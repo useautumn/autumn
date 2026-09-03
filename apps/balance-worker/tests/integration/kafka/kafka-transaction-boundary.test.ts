@@ -10,6 +10,7 @@ import { Kafka, logLevel, type RecordMetadata } from "kafkajs";
 import {
 	balanceWorkerConsumerConfigOf,
 	balanceWorkerKafkaConfigOf,
+	type KafkaBalanceWorkerTimings,
 } from "../../../src/kafka/kafkaBalanceWorkerConfig.js";
 import { createKafkaCommittedTrackOutcomeAppender } from "../../../src/kafka/kafkaCommittedTrackOutcomeAppender.js";
 import { createKafkaOwnedPartitionGroup } from "../../../src/kafka/kafkaOwnedPartitionGroup.js";
@@ -29,6 +30,13 @@ import {
 
 const brokers = (process.env.KAFKA_BROKERS ?? "127.0.0.1:19092").split(",");
 const partition = 0;
+const timings = {
+	fetchMaxWaitTimeMs: 250,
+	heartbeatIntervalMs: 3_000,
+	recoveryDrainTimeoutMs: 5_000,
+	rebalanceTimeoutMs: 60_000,
+	sessionTimeoutMs: 30_000,
+} satisfies KafkaBalanceWorkerTimings;
 
 const uniqueName = ({ prefix }: { prefix: string }): string =>
 	`${prefix}-${crypto.randomUUID().replaceAll("-", "")}`;
@@ -170,7 +178,7 @@ describe("Kafka transaction boundary", () => {
 		const consumer = kafka.consumer(
 			balanceWorkerConsumerConfigOf({
 				groupId: uniqueName({ prefix: "read-committed" }),
-				fetchMaxWaitTimeMs: 250,
+				timings,
 			}),
 		);
 		try {
@@ -253,7 +261,7 @@ describe("Kafka transaction boundary", () => {
 		const consumer = kafka.consumer(
 			balanceWorkerConsumerConfigOf({
 				groupId: uniqueName({ prefix: "catch-up" }),
-				fetchMaxWaitTimeMs: 250,
+				timings,
 			}),
 		);
 		const partitionOffsets = kafka.admin();
@@ -274,7 +282,7 @@ describe("Kafka transaction boundary", () => {
 				initialRetryTimeMs: 100,
 				maxRetryTimeMs: 1_000,
 			},
-			recoveryDrainTimeoutMs: 5_000,
+			timings,
 		});
 		const errors: unknown[] = [];
 		const group = createKafkaOwnedPartitionGroup({
@@ -355,7 +363,7 @@ describe("Kafka transaction boundary", () => {
 					maxPendingCommands: 1_000,
 					maxPendingCommandsPerCustomer: 100,
 				},
-				recoveryDrainTimeoutMs: 5_000,
+				recoveryDrainTimeoutMs: timings.recoveryDrainTimeoutMs,
 			});
 		const firstRuntime = runtimeOf({ store: firstStore.store });
 		const replacementRuntime = runtimeOf({ store: secondStore.store });

@@ -95,10 +95,10 @@ export const createKafkaOwnedPartitionGroup = ({
 	if (topic.trim().length === 0) throw new Error("Kafka topic cannot be empty");
 	if (
 		!Number.isSafeInteger(partitionsConsumedConcurrently) ||
-		partitionsConsumedConcurrently < 2
+		partitionsConsumedConcurrently < 1
 	) {
 		throw new RangeError(
-			"partitionsConsumedConcurrently must be a safe integer greater than one",
+			"partitionsConsumedConcurrently must be a positive safe integer",
 		);
 	}
 

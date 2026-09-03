@@ -205,6 +205,29 @@ const createRuntimeFactory =
 	});
 
 describe("Kafka owned partition group", () => {
+	test("allows one partition to be consumed at a time", () => {
+		const fixture = createStoreFixture();
+		try {
+			expect(() =>
+				createKafkaOwnedPartitionGroup({
+					consumer: createFakeGroupConsumer(),
+					partitionOffsets: createPartitionOffsets(),
+					topic,
+					stateStore: fixture.store,
+					partitionsConsumedConcurrently: 1,
+					createRuntime: createRuntimeFactory({
+						started: [],
+						stopped: [],
+						unavailable: [],
+					}),
+					onError: () => undefined,
+				}),
+			).not.toThrow();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("creates one runtime per assigned partition over one concurrent consumer", async () => {
 		const fixture = createStoreFixture();
 		try {

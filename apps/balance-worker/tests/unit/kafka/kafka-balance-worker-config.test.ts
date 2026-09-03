@@ -2,7 +2,16 @@ import { describe, expect, test } from "bun:test";
 import {
 	balanceWorkerConsumerConfigOf,
 	balanceWorkerKafkaConfigOf,
+	type KafkaBalanceWorkerTimings,
 } from "../../../src/kafka/kafkaBalanceWorkerConfig.js";
+
+const timings = {
+	fetchMaxWaitTimeMs: 250,
+	heartbeatIntervalMs: 3_000,
+	recoveryDrainTimeoutMs: 5_000,
+	rebalanceTimeoutMs: 60_000,
+	sessionTimeoutMs: 30_000,
+} satisfies KafkaBalanceWorkerTimings;
 
 describe("Kafka balance worker config", () => {
 	test("bounds connection and request retries", () => {
@@ -38,14 +47,53 @@ describe("Kafka balance worker config", () => {
 		expect(
 			balanceWorkerConsumerConfigOf({
 				groupId: "balance-worker-staging",
-				fetchMaxWaitTimeMs: 250,
+				timings,
 			}),
 		).toEqual({
 			groupId: "balance-worker-staging",
 			readUncommitted: false,
 			allowAutoTopicCreation: false,
 			maxWaitTimeInMs: 250,
+			heartbeatInterval: 3_000,
+			rebalanceTimeout: 60_000,
+			sessionTimeout: 30_000,
 		});
+	});
+
+	test("rejects a recovery drain that can outlast the rebalance", () => {
+		expect(() =>
+			balanceWorkerConsumerConfigOf({
+				groupId: "balance-worker-staging",
+				timings: {
+					...timings,
+					recoveryDrainTimeoutMs: timings.rebalanceTimeoutMs,
+				},
+			}),
+		).toThrow("recoveryDrainTimeoutMs");
+	});
+
+	test("rejects a heartbeat that cannot fit inside the session", () => {
+		expect(() =>
+			balanceWorkerConsumerConfigOf({
+				groupId: "balance-worker-staging",
+				timings: {
+					...timings,
+					heartbeatIntervalMs: timings.sessionTimeoutMs,
+				},
+			}),
+		).toThrow("heartbeatIntervalMs");
+	});
+
+	test("rejects a session that can outlast the rebalance", () => {
+		expect(() =>
+			balanceWorkerConsumerConfigOf({
+				groupId: "balance-worker-staging",
+				timings: {
+					...timings,
+					sessionTimeoutMs: timings.rebalanceTimeoutMs + 1,
+				},
+			}),
+		).toThrow("sessionTimeoutMs");
 	});
 
 	test("rejects unbounded client retry settings", () => {

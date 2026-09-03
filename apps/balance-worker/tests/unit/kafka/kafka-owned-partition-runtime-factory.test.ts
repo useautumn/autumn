@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ProducerConfig } from "kafkajs";
+import type { KafkaBalanceWorkerTimings } from "../../../src/kafka/kafkaBalanceWorkerConfig.js";
 import { createKafkaOwnedPartitionRuntimeFactory } from "../../../src/kafka/kafkaOwnedPartitionRuntimeFactory.js";
 import type { KafkaPartitionOutcomeFollower } from "../../../src/kafka/kafkaPartitionOutcomeFollower.js";
 import type { OwnedPartitionProducerPort } from "../../../src/runtime/ownedPartitionRuntime.js";
@@ -8,6 +9,14 @@ import {
 	createStoreFixture,
 	topic,
 } from "./kafka-test-fixtures.js";
+
+const timings = {
+	fetchMaxWaitTimeMs: 250,
+	heartbeatIntervalMs: 3_000,
+	recoveryDrainTimeoutMs: 5_000,
+	rebalanceTimeoutMs: 60_000,
+	sessionTimeoutMs: 30_000,
+} satisfies KafkaBalanceWorkerTimings;
 
 describe("Kafka owned partition runtime factory", () => {
 	test("creates each assigned runtime with its partition-scoped producer", () => {
@@ -36,7 +45,7 @@ describe("Kafka owned partition runtime factory", () => {
 					initialRetryTimeMs: 100,
 					maxRetryTimeMs: 2_000,
 				},
-				recoveryDrainTimeoutMs: 5_000,
+				timings,
 			});
 			const follower = {} as KafkaPartitionOutcomeFollower;
 
