@@ -4,6 +4,7 @@ import {
 	type JsonSchema,
 	toCamelCase,
 } from "../../casing/schemaKeyCasing";
+import { isInternalField, type Overlay } from "../../overlay/overlay";
 import { resolveRef } from "../../spec/resolveRef";
 import type {
 	FieldConstraints,
@@ -212,12 +213,16 @@ const variantsOf = (
 	return { variants: { on, byValue, ...(fallback ? { fallback } : {}) } };
 };
 
+const EXPOSE_NOTHING: Overlay = { collections: {}, exposeInternal: [] };
+
 const shapeOf = ({
 	schema,
 	root,
+	overlay,
 }: {
 	schema: JsonSchema | undefined;
 	root: JsonSchema;
+	overlay: Overlay;
 }): Shape => {
 	const resolved = resolveRef({ schema, root });
 	const shape = emptyShape();
@@ -234,22 +239,30 @@ const shapeOf = ({
 		return shape;
 	}
 
+	const internal = new Set<string>();
 	for (const [wireKey, property] of Object.entries(resolved.properties ?? {})) {
+		if (isInternalField({ overlay, wireKey, schema: property })) {
+			internal.add(wireKey);
+			continue;
+		}
 		const name = toCamelCase(wireKey);
 		const constraints = constraintsOf({ schema: property, root });
 		if (constraints) shape.fields[name] = constraints;
 		shape.children.push([name, property]);
 	}
 	for (const wireKey of (resolved.required as string[] | undefined) ?? []) {
-		shape.required.add(toCamelCase(wireKey));
+		if (!internal.has(wireKey)) shape.required.add(toCamelCase(wireKey));
 	}
 
 	for (const branch of resolved.allOf ?? []) {
-		mergeInto({ target: shape, source: shapeOf({ schema: branch, root }) });
+		mergeInto({
+			target: shape,
+			source: shapeOf({ schema: branch, root, overlay }),
+		});
 	}
 
 	const alternatives = alternativesOf({ schema: resolved, root }).map(
-		(branch) => shapeOf({ schema: branch, root }),
+		(branch) => shapeOf({ schema: branch, root, overlay }),
 	);
 	for (const alternative of alternatives)
 		shape.children.push(...alternative.children);
@@ -303,9 +316,11 @@ const intersectSpecRules = (
 export const nodeRulesFromSpec = ({
 	schema,
 	root,
+	overlay = EXPOSE_NOTHING,
 }: {
 	schema: JsonSchema;
 	root: JsonSchema;
+	overlay?: Overlay;
 }): Record<string, SpecNodeRules> => {
 	const out: Record<string, SpecNodeRules> = {};
 
@@ -332,7 +347,7 @@ export const nodeRulesFromSpec = ({
 			return;
 		}
 
-		const shape = shapeOf({ schema: resolved, root });
+		const shape = shapeOf({ schema: resolved, root, overlay });
 		const rules = specRulesOf(shape);
 		if (rules) emit({ path, rules });
 

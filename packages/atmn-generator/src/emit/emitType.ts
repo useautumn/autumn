@@ -7,6 +7,7 @@ import type { Overlay } from "../overlay/overlay";
 import {
 	fixtureNameFor,
 	isHidden,
+	isInternalField,
 	isRequiredByOverlay,
 } from "../overlay/overlay";
 
@@ -107,6 +108,15 @@ const objectTypeExpression = ({
 	const members = Object.entries(properties).flatMap(
 		([wireKey, propertySchema]) => {
 			const fieldPath = childPath({ path, key: wireKey });
+			if (
+				isInternalField({
+					overlay: context.overlay,
+					wireKey,
+					schema: propertySchema,
+				})
+			) {
+				return [];
+			}
 			if (
 				isHidden({
 					overlay: context.overlay,
