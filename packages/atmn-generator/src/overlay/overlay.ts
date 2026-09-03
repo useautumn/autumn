@@ -62,6 +62,11 @@ export const OVERLAY: Overlay = {
 			},
 		},
 		features: {
+			invoice_credit: {
+				hidden: true,
+				reason:
+					"Admin-only for now: invoice credits are money, and a config must not mint them.",
+			},
 			event_names: {
 				hidden: true,
 				reason:
