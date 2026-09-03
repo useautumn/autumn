@@ -5,7 +5,12 @@ import { insertFirstProperty } from "../../surgery/insertFirstProperty";
 import { listSourceFiles } from "../pull/listSourceFiles";
 import { locateFixture } from "../pull/locateFixture";
 
-type AppliedRow = { id?: string; internalId?: string | null; action?: string };
+type AppliedRow = {
+	id?: string;
+	internalId?: string | null;
+	action?: string;
+	versionSlug?: string | null;
+};
 
 const HAS_INTERNAL_ID = /\binternalId\s*:/;
 
@@ -15,10 +20,11 @@ const HAS_INTERNAL_ID = /\binternalId\s*:/;
  * rename rather than a delete and a create.
  */
 export const backfillInternalIds = ({
-	results,
+	applied,
 	configPath,
 }: {
-	results: Record<string, unknown>;
+	/** The update response: `results` per collection, plus full plan rows. */
+	applied: { results?: Record<string, unknown> } & Record<string, unknown>;
 	configPath: string;
 }): { backfilled: string[] } => {
 	const files = new Map<string, string>();
@@ -30,10 +36,13 @@ export const backfillInternalIds = ({
 	const backfilled: string[] = [];
 
 	for (const [collection, spec] of Object.entries(COLLECTIONS)) {
-		const rows = results[collection];
+		// Versioned rows come back in full with their slug; others in `results`.
+		const rows = spec.historyKey
+			? applied[collection]
+			: applied.results?.[collection];
 		if (!Array.isArray(rows)) continue;
 		for (const row of rows as AppliedRow[]) {
-			if (row.action !== "create") continue;
+			if (!spec.historyKey && row.action !== "create") continue;
 			if (typeof row.id !== "string" || typeof row.internalId !== "string")
 				continue;
 			const located = locateFixture({
@@ -42,6 +51,15 @@ export const backfillInternalIds = ({
 				builder: spec.builder,
 				idField: spec.idField,
 				id: row.id,
+				where: spec.historyKey
+					? [
+							{
+								field: "versionSlug",
+								equals: row.versionSlug ?? "v1",
+								absentMeans: "v1",
+							},
+						]
+					: undefined,
 			});
 			// Not a plain literal: the row still matches by public id next push.
 			if (located === null || HAS_INTERNAL_ID.test(located.node.text()))
@@ -49,8 +67,9 @@ export const backfillInternalIds = ({
 			const updated = insertFirstProperty({
 				source: located.source,
 				builder: spec.builder,
-				idField: spec.idField,
-				id: row.id,
+				idField: located.idField,
+				id: located.id,
+				where: located.where,
 				property: `internalId: ${JSON.stringify(row.internalId)}`,
 			});
 			if (updated === null) continue;

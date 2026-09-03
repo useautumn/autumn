@@ -75,10 +75,7 @@ export const runPush = async ({
 
 	write("\nApplied.\n");
 
-	const { backfilled } = backfillInternalIds({
-		results: applied.results ?? {},
-		configPath,
-	});
+	const { backfilled } = backfillInternalIds({ applied, configPath });
 	if (backfilled.length > 0) {
 		write(
 			`Wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}.\n`,

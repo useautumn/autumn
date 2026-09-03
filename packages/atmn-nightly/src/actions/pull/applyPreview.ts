@@ -3,8 +3,10 @@ import { appendToCollection } from "../../surgery/appendToCollection";
 import { deleteFixtureLiteral } from "../../surgery/deleteFixtureLiteral";
 import { deleteReference } from "../../surgery/deleteReference";
 import { leadingIndentOfLine } from "../../surgery/fixtureEdit";
+import { insertCollection } from "../../surgery/insertCollection";
 import { replaceFixture } from "../../surgery/replaceFixture";
-import { locateFixture } from "./locateFixture";
+import { type FixtureConstraint, locateFixture } from "./locateFixture";
+import { activeVersionOf, routePlanRow } from "./routePlanRow";
 
 export type PreviewEntry = { action?: string } & Record<string, unknown>;
 
@@ -53,21 +55,48 @@ export const applyPreview = ({
 		unlocated: [],
 	};
 
+	// Versioned collections key rows by id AND slug; a row without a slug is v1.
+	const versioned = spec.historyKey !== undefined;
+	const slugOf = (row: Record<string, unknown>): string =>
+		typeof row.versionSlug === "string" ? row.versionSlug : "v1";
+	const keyOf = ({ id, slug }: { id: string; slug: string }): string =>
+		versioned ? `${id}@${slug}` : id;
+
 	const rowsById = new Map<string, Record<string, unknown>>();
+	const rowsByPlan = new Map<string, Record<string, unknown>[]>();
 	for (const row of catalogRows) {
 		// Archived rows are server history, not something a pull should write.
 		if (row.archived === true) continue;
 		const id = row[spec.responseIdField];
-		if (typeof id === "string") rowsById.set(id, row);
+		if (typeof id !== "string") continue;
+		rowsById.set(keyOf({ id, slug: slugOf(row) }), row);
+		rowsByPlan.set(id, [...(rowsByPlan.get(id) ?? []), row]);
 	}
 
-	const removeFixture = ({ id }: { id: string }): void => {
+	const constraintsFor = (
+		entry: PreviewEntry,
+	): FixtureConstraint[] | undefined =>
+		versioned
+			? [{ field: "versionSlug", equals: slugOf(entry), absentMeans: "v1" }]
+			: undefined;
+	const internalIdOf = (entry: PreviewEntry): string | null =>
+		typeof entry.internalId === "string" ? entry.internalId : null;
+
+	const removeFixture = ({
+		id,
+		entry,
+	}: {
+		id: string;
+		entry: PreviewEntry;
+	}): void => {
 		const located = locateFixture({
 			configPath,
 			files,
 			builder: spec.builder,
 			idField: spec.idField,
 			id,
+			internalId: internalIdOf(entry),
+			where: constraintsFor(entry),
 		});
 		if (located === null) {
 			result.unlocated.push({ id, action: "delete from your config" });
@@ -76,8 +105,9 @@ export const applyPreview = ({
 		const removed = deleteFixtureLiteral({
 			source: located.source,
 			builder: spec.builder,
-			idField: spec.idField,
-			id,
+			idField: located.idField,
+			id: located.id,
+			where: located.where,
 		});
 		if (removed === null) return;
 		files.set(located.file, removed.source);
@@ -93,26 +123,74 @@ export const applyPreview = ({
 		result.lines.push(`- ${id}`);
 	};
 
-	const appendRow = ({ id }: { id: string }): void => {
-		const row = rowsById.get(id);
+	const appendRow = ({
+		id,
+		entry,
+	}: {
+		id: string;
+		entry: PreviewEntry;
+	}): void => {
+		const row = rowsById.get(keyOf({ id, slug: slugOf(entry) }));
 		if (row === undefined) return;
-		const configSource = files.get(configPath) ?? "";
+		let target = collection;
+		let emitted: Record<string, unknown> = row;
+		if (versioned) {
+			const route = routePlanRow({
+				row: row as { active?: boolean; version?: number },
+				activeVersion: activeVersionOf({
+					rows: (rowsByPlan.get(id) ?? []) as {
+						active?: boolean;
+						version?: number;
+					}[],
+				}),
+			});
+			target =
+				route.collection === "plans"
+					? collection
+					: (spec.historyKey ?? collection);
+			// Variants come back nested under their base; pulling them is later work.
+			const { variants: _nested, ...rest } = row;
+			emitted = route.draft
+				? { ...rest, active: false }
+				: { ...rest, active: true };
+		}
+		let configSource = files.get(configPath) ?? "";
+		// A config that never mentioned the collection gets the key, then the row.
+		const withKey = insertCollection({
+			source: configSource,
+			collection: target,
+		});
+		if (withKey === null) return;
+		configSource = withKey;
 		// The surgery indents the first line; the emitter indents the rest.
 		const text = (elementIndent: string) =>
-			emitFixture({ spec, row, includeMappings, indent: elementIndent });
+			emitFixture({
+				spec,
+				row: emitted,
+				includeMappings,
+				indent: elementIndent,
+			});
 		const updated = appendToCollection({
 			source: configSource,
-			collection,
+			collection: target,
 			text,
 		});
 		if (updated === null) return;
 		files.set(configPath, updated);
-		result.appended.push(id);
-		result.lines.push(`+ ${id}`);
+		result.appended.push(versioned ? keyOf({ id, slug: slugOf(entry) }) : id);
+		result.lines.push(
+			`+ ${versioned ? keyOf({ id, slug: slugOf(entry) }) : id}`,
+		);
 	};
 
-	const replaceRow = ({ id }: { id: string }): void => {
-		const row = rowsById.get(id);
+	const replaceRow = ({
+		id,
+		entry,
+	}: {
+		id: string;
+		entry: PreviewEntry;
+	}): void => {
+		const row = rowsById.get(keyOf({ id, slug: slugOf(entry) }));
 		if (row === undefined) return;
 		const located = locateFixture({
 			configPath,
@@ -120,23 +198,27 @@ export const applyPreview = ({
 			builder: spec.builder,
 			idField: spec.idField,
 			id,
+			internalId: internalIdOf(entry),
+			where: constraintsFor(entry),
 		});
 		if (located === null) {
 			result.unlocated.push({ id, action: "replace with the server's copy" });
 			return;
 		}
+		const { variants: _nested, ...emitted } = row;
 		// The emitter's indent is the found call's own line indent, so the
 		// closing `})` lines up with the text it replaces.
 		const indent = leadingIndentOfLine(
 			located.source,
 			located.node.range().start.index,
 		);
-		const text = emitFixture({ spec, row, includeMappings, indent });
+		const text = emitFixture({ spec, row: emitted, includeMappings, indent });
 		const updated = replaceFixture({
 			source: located.source,
 			builder: spec.builder,
-			idField: spec.idField,
-			id,
+			idField: located.idField,
+			id: located.id,
+			where: located.where,
 			text,
 		});
 		if (updated === null) return;
@@ -149,9 +231,9 @@ export const applyPreview = ({
 		const id = entry[spec.idField];
 		if (typeof id !== "string") continue;
 		// `none` and `skip` mean the code already matches the server.
-		if (entry.action === "create") removeFixture({ id });
-		else if (entry.action === "delete") appendRow({ id });
-		else if (entry.action === "update") replaceRow({ id });
+		if (entry.action === "create") removeFixture({ id, entry });
+		else if (entry.action === "delete") appendRow({ id, entry });
+		else if (entry.action === "update") replaceRow({ id, entry });
 	}
 
 	return result;
