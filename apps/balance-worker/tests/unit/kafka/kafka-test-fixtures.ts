@@ -71,7 +71,11 @@ export const createOutcome = ({
 	return decision.outcome;
 };
 
-export const createStoreFixture = (): {
+export const createStoreFixture = ({
+	nextOffset = 0n,
+}: {
+	nextOffset?: bigint;
+} = {}): {
 	directory: string;
 	store: SqliteBalanceStateStore;
 } => {
@@ -81,7 +85,7 @@ export const createStoreFixture = (): {
 	});
 
 	try {
-		store.initializePartition({ topic, partition, nextOffset: 0n });
+		store.initializePartition({ topic, partition, nextOffset });
 		return { directory, store };
 	} catch (error) {
 		store.close();
