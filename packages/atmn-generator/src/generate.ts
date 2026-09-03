@@ -82,11 +82,20 @@ export const generate = async (): Promise<string[]> => {
 
 	// A typo in a rule's path or field would otherwise ship as a rule that
 	// never fires.
-	validateRegistry({ registry: LINT_REGISTRY, schema: envelope, root });
+	validateRegistry({
+		registry: LINT_REGISTRY,
+		schema: envelope,
+		root,
+		overlay: OVERLAY,
+	});
 	write({
 		name: "lintRules.ts",
 		source: emitLintRulesModule({
-			specRules: nodeRulesFromSpec({ schema: envelope, root }),
+			specRules: nodeRulesFromSpec({
+				schema: envelope,
+				root,
+				overlay: OVERLAY,
+			}),
 			registry: LINT_REGISTRY,
 		}),
 	});

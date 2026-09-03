@@ -845,55 +845,6 @@ export const LINT_RULES: LintRules = {
 	"plans.variants.customize.removeLicenses": {
 		required: ["licensePlanId"],
 	},
-	"plans.variants.customize.updateItems": {
-		required: ["filter"],
-		fields: {
-			included: {
-				minimum: 0,
-			},
-			interval: {
-				enum: [
-					"one_off",
-					"minute",
-					"hour",
-					"day",
-					"week",
-					"month",
-					"quarter",
-					"semi_annual",
-					"year",
-				],
-			},
-		},
-	},
-	"plans.variants.customize.updateItems.filter": {
-		fields: {
-			billingMethod: {
-				enum: ["prepaid", "usage_based"],
-			},
-			interval: {
-				enum: [
-					"one_off",
-					"week",
-					"month",
-					"quarter",
-					"semi_annual",
-					"year",
-					"minute",
-					"hour",
-					"day",
-				],
-			},
-			intervalCount: {
-				minimum: -9007199254740991,
-				maximum: 9007199254740991,
-				exclusiveMinimum: 0,
-			},
-			included: {
-				maximum: 10000000000000,
-			},
-		},
-	},
 	"plans.variants.customize.upsertLicenses": {
 		required: ["licensePlanId"],
 		fields: {

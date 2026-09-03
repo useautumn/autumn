@@ -1,4 +1,5 @@
 import type { JsonSchema } from "../casing/schemaKeyCasing";
+import type { Overlay } from "../overlay/overlay";
 import { fieldsAtPath } from "../spec/fieldsAtPath";
 import type { RegistryEntry } from "./rules/registry";
 import type { LintRule } from "./runtime/lintDocument";
@@ -33,16 +34,19 @@ export const validateRegistry = ({
 	registry,
 	schema,
 	root,
+	overlay,
 }: {
 	registry: Record<string, RegistryEntry>;
 	schema: JsonSchema;
 	root: JsonSchema;
+	overlay: Overlay;
 }): void => {
 	const problems: string[] = [];
-	const topLevel = fieldsAtPath({ schema, root, path: "" }) ?? new Set();
+	const topLevel =
+		fieldsAtPath({ schema, root, path: "", overlay }) ?? new Set();
 
 	for (const [path, entry] of Object.entries(registry)) {
-		const fields = fieldsAtPath({ schema, root, path });
+		const fields = fieldsAtPath({ schema, root, path, overlay });
 		if (!fields) {
 			problems.push(`"${path}" is not a path in the catalog.`);
 			continue;
@@ -66,7 +70,12 @@ export const validateRegistry = ({
 					);
 					continue;
 				}
-				const targetFields = fieldsAtPath({ schema, root, path: rule.in });
+				const targetFields = fieldsAtPath({
+					schema,
+					root,
+					path: rule.in,
+					overlay,
+				});
 				if (!targetFields?.has(rule.matching)) {
 					problems.push(
 						`"${path}": exists rule matches on "${rule.in}.${rule.matching}", which is not a field there.`,

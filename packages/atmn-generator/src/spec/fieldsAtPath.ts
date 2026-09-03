@@ -3,7 +3,10 @@ import {
 	type JsonSchema,
 	toCamelCase,
 } from "../casing/schemaKeyCasing";
+import { isInternalField, type Overlay } from "../overlay/overlay";
 import { resolveRef } from "./resolveRef";
+
+const EXPOSE_NOTHING: Overlay = { collections: {}, exposeInternal: [] };
 
 /**
  * The property names an object at a fixture path can have, across every
@@ -54,10 +57,12 @@ const childSchemas = ({
 	nodes,
 	segment,
 	root,
+	overlay,
 }: {
 	nodes: JsonSchema[];
 	segment: string;
 	root: JsonSchema;
+	overlay: Overlay;
 }): JsonSchema[] =>
 	nodes
 		.flatMap((node) => {
@@ -67,7 +72,11 @@ const childSchemas = ({
 					: [];
 			}
 			return Object.entries(node.properties ?? {})
-				.filter(([wireKey]) => toCamelCase(wireKey) === segment)
+				.filter(
+					([wireKey, child]) =>
+						toCamelCase(wireKey) === segment &&
+						!isInternalField({ overlay, wireKey, schema: child }),
+				)
 				.map(([, child]) => child);
 		})
 		.flatMap((child) => objectNodesOf({ schema: child, root }));
@@ -76,20 +85,23 @@ export const fieldsAtPath = ({
 	schema,
 	root,
 	path,
+	overlay = EXPOSE_NOTHING,
 }: {
 	schema: JsonSchema;
 	root: JsonSchema;
 	path: string;
+	overlay?: Overlay;
 }): Set<string> | undefined => {
 	let nodes = objectNodesOf({ schema, root });
 	for (const segment of path === "" ? [] : path.split(".")) {
-		nodes = childSchemas({ nodes, segment, root });
+		nodes = childSchemas({ nodes, segment, root, overlay });
 		if (nodes.length === 0) return undefined;
 	}
 	const fields = new Set<string>();
 	for (const node of nodes) {
-		for (const wireKey of Object.keys(node.properties ?? {})) {
-			fields.add(toCamelCase(wireKey));
+		for (const [wireKey, child] of Object.entries(node.properties ?? {})) {
+			if (!isInternalField({ overlay, wireKey, schema: child }))
+				fields.add(toCamelCase(wireKey));
 		}
 	}
 	return fields;

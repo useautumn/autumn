@@ -7,6 +7,7 @@ import { expect, test } from "bun:test";
 import type { JsonSchema } from "../src/casing/schemaKeyCasing";
 import { LINT_REGISTRY } from "../src/lint/rules/registry";
 import { validateRegistry } from "../src/lint/validateRegistry";
+import { OVERLAY } from "../src/overlay/overlay";
 import { fieldsAtPath } from "../src/spec/fieldsAtPath";
 import { catalogUpdateSchema, loadSpec } from "../src/spec/loadSpec";
 
@@ -16,7 +17,7 @@ const schema = catalogUpdateSchema({ spec });
 
 const validate =
 	(registry: Parameters<typeof validateRegistry>[0]["registry"]) => () =>
-		validateRegistry({ registry, schema, root });
+		validateRegistry({ registry, schema, root, overlay: OVERLAY });
 
 test("the real registry is fully alive", () => {
 	expect(validate(LINT_REGISTRY)).not.toThrow();
