@@ -171,9 +171,12 @@ export const replaceLicenseEntitlementsForPage = async ({
 		return emptyResult({ distinctEntitlements: distinct.length });
 	}
 
+	// Migration edits amend the definition in place — usage always carries;
+	// the delta credit is the migration's contract, unlike plan transitions.
 	const customerEntitlementPatch = computeCustomerEntitlementPatch({
 		fromEntitlement,
 		toEntitlement,
+		carryOverUsages: { enabled: true },
 	});
 
 	await iterateCustomerProductPages({

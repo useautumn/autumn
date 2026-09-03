@@ -70,6 +70,7 @@ export const computeCustomPlan = async ({
 				incomingCustomerProducts: [newFullCustomerProduct],
 				customerLicenseBillingContext:
 					updateSubscriptionContext.customerLicenseBillingContext,
+				carryOverUsages: updateSubscriptionContext.carryOverUsages,
 			});
 
 	// A scheduled cusProduct hasn't started billing yet, so there's nothing to

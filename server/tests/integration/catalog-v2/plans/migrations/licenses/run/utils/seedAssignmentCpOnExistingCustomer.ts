@@ -39,5 +39,8 @@ export const seedAssignmentCpOnExistingCustomer = async ({
 		is_custom: false,
 		customer_license_link_id: pool.link_id,
 	});
-	return { assignmentCustomerProductId };
+	return {
+		assignmentCustomerProductId,
+		internalProductId: child.internal_id,
+	};
 };

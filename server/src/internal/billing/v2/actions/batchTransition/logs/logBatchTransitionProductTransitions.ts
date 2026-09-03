@@ -38,6 +38,14 @@ export const logBatchTransitionProductTransitions = ({
 						toPriceId: toEntitlementPrice.price?.id ?? null,
 					}),
 				),
+				retainedEntitlementPrices: entitlementPrices.retained.map(
+					({ fromEntitlementPrice, toEntitlementPrice }) => ({
+						fromEntitlementId: fromEntitlementPrice.entitlement.id,
+						toEntitlementId: toEntitlementPrice.entitlement.id,
+						fromPriceId: fromEntitlementPrice.price?.id ?? null,
+						toPriceId: toEntitlementPrice.price?.id ?? null,
+					}),
+				),
 				addedEntitlementPrices: entitlementPrices.added.map(
 					({ entitlement, price }) => ({
 						entitlementId: entitlement.id,

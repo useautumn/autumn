@@ -1,5 +1,7 @@
 // Contract: Pro and Pro Annual price the same 200-message dev seat at $20/mo and $200/yr.
-// Switching preserves assignments, usage/reset timestamps, and re-prices every seat annually.
+// Switching preserves assignments and reset timestamps, and re-prices every seat
+// annually. The entitlement is retained (same definition), so usage resets to the
+// grant unless carry_over_usages is set.
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,
@@ -29,15 +31,24 @@ const INCLUDED_MESSAGES = 200;
 const SEAT_QUANTITY = 3;
 const ENTITY_USAGES = [25, 60, 110] as const;
 
-test(`${chalk.yellowBright("license attach switch: monthly to annual parent preserves entity seat state")}`, async () => {
-	const customerId = "attach-parent-customized-license-switch";
+const runMonthlyToAnnualSwitch = async ({
+	customerId,
+	idPrefix,
+	carryOverUsages,
+	expectUsageCarried,
+}: {
+	customerId: string;
+	idPrefix: string;
+	carryOverUsages?: { enabled: boolean; feature_ids?: string[] };
+	expectUsageCarried: boolean;
+}) => {
 	const pro = products.base({
-		id: "customized-license-switch-pro",
+		id: `${idPrefix}-pro`,
 		items: [items.dashboard()],
 	});
 	const devSeat = products.base({
-		id: "customized-license-switch-dev-seat",
-		group: "customized-license-switch-dev-seats",
+		id: `${idPrefix}-dev-seat`,
+		group: `${idPrefix}-dev-seats`,
 		items: [items.monthlyMessages({ includedUsage: INCLUDED_MESSAGES })],
 	});
 	const { ctx, entities, autumnV2_3 } = await initScenario({
@@ -201,6 +212,7 @@ test(`${chalk.yellowBright("license attach switch: monthly to annual parent pres
 		license_quantities: [
 			{ license_plan_id: devSeat.id, quantity: SEAT_QUANTITY },
 		],
+		carry_over_usages: carryOverUsages,
 	});
 
 	customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
@@ -276,8 +288,8 @@ test(`${chalk.yellowBright("license attach switch: monthly to annual parent pres
 			featureId: TestFeature.Messages,
 			planId: devSeat.id,
 			granted: INCLUDED_MESSAGES,
-			remaining: stateBefore.remaining,
-			usage: stateBefore.usage,
+			remaining: expectUsageCarried ? stateBefore.remaining : INCLUDED_MESSAGES,
+			usage: expectUsageCarried ? stateBefore.usage : 0,
 			nextResetAt: stateBefore.nextResetAt,
 			toleranceMs: 0,
 		});
@@ -314,4 +326,27 @@ test(`${chalk.yellowBright("license attach switch: monthly to annual parent pres
 		amount: ANNUAL_SEAT_PRICE,
 		count: SEAT_QUANTITY,
 	});
-});
+};
+
+test.concurrent(
+	`${chalk.yellowBright("license attach switch: monthly to annual parent resets retained seat usage by default")}`,
+	async () => {
+		await runMonthlyToAnnualSwitch({
+			customerId: "attach-parent-customized-license-switch",
+			idPrefix: "customized-license-switch",
+			expectUsageCarried: false,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license attach switch: monthly to annual parent carries retained seat usage when enabled")}`,
+	async () => {
+		await runMonthlyToAnnualSwitch({
+			customerId: "attach-parent-customized-license-switch-carry",
+			idPrefix: "customized-license-switch-carry",
+			carryOverUsages: { enabled: true },
+			expectUsageCarried: true,
+		});
+	},
+);

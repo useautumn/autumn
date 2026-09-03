@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import { customerEntitlements } from "@autumn/shared";
+import { customerProducts } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -47,18 +47,24 @@ export const expectCustomerLicenseEntitlementsCorrect = async ({
 	}
 };
 
-export const expectAssignmentCustomerProductUntouched = async ({
+/** Child update_plan must not remint this seat as a standalone child attach. */
+export const expectAssignmentCustomerProductNotChildMatched = async ({
 	ctx,
 	assignmentCustomerProductId,
+	internalProductId,
 }: {
 	ctx: AutumnContext;
 	assignmentCustomerProductId: string;
+	internalProductId: string;
 }) => {
-	const entitlements = await ctx.db.query.customerEntitlements.findMany({
-		where: eq(
-			customerEntitlements.customer_product_id,
-			assignmentCustomerProductId,
-		),
-	});
-	expect(entitlements).toHaveLength(0);
+	const [assignment] = await ctx.db
+		.select({
+			internalProductId: customerProducts.internal_product_id,
+			customerLicenseLinkId: customerProducts.customer_license_link_id,
+		})
+		.from(customerProducts)
+		.where(eq(customerProducts.id, assignmentCustomerProductId));
+	expect(assignment).toBeDefined();
+	expect(assignment?.internalProductId).toBe(internalProductId);
+	expect(assignment?.customerLicenseLinkId).not.toBeNull();
 };

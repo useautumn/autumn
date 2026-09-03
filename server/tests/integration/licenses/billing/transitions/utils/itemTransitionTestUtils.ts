@@ -140,8 +140,10 @@ export type ItemTransitionScenario = Awaited<
 
 export const completeImmediateItemTransition = async ({
 	scenario,
+	carryOverUsages,
 }: {
 	scenario: ItemTransitionScenario;
+	carryOverUsages?: { enabled: boolean; feature_ids?: string[] };
 }) => {
 	const {
 		autumnV2_3,
@@ -157,6 +159,7 @@ export const completeImmediateItemTransition = async ({
 		customer_id: customerId,
 		plan_id: toParent.id,
 		redirect_mode: "if_required",
+		carry_over_usages: carryOverUsages,
 	});
 
 	const customer = await pollUntil({

@@ -11,7 +11,7 @@ import chalk from "chalk";
 import { getRefundLineItemsForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemsForPrice";
 import { invoiceCreditFromStoredLineItems } from "@/internal/billing/v2/utils/lineItems/invoiceCreditFromStoredLineItems";
 import {
-	computeAlreadyRefundedForCharge,
+	computeAlreadyRefundedByCharge,
 	computeProratedCredit,
 	splitMultiEntityAmount,
 } from "@/internal/billing/v2/utils/lineItems/storedLineItemUtils";
@@ -25,6 +25,7 @@ const makeChargeRow = (
 ): DbInvoiceLineItem =>
 	({
 		id: "li_charge_1",
+		created_at: PERIOD_START,
 		amount: 20,
 		amount_after_discounts: 20,
 		effective_period_start: PERIOD_START,
@@ -42,6 +43,7 @@ const makeRefundRow = (
 ): DbInvoiceLineItem =>
 	({
 		id: "li_refund_1",
+		created_at: PERIOD_START + 1000,
 		amount: -10,
 		amount_after_discounts: -10,
 		effective_period_start: PERIOD_START,
@@ -129,33 +131,40 @@ describe(chalk.yellowBright("computeProratedCredit"), () => {
 	});
 });
 
-describe(chalk.yellowBright("computeAlreadyRefundedForCharge"), () => {
+describe(chalk.yellowBright("computeAlreadyRefundedByCharge"), () => {
 	test("sums matching refund rows by price and period", () => {
-		const result = computeAlreadyRefundedForCharge({
-			chargeRow: makeChargeRow(),
+		const chargeRow = makeChargeRow();
+		const result = computeAlreadyRefundedByCharge({
+			chargeRows: [chargeRow],
 			refundRows: [
 				makeRefundRow({ amount_after_discounts: -5 }),
-				makeRefundRow({ id: "li_refund_2", amount_after_discounts: -3 }),
+				makeRefundRow({
+					id: "li_refund_2",
+					created_at: PERIOD_START + 2000,
+					amount_after_discounts: -3,
+				}),
 			],
 		});
 
-		expect(result).toBe(8);
+		expect(result.get(chargeRow.id)).toBe(8);
 	});
 
 	test("excludes refunds with different price_id", () => {
-		const result = computeAlreadyRefundedForCharge({
-			chargeRow: makeChargeRow(),
+		const chargeRow = makeChargeRow();
+		const result = computeAlreadyRefundedByCharge({
+			chargeRows: [chargeRow],
 			refundRows: [
 				makeRefundRow({ price_id: "price_other", stripe_price_id: "other" }),
 			],
 		});
 
-		expect(result).toBe(0);
+		expect(result.get(chargeRow.id)).toBeUndefined();
 	});
 
 	test("excludes refunds outside the charge period", () => {
-		const result = computeAlreadyRefundedForCharge({
-			chargeRow: makeChargeRow(),
+		const chargeRow = makeChargeRow();
+		const result = computeAlreadyRefundedByCharge({
+			chargeRows: [chargeRow],
 			refundRows: [
 				makeRefundRow({
 					effective_period_start: PERIOD_END + 1000,
@@ -164,16 +173,44 @@ describe(chalk.yellowBright("computeAlreadyRefundedForCharge"), () => {
 			],
 		});
 
-		expect(result).toBe(0);
+		expect(result.get(chargeRow.id)).toBeUndefined();
 	});
 
-	test("returns 0 with no refund rows", () => {
-		const result = computeAlreadyRefundedForCharge({
-			chargeRow: makeChargeRow(),
+	test("returns no allocations with no refund rows", () => {
+		const result = computeAlreadyRefundedByCharge({
+			chargeRows: [makeChargeRow()],
 			refundRows: [],
 		});
 
-		expect(result).toBe(0);
+		expect(result.size).toBe(0);
+	});
+
+	test("allocates a refund only to the latest matching earlier charge", () => {
+		const originalCharge = makeChargeRow({
+			id: "li_charge_5",
+			created_at: PERIOD_START,
+			invoice_id: "inv_initial",
+			amount_after_discounts: 100,
+		});
+		const refund = makeRefundRow({
+			created_at: PERIOD_START + 1000,
+			invoice_id: "inv_update",
+			amount_after_discounts: -100,
+		});
+		const replacementCharge = makeChargeRow({
+			id: "li_charge_7",
+			created_at: PERIOD_START + 500,
+			invoice_id: "inv_update",
+			amount_after_discounts: 140,
+		});
+
+		const result = computeAlreadyRefundedByCharge({
+			chargeRows: [originalCharge, replacementCharge],
+			refundRows: [refund],
+		});
+
+		expect(result.get(originalCharge.id)).toBe(100);
+		expect(result.get(replacementCharge.id)).toBeUndefined();
 	});
 });
 

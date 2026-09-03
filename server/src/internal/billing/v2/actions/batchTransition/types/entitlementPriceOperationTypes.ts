@@ -16,7 +16,7 @@ export type CustomerEntitlementPatch = {
 };
 
 export type PooledContributionPatch = {
-	type: "increment";
+	type: "increment" | "set";
 	amount: number;
 };
 
@@ -27,7 +27,8 @@ export type ReplaceEntitlementPriceOperation = {
 	fromEntitlementPrice: EntitlementPrice;
 	toEntitlementPrice: EntitlementPrice;
 	customerEntitlementPatch: CustomerEntitlementPatch;
-	/** Present when both sides are pooled: source balance stays 0; Δ goes to contributions + pool. */
+	/** Present when both sides are pooled: source balance stays 0; contributions
+	 * and the shared pool either carry by Δ or reset to the incoming grant. */
 	pooledContributionPatch?: PooledContributionPatch;
 };
 
