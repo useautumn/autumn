@@ -8,7 +8,8 @@
 		"ts": "bunx tsgo --build --noEmit",
 		"test": "bun test test",
 		"generate": "bun run src/generate.ts",
-		"check": "bun run src/checkClean.ts"
+		"check": "bun run src/checkClean.ts",
+		"fuzz": "bun run src/fuzz/runFuzz.ts"
 	},
 	"dependencies": {
 		"yaml": "2.9.0"
