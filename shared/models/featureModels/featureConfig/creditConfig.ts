@@ -59,9 +59,19 @@ export const FeatureConfigOverrideSchema = z.strictObject({
 	schema: z.array(CreditSchemaItemSchema).optional(),
 });
 
+/**
+ * `<provider>/<model>`, split on the FIRST slash so `openrouter/openai/gpt-4o`
+ * keeps its inner one. Rejecting a bare key here only moves an existing failure
+ * earlier: `resolveModel` already throws "not found in models.dev pricing data"
+ * at track time, which is a billing-time surprise rather than a config error.
+ * Shape only — whether the model exists needs the models.dev catalog, and that
+ * lookup does not belong on the write path.
+ */
 export const ModelMarkupsSchema = z
 	.record(
-		z.string(), // Represents the model name in "provider/model" format, e.g. "anthropic/claude-2"
+		z
+			.string()
+			.regex(/.+\/.+/, 'Model keys are "<provider>/<model>", e.g. "openai/gpt-4o" or "custom/my-model".'),
 		MarkupEntrySchema.extend({
 			markup: z.number().min(-100).optional(), // Omit to inherit provider/global markup
 			input_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
