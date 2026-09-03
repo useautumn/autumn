@@ -1,16 +1,14 @@
 import { featureIdIdentity } from "../identity/featureIdIdentity.js";
 import { usageAlertIdentity } from "../identity/usageAlertIdentity.js";
-import { usageLimitIdentity } from "../usageLimit.js";
+import { usageLimitIdentity } from "../identity/usageLimitIdentity.js";
 import { findDuplicateInControls } from "./findDuplicateInControls.js";
 import type { DuplicateBillingControlIssue } from "./types/duplicateBillingControlIssue.js";
-import type {
-	DuplicateCheckedBillingControls,
-	DuplicateCheckedControl,
-	DuplicateCheckedControlKey,
-} from "./types/duplicateCheckedBillingControls.js";
+import type { DuplicateCheckedBillingControls } from "./types/duplicateCheckedBillingControls.js";
+import type { DuplicateCheckedControl } from "./types/duplicateCheckedControl.js";
+import type { DuplicateCheckedControlKey } from "./types/duplicateCheckedControlKey.js";
 import type { DuplicateRule } from "./types/duplicateRule.js";
 
-export type DuplicateCheck = (
+type DuplicateCheck = (
 	billingControls: DuplicateCheckedBillingControls,
 ) => DuplicateBillingControlIssue | undefined;
 

@@ -1,5 +1,5 @@
 import type { DuplicateBillingControlIssue } from "./types/duplicateBillingControlIssue.js";
-import type { DuplicateCheckedControlKey } from "./types/duplicateCheckedBillingControls.js";
+import type { DuplicateCheckedControlKey } from "./types/duplicateCheckedControlKey.js";
 import type { DuplicateRule } from "./types/duplicateRule.js";
 
 export const findDuplicateInControls = <TControl>({

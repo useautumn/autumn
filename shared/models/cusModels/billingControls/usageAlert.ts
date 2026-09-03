@@ -8,13 +8,11 @@ export const UsageAlertThresholdType = z.enum([
 	"remaining_percentage",
 ]);
 
-export const USAGE_ALERT_BASES = [
-	"balance",
-	"included",
-	"recurring",
-	"usage_limit",
-] as const;
+export const BALANCE_BASES = ["balance", "included", "recurring"] as const;
+export const USAGE_ALERT_BASES = [...BALANCE_BASES, "usage_limit"] as const;
+export const DEFAULT_USAGE_ALERT_BASIS = "balance" as const;
 
+export type BalanceBasis = (typeof BALANCE_BASES)[number];
 export const UsageAlertBasisSchema = z.enum(USAGE_ALERT_BASES);
 export type UsageAlertBasis = z.infer<typeof UsageAlertBasisSchema>;
 
@@ -34,7 +32,7 @@ export const DbUsageAlertSchema = z
 			description:
 				"Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.",
 		}),
-		basis: UsageAlertBasisSchema.default("balance").meta({
+		basis: UsageAlertBasisSchema.default(DEFAULT_USAGE_ALERT_BASIS).meta({
 			description:
 				"What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.",
 		}),
@@ -48,7 +46,7 @@ export const DbUsageAlertSchema = z
 		}),
 	})
 	.check((ctx) => {
-		const { threshold_type, threshold, basis, filter } = ctx.value;
+		const { feature_id, threshold_type, threshold, basis, filter } = ctx.value;
 
 		// remaining_percentage is bounded by the denominator, so > 100 can never fire.
 		if (threshold_type === "remaining_percentage" && threshold > 100) {
@@ -57,6 +55,15 @@ export const DbUsageAlertSchema = z
 				input: threshold,
 				path: ["threshold"],
 				message: "Threshold must be between 0 and 100 for remaining_percentage",
+			});
+		}
+
+		if (basis === "usage_limit" && !feature_id) {
+			ctx.issues.push({
+				code: "custom",
+				input: feature_id,
+				path: ["feature_id"],
+				message: "feature_id is required when basis is usage_limit",
 			});
 		}
 

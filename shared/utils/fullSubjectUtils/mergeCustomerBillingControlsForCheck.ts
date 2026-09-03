@@ -6,10 +6,8 @@ import type {
 	DbSpendLimit,
 	DbUsageLimit,
 } from "../../models/cusModels/billingControls/customerBillingControls.js";
-import {
-	usageLimitFilterKey,
-	usageLimitIdentity,
-} from "../../models/cusModels/billingControls/usageLimit.js";
+import { usageLimitIdentity } from "../../models/cusModels/billingControls/identity/usageLimitIdentity.js";
+import { usageLimitFilterKey } from "../../models/cusModels/billingControls/usageLimit.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";

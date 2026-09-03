@@ -304,9 +304,13 @@ export {
 export { isUsageLimitBasisAlert } from "./classify/isUsageLimitBasisAlert.js";
 export { usageAlertIdentity } from "./identity/usageAlertIdentity.js";
 export { usageAlertTargetLimitIdentity } from "./identity/usageAlertTargetLimitIdentity.js";
+export { usageLimitIdentity } from "./identity/usageLimitIdentity.js";
 export {
+	BALANCE_BASES,
+	type BalanceBasis,
 	type DbUsageAlertLike,
 	type DbUsageAlertParams,
+	DEFAULT_USAGE_ALERT_BASIS,
 	USAGE_ALERT_BASES,
 	type UsageAlertBasis,
 	UsageAlertBasisSchema,
@@ -326,5 +330,4 @@ export {
 	UsageLimitFilterSchema,
 	usageLimitFilterKey,
 	usageLimitFilterMatchesProperties,
-	usageLimitIdentity,
 } from "./usageLimit.js";

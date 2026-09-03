@@ -103,11 +103,6 @@ export const usageLimitFilterKey = (
 		.join("&");
 };
 
-export const usageLimitIdentity = (
-	usageLimit: Pick<DbUsageLimitLike, "feature_id" | "filter">,
-): string =>
-	`${usageLimit.feature_id}|${usageLimitFilterKey(usageLimit.filter)}`;
-
 /**
  * Whether an event's properties satisfy a limit's filter: every condition
  * must match (AND), scalar values compare string-normalized. No filter

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-	findUnresolvableUsageLimitAlerts,
+	filterUnresolvableUsageLimitAlerts,
 	usageAlertIdentity,
 } from "@autumn/shared";
 
@@ -51,7 +51,7 @@ describe("usageAlertIdentity", () => {
 	});
 });
 
-describe("findUnresolvableUsageLimitAlerts", () => {
+describe("filterUnresolvableUsageLimitAlerts", () => {
 	const dailyLimit = (filter?: { properties: Record<string, string> }) => ({
 		feature_id: "messages",
 		...(filter && { filter }),
@@ -59,7 +59,7 @@ describe("findUnresolvableUsageLimitAlerts", () => {
 
 	test("alerts on balance-backed bases never need a limit", () => {
 		expect(
-			findUnresolvableUsageLimitAlerts({
+			filterUnresolvableUsageLimitAlerts({
 				usageAlerts: [
 					alert({ basis: "balance" }),
 					alert({ basis: "included" }),
@@ -76,7 +76,7 @@ describe("findUnresolvableUsageLimitAlerts", () => {
 			alert({ basis: "usage_limit", filter: { properties: { key: "a" } } }),
 			alert({ basis: "usage_limit", filter: { properties: { key: "b" } } }),
 		];
-		const unresolvable = findUnresolvableUsageLimitAlerts({
+		const unresolvable = filterUnresolvableUsageLimitAlerts({
 			usageAlerts,
 			usageLimitLists: [
 				[dailyLimit()],

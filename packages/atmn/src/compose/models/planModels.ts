@@ -79,6 +79,8 @@ type UsageLimit = {
 	enabled?: boolean;
 	limit: number;
 	interval: "day" | "week" | "month" | "year";
+	anchor?: "billing_cycle" | "utc";
+	filter?: UsageLimitFilter;
 };
 
 type UsageLimitFilter = {

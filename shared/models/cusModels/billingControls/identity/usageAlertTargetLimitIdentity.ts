@@ -1,5 +1,5 @@
 import type { DbUsageAlertLike } from "../usageAlert.js";
-import { usageLimitIdentity } from "../usageLimit.js";
+import { usageLimitIdentity } from "./usageLimitIdentity.js";
 
 export const usageAlertTargetLimitIdentity = (
 	alert: DbUsageAlertLike,
