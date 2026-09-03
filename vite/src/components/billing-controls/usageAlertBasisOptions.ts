@@ -25,7 +25,7 @@ const basisToOption = (basis: UsageAlertBasis): UsageAlertBasisOption => ({
 export const ALL_BASIS_OPTIONS: UsageAlertBasisOption[] =
 	USAGE_ALERT_BASES.map(basisToOption);
 
-/** Org alerts have no single cap to measure, so usage_limit is not offered. */
+// Org alerts have no single cap to measure.
 export const BALANCE_BASIS_OPTIONS: UsageAlertBasisOption[] =
 	USAGE_ALERT_BASES.filter((basis) => basis !== "usage_limit").map(
 		basisToOption,
