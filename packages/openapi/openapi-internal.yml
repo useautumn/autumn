@@ -1517,7 +1517,9 @@ components:
           type: string
           description: Unique identifier for the plan.
         internal_id:
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
           x-internal: true
         name:
           type: string
@@ -9173,7 +9175,9 @@ paths:
                     type: string
                     description: Unique identifier for the plan.
                   internal_id:
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                     x-internal: true
                   name:
                     type: string
@@ -11275,7 +11279,9 @@ paths:
                     type: string
                     description: Unique identifier for the plan.
                   internal_id:
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                     x-internal: true
                   name:
                     type: string
@@ -13358,7 +13364,9 @@ paths:
                           type: string
                           description: Unique identifier for the plan.
                         internal_id:
-                          type: string
+                          anyOf:
+                            - type: string
+                            - type: "null"
                           x-internal: true
                         name:
                           type: string
@@ -17098,7 +17106,9 @@ paths:
                     type: string
                     description: Unique identifier for the plan.
                   internal_id:
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                     x-internal: true
                   name:
                     type: string
@@ -49079,6 +49089,10 @@ paths:
                 include_archived:
                   type: boolean
                   description: If true, includes archived plans in the response.
+                include_versions:
+                  type: boolean
+                  description: Return every non-archived version of each plan, not only the active
+                    one. Rows carry active, version and version_slug.
               title: GetCatalogParams
       responses:
         "200":
@@ -49295,7 +49309,9 @@ paths:
                           type: string
                           description: Unique identifier for the plan.
                         internal_id:
-                          type: string
+                          anyOf:
+                            - type: string
+                            - type: "null"
                           x-internal: true
                         name:
                           type: string
@@ -52204,7 +52220,9 @@ paths:
                                     type: string
                                     description: Unique identifier for the plan.
                                   internal_id:
-                                    type: string
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
                                     x-internal: true
                                   name:
                                     type: string
@@ -55610,7 +55628,8 @@ paths:
                           anyOf:
                             - type: string
                             - type: "null"
-                          description: Stable id of this row; null when the row is minted by this update.
+                          description: Stable id of this row. Null when the row is minted by this update —
+                            the applied result carries the id it received.
                         new_plan_id:
                           type: string
                           description: Present only when this row's public plan id changes.
@@ -59017,7 +59036,8 @@ paths:
                                 anyOf:
                                   - type: string
                                   - type: "null"
-                                description: Stable id of this row; null when the row is minted by this update.
+                                description: Stable id of this row. Null when the row is minted by this update —
+                                  the applied result carries the id it received.
                               new_plan_id:
                                 type: string
                                 description: Present only when this row's public plan id changes.
@@ -61245,7 +61265,9 @@ paths:
                                       anyOf:
                                         - type: string
                                         - type: "null"
-                                      description: Stable id of this row; null when the row is minted by this update.
+                                      description: Stable id of this row. Null when the row is minted by this update —
+                                        the applied result carries the id it
+                                        received.
                                     new_plan_id:
                                       type: string
                                       description: Present only when this row's public plan id changes.
@@ -62217,7 +62239,9 @@ paths:
                                             anyOf:
                                               - type: string
                                               - type: "null"
-                                            description: Stable id of this row; null when the row is minted by this update.
+                                            description: Stable id of this row. Null when the row is minted by this update —
+                                              the applied result carries the id
+                                              it received.
                                           new_plan_id:
                                             type: string
                                             description: Present only when this row's public plan id changes.
@@ -62394,7 +62418,9 @@ paths:
                                       anyOf:
                                         - type: string
                                         - type: "null"
-                                      description: Stable id of this row; null when the row is minted by this update.
+                                      description: Stable id of this row. Null when the row is minted by this update —
+                                        the applied result carries the id it
+                                        received.
                                     new_plan_id:
                                       type: string
                                       description: Present only when this row's public plan id changes.
@@ -63362,7 +63388,9 @@ paths:
                                             anyOf:
                                               - type: string
                                               - type: "null"
-                                            description: Stable id of this row; null when the row is minted by this update.
+                                            description: Stable id of this row. Null when the row is minted by this update —
+                                              the applied result carries the id
+                                              it received.
                                           new_plan_id:
                                             type: string
                                             description: Present only when this row's public plan id changes.
@@ -63564,7 +63592,8 @@ paths:
                                 anyOf:
                                   - type: string
                                   - type: "null"
-                                description: Stable id of this row; null when the row is minted by this update.
+                                description: Stable id of this row. Null when the row is minted by this update —
+                                  the applied result carries the id it received.
                               new_plan_id:
                                 type: string
                                 description: Present only when this row's public plan id changes.
@@ -65841,7 +65870,9 @@ paths:
                                       anyOf:
                                         - type: string
                                         - type: "null"
-                                      description: Stable id of this row; null when the row is minted by this update.
+                                      description: Stable id of this row. Null when the row is minted by this update —
+                                        the applied result carries the id it
+                                        received.
                                     new_plan_id:
                                       type: string
                                       description: Present only when this row's public plan id changes.
@@ -66792,7 +66823,8 @@ paths:
                                 anyOf:
                                   - type: string
                                   - type: "null"
-                                description: Stable id of this row; null when the row is minted by this update.
+                                description: Stable id of this row. Null when the row is minted by this update —
+                                  the applied result carries the id it received.
                               new_plan_id:
                                 type: string
                                 description: Present only when this row's public plan id changes.
@@ -69066,7 +69098,9 @@ paths:
                                       anyOf:
                                         - type: string
                                         - type: "null"
-                                      description: Stable id of this row; null when the row is minted by this update.
+                                      description: Stable id of this row. Null when the row is minted by this update —
+                                        the applied result carries the id it
+                                        received.
                                     new_plan_id:
                                       type: string
                                       description: Present only when this row's public plan id changes.
@@ -70405,8 +70439,8 @@ paths:
                           anyOf:
                             - type: string
                             - type: "null"
-                          description: Stable id of the row this preview is about; on create, the id the
-                            row will receive.
+                          description: Stable id of the row this preview is about. Null on create — the
+                            applied result carries the id the row received.
                         name:
                           type: string
                         action:
