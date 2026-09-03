@@ -17,8 +17,6 @@ import { getCurrentUsageWindowUsage } from "../usageWindowUtils/getCurrentUsageW
 import { fullSubjectToUsageWindowLimits } from "./fullSubjectToUsageWindowLimits.js";
 import { resolveBillingControl } from "./planBillingControlUtils.js";
 
-export { usageLimitIdentity };
-
 export const mergeControlsByFeature = <
 	TControl extends { feature_id?: string },
 	TKey extends BillingControlKey,
