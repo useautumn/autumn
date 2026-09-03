@@ -107,6 +107,7 @@ export const fireTrackWebhooks = ({
 				oldEvalSubject,
 				newEvalSubject,
 				newFullCus,
+				newFullSubject,
 				feature: affectedFeature,
 				entityId,
 				eventProperties,
