@@ -94,11 +94,13 @@ const serialize = ({
 	path,
 	index,
 	indent,
+	includeMappings,
 }: {
 	value: unknown;
 	path: string;
 	index: PathIndex;
 	indent: string;
+	includeMappings: boolean;
 }): string => {
 	if (typeof value === "string") return JSON.stringify(value);
 	if (typeof value === "number" || typeof value === "boolean")
@@ -109,7 +111,7 @@ const serialize = ({
 		if (value.length === 0) return "[]";
 		const items = value.map(
 			(entry) =>
-				`${indent}\t${serialize({ value: entry, path, index, indent: `${indent}\t` })},`,
+				`${indent}\t${serialize({ includeMappings, value: entry, path, index, indent: `${indent}\t` })},`,
 		);
 		return `[\n${items.join("\n")}\n${indent}]`;
 	}
@@ -120,14 +122,18 @@ const serialize = ({
 
 	const childPathOf = (key: string): string =>
 		isRecord ? `${path}.*` : `${path}.${key}`;
+	// A null from the server means unset — omission says the same on the wire.
 	const entries = Object.entries(value as Record<string, unknown>).filter(
 		([key, entry]) =>
-			entry !== undefined && (isRecord || index.paths.has(childPathOf(key))),
+			entry !== undefined &&
+			entry !== null &&
+			(includeMappings || key !== "processors") &&
+			(isRecord || index.paths.has(childPathOf(key))),
 	);
 	if (entries.length === 0) return "{}";
 	const items = entries.map(([key, entry]) => {
 		const childPath = childPathOf(key);
-		return `${indent}\t${keyText(key)}: ${serialize({ value: entry, path: childPath, index, indent: `${indent}\t` })},`;
+		return `${indent}\t${keyText(key)}: ${serialize({ includeMappings, value: entry, path: childPath, index, indent: `${indent}\t` })},`;
 	});
 	return `{\n${items.join("\n")}\n${indent}}`;
 };
@@ -188,9 +194,9 @@ export const emitFixture = ({
 	const lines: string[] = [`${spec.builder}({`];
 	for (const key of spec.keys) {
 		const value = rowValueOf({ spec, key, row, includeMappings });
-		if (value === undefined) continue;
+		if (value === undefined || value === null) continue;
 		lines.push(
-			`${indent}\t${keyText(key)}: ${serialize({ value, path: key, index, indent: `${indent}\t` })},`,
+			`${indent}\t${keyText(key)}: ${serialize({ includeMappings, value, path: key, index, indent: `${indent}\t` })},`,
 		);
 	}
 	lines.push(`${indent}})`);
