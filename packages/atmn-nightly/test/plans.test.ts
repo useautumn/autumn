@@ -89,3 +89,81 @@ test("with features omitted, item references are not checked: absent means not m
 		atmn({ plans: [plan({ planId: "pro", items: [{ featureId: "ghost" }] })] }),
 	).not.toThrow();
 });
+
+test("a volume-tiered item price must be prepaid", () => {
+	const issues = issuesOf(() =>
+		atmn({
+			features: [
+				feature({
+					featureId: "api",
+					name: "API calls",
+					type: "metered",
+					consumable: true,
+				}),
+			],
+			plans: [
+				plan({
+					planId: "pro",
+					items: [
+						{
+							featureId: "api",
+							price: {
+								billingMethod: "usage_based",
+								tierBehavior: "volume",
+								tiers: [{ to: "inf", amount: 1 }],
+								interval: "month",
+							},
+						},
+					],
+				}),
+			],
+		}),
+	);
+	expect(issues).toEqual([
+		{
+			path: 'plan "pro" › item "api" › price',
+			message:
+				'billingMethod must be "prepaid" when tierBehavior is "volume". Volume tiers are prepaid-only.',
+		},
+	]);
+});
+
+test("featureOverride is only honoured on classic credit-system features", () => {
+	const items = [
+		{ featureId: "credits", featureOverride: { creditSchema: [] } },
+	];
+
+	const withMetered = issuesOf(() =>
+		atmn({
+			features: [
+				feature({
+					featureId: "credits",
+					name: "Credits",
+					type: "metered",
+					consumable: true,
+				}),
+			],
+			plans: [plan({ planId: "pro", items })],
+		}),
+	);
+	expect(withMetered).toEqual([
+		{
+			path: 'plan "pro" › item "credits"',
+			message:
+				'featureOverride needs features "credits" to have type "credit_system" — got "metered". featureOverride is only honoured on classic credit-system features.',
+		},
+	]);
+
+	expect(() =>
+		atmn({
+			features: [
+				feature({
+					featureId: "credits",
+					name: "Credits",
+					type: "credit_system",
+				}),
+			],
+			plans: [plan({ planId: "pro", items })],
+		}),
+	).not.toThrow();
+});

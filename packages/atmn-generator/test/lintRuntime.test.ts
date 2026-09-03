@@ -255,6 +255,81 @@ test("exists checks a present collection and skips an absent one", () => {
 	expect(messagesWith({ rules, entry, document: {} })).toEqual([]);
 });
 
+test("valueWhen", () => {
+	const rules = [
+		{
+			kind: "valueWhen" as const,
+			when: "tierBehavior",
+			equals: "volume",
+			field: "billingMethod",
+			mustBe: "prepaid",
+			because: "Because.",
+		},
+	];
+	expect(messagesWith({ rules, entry: { tierBehavior: "graduated" } })).toEqual(
+		[],
+	);
+	expect(
+		messagesWith({
+			rules,
+			entry: { tierBehavior: "volume", billingMethod: "prepaid" },
+		}),
+	).toEqual([]);
+	expect(messagesWith({ rules, entry: { tierBehavior: "volume" } })).toEqual(
+		[],
+	);
+	expect(
+		messagesWith({
+			rules,
+			entry: { tierBehavior: "volume", billingMethod: "usage_based" },
+		}),
+	).toEqual([
+		'billingMethod must be "prepaid" when tierBehavior is "volume". Because.',
+	]);
+});
+
+test("targetHas checks a present collection, skips an absent one or an unmatched row", () => {
+	const rules = [
+		{
+			kind: "targetHas" as const,
+			when: "featureOverride",
+			field: "featureId",
+			in: "features",
+			matching: "featureId",
+			target: "type",
+			equals: "credit_system",
+			because: "Because.",
+		},
+	];
+	const entry = { featureId: "seats", featureOverride: {} };
+	expect(messagesWith({ rules, entry: { featureId: "seats" } })).toEqual([]);
+	expect(
+		messagesWith({
+			rules,
+			entry,
+			document: { features: [{ featureId: "seats", type: "credit_system" }] },
+		}),
+	).toEqual([]);
+	// Omitted means "not mine": the exists rule owns unmatched references.
+	expect(messagesWith({ rules, entry, document: {} })).toEqual([]);
+	expect(
+		messagesWith({
+			rules,
+			entry,
+			document: { features: [{ featureId: "other", type: "metered" }] },
+		}),
+	).toEqual([]);
+	expect(
+		messagesWith({
+			rules,
+			entry,
+			document: { features: [{ featureId: "seats", type: "metered" }] },
+		}),
+	).toEqual([
+		'featureOverride needs features "seats" to have type "credit_system" — got "metered". Because.',
+	]);
+});
+
 test("compare", () => {
 	const rules = [
 		{
