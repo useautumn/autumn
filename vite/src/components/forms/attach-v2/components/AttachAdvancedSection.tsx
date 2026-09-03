@@ -141,6 +141,7 @@ export function AttachAdvancedSection() {
 		trialEnabled,
 		startDate,
 		endDate,
+		refundLastPayment,
 	} = formValues;
 	const hasCustomerEntitlements =
 		customer?.customer_products?.some(
@@ -548,6 +549,26 @@ export function AttachAdvancedSection() {
 					}
 				/>
 			)}
+
+			{rules.proration.visible &&
+				showProrationBehavior &&
+				effectiveProrationBehavior === "prorate_immediately" && (
+					<ConfigRow
+						title="Refund Instead of Credit"
+						description="Return prorated credit to the payment method rather than holding it on the customer's balance"
+						action={
+							<Switch
+								checked={refundLastPayment === "prorated"}
+								onCheckedChange={(checked) =>
+									form.setFieldValue(
+										"refundLastPayment",
+										checked ? "prorated" : null,
+									)
+								}
+							/>
+						}
+					/>
+				)}
 
 			{rules.planSchedule.visible && (
 				<AdvancedToggleRow

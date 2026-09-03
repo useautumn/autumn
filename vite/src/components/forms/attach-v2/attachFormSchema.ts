@@ -56,6 +56,7 @@ export const AttachFormSchema = z.object({
 	startDate: z.number().nullable(),
 	endDate: z.number().nullable(),
 	prorationBehavior: z.custom<BillingBehavior>().nullable(),
+	refundLastPayment: z.enum(["prorated", "full"]).nullable(),
 	redirectMode: RedirectModeSchema,
 	newBillingSubscription: z.boolean(),
 	resetBillingCycle: z.boolean(),

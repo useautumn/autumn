@@ -6,6 +6,7 @@ import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
+import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
@@ -35,6 +36,10 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	// - 'prorate_immediately' (default): Invoice line items are charged immediately
 	// - 'next_cycle_only': Do NOT create any charges due to the attach
 	billing_behavior: BillingBehaviorSchema.optional(),
+
+	// Pay prorated credit from the outgoing plan back to the payment method
+	// instead of leaving it on the customer's balance.
+	refund_last_payment: RefundLastPaymentSchema.optional(),
 
 	// For importing an existing subscription...?
 	processor_subscription_id: z.string().optional(),

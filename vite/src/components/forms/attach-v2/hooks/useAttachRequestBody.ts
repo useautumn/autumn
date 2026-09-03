@@ -47,6 +47,7 @@ export interface BuildAttachRequestBodyParams {
 	startDate: number | null;
 	endDate: number | null;
 	prorationBehavior: BillingBehavior | null;
+	refundLastPayment: "prorated" | "full" | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
 	resetBillingCycle: boolean;
@@ -85,6 +86,7 @@ export function buildAttachRequestBody({
 	startDate,
 	endDate,
 	prorationBehavior,
+	refundLastPayment,
 	redirectMode,
 	newBillingSubscription,
 	resetBillingCycle,
@@ -197,6 +199,10 @@ export function buildAttachRequestBody({
 		body.billing_behavior = normalizedProrationBehavior;
 	}
 
+	if (refundLastPayment) {
+		body.refund_last_payment = refundLastPayment;
+	}
+
 	if (newBillingSubscription) {
 		body.new_billing_subscription = true;
 	}
@@ -274,6 +280,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		startDate,
 		endDate,
 		prorationBehavior,
+		refundLastPayment,
 		redirectMode,
 		newBillingSubscription,
 		resetBillingCycle,
@@ -313,6 +320,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				startDate,
 				endDate,
 				prorationBehavior,
+				refundLastPayment,
 				redirectMode,
 				newBillingSubscription,
 				resetBillingCycle,
@@ -349,6 +357,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			startDate,
 			endDate,
 			prorationBehavior,
+			refundLastPayment,
 			redirectMode,
 			newBillingSubscription,
 			resetBillingCycle,

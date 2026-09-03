@@ -38,6 +38,7 @@ export function useAttachForm({
 			startDate: null,
 			endDate: null,
 			prorationBehavior: null,
+			refundLastPayment: null,
 			redirectMode: "if_required",
 			newBillingSubscription: false,
 			resetBillingCycle: false,
