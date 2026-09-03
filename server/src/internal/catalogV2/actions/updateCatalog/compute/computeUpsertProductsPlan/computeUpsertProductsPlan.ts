@@ -5,6 +5,7 @@ import { computeUpsertProductPlan } from "@/internal/catalogV2/actions/updateCat
 import { indexDeclaredVariants } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/shouldUnlinkDirectVariant";
 import { deriveDirectIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveDirectIntents";
 import { deriveIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveIntents";
+import { mergeDeclaredProcessors } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/mergeDeclaredProcessors";
 import type { CatalogComputeStep } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import {
@@ -14,8 +15,10 @@ import {
 import { createProductStatesFold } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/createProductStatesFold";
 
 /**
- * Derive direct intents → fold each → deriveIntents onto the same pending list.
- * First claim wins. planLicenses compute last, once all plan content is final.
+ * Derive direct intents → merge stated processors across each lineage → fold
+ * each → deriveIntents onto the same pending list. First claim wins, so the
+ * merge has to land before every direct intent is claimed. planLicenses
+ * compute last, once all plan content is final.
  */
 export const computeUpsertProductsPlan = ({
 	ctx,
@@ -26,14 +29,22 @@ export const computeUpsertProductsPlan = ({
 	catalogContext: UpdateCatalogContext;
 	params: UpdateCatalogParams;
 }): CatalogComputeStep => {
-	const { productStatesContext } = catalogContext;
+	const { productStatesContext, internalIdRefs } = catalogContext;
 
-	const pendingIntents = deriveDirectIntents({
+	// A row the payload named is claimed before the fold, so the derived
+	// mapping fan-out can never reach it — fill it in up front instead.
+	const pendingIntents = mergeDeclaredProcessors({
+		intents: deriveDirectIntents({
+			params,
+			productStatesContext,
+			internalIdRefs,
+		}),
 		params,
 		productStatesContext,
+		internalIdRefs,
 	});
 	const declaredVariants = indexDeclaredVariants({
-		plans: params.plans,
+		plans: params.plans ?? [],
 		productStatesContext,
 	});
 	const claimedProductKeys = claimProductKeys({ intents: pendingIntents });
@@ -54,6 +65,7 @@ export const computeUpsertProductsPlan = ({
 			productStatesContext: fold.projected,
 			claimedProductKeys,
 			declaredVariants,
+			fullState: params.skip_deletions === false,
 		});
 
 		for (const upsert of upsertProductPlans) {

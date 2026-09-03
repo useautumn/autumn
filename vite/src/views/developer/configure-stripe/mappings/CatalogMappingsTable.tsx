@@ -34,7 +34,6 @@ export const CatalogMappingsTable = ({
 			<div className="flex items-center gap-3 border-border/60 border-b py-2 text-tertiary-foreground text-xs">
 				<span className="flex-1">Plan</span>
 				<span className="w-[200px] shrink-0">Stripe product</span>
-				<span className="w-[72px] shrink-0 text-right">Items</span>
 				<span className="w-[104px] shrink-0 text-right">Status</span>
 				<span className="w-4 shrink-0" />
 			</div>
@@ -44,10 +43,6 @@ export const CatalogMappingsTable = ({
 						mappings,
 						planId: group.base.id,
 					});
-					const itemMappings = planMapping?.item_mappings ?? [];
-					const mappedItems = itemMappings.filter(
-						(item) => item.mapping.stripe_product_id,
-					).length;
 					const baseStripeProductId =
 						planMapping?.mapping.stripe_product_id ?? null;
 					const rollup = rollupPlanStatus({
@@ -94,11 +89,6 @@ export const CatalogMappingsTable = ({
 									? (stripeProductsById.get(baseStripeProductId)?.name ??
 										baseStripeProductId)
 									: "No Stripe product"}
-							</span>
-							<span className="w-[72px] shrink-0 text-right text-tertiary-foreground text-xs tabular-nums">
-								{itemMappings.length > 0
-									? `${mappedItems}/${itemMappings.length}`
-									: "—"}
 							</span>
 							<span className="flex w-[104px] shrink-0 justify-end">
 								{rollup.pending ? (

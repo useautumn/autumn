@@ -45,8 +45,10 @@ export interface ApiPlanParams {
 
 export interface ApiPlanItemParams {
 	feature_id: string;
+	entity_feature_id?: string;
 	included?: number;
 	unlimited?: boolean;
+	pooled?: boolean;
 	reset?: {
 		interval: string;
 		interval_count?: number;
@@ -85,12 +87,20 @@ export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 		feature_id: planItem.featureId,
 	};
 
+	if (planItem.entityFeatureId != null) {
+		result.entity_feature_id = planItem.entityFeatureId;
+	}
+
 	if (planItem.included !== undefined) {
 		result.included = planItem.included;
 	}
 
 	if (planItem.unlimited !== undefined) {
 		result.unlimited = planItem.unlimited;
+	}
+
+	if (planItem.pooled === true) {
+		result.pooled = true;
 	}
 
 	if (planItem.reset) {

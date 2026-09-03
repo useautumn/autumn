@@ -19,6 +19,12 @@ export const BasePriceSchema = z.object({
 	}),
 });
 
+/**
+ * The base price params, without any processor mapping. Adoption of an existing
+ * Stripe price is deliberately scoped to the catalog path, so the `processors`
+ * field is added by `CatalogBasePriceParamsSchema` instead of living here —
+ * attach/customize/migration paths must not be able to state one.
+ */
 export const BasePriceParamsSchema = BasePriceSchema.omit({
 	display: true,
 })

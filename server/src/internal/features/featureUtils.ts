@@ -230,6 +230,14 @@ export const validateCreditSystemSchemaReferences = ({
 			});
 		}
 
+		if (referenced.type === FeatureType.Boolean) {
+			throw new RecaseError({
+				message: `Credit system schema cannot reference boolean feature ${referencedId}. Only consumable (single-use) metered or AI credit features are allowed.`,
+				code: ErrCode.InvalidFeature,
+				statusCode: 400,
+			});
+		}
+
 		if (
 			referenced.type === FeatureType.Metered &&
 			referenced.config?.usage_type === FeatureUsageType.Continuous

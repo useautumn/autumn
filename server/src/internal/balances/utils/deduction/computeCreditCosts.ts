@@ -2,6 +2,7 @@ import {
 	AllowanceType,
 	type CreditSchemaItem,
 	creditSystemContainsFeature,
+	entitlementToCreditSystem,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -47,12 +48,17 @@ export const computeCreditCosts = ({
 			continue;
 		}
 
+		// Plan-item feature_override supersedes the catalog config for this cusEnt.
+		const creditSystem = entitlementToCreditSystem({
+			entitlement: ce.entitlement,
+		});
+
 		let rateCard: CreditRateCard | undefined;
 		try {
 			rateCard = !deduction.tokens
 				? getCreditRateCard({
 						sourceFeature: deduction.feature,
-						creditSystem: ce.entitlement.feature,
+						creditSystem,
 					})
 				: undefined;
 			if (
@@ -85,17 +91,20 @@ export const computeCreditCosts = ({
 			costMap.set(ce.id, {
 				creditCost: getCreditCost({
 					featureId: deduction.feature.id,
-					creditSystem: ce.entitlement.feature,
+					creditSystem,
 					amount: deduction.tokens?.cost,
 				}),
 				...(rateCard ? { rateCard } : {}),
 			});
 		} catch (error) {
-			// A configured rate that cannot be evaluated must fail closed.
+			// A configured rate that cannot be evaluated must fail closed. An item
+			// override rides the same cached row as the balance, so the staleness
+			// fallback below never applies to it — the override is authoritative.
 			if (
 				rateCard ||
+				ce.entitlement.feature_override?.schema ||
 				creditSystemContainsFeature({
-					creditSystem: ce.entitlement.feature,
+					creditSystem,
 					meteredFeatureId: deduction.feature.id,
 				})
 			) {

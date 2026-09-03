@@ -1,7 +1,7 @@
 import {
 	type ApiBalanceV1,
 	type FullSubject,
-	getRelevantFeatures,
+	fullSubjectToRelevantFeatures,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
@@ -30,9 +30,10 @@ export const deductionToBalancesResponseV2 = async ({
 	const balances: Record<string, ApiBalanceV1 | null> = {};
 
 	for (const deduction of featureDeductions) {
-		const relevantFeatures = getRelevantFeatures({
-			features: ctx.features,
+		const relevantFeatures = fullSubjectToRelevantFeatures({
+			fullSubject,
 			featureId: deduction.feature.id,
+			features: ctx.features,
 		});
 
 		for (const feature of relevantFeatures) {

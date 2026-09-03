@@ -16,7 +16,7 @@ export const indexDeclaredVariants = ({
 	plans,
 	productStatesContext,
 }: {
-	plans: UpdateCatalogParams["plans"];
+	plans: NonNullable<UpdateCatalogParams["plans"]>;
 	productStatesContext: ProductStatesContext;
 }): DeclaredVariantsMap => {
 	const rowToVariantPlanIds = new Map<string, Set<string>>();
@@ -79,5 +79,4 @@ export const declaredParentInternalIdForPlan = ({
 }: {
 	planId: string;
 	declaredVariants?: DeclaredVariantsMap;
-}): string | undefined =>
-	declaredVariants?.variantPlanIdToRow.get(planId);
+}): string | undefined => declaredVariants?.variantPlanIdToRow.get(planId);

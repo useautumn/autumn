@@ -12,9 +12,12 @@ import {
 	getProductItemDisplay,
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
+	priceConfigToPriceProcessors,
 	productItemsToPlanItemsV1,
+	productToPlanProcessors,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
+	type RevenueCatPlanMapping,
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -54,6 +57,14 @@ type GetPlanResponseArgs = {
 	basePlan?: ApiPlanV1;
 	baseFullProduct?: FullProduct;
 	resolveBaseFullProduct?: boolean;
+	/** RevenueCat mappings live in their own table, so the row is read in. */
+	revenuecatMapping?: RevenueCatPlanMapping | null;
+	/**
+	 * Every mapping the caller loaded, keyed by plan id. A variant is its own
+	 * product with its own plan id, so it owns its own row — pass the map when
+	 * rendering variants so each nested plan can find its own mapping.
+	 */
+	revenuecatMappings?: ReadonlyMap<string, RevenueCatPlanMapping>;
 };
 
 type PlanExpansions = {
@@ -89,6 +100,8 @@ export async function getPlanResponse({
 	basePlan,
 	baseFullProduct,
 	resolveBaseFullProduct = true,
+	revenuecatMapping,
+	revenuecatMappings,
 	expandLicensePlans = false,
 	expandVariants = false,
 }: GetPlanResponseArgs & PlanExpansions): Promise<
@@ -109,6 +122,9 @@ export async function getPlanResponse({
 
 	// 4. Extract base price using existing helper
 	const basePriceItem = productV2ToBasePrice({ product: productV2 as any });
+	const basePriceProcessors = priceConfigToPriceProcessors({
+		config: basePriceItem?.price_config,
+	});
 	const basePrice: ApiPlanV1["price"] | null = basePriceItem
 		? {
 				amount: basePriceItem.price,
@@ -126,6 +142,7 @@ export async function getPlanResponse({
 					features,
 					currency,
 				}),
+				...(basePriceProcessors ? { processors: basePriceProcessors } : {}),
 			}
 		: null;
 
@@ -174,8 +191,13 @@ export async function getPlanResponse({
 		: undefined;
 
 	// 9. Build Plan response
+	const planProcessors = productToPlanProcessors({
+		product,
+		revenuecatMapping: revenuecatMapping ?? revenuecatMappings?.get(product.id),
+	});
 	const plan = {
 		id: product.id,
+		internal_id: product.internal_id,
 		name: product.name || "",
 		description: product.description || null,
 		group: product.group || null,
@@ -200,6 +222,7 @@ export async function getPlanResponse({
 		metadata: product.metadata ?? {},
 
 		customer_eligibility: customerEligibility,
+		...(planProcessors ? { processors: planProcessors } : {}),
 	} satisfies ApiPlanV1;
 
 	// 10. Graph edges: up-link to the base plan, down-links to variants.
@@ -225,6 +248,7 @@ export async function getPlanResponse({
 							features,
 							expand,
 							currency,
+							revenuecatMappings,
 						}),
 					),
 				)

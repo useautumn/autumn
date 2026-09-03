@@ -61,7 +61,7 @@ function SheetAccordionItem({
 	return (
 		<AccordionPrimitive.Item value={value} className={cn("", className)}>
 			<AccordionPrimitive.Header className="flex">
-				<AccordionPrimitive.Trigger className="flex flex-1 items-start justify-between gap-4 px-4 py-3 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[aria-expanded=true]>svg]:rotate-180 hover:bg-accent/50">
+				<AccordionPrimitive.Trigger className="flex flex-1 cursor-pointer items-start justify-between gap-4 px-4 py-3 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[aria-expanded=true]>svg]:rotate-180 hover:bg-accent/50">
 					<div className="flex flex-col gap-1">
 						<h3 className={cn("text-sm font-medium", titleClassName)}>
 							{title}

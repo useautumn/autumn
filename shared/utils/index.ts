@@ -54,8 +54,10 @@ export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduc
 export * from "./productUtils/classifyProduct/isEligibleDefaultProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
 export * from "./productUtils/compareProduct/productDetailsAreSame";
+export * from "./productUtils/compareProduct/productProcessorsAreSame";
 export * from "./productUtils/convertProduct/productKey";
 export * from "./productUtils/convertProduct/productToEffectivePrices";
+export * from "./productUtils/convertProduct/productToPlanProcessors";
 export * from "./productUtils/convertProduct/productToProductKey";
 export * from "./productUtils/convertProduct/productToReplacementKey";
 // Product utils
@@ -72,6 +74,7 @@ export * from "./productUtils/priceUtils/match/copyStripeResourcesToMatchingPric
 export * from "./productUtils/priceUtils/match/getPriceStripeReuseLevel";
 export * from "./productUtils/priceUtils/match/priceStripeObjectsMatch";
 export * from "./productUtils/priceUtils/match/stripePriceIdForInitializedPrice";
+export * from "./productUtils/priceUtils/match/stripePriceMappingSlots";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";
 export * from "./productV2Utils/productItemUtils/getItemType";

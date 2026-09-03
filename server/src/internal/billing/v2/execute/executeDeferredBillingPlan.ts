@@ -58,7 +58,7 @@ export const executeDeferredBillingPlan = async ({
 		});
 	}
 
-	await promotePendingCustomerProducts({
+	const autumnBillingPlanToExecute = await promotePendingCustomerProducts({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		fullCustomer: billingContext.fullCustomer,
@@ -67,7 +67,7 @@ export const executeDeferredBillingPlan = async ({
 
 	await executeAutumnBillingPlan({
 		ctx,
-		autumnBillingPlan: billingPlan.autumn,
+		autumnBillingPlan: autumnBillingPlanToExecute,
 		stripeInvoice: stripeBillingResult.stripeInvoice ?? stripeInvoice,
 		stripeInvoiceItems: stripeBillingResult.stripeInvoiceItems,
 		autumnInvoice: stripeBillingResult.autumnInvoice,

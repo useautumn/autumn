@@ -1,7 +1,6 @@
-import type { CreditSchemaItem, Feature } from "@autumn/shared";
+import type { CreditSchemaItem } from "@autumn/shared";
 import { FormLabel, IconButton, Switch } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
-import { useState } from "react";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCreditSchema } from "../hooks/useCreditSchema";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
@@ -17,17 +16,15 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 		schema,
 		schemaKeys,
 		allSchemaCandidateFeatures,
+		availableFeaturesFor,
+		expandedKey,
+		toggleExpandedKey,
 		invoiceCredit,
 		setInvoiceCredit,
 		setSchemaItem,
 		addSchemaItem,
 		removeSchemaItem,
 	} = useCreditSchema(form);
-	const [expandedKey, setExpandedKey] = useState<string | null>(null);
-
-	const usedFeatureIds = new Set(
-		schema.map((schemaItem: CreditSchemaItem) => schemaItem.metered_feature_id),
-	);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -51,25 +48,18 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 				<FormLabel>Rate card</FormLabel>
 
 				{schema.map((item: CreditSchemaItem, index: number) => {
-					const availableFeatures = allSchemaCandidateFeatures.filter(
-						(feature: Feature) =>
-							feature.id === item.metered_feature_id ||
-							!usedFeatureIds.has(feature.id),
-					);
 					const rowKey = schemaKeys[index];
 
 					return (
 						<CreditRateCardRow
 							key={rowKey}
 							item={item}
-							availableFeatures={availableFeatures}
+							availableFeatures={availableFeaturesFor(item)}
 							allFeatures={allSchemaCandidateFeatures}
 							onChange={(next) => setSchemaItem({ index, item: next })}
 							onRemove={() => removeSchemaItem(index)}
 							isExpanded={expandedKey === rowKey}
-							onToggle={() =>
-								setExpandedKey(expandedKey === rowKey ? null : rowKey)
-							}
+							onToggle={() => toggleExpandedKey(rowKey)}
 							showRateCardControls={isAdmin}
 						/>
 					);
@@ -79,7 +69,7 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 					type="button"
 					variant="muted"
 					size="sm"
-					onClick={() => setExpandedKey(addSchemaItem() ?? null)}
+					onClick={addSchemaItem}
 					disabled={schema.length >= allSchemaCandidateFeatures.length}
 					className="w-full text-tertiary-foreground text-xs"
 					icon={<PlusIcon size={10} />}

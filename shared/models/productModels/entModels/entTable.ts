@@ -9,7 +9,7 @@ import {
 	text,
 	unique,
 } from "drizzle-orm/pg-core";
-import type { RolloverConfig } from "../../../index";
+import type { FeatureConfigOverride, RolloverConfig } from "../../../index";
 import { features } from "../../featureModels/featureTable";
 import { rewards } from "../../rewardModels/rewardModels/rewardTable";
 import { products } from "../productTable";
@@ -41,6 +41,11 @@ export const entitlements = pgTable(
 		expiry_length: numeric({ mode: "number" }),
 
 		rollover: jsonb().$type<RolloverConfig>(),
+
+		// Partial override of the feature's config for customers attached
+		// through this plan item, keyed like the feature config itself
+		// (schema is a full replacement when present).
+		feature_override: jsonb().$type<FeatureConfigOverride>(),
 	},
 	(table) => [
 		foreignKey({

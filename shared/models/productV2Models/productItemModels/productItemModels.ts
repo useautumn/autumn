@@ -4,6 +4,7 @@ import {
 	AdditionalCurrencyPriceArraySchema,
 	AdditionalCurrencyTierArraySchema,
 } from "../../../api/products/components/additionalCurrencies.js";
+import { FeatureConfigOverrideSchema } from "../../featureModels/featureConfig/creditConfig.js";
 import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
 import { TierBehavior } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
@@ -76,6 +77,9 @@ const ProductItemConfigSchema = z.object({
 	on_increase: z.enum(OnIncrease).nullish(),
 	on_decrease: z.enum(OnDecrease).nullish(),
 	rollover: RolloverConfigSchema.nullish(),
+	/** Partial override of the feature's config, keyed like the feature
+	 * config itself in DB shape (schema is a full replacement when present). */
+	feature_override: FeatureConfigOverrideSchema.nullish(),
 });
 
 export const ProductItemSchema = z.object({
@@ -204,6 +208,10 @@ export const ProductItemSchema = z.object({
 	/** Set only by producers that know the item corresponds to an existing
 	 * Stripe price of the same shape. Flows into Price.config when rebuilt. */
 	stripe_price_id: z.string().nullish().meta({
+		internal: true,
+	}),
+	/** Caller-adopted Stripe price. Validated to exist before it is honoured. */
+	stripe_prepaid_price_v2_id: z.string().nullish().meta({
 		internal: true,
 	}),
 	price_interval: z.enum(ProductItemInterval).nullish().meta({

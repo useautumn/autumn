@@ -453,6 +453,8 @@ test.concurrent(
 // CHECKOUT: ATTACH VIA STRIPE CHECKOUT (no payment method on file)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Red: pending promotion erased the paid plan before billing and product webhooks.
+// Green: checkout emits both events with the activated paid plan.
 test(`${chalk.yellowBright("billing.updated: stripe checkout completion → activated")}`, async () => {
 	const customerId = "billing-updated-stripe-checkout";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -478,18 +480,30 @@ test(`${chalk.yellowBright("billing.updated: stripe checkout completion → acti
 	// handleCheckoutSessionMetadataV2 → executeBillingPlan → webhook fires
 	await completeStripeCheckoutForm({ url: attachResult.payment_url });
 
-	const result = await waitForWebhook<BillingUpdatedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data?.customer_id === customerId &&
-			findChange(payload.data.plan_changes, {
-				action: "activated",
-				planId: pro.id,
-			}) !== undefined,
-		timeoutMs: 30000,
-	});
+	const [productsResult, result] = await Promise.all([
+		waitForWebhook<CustomerProductsUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "customer.products.updated" &&
+				payload.data?.customer?.id === customerId &&
+				payload.data?.updated_product?.id === pro.id &&
+				payload.data?.scenario === "new",
+			timeoutMs: 30000,
+		}),
+		waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				findChange(payload.data.plan_changes, {
+					action: "activated",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 30000,
+		}),
+	]);
 
+	expect(productsResult).not.toBeNull();
 	expect(result).not.toBeNull();
 	const activated = findChange(result!.payload.data.plan_changes, {
 		action: "activated",

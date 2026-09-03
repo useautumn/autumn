@@ -138,4 +138,15 @@ previous_version_slug: null,
 		});
 		expect(parsed).not.toHaveProperty("versioning");
 	});
+
+	test("variants[] accepts processors", () => {
+		const parsed = CatalogVariantParamsSchema.parse({
+			variant_plan_id: "team-eu",
+			processors: { stripe: { product_id: "prod_eu" } },
+		});
+		expect(parsed.processors).toEqual({
+			stripe: { product_id: "prod_eu" },
+		});
+	});
 });
+

@@ -104,6 +104,184 @@ export const versionedPlanContext = ({
 		})),
 	}) as unknown as GenerationContext;
 
+export const complexScheduleStarts = [
+	Date.UTC(2026, 7, 24, 12),
+	Date.UTC(2027, 7, 24, 12),
+	Date.UTC(2028, 7, 24, 12),
+	Date.UTC(2029, 7, 24, 12),
+];
+
+const monthlyItem = (feature_id: string, included: number) => ({
+	feature_id,
+	included,
+	pooled: false,
+	reset: { interval: "month" },
+});
+
+const planFeatureIds: Record<string, string> = {
+	"analytics-addon": "reports",
+	core: "messages",
+	"success-addon": "sessions",
+	"support-addon": "tickets",
+};
+
+const customizedPlan = ({
+	amount,
+	included,
+	plan_id,
+	version = 1,
+}: {
+	amount: number;
+	included: number;
+	plan_id: string;
+	version?: number;
+}) => ({
+	customize: {
+		items: [monthlyItem(planFeatureIds[plan_id]!, included)],
+		price: { amount, interval: "month" },
+	},
+	plan_id,
+	version,
+});
+
+export const complexScheduleRequest = ({
+	phaseTwoVersion = 2,
+	phaseThreeSupportPrice = 275,
+	phaseFourMessages = 40_000,
+}: {
+	phaseTwoVersion?: number;
+	phaseThreeSupportPrice?: number;
+	phaseFourMessages?: number;
+} = {}): Record<string, unknown> => ({
+	billing_behavior: "none",
+	billing_cycle_anchor: "now",
+	phases: [
+		[900, 12_000, 1, 175, 5_000, 225, 25],
+		[1_100, 20_000, phaseTwoVersion, 190, 7_500, 250, 50],
+		[1_350, 30_000, 3, 200, 9_000, phaseThreeSupportPrice, 75],
+		[1_500, phaseFourMessages, 3, 225, 10_000, 300, 100],
+	].map(
+		(
+			[
+				corePrice,
+				messages,
+				version,
+				analyticsPrice,
+				reports,
+				supportPrice,
+				tickets,
+			],
+			index,
+		) => ({
+			...(index % 2 ? { billing_cycle_anchor: "phase_start" } : {}),
+			plans: [
+				customizedPlan({
+					amount: corePrice,
+					included: messages,
+					plan_id: "core",
+					version,
+				}),
+				customizedPlan({
+					amount: analyticsPrice,
+					included: reports,
+					plan_id: "analytics-addon",
+				}),
+				customizedPlan({
+					amount: supportPrice,
+					included: tickets,
+					plan_id: "support-addon",
+				}),
+			],
+			starts_at: complexScheduleStarts[index],
+		}),
+	),
+	unscheduled_plans: [
+		customizedPlan({
+			amount: 95,
+			included: 25,
+			plan_id: "success-addon",
+		}),
+	],
+});
+
+export const complexScheduleContext = (): GenerationContext => {
+	const plans = [
+		...[1, 2, 3].map((version) => ({
+			id: "core",
+			items: [monthlyItem("messages", version * 10_000)],
+			name: "Core",
+			price: { amount: version * 500, interval: "month" },
+			version,
+		})),
+		...(
+			[
+				["analytics-addon", "Analytics Add-on", 200, 5_000, "reports"],
+				["support-addon", "Support Add-on", 300, 50, "tickets"],
+				["success-addon", "Success Add-on", 100, 25, "sessions"],
+			] as const
+		).map(([id, name, amount, included, featureId]) => ({
+			id,
+			is_add_on: true,
+			items: [monthlyItem(featureId, included)],
+			name,
+			price: { amount, interval: "month" },
+			version: 1,
+		})),
+	];
+	const schedule = complexScheduleRequest() as {
+		phases: {
+			billing_cycle_anchor?: string;
+			plans: ReturnType<typeof customizedPlan>[];
+			starts_at: number;
+		}[];
+	};
+	const customerProductId = (phase: number, planId: string) =>
+		`cp_${phase + 1}_${planId}`;
+
+	return {
+		customer: {
+			current_plans: schedule.phases.flatMap((phase, phaseIndex) =>
+				phase.plans.map((plan) => ({
+					customer_product_id: customerProductId(phaseIndex, plan.plan_id),
+					effective_plan: {
+						...plans.find(
+							(candidate) =>
+								candidate.id === plan.plan_id &&
+								candidate.version === plan.version,
+						),
+						...plan.customize,
+					},
+					plan_id: plan.plan_id,
+					status: phaseIndex ? "scheduled" : "active",
+				})),
+			),
+			id: "cus_complex_schedule",
+			name: "Example Company",
+			schedules: [
+				{
+					phases: schedule.phases.map((phase, phaseIndex) => ({
+						...(phase.billing_cycle_anchor
+							? { billing_cycle_anchor: phase.billing_cycle_anchor }
+							: {}),
+						customer_product_ids: phase.plans.map((plan) =>
+							customerProductId(phaseIndex, plan.plan_id),
+						),
+						starts_at: phase.starts_at,
+					})),
+				},
+			],
+		},
+		features: [
+			{ id: "messages", name: "Messages", type: "single_use" },
+			{ id: "reports", name: "Reports", type: "single_use" },
+			{ id: "sessions", name: "Success Sessions", type: "single_use" },
+			{ id: "tickets", name: "Support Tickets", type: "single_use" },
+		],
+		now,
+		plans,
+	} as unknown as GenerationContext;
+};
+
 /** Enterprise org with a volume-tiered prepaid credits ladder — the shape that
  * stresses same-shape customize patches. */
 export const creditLadderContext = (): GenerationContext =>

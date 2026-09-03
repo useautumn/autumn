@@ -1,0 +1,1 @@
+ALTER TABLE "entitlements" ADD COLUMN "feature_override" jsonb;

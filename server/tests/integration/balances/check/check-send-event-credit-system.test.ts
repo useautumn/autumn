@@ -51,11 +51,17 @@ test.concurrent(
 		// pools the customer doesn't carry (credits3) are present but null
 		expect(checkRes.balances).toBeDefined();
 		expect(Object.keys(checkRes.balances ?? {}).sort()).toEqual(
-			[TestFeature.Action1, TestFeature.Credits, TestFeature.Credits3].sort(),
+			[
+				TestFeature.Action1,
+				TestFeature.Credits,
+				TestFeature.Credits3,
+				TestFeature.InvoiceCredits,
+			].sort(),
 		);
 		expect(checkRes.balances?.[TestFeature.Action1]).not.toBeNull();
 		expect(checkRes.balances?.[TestFeature.Credits]).not.toBeNull();
 		expect(checkRes.balances?.[TestFeature.Credits3]).toBeNull();
+		expect(checkRes.balances?.[TestFeature.InvoiceCredits]).toBeNull();
 	},
 );
 

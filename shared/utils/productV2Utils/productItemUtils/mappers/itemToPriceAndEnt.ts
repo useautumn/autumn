@@ -185,6 +185,7 @@ export const toFeature = ({
 		usage_limit: null,
 
 		rollover: item.config?.rollover,
+		feature_override: item.config?.feature_override,
 	};
 
 	if ((isCustom || newVersion) && !item.entitlement_id) {
@@ -254,6 +255,7 @@ const toFeatureAndPrice = ({
 		usage_limit: item.usage_limit || null,
 
 		rollover: item.config?.rollover,
+		feature_override: item.config?.feature_override,
 	};
 
 	// Will only create new ent id if
@@ -389,6 +391,11 @@ const toFeatureAndPrice = ({
 			currentPrice: stripeReusePrice ?? curPrice,
 			newPrice: price,
 		}) ?? null;
+
+	// Adopted V2 price: honoured as stated, existence-checked before Stripe init.
+	if (item.stripe_prepaid_price_v2_id) {
+		config.stripe_prepaid_price_v2_id = item.stripe_prepaid_price_v2_id;
+	}
 
 	return { price, ent };
 };

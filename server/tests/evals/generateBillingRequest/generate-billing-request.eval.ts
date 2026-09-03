@@ -6,6 +6,7 @@
  * Run: bun eval:generation  (needs ANTHROPIC_API_KEY + BRAINTRUST_API_KEY)
  */
 
+import { isDeepStrictEqual } from "node:util";
 import {
 	type ApiPlanV1,
 	applyCustomizeToPlan,
@@ -21,6 +22,8 @@ import type {
 } from "@/internal/billing/v2/actions/generateRequest/generationSchemas";
 import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext";
 import {
+	complexScheduleContext,
+	complexScheduleRequest,
 	creditLadderContext,
 	entityScaleContext,
 	rolloverCreditsBaseItems,
@@ -40,6 +43,7 @@ type EvalInput = {
 	forbiddenKeys?: string[];
 	applyToItems?: ApiPlanV1["items"];
 	expectedApplied?: Record<string, unknown>[];
+	exact?: boolean;
 };
 
 type EvalOutput = {
@@ -154,6 +158,29 @@ const expectedParams = ({
 		name: "expected_params",
 		score: mismatches.length === 0 ? 1 : 0,
 		...(mismatches.length ? { metadata: { mismatches } } : {}),
+	};
+};
+
+const exactParams = ({
+	input,
+	output,
+	expected,
+}: {
+	input: EvalInput;
+	output: EvalOutput;
+	expected?: Record<string, unknown>;
+}) => {
+	if (!input.exact) return null;
+	const matches = isDeepStrictEqual(output.params, expected);
+	if (!matches) {
+		console.warn(
+			`[exact_params] ${input.tool}: "${input.prompt}"\nexpected ${JSON.stringify(expected)}\nactual   ${JSON.stringify(output.params)}`,
+		);
+	}
+	return {
+		name: "exact_params",
+		score: matches ? 1 : 0,
+		...(matches ? {} : { metadata: { actual: output.params, expected } }),
 	};
 };
 
@@ -644,6 +671,46 @@ const cases: EvalCase[] = [
 			],
 		},
 	},
+	...[
+		{
+			name: "schedule: changes one version without dropping complex phases",
+			prompt:
+				"Change only the Core plan in phase 2 to version 3. Keep its $1,100 monthly price, its items, and every other schedule field exactly unchanged.",
+			expected: complexScheduleRequest({ phaseTwoVersion: 3 }),
+		},
+		{
+			name: "schedule: changes one add-on price without dropping sibling plans",
+			prompt:
+				"In phase 3 only, change the Support Add-on price from $275 to $325 per month. Preserve the rest of the schedule exactly.",
+			expected: complexScheduleRequest({ phaseThreeSupportPrice: 325 }),
+		},
+		{
+			name: "schedule: changes one entitlement without dropping nested items",
+			prompt:
+				"In phase 4 only, increase the Core plan's included Messages from 40,000 to 45,000. Keep its price, version, other plans, and all other fields exactly unchanged.",
+			expected: complexScheduleRequest({ phaseFourMessages: 45_000 }),
+		},
+		{
+			name: "schedule: a follow-up edit preserves the prior generated change",
+			currentRequest: complexScheduleRequest({ phaseThreeSupportPrice: 325 }),
+			prompt:
+				"Now increase phase 4 Core Messages to 45,000. Keep the phase 3 Support Add-on at $325 and preserve everything else.",
+			expected: complexScheduleRequest({
+				phaseFourMessages: 45_000,
+				phaseThreeSupportPrice: 325,
+			}),
+		},
+	].map(({ name, prompt, expected, currentRequest }) => ({
+		name,
+		input: {
+			context: complexScheduleContext(),
+			currentRequest: currentRequest ?? complexScheduleRequest(),
+			exact: true,
+			prompt,
+			tool: "create_schedule" as const,
+		},
+		expected,
+	})),
 ];
 
 Eval("generate-billing-request", {
@@ -651,11 +718,11 @@ Eval("generate-billing-request", {
 		cases.map(({ name, input, expected }) => ({
 			expected,
 			input,
-			metadata: { tool: input.tool },
+			metadata: { name, tool: input.tool },
 			tags: [input.tool],
 			// biome-ignore lint/suspicious/noExplicitAny: braintrust's case type is looser than ours
 		})) as any,
-	scores: [schemaFirstTry, expectedParams, appliedPlan],
+	scores: [schemaFirstTry, expectedParams, exactParams, appliedPlan],
 	task: async (input: EvalInput): Promise<EvalOutput> => {
 		try {
 			const { params, repaired, repairReason } = await computeGeneratedParams({

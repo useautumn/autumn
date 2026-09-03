@@ -11,6 +11,7 @@ import {
 } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import type {
 	CreateScheduleForm,
+	SchedulePhase,
 	SchedulePlan,
 } from "../createScheduleFormSchema";
 
@@ -69,18 +70,41 @@ const startsAtFrom = ({
  * request (per-plan customize already flattened to items) into form values. */
 export const scheduleFormFromRequestBody = (
 	request: RequestBody,
+	persistedPhases: SchedulePhase[] = [],
 ): Partial<CreateScheduleForm> | undefined => {
 	if (!Array.isArray(request.phases) || !request.phases.length)
 		return undefined;
+	const persistedStarts = new Set(
+		persistedPhases.flatMap(({ persistedStartsAt }) =>
+			persistedStartsAt == null ? [] : [persistedStartsAt],
+		),
+	);
+	const firstPersistedStartsAt = persistedPhases[0]?.persistedStartsAt;
 	let previousStartsAt: number | null = null;
-	const phases = request.phases.flatMap((value) => {
+	const phases = request.phases.flatMap((value, index) => {
 		const phase = requestRecord(value);
 		if (!phase) return [];
 		const plans = plansFrom(phase.plans);
 		if (!plans.length) return [];
-		const startsAt = startsAtFrom({ phase, previousStartsAt });
+		const generatedStartsAt = startsAtFrom({ phase, previousStartsAt });
+		const startsAt =
+			index === 0 &&
+			firstPersistedStartsAt != null &&
+			firstPersistedStartsAt <= Date.now()
+				? firstPersistedStartsAt
+				: generatedStartsAt;
+		let persistedStartsAt: number | undefined;
+		if (index === 0) persistedStartsAt = firstPersistedStartsAt;
+		else if (startsAt != null && persistedStarts.has(startsAt))
+			persistedStartsAt = startsAt;
 		previousStartsAt = startsAt ?? previousStartsAt ?? Date.now();
-		return [{ plans, startsAt }];
+		return [
+			{
+				plans,
+				startsAt,
+				...(persistedStartsAt != null ? { persistedStartsAt } : {}),
+			},
+		];
 	});
 	if (!phases.length) return undefined;
 	return {
@@ -90,7 +114,11 @@ export const scheduleFormFromRequestBody = (
 				: null,
 		enablePlanImmediately: request.enable_plan_immediately === true,
 		phases,
-		resetBillingCycle: request.billing_cycle_anchor === "now",
+		resetBillingCycle:
+			request.billing_cycle_anchor === "now" ||
+			request.phases.some(
+				(value) => requestRecord(value)?.billing_cycle_anchor === "phase_start",
+			),
 		unscheduledPlans: plansFrom(request.unscheduled_plans),
 	};
 };

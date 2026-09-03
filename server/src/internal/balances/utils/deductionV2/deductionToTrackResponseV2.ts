@@ -4,7 +4,7 @@ import {
 	FeatureType,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
-	getRelevantFeatures,
+	fullSubjectToRelevantFeatures,
 	InternalError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -63,9 +63,10 @@ const findUnlimitedFeature = ({
 	fullSubject: FullSubject;
 	featureId: string;
 }): Feature | undefined => {
-	const relevantFeatures = getRelevantFeatures({
-		features: ctx.features,
+	const relevantFeatures = fullSubjectToRelevantFeatures({
+		fullSubject,
 		featureId,
+		features: ctx.features,
 	});
 
 	for (const feature of relevantFeatures) {
@@ -107,9 +108,10 @@ const getFeatureToUseForBalance = ({
 		return unlimitedFeature.id;
 	}
 
-	const relevantFeatures = getRelevantFeatures({
-		features: ctx.features,
+	const relevantFeatures = fullSubjectToRelevantFeatures({
+		fullSubject,
 		featureId: featureDeduction.feature.id,
+		features: ctx.features,
 	}).sort((left, right) => {
 		if (
 			left.type === FeatureType.CreditSystem &&

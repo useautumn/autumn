@@ -1,5 +1,6 @@
 import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { InternalIdRefs } from "@/internal/catalogV2/actions/updateCatalog/setup/resolveInternalIdRefs";
 import {
 	type CatalogPhases,
 	timeCatalogPhase,
@@ -19,11 +20,15 @@ import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 const payloadPlanIds = ({
 	params,
+	internalIdRefs,
 }: {
 	params: UpdateCatalogParams;
+	internalIdRefs: InternalIdRefs;
 }): string[] => [
 	...new Set([
-		...params.plans.flatMap((entry) => [
+		// A renamed row's current id is only known through its internal_id.
+		...[...internalIdRefs.values()].map((ref) => ref.planId),
+		...(params.plans ?? []).flatMap((entry) => [
 			entry.plan_id,
 			...(entry.new_plan_id ? [entry.new_plan_id] : []),
 			...(typeof entry.base_variant_id === "string"
@@ -51,14 +56,21 @@ export const setupProductStatesContext = async ({
 	ctx,
 	params,
 	phases,
+	internalIdRefs,
 }: {
 	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 	phases: CatalogPhases;
+	internalIdRefs: InternalIdRefs;
 }): Promise<ProductStatesContext> => {
 	const { db, org, env } = ctx;
-	const loadedPlanIds = payloadPlanIds({ params });
-	if (loadedPlanIds.length === 0) return emptyProductStatesContext();
+	// Full state means the payload is the whole desired catalog, so the server
+	// has to see everything to know what is missing from it.
+	const fullState = params.skip_deletions === false;
+	const loadedPlanIds = payloadPlanIds({ params, internalIdRefs });
+	if (!fullState && loadedPlanIds.length === 0) {
+		return emptyProductStatesContext();
+	}
 
 	const payloadVersions = await timeCatalogPhase({
 		ctx,
@@ -69,7 +81,7 @@ export const setupProductStatesContext = async ({
 				db,
 				orgId: org.id,
 				env,
-				inIds: loadedPlanIds,
+				...(fullState ? {} : { inIds: loadedPlanIds }),
 				returnAll: true,
 				includeDeleted: true,
 				skipCache: true,
@@ -77,8 +89,14 @@ export const setupProductStatesContext = async ({
 	});
 	const allVersions = collectProductStateRows({
 		products: payloadVersions,
-		payloadPlanIds: loadedPlanIds,
+		payloadPlanIds: fullState
+			? [...new Set(payloadVersions.map((product) => product.id))]
+			: loadedPlanIds,
 	});
+	// Full state can legitimately load an org with no plans at all, and the
+	// versioning probes reject empty id lists rather than returning nothing.
+	if (allVersions.length === 0) return emptyProductStatesContext();
+
 	const allPlanIds = [
 		...new Set([...loadedPlanIds, ...allVersions.map((product) => product.id)]),
 	];

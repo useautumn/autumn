@@ -1,6 +1,5 @@
 import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import { Button, Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
-import { PlusIcon } from "@phosphor-icons/react";
+import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
@@ -10,13 +9,12 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useAppForm } from "@/hooks/form/form";
 import { useCatalogMappings } from "@/hooks/queries/catalog/useCatalogMappings";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useStripeProductsResolveQuery } from "@/hooks/queries/useStripeProductsResolveQuery";
 import { CatalogMappingSaveConfirmDialog } from "./CatalogMappingSaveConfirmDialog";
 import {
 	buildPlanDetailFormValues,
-	buildUpdatePlanMappingParams,
+	buildPlanProcessorsUpdate,
 	type CatalogPlanMapping,
 	collectPlanStripeProductIds,
 	findPlanMapping,
@@ -24,10 +22,23 @@ import {
 	groupPlanMappings,
 	resolveMapping,
 } from "./catalogMappingsForm";
-import { ItemMappingLabel } from "./ItemMappingLabel";
 import { MappingField } from "./MappingField";
 import { PlanMappingDetailSkeleton } from "./PlanMappingDetailSkeleton";
 import { useStripeProductSearch } from "./useStripeProductSearch";
+
+const VariantList = ({ variants }: { variants: ProductV2[] }) => (
+	<div className="flex flex-col gap-1 pt-1 pl-5">
+		{variants.map((variant) => (
+			<div className="flex min-w-0 items-center gap-2 text-xs" key={variant.id}>
+				<span className="text-tertiary-foreground">└</span>
+				<span className="truncate text-foreground">{variant.name}</span>
+				<span className="ml-auto shrink-0 text-tertiary-foreground">
+					Inherits mapping
+				</span>
+			</div>
+		))}
+	</div>
+);
 
 const PlanMappingDetailForm = ({
 	base,
@@ -45,7 +56,6 @@ const PlanMappingDetailForm = ({
 	onClose: () => void;
 }) => {
 	const { updateMappings, isSaving } = useCatalogMappings();
-	const { features } = useFeaturesQuery();
 	const [variantsExpanded, setVariantsExpanded] = useState(false);
 	const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
 	const {
@@ -57,68 +67,40 @@ const PlanMappingDetailForm = ({
 		enabled: mappings.stripe_connected,
 	});
 	const { setSearch, knownStripeProducts, selectStripeProducts, isSearching } =
-		useStripeProductSearch({
-			knownProducts: stripeProducts,
-			enabled: true,
-		});
+		useStripeProductSearch({ knownProducts: stripeProducts, enabled: true });
 	const hasVariants = variants.length > 0;
 	const productVersions = products.length > 0 ? products : [base, ...variants];
-
-	const knownStripeProductsById = new Map(
-		knownStripeProducts.map((product) => [product.id, product]),
-	);
 
 	const form = useAppForm({
 		defaultValues: buildPlanDetailFormValues(planMapping),
 		onSubmit: async ({ value }) => {
 			await updateMappings(
-				buildUpdatePlanMappingParams({ planMapping, values: value }),
+				buildPlanProcessorsUpdate({ planMapping, values: value }),
 			);
 			setConfirmSaveOpen(false);
 			onClose();
 		},
 	});
 
-	const baseStripeProductId = useStore(
+	const stripeProductId = useStore(
 		form.store,
 		(state) => state.values.stripe_product_id,
 	);
-	const itemStripeProductIds = useStore(
-		form.store,
-		(state) => state.values.item_mappings,
-	);
-	const additionalStripeProductIds = useStore(
-		form.store,
-		(state) => state.values.additional_stripe_product_ids,
-	);
 
-	const setAdditionalStripeProductIds = (
-		next: Array<{ stripe_product_id: string | null }>,
-	) => form.setFieldValue("additional_stripe_product_ids", next);
-	const affectedPriceIds = getAffectedCatalogPriceIds({
-		base,
-		products: productVersions,
-		planMapping,
-		values: {
-			stripe_product_id: baseStripeProductId,
-			item_mappings: itemStripeProductIds,
-		},
-	});
-
-	const baseResolved = resolveMapping({
-		stripeProductId: baseStripeProductId,
+	const resolved = resolveMapping({
+		stripeProductId,
 		backendStatus: planMapping.mapping.status,
 		stripeConnected: mappings.stripe_connected,
-		stripeProductsById: knownStripeProductsById,
+		stripeProductsById: new Map(
+			knownStripeProducts.map((product) => [product.id, product]),
+		),
 		isResolving,
 	});
 
 	if (isResolvingInitial) {
 		return (
 			<>
-				<PlanMappingDetailSkeleton
-					itemCount={planMapping.item_mappings.length}
-				/>
+				<PlanMappingDetailSkeleton />
 				<SheetFooter>
 					<ShortcutButton
 						className="w-full"
@@ -129,7 +111,7 @@ const PlanMappingDetailForm = ({
 						Cancel
 					</ShortcutButton>
 					<ShortcutButton className="w-full" disabled>
-						Save mappings
+						Save mapping
 					</ShortcutButton>
 				</SheetFooter>
 			</>
@@ -140,7 +122,6 @@ const PlanMappingDetailForm = ({
 		<>
 			<div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-4">
 				<div className="flex flex-col gap-2">
-					<h3 className="text-sub">Base plan</h3>
 					<MappingField
 						expanded={variantsExpanded}
 						isSearching={isSearching}
@@ -155,9 +136,9 @@ const PlanMappingDetailForm = ({
 								? () => setVariantsExpanded((value) => !value)
 								: undefined
 						}
-						status={baseResolved.status}
-						statusPending={baseResolved.pending}
-						stripeProductId={baseStripeProductId}
+						status={resolved.status}
+						statusPending={resolved.pending}
+						stripeProductId={stripeProductId}
 						stripeProducts={selectStripeProducts}
 						sublabel={
 							hasVariants ? (
@@ -177,134 +158,17 @@ const PlanMappingDetailForm = ({
 									initial={{ height: 0, opacity: 0 }}
 									transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
 								>
-									<div className="flex flex-col gap-1 pt-1 pl-5">
-										{variants.map((variant) => (
-											<div
-												className="flex min-w-0 items-center gap-2 text-xs"
-												key={variant.id}
-											>
-												<span className="text-tertiary-foreground">└</span>
-												<span className="truncate text-foreground">
-													{variant.name}
-												</span>
-												<span className="ml-auto shrink-0 text-tertiary-foreground">
-													Inherits mapping
-												</span>
-											</div>
-										))}
-									</div>
+									<VariantList variants={variants} />
 								</motion.div>
 							)}
 						</AnimatePresence>
 					)}
-
-					{additionalStripeProductIds.map((entry, index) => {
-						const additionalResolved = resolveMapping({
-							stripeProductId: entry.stripe_product_id,
-							backendStatus: planMapping.additional_mappings[index]?.status,
-							stripeConnected: mappings.stripe_connected,
-							stripeProductsById: knownStripeProductsById,
-							isResolving,
-						});
-
-						return (
-							<MappingField
-								isSearching={isSearching}
-								// biome-ignore lint/suspicious/noArrayIndexKey: rows are positional, ids may be null
-								key={`additional-${index}`}
-								knownProducts={knownStripeProducts}
-								label={
-									<span className="text-tertiary-foreground">
-										Additional Stripe product
-									</span>
-								}
-								onRemove={() =>
-									setAdditionalStripeProductIds(
-										additionalStripeProductIds.filter(
-											(_, position) => position !== index,
-										),
-									)
-								}
-								onSearchChange={setSearch}
-								onStripeProductChange={(value) =>
-									setAdditionalStripeProductIds(
-										additionalStripeProductIds.map((current, position) =>
-											position === index
-												? { stripe_product_id: value }
-												: current,
-										),
-									)
-								}
-								removeTooltip="Remove additional ID"
-								status={additionalResolved.status}
-								statusPending={additionalResolved.pending}
-								stripeProductId={entry.stripe_product_id}
-								stripeProducts={selectStripeProducts}
-							/>
-						);
-					})}
-
-					<Button
-						className="w-fit text-tertiary-foreground"
-						onClick={() =>
-							setAdditionalStripeProductIds([
-								...additionalStripeProductIds,
-								{ stripe_product_id: null },
-							])
-						}
-						size="sm"
-						type="button"
-						variant="muted"
-					>
-						<PlusIcon size={12} />
-						Add additional ID
-					</Button>
 				</div>
 
-				{planMapping.item_mappings.length > 0 && (
-					<div className="flex flex-col gap-4">
-						<h3 className="text-sub">Item mappings</h3>
-						{planMapping.item_mappings.map((item, index) => {
-							const stripeProductId =
-								itemStripeProductIds[index]?.stripe_product_id ?? null;
-							const itemResolved = resolveMapping({
-								stripeProductId,
-								backendStatus: item.mapping.status,
-								stripeConnected: mappings.stripe_connected,
-								stripeProductsById: knownStripeProductsById,
-								isResolving,
-							});
-
-							return (
-								<MappingField
-									isSearching={isSearching}
-									key={`${item.label}-${index}`}
-									knownProducts={knownStripeProducts}
-									label={
-										<ItemMappingLabel
-											base={base}
-											features={features}
-											itemMapping={item}
-											products={productVersions}
-											stripeProductId={item.mapping.stripe_product_id}
-										/>
-									}
-									onSearchChange={setSearch}
-									onStripeProductChange={(value) =>
-										form.setFieldValue(
-											`item_mappings[${index}].stripe_product_id` as never,
-											value as never,
-										)
-									}
-									status={itemResolved.status}
-									statusPending={itemResolved.pending}
-									stripeProductId={stripeProductId}
-									stripeProducts={selectStripeProducts}
-								/>
-							);
-						})}
-					</div>
-				)}
+				<p className="text-tertiary-foreground text-xs">
+					Individual prices are mapped on the plan itself, where each version
+					can point at its own Stripe price.
+				</p>
 			</div>
 
 			<SheetFooter>
@@ -326,14 +190,19 @@ const PlanMappingDetailForm = ({
 							metaShortcut="enter"
 							onClick={() => setConfirmSaveOpen(true)}
 						>
-							Save mappings
+							Save mapping
 						</ShortcutButton>
 					)}
 				</form.Subscribe>
 			</SheetFooter>
 
 			<CatalogMappingSaveConfirmDialog
-				affectedPriceIds={affectedPriceIds}
+				affectedPriceIds={getAffectedCatalogPriceIds({
+					base,
+					products: productVersions,
+					planMapping,
+					values: { stripe_product_id: stripeProductId },
+				})}
 				isSaving={isSaving}
 				onConfirm={() => form.handleSubmit()}
 				onOpenChange={setConfirmSaveOpen}
@@ -359,14 +228,13 @@ export const PlanMappingDetailSheet = ({
 		: undefined;
 	const planMapping =
 		mappings && planId ? findPlanMapping({ mappings, planId }) : undefined;
-	const isReady = Boolean(group && planMapping && mappings);
 
 	return (
 		<Sheet onOpenChange={onOpenChange} open={Boolean(planId)}>
-			{planId && isReady && group && planMapping && mappings && (
+			{planId && group && planMapping && mappings && (
 				<SheetContent className="flex flex-col overflow-hidden sm:max-w-xl">
 					<SheetHeader
-						description="Map this plan and its items to Stripe products. Saving updates every version and variant."
+						description="Map this plan to a Stripe product. Saving updates every version and variant."
 						title={group.base.name}
 					/>
 					<PlanMappingDetailForm

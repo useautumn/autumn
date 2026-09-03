@@ -15,10 +15,12 @@ import {
 } from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
+import { FeatureOverrideConfig } from "./advanced-settings/FeatureOverrideConfig";
 import { PooledBalanceConfig } from "./advanced-settings/PooledBalanceConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
 import { ResetIntervalConfig } from "./advanced-settings/ResetIntervalConfig";
 import { RolloverConfig } from "./advanced-settings/RolloverConfig";
+import { StripePriceConfig } from "./advanced-settings/StripePriceConfig";
 import { UsageLimit } from "./advanced-settings/UsageLimit";
 
 export function AdvancedSettings() {
@@ -34,6 +36,7 @@ export function AdvancedSettings() {
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
+	const showFeatureOverride = hasCreditSystem;
 	// Deprecated in favor of licenses. Surface it whenever any item in the plan
 	// uses an entity feature, so all items in such plans keep working.
 	const showEntityFeature =
@@ -54,6 +57,10 @@ export function AdvancedSettings() {
 		usageType === FeatureUsageType.Single &&
 		itemToBillingInterval({ item }) !== BillingInterval.OneOff;
 
+	// Prepaid maps into the v2 slot, usage-based into v1; the meter comes from
+	// the adopted price rather than being mapped.
+	const showStripePrice = isPriced;
+
 	return (
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>
 			<SheetAccordionItem
@@ -70,6 +77,9 @@ export function AdvancedSettings() {
 					{/* Rollover */}
 					{showRollover && <RolloverConfig />}
 
+					{/* Credit rate card override */}
+					{showFeatureOverride && <FeatureOverrideConfig />}
+
 					{/* Entity Feature Config */}
 					{showEntityFeature && <EntityFeatureConfig />}
 
@@ -78,6 +88,9 @@ export function AdvancedSettings() {
 
 					{/* Reset Interval Config */}
 					{showResetInterval && <ResetIntervalConfig />}
+
+					{/* Stripe price mapping */}
+					{showStripePrice && <StripePriceConfig />}
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>

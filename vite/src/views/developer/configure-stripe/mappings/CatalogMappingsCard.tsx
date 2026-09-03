@@ -31,8 +31,9 @@ export const CatalogMappingsCard = () => {
 				<CardHeader>
 					<CardTitle className="text-base">Stripe product mappings</CardTitle>
 					<CardDescription>
-						Link Autumn plans and their items to Stripe products for base-price
-						sync. Select a plan to edit its mappings.
+						Link each Autumn plan to a Stripe product. A plan's product is
+						shared by all of its versions and variants; individual prices are
+						mapped per version on the plan itself.
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="flex flex-col gap-3 pt-0">

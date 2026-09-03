@@ -18,6 +18,7 @@ import type {
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { intervalsSame } from "../../intervalUtils/priceIntervalUtils.js";
 import { entIntervalsSame } from "../../intervalUtils.js";
+import { featureOverridesAreSame } from "../../productUtils/entUtils/compareEnt/entsAreSame.js";
 import { notNullish } from "../../utils.js";
 import { itemToFeature } from "../productItemUtils/convertItemUtils.js";
 import {
@@ -219,6 +220,13 @@ export const featureItemsAreSame = ({
 			}),
 			message: `Rollover config different: ${JSON.stringify(item1.config?.rollover)} !== ${JSON.stringify(item2.config?.rollover)}`,
 		},
+		feature_override: {
+			condition: featureOverridesAreSame({
+				override1: item1.config?.feature_override,
+				override2: item2.config?.feature_override,
+			}),
+			message: `Feature override different: ${JSON.stringify(item1.config?.feature_override)} !== ${JSON.stringify(item2.config?.feature_override)}`,
+		},
 		// config: {
 		// 	condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
 		// 	message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
@@ -374,6 +382,13 @@ export const featurePriceItemsAreSame = ({
 				rollover2: item2.config?.rollover || undefined,
 			}),
 			message: `Rollover config different: ${JSON.stringify(item1.config?.rollover)} !== ${JSON.stringify(item2.config?.rollover)}`,
+		},
+		feature_override: {
+			condition: featureOverridesAreSame({
+				override1: item1.config?.feature_override,
+				override2: item2.config?.feature_override,
+			}),
+			message: `Feature override different: ${JSON.stringify(item1.config?.feature_override)} !== ${JSON.stringify(item2.config?.feature_override)}`,
 		},
 		entity_feature_id: {
 			condition: item1.entity_feature_id == item2.entity_feature_id,

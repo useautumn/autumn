@@ -1,4 +1,5 @@
 import { PlanExpand } from "@api/products/components/planExpand.js";
+import { priceConfigToPriceProcessors } from "@utils/productUtils/priceUtils/convertPrice/priceConfigToPriceProcessors.js";
 import {
 	type ApiPlanItemV1,
 	ApiPlanItemV1Schema,
@@ -11,6 +12,7 @@ import {
 import { InternalError } from "../../../../api/models.js";
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
 import { expandIncludes } from "../../../expandUtils.js";
+import { dbFeatureOverrideToApi } from "../../../featureUtils/apiFeatureToDbFeature.js";
 import {
 	isBooleanFeature,
 	isContUseFeature,
@@ -106,6 +108,10 @@ const itemToPlanFeaturePrice = ({
 		});
 	}
 
+	const processors = priceConfigToPriceProcessors({
+		config: item.price_config,
+	});
+
 	return {
 		amount: price ?? undefined,
 		additional_currencies: additionalCurrencies,
@@ -121,6 +127,7 @@ const itemToPlanFeaturePrice = ({
 		billing_units: item.billing_units ?? 1,
 		billing_method: billingMethod,
 		max_purchase: maxPurchase,
+		...(processors ? { processors } : {}),
 	};
 };
 
@@ -218,6 +225,9 @@ export const productItemsToPlanItemsV1 = ({
 
 			rollover,
 			proration,
+			feature_override: item.config?.feature_override
+				? dbFeatureOverrideToApi(item.config.feature_override)
+				: undefined,
 			entity_feature_id: item.entity_feature_id ?? undefined,
 			entitlement_id: item.entitlement_id ?? undefined,
 			price_id: item.price_id ?? undefined,

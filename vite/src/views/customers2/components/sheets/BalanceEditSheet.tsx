@@ -40,6 +40,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { getCustomerBalancePlanName } from "../table/customer-balance/customerBalanceUtils";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
+import { FeatureOverrideSection } from "./FeatureOverrideSection";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
 import { PooledBalanceContributions } from "./PooledBalanceContributions";
 import {
@@ -187,6 +188,7 @@ function UnlimitedBalanceInfo({
 				/>
 			</SheetSection>
 			<RolloversSection selectedCusEnt={selectedCusEnt} />
+			<FeatureOverrideSection selectedCusEnt={selectedCusEnt} />
 			<PooledBalanceContributions
 				pooledBalance={selectedCusEnt.pooled_balance}
 			/>
@@ -249,6 +251,8 @@ function BalanceEditForm({
 				selectedCusEnt={selectedCusEnt}
 				cusPrice={cusPrice}
 			/>
+
+			<FeatureOverrideSection selectedCusEnt={selectedCusEnt} />
 
 			<PooledBalanceContributions
 				pooledBalance={selectedCusEnt.pooled_balance}

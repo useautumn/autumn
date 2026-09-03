@@ -50,6 +50,9 @@ export const declaredVariantTargets = ({
 				row,
 				declared: true,
 				...(variant.customize ? { customize: variant.customize } : {}),
+				...(variant.processors !== undefined
+					? { processors: variant.processors }
+					: {}),
 				...(variant.archived !== undefined
 					? { archived: variant.archived }
 					: {}),

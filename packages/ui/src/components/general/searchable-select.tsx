@@ -34,7 +34,8 @@ export type SearchableSelectProps<T> = {
 	placeholder?: string;
 	searchable?: boolean;
 	searchPlaceholder?: string;
-	emptyText?: string;
+	/** `null` renders no empty state at all — the search input stands alone. */
+	emptyText?: ReactNode | null;
 	disabled?: boolean;
 	triggerClassName?: string;
 	contentClassName?: string;
@@ -126,7 +127,7 @@ export function SearchableSelect<T>({
 						aria-haspopup="listbox"
 						disabled={disabled}
 						className={cn(
-							"flex items-center justify-between gap-2 w-full min-w-0 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
+							"flex items-center justify-between gap-2 w-full min-w-0 cursor-pointer text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
 							"input-base input-shadow-default input-state-open transition-all duration-150",
 							triggerClassName,
 						)}
@@ -189,15 +190,17 @@ export function SearchableSelect<T>({
 								)}
 								{header}
 								<CommandList>
-									<CommandEmpty className="text-tertiary-foreground">
-										{isLoading ? (
-											<div className="flex justify-center items-center py-2">
-												<SmallSpinner size={14} />
-											</div>
-										) : (
-											emptyText
-										)}
-									</CommandEmpty>
+									{(emptyText !== null || isLoading) && (
+										<CommandEmpty className="text-tertiary-foreground">
+											{isLoading ? (
+												<div className="flex justify-center items-center py-2">
+													<SmallSpinner size={14} />
+												</div>
+											) : (
+												emptyText
+											)}
+										</CommandEmpty>
+									)}
 									<CommandGroup>
 										{options.map((option) => {
 											const optionValue = getOptionValue(option);
@@ -211,7 +214,7 @@ export function SearchableSelect<T>({
 													onSelect={() => handleSelect(option)}
 													disabled={isDisabled}
 													className={cn(
-														"min-w-0",
+														"min-w-0 cursor-pointer",
 														isDisabled &&
 															"text-subtle pointer-events-none opacity-50",
 													)}

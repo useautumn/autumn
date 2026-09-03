@@ -1,3 +1,4 @@
+import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
 import {
 	AdditionalCurrencyPriceArraySchema,
@@ -6,6 +7,7 @@ import {
 } from "@api/products/components/additionalCurrencies.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { DisplaySchema } from "@api/products/components/display.js";
+import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
@@ -127,6 +129,10 @@ export const ApiPlanItemV1Schema = z
 					description:
 						"Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.",
 				}),
+				processors: ApiPriceProcessorsSchema.optional().meta({
+					description:
+						"Payment processors this item price is connected to. Omitted when unset.",
+				}),
 			})
 			.nullable()
 			.meta({
@@ -175,6 +181,11 @@ export const ApiPlanItemV1Schema = z
 			.meta({
 				internal: true,
 			}),
+
+		feature_override: ApiFeatureOverrideSchema.optional().meta({
+			description:
+				"Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).",
+		}),
 
 		entity_feature_id: z.string().optional().meta({
 			internal: true,

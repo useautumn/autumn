@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
 import {
+	type ApiFeatureOverride,
 	type ApiPlanItemV1,
 	type BillingInterval,
 	type BillingMethod,
@@ -58,6 +59,8 @@ export type ExpectedPlanItem = {
 		expiry_duration_type?: RolloverExpiryDurationType;
 		expiry_duration_length?: number;
 	};
+	/** Deep equality; pass null to assert absent. */
+	feature_override?: ApiFeatureOverride | null;
 	entity_feature_id?: string;
 };
 
@@ -250,6 +253,11 @@ const expectPlanItemMatches = ({
 	}
 	if (expected.rollover !== undefined) {
 		expect(item.rollover).toMatchObject(expected.rollover);
+	}
+	if (expected.feature_override === null) {
+		expect(item.feature_override).toBeUndefined();
+	} else if (expected.feature_override !== undefined) {
+		expect(item.feature_override).toEqual(expected.feature_override);
 	}
 	if (expected.entity_feature_id !== undefined) {
 		expect(item.entity_feature_id).toBe(expected.entity_feature_id);

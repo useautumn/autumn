@@ -2,6 +2,7 @@ import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls
 import type { z } from "zod/v4";
 import { ApiPlanV1Schema } from "../../apiPlanV1.js";
 import { ApiFreeTrialV2Schema } from "../apiFreeTrialV2.js";
+import { ApiPlanProcessorsSchema } from "../processors.js";
 
 /**
  * Sparse definition scalars that changed, holding their previous values.
@@ -17,10 +18,15 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 	config: true,
 	archived: true,
 	metadata: true,
+	processors: true,
 })
 	.partial()
 	.extend({
 		// Diff emits null when the previous value was unset so the key survives JSON.
+		processors: ApiPlanProcessorsSchema.nullable().optional().meta({
+			description:
+				"Previous payment processors when they changed. Null when the plan had none.",
+		}),
 		free_trial: ApiFreeTrialV2Schema.nullable().optional().meta({
 			description:
 				"Previous free trial when it changed. Null when the plan had none.",

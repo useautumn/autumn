@@ -21,7 +21,7 @@ export const setupInvoiceCreditProducts = async ({
 	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 }): Promise<FullProduct[]> => {
-	const internalFeatureIds = params.features.flatMap((entry) => {
+	const internalFeatureIds = (params.features ?? []).flatMap((entry) => {
 		if (entry.invoice_credit !== true) return [];
 		const feature = ctx.features.find(
 			(candidate) => candidate.id === entry.feature_id,
