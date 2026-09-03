@@ -10,6 +10,12 @@ export const defaultKit = (): AgentKit => ({
 /** Nothing installed — the control arm. */
 export const bareKit = (): AgentKit => ({ skills: [] });
 
+/** The integration pack: autumn-integrate plus its required concepts. */
+export const integrateKit = (): AgentKit => ({
+	skills: skillBundleFor({ name: "autumn-integrate" }),
+	underTest: "autumn-integrate",
+});
+
 /** Exactly the named agent-docs skills — no automatic requires expansion. */
 export const agentDocsKit = ({
 	skillNames,

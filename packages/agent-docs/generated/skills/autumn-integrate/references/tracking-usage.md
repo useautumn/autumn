@@ -1,0 +1,258 @@
+## Tracking usage
+
+When customers use features in your product, you'll need to record their usage so Autumn can track it against their limits or bill them for usage.
+
+There are two ways to record usage: sending events or setting usage directly.
+
+The customer must already exist before calling `track`. If the `customer_id` doesn't match an existing customer, the API returns a `customer_not_found` error. Create customers using [`customers.getOrCreate`](/documentation/customers/creating-customers) during signup or login.
+
+## Sending Events
+
+The track route is recommended for tracking consumable features, like AI messages, credits or API calls. Each time a customer uses a feature, send an event to count their usage.
+
+  Before recording usage, you may want to check if the customer is [allowed to
+  use the feature](/documentation/customers/check). This prevents them from exceeding usage
+  limits defined in the product.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.track({
+  customerId: "user_123",
+  featureId: "ai-messages",
+  value: 1,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.track(
+    customer_id="user_123",
+    feature_id="ai-messages",
+    value=1,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "ai-messages",
+    "value": 1
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="track response">
+```json
+{
+  "customerId": "user_123",
+  "value": 1,
+  "balance": {
+    "featureId": "ai-messages",
+    "granted": 100,
+    "remaining": 99,
+    "usage": 1,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1767610960519
+  }
+}
+```
+</Expandable>
+
+  You can also send a negative `value` to increase the balance counter, which is
+  useful for increasing a feature limit (eg, if a customer removes a seat).
+
+## Setting Usage Directly
+
+For non-consumable features (such as seats or workspaces), you may prefer to set usage directly, rather than incrementing Autumn's feature balance. This enables you to sync a source of truth up on your side with Autumn, preventing any discrepancies.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.balances.update({
+  customerId: "user_123",
+  featureId: "seats",
+  usage: 3,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.balances.update(
+    customer_id="user_123",
+    feature_id="seats",
+    usage=3,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/balances/update" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "seats",
+    "usage": 3
+  }'
+```
+
+</CodeGroup>
+
+  The usage route overwrites the current usage value. Use this carefully, as it
+  can reset or override incremental usage recorded through events.
+
+## Tracking AI Token Usage
+
+If you're using an [AI credit system](/examples/monetary-credits), you can track token usage directly with `trackTokens`. This automatically converts token counts to a dollar cost using [Models.dev](https://models.dev) pricing and your configured markup, then deducts from the customer's credit balance.
+
+The `modelId` must be in `provider/model` format, matching the provider and model keys from [Models.dev](https://models.dev). For example:
+- `anthropic/claude-sonnet-4-5-20250514`
+- `openai/gpt-4o`
+- `google/gemini-2.5-pro`
+
+For providers with nested model paths (like OpenRouter), include the full path after the provider: `openrouter/anthropic/claude-opus-4.6`.
+
+Token counts are **exclusive pools**: `inputTokens` should exclude cached tokens (pass those as `cacheReadTokens` / `cacheWriteTokens`) and `outputTokens` should exclude reasoning tokens (pass those as `reasoningTokens`). Audio tokens go in `audioInputTokens` / `audioOutputTokens`. See the [API reference](/api-reference/balances/trackTokens) for the full parameter list.
+
+  `autumn.balances.trackTokens` requires an autumn-js release that includes
+  the method. On older versions, call the REST endpoint directly — see the
+  cURL tab below.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.balances.trackTokens({
+  customerId: "user_123",
+  modelId: "anthropic/claude-opus-4-6",
+  inputTokens: 1000,
+  outputTokens: 500,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.balances.track_tokens(
+    customer_id="user_123",
+    model_id="anthropic/claude-opus-4-6",
+    input_tokens=1000,
+    output_tokens=500,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/balances.track_tokens" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "model_id": "anthropic/claude-opus-4-6",
+    "input_tokens": 1000,
+    "output_tokens": 500
+  }'
+```
+
+</CodeGroup>
+
+  If the customer has exactly one AI credit system feature, you can omit the
+  `featureId` parameter — it will be auto-detected. The request fails with an
+  error if the customer has no AI credit system, or has more than one and no
+  `featureId` is provided.
+
+### Vercel AI SDK integration
+
+If you're using the [Vercel AI SDK](https://sdk.vercel.ai), the `@useautumn/gateway` package can automatically track token usage for every `generateText` or `streamText` call — no manual `trackTokens` calls needed.
+
+## Using Event Names
+
+In the above examples, we used the `featureId` to identify the feature. You can instead use the `eventName` parameter to link balances to different events in your application. This can be useful when:
+
+- Multiple balances are affected by the same user action
+- Different user actions should be tracked against the same balance
+
+**Example Use Case:**
+
+Your AI chatbot has a daily limit of 10 messages, with a maximum monthly limit of 100 messages. Recording a message in Autumn should decrease both balances simultaneously.
+
+In Autumn, you can create two features: `daily-messages` and `monthly-messages`. You can add the same event name to both features: `message-sent`. Then, assign both features to a plan with the correct included amounts.
+
+Every time that event name is recorded, both the daily-messages and monthly-messages balances will be decremented.
+
+If you were to use the same feature for both in this case, the daily and monthly balances would sum, allowing the user to send 10 messages a day, with an "overage" balance of 100 messages per month if they go over the daily limit.
+
+You can define event names in the Autumn dashboard:
+
+1. Go to the [Features Page](https://app.useautumn.com/sandbox/products?tab=features).
+2. Click on the feature you want to add an event to.
+3. In the sheet, under the "advanced" section, add your event names.
+4. Save the feature.
+
+You can then record usage for these events from your application:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.track({
+  customerId: "user_123",
+  eventName: "blog_post_generation",
+  value: 1,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.track(
+    customer_id="user_123",
+    event_name="blog_post_generation",
+    value=1,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "event_name": "blog_post_generation",
+    "value": 1
+  }'
+```
+
+</CodeGroup>
+
+  You can only use one of `eventName` or `featureId` when recording usage.
+  Check that you're sending the correct one in the request, especially if you're
+  using a mix of `snake_case` and `kebab-case`.

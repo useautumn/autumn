@@ -1,0 +1,11 @@
+{
+	"name": "acme-notes-api",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "bun run src/index.ts"
+	},
+	"dependencies": {
+		"autumn-js": "*"
+	}
+}

@@ -6,6 +6,10 @@
 import { expect, test } from "bun:test";
 import { addOnFlatStated } from "../../cases/fill/addOn/addOnFlatStated.eval.ts";
 import { addOnPerUnitSwept } from "../../cases/fill/addOn/addOnPerUnitSwept.eval.ts";
+import { dailyCapStated } from "../../cases/fill/controls/dailyCapStated.eval.ts";
+import { gracefulOverage } from "../../cases/fill/controls/gracefulOverage.eval.ts";
+import { gracefulOverageSwept } from "../../cases/fill/controls/gracefulOverageSwept.eval.ts";
+import { overageToggle } from "../../cases/fill/controls/overageToggle.eval.ts";
 import { rolloverStated } from "../../cases/fill/rollover/rolloverStated.eval.ts";
 import { rolloverSwept } from "../../cases/fill/rollover/rolloverSwept.eval.ts";
 import { scoreConfigExpectations } from "../utils/scoreConfigExpectations.ts";
@@ -165,4 +169,152 @@ test("add-on-flat-stated: golden passes; per-unit modeling fails the flat verdic
 		configFile: perUnit,
 	});
 	expect(scores["has plan: sso add-on with flat base price"]).toBe(0);
+});
+
+test("daily-cap-stated: golden passes, empty fails", async () => {
+	const golden = await scoreConfigExpectations({
+		axCase: dailyCapStated,
+		configFile: dailyCapStated.goldenConfig,
+	});
+	expect(golden).toEqual({
+		"config parses and passes validation": 1,
+		"modeled exactly 1 plans": 1,
+		"has plan: free with monthly 3000 allowance and a 200/day cap": 1,
+		"has feature: emails (metered)": 1,
+	});
+
+	const empty = await scoreConfigExpectations({ axCase: dailyCapStated });
+	expect(
+		empty["has plan: free with monthly 3000 allowance and a 200/day cap"],
+	).toBe(0);
+});
+
+test("daily-cap-stated: cap modeled as a second daily item fails the plan verdict", async () => {
+	const secondItem = dailyCapStated.goldenConfig
+		?.replace(/\tbillingControls: billingControls\(\{[\s\S]*?\}\),\n/, "")
+		.replace(
+			"\t],\n});",
+			`\t\titem({
+			featureId: emails.id,
+			included: 200,
+			reset: { interval: "day" },
+		}),
+	],
+});`,
+		);
+	expect(secondItem).not.toContain("billingControls({");
+	const scores = await scoreConfigExpectations({
+		axCase: dailyCapStated,
+		configFile: secondItem,
+	});
+	expect(
+		scores["has plan: free with monthly 3000 allowance and a 200/day cap"],
+	).toBe(0);
+	expect(scores["config parses and passes validation"]).toBe(1);
+});
+
+test("overage-toggle: golden passes; percentage-base confusion (120) fails", async () => {
+	const golden = await scoreConfigExpectations({
+		axCase: overageToggle,
+		configFile: overageToggle.goldenConfig,
+	});
+	expect(golden).toEqual({
+		"config parses and passes validation": 1,
+		"modeled exactly 1 plans": 1,
+		"has plan: pro with overage item and default-off billing + 20% buffer": 1,
+		"has feature: emails (metered)": 1,
+	});
+
+	const wrongBase = overageToggle.goldenConfig?.replace(
+		"overage_limit: 20,",
+		"overage_limit: 120,",
+	);
+	const scores = await scoreConfigExpectations({
+		axCase: overageToggle,
+		configFile: wrongBase,
+	});
+	expect(
+		scores[
+			"has plan: pro with overage item and default-off billing + 20% buffer"
+		],
+	).toBe(0);
+	expect(scores["config parses and passes validation"]).toBe(1);
+});
+
+test("graceful-overage: golden passes every config verdict (both twins share it)", async () => {
+	for (const axCase of [gracefulOverage, gracefulOverageSwept]) {
+		const scores = await scoreConfigExpectations({
+			axCase,
+			configFile: axCase.goldenConfig,
+		});
+		expect(scores).toEqual({
+			"config parses and passes validation": 1,
+			"has plan: standard hard-stops: allowance only, no overage item": 1,
+			"has plan: enterprise with controls-based graceful overage": 1,
+			"has feature: credits (credit system)": 1,
+			"base plans carry no prepaid items": 1,
+		});
+	}
+});
+
+test("graceful-overage: spend limit alone (overage never enabled) fails the enterprise verdict", async () => {
+	const noEnable = gracefulOverage.goldenConfig?.replace(
+		/\t\toverage_allowed: \[[^\]]*\],\n/,
+		"",
+	);
+	expect(noEnable).not.toContain("overage_allowed");
+	const scores = await scoreConfigExpectations({
+		axCase: gracefulOverage,
+		configFile: noEnable,
+	});
+	expect(
+		scores["has plan: enterprise with controls-based graceful overage"],
+	).toBe(0);
+	expect(scores["config parses and passes validation"]).toBe(1);
+});
+
+test("graceful-overage: a PRICED overage item on enterprise fails the standard-pattern verdicts", async () => {
+	const pricedOverage = gracefulOverage.goldenConfig
+		?.replace(
+			`	billingControls: billingControls({
+		overage_allowed: [{ feature_id: "credits", enabled: true }],
+		spend_limits: [
+			{
+				feature_id: "credits",
+				enabled: true,
+				skip_overage_billing: true,
+				limit_type: "usage_percentage",
+				overage_limit: 10,
+			},
+		],
+	}),`,
+			"",
+		)
+		.replace(
+			`		item({
+			featureId: credits.id,
+			included: 5000000,
+			reset: { interval: "month" },
+		}),`,
+			`		item({
+			featureId: credits.id,
+			included: 5000000,
+			reset: { interval: "month" },
+			price: {
+				amount: 0.01,
+				billingUnits: 1,
+				billingMethod: "usage_based",
+				interval: "month",
+			},
+		}),`,
+		);
+	expect(pricedOverage).not.toContain("billingControls(");
+	const scores = await scoreConfigExpectations({
+		axCase: gracefulOverage,
+		configFile: pricedOverage,
+	});
+	expect(
+		scores["has plan: enterprise with controls-based graceful overage"],
+	).toBe(0);
+	expect(scores["config parses and passes validation"]).toBe(1);
 });

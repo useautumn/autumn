@@ -28,6 +28,9 @@ export const leafSkillRequires: Record<string, string[]> = {
   "autumn-catalog": [
     "autumn-concepts"
   ],
+  "autumn-integrate": [
+    "autumn-concepts"
+  ],
   "autumn-billing": [],
   "autumn-trials": [],
   "autumn-schedules": [],

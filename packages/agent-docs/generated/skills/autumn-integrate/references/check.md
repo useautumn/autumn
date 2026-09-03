@@ -1,0 +1,301 @@
+## Checking access
+
+When you create a plan in Autumn, you define what features your customers on that plan get access to.
+
+The `check` method returns the `allowed` field in real-time to check if a customer should have access to a feature. You can use this to block access and prompt an upsell.
+
+## The `allowed` field
+
+The `allowed` field will return `true` for a given feature if:
+- The customer has an active plan with this feature
+- The customer has an active plan with a `credit_system` that grants this feature
+- The plan feature is <Badge>included</Badge> or <Badge>prepaid</Badge>, and the current balance is greater than the `required_balance` parameter
+- The plan feature is <Badge>usage-based</Badge>, and the user has not exceeded their max spend limit
+- The plan feature is <Badge>unlimited</Badge> or a <Badge>boolean</Badge> feature
+
+Under these conditions, you should allow your customer to use the feature. You can then [record the usage event](/documentation/customers/tracking-usage/) so Autumn can update the `allowed` field as necessary.
+
+The customer must already exist before calling `check`. If the `customer_id` doesn't match an existing customer, the API returns a `customer_not_found` error. Create customers using [`customers.getOrCreate`](/documentation/customers/creating-customers) during signup or login.
+
+## Checking metered features
+
+Before your customer uses a feature, you can check if the customer is allowed to use it and their current usage.
+
+**Example**
+
+Let's imagine you have a free plan for a chatbot that allows 5 messages per month. Before your customer sends an AI message, you can check if they have any left.
+
+If they still have messages remaining, they'll be allowed to send an AI message.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.check({
+  customerId: "user_123",
+  featureId: "messages",
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.check(
+    customer_id="user_123",
+    feature_id="messages",
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "messages"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="check response">
+```json
+{
+  "allowed": true,
+  "customerId": "user_123",
+  "requiredBalance": 1,
+  "balance": {
+    "featureId": "messages",
+    "granted": 5,
+    "remaining": 5,
+    "usage": 0,
+    "unlimited": false,
+    "overageAllowed": false,
+    "nextResetAt": 1767610960519
+  }
+}
+```
+</Expandable>
+
+Even if your product doesn't have usage limits (ie your feature is purely usage-based), you can still use the above method to prevent usage if a customer's payment fails.
+
+## Checking for a required balance
+
+If you know the balance a user will consume in advance, you can specify it with the `requiredBalance` parameter. This means you can prevent a user from starting a process that would consume more than their current balance.
+
+By default, `requiredBalance` is 1, so not passing this parameter will return `allowed: true` as long as the customer has a feature balance of 1 or more.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.check({
+  customerId: "user_123",
+  featureId: "messages",
+  requiredBalance: 3,
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.check(
+    customer_id="user_123",
+    feature_id="messages",
+    required_balance=3,
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "messages",
+    "required_balance": 3
+  }'
+```
+
+</CodeGroup>
+
+## Checking and reserving usage
+
+When you don't know the final cost upfront — like AI completions or long-running jobs — reserve balance with a `lock` on the check call, then finalize it once the operation completes.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.check({
+  customerId: "user_123",
+  featureId: "api_calls",
+  requiredBalance: 3,
+  sendEvent: true,
+  lock: {
+    enabled: true,
+    lockId: "request_abc123",
+    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+  },
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.check(
+    customer_id="user_123",
+    feature_id="api_calls",
+    required_balance=3,
+    send_event=True,
+    lock={
+        "enabled": True,
+        "lock_id": "request_abc123",
+        "expires_at": int(time.time() * 1000) + 5 * 60 * 1000,
+    },
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "api_calls",
+    "required_balance": 3,
+    "send_event": true,
+    "lock": {
+      "enabled": true,
+      "lock_id": "request_abc123",
+      "expires_at": 1735689600000
+    }
+  }'
+```
+
+</CodeGroup>
+
+Once the operation completes, finalize the lock — `confirm` it to keep the deduction, or `release` it if the operation failed.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.balances.finalize({
+  lockId: "request_abc123",
+  action: "confirm",
+});
+```
+
+```python Python
+await autumn.balances.finalize(
+    lock_id="request_abc123",
+    action="confirm",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/balances.finalize" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lock_id": "request_abc123",
+    "action": "confirm"
+  }'
+```
+
+</CodeGroup>
+
+See [Balance Locking](/documentation/customers/balance-locking) for the full guide, including releasing a lock and adjusting the final amount when actual usage differs from what you reserved.
+
+## Checking boolean features
+
+For simple on/off features, use the check method to determine if a customer has access:
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.check({
+  customerId: "user_123",
+  featureId: "premium-dashboard",
+});
+
+if (response.allowed) {
+  // Show premium dashboard
+}
+```
+
+### Feature flags in customer responses
+
+Boolean features are also returned as a `flags` object on customer and entity API responses. This lets you check on/off feature access directly from the customer object without calling the `check` endpoint separately.
+
+```json
+{
+  "balances": {
+    "credits": { "featureId": "credits", "granted": 1000, "remaining": 800, "usage": 200 }
+  },
+  "flags": {
+    "premiumDashboard": {
+      "id": "cus_ent_abc123",
+      "planId": "pro_plan",
+      "expiresAt": null,
+      "featureId": "premiumDashboard"
+    }
+  }
+}
+```
+
+- **Flags** are separate from **balances** — boolean features appear under `flags`, while metered and credit system features remain under `balances`
+- Each flag shows which `planId` it originates from and when it expires
+- Use `expand: ["flags.feature"]` to include the full feature object on each flag
+
+<CodeGroup>
+
+```typescript TypeScript
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+  expand: ["flags.feature"],
+});
+
+if (customer.flags?.["premiumDashboard"]) {
+  // Customer has the premium dashboard feature
+}
+```
+
+```python Python
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123",
+    expand=["flags.feature"],
+)
+
+if customer.flags and "premium_dashboard" in customer.flags:
+    # Customer has the premium dashboard feature
+    pass
+```
+
+</CodeGroup>

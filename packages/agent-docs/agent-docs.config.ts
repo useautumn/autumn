@@ -66,6 +66,14 @@ export default defineConfig({
 			skill: { file: "skills/catalog/catalog.mdx" },
 		},
 	},
+	integrate: {
+		title: "Integrate",
+		description:
+			"Integrating Autumn into an app's backend — customers, billing flows, gating, usage.",
+		formats: {
+			skill: { file: "skills/integrate/integrate.mdx" },
+		},
+	},
 	billing: {
 		title: "Billing",
 		description: "How agents should perform Autumn billing workflows.",
