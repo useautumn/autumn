@@ -126,8 +126,9 @@ export const AdminOrgTable = () => {
 					enableSorting,
 					isLoading,
 					emptyStateText: "No organizations found.",
-					rowClassName: "h-10",
+					rowClassName: "h-9",
 					flexibleTableColumns: true,
+					mobileCards: true,
 				}}
 			>
 				<Table.Container>

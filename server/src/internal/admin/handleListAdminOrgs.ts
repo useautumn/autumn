@@ -1,4 +1,4 @@
-import { member, organizations, user, Scopes } from "@autumn/shared";
+import { member, organizations, Scopes, user } from "@autumn/shared";
 import {
 	and,
 	desc,
@@ -111,7 +111,13 @@ export const handleListAdminOrgs = createRoute({
 
 		return c.json({
 			rows: orgs.slice(0, 20).map((org) => {
-				const { redis_config: rawRedisConfig, ...rest } = org;
+				// claim_token_hash never leaves the server — the admin list only needs
+				// claim_state to flag orgs an agent provisioned but nobody claimed yet.
+				const {
+					redis_config: rawRedisConfig,
+					claim_token_hash: _claimTokenHash,
+					...rest
+				} = org;
 				return {
 					...rest,
 					// Redact encrypted connection string from admin list — UI only
