@@ -17,8 +17,8 @@
  * Contract:
  *   G1  stating plans while omitting features leaves features alone
  *   G2  stating features while omitting plans leaves plans alone
- *   G3  an explicit empty array still means "I manage this and it is empty",
- *       so the wipe backstop still fires — omission and [] are not the same
+ *   G3  an explicit empty array means "I manage this and it is empty", so it
+ *       removes everything — omission and [] are not the same
  *
  * Red (current): the zod default turns an absent key into [], so the absentee
  *   sweep runs over the whole collection and G1/G2 delete.
@@ -137,19 +137,19 @@ test.concurrent(
 			plans: [],
 		});
 
-		// G3: stating `features: []` is a claim about features — "I manage them
-		// and there are none" — which is the wipe the backstop exists to refuse.
-		// If omission and [] were the same thing, this would pass silently.
-		const wipe = autumnV2_3.catalogV2.update({
+		// G3: stating `features: []` is a claim — "I manage them and there are
+		// none" — so it removes them. This is the assertion that proves omission
+		// and [] are different: the test above omits the key and the feature
+		// survives; here it is stated empty and the feature goes.
+		await autumnV2_3.catalogV2.update({
 			skip_deletions: false,
 			features: [],
 			plans: [],
 		});
-		await expect(wipe).rejects.toThrow();
 
 		expect(
 			await featureExists({ ctx, featureId }),
-			"stated-empty was refused, not applied",
-		).toBe(true);
+			"stated-empty removed the feature",
+		).toBe(false);
 	},
 );

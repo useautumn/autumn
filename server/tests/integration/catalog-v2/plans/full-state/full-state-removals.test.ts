@@ -101,7 +101,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 full-state: an empty payload is refused rather than wiping the catalog")}`,
+	`${chalk.yellowBright("catalogV2 full-state: a stated empty collection removes everything in it")}`,
 	async () => {
 		// Full state speaks for the entire org catalog, so it needs an org of its
 		// own — in a shared one it would remove every concurrent test's plans.
@@ -123,17 +123,57 @@ test.concurrent(
 					plans: [{ plan_id: planId, name: "Survivor", items: [] }],
 				});
 
-				// C5: a config that failed to load looks exactly like this. Deleting
-				// a live catalog is not recoverable, so it is refused.
-				const wipe = autumnV2_3.catalogV2.update({
+				// C5: `plans: []` is a claim — "I manage plans and there are none".
+				// This was refused until 2026-09-03 on the theory that a config which
+				// failed to load looks the same. It does not any more: a payload that
+				// failed to state plans omits the key, and an omitted key returns
+				// before the sweep. Refusing it also fired from preview_update, so it
+				// blocked SEEING the deletions as well as doing them.
+				await autumnV2_3.catalogV2.update({
 					skip_deletions: false,
 					plans: [],
 				});
-				await expect(wipe).rejects.toThrow();
 
 				expect(
 					await planExists({ ctx, planId }),
-					"catalog survived the empty payload",
+					"a stated empty collection removed the plan",
+				).toBe(false);
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 full-state: an omitted collection is still untouchable")}`,
+	async () => {
+		// The protection that actually matters, and the one a client too old to
+		// know about a collection relies on: it sends no key, so nothing is swept.
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("fs")}@autumn.test`,
+				}),
+			],
+			actions: [],
+		});
+		const planId = uniqueTestId("cv2_fs_omitted");
+
+		await withCatalogPlans({
+			ctx,
+			planIds: [planId],
+			run: async () => {
+				await autumnV2_3.catalogV2.update({
+					plans: [{ plan_id: planId, name: "Untouched", items: [] }],
+				});
+
+				await autumnV2_3.catalogV2.update({
+					skip_deletions: false,
+					features: [],
+				});
+
+				expect(
+					await planExists({ ctx, planId }),
+					"plans were never mentioned, so they were never swept",
 				).toBe(true);
 			},
 		});
