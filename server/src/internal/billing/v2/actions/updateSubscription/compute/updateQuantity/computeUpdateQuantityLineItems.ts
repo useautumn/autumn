@@ -5,10 +5,9 @@ import {
 	billingContextToCurrency,
 	cloneEntitlementWithUpdatedQuantity,
 	cusEntToCusPrice,
-	cusProductToCusEnts,
 	type Feature,
+	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
-	findPrepaidCustomerEntitlement,
 	InternalError,
 	type LineItem,
 	type LineItemContext,
@@ -23,6 +22,7 @@ export const computeUpdateQuantityLineItems = ({
 	ctx,
 	billingContext,
 	customerProduct,
+	prepaidCustomerEntitlement,
 	feature,
 	billingPeriod,
 	quantityDifferenceForEntitlements,
@@ -31,24 +31,13 @@ export const computeUpdateQuantityLineItems = ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	customerProduct: FullCusProduct;
+	prepaidCustomerEntitlement: FullCusEntWithFullCusProduct;
 	feature: Feature;
 	billingPeriod?: BillingPeriod;
 	quantityDifferenceForEntitlements: number;
 	currentEpochMs: number;
 }) => {
 	const { org } = ctx;
-	const customerEntitlements = cusProductToCusEnts({ customerProduct });
-
-	const prepaidCustomerEntitlement = findPrepaidCustomerEntitlement({
-		customerEntitlements,
-		feature,
-	});
-
-	if (!prepaidCustomerEntitlement) {
-		throw new InternalError({
-			message: `[Quantity Update] Prepaid customer entitlement not found for feature: ${feature.internal_id}`,
-		});
-	}
 
 	const customerPrice = cusEntToCusPrice({
 		cusEnt: prepaidCustomerEntitlement,

@@ -158,6 +158,7 @@ export const computeUpdateQuantityDetails = ({
 		ctx,
 		billingContext: updateSubscriptionContext,
 		customerProduct,
+		prepaidCustomerEntitlement: cusEntWithCusProduct,
 		feature,
 		billingPeriod,
 		quantityDifferenceForEntitlements:

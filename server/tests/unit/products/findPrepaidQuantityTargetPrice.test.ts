@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
-import type { Price } from "@autumn/shared";
+import type { FullCusEntWithFullCusProduct, Price } from "@autumn/shared";
 import {
 	BillingInterval,
 	BillWhen,
+	customerEntitlementToOptions,
 	findPrepaidQuantityTargetPrice,
 	isLosingPrepaidQuantityPrice,
 	PriceType,
@@ -130,4 +131,61 @@ test("no prepaid price for the feature resolves to undefined", () => {
 	});
 
 	expect(target).toBeUndefined();
+});
+
+const cusEntForPrice = ({
+	price,
+	siblingPrices,
+	options,
+}: {
+	price: Price;
+	siblingPrices: Price[];
+	options: { feature_id: string; quantity: number; upcoming_quantity?: number }[];
+}) =>
+	({
+		customer_product_id: "cus_prod_1",
+		entitlement_id: `ent_${price.id}`,
+		entitlement: {
+			id: `ent_${price.id}`,
+			feature_id: "messages",
+			internal_feature_id: "internal_messages",
+			feature: { id: "messages", internal_id: "internal_messages" },
+		},
+		customer_product: {
+			options,
+			customer_prices: siblingPrices.map((siblingPrice) => ({
+				id: `cp_${siblingPrice.id}`,
+				customer_product_id: "cus_prod_1",
+				price: { ...siblingPrice, entitlement_id: `ent_${siblingPrice.id}` },
+			})),
+		},
+	}) as unknown as FullCusEntWithFullCusProduct;
+
+test("losing prepaid price reads a zeroed options copy, not undefined", () => {
+	const oneOff = prepaidPrice({ id: "pr_one_off", interval: BillingInterval.OneOff });
+	const monthly = prepaidPrice({ id: "pr_monthly", interval: BillingInterval.Month });
+	const options = [{ feature_id: "messages", quantity: 3, upcoming_quantity: 5 }];
+
+	const losingOptions = customerEntitlementToOptions({
+		customerEntitlement: cusEntForPrice({
+			price: oneOff,
+			siblingPrices: [oneOff, monthly],
+			options,
+		}),
+	});
+	// Zeroed copy: renewal resets still run, but the winner's quantity never leaks.
+	expect(losingOptions).toEqual({
+		feature_id: "messages",
+		quantity: 0,
+		upcoming_quantity: null,
+	});
+
+	const winningOptions = customerEntitlementToOptions({
+		customerEntitlement: cusEntForPrice({
+			price: monthly,
+			siblingPrices: [oneOff, monthly],
+			options,
+		}),
+	});
+	expect(winningOptions).toEqual(options[0]);
 });
