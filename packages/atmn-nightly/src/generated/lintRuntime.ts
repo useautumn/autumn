@@ -90,6 +90,27 @@ export type LintRule =
 			readonly op: "<" | "<=" | ">" | ">=";
 			readonly than: string;
 			readonly because: string;
+	  }
+	| {
+			/** `field` must equal `mustBe` when `when` is `equals`. */
+			readonly kind: "valueWhen";
+			readonly when: string;
+			readonly equals: string;
+			readonly field: string;
+			readonly mustBe: string;
+			readonly because: string;
+	  }
+	| {
+			/** `field` names a row of top-level collection `in` by `matching`;
+			 * that row's `target` must equal `equals`. Skipped when `when` is unset. */
+			readonly kind: "targetHas";
+			readonly when: string;
+			readonly field: string;
+			readonly in: string;
+			readonly matching: string;
+			readonly target: string;
+			readonly equals: string;
+			readonly because: string;
 	  };
 
 /** The part of a node's rules that an anyOf/oneOf branch can override. */
@@ -373,6 +394,27 @@ const entryRuleFailures = ({
 				: [
 						`${rule.field} must be ${words} ${rule.than} — got ${a} and ${b}. ${rule.because}`,
 					];
+		}
+		case "valueWhen": {
+			if (entry[rule.when] !== rule.equals) return [];
+			const value = entry[rule.field];
+			if (value === undefined || value === rule.mustBe) return [];
+			return [
+				`${rule.field} must be ${show(rule.mustBe)} when ${rule.when} is ${show(rule.equals)}. ${rule.because}`,
+			];
+		}
+		case "targetHas": {
+			if (entry[rule.when] === undefined) return [];
+			const target = document[rule.in];
+			if (!Array.isArray(target)) return [];
+			const row = target.find(
+				(candidate) =>
+					isEntry(candidate) && candidate[rule.matching] === entry[rule.field],
+			);
+			if (!row || row[rule.target] === rule.equals) return [];
+			return [
+				`${rule.when} needs ${rule.in} ${show(entry[rule.field])} to have ${rule.target} ${show(rule.equals)} — got ${show(row[rule.target])}. ${rule.because}`,
+			];
 		}
 		case "unique":
 			return [];

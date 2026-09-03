@@ -24,6 +24,10 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return [rule.field];
 		case "compare":
 			return [rule.field, rule.than];
+		case "valueWhen":
+			return [rule.when, rule.field];
+		case "targetHas":
+			return [rule.when, rule.field];
 	}
 };
 
@@ -79,6 +83,30 @@ export const validateRegistry = ({
 				if (!targetFields?.has(rule.matching)) {
 					problems.push(
 						`"${path}": exists rule matches on "${rule.in}.${rule.matching}", which is not a field there.`,
+					);
+				}
+			}
+			if (rule.kind === "targetHas") {
+				if (!topLevel.has(rule.in)) {
+					problems.push(
+						`"${path}": targetHas rule points at "${rule.in}", which is not a top-level collection.`,
+					);
+					continue;
+				}
+				const targetFields = fieldsAtPath({
+					schema,
+					root,
+					path: rule.in,
+					overlay,
+				});
+				if (!targetFields?.has(rule.matching)) {
+					problems.push(
+						`"${path}": targetHas rule matches on "${rule.in}.${rule.matching}", which is not a field there.`,
+					);
+				}
+				if (!targetFields?.has(rule.target)) {
+					problems.push(
+						`"${path}": targetHas rule targets "${rule.in}.${rule.target}", which is not a field there.`,
 					);
 				}
 			}
