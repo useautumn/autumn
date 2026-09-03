@@ -5,21 +5,24 @@ import {
 	TrackOutcomeSubjectMismatchError,
 } from "@autumn/balance-engine";
 import {
+	ConflictingMeteringStateInitializationError,
 	CorruptBalanceStateError,
 	MeteringStateNotFoundError,
+	MeteringStatePartitionMismatchError,
 	PartitionProgressNotFoundError,
 	UnexpectedKafkaOffsetError,
 } from "../state/sqliteBalanceStateErrors.js";
 import type {
+	DurableStateInitializationApplyResult,
 	DurableTrackOutcomeApplyResult,
 	SqliteBalanceStateStore,
 } from "../state/sqliteBalanceStateStore.js";
 import {
-	InvalidKafkaTrackOutcomeRecordError,
-	KafkaTrackOutcomeKeyMismatchError,
-	parseKafkaTrackOutcomeRecord,
-	UnsupportedKafkaTrackOutcomeRecordVersionError,
-} from "./trackOutcomeRecord.js";
+	InvalidKafkaMeteringRecordError,
+	KafkaMeteringRecordKeyMismatchError,
+	parseKafkaMeteringRecord,
+	UnsupportedKafkaMeteringRecordVersionError,
+} from "./kafkaMeteringRecord.js";
 
 export class InvalidKafkaRecordOffsetError extends Error {
 	readonly retriable = false;
@@ -62,15 +65,17 @@ export class KafkaPartitionInvariantError extends Error {
 
 const isKafkaPartitionInvariantCause = (cause: unknown): cause is Error =>
 	cause instanceof InvalidKafkaRecordOffsetError ||
-	cause instanceof InvalidKafkaTrackOutcomeRecordError ||
-	cause instanceof UnsupportedKafkaTrackOutcomeRecordVersionError ||
-	cause instanceof KafkaTrackOutcomeKeyMismatchError ||
+	cause instanceof InvalidKafkaMeteringRecordError ||
+	cause instanceof UnsupportedKafkaMeteringRecordVersionError ||
+	cause instanceof KafkaMeteringRecordKeyMismatchError ||
 	cause instanceof ConflictingTrackReceiptError ||
+	cause instanceof ConflictingMeteringStateInitializationError ||
 	cause instanceof OutOfOrderTrackOutcomeError ||
 	cause instanceof StaleTrackOutcomeError ||
 	cause instanceof TrackOutcomeSubjectMismatchError ||
 	cause instanceof CorruptBalanceStateError ||
 	cause instanceof MeteringStateNotFoundError ||
+	cause instanceof MeteringStatePartitionMismatchError ||
 	cause instanceof PartitionProgressNotFoundError ||
 	cause instanceof UnexpectedKafkaOffsetError;
 
@@ -89,7 +94,11 @@ export const parseKafkaRecordOffset = ({
 	return parsedOffset;
 };
 
-export const processTrackOutcomeRecord = ({
+export type DurableMeteringRecordApplyResult =
+	| DurableStateInitializationApplyResult
+	| DurableTrackOutcomeApplyResult;
+
+export const processKafkaMeteringRecord = ({
 	topic,
 	partition,
 	message,
@@ -103,18 +112,21 @@ export const processTrackOutcomeRecord = ({
 		value: Buffer | null;
 	};
 	stateStore: SqliteBalanceStateStore;
-}): DurableTrackOutcomeApplyResult => {
+}): DurableMeteringRecordApplyResult => {
 	try {
 		const offset = parseKafkaRecordOffset({ offset: message.offset });
-		const outcome = parseKafkaTrackOutcomeRecord({
+		const record = parseKafkaMeteringRecord({
 			key: message.key,
 			value: message.value,
 		});
+		const position = { topic, partition, offset };
 
-		return stateStore.applyDurableTrackOutcome({
-			position: { topic, partition, offset },
-			outcome,
-		});
+		return record.type === "state_initialized"
+			? stateStore.applyDurableStateInitialization({
+					position,
+					initialization: record,
+				})
+			: stateStore.applyDurableTrackOutcome({ position, outcome: record });
 	} catch (cause) {
 		if (!isKafkaPartitionInvariantCause(cause)) throw cause;
 		throw new KafkaPartitionInvariantError({

@@ -2,13 +2,13 @@ import type { Consumer } from "kafkajs";
 import type { PartitionOutcomeFollowerPort } from "../runtime/ownedPartitionRuntime.js";
 import { PartitionProgressNotFoundError } from "../state/sqliteBalanceStateErrors.js";
 import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.js";
-import type { KafkaPartitionPositionTrackerPort } from "./kafkaPartitionPositionTracker.js";
 import {
 	KafkaPartitionOffsetsNotFoundError,
 	type KafkaPartitionOffsetsPort,
 	StateBehindKafkaLogStartError,
-} from "./kafkaTrackOutcomeConsumer.js";
-import { parseKafkaRecordOffset } from "./processTrackOutcomeRecord.js";
+} from "./kafkaMeteringConsumer.js";
+import type { KafkaPartitionPositionTrackerPort } from "./kafkaPartitionPositionTracker.js";
+import { parseKafkaRecordOffset } from "./processKafkaMeteringRecord.js";
 
 export type KafkaPartitionControlPort = Pick<
 	Consumer,

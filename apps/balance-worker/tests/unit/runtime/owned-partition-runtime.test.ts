@@ -71,6 +71,7 @@ const createTrackCommand = ({
 			overageBehavior: "reject",
 			properties: null,
 			occurredAt: 1_700_000_000_000,
+			deduplicationExpiresAt: 1_700_086_400_000,
 		},
 	});
 
@@ -242,7 +243,12 @@ const createStoreFixture = (): {
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
-	store.initializeState({ state: createState() });
+	store.initializeState({
+		topic,
+		partition,
+		initializationId: "init_1",
+		state: createState(),
+	});
 	return { directory, store };
 };
 

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { StateBehindKafkaLogStartError } from "../../../src/kafka/kafkaMeteringConsumer.js";
 import {
 	createKafkaPartitionOutcomeFollower,
 	type KafkaPartitionControlPort,
@@ -6,7 +7,6 @@ import {
 	StateAheadOfKafkaLogEndError,
 } from "../../../src/kafka/kafkaPartitionOutcomeFollower.js";
 import { KafkaPartitionPositionTracker } from "../../../src/kafka/kafkaPartitionPositionTracker.js";
-import { StateBehindKafkaLogStartError } from "../../../src/kafka/kafkaTrackOutcomeConsumer.js";
 import { PartitionProgressNotFoundError } from "../../../src/state/sqliteBalanceStateErrors.js";
 import {
 	closeStoreFixture,

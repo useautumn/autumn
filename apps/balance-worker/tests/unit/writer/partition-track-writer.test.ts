@@ -74,6 +74,7 @@ const createCommand = ({
 			overageBehavior: "reject",
 			properties,
 			occurredAt: 1_700_000_000_000,
+			deduplicationExpiresAt: 1_700_086_400_000,
 		},
 	});
 
@@ -151,7 +152,12 @@ const createFixture = ({
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
 	for (const identity of identities) {
-		store.initializeState({ state: createState({ identity }) });
+		store.initializeState({
+			topic,
+			partition,
+			initializationId: `init_${identity.customerId}`,
+			state: createState({ identity }),
+		});
 	}
 	return { directory, store };
 };

@@ -19,6 +19,13 @@ export class MeteringStateNotFoundError extends Error {
 	}
 }
 
+export class MeteringStatePartitionMismatchError extends Error {
+	constructor({ partitionKey }: { partitionKey: string }) {
+		super(`Metering state ${partitionKey} belongs to another Kafka partition`);
+		this.name = "MeteringStatePartitionMismatchError";
+	}
+}
+
 export class ConflictingPartitionInitializationError extends Error {
 	constructor({ topic, partition }: { topic: string; partition: number }) {
 		super(`Partition ${topic}[${partition}] is already initialized`);

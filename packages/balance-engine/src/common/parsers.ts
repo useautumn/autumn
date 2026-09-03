@@ -3,6 +3,8 @@ import {
 	type CustomerMeteringState,
 	checkCommandSchema,
 	customerMeteringStateSchema,
+	type StateInitializedEvent,
+	stateInitializedEventSchema,
 	type TrackCommand,
 	type TrackOutcome,
 	trackCommandSchema,
@@ -32,3 +34,9 @@ export const parseCustomerMeteringState = ({
 }: {
 	input: unknown;
 }): CustomerMeteringState => customerMeteringStateSchema.parse(input);
+
+export const parseStateInitializedEvent = ({
+	input,
+}: {
+	input: unknown;
+}): StateInitializedEvent => stateInitializedEventSchema.parse(input);

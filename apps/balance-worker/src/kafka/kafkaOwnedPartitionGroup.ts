@@ -6,19 +6,19 @@ import type {
 } from "kafkajs";
 import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.js";
 import {
+	createKafkaMeteringConsumer,
+	type KafkaMeteringConsumerPort,
+	type KafkaPartitionOffsetsPort,
+} from "./kafkaMeteringConsumer.js";
+import {
 	createKafkaPartitionOutcomeFollower,
 	type KafkaPartitionControlPort,
 	type KafkaPartitionOutcomeFollower,
 } from "./kafkaPartitionOutcomeFollower.js";
 import { KafkaPartitionPositionTracker } from "./kafkaPartitionPositionTracker.js";
-import {
-	createKafkaTrackOutcomeConsumer,
-	type KafkaPartitionOffsetsPort,
-	type KafkaTrackOutcomeConsumerPort,
-} from "./kafkaTrackOutcomeConsumer.js";
 
-export type KafkaOwnedPartitionGroupConsumerPort =
-	KafkaTrackOutcomeConsumerPort & KafkaPartitionControlPort;
+export type KafkaOwnedPartitionGroupConsumerPort = KafkaMeteringConsumerPort &
+	KafkaPartitionControlPort;
 
 export type KafkaOwnedPartitionGroupAdminPort = KafkaPartitionOffsetsPort &
 	Pick<Admin, "connect" | "disconnect">;
@@ -103,7 +103,7 @@ export const createKafkaOwnedPartitionGroup = ({
 	}
 
 	const positionTracker = new KafkaPartitionPositionTracker();
-	const outcomeConsumer = createKafkaTrackOutcomeConsumer({
+	const meteringConsumer = createKafkaMeteringConsumer({
 		consumer,
 		partitionOffsets,
 		topic,
@@ -270,7 +270,7 @@ export const createKafkaOwnedPartitionGroup = ({
 		try {
 			await partitionOffsets.connect();
 			adminConnected = true;
-			await outcomeConsumer.start();
+			await meteringConsumer.start();
 		} catch (cause) {
 			status = "stopped";
 			for (const removeListener of removeEventListeners.splice(0)) {
@@ -304,7 +304,7 @@ export const createKafkaOwnedPartitionGroup = ({
 			await Promise.allSettled([previousLifecycle, stoppingEntries]);
 			const cleanupErrors: unknown[] = [];
 			try {
-				await outcomeConsumer.stop();
+				await meteringConsumer.stop();
 			} catch (cause) {
 				cleanupErrors.push(cause);
 			}

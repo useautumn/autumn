@@ -1,14 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
-	InvalidKafkaTrackOutcomeRecordError,
-	KafkaTrackOutcomeKeyMismatchError,
+	InvalidKafkaMeteringRecordError,
+	KafkaMeteringRecordKeyMismatchError,
+	parseKafkaMeteringRecord,
 	parseKafkaTrackOutcomeRecord,
+	serializeKafkaStateInitializedRecord,
 	serializeKafkaTrackOutcomeRecord,
-	UnsupportedKafkaTrackOutcomeRecordVersionError,
-} from "../../../src/kafka/trackOutcomeRecord.js";
+	UnsupportedKafkaMeteringRecordVersionError,
+} from "../../../src/kafka/kafkaMeteringRecord.js";
 import { createOutcome, createState } from "./kafka-test-fixtures.js";
 
-describe("Kafka track outcome record", () => {
+describe("Kafka metering record", () => {
 	test("round-trips a versioned outcome with its customer partition key", () => {
 		const outcome = createOutcome({ state: createState() });
 		const serialized = serializeKafkaTrackOutcomeRecord({ outcome });
@@ -19,6 +21,24 @@ describe("Kafka track outcome record", () => {
 				value: serialized.value,
 			}),
 		).toEqual(outcome);
+	});
+
+	test("round-trips a versioned state initialization with its customer partition key", () => {
+		const initialization = {
+			schemaVersion: 1,
+			type: "state_initialized",
+			initializationId: "init_1",
+			initializedAt: 1_700_000_000_000,
+			state: createState(),
+		} as const;
+		const serialized = serializeKafkaStateInitializedRecord({ initialization });
+
+		expect(
+			parseKafkaMeteringRecord({
+				key: serialized.key,
+				value: serialized.value,
+			}),
+		).toEqual(initialization);
 	});
 
 	test("rejects an unsupported envelope version", () => {
@@ -34,7 +54,7 @@ describe("Kafka track outcome record", () => {
 					"utf8",
 				),
 			}),
-		).toThrow(UnsupportedKafkaTrackOutcomeRecordVersionError);
+		).toThrow(UnsupportedKafkaMeteringRecordVersionError);
 	});
 
 	test("rejects a record whose Kafka key names another customer", () => {
@@ -46,7 +66,26 @@ describe("Kafka track outcome record", () => {
 				key: Buffer.from('["org_1","sandbox","cus_2"]', "utf8"),
 				value: serialized.value,
 			}),
-		).toThrow(KafkaTrackOutcomeKeyMismatchError);
+		).toThrow(KafkaMeteringRecordKeyMismatchError);
+	});
+
+	test("rejects a state initialization keyed to another customer", () => {
+		const serialized = serializeKafkaStateInitializedRecord({
+			initialization: {
+				schemaVersion: 1,
+				type: "state_initialized",
+				initializationId: "init_1",
+				initializedAt: 1_700_000_000_000,
+				state: createState(),
+			},
+		});
+
+		expect(() =>
+			parseKafkaMeteringRecord({
+				key: Buffer.from('["org_1","sandbox","cus_2"]', "utf8"),
+				value: serialized.value,
+			}),
+		).toThrow(KafkaMeteringRecordKeyMismatchError);
 	});
 
 	test("rejects malformed and non-strict envelopes", () => {
@@ -59,7 +98,7 @@ describe("Kafka track outcome record", () => {
 				key: serialized.key,
 				value: Buffer.from("not-json", "utf8"),
 			}),
-		).toThrow(InvalidKafkaTrackOutcomeRecordError);
+		).toThrow(InvalidKafkaMeteringRecordError);
 		expect(() =>
 			parseKafkaTrackOutcomeRecord({
 				key: serialized.key,
@@ -68,6 +107,6 @@ describe("Kafka track outcome record", () => {
 					"utf8",
 				),
 			}),
-		).toThrow(InvalidKafkaTrackOutcomeRecordError);
+		).toThrow(InvalidKafkaMeteringRecordError);
 	});
 });

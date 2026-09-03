@@ -3,7 +3,7 @@ import {
 	type CommittedTrackOutcomeAppender,
 	TrackOutcomeBatchNotCommittedError,
 } from "../writer/committedTrackOutcomeAppender.js";
-import { serializeKafkaTrackOutcomeRecord } from "./trackOutcomeRecord.js";
+import { serializeKafkaTrackOutcomeRecord } from "./kafkaMeteringRecord.js";
 
 export type KafkaTrackOutcomeTransactionPort = Pick<
 	Transaction,

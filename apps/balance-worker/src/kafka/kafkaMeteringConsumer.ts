@@ -9,10 +9,10 @@ import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.j
 import type { KafkaPartitionPositionTrackerPort } from "./kafkaPartitionPositionTracker.js";
 import {
 	parseKafkaRecordOffset,
-	processTrackOutcomeRecord,
-} from "./processTrackOutcomeRecord.js";
+	processKafkaMeteringRecord,
+} from "./processKafkaMeteringRecord.js";
 
-export type KafkaTrackOutcomeConsumerPort = Pick<
+export type KafkaMeteringConsumerPort = Pick<
 	Consumer,
 	| "connect"
 	| "subscribe"
@@ -27,7 +27,7 @@ export type KafkaTrackOutcomeConsumerPort = Pick<
 
 export type KafkaPartitionOffsetsPort = Pick<Admin, "fetchTopicOffsets">;
 
-export type KafkaTrackOutcomeConsumerRunConfig = ConsumerRunConfig & {
+export type KafkaMeteringConsumerRunConfig = ConsumerRunConfig & {
 	autoCommit: false;
 	eachBatchAutoResolve: false;
 	partitionsConsumedConcurrently: number;
@@ -66,7 +66,7 @@ export class StateBehindKafkaLogStartError extends Error {
 	}
 }
 
-export const createKafkaTrackOutcomeConsumer = ({
+export const createKafkaMeteringConsumer = ({
 	consumer,
 	partitionOffsets,
 	topic,
@@ -74,7 +74,7 @@ export const createKafkaTrackOutcomeConsumer = ({
 	positionTracker,
 	partitionsConsumedConcurrently = 1,
 }: {
-	consumer: KafkaTrackOutcomeConsumerPort;
+	consumer: KafkaMeteringConsumerPort;
 	partitionOffsets: KafkaPartitionOffsetsPort;
 	topic: string;
 	stateStore: SqliteBalanceStateStore;
@@ -212,7 +212,7 @@ export const createKafkaTrackOutcomeConsumer = ({
 			if (!isRunning() || isStale()) return;
 
 			const recordOffset = parseKafkaRecordOffset({ offset: message.offset });
-			const result = processTrackOutcomeRecord({
+			const result = processKafkaMeteringRecord({
 				topic: recordTopic,
 				partition,
 				message,
@@ -245,11 +245,12 @@ export const createKafkaTrackOutcomeConsumer = ({
 			await heartbeat();
 		}
 
-		const currentTopicOffsets = uncommittedOffsets().topics.find(
+		const pendingOffsets = uncommittedOffsets();
+		const currentTopicOffsets = pendingOffsets.topics.find(
 			(offsets) => offsets.topic === recordTopic,
 		);
 		const currentPartitionOffset = currentTopicOffsets?.partitions.find(
-			(offsets) => offsets.partition === partition,
+			(offsets) => Number(offsets.partition) === partition,
 		);
 		if (!currentPartitionOffset) {
 			throw new KafkaPartitionOffsetsNotFoundError({
@@ -261,25 +262,29 @@ export const createKafkaTrackOutcomeConsumer = ({
 			topics: [
 				{
 					topic: recordTopic,
-					partitions: [currentPartitionOffset],
+					partitions: [{ partition, offset: currentPartitionOffset.offset }],
 				},
 			],
 		});
+		const committedNextOffset = parseKafkaRecordOffset({
+			offset: currentPartitionOffset.offset,
+		});
+		const fetchedNextOffset =
+			parseKafkaRecordOffset({ offset: batch.lastOffset() }) + 1n;
 		positionTracker.advance({
 			topic: recordTopic,
 			partition,
-			nextOffset: parseKafkaRecordOffset({
-				offset: currentPartitionOffset.offset,
-			}),
+			nextOffset:
+				fetchedNextOffset > committedNextOffset
+					? fetchedNextOffset
+					: committedNextOffset,
 		});
 		initializedPartitions.add(partitionKey);
 	};
 
 	const start = async (): Promise<void> => {
-		if (isStarted)
-			throw new Error("Kafka track outcome consumer already started");
-		if (isStopped)
-			throw new Error("Kafka track outcome consumer already stopped");
+		if (isStarted) throw new Error("Kafka metering consumer already started");
+		if (isStopped) throw new Error("Kafka metering consumer already stopped");
 
 		await consumer.connect();
 		removeGroupJoinListener = consumer.on(consumer.events.GROUP_JOIN, () => {
@@ -291,7 +296,7 @@ export const createKafkaTrackOutcomeConsumer = ({
 		);
 		try {
 			await consumer.subscribe({ topics: [topic], fromBeginning: true });
-			const runConfig: KafkaTrackOutcomeConsumerRunConfig = {
+			const runConfig: KafkaMeteringConsumerRunConfig = {
 				autoCommit: false,
 				eachBatchAutoResolve: false,
 				partitionsConsumedConcurrently,
