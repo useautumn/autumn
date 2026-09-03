@@ -24,7 +24,6 @@ export const checkLimitReached = async ({
 	feature,
 	entityId,
 	eventProperties,
-	now = Date.now(),
 }: {
 	ctx: AutumnContext;
 	oldEvalSubject: ApiCustomerV5 | ApiEntityV2;
@@ -34,8 +33,8 @@ export const checkLimitReached = async ({
 	feature: Feature;
 	entityId?: string;
 	eventProperties?: Record<string, unknown> | null;
-	now?: number;
 }) => {
+	const now = ctx.timestamp;
 	try {
 		const oldBalance = oldEvalSubject.balances?.[feature.id];
 		const newBalance = newEvalSubject.balances?.[feature.id];

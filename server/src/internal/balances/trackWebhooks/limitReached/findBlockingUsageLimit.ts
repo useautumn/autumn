@@ -1,12 +1,11 @@
 import {
 	type Feature,
 	type FullSubject,
-	fullSubjectToUsageWindowLimits,
 	getCurrentUsageWindowUsage,
-	orgToInStatuses,
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 import { usageWindowLimitToWebhookBlock } from "@/internal/balances/utils/usageWindows/usageWindowLimitToWebhookBlock.js";
 import type { BlockingUsageLimit } from "./types/blockingUsageLimit.js";
 
@@ -28,13 +27,7 @@ export const findBlockingUsageLimit = ({
 	now: number;
 }): BlockingUsageLimit | undefined => {
 	const usageWindows = fullSubject.usage_windows ?? [];
-	const measured = fullSubjectToUsageWindowLimits({
-		fullSubject,
-		featureIds: [feature.id],
-		features: ctx.features,
-		now,
-		inStatuses: orgToInStatuses({ org: ctx.org }),
-	})
+	const measured = resolveUsageWindowLimits({ ctx, fullSubject, feature, now })
 		.filter((limit) =>
 			usageLimitFilterMatchesProperties({
 				filterProperties: limit.filter_properties,

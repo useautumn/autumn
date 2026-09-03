@@ -12,7 +12,7 @@
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { ApiVersion, ResetInterval } from "@autumn/shared";
+import { ApiVersion, ms, ResetInterval } from "@autumn/shared";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
@@ -31,7 +31,6 @@ import { setCustomerUsageLimit } from "../../utils/usage-limit-utils/customerUsa
 import { expectUsageLimitWindowContains } from "../../utils/usage-limit-utils/expectUsageLimitWindowContains.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 type LimitReachedPayload = {
 	type: string;
@@ -128,7 +127,7 @@ test(`${chalk.yellowBright("limit-reached-ul1: a usage_limit block describes the
 	expectUsageLimitWindowContains({
 		usageLimit: result!.payload.data.usage_limit,
 		at: trackedAt,
-		intervalMs: ONE_DAY_MS,
+		intervalMs: ms.days(1),
 	});
 });
 
