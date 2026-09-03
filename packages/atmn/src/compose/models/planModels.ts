@@ -81,6 +81,10 @@ type UsageLimit = {
 	interval: "day" | "week" | "month" | "year";
 };
 
+type UsageLimitFilter = {
+	properties: Record<string, string>;
+};
+
 type UsageAlert = {
 	feature_id?: string;
 	enabled?: boolean;
@@ -91,7 +95,7 @@ type UsageAlert = {
 		| "remaining"
 		| "remaining_percentage";
 	basis?: "balance" | "included" | "recurring" | "usage_limit";
-	filter?: { properties: Record<string, string | number | boolean> };
+	filter?: UsageLimitFilter;
 	name?: string;
 };
 
