@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { toCamelCase } from "../casing/schemaKeyCasing";
 import { COLLECTIONS } from "../collections";
 import { OVERLAY } from "../overlay/overlay";
@@ -39,7 +40,8 @@ export const runFuzz = async ({
 };
 
 if (import.meta.main) {
-	const configPath = process.argv[2];
+	// A dynamic import resolves relative to this file, not the caller's shell.
+	const configPath = process.argv[2] && resolve(process.cwd(), process.argv[2]);
 	if (!configPath) {
 		console.error("usage: bun run fuzz <path/to/autumn.config.ts>");
 		process.exit(1);
