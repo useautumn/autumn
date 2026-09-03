@@ -2,7 +2,7 @@ import {
 	type ApiPlanV1,
 	AttachAction,
 	AttachScenario,
-	cusProductToProduct,
+	customerProductToEffectivePrices,
 	EligibilityStatus,
 	type FullCustomer,
 	type FullProduct,
@@ -11,6 +11,7 @@ import {
 	findScheduledCustomerProductById,
 	isCustomerProductCanceling,
 	isCustomerProductTrialing,
+	productToEffectivePrices,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
@@ -63,14 +64,12 @@ const getAttachAction = ({
 		return AttachAction.Activate;
 	}
 
-	// 5. Compare with current main product
-	const curFullProduct = cusProductToProduct({
-		cusProduct: curMainCusProduct,
-	});
-
+	// 5. Include license prices so eligibility matches attach previews.
 	const isUpgrade = isProductUpgrade({
-		prices1: curFullProduct.prices,
-		prices2: fullProduct.prices,
+		prices1: customerProductToEffectivePrices({
+			customerProduct: curMainCusProduct,
+		}),
+		prices2: productToEffectivePrices({ product: fullProduct }),
 	});
 
 	return isUpgrade ? AttachAction.Upgrade : AttachAction.Downgrade;
