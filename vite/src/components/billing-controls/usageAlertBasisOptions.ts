@@ -1,4 +1,8 @@
-import { USAGE_ALERT_BASES, type UsageAlertBasis } from "@autumn/shared";
+import {
+	BALANCE_BASES,
+	USAGE_ALERT_BASES,
+	type UsageAlertBasis,
+} from "@autumn/shared";
 
 export const USAGE_ALERT_BASIS_LABELS: Record<UsageAlertBasis, string> = {
 	balance: "Total balance",
@@ -22,11 +26,8 @@ const basisToOption = (basis: UsageAlertBasis): UsageAlertBasisOption => ({
 	label: USAGE_ALERT_BASIS_LABELS[basis],
 });
 
-export const ALL_BASIS_OPTIONS: UsageAlertBasisOption[] =
+export const USAGE_ALERT_BASIS_OPTIONS: readonly UsageAlertBasisOption[] =
 	USAGE_ALERT_BASES.map(basisToOption);
 
-// Org alerts have no single cap to measure.
-export const BALANCE_BASIS_OPTIONS: UsageAlertBasisOption[] =
-	USAGE_ALERT_BASES.filter((basis) => basis !== "usage_limit").map(
-		basisToOption,
-	);
+export const ORG_USAGE_ALERT_BASIS_OPTIONS: readonly UsageAlertBasisOption[] =
+	BALANCE_BASES.map(basisToOption);

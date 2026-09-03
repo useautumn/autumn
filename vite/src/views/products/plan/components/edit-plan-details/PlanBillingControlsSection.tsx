@@ -1,9 +1,11 @@
 import {
 	type BillingControlKey,
 	type CustomerBillingControls,
+	type DbUsageAlert,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
+	filterUnresolvableUsageLimitAlerts,
 	PurchaseLimitInterval,
 	ResetInterval,
 	type SpendLimitType,
@@ -33,7 +35,8 @@ import {
 } from "@/components/billing-controls/BillingControlsDisplay";
 import { OVERAGE_BILLING_OPTIONS } from "@/components/billing-controls/overageBillingOptions";
 import { UsageAnchorTooltip } from "@/components/billing-controls/UsageAnchorTooltip";
-import { ALL_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
+import { USAGE_ALERT_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
+import { USAGE_ALERT_THRESHOLD_TYPE_OPTIONS } from "@/components/billing-controls/usageAlertThresholdTypeOptions";
 import { FieldInfo } from "@/components/general/form/field-info";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -74,13 +77,6 @@ const USAGE_INTERVAL_OPTIONS: SelectOption[] = [
 	{ value: ResetInterval.Week, label: "Week" },
 	{ value: ResetInterval.Month, label: "Month" },
 	{ value: ResetInterval.Year, label: "Year" },
-];
-
-const THRESHOLD_TYPE_OPTIONS: SelectOption[] = [
-	{ value: "usage", label: "Absolute usage" },
-	{ value: "usage_percentage", label: "% used of allowance" },
-	{ value: "remaining", label: "Absolute remaining" },
-	{ value: "remaining_percentage", label: "% remaining of allowance" },
 ];
 
 const SPEND_LIMIT_TYPE_OPTIONS: SelectOption[] = [
@@ -479,15 +475,15 @@ function UsageAlertFields({ form }: { form: UsePlanBillingControlForm }) {
 					name="threshold_type"
 					label="Type"
 					placeholder="Type"
-					options={THRESHOLD_TYPE_OPTIONS}
+					options={USAGE_ALERT_THRESHOLD_TYPE_OPTIONS}
 				/>
 			</div>
 			<SelectFieldRow
 				form={form}
 				name="alert_basis"
 				label="Measured against"
-				placeholder="Measured against"
-				options={ALL_BASIS_OPTIONS}
+				placeholder="Basis"
+				options={USAGE_ALERT_BASIS_OPTIONS}
 			/>
 		</div>
 	);
@@ -540,7 +536,18 @@ function PlanBillingControlForm({
 			toast.error("Only one control is allowed per feature");
 			return;
 		}
-		onSave(buildControlItem(controlKey, values));
+		const item = buildControlItem(controlKey, values);
+		if (
+			controlKey === "usage_alerts" &&
+			filterUnresolvableUsageLimitAlerts({
+				usageAlerts: [item as DbUsageAlert],
+				usageLimitLists: [existingControls.usage_limits],
+			}).length > 0
+		) {
+			toast.error("No usage limit on this plan matches this feature");
+			return;
+		}
+		onSave(item);
 	};
 
 	const form = usePlanBillingControlForm({

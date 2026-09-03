@@ -1,4 +1,9 @@
-import { type DbUsageAlert, type Feature, FeatureType } from "@autumn/shared";
+import {
+	type DbUsageAlert,
+	DEFAULT_USAGE_ALERT_BASIS,
+	type Feature,
+	FeatureType,
+} from "@autumn/shared";
 import {
 	Button,
 	Dialog,
@@ -18,7 +23,8 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { UsageAlertBasisSelect } from "@/components/billing-controls/UsageAlertBasisSelect";
-import { BALANCE_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
+import { ORG_USAGE_ALERT_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
+import { USAGE_ALERT_THRESHOLD_TYPE_OPTIONS } from "@/components/billing-controls/usageAlertThresholdTypeOptions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 
 type ThresholdType = DbUsageAlert["threshold_type"];
@@ -49,7 +55,7 @@ export const OrgUsageAlertDialog = ({
 			enabled: true,
 			threshold: 0,
 			threshold_type: "usage",
-			basis: "balance",
+			basis: DEFAULT_USAGE_ALERT_BASIS,
 			feature_id: undefined,
 			name: undefined,
 		},
@@ -134,23 +140,18 @@ export const OrgUsageAlertDialog = ({
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="usage">Usage (absolute value)</SelectItem>
-								<SelectItem value="usage_percentage">
-									Percentage used of allowance
-								</SelectItem>
-								<SelectItem value="remaining">
-									Remaining (absolute value)
-								</SelectItem>
-								<SelectItem value="remaining_percentage">
-									Percentage remaining of allowance
-								</SelectItem>
+								{USAGE_ALERT_THRESHOLD_TYPE_OPTIONS.map((option) => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 					</div>
 
 					<UsageAlertBasisSelect
-						value={draft.basis ?? "balance"}
-						options={BALANCE_BASIS_OPTIONS}
+						value={draft.basis ?? DEFAULT_USAGE_ALERT_BASIS}
+						options={ORG_USAGE_ALERT_BASIS_OPTIONS}
 						onChange={(basis) => updateDraft({ basis })}
 					/>
 

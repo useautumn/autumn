@@ -3,11 +3,12 @@ import {
 	USAGE_LIMIT_FILTER_MAX_KEY_LENGTH,
 	USAGE_LIMIT_FILTER_MAX_KEYS,
 	USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH,
+	type UsageLimitFilter,
 } from "@autumn/shared";
 import type { UsageLimitCondition } from "./UsageLimitConditionRows";
 
 export const conditionsFromFilter = (
-	filter: DbUsageLimit["filter"],
+	filter: UsageLimitFilter | null | undefined,
 ): UsageLimitCondition[] =>
 	Object.entries(filter?.properties ?? {}).map(([key, value]) => ({
 		key,

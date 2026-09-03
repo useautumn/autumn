@@ -4,11 +4,14 @@ import {
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
 	type DbUsageAlert,
+	DEFAULT_USAGE_ALERT_BASIS,
 	type Feature,
 	FeatureType,
 	type FullCustomer,
+	filterUnresolvableUsageLimitAlerts,
 	fullCustomerToCustomerEntitlements,
 	nullish,
+	type UsageAlertBasis,
 } from "@autumn/shared";
 import {
 	Button,
@@ -24,7 +27,11 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { UsageAlertBasisSelect } from "@/components/billing-controls/UsageAlertBasisSelect";
-import { ALL_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
+import { USAGE_ALERT_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
+import {
+	USAGE_ALERT_THRESHOLD_TYPE_LABELS,
+	USAGE_ALERT_THRESHOLD_TYPE_OPTIONS,
+} from "@/components/billing-controls/usageAlertThresholdTypeOptions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -79,8 +86,8 @@ export function BillingUsageAlertSheet() {
 	const [thresholdType, setThresholdType] = useState<string>(
 		existingItem?.threshold_type ?? "usage",
 	);
-	const [basis, setBasis] = useState<DbUsageAlert["basis"]>(
-		existingItem?.basis ?? "balance",
+	const [basis, setBasis] = useState<UsageAlertBasis>(
+		existingItem?.basis ?? DEFAULT_USAGE_ALERT_BASIS,
 	);
 	const [conditions, setConditions] = useState<UsageLimitCondition[]>(
 		conditionsFromFilter(existingItem?.filter),
@@ -197,6 +204,20 @@ export function BillingUsageAlertSheet() {
 			...(filter && { filter }),
 			name: name.trim() || undefined,
 		};
+		const unresolvable = filterUnresolvableUsageLimitAlerts({
+			usageAlerts: [item],
+			usageLimitLists: [
+				selectedEntity?.usage_limits,
+				fullCustomer?.usage_limits,
+				fullCustomer?.customer_products?.flatMap(
+					(customerProduct) => customerProduct.product?.usage_limits ?? [],
+				),
+			],
+		});
+		if (unresolvable.length > 0) {
+			toast.error("No usage limit matches this feature and conditions");
+			return;
+		}
 
 		const currentUsageAlerts = getCurrentUsageAlerts();
 
@@ -307,34 +328,24 @@ export function BillingUsageAlertSheet() {
 							<Select
 								value={thresholdType}
 								onValueChange={setThresholdType}
-								items={{
-									usage: "Usage (absolute value)",
-									usage_percentage: "Percentage used of allowance",
-									remaining: "Remaining (absolute value)",
-									remaining_percentage: "Percentage remaining of allowance",
-								}}
+								items={USAGE_ALERT_THRESHOLD_TYPE_LABELS}
 							>
 								<SelectTrigger className="w-full">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="usage">Usage (absolute value)</SelectItem>
-									<SelectItem value="usage_percentage">
-										Percentage used of allowance
-									</SelectItem>
-									<SelectItem value="remaining">
-										Remaining (absolute value)
-									</SelectItem>
-									<SelectItem value="remaining_percentage">
-										Percentage remaining of allowance
-									</SelectItem>
+									{USAGE_ALERT_THRESHOLD_TYPE_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 						</div>
 
 						<UsageAlertBasisSelect
 							value={basis}
-							options={ALL_BASIS_OPTIONS}
+							options={USAGE_ALERT_BASIS_OPTIONS}
 							onChange={setBasis}
 						/>
 

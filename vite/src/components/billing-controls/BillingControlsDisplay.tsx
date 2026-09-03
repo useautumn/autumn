@@ -9,6 +9,7 @@ import type {
 	DbUsageAlert,
 	DbUsageLimit,
 } from "@autumn/shared";
+import { DEFAULT_USAGE_ALERT_BASIS } from "@autumn/shared";
 import {
 	SectionTag,
 	Tooltip,
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
 import { skipOverageBillingLabel } from "./overageBillingOptions";
 import { USAGE_ALERT_BASIS_LABELS } from "./usageAlertBasisOptions";
+import { USAGE_ALERT_THRESHOLD_TYPE_LABELS } from "./usageAlertThresholdTypeOptions";
 
 const ROW_SWAP_TRANSITION = {
 	duration: 0.2,
@@ -283,6 +285,15 @@ export const SpendLimitRow = ({
 
 const FILTER_VALUE_DISPLAY_LENGTH = 24;
 
+const filterSummary = (entries: Array<[string, unknown]>) =>
+	entries.length ? (
+		<span title={entries.map(([key, value]) => `${key} = ${value}`).join(", ")}>
+			{entries
+				.map(([key, value]) => `${key} = ${truncateFilterValue(String(value))}`)
+				.join(", ")}
+		</span>
+	) : null;
+
 const truncateFilterValue = (value: string) =>
 	value.length > FILTER_VALUE_DISPLAY_LENGTH
 		? `${value.slice(0, FILTER_VALUE_DISPLAY_LENGTH - 1)}…`
@@ -297,9 +308,7 @@ export const UsageLimitRow = ({
 	const usage = "usage" in usageLimit ? usageLimit.usage : undefined;
 	const enabled = "enabled" in usageLimit ? usageLimit.enabled : true;
 	const filterProperties = usageLimit.filter?.properties;
-	const filterEntries = filterProperties
-		? Object.entries(filterProperties)
-		: [];
+	const filterEntries = Object.entries(filterProperties ?? {});
 	return (
 		<RowButton enabled={enabled} onClick={onClick}>
 			<RowHeader
@@ -318,20 +327,7 @@ export const UsageLimitRow = ({
 					},
 					{
 						label: "Filter",
-						value: filterEntries.length ? (
-							<span
-								title={filterEntries
-									.map(([key, value]) => `${key} = ${value}`)
-									.join(", ")}
-							>
-								{filterEntries
-									.map(
-										([key, value]) =>
-											`${key} = ${truncateFilterValue(String(value))}`,
-									)
-									.join(", ")}
-							</span>
-						) : null,
+						value: filterSummary(filterEntries),
 					},
 					{
 						label: "Usage",
@@ -360,13 +356,7 @@ export const UsageAlertRow = ({
 		? `${usageAlert.threshold}%`
 		: usageAlert.threshold.toLocaleString();
 
-	const thresholdTypeLabel: Record<string, string> = {
-		usage: "Absolute usage",
-		usage_percentage: "% used",
-		remaining: "Absolute remaining",
-		remaining_percentage: "% remaining",
-	};
-	const basis = usageAlert.basis ?? "balance";
+	const basis = usageAlert.basis ?? DEFAULT_USAGE_ALERT_BASIS;
 	const filterEntries = Object.entries(usageAlert.filter?.properties ?? {});
 
 	return (
@@ -384,19 +374,12 @@ export const UsageAlertRow = ({
 					{ label: "At", value: thresholdLabel },
 					{
 						label: "Type",
-						value: thresholdTypeLabel[usageAlert.threshold_type],
+						value: USAGE_ALERT_THRESHOLD_TYPE_LABELS[usageAlert.threshold_type],
 					},
 					{ label: "Of", value: USAGE_ALERT_BASIS_LABELS[basis] },
 					{
 						label: "Filter",
-						value: filterEntries.length
-							? filterEntries
-									.map(
-										([key, value]) =>
-											`${key} = ${truncateFilterValue(String(value))}`,
-									)
-									.join(", ")
-							: null,
+						value: filterSummary(filterEntries),
 					},
 					{ label: "Name", value: usageAlert.name || null },
 				]}

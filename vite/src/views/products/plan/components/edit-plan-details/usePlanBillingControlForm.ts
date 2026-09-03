@@ -5,9 +5,11 @@ import {
 	type DbSpendLimit,
 	type DbUsageAlert,
 	type DbUsageLimit,
+	DEFAULT_USAGE_ALERT_BASIS,
 	PurchaseLimitInterval,
 	ResetInterval,
 	type SpendLimitType,
+	type UsageAlertBasis,
 } from "@autumn/shared";
 import { useRef } from "react";
 import { z } from "zod/v4";
@@ -44,7 +46,7 @@ export type PlanBillingControlFormValues = {
 	alert_name: string;
 	alert_threshold: number | null;
 	threshold_type: DbUsageAlert["threshold_type"];
-	alert_basis: DbUsageAlert["basis"];
+	alert_basis: UsageAlertBasis;
 };
 
 const requireNumber = (min: number, message: string) =>
@@ -106,11 +108,22 @@ const UsageLimitFormSchema = z.object({
 
 const UsageAlertFormSchema = z
 	.object({
+		feature_id: z.string(),
 		alert_threshold: requireNumber(0, "Please enter a valid threshold"),
 		threshold_type: z.string(),
+		alert_basis: z.string(),
 	})
 	.check((ctx) => {
-		const { alert_threshold, threshold_type } = ctx.value;
+		const { feature_id, alert_threshold, threshold_type, alert_basis } =
+			ctx.value;
+		if (alert_basis === "usage_limit" && !feature_id) {
+			ctx.issues.push({
+				code: "custom",
+				input: feature_id,
+				path: ["feature_id"],
+				message: "Choose a feature to measure against a usage limit",
+			});
+		}
 		if (threshold_type === "remaining_percentage" && alert_threshold > 100) {
 			ctx.issues.push({
 				code: "custom",
@@ -248,7 +261,7 @@ function toDefaultValues(
 		alert_name: usageAlert?.name ?? "",
 		alert_threshold: usageAlert?.threshold ?? null,
 		threshold_type: usageAlert?.threshold_type ?? "usage",
-		alert_basis: usageAlert?.basis ?? "balance",
+		alert_basis: usageAlert?.basis ?? DEFAULT_USAGE_ALERT_BASIS,
 	};
 }
 
