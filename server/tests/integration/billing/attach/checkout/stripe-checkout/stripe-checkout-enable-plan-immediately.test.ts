@@ -211,16 +211,15 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 	expect(before.some((cp) => cp.product.id === pro.id)).toBe(true);
 
 	// 2. Abandon the checkout: expire the session on Stripe, which emits
-	// `checkout.session.expired`, then wait for Autumn to expire the row.
+	// `checkout.session.expired`. Wait on the cache-backed API view, not the
+	// DB row: the handler expires the row first and the refresh middleware
+	// drops the cached subject after it returns, so a DB-only predicate can
+	// resolve before `customers.get` stops reporting the plan.
 	await ctx.stripeCli.checkout.sessions.expire(checkoutSessionId!);
 
-	const isProActiveInDb = async () => {
-		const active = await CusProductService.list({
-			db: ctx.db,
-			internalCustomerId,
-			inStatuses: [CusProductStatus.Active],
-		});
-		return active.some((cp) => cp.product.id === pro.id);
+	const isProActiveInApi = async () => {
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		return (customer.products ?? []).some((product) => product.id === pro.id);
 	};
 
 	await waitForStripeWebhook({
@@ -228,11 +227,16 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 		env: ctx.env,
 		types: ["checkout.session.expired"],
 		objectId: checkoutSessionId!,
-		until: async () => !(await isProActiveInDb()),
+		until: async () => !(await isProActiveInApi()),
 	});
 
 	// 3. After expiry: cusProduct should no longer be Active.
-	expect(await isProActiveInDb()).toBe(false);
+	const after = await CusProductService.list({
+		db: ctx.db,
+		internalCustomerId,
+		inStatuses: [CusProductStatus.Active],
+	});
+	expect(after.some((cp) => cp.product.id === pro.id)).toBe(false);
 
 	// API view: pro is not active.
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
