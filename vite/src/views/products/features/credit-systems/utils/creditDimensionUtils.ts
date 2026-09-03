@@ -1,18 +1,27 @@
-import type { CreditDimension, CreditSchemaItem } from "@autumn/shared";
+import type {
+	CreditDimension,
+	CreditMultiplier,
+	CreditSchemaItem,
+} from "@autumn/shared";
 import { isEmptyObject } from "@autumn/shared";
 
 /**
- * The dashboard edits dimensions as fields → values → rates: every rate is one
- * rule whose match picks a value for some of the fields (unset = any), named
- * from its match.
+ * The dashboard edits dimensions as fields → values → rules: every rate or
+ * multiplier is one rule whose match picks a value for some of the fields
+ * (unset = any), named from its match.
  */
 
+export type CreditMatch = Record<string, string>;
 export type CreditRateRule = { name: string; dimension: CreditDimension };
+export type CreditMultiplierRule = {
+	name: string;
+	multiplier: CreditMultiplier;
+};
 export type DimensionValues = Record<string, string[]>;
 
-type Matched = { match: Record<string, string> };
+type Matched = { match: CreditMatch };
 
-const matchesOf = (item: CreditSchemaItem): Record<string, string>[] =>
+const matchesOf = (item: CreditSchemaItem): CreditMatch[] =>
 	[
 		...Object.values(item.dimensions ?? {}),
 		...Object.values(item.multipliers ?? {}),
@@ -49,7 +58,15 @@ export const rateRules = (item: CreditSchemaItem): CreditRateRule[] =>
 		dimension,
 	}));
 
-const ruleName = (match: Record<string, string>) =>
+export const multiplierRules = (
+	item: CreditSchemaItem,
+): CreditMultiplierRule[] =>
+	Object.entries(item.multipliers ?? {}).map(([name, multiplier]) => ({
+		name,
+		multiplier,
+	}));
+
+const ruleName = (match: CreditMatch) =>
 	Object.entries(match)
 		.map(([key, value]) => `${key}_${value}`)
 		.join("_")
@@ -65,6 +82,13 @@ const uniqueName = (name: string, taken: Set<string>) => {
 	return candidate;
 };
 
+const namedByMatch = <T extends Matched>(rules: T[]): Record<string, T> => {
+	const taken = new Set<string>();
+	return Object.fromEntries(
+		rules.map((rule) => [uniqueName(ruleName(rule.match), taken), rule]),
+	);
+};
+
 export const withRateRules = ({
 	item,
 	rules,
@@ -74,22 +98,28 @@ export const withRateRules = ({
 }): CreditSchemaItem => {
 	const { dimensions: _dimensions, ...rest } = item;
 	if (rules.length === 0) return rest;
-	const taken = new Set<string>();
 	return {
 		...rest,
-		dimensions: Object.fromEntries(
-			rules.map(({ dimension }) => [
-				uniqueName(ruleName(dimension.match), taken),
-				dimension,
-			]),
-		),
+		dimensions: namedByMatch(rules.map(({ dimension }) => dimension)),
 	};
 };
 
-const isMatchAllowed = (
-	match: Record<string, string>,
-	allowed: DimensionValues,
-) =>
+export const withMultiplierRules = ({
+	item,
+	rules,
+}: {
+	item: CreditSchemaItem;
+	rules: CreditMultiplierRule[];
+}): CreditSchemaItem => {
+	const { multipliers: _multipliers, ...rest } = item;
+	if (rules.length === 0) return rest;
+	return {
+		...rest,
+		multipliers: namedByMatch(rules.map(({ multiplier }) => multiplier)),
+	};
+};
+
+const isMatchAllowed = (match: CreditMatch, allowed: DimensionValues) =>
 	Object.entries(match).every(([field, value]) =>
 		allowed[field]?.includes(value),
 	);
@@ -131,17 +161,21 @@ export const createRateRule = (): CreditRateRule => ({
 	dimension: { match: {}, credit_amount: 0 },
 });
 
+export const createMultiplierRule = (): CreditMultiplierRule => ({
+	name: "",
+	multiplier: { match: {}, factor: 1 },
+});
+
 /** An unset cell means "any value" for that field. */
-export const setRuleCell = ({
-	rule,
+export const setMatchValue = ({
+	match,
 	field,
 	value,
 }: {
-	rule: CreditRateRule;
+	match: CreditMatch;
 	field: string;
 	value: string | undefined;
-}): CreditRateRule => {
-	const { [field]: _current, ...others } = rule.dimension.match;
-	const match = value === undefined ? others : { ...others, [field]: value };
-	return { ...rule, dimension: { ...rule.dimension, match } };
+}): CreditMatch => {
+	const { [field]: _current, ...others } = match;
+	return value === undefined ? others : { ...others, [field]: value };
 };

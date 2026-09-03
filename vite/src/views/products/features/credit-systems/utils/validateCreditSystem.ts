@@ -24,6 +24,12 @@ const validateDimensionMatches = (item: CreditSchemaItem): string | null => {
 			if (!value.trim()) return `Each ${key} value needs a name`;
 		}
 	}
+	for (const multiplier of Object.values(item.multipliers ?? {})) {
+		const factor = Number(multiplier.factor);
+		if (multiplier.factor !== undefined && !(factor > 0)) {
+			return "Multiplier factors must be greater than 0";
+		}
+	}
 	return null;
 };
 

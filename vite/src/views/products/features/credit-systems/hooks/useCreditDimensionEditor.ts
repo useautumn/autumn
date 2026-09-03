@@ -1,23 +1,33 @@
 import type { CreditSchemaItem } from "@autumn/shared";
 import { useMemo, useState } from "react";
 import {
+	type CreditMultiplierRule,
 	type CreditRateRule,
+	createMultiplierRule,
 	createRateRule,
 	type DimensionValues,
 	dimensionValues,
 	mergeDimensionValues,
+	multiplierRules,
 	rateRules,
 	withAllowedValues,
+	withMultiplierRules,
 	withRateRules,
 } from "../utils/creditDimensionUtils";
 
 const without = (values: string[], value: string) =>
 	values.filter((current) => current !== value);
 
+const replaceAt = <T>(list: T[], index: number, next: T) =>
+	list.map((current, i) => (i === index ? next : current));
+
+const removeAt = <T>(list: T[], index: number) =>
+	list.filter((_, i) => i !== index);
+
 /**
  * Fields and values are whatever the rules reference; ones added before any
  * rule uses them live in local state until then, so they survive re-renders.
- * With no saved rules the table offers one blank row, committed on first edit.
+ * With no saved rates the table offers one blank row, committed on first edit.
  */
 export function useCreditDimensionEditor({
 	item,
@@ -37,9 +47,12 @@ export function useCreditDimensionEditor({
 		() => (savedRules.length === 0 ? [createRateRule()] : savedRules),
 		[savedRules],
 	);
+	const multipliers = useMemo(() => multiplierRules(item), [item.multipliers]);
 
 	const commitRules = (next: CreditRateRule[]) =>
 		onChange(withRateRules({ item, rules: next }));
+	const commitMultipliers = (next: CreditMultiplierRule[]) =>
+		onChange(withMultiplierRules({ item, rules: next }));
 
 	const restrictTo = (allowed: DimensionValues) => {
 		setDraft(allowed);
@@ -50,6 +63,7 @@ export function useCreditDimensionEditor({
 		fields,
 		values,
 		rules,
+		multipliers,
 		addField: (field: string) =>
 			setDraft({ ...draft, [field]: draft[field] ?? [] }),
 		removeField: (field: string) => {
@@ -62,8 +76,13 @@ export function useCreditDimensionEditor({
 			restrictTo({ ...values, [field]: without(values[field], value) }),
 		addRule: () => commitRules([...rules, createRateRule()]),
 		setRule: (index: number, rule: CreditRateRule) =>
-			commitRules(rules.map((r, i) => (i === index ? rule : r))),
-		removeRule: (index: number) =>
-			commitRules(savedRules.filter((_, i) => i !== index)),
+			commitRules(replaceAt(rules, index, rule)),
+		removeRule: (index: number) => commitRules(removeAt(savedRules, index)),
+		addMultiplier: () =>
+			commitMultipliers([...multipliers, createMultiplierRule()]),
+		setMultiplier: (index: number, rule: CreditMultiplierRule) =>
+			commitMultipliers(replaceAt(multipliers, index, rule)),
+		removeMultiplier: (index: number) =>
+			commitMultipliers(removeAt(multipliers, index)),
 	};
 }

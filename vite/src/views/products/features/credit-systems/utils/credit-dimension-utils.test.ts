@@ -3,9 +3,11 @@ import type { CreditSchemaItem } from "@autumn/shared";
 import {
 	dimensionValues,
 	mergeDimensionValues,
+	multiplierRules,
 	rateRules,
-	setRuleCell,
+	setMatchValue,
 	withAllowedValues,
+	withMultiplierRules,
 	withoutDimensions,
 	withRateRules,
 } from "./creditDimensionUtils";
@@ -89,13 +91,44 @@ test("removing a value drops only the rates that matched it", () => {
 	expect(next.multipliers).toEqual(row.multipliers);
 });
 
+test("multipliers are named from their match like rates, and rates are kept", () => {
+	const next = withMultiplierRules({
+		item: row,
+		rules: [
+			{ name: "", multiplier: { match: { region: "eu" }, factor: 1.2 } },
+			{ name: "", multiplier: { match: { region: "eu" }, factor: 0.5 } },
+		],
+	});
+
+	expect(next.multipliers).toEqual({
+		region_eu: { match: { region: "eu" }, factor: 1.2 },
+		region_eu_2: { match: { region: "eu" }, factor: 0.5 },
+	});
+	expect(next.dimensions).toEqual(row.dimensions);
+	expect(multiplierRules(next).map((rule) => rule.name)).toEqual([
+		"region_eu",
+		"region_eu_2",
+	]);
+	expect(
+		withMultiplierRules({ item: row, rules: [] }).multipliers,
+	).toBeUndefined();
+});
+
 test("an unset cell means any value", () => {
 	const [rule] = rateRules(row);
 	expect(
-		setRuleCell({ rule, field: "size", value: undefined }).dimension.match,
+		setMatchValue({
+			match: rule.dimension.match,
+			field: "size",
+			value: undefined,
+		}),
 	).toEqual({});
 	expect(
-		setRuleCell({ rule, field: "region", value: "us" }).dimension.match,
+		setMatchValue({
+			match: rule.dimension.match,
+			field: "region",
+			value: "us",
+		}),
 	).toEqual({ size: "large", region: "us" });
 });
 

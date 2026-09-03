@@ -106,6 +106,9 @@ test("the dimensions section lists each field's values and a rate table with a s
 							credit_amount: 20,
 						},
 					},
+					multipliers: {
+						region_eu: { match: { region: "eu" }, factor: 1.2 },
+					},
 				},
 			]}
 			allFeatures={[feature]}
@@ -121,5 +124,7 @@ test("the dimensions section lists each field's values and a rate table with a s
 	expect(html).toContain('aria-label="size_large_region_eu credit cost"');
 	expect(html).toContain(">Credits<");
 	expect(html).toContain("New rate");
+	expect(html).toContain('aria-label="region_eu factor"');
+	expect(html).toContain("New multiplier");
 	expect(html).not.toContain(">Feature A<");
 });

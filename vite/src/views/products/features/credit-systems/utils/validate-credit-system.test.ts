@@ -156,3 +156,17 @@ test("dimension values must be named before saving", () => {
 		),
 	).toBe("Each size value needs a name");
 });
+
+test("multiplier factors must be positive", () => {
+	expect(
+		validateCreditSystem(
+			creditSystem([
+				{
+					metered_feature_id: "cpu_minutes",
+					credit_amount: 1,
+					multipliers: { region_eu: { match: { region: "eu" }, factor: 0 } },
+				},
+			]),
+		),
+	).toBe("Multiplier factors must be greater than 0");
+});
