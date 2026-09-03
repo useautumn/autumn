@@ -1,38 +1,46 @@
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useState } from "react";
 
-const DEFAULT_SUBMIT_KEYS = ["Enter"];
-
-/** A text draft that submits (trimmed, non-empty) on chosen keys and on blur, then clears. */
+/**
+ * A text draft that submits (trimmed, non-empty) on enter and on blur, then clears.
+ * With `separators`, typed or pasted text splits on them and every piece but the
+ * last submits at once — so "a, b, c" becomes three values while "c" stays editable.
+ */
 export function useDraftValue({
 	onSubmit,
-	submitKeys = DEFAULT_SUBMIT_KEYS,
+	separators,
 }: {
 	onSubmit: (value: string) => void;
-	submitKeys?: string[];
+	separators?: RegExp;
 }) {
 	const [draft, setDraft] = useState("");
 
+	const submitAll = (values: string[]) => {
+		for (const value of values.map((v) => v.trim())) {
+			if (value) onSubmit(value);
+		}
+	};
+
+	const onChange = (event: ChangeEvent<HTMLInputElement>) => {
+		const parts = separators ? event.target.value.split(separators) : [];
+		if (parts.length <= 1) return setDraft(event.target.value);
+		submitAll(parts.slice(0, -1));
+		setDraft(parts[parts.length - 1]);
+	};
+
 	const submit = () => {
-		const value = draft.trim();
-		if (value) onSubmit(value);
+		submitAll([draft]);
 		setDraft("");
 	};
 
 	const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-		if (!submitKeys.includes(event.key)) return;
+		if (event.key !== "Enter") return;
 		event.preventDefault();
 		submit();
 	};
 
 	return {
 		draft,
-		inputProps: {
-			value: draft,
-			onChange: (event: ChangeEvent<HTMLInputElement>) =>
-				setDraft(event.target.value),
-			onKeyDown,
-			onBlur: submit,
-		},
+		inputProps: { value: draft, onChange, onKeyDown, onBlur: submit },
 	};
 }

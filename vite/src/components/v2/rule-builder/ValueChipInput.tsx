@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { useDraftValue } from "./useDraftValue";
 import { ValueChip } from "./ValueChip";
 
-const CHIP_SUBMIT_KEYS = ["Enter", ",", " "];
+const CHIP_SEPARATORS = /[,\s]+/;
 
 interface ValueChipInputProps {
 	values: string[];
@@ -17,7 +17,7 @@ interface ValueChipInputProps {
 	"aria-label"?: string;
 }
 
-/** The ValuePicker trigger with an inline input instead of a list: type, press enter, it becomes a chip. */
+/** The ValuePicker trigger with an inline input instead of a list: type, then enter, comma or space, and it becomes a chip. Pasting a list adds every item. */
 export function ValueChipInput({
 	values,
 	onAdd,
@@ -33,7 +33,7 @@ export function ValueChipInput({
 		onSubmit: (value) => {
 			if (!values.includes(value)) onAdd(value);
 		},
-		submitKeys: CHIP_SUBMIT_KEYS,
+		separators: CHIP_SEPARATORS,
 	});
 
 	const removeLastChipOnBackspace = (
