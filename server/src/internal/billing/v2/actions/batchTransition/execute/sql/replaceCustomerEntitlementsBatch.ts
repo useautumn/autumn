@@ -15,13 +15,6 @@ const balanceAssignment = (
 	return sql`, balance = ${patch.amount}`;
 };
 
-const assignedSeatFilter = (
-	operation: ReplaceEntitlementPriceOperation,
-): SQL =>
-	operation.pooledContributionPatch
-		? sql``
-		: sql`AND seat.internal_entity_id IS NOT NULL`;
-
 const retainedResetFilter = (
 	operation: ReplaceEntitlementPriceOperation,
 ): SQL => {
@@ -129,7 +122,6 @@ export const buildReplaceCustomerEntitlementsBatchQuery = ({
 			INNER JOIN customer_entitlements AS customer_entitlement
 				ON customer_entitlement.customer_product_id = seat.id
 			WHERE seat.customer_license_link_id = ${customerLicenseLinkId}
-				${assignedSeatFilter(operation)}
 				AND seat.status IN (${activeStatusesSql})
 				AND customer_entitlement.entitlement_id IN (${sqlList({ values: operation.fromEntitlementIds })})
 				${retainedResetFilter(operation)}
