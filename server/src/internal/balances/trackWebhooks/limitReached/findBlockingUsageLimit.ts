@@ -23,7 +23,11 @@ export const findBlockingUsageLimit = ({
 }): BlockingUsageLimit | undefined => {
 	const now = ctx.timestamp;
 	const usageWindows = fullSubject.usage_windows ?? [];
-	const measured = resolveUsageWindowLimits({ ctx, fullSubject, feature })
+	const measured = resolveUsageWindowLimits({
+		ctx,
+		fullSubject,
+		featureIds: [feature.id],
+	})
 		.filter((limit) =>
 			usageLimitFilterMatchesProperties({
 				filterProperties: limit.filter_properties,
