@@ -9,7 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
 import { constructEntity } from "../entityUtils/entityUtils";
-import { createEntityForCusProduct } from "../handlers/handleCreateEntity/createEntityForCusProduct";
+import { createEntityForCusProduct, preflightCreateEntityForCusProduct } from "../handlers/handleCreateEntity/createEntityForCusProduct";
 import { validateAndGetInputEntities } from "../handlers/handleCreateEntity/getInputEntities";
 import { attachDefaultProductsToEntities } from "./batchCreateEntities/attachDefaultProductsToEntities";
 
@@ -42,6 +42,15 @@ const createEntities = async ({
 		customerData,
 		createEntityData,
 	});
+	// Preflight all products to catch missing pools early and avoid partial application
+	for (const cusProduct of cusProducts) {
+		preflightCreateEntityForCusProduct({
+			ctx,
+			customer: fullCus,
+			cusProduct,
+			inputEntities,
+		});
+	}
 
 	for (const cusProduct of cusProducts) {
 		await createEntityForCusProduct({

@@ -49,7 +49,9 @@ const updateLinkedCusEnt = async ({
 			};
 			delete newEntities[replaceableId];
 		} else {
-			const balance = linkedCusEnt.entitlement.allowance ?? 0; // cannot be null, must be 0 in unlimited case.
+			const balance = linkedCusEnt.is_pooled_balance
+				? (linkedCusEnt.pooled_balance?.granted ?? 0)
+				: (linkedCusEnt.entitlement.allowance ?? 0);
 			newEntities[entity.id] = {
 				id: entity.id,
 				balance,
@@ -64,8 +66,79 @@ const updateLinkedCusEnt = async ({
 		updates: { entities: newEntities },
 	});
 
-	// The create response is built from this request's customer snapshot.
 	linkedCusEnt.entities = newEntities;
+};
+export const preflightCreateEntityForCusProduct = ({
+	ctx,
+	customer,
+	cusProduct,
+	inputEntities,
+	fromAutoCreate = false,
+}: CreateEntityParams) => {
+	const { features } = ctx;
+
+	const featureToEntities = inputEntities.reduce(
+		(acc, entity) => {
+			if (!acc[entity.feature_id]) {
+				acc[entity.feature_id] = [];
+			}
+			acc[entity.feature_id].push(entity);
+			return acc;
+		},
+		{} as Record<string, Partial<Entity>[]>,
+	);
+
+	for (const featureId in featureToEntities) {
+		const feature = findFeatureById({
+			features,
+			featureId,
+			errorOnNotFound: true,
+		});
+
+		const mainCusEnt = cusProduct.customer_entitlements.find(
+			(ce) => ce.entitlement.feature.id === feature.id,
+		);
+
+		let mainCusEntWithCusProduct: FullCusEntWithFullCusProduct | undefined;
+
+		if (mainCusEnt) {
+			mainCusEntWithCusProduct = addCusProductToCusEnt({
+				cusEnt: mainCusEnt,
+				cusProduct,
+			});
+
+			const cusPrice = cusEntToCusPrice({
+				cusEnt: mainCusEntWithCusProduct,
+			});
+
+			if (fromAutoCreate && cusPrice) {
+				throw new RecaseError({
+					message: `Failed to auto create entity for feature ${feature.name} because it is a paid feature.`,
+					code: ErrCode.InvalidInputs,
+					statusCode: 400,
+				});
+			}
+		}
+
+		const isPooled = mainCusEntWithCusProduct?.entitlement.pooled === true;
+
+		if (isPooled) {
+			const sourcePoolId =
+				mainCusEntWithCusProduct?.pooled_balance_contribution?.pooled_balance_id;
+			const foundPool = customer.pooled_customer_entitlements?.find(
+				(p) =>
+					p.pooled_balance_id === sourcePoolId ||
+					p.pooled_balance?.id === sourcePoolId,
+			);
+			if (!foundPool) {
+				throw new RecaseError({
+					message: `[createEntityForCusProduct] Synthetic pooled customer entitlement not found for poolId: ${sourcePoolId}. Cannot create entities without a valid pool to decrement.`,
+					code: ErrCode.InternalError,
+					statusCode: 500,
+				});
+			}
+		}
+	}
 };
 
 export const createEntityForCusProduct = async ({
@@ -128,9 +201,32 @@ export const createEntityForCusProduct = async ({
 			}
 		}
 
-		// 1. If main cus ent:
+		const isPooled = mainCusEntWithCusProduct?.entitlement.pooled === true;
+		let targetCusEnt = mainCusEntWithCusProduct;
+
+		if (isPooled) {
+			const sourcePoolId =
+				mainCusEntWithCusProduct?.pooled_balance_contribution?.pooled_balance_id;
+			const foundPool = customer.pooled_customer_entitlements?.find(
+				(p) =>
+					p.pooled_balance_id === sourcePoolId ||
+					p.pooled_balance?.id === sourcePoolId,
+			);
+			if (!foundPool) {
+				throw new RecaseError({
+					message: `[createEntityForCusProduct] Synthetic pooled customer entitlement not found for poolId: ${sourcePoolId}. Cannot create entities without a valid pool to decrement.`,
+					code: ErrCode.InternalError,
+					statusCode: 500,
+				});
+			}
+			targetCusEnt = foundPool as FullCusEntWithFullCusProduct;
+		}
+
+		let newEntitiesToCreate = inputEntities;
+
+		// 1. If target cus ent:
 		let deletedReplaceables: Replaceable[] = [];
-		if (mainCusEntWithCusProduct) {
+		if (targetCusEnt) {
 			// Acquire lock to prevent race conditions on seat charging
 			const lockKey = `lock:create-entity:${org.id}:${env}:${customer.id}`;
 			await acquireLock({
@@ -141,25 +237,50 @@ export const createEntityForCusProduct = async ({
 			});
 
 			try {
-				const originalBalance = mainCusEntWithCusProduct.balance || 0;
-				const newBalance = originalBalance - inputEntities.length;
+				// Reload the target customer entitlement from the DB to get the latest state inside the lock
+				const reloadedCusEnts = await CusEntService.getByIds({
+					db,
+					ids: [targetCusEnt.id],
+				});
+				const latestCusEnt = reloadedCusEnts[0];
+				if (!latestCusEnt) {
+					throw new RecaseError({
+						message: "Customer entitlement not found",
+						statusCode: 404,
+					});
+				}
+				targetCusEnt.balance = latestCusEnt.balance;
+				targetCusEnt.entities = latestCusEnt.entities;
+
+				if (isPooled) {
+					const existingEntities = targetCusEnt.entities || {};
+					newEntitiesToCreate = inputEntities.filter(
+						(e) => !e.id || !existingEntities[e.id],
+					);
+					if (newEntitiesToCreate.length === 0) {
+						continue;
+					}
+				}
+
+				const originalBalance = targetCusEnt.balance || 0;
+				const newBalance = originalBalance - newEntitiesToCreate.length;
 
 				// Pre-compute reps only for the usage limit check —
 				// handleProratedUpgrade applies reps itself, so we must NOT
 				// pass an already-adjusted balance to adjustAllowance.
 				const repsLength = getReps({
-					cusEnt: mainCusEntWithCusProduct,
+					cusEnt: targetCusEnt,
 					prevBalance: originalBalance,
 					newBalance,
 				}).length;
 				const balanceAfterReps = newBalance + repsLength;
 
 				if (
-					notNullish(mainCusEntWithCusProduct.entitlement.usage_limit) &&
-					balanceAfterReps < -mainCusEntWithCusProduct.entitlement.usage_limit!
+					notNullish(targetCusEnt.entitlement.usage_limit) &&
+					balanceAfterReps < -targetCusEnt.entitlement.usage_limit!
 				) {
 					throw new RecaseError({
-						message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
+						message: `Cannot create ${newEntitiesToCreate.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
 						code: ErrCode.FeatureLimitReached,
 						statusCode: 400,
 					});
@@ -171,7 +292,7 @@ export const createEntityForCusProduct = async ({
 						cusPrices,
 						customer,
 						affectedFeature: feature!,
-						cusEnt: mainCusEntWithCusProduct,
+						cusEnt: targetCusEnt,
 						originalBalance,
 						newBalance,
 						errorIfIncomplete: true,
@@ -181,9 +302,12 @@ export const createEntityForCusProduct = async ({
 
 				await CusEntService.decrement({
 					ctx,
-					id: mainCusEntWithCusProduct.id,
-					amount: inputEntities.length - deletedReplaceables.length,
+					id: targetCusEnt.id,
+					amount: newEntitiesToCreate.length - deletedReplaceables.length,
 				});
+
+				// Update in-memory balance
+				targetCusEnt.balance = (targetCusEnt.balance || 0) - (newEntitiesToCreate.length - deletedReplaceables.length);
 			} finally {
 				await clearLock({ lockKey });
 			}
@@ -192,23 +316,25 @@ export const createEntityForCusProduct = async ({
 		const entityToReplacement: Record<string, string> = {};
 		for (let i = 0; i < deletedReplaceables.length; i++) {
 			const replaceable = deletedReplaceables[i];
-			entityToReplacement[inputEntities[i].id!] = replaceable.id;
+			entityToReplacement[newEntitiesToCreate[i].id!] = replaceable.id;
 
-			if (i >= inputEntities.length) {
+			if (i >= newEntitiesToCreate.length) {
 				break;
 			}
 		}
 
-		const linkedCusEnts = findLinkedCusEnts({
-			cusEnts,
-			feature,
-		});
+		const linkedCusEnts = isPooled && targetCusEnt
+			? [targetCusEnt]
+			: findLinkedCusEnts({
+					cusEnts,
+					feature,
+				});
 
 		for (const linkedCusEnt of linkedCusEnts) {
 			await updateLinkedCusEnt({
 				ctx,
 				linkedCusEnt,
-				inputEntities,
+				inputEntities: newEntitiesToCreate,
 				entityToReplacement,
 			});
 		}
