@@ -1,10 +1,12 @@
 import type {
 	Admin,
 	Consumer,
+	ConsumerEndBatchProcessEvent,
 	ConsumerRunConfig,
 	EachBatchHandler,
 } from "kafkajs";
 import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.js";
+import type { KafkaPartitionPositionTrackerPort } from "./kafkaPartitionPositionTracker.js";
 import {
 	parseKafkaRecordOffset,
 	processTrackOutcomeRecord,
@@ -69,12 +71,14 @@ export const createKafkaTrackOutcomeConsumer = ({
 	partitionOffsets,
 	topic,
 	stateStore,
+	positionTracker,
 	partitionsConsumedConcurrently = 1,
 }: {
 	consumer: KafkaTrackOutcomeConsumerPort;
 	partitionOffsets: KafkaPartitionOffsetsPort;
 	topic: string;
 	stateStore: SqliteBalanceStateStore;
+	positionTracker: KafkaPartitionPositionTrackerPort;
 	partitionsConsumedConcurrently?: number;
 }): {
 	start: () => Promise<void>;
@@ -93,6 +97,7 @@ export const createKafkaTrackOutcomeConsumer = ({
 	let isStarted = false;
 	let isStopped = false;
 	let removeGroupJoinListener: (() => void) | null = null;
+	let removeEndBatchProcessListener: (() => void) | null = null;
 	const initializedPartitions = new Set<string>();
 
 	const assertStoredOffsetIsRetained = async ({
@@ -141,6 +146,18 @@ export const createKafkaTrackOutcomeConsumer = ({
 		]);
 	};
 
+	const handleEndBatchProcess = ({
+		payload,
+	}: ConsumerEndBatchProcessEvent): void => {
+		if (payload.topic !== topic || payload.batchSize !== 0) return;
+		const lastOffset = parseKafkaRecordOffset({ offset: payload.lastOffset });
+		positionTracker.advance({
+			topic: payload.topic,
+			partition: payload.partition,
+			nextOffset: lastOffset + 1n,
+		});
+	};
+
 	const eachBatch: EachBatchHandler = async ({
 		batch,
 		resolveOffset,
@@ -181,6 +198,11 @@ export const createKafkaTrackOutcomeConsumer = ({
 					partition,
 					offset: storedNextOffset.toString(),
 				});
+				positionTracker.advance({
+					topic: recordTopic,
+					partition,
+					nextOffset: storedNextOffset,
+				});
 				initializedPartitions.add(partitionKey);
 				return;
 			}
@@ -210,6 +232,11 @@ export const createKafkaTrackOutcomeConsumer = ({
 					partition,
 					offset: result.nextOffset.toString(),
 				});
+				positionTracker.advance({
+					topic: recordTopic,
+					partition,
+					nextOffset: result.nextOffset,
+				});
 				initializedPartitions.add(partitionKey);
 				return;
 			}
@@ -238,6 +265,13 @@ export const createKafkaTrackOutcomeConsumer = ({
 				},
 			],
 		});
+		positionTracker.advance({
+			topic: recordTopic,
+			partition,
+			nextOffset: parseKafkaRecordOffset({
+				offset: currentPartitionOffset.offset,
+			}),
+		});
 		initializedPartitions.add(partitionKey);
 	};
 
@@ -251,6 +285,10 @@ export const createKafkaTrackOutcomeConsumer = ({
 		removeGroupJoinListener = consumer.on(consumer.events.GROUP_JOIN, () => {
 			initializedPartitions.clear();
 		});
+		removeEndBatchProcessListener = consumer.on(
+			consumer.events.END_BATCH_PROCESS,
+			handleEndBatchProcess,
+		);
 		try {
 			await consumer.subscribe({ topics: [topic], fromBeginning: true });
 			const runConfig: KafkaTrackOutcomeConsumerRunConfig = {
@@ -265,6 +303,8 @@ export const createKafkaTrackOutcomeConsumer = ({
 			await consumer.disconnect().catch(() => undefined);
 			removeGroupJoinListener();
 			removeGroupJoinListener = null;
+			removeEndBatchProcessListener();
+			removeEndBatchProcessListener = null;
 			throw error;
 		}
 	};
@@ -280,6 +320,8 @@ export const createKafkaTrackOutcomeConsumer = ({
 			} finally {
 				removeGroupJoinListener?.();
 				removeGroupJoinListener = null;
+				removeEndBatchProcessListener?.();
+				removeEndBatchProcessListener = null;
 			}
 		}
 	};
