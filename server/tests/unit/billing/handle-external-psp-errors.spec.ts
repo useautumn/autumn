@@ -221,6 +221,22 @@ describe(
 				"managed by RevenueCat",
 			);
 		});
+
+		test("THROWS: cancel + no_billing_changes with internal field updates (status / processor_subscription_id)", () => {
+			const cp = buildRcCusProduct();
+			expectThrows(
+				() =>
+					handleExternalPSPErrors({
+						customerProduct: cp,
+						action: "update",
+						cancelAction: "cancel_end_of_cycle",
+						noBillingChanges: true,
+						intent: UpdateSubscriptionIntent.CancelAction,
+						hasFieldUpdates: true,
+					}),
+				"managed by RevenueCat",
+			);
+		});
 	},
 );
 

@@ -38,6 +38,7 @@ export const handleExternalPSPErrors = ({
 	cancelAction,
 	noBillingChanges,
 	intent,
+	hasFieldUpdates,
 }: {
 	/** For `update`: the specific customer product being modified. */
 	customerProduct?: FullCusProduct;
@@ -52,19 +53,22 @@ export const handleExternalPSPErrors = ({
 	noBillingChanges?: boolean;
 	/** For `update`: the resolved update intent. */
 	intent?: UpdateSubscriptionIntent;
+	/** For `update`: whether the request also mutates cusProduct fields (status, subscription linkage). */
+	hasFieldUpdates?: boolean;
 }) => {
 	if (action === "update") {
 		if (!customerProduct) return;
 
 		// Autumn-only cancel: no Stripe write happens, so it cannot conflict
-		// with the external subscription. Intent must be CancelAction so a
-		// cancel riding along with other mutations stays blocked; uncancel is
-		// excluded because RC would remain canceled while Autumn reactivates.
+		// with the external subscription. Intent must be CancelAction and no
+		// other mutation may ride along; uncancel is excluded because RC would
+		// remain canceled while Autumn reactivates.
 		const isAutumnOnlyCancel =
 			intent === UpdateSubscriptionIntent.CancelAction &&
 			cancelAction !== undefined &&
 			cancelAction !== "uncancel" &&
-			noBillingChanges === true;
+			noBillingChanges === true &&
+			!hasFieldUpdates;
 		if (isAutumnOnlyCancel) return;
 
 		const processorType = cusProductToProcessorType(customerProduct);

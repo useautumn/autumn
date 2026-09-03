@@ -8,6 +8,7 @@ import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/upda
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
+import { computeFieldUpdates } from "../compute/computeFieldUpdates";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
 import { handleManualTopUpErrors } from "./handleManualTopUpErrors";
@@ -43,6 +44,7 @@ export const handleUpdateSubscriptionErrors = async ({
 		cancelAction: params.cancel_action,
 		noBillingChanges: params.no_billing_changes,
 		intent: billingContext.intent,
+		hasFieldUpdates: Object.keys(computeFieldUpdates({ params })).length > 0,
 	});
 
 	// 1. Current customer product errors
