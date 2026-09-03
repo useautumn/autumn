@@ -14,6 +14,8 @@ export type EntitlementPriceTransition = {
 
 export type ComputedEntitlementPriceTransitions = {
 	transitions: EntitlementPriceTransition[];
+	/** Same-definition survivors. They still need a replace when usage resets. */
+	retained: EntitlementPriceTransition[];
 	added: EntitlementPrice[];
 	deleted: EntitlementPrice[];
 };
@@ -53,6 +55,7 @@ export const computeEntitlementPriceTransitions = ({
 	}
 
 	const transitions: EntitlementPriceTransition[] = [];
+	const retained: EntitlementPriceTransition[] = [];
 	const deleted: EntitlementPrice[] = [];
 	fromEntitlementPrices.forEach((fromEntitlementPrice, fromIndex) => {
 		const toEntitlementPrice = matchedByFromIndex.get(fromIndex);
@@ -73,7 +76,10 @@ export const computeEntitlementPriceTransitions = ({
 			})
 		) {
 			transitions.push({ fromEntitlementPrice, toEntitlementPrice });
+			return;
 		}
+
+		retained.push({ fromEntitlementPrice, toEntitlementPrice });
 	});
 
 	const added = toEntitlementPrices.filter(
@@ -81,5 +87,5 @@ export const computeEntitlementPriceTransitions = ({
 			!claimedToEntitlementIds.has(toEntitlementPrice.entitlement.id),
 	);
 
-	return { transitions, added, deleted };
+	return { transitions, retained, added, deleted };
 };

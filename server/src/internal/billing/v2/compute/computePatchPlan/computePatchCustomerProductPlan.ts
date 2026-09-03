@@ -43,6 +43,7 @@ export const computePatchCustomerProductPlan = ({
 		incomingCustomerProducts: [finalCustomerProduct],
 		customerLicenseBillingContext:
 			updateSubscriptionContext.customerLicenseBillingContext,
+		carryOverUsages: updateSubscriptionContext.carryOverUsages,
 	});
 
 	// A scheduled cusProduct hasn't started billing yet, so there's nothing to

@@ -73,6 +73,7 @@ export const computeAttachPlan = ({
 				customerLicenseBillingContext:
 					attachBillingContext.customerLicenseBillingContext,
 				carryCustomerLicenseState: planTiming === "immediate",
+				carryOverUsages: params.carry_over_usages,
 			})
 		: [];
 	const customerLicenseTransitions =

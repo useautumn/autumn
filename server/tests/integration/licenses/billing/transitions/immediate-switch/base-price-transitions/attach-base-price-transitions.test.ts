@@ -20,111 +20,165 @@ import { constructPriceItem } from "@/internal/products/product-items/productIte
 import { expectAssignmentBasePrices } from "../../utils/basePriceTransitionTestUtils";
 
 const SEAT_COUNT = 2;
+const SAME_SEAT_GRANT = 100;
+const SAME_SEAT_USAGE = 25;
+
+const runSameSeatParentSwitch = async ({
+	customerId,
+	idPrefix,
+	carryOverUsages,
+	expectUsageCarried,
+}: {
+	customerId: string;
+	idPrefix: string;
+	carryOverUsages?: { enabled: boolean };
+	expectUsageCarried: boolean;
+}) => {
+	const parentA = {
+		...products.base({
+			id: `${idPrefix}-pro-a`,
+			group: `${idPrefix}-pro`,
+			items: [items.dashboard()],
+		}),
+		name: "Pro A",
+	};
+	const parentB = {
+		...products.base({
+			id: `${idPrefix}-pro-b`,
+			group: `${idPrefix}-pro`,
+			items: [items.dashboard()],
+		}),
+		name: "Pro B",
+	};
+	const seat = {
+		...products.base({
+			id: `${idPrefix}-seat`,
+			items: [items.monthlyMessages({ includedUsage: SAME_SEAT_GRANT })],
+		}),
+		name: "Dev Seat",
+	};
+	const scenario = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.entities({ count: SEAT_COUNT, featureId: TestFeature.Users }),
+			s.products({ list: [parentA, parentB, seat] }),
+		],
+		actions: [],
+	});
+	const rpc = new AutumnRpcCli({
+		secretKey: scenario.ctx.orgSecretKey,
+		version: ApiVersion.V2_1,
+	});
+	for (const [parentPlanId, amount] of [
+		[parentA.id, 20],
+		[parentB.id, 40],
+	] as const) {
+		await rpc.post("/plans.update", {
+			plan_id: parentPlanId,
+			licenses: [
+				{
+					license_plan_id: seat.id,
+					included: 0,
+					customize: {
+						price: { amount, interval: BillingInterval.Month },
+					},
+				},
+			],
+		});
+	}
+
+	await scenario.autumnV2_3.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: parentA.id,
+		license_quantities: [{ license_plan_id: seat.id, quantity: SEAT_COUNT }],
+		redirect_mode: "if_required",
+	});
+	await scenario.autumnV2_3.licenses.attach({
+		customer_id: customerId,
+		plan_id: seat.id,
+		entities: scenario.entities.map((entity) => ({ entity_id: entity.id })),
+	});
+	await scenario.autumnV2_3.track(
+		{
+			customer_id: customerId,
+			entity_id: scenario.entities[0].id,
+			feature_id: TestFeature.Messages,
+			value: SAME_SEAT_USAGE,
+		},
+		{ timeout: 2000 },
+	);
+	const params: AttachParamsV1Input = {
+		customer_id: customerId,
+		plan_id: parentB.id,
+		license_quantities: [{ license_plan_id: seat.id, quantity: SEAT_COUNT }],
+		redirect_mode: "if_required",
+		carry_over_usages: carryOverUsages,
+	};
+	const preview =
+		await scenario.autumnV2_3.billing.previewAttach<AttachParamsV1Input>(
+			params,
+		);
+	await expectLicenseUpdatePreviewCorrect({
+		preview,
+		customerId,
+		advancedTo: scenario.advancedTo,
+		oldRecurringTotal: 40,
+		newRecurringTotal: 80,
+	});
+	await scenario.autumnV2_3.billing.attach(params);
+
+	await expectAssignmentBasePrices({
+		ctx: scenario.ctx,
+		autumn: scenario.autumnV2_3,
+		customerId,
+		licensePlanId: seat.id,
+		amount: 40,
+		count: SEAT_COUNT,
+	});
+	const entity = await scenario.autumnV2_3.entities.get<ApiEntityV2>(
+		customerId,
+		scenario.entities[0].id,
+	);
+	const usage = expectUsageCarried ? SAME_SEAT_USAGE : 0;
+	expectBalanceCorrect({
+		customer: entity,
+		featureId: TestFeature.Messages,
+		planId: seat.id,
+		granted: SAME_SEAT_GRANT,
+		usage,
+		remaining: SAME_SEAT_GRANT - usage,
+	});
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 2,
+		latestTotal: preview.total,
+	});
+	await expectStripeSubscriptionCorrect({
+		ctx: scenario.ctx,
+		customerId,
+	});
+};
 
 test.concurrent(
-	`${chalk.yellowBright("base price transition: attach replaces the same license plan")}`,
+	`${chalk.yellowBright("base price transition: same seat resets retained usage by default")}`,
 	async () => {
-		const customerId = "bp-attach-same";
-		const parentA = {
-			...products.base({
-				id: "same-pro-a",
-				group: "same-pro",
-				items: [items.dashboard()],
-			}),
-			name: "Pro A",
-		};
-		const parentB = {
-			...products.base({
-				id: "same-pro-b",
-				group: "same-pro",
-				items: [items.dashboard()],
-			}),
-			name: "Pro B",
-		};
-		const seat = {
-			...products.base({
-				id: "same-seat",
-				items: [items.monthlyMessages({ includedUsage: 100 })],
-			}),
-			name: "Dev Seat",
-		};
-		const scenario = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success", testClock: false }),
-				s.entities({ count: SEAT_COUNT, featureId: TestFeature.Users }),
-				s.products({ list: [parentA, parentB, seat] }),
-			],
-			actions: [],
+		await runSameSeatParentSwitch({
+			customerId: "bp-attach-same",
+			idPrefix: "same",
+			expectUsageCarried: false,
 		});
-		const rpc = new AutumnRpcCli({
-			secretKey: scenario.ctx.orgSecretKey,
-			version: ApiVersion.V2_1,
-		});
-		for (const [parentPlanId, amount] of [
-			[parentA.id, 20],
-			[parentB.id, 40],
-		] as const) {
-			await rpc.post("/plans.update", {
-				plan_id: parentPlanId,
-				licenses: [
-					{
-						license_plan_id: seat.id,
-						included: 0,
-						customize: {
-							price: { amount, interval: BillingInterval.Month },
-						},
-					},
-				],
-			});
-		}
+	},
+);
 
-		await scenario.autumnV2_3.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			plan_id: parentA.id,
-			license_quantities: [{ license_plan_id: seat.id, quantity: SEAT_COUNT }],
-			redirect_mode: "if_required",
-		});
-		await scenario.autumnV2_3.licenses.attach({
-			customer_id: customerId,
-			plan_id: seat.id,
-			entities: scenario.entities.map((entity) => ({ entity_id: entity.id })),
-		});
-		const params: AttachParamsV1Input = {
-			customer_id: customerId,
-			plan_id: parentB.id,
-			license_quantities: [{ license_plan_id: seat.id, quantity: SEAT_COUNT }],
-			redirect_mode: "if_required",
-		};
-		const preview =
-			await scenario.autumnV2_3.billing.previewAttach<AttachParamsV1Input>(
-				params,
-			);
-		await expectLicenseUpdatePreviewCorrect({
-			preview,
-			customerId,
-			advancedTo: scenario.advancedTo,
-			oldRecurringTotal: 40,
-			newRecurringTotal: 80,
-		});
-		await scenario.autumnV2_3.billing.attach(params);
-
-		await expectAssignmentBasePrices({
-			ctx: scenario.ctx,
-			autumn: scenario.autumnV2_3,
-			customerId,
-			licensePlanId: seat.id,
-			amount: 40,
-			count: SEAT_COUNT,
-		});
-		await expectCustomerInvoiceCorrect({
-			customerId,
-			count: 2,
-			latestTotal: preview.total,
-		});
-		await expectStripeSubscriptionCorrect({
-			ctx: scenario.ctx,
-			customerId,
+test.concurrent(
+	`${chalk.yellowBright("base price transition: same seat carries retained usage when enabled")}`,
+	async () => {
+		await runSameSeatParentSwitch({
+			customerId: "bp-attach-same-carry",
+			idPrefix: "same-carry",
+			carryOverUsages: { enabled: true },
+			expectUsageCarried: true,
 		});
 	},
 );
@@ -322,8 +376,8 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			planId: devB.id,
 			granted: 500,
-			usage: 25,
-			remaining: 475,
+			usage: 0,
+			remaining: 500,
 		});
 		const dashboard = await scenario.autumnV2_3.check<CheckResponseV3>({
 			customer_id: customerId,

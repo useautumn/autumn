@@ -10,6 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
@@ -61,10 +62,16 @@ export const activateScheduledCustomerProduct = async ({
 		scheduled_ids: scheduledIds,
 		starts_at: Math.min(customerProduct.starts_at, activatedAt),
 	};
+	// Scheduled activations have no request params — the org transition rule
+	// is the only carry-over source.
 	const customerLicenseTransitions = transitionSource
 		? computeCustomerLicenseTransitions({
 				outgoingCustomerProducts: [transitionSource],
 				incomingCustomerProducts: [customerProduct],
+				carryOverUsages: await resolveCarryOverUsagesParam({
+					ctx,
+					carryOverUsages: undefined,
+				}),
 			})
 		: [];
 
