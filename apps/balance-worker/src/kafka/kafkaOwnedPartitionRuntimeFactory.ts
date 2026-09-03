@@ -4,6 +4,10 @@ import {
 } from "../runtime/ownedPartitionRuntime.js";
 import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.js";
 import type { PartitionTrackWriterLimits } from "../writer/partitionTrackWriter.js";
+import {
+	assertKafkaBalanceWorkerTimings,
+	type KafkaBalanceWorkerTimings,
+} from "./kafkaBalanceWorkerConfig.js";
 import type { KafkaPartitionRuntimeFactory } from "./kafkaOwnedPartitionGroup.js";
 import {
 	createKafkaOwnedPartitionProducer,
@@ -15,25 +19,25 @@ export type KafkaOwnedPartitionRuntimeFactory = (
 	params: Parameters<KafkaPartitionRuntimeFactory>[0],
 ) => ReturnType<typeof createOwnedPartitionRuntime>;
 
-export const createKafkaOwnedPartitionRuntimeFactory =
-	({
-		kafka,
-		deploymentEnvironment,
-		stateStore,
-		partitionResolver,
-		writerLimits,
-		producerLimits,
-		recoveryDrainTimeoutMs,
-	}: {
-		kafka: KafkaProducerFactoryPort;
-		deploymentEnvironment: string;
-		stateStore: SqliteBalanceStateStore;
-		partitionResolver: MeteringPartitionResolver;
-		writerLimits: PartitionTrackWriterLimits;
-		producerLimits: KafkaOwnedPartitionProducerLimits;
-		recoveryDrainTimeoutMs: number;
-	}): KafkaOwnedPartitionRuntimeFactory =>
-	({ topic, partition, follower }) =>
+export const createKafkaOwnedPartitionRuntimeFactory = ({
+	kafka,
+	deploymentEnvironment,
+	stateStore,
+	partitionResolver,
+	writerLimits,
+	producerLimits,
+	timings,
+}: {
+	kafka: KafkaProducerFactoryPort;
+	deploymentEnvironment: string;
+	stateStore: SqliteBalanceStateStore;
+	partitionResolver: MeteringPartitionResolver;
+	writerLimits: PartitionTrackWriterLimits;
+	producerLimits: KafkaOwnedPartitionProducerLimits;
+	timings: KafkaBalanceWorkerTimings;
+}): KafkaOwnedPartitionRuntimeFactory => {
+	assertKafkaBalanceWorkerTimings({ timings });
+	return ({ topic, partition, follower }) =>
 		createOwnedPartitionRuntime({
 			topic,
 			partition,
@@ -48,5 +52,6 @@ export const createKafkaOwnedPartitionRuntimeFactory =
 			follower,
 			partitionResolver,
 			writerLimits,
-			recoveryDrainTimeoutMs,
+			recoveryDrainTimeoutMs: timings.recoveryDrainTimeoutMs,
 		});
+};
