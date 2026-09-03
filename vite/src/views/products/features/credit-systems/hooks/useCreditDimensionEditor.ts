@@ -27,7 +27,6 @@ const removeAt = <T>(list: T[], index: number) =>
 /**
  * Fields and values are whatever the rules reference; ones added before any
  * rule uses them live in local state until then, so they survive re-renders.
- * With no saved rates the table offers one blank row, committed on first edit.
  */
 export function useCreditDimensionEditor({
 	item,
@@ -42,11 +41,7 @@ export function useCreditDimensionEditor({
 		[item.dimensions, item.multipliers, draft],
 	);
 	const fields = Object.keys(values);
-	const savedRules = useMemo(() => rateRules(item), [item.dimensions]);
-	const rules = useMemo(
-		() => (savedRules.length === 0 ? [createRateRule()] : savedRules),
-		[savedRules],
-	);
+	const rules = useMemo(() => rateRules(item), [item.dimensions]);
 	const multipliers = useMemo(() => multiplierRules(item), [item.multipliers]);
 
 	const commitRules = (next: CreditRateRule[]) =>
@@ -77,7 +72,7 @@ export function useCreditDimensionEditor({
 		addRule: () => commitRules([...rules, createRateRule()]),
 		setRule: (index: number, rule: CreditRateRule) =>
 			commitRules(replaceAt(rules, index, rule)),
-		removeRule: (index: number) => commitRules(removeAt(savedRules, index)),
+		removeRule: (index: number) => commitRules(removeAt(rules, index)),
 		addMultiplier: () =>
 			commitMultipliers([...multipliers, createMultiplierRule()]),
 		setMultiplier: (index: number, rule: CreditMultiplierRule) =>
