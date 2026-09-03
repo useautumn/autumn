@@ -407,8 +407,10 @@ export {
 export {
 	isUsageLimitBasisAlert,
 	usageAlertIdentity,
+	usageAlertTargetLimitIdentity,
 } from "./usageAlertIdentity.js";
 export {
+	type DbUsageLimitParams,
 	USAGE_LIMIT_ANCHORS,
 	USAGE_LIMIT_FILTER_MAX_KEY_LENGTH,
 	USAGE_LIMIT_FILTER_MAX_KEYS,

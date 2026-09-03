@@ -85,6 +85,7 @@ export const DbUsageLimitSchema = z.object({
 });
 
 export type DbUsageLimit = z.infer<typeof DbUsageLimitSchema>;
+export type DbUsageLimitParams = z.input<typeof DbUsageLimitSchema>;
 
 /**
  * Canonical identity of a filter: sorted `key=value` pairs. Counters and
@@ -102,10 +103,9 @@ export const usageLimitFilterKey = (
 };
 
 /** A limit is identified by its feature and its canonical filter. */
-export const usageLimitIdentity = (usageLimit: {
-	feature_id: string;
-	filter?: UsageLimitFilter | UsageLimitFilterParams | null;
-}): string =>
+export const usageLimitIdentity = (
+	usageLimit: Pick<DbUsageLimit | DbUsageLimitParams, "feature_id" | "filter">,
+): string =>
 	`${usageLimit.feature_id}|${usageLimitFilterKey(usageLimit.filter)}`;
 
 /**
