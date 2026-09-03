@@ -965,6 +965,7 @@ components:
                       - type: object
                         propertyNames:
                           type: string
+                          pattern: .+\/.+
                         additionalProperties:
                           type: object
                           properties:
@@ -3588,6 +3589,7 @@ components:
                 - type: object
                   propertyNames:
                     type: string
+                    pattern: .+\/.+
                   additionalProperties:
                     type: object
                     properties:
@@ -5183,6 +5185,7 @@ paths:
                                 - type: object
                                   propertyNames:
                                     type: string
+                                    pattern: .+\/.+
                                   additionalProperties:
                                     type: object
                                     properties:
@@ -6462,6 +6465,7 @@ paths:
                                       - type: object
                                         propertyNames:
                                           type: string
+                                          pattern: .+\/.+
                                         additionalProperties:
                                           type: object
                                           properties:
@@ -7728,6 +7732,7 @@ paths:
                                 - type: object
                                   propertyNames:
                                     type: string
+                                    pattern: .+\/.+
                                   additionalProperties:
                                     type: object
                                     properties:
@@ -19394,6 +19399,7 @@ paths:
                     - type: object
                       propertyNames:
                         type: string
+                        pattern: .+\/.+
                       additionalProperties:
                         type: object
                         properties:
@@ -19584,6 +19590,7 @@ paths:
                       - type: object
                         propertyNames:
                           type: string
+                          pattern: .+\/.+
                         additionalProperties:
                           type: object
                           properties:
@@ -19829,6 +19836,7 @@ paths:
                       - type: object
                         propertyNames:
                           type: string
+                          pattern: .+\/.+
                         additionalProperties:
                           type: object
                           properties:
@@ -20060,6 +20068,7 @@ paths:
                             - type: object
                               propertyNames:
                                 type: string
+                                pattern: .+\/.+
                               additionalProperties:
                                 type: object
                                 properties:
@@ -20358,6 +20367,7 @@ paths:
                     - type: object
                       propertyNames:
                         type: string
+                        pattern: .+\/.+
                       additionalProperties:
                         type: object
                         properties:
@@ -20548,6 +20558,7 @@ paths:
                       - type: object
                         propertyNames:
                           type: string
+                          pattern: .+\/.+
                         additionalProperties:
                           type: object
                           properties:
@@ -38859,6 +38870,7 @@ paths:
                                   - type: object
                                     propertyNames:
                                       type: string
+                                      pattern: .+\/.+
                                     additionalProperties:
                                       type: object
                                       properties:
@@ -39795,6 +39807,7 @@ paths:
                                   - type: object
                                     propertyNames:
                                       type: string
+                                      pattern: .+\/.+
                                     additionalProperties:
                                       type: object
                                       properties:
@@ -43844,6 +43857,7 @@ paths:
                                 - type: object
                                   propertyNames:
                                     type: string
+                                    pattern: .+\/.+
                                   additionalProperties:
                                     type: object
                                     properties:
@@ -44585,6 +44599,7 @@ paths:
                                 - type: object
                                   propertyNames:
                                     type: string
+                                    pattern: .+\/.+
                                   additionalProperties:
                                     type: object
                                     properties:
@@ -45383,6 +45398,7 @@ paths:
                                       - type: object
                                         propertyNames:
                                           type: string
+                                          pattern: .+\/.+
                                         additionalProperties:
                                           type: object
                                           properties:
@@ -46269,6 +46285,7 @@ paths:
                                 - type: object
                                   propertyNames:
                                     type: string
+                                    pattern: .+\/.+
                                   additionalProperties:
                                     type: object
                                     properties:
@@ -49196,6 +49213,7 @@ paths:
                             - type: object
                               propertyNames:
                                 type: string
+                                pattern: .+\/.+
                               additionalProperties:
                                 type: object
                                 properties:
@@ -53143,6 +53161,7 @@ paths:
                               - type: object
                                 propertyNames:
                                   type: string
+                                  pattern: .+\/.+
                                 additionalProperties:
                                   type: object
                                   properties:
@@ -72883,6 +72902,7 @@ paths:
                               - type: object
                                 propertyNames:
                                   type: string
+                                  pattern: .+\/.+
                                 additionalProperties:
                                   type: object
                                   properties:
@@ -75443,6 +75463,7 @@ paths:
                             - type: object
                               propertyNames:
                                 type: string
+                                pattern: .+\/.+
                               additionalProperties:
                                 type: object
                                 properties:
