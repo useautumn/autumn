@@ -9,7 +9,7 @@ export const paramsToTouchedFeatures = ({
 	params: UpdateCatalogParams;
 }): Feature[] => {
 	const touchedFeatureIds = new Set([
-		...params.features.map((entry) => entry.feature_id),
+		...(params.features ?? []).map((entry) => entry.feature_id),
 		...params.remove_features.map((entry) => entry.feature_id),
 	]);
 	return features.filter((feature) => touchedFeatureIds.has(feature.id));

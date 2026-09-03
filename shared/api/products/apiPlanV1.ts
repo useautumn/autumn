@@ -4,28 +4,32 @@ import { BillingInterval } from "@models/productModels/intervals/billingInterval
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
-import { AdditionalCurrencyPriceArraySchema } from "./components/additionalCurrencies.js";
-import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
-import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
-import { DisplaySchema } from "./components/display.js";
-import {
-	API_PLAN_ITEM_PREPAID_EXAMPLE,
-	API_PLAN_ITEM_USAGE_BASED_EXAMPLE,
-	ApiPlanItemV1Schema,
-} from "./items/apiPlanItemV1.js";
 import { ApiPlanLicenseV1Schema } from "./apiPlanLicenseV1.js";
 import {
 	ApiPlanVariantV1Schema,
 	VariantCustomizeSchema,
 } from "./apiPlanVariantV1.js";
+import { AdditionalCurrencyPriceArraySchema } from "./components/additionalCurrencies.js";
+import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
+import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
+import { DisplaySchema } from "./components/display.js";
+import {
+	ApiPlanProcessorsSchema,
+	ApiPriceProcessorsSchema,
+} from "./components/processors.js";
+import {
+	API_PLAN_ITEM_PREPAID_EXAMPLE,
+	API_PLAN_ITEM_USAGE_BASED_EXAMPLE,
+	ApiPlanItemV1Schema,
+} from "./items/apiPlanItemV1.js";
 
 export {
-	ApiPlanLicenseV1Schema,
 	type ApiPlanLicenseV1,
+	ApiPlanLicenseV1Schema,
 } from "./apiPlanLicenseV1.js";
 export {
-	ApiPlanVariantV1Schema,
 	type ApiPlanVariantV1,
+	ApiPlanVariantV1Schema,
 	VariantCustomizeSchema,
 } from "./apiPlanVariantV1.js";
 
@@ -71,6 +75,11 @@ export const ApiPlanV1Schema = z.object({
 	// Identity
 	id: z.string().meta({
 		description: "Unique identifier for the plan.",
+	}),
+	internal_id: z.string().optional().meta({
+		description:
+			"Stable row id. Survives renames of plan_id and version_slug, so config files address rows by it.",
+		internal: true,
 	}),
 	name: z.string().meta({
 		description: "Display name of the plan.",
@@ -133,6 +142,10 @@ export const ApiPlanV1Schema = z.object({
 			display: DisplaySchema.optional().meta({
 				description: "Display text for showing this price in pricing pages.",
 			}),
+			processors: ApiPriceProcessorsSchema.optional().meta({
+				description:
+					"Payment processors this base price is connected to. Omitted when unset.",
+			}),
 		})
 		.nullable()
 		.meta({
@@ -142,6 +155,10 @@ export const ApiPlanV1Schema = z.object({
 	items: z.array(ApiPlanItemV1Schema).meta({
 		description:
 			"Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.",
+	}),
+	processors: ApiPlanProcessorsSchema.optional().meta({
+		description:
+			"Payment processors this plan is connected to. Omitted when unset.",
 	}),
 	free_trial: ApiFreeTrialV2Schema.optional().meta({
 		description:

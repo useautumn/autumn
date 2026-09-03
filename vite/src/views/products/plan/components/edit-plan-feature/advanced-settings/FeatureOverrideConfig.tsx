@@ -31,6 +31,8 @@ export function FeatureOverrideConfig() {
 		schemaKeys,
 		allSchemaCandidateFeatures,
 		availableFeaturesFor,
+		expandedKey,
+		toggleExpandedKey,
 		setSchemaItem,
 		addSchemaItem,
 		removeSchemaItem,
@@ -65,17 +67,23 @@ export function FeatureOverrideConfig() {
 			}}
 		>
 			<div className="flex flex-col gap-2">
-				{schema.map((schemaItem: CreditSchemaItem, index: number) => (
-					<CreditRateCardRow
-						key={schemaKeys[index]}
-						item={schemaItem}
-						availableFeatures={availableFeaturesFor(schemaItem)}
-						allFeatures={allSchemaCandidateFeatures}
-						onChange={(next) => setSchemaItem({ index, item: next })}
-						onRemove={() => removeSchemaItem(index)}
-						showRateCardControls={true}
-					/>
-				))}
+				{schema.map((schemaItem: CreditSchemaItem, index: number) => {
+					const rowKey = schemaKeys[index];
+
+					return (
+						<CreditRateCardRow
+							key={rowKey}
+							item={schemaItem}
+							availableFeatures={availableFeaturesFor(schemaItem)}
+							allFeatures={allSchemaCandidateFeatures}
+							onChange={(next) => setSchemaItem({ index, item: next })}
+							onRemove={() => removeSchemaItem(index)}
+							isExpanded={expandedKey === rowKey}
+							onToggle={() => toggleExpandedKey(rowKey)}
+							showRateCardControls={true}
+						/>
+					);
+				})}
 				<IconButton
 					type="button"
 					variant="muted"

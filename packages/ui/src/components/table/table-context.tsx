@@ -15,8 +15,8 @@ export type TableLinkComponent = ComponentType<{
 }>;
 
 export interface VirtualizationConfig {
-	/** Height of the scroll container, e.g., "calc(100vh - 240px)" */
-	containerHeight: string;
+	/** Height of the scroll container, e.g., "calc(100vh - 240px)". Omit to let the table grow with its rows. */
+	containerHeight?: string;
 	/** Height of each row in pixels (default: 40) */
 	rowHeight?: number;
 	/** Number of rows to render outside visible area (default: 30) - higher values improve fast scrolling smoothness */

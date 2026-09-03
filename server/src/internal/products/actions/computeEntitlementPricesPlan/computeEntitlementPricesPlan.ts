@@ -9,6 +9,7 @@ import { validateProductItems } from "@/internal/products/product-items/validate
 import { buildEntitlementPricesPlan } from "./buildEntitlementPricesPlan/buildEntitlementPricesPlan";
 import { claimCurrentRows } from "./claimCurrentRows/claimCurrentRows";
 import { carryForwardStripeResources } from "./helpers/carryForwardStripeResources";
+import { stripeMappingUnlinks } from "./helpers/stripeMappingUnlinks";
 import { resolveEntitlementPricesCustomize } from "./resolveEntitlementPricesCustomize";
 import type { ComputeEntitlementPricesPlanParams } from "./types/computeEntitlementPricesPlanParams";
 import type { EntitlementPricesPlan } from "./types/entitlementPricesPlan";
@@ -57,9 +58,16 @@ export const computeEntitlementPricesPlan = ({
 		desiredBasePriceAndEntitlementPrices,
 	});
 
+	const unlinks = stripeMappingUnlinks({
+		claims,
+		unlinkedStripeSlots:
+			desiredBasePriceAndEntitlementPrices.unlinkedStripeSlots,
+	});
+
 	const plan = buildEntitlementPricesPlan({
 		mode: params.mode,
 		claims,
+		unlinks,
 	});
 
 	const stripeCandidates = params.stripeCandidates ?? params.currentRows;
@@ -67,6 +75,7 @@ export const computeEntitlementPricesPlan = ({
 		plan,
 		candidatePrices: stripeCandidates?.prices ?? [],
 		candidateEntitlements: stripeCandidates?.entitlements ?? [],
+		unlinks,
 	});
 
 	plan.projected = {

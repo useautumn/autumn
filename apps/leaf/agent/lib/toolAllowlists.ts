@@ -34,6 +34,7 @@ export const toolAllowlists = {
 		...ORG_CONTEXT_READS,
 		...DATE_UTILS,
 		...CUSTOMER_READS,
+		"aggregateEvents",
 		"attach",
 		"createBalance",
 		"createEntity",

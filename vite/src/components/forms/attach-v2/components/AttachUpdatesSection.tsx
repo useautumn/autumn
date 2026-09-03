@@ -79,7 +79,13 @@ export function AttachUpdatesSection() {
 	if (isPending) return <AttachUpdatesSkeleton />;
 	if (!product) return null;
 
-	const isPausing = supportsTrialRevert && formValues.trialOnEnd === "revert";
+	// The outgoing plan is only paused when a revert-on-end trial is actually
+	// attached — matching getFreeTrial, which omits the trial (and so its
+	// on_end) unless the toggle is on with a positive length. Without one the
+	// plan is replaced, so trialOnEnd's "revert" default must not leak in here.
+	const hasTrial = formValues.trialEnabled && (formValues.trialLength ?? 0) > 0;
+	const isPausing =
+		hasTrial && supportsTrialRevert && formValues.trialOnEnd === "revert";
 
 	return (
 		<SheetSection withSeparator={false} className="pb-0">

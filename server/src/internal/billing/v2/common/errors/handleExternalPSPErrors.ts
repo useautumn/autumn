@@ -1,4 +1,5 @@
 import {
+	type CancelAction,
 	cusProductToProcessorType,
 	type FullCusProduct,
 	type FullProduct,
@@ -6,6 +7,7 @@ import {
 	isOneOffProduct,
 	ProcessorType,
 	RecaseError,
+	UpdateSubscriptionIntent,
 } from "@autumn/shared";
 
 /**
@@ -33,6 +35,10 @@ export const handleExternalPSPErrors = ({
 	customerProducts,
 	attachProduct,
 	action,
+	cancelAction,
+	noBillingChanges,
+	intent,
+	hasFieldUpdates,
 }: {
 	/** For `update`: the specific customer product being modified. */
 	customerProduct?: FullCusProduct;
@@ -41,9 +47,29 @@ export const handleExternalPSPErrors = ({
 	/** For `attach`: the product being attached. */
 	attachProduct?: FullProduct;
 	action: "attach" | "update";
+	/** For `update`: the request's cancel_action, if any. */
+	cancelAction?: CancelAction;
+	/** For `update`: the request's no_billing_changes flag. */
+	noBillingChanges?: boolean;
+	/** For `update`: the resolved update intent. */
+	intent?: UpdateSubscriptionIntent;
+	/** For `update`: whether the request also mutates cusProduct fields (status, subscription linkage). */
+	hasFieldUpdates?: boolean;
 }) => {
 	if (action === "update") {
 		if (!customerProduct) return;
+
+		// Autumn-only cancel: no Stripe write happens, so it cannot conflict
+		// with the external subscription. Intent must be CancelAction and no
+		// other mutation may ride along; uncancel is excluded because RC would
+		// remain canceled while Autumn reactivates.
+		const isAutumnOnlyCancel =
+			intent === UpdateSubscriptionIntent.CancelAction &&
+			cancelAction !== undefined &&
+			cancelAction !== "uncancel" &&
+			noBillingChanges === true &&
+			!hasFieldUpdates;
+		if (isAutumnOnlyCancel) return;
 
 		const processorType = cusProductToProcessorType(customerProduct);
 		if (processorType === ProcessorType.RevenueCat) {

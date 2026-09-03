@@ -10,7 +10,11 @@ import {
 	executeCreditSystemSchemaRewrites,
 	executeFeatureReferenceRewrites,
 } from "@/internal/catalogV2/execute/executeFeatureReferenceRewrites";
-import { initStripeResourcesForCatalog } from "@/internal/catalogV2/execute/executeInitStripeResources/initStripeResourcesForCatalog";
+import {
+	initStripeResourcesForCatalog,
+	stripeInitTargets,
+} from "@/internal/catalogV2/execute/executeInitStripeResources/initStripeResourcesForCatalog";
+import { validateAdoptedStripePrices } from "@/internal/catalogV2/execute/executeInitStripeResources/validateAdoptedStripePrices";
 import { executeMigrationDrafts } from "@/internal/catalogV2/execute/executeMigrationDrafts";
 import { executeRemovePlans } from "@/internal/catalogV2/execute/executeRemovePlans";
 import { executeRenamePlans } from "@/internal/catalogV2/execute/executeRenamePlans";
@@ -18,13 +22,17 @@ import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpser
 import { queueRewardMigrations } from "@/internal/catalogV2/execute/queueRewardMigrations";
 import { rewritePublicPlanIdsAfterRename } from "@/internal/catalogV2/execute/rewritePublicPlanIdsAfterRename";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { fillFeatureStripeMeterEventName } from "@/internal/features/utils/fillFeatureStripeMeterEventName.js";
 import { updateFeatureStripeProductName } from "@/internal/features/utils/updateFeatureStripeProductName.js";
-import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { workflows } from "@/queue/workflows.js";
+import {
+	assertRevenueCatIdsUnclaimed,
+	executeRevenueCatMappings,
+} from "./executeRevenueCatMappings";
 
 export type CatalogAppliedResult = { id: string; action: CatalogAction };
 
@@ -164,6 +172,34 @@ const executeRemoveFeatures = async ({
 	);
 };
 
+/**
+ * Every check that can still reject the request, run before the first write.
+ *
+ * The phase below is a straight sequence of independent, non-transactional
+ * writes, and it cannot be wrapped in a transaction because it calls Stripe. So
+ * a 400 thrown mid-sequence leaves whatever already committed — a rename that
+ * survives a rejected RevenueCat collision, say. Worse for adopted prices:
+ * `newlyAdoptedPrices` diffs against the CURRENT row, so once a failed attempt
+ * has persisted a bad Stripe price id, the retry reads it as already-known,
+ * skips the lookup and succeeds on an id that does not exist. Validating first
+ * closes both.
+ */
+const validateCatalogBeforeWrites = async ({
+	ctx,
+	updateCatalogPlan,
+}: {
+	ctx: AutumnContext;
+	updateCatalogPlan: UpdateCatalogPlan;
+}) => {
+	await assertRevenueCatIdsUnclaimed({ ctx, updateCatalogPlan });
+	// The same set Stripe init walks, so a stated id is checked against exactly
+	// the rows that would have consumed it.
+	await validateAdoptedStripePrices({
+		ctx,
+		upsertProducts: stripeInitTargets({ updateCatalogPlan }),
+	});
+};
+
 /** Persist the plan — dumb writers only, every op was computed upstream. */
 export const executeUpdateCatalogPlan = async ({
 	ctx,
@@ -174,6 +210,12 @@ export const executeUpdateCatalogPlan = async ({
 	updateCatalogPlan: UpdateCatalogPlan;
 	phases: CatalogPhases;
 }): Promise<CatalogResult> => {
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.validate",
+		run: () => validateCatalogBeforeWrites({ ctx, updateCatalogPlan }),
+	});
 	// Identity moves first: atomic per plan, so a later failure can never
 	// leave references split between old and new ids.
 	await timeCatalogPhase({
@@ -212,6 +254,12 @@ export const executeUpdateCatalogPlan = async ({
 		phases,
 		phase: "execute.remove_plans",
 		run: () => executeRemovePlans({ ctx, updateCatalogPlan }),
+	});
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.revenuecat_mappings",
+		run: () => executeRevenueCatMappings({ ctx, updateCatalogPlan }),
 	});
 	await timeCatalogPhase({
 		ctx,

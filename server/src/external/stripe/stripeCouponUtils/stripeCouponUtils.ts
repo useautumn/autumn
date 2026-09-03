@@ -160,7 +160,9 @@ export const resolveCouponStripeProductIds = ({
 		: [];
 };
 
-const getPromoCouponId = (promo: Stripe.PromotionCode): string | null => {
+export const getPromoCouponId = (
+	promo: Stripe.PromotionCode,
+): string | null => {
 	const coupon =
 		promo.promotion?.coupon ??
 		(promo as unknown as { coupon?: Stripe.Coupon | string }).coupon;

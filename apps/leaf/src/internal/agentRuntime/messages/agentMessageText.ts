@@ -26,6 +26,7 @@ export const buildAgentMessageText = ({
 	env,
 	isAdminInstall = false,
 	newSession,
+	now = new Date(),
 	orgContext,
 	orgSlug,
 	params,
@@ -33,11 +34,15 @@ export const buildAgentMessageText = ({
 	env: string;
 	isAdminInstall?: boolean;
 	newSession: boolean;
+	now?: Date;
 	orgContext?: AutumnOrgContext;
 	orgSlug?: string;
 	params: AgentTurnParams;
 }) => {
 	const preamble = [
+		// The model has no clock; without this it guesses the year for date
+		// ranges (log windows, custom_range) and queries the wrong one.
+		`Current date and time (UTC): ${now.toISOString()}. Derive every date range, "today", "yesterday", and "last N days" from this, never from memory.`,
 		newSession && isAdminInstall ? adminBypassPreamble({ env, orgSlug }) : null,
 		newSession
 			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`

@@ -4,6 +4,7 @@ import type {
 	ProjectedCatalog,
 } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { resolveAbsenteePlanTargets } from "./resolveAbsenteePlanTargets";
 import { resolveRemoveProductTargets } from "./resolveRemoveProductTargets";
 import { stampRemoveWillArchive } from "./stampRemoveWillArchive";
 
@@ -20,7 +21,12 @@ export const computeRemoveProductsPlan = ({
 	params: UpdateCatalogParams;
 	projected: ProjectedCatalog;
 }): CatalogComputeStep => {
-	const targets = resolveRemoveProductTargets({ params, catalogContext });
+	// Explicit removals, plus — under full state — the plans the payload never
+	// mentioned, which is how a config asks for a deletion.
+	const targets = [
+		...resolveRemoveProductTargets({ params, catalogContext }),
+		...resolveAbsenteePlanTargets({ params, catalogContext }),
+	];
 	const removePlans = stampRemoveWillArchive({
 		targets,
 		catalogContext,

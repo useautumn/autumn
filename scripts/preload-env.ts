@@ -26,6 +26,10 @@ if (process.env.PW_MODE !== "1") {
 		for (const line of contents.split(/\r?\n/)) {
 			const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
 			if (!m) continue;
+			// AUTUMN_DB_DIRECT callers inject DATABASE_URL for a DB that
+			// .env.local may not describe yet (fresh branch provisioning).
+			if (process.env.AUTUMN_DB_DIRECT === "1" && m[1] === "DATABASE_URL")
+				continue;
 			process.env[m[1]] = m[2];
 		}
 	}

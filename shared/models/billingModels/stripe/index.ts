@@ -1,5 +1,6 @@
 export * from "./stripeBillingPlan";
 export * from "./stripeCheckoutSessionAction";
+export * from "./stripeCouponWithPromoCodes";
 export * from "./stripeDiscountWithCoupon";
 export * from "./stripeInvoiceAction";
 export * from "./stripeInvoiceItemsAction";

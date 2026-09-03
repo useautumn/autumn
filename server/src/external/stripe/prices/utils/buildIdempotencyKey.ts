@@ -20,18 +20,26 @@ const hashStripePriceIdempotencyShape = ({
 		.digest("hex")
 		.slice(0, 16);
 
+/**
+ * The Stripe product is part of the key because it is a `prices.create`
+ * parameter the hashed shape does not cover: re-minting one Autumn price under
+ * a new product is a different request, and Stripe rejects a reused key whose
+ * parameters changed.
+ */
 export const buildStripePriceIdempotencyKey = ({
 	price,
 	slot,
 	currency,
 	orgDefault,
+	stripeProductId,
 }: {
 	price: Price;
 	slot: string;
 	currency: string;
 	orgDefault: string;
+	stripeProductId: string;
 }) =>
-	`${AUTUMN_STRIPE_IDEMPOTENCY_PREFIX}price:${price.id}:${slot}:${currency}:${hashStripePriceIdempotencyShape({ price, currency, orgDefault })}`;
+	`${AUTUMN_STRIPE_IDEMPOTENCY_PREFIX}price:${price.id}:${slot}:${currency}:${stripeProductId}:${hashStripePriceIdempotencyShape({ price, currency, orgDefault })}`;
 
 export const buildStripeProductIdempotencyKey = ({
 	productInternalId,

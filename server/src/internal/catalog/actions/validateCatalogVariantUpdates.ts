@@ -1,8 +1,8 @@
 import {
-	ErrCode,
-	RecaseError,
 	type CatalogUpdateParams,
+	ErrCode,
 	type FullProduct,
+	RecaseError,
 } from "@autumn/shared";
 
 export const validateCatalogVariantUpdates = ({
@@ -11,13 +11,13 @@ export const validateCatalogVariantUpdates = ({
 	params: CatalogUpdateParams;
 }) => {
 	const planIds = new Set<string>();
-	for (const plan of params.plans) {
+	for (const plan of params.plans ?? []) {
 		planIds.add(plan.plan_id);
 		if (plan.new_plan_id) planIds.add(plan.new_plan_id);
 	}
 
 	const variantBaseById = new Map<string, string>();
-	for (const plan of params.plans) {
+	for (const plan of params.plans ?? []) {
 		for (const variant of plan.variants ?? []) {
 			if (variant.variant_plan_id === plan.plan_id) {
 				throw new RecaseError({
@@ -76,7 +76,7 @@ export const validateCatalogVariantVersionTargets = ({
 		);
 	}
 
-	for (const plan of params.plans) {
+	for (const plan of params.plans ?? []) {
 		if ((plan.variants ?? []).length === 0) continue;
 		if (plan.version === undefined) continue;
 

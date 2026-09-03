@@ -1,6 +1,7 @@
 import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
 import { DisplaySchema } from "@api/products/components/display.js";
+import { ApiPriceProcessorsSchema } from "@api/products/components/processors";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
@@ -37,6 +38,9 @@ export const ApiPlanItemV0Schema = z
 		price: z
 			.object({
 				stripe_price_id: z.string().optional().meta({
+					internal: true,
+				}),
+				processors: ApiPriceProcessorsSchema.optional().meta({
 					internal: true,
 				}),
 				amount: z.number().optional(),
