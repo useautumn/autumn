@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerLicenseV0 } from "@autumn/shared";
+import { type ApiCustomerLicenseV0, CusProductStatus } from "@autumn/shared";
+import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
+import { expectSpareSeatRowsCorrect } from "@tests/integration/licenses/utils/expectSpareSeatRowsCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -414,6 +416,60 @@ test.concurrent(
 			granted: 4,
 			usage: 2,
 			remaining: 2,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("licenses-reconcile: unused beyond remaining expire")}`,
+	async () => {
+		const customerId = "licenses-reconcile-surplus-unused";
+		const idPrefix = "rec-surplus";
+		const { ctx, autumnV2_3, parent, devSeat, assignSeats } =
+			await setupLicenseUpdateScenario({
+				customerId,
+				idPrefix,
+				seatPrice: 20,
+				includedSeats: 0,
+				attachedSeats: 5,
+			});
+
+		await assignSeats({ count: 5 });
+		await autumnV2_3.licenses.release({
+			customer_id: customerId,
+			license_plan_id: devSeat.id,
+			entity_ids: [`${idPrefix}-entity-1`, `${idPrefix}-entity-2`],
+		});
+
+		const state = await reconcileLicenseStateForCustomer({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		if (!state) throw new Error("expected customer to touch licenses");
+		const [customerLicense] = state.customerLicenses;
+		expect(customerLicense).toBeDefined();
+		expect(customerLicense.remaining).toBe(2);
+
+		await customerLicenseRepo.setPaidQuantity({
+			db: ctx.db,
+			customerLicenseId: customerLicense.id,
+			paidQuantity: 3,
+		});
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
+
+		const healed = (await autumnV2_3.post("/licenses.list", {
+			customer_id: customerId,
+		})) as PoolsResponse;
+		expect(findPool(healed, parent.id)).toMatchObject({
+			granted: 3,
+			usage: 3,
+			remaining: 0,
+		});
+		await expectSpareSeatRowsCorrect({
+			ctx,
+			customerLicenseLinkId: customerLicense.link_id,
+			count: 2,
+			status: CusProductStatus.Expired,
 		});
 	},
 );

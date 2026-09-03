@@ -137,7 +137,16 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 			),
 		);
 
-/** Released seats waiting for reuse, longest-released first. */
+const unusedAssignmentConditions = ({
+	customerLicenseLinkIds,
+}: {
+	customerLicenseLinkIds: string[];
+}) => [
+	inArray(customerProducts.customer_license_link_id, customerLicenseLinkIds),
+	isNull(customerProducts.internal_entity_id),
+	inArray(customerProducts.status, ACTIVE_STATUSES),
+];
+
 const listUnusedAssignmentsByLinkId = async ({
 	db,
 	customerLicenseLinkId,
@@ -149,13 +158,34 @@ const listUnusedAssignmentsByLinkId = async ({
 }): Promise<DbLicenseAssignment[]> =>
 	await db.query.customerProducts.findMany({
 		where: and(
-			eq(customerProducts.customer_license_link_id, customerLicenseLinkId),
-			isNull(customerProducts.internal_entity_id),
-			inArray(customerProducts.status, ACTIVE_STATUSES),
+			...unusedAssignmentConditions({
+				customerLicenseLinkIds: [customerLicenseLinkId],
+			}),
 		),
 		orderBy: asc(customerProducts.released_at),
 		limit,
 	});
+
+const listUnusedAssignmentsByLinkIds = async ({
+	db,
+	customerLicenseLinkIds,
+}: {
+	db: DrizzleCli;
+	customerLicenseLinkIds: string[];
+}): Promise<
+	Pick<DbCustomerProduct, "id" | "customer_license_link_id" | "released_at">[]
+> => {
+	if (customerLicenseLinkIds.length === 0) return [];
+	return db
+		.select({
+			id: customerProducts.id,
+			customer_license_link_id: customerProducts.customer_license_link_id,
+			released_at: customerProducts.released_at,
+		})
+		.from(customerProducts)
+		.where(and(...unusedAssignmentConditions({ customerLicenseLinkIds })))
+		.orderBy(asc(customerProducts.released_at));
+};
 
 const listActiveAssignmentsByInternalEntityId = async ({
 	db,
@@ -206,27 +236,23 @@ const expireOrphanAssignments = async ({
 		);
 };
 
-/** Ends released spare seats (entity-less rows awaiting reuse) on the given
- * pool links — spares can never rebind while a pool is over capacity. */
-const expireUnusedAssignmentsByLinkIds = async ({
+/** Ends specific released spare seats — caller selects surplus vs remaining. */
+const expireUnusedAssignmentsByIds = async ({
 	db,
-	customerLicenseLinkIds,
+	customerProductIds,
 	endedAt,
 }: {
 	db: DrizzleCli;
-	customerLicenseLinkIds: string[];
+	customerProductIds: string[];
 	endedAt: number;
 }) => {
-	if (customerLicenseLinkIds.length === 0) return [];
+	if (customerProductIds.length === 0) return [];
 	return db
 		.update(customerProducts)
 		.set({ status: CusProductStatus.Expired, ended_at: endedAt })
 		.where(
 			and(
-				inArray(
-					customerProducts.customer_license_link_id,
-					customerLicenseLinkIds,
-				),
+				inArray(customerProducts.id, customerProductIds),
 				isNull(customerProducts.internal_entity_id),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 			),
@@ -310,8 +336,9 @@ export const licenseAssignmentRepo = {
 	listAssignmentsWithEntityAndProductByCustomer,
 	listActiveAssignmentsByInternalEntityId,
 	listUnusedAssignmentsByLinkId,
+	listUnusedAssignmentsByLinkIds,
 	expireOrphanAssignments,
-	expireUnusedAssignmentsByLinkIds,
+	expireUnusedAssignmentsByIds,
 	maxActiveCountByCatalogLink,
 	repointSeatPrices,
 } as const;

@@ -26,6 +26,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	AttachParamsV0Input,
+	AttachParamsV1Input,
 	BillingChangeResponse,
 	CustomerPlanChange,
 	PlanChangeAction,
@@ -40,6 +41,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { completeInvoiceConfirmationV2 as completeInvoiceConfirmation } from "@tests/utils/browserPool/completeInvoiceConfirmationV2";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items.js";
+import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -453,14 +455,14 @@ test.concurrent(
 // CHECKOUT: ATTACH VIA STRIPE CHECKOUT (no payment method on file)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Red: pending promotion erased the paid plan before billing and product webhooks.
-// Green: checkout emits both events with the activated paid plan.
-test(`${chalk.yellowBright("billing.updated: stripe checkout completion → activated")}`, async () => {
+// Red: promotion reinserts the pending custom price and crashes before webhooks.
+// Green: checkout emits both events with the activated custom-price plan.
+test(`${chalk.yellowBright("billing.updated: custom-price checkout completion → activated")}`, async () => {
 	const customerId = "billing-updated-stripe-checkout";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ id: "pro-checkout", items: [messagesItem] });
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV2_2 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true, skipWebhooks: true }), // no payment method
@@ -470,9 +472,10 @@ test(`${chalk.yellowBright("billing.updated: stripe checkout completion → acti
 	});
 
 	// Attach returns a payment_url because there's no PM on file
-	const attachResult = await autumnV1.billing.attach({
+	const attachResult = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
-		product_id: pro.id,
+		plan_id: pro.id,
+		customize: { price: itemsV2.monthlyPrice({ amount: 42 }) },
 	});
 	expect(attachResult.payment_url).toContain("checkout.stripe.com");
 

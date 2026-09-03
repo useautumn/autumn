@@ -61,6 +61,9 @@ export const promotePendingCustomerProducts = async ({
 
 	return {
 		...autumnBillingPlan,
+		customPrices: undefined,
+		customEntitlements: undefined,
+		customFreeTrial: undefined,
 		insertCustomerProducts:
 			autumnBillingPlan.insertCustomerProducts?.filter(
 				(planned) => !promotedIds.has(planned.id),
