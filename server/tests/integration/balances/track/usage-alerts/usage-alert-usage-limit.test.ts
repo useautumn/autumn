@@ -376,7 +376,7 @@ test(`${chalk.yellowBright("ul-alert6: entity-owned cap alerts on the entity cou
 });
 
 // ── B8: customer limit inherited by an entity → aggregate counter ───────────
-test(`${chalk.yellowBright("ul-alert7: customer cap inherited by an entity alerts on the aggregate counter")}`, async () => {
+test(`${chalk.yellowBright("ul-alert7: customer cap inherited by an entity alerts at customer scope on entity tracks")}`, async () => {
 	const customerId = "ul-alert-entity-inherit-1";
 	const entity = await setupCustomer({
 		customerId,
@@ -390,7 +390,7 @@ test(`${chalk.yellowBright("ul-alert7: customer cap inherited by an entity alert
 		usageAlerts: [usageLimitAlert({ threshold: 80 })],
 	});
 
-	await track({ customerId, value: 100 });
+	await track({ customerId, value: 100, entityId: entity!.id });
 	await track({ customerId, value: 60, entityId: entity!.id });
 	const data = await waitForUsageAlert({
 		token: playToken,
