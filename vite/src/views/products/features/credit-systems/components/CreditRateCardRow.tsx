@@ -66,12 +66,12 @@ export function CreditRateCardRow({
 				: { ...item, credit_amount },
 		);
 
-	const handleAddTier = () =>
-		onChange(
-			addTier(
-				isGraduated(item) ? item : setRateType({ item, rateType: "graduated" }),
-			),
-		);
+	const handleAddTier = () => {
+		const graduated = isGraduated(item)
+			? item
+			: setRateType({ item, rateType: "graduated" });
+		onChange(isGraduated(graduated) ? addTier(graduated) : graduated);
+	};
 
 	if (!selectedFeature) {
 		return (
