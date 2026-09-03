@@ -28,6 +28,8 @@ export type SearchableSelectProps<T> = {
 	options: T[];
 	getOptionValue: (option: T) => string;
 	getOptionLabel: (option: T) => string;
+	/** Extra strings to match on, alongside the option's label and value. */
+	getOptionSearchTerms?: (option: T) => (string | null | undefined)[];
 	getOptionDisabled?: (option: T) => boolean;
 	renderOption?: (option: T, isSelected: boolean) => ReactNode;
 	renderValue?: (option: T | undefined) => ReactNode;
@@ -47,6 +49,11 @@ export type SearchableSelectProps<T> = {
 	header?: ReactNode;
 	footer?: SearchableSelectFooter;
 	onSearchChange?: (search: string) => void;
+	/**
+	 * Whether to filter options locally as the user types. Defaults to off when
+	 * `onSearchChange` is set, since the caller is usually searching server-side.
+	 */
+	shouldFilter?: boolean;
 	isLoading?: boolean;
 };
 
@@ -56,6 +63,7 @@ export function SearchableSelect<T>({
 	options,
 	getOptionValue,
 	getOptionLabel,
+	getOptionSearchTerms,
 	getOptionDisabled,
 	renderOption,
 	renderValue,
@@ -73,6 +81,7 @@ export function SearchableSelect<T>({
 	header,
 	footer,
 	onSearchChange,
+	shouldFilter = !onSearchChange,
 	isLoading = false,
 }: SearchableSelectProps<T>) {
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -162,7 +171,7 @@ export function SearchableSelect<T>({
 							<Command
 								className="bg-interactive-secondary"
 								filter={
-									onSearchChange
+									!shouldFilter
 										? () => 1
 										: searchable
 											? (optionValue, search) => {
@@ -170,14 +179,17 @@ export function SearchableSelect<T>({
 														(opt) => getOptionValue(opt) === optionValue,
 													);
 													if (!option) return 0;
-													const searchLower = search.toLowerCase();
-													const labelMatch = getOptionLabel(option)
-														.toLowerCase()
-														.includes(searchLower);
-													const valueMatch = optionValue
-														.toLowerCase()
-														.includes(searchLower);
-													return labelMatch || valueMatch ? 1 : 0;
+													const searchLower = search.trim().toLowerCase();
+													const haystack = [
+														getOptionLabel(option),
+														optionValue,
+														...(getOptionSearchTerms?.(option) ?? []),
+													];
+													return haystack.some((term) =>
+														term?.toLowerCase().includes(searchLower),
+													)
+														? 1
+														: 0;
 												}
 											: undefined
 								}

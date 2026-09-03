@@ -1,9 +1,13 @@
+import type { StripeCouponWithPromoCodes } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-import type Stripe from "stripe";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-export const useStripeCouponsQuery = () => {
+export const useStripeCouponsQuery = ({
+	enabled = true,
+}: {
+	enabled?: boolean;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
@@ -11,10 +15,11 @@ export const useStripeCouponsQuery = () => {
 		queryKey: buildKey(["stripe_coupons"]),
 		queryFn: () =>
 			axiosInstance.get("/products/stripe_coupons").then((r) => r.data),
+		enabled,
 	});
 
 	return {
-		stripeCoupons: (data?.coupons || []) as Stripe.Coupon[],
+		stripeCoupons: (data?.coupons || []) as StripeCouponWithPromoCodes[],
 		isLoading,
 		error,
 		refetch,

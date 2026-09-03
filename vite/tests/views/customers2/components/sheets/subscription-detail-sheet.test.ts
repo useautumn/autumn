@@ -17,5 +17,5 @@ test("formats fixed subscription discounts in major currency units", () => {
 		duration_type: CouponDurationType.Forever,
 	} as ApiDiscount;
 
-	expect(formatDiscountLabel({ discount })).toBe("alludium (1050 USD off)");
+	expect(formatDiscountLabel({ discount })).toBe("alludium ($1,050.00 off)");
 });
