@@ -142,6 +142,55 @@ test.concurrent(`${chalk.yellowBright("customer-eligibility: customer on pro, li
 	}
 });
 
+test.concurrent(
+	`${chalk.yellowBright("customer-eligibility: license prices match attach preview classification")}`,
+	async () => {
+		const group = "eligibility-license-parent-group";
+		const currentPlan = products.base({
+			id: "eligibility-license-current",
+			group,
+			items: [items.monthlyPrice({ price: 100 })],
+		});
+		const targetPlan = products.base({
+			id: "eligibility-license-target",
+			group,
+			items: [items.monthlyPrice({ price: 150 })],
+		});
+		const licensePlan = products.base({
+			id: "eligibility-license-seat",
+			group: "eligibility-license-seat-group",
+			items: [items.monthlyPrice({ price: 100 })],
+		});
+
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "cus-elig-license-prices",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [currentPlan, targetPlan, licensePlan] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: currentPlan.id,
+					licenseProductId: licensePlan.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: currentPlan.id }),
+			],
+		});
+
+		const { list: plans } = await autumnV2_2.products.list<ApiPlanV1[]>({
+			customer_id: customerId,
+		});
+
+		// The current plan costs $200 with its license. The target plan costs $150.
+		// The attach operation treats this change as a downgrade.
+		const target = findPlan({ plans, productId: targetPlan.id });
+		expect(target.customer_eligibility?.attach_action).toBe(
+			AttachAction.Downgrade,
+		);
+	},
+);
+
 test.concurrent(`${chalk.yellowBright("customer-eligibility: customer on pro canceling")}`, async () => {
 	const cancelPro = products.pro({ id: "pro", items: [creditsItem] });
 	const cancelPremium = products.premium({
