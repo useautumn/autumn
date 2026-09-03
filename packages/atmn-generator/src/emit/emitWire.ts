@@ -135,20 +135,23 @@ const hintsLiteral = ({
 });`;
 
 /**
- * `atmn()` is the whole client-side computation, and it is three constants and
- * a recase. Every decision the config used to carry — versioning, propagation,
- * which plans need a migration — is the server's now.
+ * `atmn()` is the whole client-side computation: lint, recase, and two
+ * constants. Every decision the config used to carry — versioning, propagation,
+ * which plans need a migration — is the server's now. Hints and rules are keyed
+ * from the document root, so adding a collection changes `AtmnConfig` only.
  */
 export const emitWireModule = ({
-	featureHints,
+	catalogHints,
 }: {
-	featureHints: WirePathHints;
+	catalogHints: WirePathHints;
 }): string =>
 	[
 		GENERATED_HEADER,
-		`import type { Feature } from "./features";`,
+		`import type { Feature } from "./features";
+import { LINT_RULES } from "./lintRules";
+import { ConfigError, lintDocument } from "./lintRuntime";`,
 		RUNTIME,
-		hintsLiteral({ name: "FEATURE_HINTS", hints: featureHints }),
+		hintsLiteral({ name: "CATALOG_HINTS", hints: catalogHints }),
 		`
 export type AtmnConfig = {
 	/** Every feature this catalog should have. Present-when-empty: \`[]\` means
@@ -156,15 +159,24 @@ export type AtmnConfig = {
 	features: Feature[];
 };
 
-export const atmn = (config: AtmnConfig): WireDocument => ({
-	features: config.features.map(
-		(feature) => toWire({ value: feature, path: "", hints: FEATURE_HINTS }),
-	),
-	// The payload is the complete desired catalog, so omission is a removal.
-	skip_deletions: false,
-	// A constant, not a decision: "draft wherever one is warranted". The server
-	// works out which rows actually need one.
-	migration: { draft: true },
-});
+export const atmn = (config: AtmnConfig): WireDocument => {
+	// Linted before anything is sent, and every problem is reported at once —
+	// a round trip per mistake is what makes a config painful to write.
+	const issues = lintDocument({
+		document: config,
+		rules: LINT_RULES,
+		hints: CATALOG_HINTS,
+	});
+	if (issues.length > 0) throw new ConfigError(issues);
+
+	return {
+		...(toWire({ value: config, path: "", hints: CATALOG_HINTS }) as WireDocument),
+		// The payload is the complete desired catalog, so omission is a removal.
+		skip_deletions: false,
+		// A constant, not a decision: "draft wherever one is warranted". The server
+		// works out which rows actually need one.
+		migration: { draft: true },
+	};
+};
 `,
 	].join("\n");
