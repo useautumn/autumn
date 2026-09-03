@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ApiBalanceV1, DbUsageAlert } from "@autumn/shared";
-import { wasThresholdCrossed } from "@/internal/balances/trackWebhooks/checkUsageAlerts.js";
+import { wasThresholdCrossed } from "@/internal/balances/usageAlerts/check/checkUsageAlerts.js";
 
 const balance = ({
 	usage,
