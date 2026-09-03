@@ -17,14 +17,16 @@ export const USAGE_ALERT_BASIS_DESCRIPTIONS: Record<UsageAlertBasis, string> = {
 
 export type UsageAlertBasisOption = { value: UsageAlertBasis; label: string };
 
-const toOption = (basis: UsageAlertBasis): UsageAlertBasisOption => ({
+const basisToOption = (basis: UsageAlertBasis): UsageAlertBasisOption => ({
 	value: basis,
 	label: USAGE_ALERT_BASIS_LABELS[basis],
 });
 
 export const ALL_BASIS_OPTIONS: UsageAlertBasisOption[] =
-	USAGE_ALERT_BASES.map(toOption);
+	USAGE_ALERT_BASES.map(basisToOption);
 
 /** Org alerts have no single cap to measure, so usage_limit is not offered. */
 export const BALANCE_BASIS_OPTIONS: UsageAlertBasisOption[] =
-	USAGE_ALERT_BASES.filter((basis) => basis !== "usage_limit").map(toOption);
+	USAGE_ALERT_BASES.filter((basis) => basis !== "usage_limit").map(
+		basisToOption,
+	);
