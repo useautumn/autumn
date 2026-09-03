@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import {
 	buildDiscountOptions,
+	discountOptionMatchesSearch,
 	filterDiscountRewards,
 	formatCouponDiscount,
 	rewardToOption,
@@ -123,6 +124,33 @@ describe("rewardToOption", () => {
 		expect(option.sublabel).toBe("SAVE20");
 		// every code is searchable, not just the one on show
 		expect(option.searchTerms).toEqual(["SAVE20", "SAVE30"]);
+	});
+});
+
+describe("discountOptionMatchesSearch", () => {
+	const option = stripeCouponToOption(
+		makeStripeCoupon({
+			id: "c1",
+			name: "Holiday Sale",
+			promotion_codes: ["HOLIDAY25"],
+		}),
+	);
+
+	test("matches on name, id, or code, ignoring case and whitespace", () => {
+		expect(discountOptionMatchesSearch({ option, search: "holiday s" })).toBe(
+			true,
+		);
+		expect(discountOptionMatchesSearch({ option, search: "C1" })).toBe(true);
+		expect(discountOptionMatchesSearch({ option, search: " holiday25 " })).toBe(
+			true,
+		);
+		expect(discountOptionMatchesSearch({ option, search: "SUMMER" })).toBe(
+			false,
+		);
+	});
+
+	test("an empty search matches everything", () => {
+		expect(discountOptionMatchesSearch({ option, search: "  " })).toBe(true);
 	});
 });
 

@@ -8,6 +8,7 @@ import {
 import type { FormDiscount } from "@/components/forms/attach-v2/utils/discountUtils";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useStripeCouponsQuery } from "@/hooks/queries/useStripeCouponsQuery";
+import { useDiscountSearch } from "@/hooks/useDiscountSearch";
 
 export function DiscountRow({
 	discounts,
@@ -26,14 +27,22 @@ export function DiscountRow({
 	const { stripeCoupons } = useStripeCouponsQuery();
 
 	const discount = discounts[index];
-	if (!discount) return null;
 
-	const allOptions = buildDiscountOptions({
-		rewards,
-		rewardPrograms,
-		stripeCoupons,
-		productId,
+	// Codes the bulk listing didn't reach are looked up in Stripe on demand.
+	const {
+		options: allOptions,
+		setSearch,
+		isLookingUp,
+	} = useDiscountSearch({
+		options: buildDiscountOptions({
+			rewards,
+			rewardPrograms,
+			stripeCoupons,
+			productId,
+		}),
 	});
+
+	if (!discount) return null;
 
 	const selectedRewardIds = discounts
 		.filter((d, i) => i !== index && "reward_id" in d)
@@ -61,6 +70,9 @@ export function DiscountRow({
 					searchable
 					searchPlaceholder="Search by name or code..."
 					emptyText="No discounts found"
+					onSearchChange={setSearch}
+					shouldFilter
+					isLoading={isLookingUp}
 					triggerClassName="h-7 px-2 text-xs border-0 shadow-none bg-transparent hover:bg-muted/50"
 					renderOption={(option: DiscountOption, isSelected: boolean) => (
 						<>

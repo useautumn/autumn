@@ -20,6 +20,7 @@ import {
 } from "@/components/forms/attach-v2/utils/discountOptionUtils";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useStripeCouponsQuery } from "@/hooks/queries/useStripeCouponsQuery";
+import { useDiscountSearch } from "@/hooks/useDiscountSearch";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -60,7 +61,14 @@ export const AddCouponDialog = ({
 		.filter((coupon) => !rewardOptionIds.has(coupon.id))
 		.map(stripeCouponToOption);
 
-	const discountOptions = [...rewardOptions, ...stripeOnlyOptions];
+	// Codes the bulk listing didn't reach are looked up in Stripe on demand.
+	const {
+		options: discountOptions,
+		setSearch,
+		isLookingUp,
+	} = useDiscountSearch({
+		options: [...rewardOptions, ...stripeOnlyOptions],
+	});
 
 	const selectedReward = rewards.find((r: Reward) => r.id === selectedId);
 	const requiresPromoCode = selectedReward?.type === RewardType.FeatureGrant;
@@ -160,7 +168,9 @@ export const AddCouponDialog = ({
 						searchable
 						searchPlaceholder="Search by name or code..."
 						emptyText="No coupons found"
-						isLoading={rewardsLoading || stripeCouponsLoading}
+						onSearchChange={setSearch}
+						shouldFilter
+						isLoading={rewardsLoading || stripeCouponsLoading || isLookingUp}
 						triggerClassName="w-full"
 					/>
 

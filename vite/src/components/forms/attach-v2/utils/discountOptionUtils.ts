@@ -21,6 +21,21 @@ export type DiscountOption = {
 	searchTerms: string[];
 };
 
+/** Mirrors the picker's own filter: name, id, or any of the option's codes. */
+export const discountOptionMatchesSearch = ({
+	option,
+	search,
+}: {
+	option: DiscountOption;
+	search: string;
+}): boolean => {
+	const searchLower = search.trim().toLowerCase();
+	if (!searchLower) return true;
+	return [option.label, option.id, ...option.searchTerms].some((term) =>
+		term.toLowerCase().includes(searchLower),
+	);
+};
+
 /** Filters rewards to only show discount types (not free products) */
 export const filterDiscountRewards = (rewards: Reward[]): Reward[] => {
 	return rewards.filter(

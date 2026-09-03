@@ -49,6 +49,11 @@ export type SearchableSelectProps<T> = {
 	header?: ReactNode;
 	footer?: SearchableSelectFooter;
 	onSearchChange?: (search: string) => void;
+	/**
+	 * Whether to filter options locally as the user types. Defaults to off when
+	 * `onSearchChange` is set, since the caller is usually searching server-side.
+	 */
+	shouldFilter?: boolean;
 	isLoading?: boolean;
 };
 
@@ -76,6 +81,7 @@ export function SearchableSelect<T>({
 	header,
 	footer,
 	onSearchChange,
+	shouldFilter = !onSearchChange,
 	isLoading = false,
 }: SearchableSelectProps<T>) {
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -165,7 +171,7 @@ export function SearchableSelect<T>({
 							<Command
 								className="bg-interactive-secondary"
 								filter={
-									onSearchChange
+									!shouldFilter
 										? () => 1
 										: searchable
 											? (optionValue, search) => {
