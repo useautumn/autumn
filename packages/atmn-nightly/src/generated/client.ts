@@ -7134,6 +7134,7 @@ export type UpdateCatalogResponse = {
 	features: Array<{
 		/** The unique identifier for this feature, used in /check and /track calls. */
 		id: string;
+		internalId?: string | null;
 		/** Human-readable name displayed in the dashboard and billing UI. */
 		name: string;
 		/** Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing. */
@@ -8317,6 +8318,7 @@ export type GetCatalogResponse = {
 	features: Array<{
 		/** The unique identifier for this feature, used in /check and /track calls. */
 		id: string;
+		internalId?: string | null;
 		/** Human-readable name displayed in the dashboard and billing UI. */
 		name: string;
 		/** Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing. */

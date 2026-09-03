@@ -850,6 +850,11 @@ components:
                     type: string
                     description: The unique identifier for this feature, used in /check and /track
                       calls.
+                  internal_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    x-internal: true
                   name:
                     type: string
                     description: Human-readable name displayed in the dashboard and billing UI.
@@ -3476,6 +3481,11 @@ components:
               type: string
               description: The unique identifier for this feature, used in /check and /track
                 calls.
+            internal_id:
+              anyOf:
+                - type: string
+                - type: "null"
+              x-internal: true
             name:
               type: string
               description: Human-readable name displayed in the dashboard and billing UI.
@@ -5071,6 +5081,11 @@ paths:
                               type: string
                               description: The unique identifier for this feature, used in /check and /track
                                 calls.
+                            internal_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              x-internal: true
                             name:
                               type: string
                               description: Human-readable name displayed in the dashboard and billing UI.
@@ -6364,6 +6379,11 @@ paths:
                                     type: string
                                     description: The unique identifier for this feature, used in /check and /track
                                       calls.
+                                  internal_id:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    x-internal: true
                                   name:
                                     type: string
                                     description: Human-readable name displayed in the dashboard and billing UI.
@@ -7618,6 +7638,11 @@ paths:
                               type: string
                               description: The unique identifier for this feature, used in /check and /track
                                 calls.
+                            internal_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              x-internal: true
                             name:
                               type: string
                               description: Human-readable name displayed in the dashboard and billing UI.
@@ -19485,6 +19510,11 @@ paths:
                     type: string
                     description: The unique identifier for this feature, used in /check and /track
                       calls.
+                  internal_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    x-internal: true
                   name:
                     type: string
                     description: Human-readable name displayed in the dashboard and billing UI.
@@ -19731,6 +19761,11 @@ paths:
                     type: string
                     description: The unique identifier for this feature, used in /check and /track
                       calls.
+                  internal_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    x-internal: true
                   name:
                     type: string
                     description: Human-readable name displayed in the dashboard and billing UI.
@@ -19962,6 +19997,11 @@ paths:
                           type: string
                           description: The unique identifier for this feature, used in /check and /track
                             calls.
+                        internal_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          x-internal: true
                         name:
                           type: string
                           description: Human-readable name displayed in the dashboard and billing UI.
@@ -20453,6 +20493,11 @@ paths:
                     type: string
                     description: The unique identifier for this feature, used in /check and /track
                       calls.
+                  internal_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    x-internal: true
                   name:
                     type: string
                     description: Human-readable name displayed in the dashboard and billing UI.
@@ -38764,6 +38809,11 @@ paths:
                                 type: string
                                 description: The unique identifier for this feature, used in /check and /track
                                   calls.
+                              internal_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                x-internal: true
                               name:
                                 type: string
                                 description: Human-readable name displayed in the dashboard and billing UI.
@@ -39701,6 +39751,11 @@ paths:
                                 type: string
                                 description: The unique identifier for this feature, used in /check and /track
                                   calls.
+                              internal_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                x-internal: true
                               name:
                                 type: string
                                 description: Human-readable name displayed in the dashboard and billing UI.
@@ -43751,6 +43806,11 @@ paths:
                               type: string
                               description: The unique identifier for this feature, used in /check and /track
                                 calls.
+                            internal_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              x-internal: true
                             name:
                               type: string
                               description: Human-readable name displayed in the dashboard and billing UI.
@@ -44493,6 +44553,11 @@ paths:
                               type: string
                               description: The unique identifier for this feature, used in /check and /track
                                 calls.
+                            internal_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              x-internal: true
                             name:
                               type: string
                               description: Human-readable name displayed in the dashboard and billing UI.
@@ -45305,6 +45370,11 @@ paths:
                                     type: string
                                     description: The unique identifier for this feature, used in /check and /track
                                       calls.
+                                  internal_id:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    x-internal: true
                                   name:
                                     type: string
                                     description: Human-readable name displayed in the dashboard and billing UI.
@@ -46179,6 +46249,11 @@ paths:
                               type: string
                               description: The unique identifier for this feature, used in /check and /track
                                 calls.
+                            internal_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              x-internal: true
                             name:
                               type: string
                               description: Human-readable name displayed in the dashboard and billing UI.
@@ -49111,6 +49186,11 @@ paths:
                           type: string
                           description: The unique identifier for this feature, used in /check and /track
                             calls.
+                        internal_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          x-internal: true
                         name:
                           type: string
                           description: Human-readable name displayed in the dashboard and billing UI.
@@ -75460,6 +75540,11 @@ paths:
                           type: string
                           description: The unique identifier for this feature, used in /check and /track
                             calls.
+                        internal_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          x-internal: true
                         name:
                           type: string
                           description: Human-readable name displayed in the dashboard and billing UI.

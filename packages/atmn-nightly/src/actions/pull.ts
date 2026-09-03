@@ -8,6 +8,10 @@ import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { listSourceFiles } from "./pull/listSourceFiles";
 import { type ConfigImports, scaffoldConfig } from "./pull/scaffoldConfig";
 import { configSearchDirs } from "./push";
+import {
+	backfillInternalIds,
+	identityRowsFromCatalog,
+} from "./push/backfillInternalIds";
 
 export type PullResult = {
 	configPath: string;
@@ -129,6 +133,17 @@ export const runPull = async ({
 		if (source === originals.get(file)) continue;
 		writeFileSync(file, source, "utf8");
 	}
+
+	// Fixtures the catalog already knows get their stable id, even when nothing
+	// else about them changed.
+	const { backfilled } = backfillInternalIds({
+		rows: identityRowsFromCatalog({ catalog: catalogRows }),
+		configPath,
+	});
+	if (backfilled.length > 0)
+		lines.push(
+			`↳ wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}`,
+		);
 
 	write(
 		lines.length === 0

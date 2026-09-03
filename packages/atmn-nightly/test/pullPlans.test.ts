@@ -21,6 +21,7 @@ const serverRows = {
 	features: [
 		{
 			id: "seats",
+			internalId: "fe_seats",
 			name: "Seats",
 			type: "boolean",
 			consumable: false,
@@ -150,6 +151,7 @@ test("server-only versions are routed: active to plans, draft to plans with acti
 	expect(text).not.toContain("priceId");
 	expect(text).not.toContain("plan: {");
 	expect(text).toContain('internalId: "prod_v2"');
+	expect(text).toContain('internalId: "fe_seats"');
 
 	const wire = await executed();
 	const byVersion = Object.fromEntries(

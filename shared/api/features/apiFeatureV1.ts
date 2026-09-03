@@ -12,6 +12,10 @@ export const ApiFeatureV1Schema = z.object({
 		description:
 			"The unique identifier for this feature, used in /check and /track calls.",
 	}),
+	internal_id: z.string().nullable().optional().meta({
+		description: "Stable id of this row; a config addresses the feature by it.",
+		internal: true,
+	}),
 	name: z.string().meta({
 		description:
 			"Human-readable name displayed in the dashboard and billing UI.",
