@@ -8,6 +8,7 @@ import {
 	renderPreview,
 } from "../render/renderPreview";
 import { findRepoLayout } from "../repo/findRepoRoot";
+import { backfillInternalIds } from "./push/backfillInternalIds";
 
 export type PushResult = {
 	configPath: string;
@@ -65,6 +66,7 @@ export const runPush = async ({
 
 	const applied = (await client.update(wire as Record<string, unknown>)) as {
 		migrations?: { id?: string }[];
+		results?: Record<string, unknown>;
 	};
 
 	const migrationIds = (applied.migrations ?? [])
@@ -72,6 +74,16 @@ export const runPush = async ({
 		.filter((id): id is string => typeof id === "string");
 
 	write("\nApplied.\n");
+
+	const { backfilled } = backfillInternalIds({
+		results: applied.results ?? {},
+		configPath,
+	});
+	if (backfilled.length > 0) {
+		write(
+			`Wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}.\n`,
+		);
+	}
 
 	return { configPath, preview, applied, migrationIds };
 };

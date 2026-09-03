@@ -62,6 +62,11 @@ export const OVERLAY: Overlay = {
 			},
 		},
 		features: {
+			new_feature_id: {
+				hidden: true,
+				reason:
+					"Dead since internal_id: a changed featureId beside it is the rename.",
+			},
 			invoice_credit: {
 				hidden: true,
 				reason:
