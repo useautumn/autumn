@@ -24,6 +24,11 @@ export const LINT_RULES: LintRules = {
 				because:
 					"Omitting it silently creates a non-consumable feature, which never resets.",
 			},
+			{
+				kind: "unique",
+				field: "featureId",
+				because: "Two features claiming one id race to define the same row.",
+			},
 		],
 	},
 	"features.creditSchema": {

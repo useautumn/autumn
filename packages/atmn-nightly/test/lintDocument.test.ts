@@ -141,3 +141,22 @@ test("every problem is reported at once, in document order", () => {
 	);
 	expect(issues[1]?.message).toStartWith("type must be one of");
 });
+
+test("two features claiming one id are refused", () => {
+	const issues = issuesOf(() =>
+		atmn({
+			features: [
+				feature({ featureId: "seats", name: "Seats", type: "boolean" }),
+				feature({ featureId: "seats", name: "Seats again", type: "boolean" }),
+			],
+		}),
+	);
+
+	expect(issues).toEqual([
+		{
+			path: 'feature "seats"',
+			message:
+				'featureId "seats" is used more than once. Two features claiming one id race to define the same row.',
+		},
+	]);
+});
