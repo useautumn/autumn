@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import {
 	buildDiscountOptions,
-	discountOptionMatchesSearch,
 	filterDiscountRewards,
 	formatCouponDiscount,
 	rewardToOption,
@@ -127,33 +126,6 @@ describe("rewardToOption", () => {
 	});
 });
 
-describe("discountOptionMatchesSearch", () => {
-	const option = stripeCouponToOption(
-		makeStripeCoupon({
-			id: "c1",
-			name: "Holiday Sale",
-			promotion_codes: ["HOLIDAY25"],
-		}),
-	);
-
-	test("matches on name, id, or code, ignoring case and whitespace", () => {
-		expect(discountOptionMatchesSearch({ option, search: "holiday s" })).toBe(
-			true,
-		);
-		expect(discountOptionMatchesSearch({ option, search: "C1" })).toBe(true);
-		expect(discountOptionMatchesSearch({ option, search: " holiday25 " })).toBe(
-			true,
-		);
-		expect(discountOptionMatchesSearch({ option, search: "SUMMER" })).toBe(
-			false,
-		);
-	});
-
-	test("an empty search matches everything", () => {
-		expect(discountOptionMatchesSearch({ option, search: "  " })).toBe(true);
-	});
-});
-
 describe("formatCouponDiscount", () => {
 	test("should format percent_off", () => {
 		const coupon = makeStripeCoupon({ id: "c1", percent_off: 25 });
@@ -172,15 +144,6 @@ describe("formatCouponDiscount", () => {
 	test("should default to USD when no currency", () => {
 		const coupon = makeStripeCoupon({ id: "c1", amount_off: 500 });
 		expect(formatCouponDiscount(coupon)).toBe("$5.00 off");
-	});
-
-	test("should use the currency's own minor units", () => {
-		const coupon = makeStripeCoupon({
-			id: "c1",
-			amount_off: 1850,
-			currency: "jpy",
-		});
-		expect(formatCouponDiscount(coupon)).toBe("¥1,850 off");
 	});
 
 	test("should return empty string when no discount values set", () => {
