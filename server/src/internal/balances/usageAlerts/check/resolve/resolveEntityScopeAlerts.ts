@@ -1,6 +1,6 @@
 import type { Feature, FullCustomer } from "@autumn/shared";
 import type { ScopedUsageAlerts } from "../types/scopedUsageAlerts.js";
-import { filterUsageAlertsForFeature } from "./filterEnabledUsageAlertsForFeature.js";
+import { filterUsageAlertsForFeature } from "./filterUsageAlertsForFeature.js";
 
 export const resolveEntityScopeAlerts = ({
 	fullCustomer,

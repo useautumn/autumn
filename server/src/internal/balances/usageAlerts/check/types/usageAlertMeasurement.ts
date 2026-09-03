@@ -1,14 +1,11 @@
 import type {
 	BalancesUsageAlertBalanceBlock,
-	UsageAlertBasis,
 	UsageLimitWebhookBlock,
 } from "@autumn/shared";
+import type { BalanceBasis } from "./balanceBasis.js";
 
 export type UsageAlertPayloadBlock =
-	| {
-			basis: Exclude<UsageAlertBasis, "usage_limit">;
-			balance: BalancesUsageAlertBalanceBlock;
-	  }
+	| { basis: BalanceBasis; balance: BalancesUsageAlertBalanceBlock }
 	| { basis: "usage_limit"; usage_limit: UsageLimitWebhookBlock };
 
 export type UsageAlertMeasurement = {
@@ -17,9 +14,4 @@ export type UsageAlertMeasurement = {
 	remaining: number;
 	periodStartAt: number | null;
 	payloadBlock: UsageAlertPayloadBlock;
-};
-
-export type UsageAlertMeasurementPair = {
-	before: UsageAlertMeasurement;
-	after: UsageAlertMeasurement;
 };

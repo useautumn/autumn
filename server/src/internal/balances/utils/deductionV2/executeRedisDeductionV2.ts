@@ -163,7 +163,6 @@ export const executeRedisDeductionV2 = async ({
 			fullSubject,
 			deduction,
 			options,
-			now: usageWindowNow,
 		});
 
 		const idempotencyRedisKey = idempotencyKey

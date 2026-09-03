@@ -16,14 +16,3 @@ export const filterUsageAlertsForFeature = ({
 	feature: Feature;
 }): DbUsageAlert[] =>
 	alerts.filter((alert) => isAlertForFeature({ alert, feature }));
-
-export const filterEnabledUsageAlertsForFeature = ({
-	alerts,
-	feature,
-}: {
-	alerts: DbUsageAlert[];
-	feature: Feature;
-}): DbUsageAlert[] =>
-	filterUsageAlertsForFeature({ alerts, feature }).filter(
-		(alert) => alert.enabled,
-	);

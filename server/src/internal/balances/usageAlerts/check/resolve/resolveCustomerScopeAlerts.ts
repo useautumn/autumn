@@ -5,7 +5,7 @@ import {
 	getPlanBillingControlProducts,
 } from "@autumn/shared";
 import type { ScopedUsageAlerts } from "../types/scopedUsageAlerts.js";
-import { filterUsageAlertsForFeature } from "./filterEnabledUsageAlertsForFeature.js";
+import { filterUsageAlertsForFeature } from "./filterUsageAlertsForFeature.js";
 
 // Plan alerts are a fallback at customer scope, used only when the customer has none for the feature.
 export const resolveCustomerScopeAlerts = ({

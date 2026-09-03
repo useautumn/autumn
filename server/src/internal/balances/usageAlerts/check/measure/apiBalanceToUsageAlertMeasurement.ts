@@ -3,11 +3,9 @@ import {
 	apiBalanceV1ToIncludedGrant,
 	apiBalanceV1ToRecurringGrant,
 	subtractSafe,
-	type UsageAlertBasis,
 } from "@autumn/shared";
+import type { BalanceBasis } from "../types/balanceBasis.js";
 import type { UsageAlertMeasurement } from "../types/usageAlertMeasurement.js";
-
-export type BalanceBasis = Exclude<UsageAlertBasis, "usage_limit">;
 
 const basisToDenominator = ({
 	basis,
@@ -22,8 +20,8 @@ const basisToDenominator = ({
 	return apiBalance.granted;
 };
 
-// Unlimited features never fire balance-backed alerts.
-export const measureBalanceBasis = ({
+// Unlimited masks usage, so no threshold can be read off it.
+export const apiBalanceToUsageAlertMeasurement = ({
 	basis,
 	apiBalance,
 }: {

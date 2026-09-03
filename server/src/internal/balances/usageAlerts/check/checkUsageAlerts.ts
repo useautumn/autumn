@@ -2,7 +2,6 @@ import type { Feature, FullCustomer, FullSubject } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { measureUsageAlert } from "./measure/measureUsageAlert.js";
 import { resolveScopeApiBalances } from "./measure/resolveScopeApiBalances.js";
-import { filterEnabledUsageAlertsForFeature } from "./resolve/filterEnabledUsageAlertsForFeature.js";
 import { resolveAlertScopes } from "./resolve/resolveAlertScopes.js";
 import { sendUsageAlertWebhook } from "./send/sendUsageAlertWebhook.js";
 import type { TrackedSubjects } from "./types/trackedSubjects.js";
@@ -29,25 +28,22 @@ export const checkUsageAlerts = async ({
 		before: { fullCustomer: oldFullCus, fullSubject: oldFullSubject },
 		after: { fullCustomer: newFullCus, fullSubject: newFullSubject },
 	};
-	const scopes = resolveAlertScopes({
+	const alertScopes = resolveAlertScopes({
 		ctx,
 		fullCustomer: tracked.after.fullCustomer,
 		feature,
 		entityId,
 	});
 
-	for (const scoped of scopes) {
-		const alerts = filterEnabledUsageAlertsForFeature({
-			alerts: scoped.alerts,
-			feature,
-		});
+	for (const scopedAlerts of alertScopes) {
+		const alerts = scopedAlerts.alerts.filter((alert) => alert.enabled);
 		if (alerts.length === 0) continue;
 
 		const apiBalances = resolveScopeApiBalances({
 			ctx,
 			tracked,
 			feature,
-			entityId: scoped.entityId,
+			entityId: scopedAlerts.entityId,
 		});
 
 		for (const alert of alerts) {
@@ -57,6 +53,7 @@ export const checkUsageAlerts = async ({
 				feature,
 				tracked,
 				apiBalances,
+				entityId: scopedAlerts.entityId,
 			});
 			if (!measured || !wasThresholdCrossed({ alert, ...measured })) continue;
 
@@ -65,8 +62,8 @@ export const checkUsageAlerts = async ({
 				fullCustomer: tracked.after.fullCustomer,
 				feature,
 				alert,
-				scope: scoped.scope,
-				entityId: scoped.entityId,
+				scope: scopedAlerts.scope,
+				entityId: scopedAlerts.entityId,
 				measurement: measured.after,
 			});
 		}
