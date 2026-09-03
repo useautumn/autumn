@@ -1,5 +1,5 @@
 import type { SgNode } from "@ast-grep/napi";
-import { findFixture } from "./findFixture";
+import { type FixtureConstraint, findFixture } from "./findFixture";
 import { lineStartOf, removeArrayElementEdits } from "./fixtureEdit";
 
 export const deleteFixtureLiteral = ({
@@ -7,13 +7,15 @@ export const deleteFixtureLiteral = ({
 	builder,
 	idField,
 	id,
+	where,
 }: {
 	source: string;
 	builder: string;
 	idField: string;
 	id: string;
+	where?: FixtureConstraint[];
 }): { source: string; exportedName?: string } | null => {
-	const call = findFixture({ source, builder, idField, id });
+	const call = findFixture({ source, builder, idField, id, where });
 	if (call === null) return null;
 	const root = call.getRoot().root();
 	// The nearer ancestor wins: an element of `export default atmn({ features: [

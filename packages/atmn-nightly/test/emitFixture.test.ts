@@ -250,3 +250,61 @@ test("the emitted spec carries every fixture key the type declares", () => {
 	expect(SPEC.keys).toContain("name");
 	expect(FEATURES.length).toBeGreaterThan(10);
 });
+
+test("plans: nested server extras do not leak into the fixture", () => {
+	const text = emitFixture({
+		spec: COLLECTIONS.plans,
+		row: {
+			id: "pro",
+			name: "Pro",
+			versionSlug: "v2",
+			active: true,
+			internalId: "prod_1",
+			items: [
+				{
+					featureId: "seats",
+					included: 5,
+					entitlementId: "ent_1",
+					priceId: "pr_1",
+				},
+			],
+			licenses: [
+				{
+					licensePlanId: "seat",
+					included: 25,
+					version: 1,
+					plan: { id: "seat" },
+				},
+			],
+		},
+		includeMappings: false,
+		indent: "",
+	});
+
+	expect(text).toContain('featureId: "seats"');
+	expect(text).toContain("included: 5");
+	expect(text).toContain('licensePlanId: "seat"');
+	expect(text).toContain('internalId: "prod_1"');
+	expect(text).not.toContain("entitlementId");
+	expect(text).not.toContain("priceId");
+	expect(text).not.toContain("version:");
+	expect(text).not.toContain("plan:");
+	expect(text).not.toContain("active");
+});
+
+test("plans: active is written only when the row is a draft", () => {
+	const text = emitFixture({
+		spec: COLLECTIONS.plans,
+		row: {
+			id: "pro",
+			name: "Pro",
+			versionSlug: "v2",
+			active: false,
+			items: [{ featureId: "seats", included: 5 }],
+		},
+		includeMappings: false,
+		indent: "",
+	});
+
+	expect(text).toContain("active: false");
+});

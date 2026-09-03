@@ -1,4 +1,4 @@
-import { findFixture } from "./findFixture";
+import { type FixtureConstraint, findFixture } from "./findFixture";
 import { lineStartOf } from "./fixtureEdit";
 
 export const insertFirstProperty = ({
@@ -6,15 +6,17 @@ export const insertFirstProperty = ({
 	builder,
 	idField,
 	id,
+	where,
 	property,
 }: {
 	source: string;
 	builder: string;
 	idField: string;
 	id: string;
+	where?: FixtureConstraint[];
 	property: string;
 }): string | null => {
-	const call = findFixture({ source, builder, idField, id });
+	const call = findFixture({ source, builder, idField, id, where });
 	if (call === null) return null;
 	const object = call.find({ rule: { kind: "object" } });
 	if (object === null) return null;
