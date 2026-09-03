@@ -5,6 +5,7 @@ import {
 	type FeatureQuantityParamsV0,
 	type FullCusProduct,
 	type FullProduct,
+	isLosingPrepaidQuantityPrice,
 	isOneOffPrice,
 	isPrepaidPrice,
 	priceToEnt,
@@ -40,6 +41,11 @@ export const setupFeatureQuantitiesContext = ({
 
 	for (const price of fullProduct.prices) {
 		if (!isPrepaidPrice(price)) continue;
+
+		// Tie-break: when the same feature has recurring + one-off prepaid prices,
+		// only the winning price consumes the feature-keyed quantity entry.
+		if (isLosingPrepaidQuantityPrice({ price, prices: fullProduct.prices }))
+			continue;
 
 		// const feature = priceToFeature({
 		// 	price,

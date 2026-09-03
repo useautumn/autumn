@@ -5,10 +5,10 @@ import type {
 import {
 	cusProductToProduct,
 	ErrCode,
+	findPrepaidQuantityTargetPrice,
 	isCustomerProductOneOff,
 	isCustomerProductPaidRecurring,
 	isOneOffPrice,
-	isPrepaidPrice,
 	productsAreSame,
 	RecaseError,
 	resolveFreeTrialParam,
@@ -36,15 +36,14 @@ const blockOneOffQuantityChangeOutsideManualTopUp = ({
 	if (featureQuantities.length === 0) return;
 
 	for (const fq of featureQuantities) {
-		const oneOffPrepaidPrice = customerProduct.customer_prices
-			.map((cp) => cp.price)
-			.find((price) => {
-				if (!isOneOffPrice(price) || !isPrepaidPrice(price)) return false;
-				const config = price.config as { feature_id?: string };
-				return config.feature_id === fq.feature_id;
-			});
-
-		if (!oneOffPrepaidPrice) continue;
+		// Tie-break aware: only guard features whose prepaid quantity actually
+		// resolves to a one-off price — a recurring prepaid sibling wins instead.
+		const targetPrice = findPrepaidQuantityTargetPrice({
+			prices: customerProduct.customer_prices.map((cp) => cp.price),
+			featureId: fq.feature_id,
+		});
+		if (!targetPrice || !isOneOffPrice(targetPrice)) continue;
+		const oneOffPrepaidPrice = targetPrice;
 
 		const currentOption = customerProduct.options.find(
 			(o) => o.feature_id === fq.feature_id,

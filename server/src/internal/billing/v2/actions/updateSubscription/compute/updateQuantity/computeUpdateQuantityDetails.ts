@@ -3,9 +3,9 @@ import {
 	addCusProductToCusEnt,
 	customerPriceToCustomerEntitlement,
 	type FeatureOptions,
-	findCusPriceByFeature,
 	findFeatureByInternalId,
 	findFeatureOptionsByFeature,
+	findPrepaidQuantityTargetPrice,
 	InternalError,
 	isOneOffPrice,
 	isPrepaidPrice,
@@ -80,13 +80,28 @@ export const computeUpdateQuantityDetails = ({
 		updatedOptions,
 	});
 
-	const customerPrice = findCusPriceByFeature({
-		internalFeatureId: internalFeatureId,
-		cusPrices: customerProduct.customer_prices.filter((cp) =>
-			isPrepaidPrice(cp.price),
+	// Tie-break: pick the prepaid price the quantity resolves to — a recurring
+	// prepaid wins over a one-off prepaid sibling of the same feature.
+	const prepaidCustomerPrices = customerProduct.customer_prices.filter(
+		(customerPriceCandidate) => isPrepaidPrice(customerPriceCandidate.price),
+	);
+	const targetPrice = findPrepaidQuantityTargetPrice({
+		prices: prepaidCustomerPrices.map(
+			(customerPriceCandidate) => customerPriceCandidate.price,
 		),
-		errorOnNotFound: true,
+		internalFeatureId,
+		featureId,
 	});
+	const customerPrice = prepaidCustomerPrices.find(
+		(customerPriceCandidate) =>
+			customerPriceCandidate.price.id === targetPrice?.id,
+	);
+
+	if (!customerPrice) {
+		throw new InternalError({
+			message: `Customer price not found for internal_feature_id: ${internalFeatureId}`,
+		});
+	}
 
 	if (isOneOffPrice(customerPrice.price)) {
 		throw new RecaseError({
