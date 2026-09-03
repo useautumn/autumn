@@ -122,6 +122,7 @@ const buildTrackOutcome = ({
 			revisionAfter: state.revision + 1,
 			mutations,
 			occurredAt: command.occurredAt,
+			deduplicationExpiresAt: command.deduplicationExpiresAt,
 		},
 	});
 };

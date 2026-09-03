@@ -7,6 +7,7 @@ import {
 	executeTrack,
 	parseCheckCommand,
 	parseCustomerMeteringState,
+	parseStateInitializedEvent,
 	parseTrackCommand,
 	parseTrackOutcome,
 } from "../../src/balanceEngine.js";
@@ -32,11 +33,13 @@ const createTrackCommand = ({
 	requestId = "req_1",
 	properties = null,
 	occurredAt = 1_700_000_000_000,
+	deduplicationExpiresAt = 1_700_086_400_000,
 	overageBehavior = "reject",
 }: {
 	requestId?: string;
 	properties?: Record<string, unknown> | null;
 	occurredAt?: number;
+	deduplicationExpiresAt?: number;
 	overageBehavior?: "cap" | "reject" | "overflow";
 } = {}) =>
 	parseTrackCommand({
@@ -52,6 +55,7 @@ const createTrackCommand = ({
 			overageBehavior,
 			properties,
 			occurredAt,
+			deduplicationExpiresAt,
 		},
 	});
 
@@ -121,6 +125,53 @@ describe("balance engine contract boundaries", () => {
 				}),
 			}),
 		).toEqual({ kind: "duplicate", outcome });
+	});
+
+	test("carries the resolved deduplication deadline without changing command identity", () => {
+		const state = createState();
+		const outcome = requireNewOutcome(
+			computeTrack({
+				state,
+				command: createTrackCommand({
+					deduplicationExpiresAt: 1_700_086_400_000,
+				}),
+			}),
+		);
+		const appliedState = executeTrack({ state, outcome }).state;
+
+		expect(outcome.deduplicationExpiresAt).toBe(1_700_086_400_000);
+		expect(
+			computeTrack({
+				state: appliedState,
+				existingReceipt: outcome,
+				command: createTrackCommand({
+					requestId: "req_2",
+					deduplicationExpiresAt: 1_700_086_400_001,
+				}),
+			}),
+		).toEqual({ kind: "duplicate", outcome });
+	});
+
+	test("validates a versioned initial-state event", () => {
+		const event = parseStateInitializedEvent({
+			input: {
+				schemaVersion: 1,
+				type: "state_initialized",
+				initializationId: "init_1",
+				initializedAt: 1_700_000_000_000,
+				state: createState(),
+			},
+		});
+
+		expect(event.state.revision).toBe(0);
+		expect(() =>
+			parseStateInitializedEvent({
+				input: {
+					...event,
+					state: { ...event.state, revision: 1 },
+				},
+			}),
+		).toThrow();
 	});
 
 	test("rejects outcomes whose metadata contradicts their mutations", () => {
