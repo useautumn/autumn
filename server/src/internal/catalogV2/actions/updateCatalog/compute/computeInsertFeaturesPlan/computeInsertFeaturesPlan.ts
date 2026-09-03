@@ -43,7 +43,9 @@ export const computeInsertFeaturesPlan = ({
 
 	const entries = sortFeaturesForInsert(
 		(params.features ?? []).filter(
-			(featureParams) => !originalById.has(featureParams.feature_id),
+			(featureParams) =>
+				featureParams.internal_id === undefined &&
+				!originalById.has(featureParams.feature_id),
 		),
 	);
 
@@ -51,8 +53,9 @@ export const computeInsertFeaturesPlan = ({
 	let workingFeatures = [...projected.features];
 
 	for (const featureParams of entries) {
+		const { internal_id: _statedInternalId, ...apiFeature } = featureParams;
 		const dbFeature = featureV1ToDbFeature({
-			apiFeature: { id: featureParams.feature_id, ...featureParams },
+			apiFeature: { id: featureParams.feature_id, ...apiFeature },
 		});
 		const parsedFeature = validateFeature({
 			data: dbFeature,

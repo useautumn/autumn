@@ -14,6 +14,9 @@ export const LINT_RULES: LintRules = {
 			defaultMarkup: {
 				minimum: -100,
 			},
+			internalId: {
+				minLength: 1,
+			},
 		},
 		rules: [
 			{

@@ -3,6 +3,7 @@ export const defaultVersionSlug = ({ version }: { version: number }) =>
 
 type IdentityProduct = {
 	id: string;
+	internal_id?: string | null;
 	version_slug?: string | null;
 	active: boolean;
 };
@@ -39,6 +40,7 @@ export const catalogRowIdentity = ({
 	next: IdentityProduct;
 }): {
 	plan_id: string;
+	internal_id: string | null;
 	version: number;
 	version_slug: string;
 	active: boolean;
@@ -52,6 +54,8 @@ export const catalogRowIdentity = ({
 
 	return {
 		plan_id: planId,
+		// A minted row's id is per computation; only an existing row's is stable.
+		internal_id: current?.internal_id ?? null,
 		version,
 		version_slug: versionSlug,
 		active: next.active,
