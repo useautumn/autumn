@@ -12,6 +12,10 @@ export type CollectionSpec = {
 	readonly idField: string;
 	readonly responseIdField: string;
 	readonly keys: readonly string[];
+	/** Config key holding past versions, when the collection has history. */
+	readonly historyKey?: string;
+	/** Whether pull can address entries by idField alone. */
+	readonly pull: boolean;
 };
 
 const PLAIN_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;

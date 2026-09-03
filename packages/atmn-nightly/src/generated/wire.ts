@@ -4,6 +4,7 @@
 import type { Feature } from "./features";
 import { LINT_RULES } from "./lintRules";
 import { ConfigError, lintDocument } from "./lintRuntime";
+import type { Plan } from "./plans";
 
 /** Operators like `$startsWith` are literal API keys, not snake_case fields. */
 const isOperatorKey = (key: string): boolean => key.startsWith("$");
@@ -133,16 +134,50 @@ const CATALOG_HINTS = hintsOf({
 });
 
 export type AtmnConfig = {
-	/** Every feature this catalog should have. Present-when-empty: `[]` means
-	 * "I manage features and there are none", omitted would mean "not mine". */
-	features: Feature[];
+	/** Every features entry this catalog should have. `[]` means "mine, and
+	 * empty"; omitted means "not mine". */
+	features?: Feature[];
+	/** Every plans entry this catalog should have. `[]` means "mine, and
+	 * empty"; omitted means "not mine". */
+	plans?: Plan[];
+	/** Past versions of plans, full rows, stamped `active: false`. */
+	planVersions?: Plan[];
 };
 
+/** The document as the server sees it: history rows folded into their collection. */
+const stated = (config: AtmnConfig): Record<string, unknown> => ({
+	...(config.features !== undefined ? { features: config.features } : {}),
+	...(config.plans !== undefined
+		? {
+				plans: [
+					...config.plans.map((row) => ({
+						...row,
+						active: row.active ?? true,
+					})),
+					...(config.planVersions ?? []).map((row) => ({
+						...row,
+						active: false,
+					})),
+				],
+			}
+		: {}),
+});
+
 export const atmn = (config: AtmnConfig): WireDocument => {
+	if (config.planVersions !== undefined && config.plans === undefined) {
+		throw new ConfigError([
+			{
+				path: "config",
+				message:
+					"planVersions needs plans: history rows on their own would remove every active version.",
+			},
+		]);
+	}
+	const document = stated(config);
 	// Linted before anything is sent, and every problem is reported at once —
 	// a round trip per mistake is what makes a config painful to write.
 	const issues = lintDocument({
-		document: config,
+		document,
 		rules: LINT_RULES,
 		hints: CATALOG_HINTS,
 	});
@@ -150,7 +185,7 @@ export const atmn = (config: AtmnConfig): WireDocument => {
 
 	return {
 		...(toWire({
-			value: config,
+			value: document,
 			path: "",
 			hints: CATALOG_HINTS,
 		}) as WireDocument),

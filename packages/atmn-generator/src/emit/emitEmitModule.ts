@@ -11,6 +11,8 @@ type EmittedCollection = {
 	readonly builder: string;
 	readonly idField: string;
 	readonly responseIdField: string;
+	readonly historyKey?: string;
+	readonly pull: boolean;
 };
 
 /**
@@ -44,6 +46,9 @@ export const emitEmitModule = ({
 		lines.push(`\t\tidField: ${JSON.stringify(meta.idField)},`);
 		lines.push(`\t\tresponseIdField: ${JSON.stringify(meta.responseIdField)},`);
 		lines.push(`\t\tkeys: ${JSON.stringify(keys)},`);
+		if (meta.historyKey !== undefined)
+			lines.push(`\t\thistoryKey: ${JSON.stringify(meta.historyKey)},`);
+		lines.push(`\t\tpull: ${meta.pull},`);
 		lines.push("\t},");
 	}
 	lines.push("};");

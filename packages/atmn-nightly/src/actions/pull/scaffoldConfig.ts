@@ -35,7 +35,10 @@ export const scaffoldConfig = ({
 	imports?: ConfigImports;
 }): string => {
 	const configPath = join(directory, "autumn.config.ts");
-	const collections = Object.keys(COLLECTIONS).map((name) => `\t${name}: [],`);
+	const collections = Object.entries(COLLECTIONS).flatMap(([name, spec]) => [
+		`\t${name}: [],`,
+		...(spec.historyKey ? [`\t${spec.historyKey}: [],`] : []),
+	]);
 	writeFileSync(
 		configPath,
 		[
