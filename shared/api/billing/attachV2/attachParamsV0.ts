@@ -37,9 +37,10 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	// - 'next_cycle_only': Do NOT create any charges due to the attach
 	billing_behavior: BillingBehaviorSchema.optional(),
 
-	// Pay prorated credit from the outgoing plan back to the payment method
-	// instead of leaving it on the customer's balance.
-	refund_last_payment: RefundLastPaymentSchema.optional(),
+	refund_last_payment: RefundLastPaymentSchema.optional().meta({
+		description:
+			"Refund prorated credit from the outgoing plan to the customer's payment method instead of leaving it as credit on their balance. Only valid for an immediate plan switch.",
+	}),
 
 	// For importing an existing subscription...?
 	processor_subscription_id: z.string().optional(),
@@ -77,7 +78,19 @@ export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
 		.optional(),
 
 	remove_plan_ids: z.array(z.string()).optional(),
-});
+})
+	.refine(
+		(data) =>
+			!(data.refund_last_payment && data.plan_schedule === "end_of_cycle"),
+		{
+			message:
+				"refund_last_payment requires an immediate plan switch. An end-of-cycle switch leaves the outgoing plan active until the cycle ends, so its payment cannot be refunded yet.",
+		},
+	)
+	.refine((data) => !(data.refund_last_payment && data.billing_behavior), {
+		message:
+			"Cannot pass both billing_behavior and refund_last_payment. Use billing_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
+	});
 
 export type ExtAttachParamsV0 = z.input<typeof ExtAttachParamsV0Schema>;
 export type AttachParamsV0 = z.infer<typeof AttachParamsV0Schema>;

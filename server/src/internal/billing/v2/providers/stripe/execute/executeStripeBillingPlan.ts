@@ -151,7 +151,10 @@ export const executeStripeBillingPlan = async ({
 		} catch (error) {
 			// On a plan change the customer is already on the new plan, so a silent
 			// refund failure would strand their money. Only cancels tolerate it.
-			if (!billingContext.cancelAction) throw error;
+			const isCancellation =
+				billingContext.cancelAction === "cancel_immediately" ||
+				billingContext.cancelAction === "cancel_end_of_cycle";
+			if (!isCancellation) throw error;
 			ctx.logger.error(
 				"[executeStripeBillingPlan] Refund failed after subscription cancel",
 				{ error },

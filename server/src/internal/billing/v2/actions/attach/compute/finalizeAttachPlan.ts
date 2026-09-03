@@ -30,14 +30,22 @@ export const finalizeAttachPlan = async ({
 		customLineItems: params.custom_line_items,
 	});
 
-	const { lineItems, refundPlan } = await computeRefundPlan({
-		ctx,
-		billingContext: attachBillingContext,
-		lineItems: plan.lineItems ?? [],
-	});
+	// Without an outgoing plan there is nothing to refund, and a "full" refund
+	// would otherwise return the last invoice on a plain add-on attach.
+	const removesOutgoingPlan = (plan.lineItems ?? []).some(
+		(lineItem) => lineItem.context.direction === "refund",
+	);
 
-	plan.lineItems = lineItems;
-	plan.refundPlan = refundPlan;
+	if (removesOutgoingPlan) {
+		const { lineItems, refundPlan } = await computeRefundPlan({
+			ctx,
+			billingContext: attachBillingContext,
+			lineItems: plan.lineItems ?? [],
+		});
+
+		plan.lineItems = lineItems;
+		plan.refundPlan = refundPlan;
+	}
 
 	return plan;
 };

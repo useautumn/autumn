@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -67,6 +68,15 @@ test(`${chalk.yellowBright("attach annual -> monthly: refunds prorated credit to
 
 	const customerAfterSwitch =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// The customer ends up on the monthly plan, billed for it.
+	await expectProductActive({
+		customer: customerAfterSwitch,
+		productId: proMonthly.id,
+	});
+	const switchInvoice = getLatestInvoice({ customer: customerAfterSwitch });
+	expect(switchInvoice.total).toBeCloseTo(preview.total, 2);
+
 	const stripeCustomer = await ctx.stripeCli.customers.retrieve(
 		customerAfterSwitch.stripe_id as string,
 	);

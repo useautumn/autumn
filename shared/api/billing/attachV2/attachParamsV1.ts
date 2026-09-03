@@ -117,7 +117,19 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description:
 			"Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.",
 	}),
-});
+})
+	.refine(
+		(data) =>
+			!(data.refund_last_payment && data.plan_schedule === "end_of_cycle"),
+		{
+			message:
+				"refund_last_payment requires an immediate plan switch. An end-of-cycle switch leaves the outgoing plan active until the cycle ends, so its payment cannot be refunded yet.",
+		},
+	)
+	.refine((data) => !(data.refund_last_payment && data.proration_behavior), {
+		message:
+			"Cannot pass both proration_behavior and refund_last_payment. Use proration_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
+	});
 
 export type AttachParamsV1 = z.infer<typeof AttachParamsV1Schema>;
 export type AttachParamsV1Input = z.input<typeof AttachParamsV1Schema>;
