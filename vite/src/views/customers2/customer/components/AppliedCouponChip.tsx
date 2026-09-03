@@ -38,6 +38,15 @@ const formatCouponDuration = (coupon: Stripe.Coupon): string => {
 
 type CouponTooltipRow = { label: string; value: string };
 
+/** A bulk code drop can attach hundreds of codes; the tooltip shows a few. */
+const MAX_CODES_SHOWN = 3;
+
+const formatPromoCodes = (codes: string[]): string => {
+	const shown = codes.slice(0, MAX_CODES_SHOWN).join(", ");
+	const remaining = codes.length - MAX_CODES_SHOWN;
+	return remaining > 0 ? `${shown} +${remaining} more` : shown;
+};
+
 const buildCouponTooltipRows = ({
 	couponId,
 	coupon,
@@ -59,7 +68,7 @@ const buildCouponTooltipRows = ({
 		if (coupon.promotion_codes.length > 0) {
 			rows.push({
 				label: coupon.promotion_codes.length === 1 ? "Code" : "Codes",
-				value: coupon.promotion_codes.join(", "),
+				value: formatPromoCodes(coupon.promotion_codes),
 			});
 		}
 	}
