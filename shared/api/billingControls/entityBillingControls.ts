@@ -1,16 +1,9 @@
 import { z } from "zod/v4";
-import {
-	featureIdIdentity,
-	findDuplicateBillingControlIssue,
-} from "../../models/cusModels/billingControls/findDuplicateBillingControlIssue.js";
+import { findDuplicateBillingControlIssue } from "../../models/cusModels/billingControls/findDuplicateBillingControlIssue.js";
 import { DbOverageAllowedSchema } from "../../models/cusModels/billingControls/overageAllowed.js";
 import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
 import { DbUsageAlertSchema } from "../../models/cusModels/billingControls/usageAlert.js";
-import { usageAlertIdentity } from "../../models/cusModels/billingControls/usageAlertIdentity.js";
-import {
-	DbUsageLimitSchema,
-	usageLimitIdentity,
-} from "../../models/cusModels/billingControls/usageLimit.js";
+import { DbUsageLimitSchema } from "../../models/cusModels/billingControls/usageLimit.js";
 import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
 import { ApiUsageAlertSchema } from "./usageAlert.js";
@@ -54,38 +47,7 @@ const ApiEntityBillingControlsParamsBaseSchema = z.object({
 
 export const ApiEntityBillingControlsParamsSchema =
 	ApiEntityBillingControlsParamsBaseSchema.check((ctx) => {
-		const billingControls = ctx.value;
-		const issue =
-			findDuplicateBillingControlIssue({
-				controlKey: "spend_limits",
-				controls: billingControls.spend_limits,
-				identityOf: featureIdIdentity,
-				field: "feature_id",
-				message: "Only one spend limit entry is allowed per feature_id",
-			}) ??
-			findDuplicateBillingControlIssue({
-				controlKey: "usage_limits",
-				controls: billingControls.usage_limits,
-				identityOf: usageLimitIdentity,
-				field: "feature_id",
-				message:
-					"Only one usage limit entry is allowed per feature_id and filter",
-			}) ??
-			findDuplicateBillingControlIssue({
-				controlKey: "usage_alerts",
-				controls: billingControls.usage_alerts,
-				identityOf: usageAlertIdentity,
-				field: "threshold",
-				message:
-					"Only one usage alert entry is allowed per feature_id, basis, filter, threshold_type and threshold",
-			}) ??
-			findDuplicateBillingControlIssue({
-				controlKey: "overage_allowed",
-				controls: billingControls.overage_allowed,
-				identityOf: featureIdIdentity,
-				field: "feature_id",
-				message: "Only one overage_allowed entry is allowed per feature_id",
-			});
+		const issue = findDuplicateBillingControlIssue(ctx.value);
 		if (issue) ctx.issues.push(issue);
 	});
 

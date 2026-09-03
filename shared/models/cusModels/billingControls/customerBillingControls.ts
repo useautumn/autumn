@@ -4,10 +4,7 @@ import {
 	type EntityBillingControlsParams,
 	EntityBillingControlsSchema,
 } from "./entityBillingControls.js";
-import {
-	featureIdIdentity,
-	findDuplicateBillingControlIssue,
-} from "./findDuplicateBillingControlIssue.js";
+import { findDuplicateBillingControlIssue } from "./findDuplicateBillingControlIssue.js";
 import {
 	type DbOverageAllowed,
 	DbOverageAllowedSchema,
@@ -20,12 +17,10 @@ import {
 	pickStricterSpendLimit,
 } from "./spendLimit.js";
 import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
-import { usageAlertIdentity } from "./usageAlertIdentity.js";
 import {
 	type DbUsageLimit,
 	DbUsageLimitSchema,
 	pickStricterUsageLimit,
-	usageLimitIdentity,
 } from "./usageLimit.js";
 
 export const BILLING_CONTROL_KEYS = [
@@ -280,45 +275,7 @@ export const CustomerBillingControlsParamsSchema =
 			description: "List of auto top-up configurations per feature.",
 		}),
 	}).check((ctx) => {
-		const billingControls = ctx.value;
-		const issue =
-			findDuplicateBillingControlIssue({
-				controlKey: "auto_topups",
-				controls: billingControls.auto_topups,
-				identityOf: featureIdIdentity,
-				field: "feature_id",
-				message: "Only one auto top-up entry is allowed per feature_id",
-			}) ??
-			findDuplicateBillingControlIssue({
-				controlKey: "spend_limits",
-				controls: billingControls.spend_limits,
-				identityOf: featureIdIdentity,
-				field: "feature_id",
-				message: "Only one spend limit entry is allowed per feature_id",
-			}) ??
-			findDuplicateBillingControlIssue({
-				controlKey: "usage_limits",
-				controls: billingControls.usage_limits,
-				identityOf: usageLimitIdentity,
-				field: "feature_id",
-				message:
-					"Only one usage limit entry is allowed per feature_id and filter",
-			}) ??
-			findDuplicateBillingControlIssue({
-				controlKey: "usage_alerts",
-				controls: billingControls.usage_alerts,
-				identityOf: usageAlertIdentity,
-				field: "threshold",
-				message:
-					"Only one usage alert entry is allowed per feature_id, basis, filter, threshold_type and threshold",
-			}) ??
-			findDuplicateBillingControlIssue({
-				controlKey: "overage_allowed",
-				controls: billingControls.overage_allowed,
-				identityOf: featureIdIdentity,
-				field: "feature_id",
-				message: "Only one overage_allowed entry is allowed per feature_id",
-			});
+		const issue = findDuplicateBillingControlIssue(ctx.value);
 		if (issue) ctx.issues.push(issue);
 	});
 
