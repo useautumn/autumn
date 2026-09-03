@@ -57,10 +57,14 @@ describe("findUnresolvableUsageLimitAlerts", () => {
 		...(filter && { filter }),
 	});
 
-	test("balance-basis alerts never need a limit", () => {
+	test("alerts on balance-backed bases never need a limit", () => {
 		expect(
 			findUnresolvableUsageLimitAlerts({
-				usageAlerts: [alert({ basis: "included" })],
+				usageAlerts: [
+					alert({ basis: "balance" }),
+					alert({ basis: "included" }),
+					alert({ basis: "recurring" }),
+				],
 				usageLimitLists: [[]],
 			}),
 		).toEqual([]);

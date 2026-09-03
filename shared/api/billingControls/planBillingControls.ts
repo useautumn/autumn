@@ -3,27 +3,43 @@ import { isUsageLimitBasisAlert } from "../../models/cusModels/billingControls/c
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls.js";
 import { findUnresolvableUsageLimitAlerts } from "../../utils/billingControlUtils/findUnresolvableUsageLimitAlerts.js";
 
-/**
- * A plan is the only place its own alerts can resolve a cap from, so a
- * usage_limit alert must point at a usage limit on the same plan.
- */
-export const PlanBillingControlsParamsSchema =
-	CustomerBillingControlsParamsSchema.check((ctx) => {
-		const usageAlerts = ctx.value.usage_alerts ?? [];
-		if (!usageAlerts.some(isUsageLimitBasisAlert)) return;
+type PlanBillingControlsInput = z.input<
+	typeof CustomerBillingControlsParamsSchema
+>;
 
-		const unresolvable = findUnresolvableUsageLimitAlerts({
-			usageAlerts,
-			usageLimitLists: [ctx.value.usage_limits ?? []],
+const usageLimitAlertsResolveWithinPlan = (ctx: {
+	value: PlanBillingControlsInput;
+	issues: unknown[];
+}) => {
+	const usageAlerts = ctx.value.usage_alerts ?? [];
+	if (!usageAlerts.some(isUsageLimitBasisAlert)) return;
+
+	const unresolvable = findUnresolvableUsageLimitAlerts({
+		usageAlerts,
+		usageLimitLists: [ctx.value.usage_limits ?? []],
+	});
+	for (const { index, usageAlert } of unresolvable) {
+		ctx.issues.push({
+			code: "custom",
+			message: `No usage limit on this plan matches the usage_limit alert for feature ${usageAlert.feature_id ?? "(any)"}`,
+			input: usageAlert,
+			path: ["usage_alerts", index, "basis"],
 		});
-		for (const { index, usageAlert } of unresolvable) {
-			ctx.issues.push({
-				code: "custom",
-				message: `No usage limit on this plan matches the usage_limit alert for feature ${usageAlert.feature_id ?? "(any)"}`,
-				input: usageAlert,
-				path: ["usage_alerts", index, "basis"],
-			});
-		}
+	}
+};
+
+/** A new plan is the only place its alerts can resolve a cap from. */
+export const PlanBillingControlsParamsSchema =
+	CustomerBillingControlsParamsSchema.check(usageLimitAlertsResolveWithinPlan);
+
+/**
+ * Plan updates merge sparsely: omitted usage_limits keep the stored ones, which
+ * this schema cannot see, so the check only runs when both lists are stated.
+ */
+export const PlanBillingControlsPatchParamsSchema =
+	CustomerBillingControlsParamsSchema.check((ctx) => {
+		if (ctx.value.usage_limits === undefined) return;
+		usageLimitAlertsResolveWithinPlan(ctx);
 	});
 
 export type PlanBillingControlsParams = z.input<
