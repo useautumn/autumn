@@ -4,7 +4,7 @@ import {
 	FeatureType,
 	type FullCustomer,
 	ResetInterval,
-	usageLimitFilterKey,
+	usageLimitIdentity,
 } from "@autumn/shared";
 import {
 	Button,
@@ -170,12 +170,11 @@ export function BillingUsageLimitSheet() {
 		});
 
 		const usageLimits = getCurrentUsageLimits();
-		const itemIdentity = `${item.feature_id}|${usageLimitFilterKey(item.filter)}`;
+		const itemIdentity = usageLimitIdentity(item);
 		const duplicate = usageLimits.some(
 			(existing, index) =>
 				!(isEdit && index === existingIndex) &&
-				`${existing.feature_id}|${usageLimitFilterKey(existing.filter)}` ===
-					itemIdentity,
+				usageLimitIdentity(existing) === itemIdentity,
 		);
 		if (duplicate) {
 			toast.error(
