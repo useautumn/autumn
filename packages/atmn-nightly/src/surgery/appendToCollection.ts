@@ -9,7 +9,8 @@ export const appendToCollection = ({
 }: {
 	source: string;
 	collection: string;
-	text: string;
+	/** A function is built against the indent its first line will receive. */
+	text: string | ((elementIndent: string) => string);
 }): string | null => {
 	const root = parse(Lang.TypeScript, source).root();
 	// A bare `collection: [$$$]` parses as a type annotation, so the anchor must
@@ -23,11 +24,13 @@ export const appendToCollection = ({
 	const elements = array.namedChildren();
 	if (elements.length === 0) {
 		const indent = leadingIndentOfLine(source, array.range().start.index);
+		// The seeded element's first line lands one tab deeper than the array.
+		const resolved = resolveText({ text, elementIndent: `${indent}\t` });
 		return root.commitEdits([
 			{
 				startPos: array.range().start.index,
 				endPos: array.range().end.index,
-				insertedText: `[\n${indent}\t${text},\n${indent}]`,
+				insertedText: `[\n${indent}\t${resolved},\n${indent}]`,
 			},
 		]);
 	}
@@ -42,28 +45,37 @@ export const appendToCollection = ({
 	const spansLines = source
 		.slice(array.range().start.index, last.range().start.index)
 		.includes("\n");
-	if (!spansLines) {
-		return root.commitEdits([
-			{
-				startPos: insertAt,
-				endPos: insertAt,
-				insertedText: `${missingComma} ${text},`,
-			},
-		]);
-	}
 	// Sibling indent, not a hard-coded one: the last element's own line indent.
 	const indent = source.slice(
 		lineStartOf(source, last.range().start.index),
 		last.range().start.index,
 	);
+	const resolved = resolveText({ text, elementIndent: indent });
+	if (!spansLines) {
+		return root.commitEdits([
+			{
+				startPos: insertAt,
+				endPos: insertAt,
+				insertedText: `${missingComma} ${resolved},`,
+			},
+		]);
+	}
 	return root.commitEdits([
 		{
 			startPos: insertAt,
 			endPos: insertAt,
-			insertedText: `${missingComma}\n${indent}${text},`,
+			insertedText: `${missingComma}\n${indent}${resolved},`,
 		},
 	]);
 };
+
+const resolveText = ({
+	text,
+	elementIndent,
+}: {
+	text: string | ((elementIndent: string) => string);
+	elementIndent: string;
+}): string => (typeof text === "function" ? text(elementIndent) : text);
 
 const collectionArray = ({
 	anchor,
