@@ -28,7 +28,7 @@ const pushUnresolvableUsageLimitAlertIssues = (ctx: {
 	}
 };
 
-/** A new plan is the only place its alerts can resolve a cap from; catalog updates check the merged row in handleUsageLimitAlertErrors. */
+// Create only; catalog updates check the merged row in handleUsageLimitAlertErrors.
 export const PlanBillingControlsParamsSchema =
 	CustomerBillingControlsParamsSchema.check(
 		pushUnresolvableUsageLimitAlertIssues,

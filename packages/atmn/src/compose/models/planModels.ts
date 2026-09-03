@@ -81,8 +81,6 @@ type UsageLimit = {
 	interval: "day" | "week" | "month" | "year";
 };
 
-// Event property equality; keys are user-defined. Bounds (1-4 keys, key <= 64,
-// value <= 128 chars) are enforced by UsageLimitFilterSchema in @autumn/shared.
 type UsageLimitFilter = {
 	properties: Record<string, string>;
 };

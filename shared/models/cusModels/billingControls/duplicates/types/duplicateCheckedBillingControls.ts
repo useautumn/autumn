@@ -16,7 +16,6 @@ export type DuplicateCheckedControlKey = keyof ControlByKey;
 export type DuplicateCheckedControl<TKey extends DuplicateCheckedControlKey> =
 	ControlByKey[TKey];
 
-/** The control lists the duplicate check reads; every billing-controls schema satisfies this. */
 export type DuplicateCheckedBillingControls = {
 	[TKey in DuplicateCheckedControlKey]?: Array<ControlByKey[TKey]> | null;
 };

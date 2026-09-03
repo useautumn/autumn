@@ -6,11 +6,7 @@ import {
 	usageLimitIdentity,
 } from "../../models/cusModels/billingControls/usageLimit.js";
 
-/**
- * usage_limit alerts whose (feature_id, filter) matches no limit in any of the
- * given lists. Disabled limits still count as present: disabling a cap makes
- * its alert dormant, not invalid.
- */
+// Disabled limits still count: disabling a cap makes its alert dormant, not invalid.
 export const findUnresolvableUsageLimitAlerts = ({
 	usageAlerts,
 	usageLimitLists,

@@ -103,7 +103,6 @@ export const usageLimitFilterKey = (
 		.join("&");
 };
 
-/** A limit is identified by its feature and its canonical filter. */
 export const usageLimitIdentity = (
 	usageLimit: Pick<DbUsageLimitLike, "feature_id" | "filter">,
 ): string =>

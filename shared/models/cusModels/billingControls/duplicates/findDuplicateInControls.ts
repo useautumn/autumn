@@ -2,7 +2,6 @@ import type { DuplicateBillingControlIssue } from "./types/duplicateBillingContr
 import type { DuplicateCheckedControlKey } from "./types/duplicateCheckedBillingControls.js";
 import type { DuplicateRule } from "./types/duplicateRule.js";
 
-/** The first entry whose identity repeats an earlier one; entries with no identity never collide. */
 export const findDuplicateInControls = <TControl>({
 	controlKey,
 	controls,
