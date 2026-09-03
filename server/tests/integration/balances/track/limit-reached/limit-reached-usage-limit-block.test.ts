@@ -12,12 +12,7 @@
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import {
-	ApiVersion,
-	EntInterval,
-	getUsageWindowBounds,
-	ResetInterval,
-} from "@autumn/shared";
+import { ApiVersion, ResetInterval } from "@autumn/shared";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
@@ -33,8 +28,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { setCustomerUsageLimit } from "../../utils/usage-limit-utils/customerUsageLimitUtils.js";
+import { expectUsageLimitWindowContains } from "../../utils/usage-limit-utils/expectUsageLimitWindowContains.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 type LimitReachedPayload = {
 	type: string;
@@ -108,6 +105,7 @@ test(`${chalk.yellowBright("limit-reached-ul1: a usage_limit block describes the
 		anchor: "utc",
 	});
 
+	const trackedAt = Date.now();
 	await autumnV2_3.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -119,19 +117,18 @@ test(`${chalk.yellowBright("limit-reached-ul1: a usage_limit block describes the
 		limitType: "usage_limit",
 	});
 	expect(result).not.toBeNull();
-	const bounds = getUsageWindowBounds({
-		interval: EntInterval.Day,
-		now: Date.now(),
-	});
 	expect(result!.payload.data.filter).toBeUndefined();
-	expect(result!.payload.data.usage_limit).toEqual({
+	expect(result!.payload.data.usage_limit).toMatchObject({
 		limit: 5,
 		interval: "day",
 		anchor: "utc",
 		usage: 5,
 		remaining: 0,
-		window_start_at: bounds.windowStartAt,
-		window_end_at: bounds.windowEndAt,
+	});
+	expectUsageLimitWindowContains({
+		usageLimit: result!.payload.data.usage_limit,
+		at: trackedAt,
+		intervalMs: ONE_DAY_MS,
 	});
 });
 

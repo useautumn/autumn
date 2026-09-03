@@ -9,6 +9,7 @@ import {
 	fullSubjectToUsageWindowLimits,
 	getCurrentUsageWindowUsage,
 	orgToInStatuses,
+	type UsageLimitFilter,
 	type UsageLimitWebhookBlock,
 	usageLimitFilterMatchesProperties,
 	WebhookEventType,
@@ -17,7 +18,15 @@ import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { usageWindowLimitToWebhookBlock } from "@/internal/balances/utils/usageWindows/usageWindowLimitToWebhookBlock.js";
 
-/** The exhausted cap that blocked this event: the first matching limit with no headroom left. */
+type BlockingUsageLimit = {
+	block: UsageLimitWebhookBlock;
+	filter: UsageLimitFilter | undefined;
+};
+
+/**
+ * The cap that blocked this event. Enforcement stops at the cap with the least
+ * headroom, so the webhook reports that one, filter included, from one source.
+ */
 const findBlockingUsageLimit = ({
 	ctx,
 	fullSubject,
@@ -30,30 +39,68 @@ const findBlockingUsageLimit = ({
 	feature: Feature;
 	eventProperties?: Record<string, unknown> | null;
 	now: number;
-}): UsageLimitWebhookBlock | undefined => {
-	const limits = fullSubjectToUsageWindowLimits({
+}): BlockingUsageLimit | undefined => {
+	const usageWindows = fullSubject.usage_windows ?? [];
+	const measured = fullSubjectToUsageWindowLimits({
 		fullSubject,
 		featureIds: [feature.id],
 		features: ctx.features,
 		now,
 		inStatuses: orgToInStatuses({ org: ctx.org }),
+	})
+		.filter((limit) =>
+			usageLimitFilterMatchesProperties({
+				filterProperties: limit.filter_properties,
+				eventProperties,
+			}),
+		)
+		.map((limit) => ({
+			limit,
+			usage: getCurrentUsageWindowUsage({ usageWindows, limit, now }),
+		}))
+		.sort(
+			(left, right) =>
+				left.limit.limit - left.usage - (right.limit.limit - right.usage),
+		);
+
+	const tightest = measured[0];
+	if (!tightest || tightest.usage < tightest.limit.limit) return undefined;
+
+	const block = usageWindowLimitToWebhookBlock({
+		limit: tightest.limit,
+		usage: tightest.usage,
 	});
-	const usageWindows = fullSubject.usage_windows ?? [];
+	if (!block) return undefined;
 
-	for (const limit of limits) {
-		const appliesToEvent = usageLimitFilterMatchesProperties({
-			filterProperties: limit.filter_properties,
-			eventProperties,
-		});
-		if (!appliesToEvent) continue;
-
-		const usage = getCurrentUsageWindowUsage({ usageWindows, limit, now });
-		if (usage < limit.limit) continue;
-
-		return usageWindowLimitToWebhookBlock({ limit, usage }) ?? undefined;
-	}
-	return undefined;
+	return {
+		block,
+		filter: tightest.limit.filter_properties
+			? { properties: tightest.limit.filter_properties }
+			: undefined,
+	};
 };
+
+/** Legacy deductions carry no FullSubject; read the exhausted filtered cap off the evaluated subject. */
+const findBlockedFilterOnSubject = ({
+	subject,
+	feature,
+	eventProperties,
+}: {
+	subject: ApiCustomerV5 | ApiEntityV2;
+	feature: Feature;
+	eventProperties?: Record<string, unknown> | null;
+}): UsageLimitFilter | undefined =>
+	subject.billing_controls?.usage_limits?.find(
+		(usageLimit) =>
+			usageLimit.feature_id === feature.id &&
+			usageLimit.enabled !== false &&
+			usageLimit.filter != null &&
+			usageLimitFilterMatchesProperties({
+				filterProperties: usageLimit.filter.properties,
+				eventProperties,
+			}) &&
+			(usageLimit.usage ?? 0) >= usageLimit.limit,
+	)?.filter;
 
 // Subjects must be built via buildEvaluationSubject, or plan-level / percentage
 // caps are invisible here and the allowed -> blocked transition never fires.
@@ -103,25 +150,7 @@ export const checkLimitReached = async ({
 		if (!oldResult.allowed || newResult.allowed) return;
 
 		const blockedByUsageLimit = newResult.limitType === "usage_limit";
-
-		// When the blocking cap is a filtered usage limit, attach its filter so
-		// the receiver knows WHICH slice (e.g. which API key) hit its cap.
-		const blockedFilter =
-			blockedByUsageLimit && eventProperties
-				? newEvalSubject.billing_controls?.usage_limits?.find(
-						(usageLimit) =>
-							usageLimit.feature_id === feature.id &&
-							usageLimit.enabled !== false &&
-							usageLimit.filter != null &&
-							usageLimitFilterMatchesProperties({
-								filterProperties: usageLimit.filter.properties,
-								eventProperties,
-							}) &&
-							(usageLimit.usage ?? 0) >= usageLimit.limit,
-					)?.filter
-				: undefined;
-
-		const usageLimitBlock =
+		const blocking =
 			blockedByUsageLimit && newFullSubject
 				? findBlockingUsageLimit({
 						ctx,
@@ -131,6 +160,15 @@ export const checkLimitReached = async ({
 						now,
 					})
 				: undefined;
+		const blockedFilter =
+			blocking?.filter ??
+			(blockedByUsageLimit && eventProperties
+				? findBlockedFilterOnSubject({
+						subject: newEvalSubject,
+						feature,
+						eventProperties,
+					})
+				: undefined);
 
 		const customerId = newFullCus.id || newFullCus.internal_id;
 		const tags = fullCustomerToTags({ fullCustomer: newFullCus });
@@ -144,7 +182,7 @@ export const checkLimitReached = async ({
 				limit_type: newResult.limitType ?? "included",
 				...(entityId && { entity_id: entityId }),
 				...(blockedFilter && { filter: blockedFilter }),
-				...(usageLimitBlock && { usage_limit: usageLimitBlock }),
+				...(blocking && { usage_limit: blocking.block }),
 			},
 			tags,
 		});
