@@ -4,8 +4,8 @@ import {
 	type Reward,
 	type RewardProgram,
 	RewardType,
+	type StripeCouponWithPromoCodes,
 } from "@autumn/shared";
-import type Stripe from "stripe";
 import {
 	buildDiscountOptions,
 	filterDiscountRewards,
@@ -31,10 +31,11 @@ function makeReward(overrides: Partial<Reward> & { id: string }): Reward {
 }
 
 function makeStripeCoupon(
-	overrides: Partial<Stripe.Coupon> & { id: string },
-): Stripe.Coupon {
+	overrides: Partial<StripeCouponWithPromoCodes> & { id: string },
+): StripeCouponWithPromoCodes {
 	return {
 		object: "coupon",
+		promotion_codes: [],
 		created: Math.floor(Date.now() / 1000),
 		livemode: false,
 		metadata: {},
@@ -49,7 +50,7 @@ function makeStripeCoupon(
 		redeem_by: null,
 		times_redeemed: 0,
 		...overrides,
-	} as Stripe.Coupon;
+	} as StripeCouponWithPromoCodes;
 }
 
 function makeRewardProgram(
@@ -103,6 +104,7 @@ describe("rewardToOption", () => {
 			label: "20% Off",
 			sublabel: undefined,
 			source: "autumn",
+			searchTerms: [],
 		});
 	});
 
@@ -117,7 +119,10 @@ describe("rewardToOption", () => {
 			name: "Discount",
 			promo_codes: [{ code: "SAVE20" }, { code: "SAVE30" }],
 		});
-		expect(rewardToOption(reward).sublabel).toBe("SAVE20");
+		const option = rewardToOption(reward);
+		expect(option.sublabel).toBe("SAVE20");
+		// every code is searchable, not just the one on show
+		expect(option.searchTerms).toEqual(["SAVE20", "SAVE30"]);
 	});
 });
 
@@ -133,12 +138,21 @@ describe("formatCouponDiscount", () => {
 			amount_off: 1000,
 			currency: "usd",
 		});
-		expect(formatCouponDiscount(coupon)).toBe("10 USD off");
+		expect(formatCouponDiscount(coupon)).toBe("$10.00 off");
 	});
 
 	test("should default to USD when no currency", () => {
 		const coupon = makeStripeCoupon({ id: "c1", amount_off: 500 });
-		expect(formatCouponDiscount(coupon)).toBe("5 USD off");
+		expect(formatCouponDiscount(coupon)).toBe("$5.00 off");
+	});
+
+	test("should use the currency's own minor units", () => {
+		const coupon = makeStripeCoupon({
+			id: "c1",
+			amount_off: 1850,
+			currency: "jpy",
+		});
+		expect(formatCouponDiscount(coupon)).toBe("¥1,850 off");
 	});
 
 	test("should return empty string when no discount values set", () => {
@@ -160,6 +174,7 @@ describe("stripeCouponToOption", () => {
 			label: "Holiday Sale",
 			sublabel: "15% off",
 			source: "stripe",
+			searchTerms: [],
 		});
 	});
 
@@ -196,6 +211,7 @@ describe("buildDiscountOptions", () => {
 			label: "10% Off",
 			sublabel: undefined,
 			source: "autumn",
+			searchTerms: [],
 		});
 	});
 
@@ -215,6 +231,7 @@ describe("buildDiscountOptions", () => {
 			label: "Stripe Deal",
 			sublabel: "20% off",
 			source: "stripe",
+			searchTerms: [],
 		});
 	});
 
@@ -285,6 +302,7 @@ describe("buildDiscountOptions", () => {
 			label: "Coupon",
 			sublabel: "5% off",
 			source: "stripe",
+			searchTerms: [],
 		});
 	});
 
@@ -394,6 +412,7 @@ describe("buildDiscountOptions", () => {
 				label: "Stripe Deal",
 				sublabel: "10% off",
 				source: "stripe",
+				searchTerms: [],
 			},
 		]);
 	});
