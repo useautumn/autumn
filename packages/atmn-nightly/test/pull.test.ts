@@ -637,3 +637,64 @@ test("a fixture that is not a plain literal stops the pull before any write", as
 	).rejects.toThrow(/features "seats": replace with the server's copy/);
 	expect(readFileSync(configPath, "utf8")).toBe(before);
 });
+
+test("a first pull scaffolds the config and fills it from the server", async () => {
+	const { runPull } = await import("../src/actions/pull");
+	const { existsSync, rmSync } = await import("node:fs");
+	const dir = `${import.meta.dir}/.tmp/pull-first`;
+	rmSync(dir, { recursive: true, force: true });
+	const { mkdirSync } = await import("node:fs");
+	mkdirSync(dir, { recursive: true });
+
+	const client = {
+		previewUpdate: async () => ({
+			features: [
+				{ featureId: "seats", action: "delete" },
+				{ featureId: "messages", action: "delete" },
+			],
+			plans: [],
+		}),
+		update: async () => ({}),
+		get: async () => ({
+			features: [
+				{
+					id: "seats",
+					name: "Seats",
+					type: "boolean",
+					consumable: false,
+					archived: false,
+				},
+				{
+					id: "messages",
+					name: "Messages",
+					type: "metered",
+					consumable: true,
+					archived: false,
+				},
+			],
+			plans: [],
+		}),
+	};
+	const printed: string[] = [];
+	const result = await runPull({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: (text) => printed.push(text),
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+	});
+
+	expect(result.appended.sort()).toEqual(["messages", "seats"]);
+	expect(printed[0]).toStartWith("Scaffolded ");
+	expect(existsSync(`${dir}/planVersions/.gitkeep`)).toBe(true);
+
+	const module = await import(`${dir}/autumn.config.ts?v=first`);
+	// biome-ignore lint/suspicious/noExplicitAny: the executed wire
+	const wire = module.default as any;
+	expect(
+		wire.features.map((row: { feature_id: string }) => row.feature_id).sort(),
+	).toEqual(["messages", "seats"]);
+});
