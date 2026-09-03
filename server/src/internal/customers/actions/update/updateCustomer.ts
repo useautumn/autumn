@@ -68,7 +68,7 @@ export const updateCustomer = async ({
 	if (writesUsageLimitAlert(billing_controls?.usage_alerts)) {
 		assertUsageLimitAlertsResolvable({
 			usageAlerts: billing_controls?.usage_alerts ?? [],
-			ownUsageLimits: [
+			scopeUsageLimits: [
 				billing_controls?.usage_limits ?? originalCustomer.usage_limits,
 			],
 			fullSubject: await getFullSubject({ ctx, customerId }),

@@ -54,7 +54,10 @@ export const updateEntity = async ({
 	if (writesUsageLimitAlert(billing_controls?.usage_alerts)) {
 		assertUsageLimitAlertsResolvable({
 			usageAlerts: billing_controls?.usage_alerts ?? [],
-			ownUsageLimits: [billing_controls?.usage_limits ?? entity.usage_limits],
+			scopeUsageLimits: [
+				billing_controls?.usage_limits ?? entity.usage_limits,
+				fullSubject.customer.usage_limits,
+			],
 			fullSubject,
 			inStatuses: orgToInStatuses({ org: ctx.org }),
 		});

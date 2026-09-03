@@ -28,18 +28,18 @@ export const writesUsageLimitAlert = (
 ): boolean => (usageAlerts ?? []).some(isUsageLimitBasisAlert);
 
 /**
- * A usage_limit alert must point at a cap the subject can already see:
- * its own limits (as they will be after this write), then the customer's,
- * then the plans enforcement reads. Throws 400 naming the first orphaned alert.
+ * A usage_limit alert must point at a cap the subject will see after this
+ * write: the caller passes the scope's limits as they will be stored, and the
+ * plans enforcement reads are added here. Throws 400 naming the first orphan.
  */
 export const assertUsageLimitAlertsResolvable = ({
 	usageAlerts,
-	ownUsageLimits,
+	scopeUsageLimits,
 	fullSubject,
 	inStatuses,
 }: {
 	usageAlerts: DbUsageAlertLike[];
-	ownUsageLimits: Array<DbUsageLimit[] | null | undefined>;
+	scopeUsageLimits: Array<DbUsageLimit[] | null | undefined>;
 	fullSubject: FullSubject | null | undefined;
 	inStatuses: CusProductStatus[];
 }): void => {
@@ -48,8 +48,7 @@ export const assertUsageLimitAlertsResolvable = ({
 	const unresolvable = findUnresolvableUsageLimitAlerts({
 		usageAlerts,
 		usageLimitLists: [
-			...ownUsageLimits,
-			fullSubject?.customer.usage_limits,
+			...scopeUsageLimits,
 			fullSubject ? planUsageLimitsOf({ fullSubject, inStatuses }) : [],
 		],
 	});
