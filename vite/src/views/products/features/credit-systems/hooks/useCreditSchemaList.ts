@@ -1,14 +1,14 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
 import { FeatureType, isAiCreditSystem } from "@autumn/shared";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { createSchemaItem } from "../utils/creditSchemaUtils";
 
 /**
  * Controlled credit-schema array mechanics shared by the feature-level editor
  * (TanStack-form backed) and the plan-item feature_override editor (item
- * config backed): stable row keys, candidate features, and add/remove/update
- * against whatever store the caller writes to.
+ * config backed): stable row keys, candidate features, the expanded accordion
+ * row, and add/remove/update against whatever store the caller writes to.
  */
 export function useCreditSchemaList({
 	schema,
@@ -21,6 +21,7 @@ export function useCreditSchemaList({
 	onRemoveLast?: () => void;
 }) {
 	const { features } = useFeaturesQuery();
+	const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
 	const schemaKeysRef = useRef<string[]>([]);
 	const schemaKeys = useMemo(() => {
@@ -45,6 +46,9 @@ export function useCreditSchemaList({
 				),
 		);
 
+	const toggleExpandedKey = (key: string) =>
+		setExpandedKey((current) => (current === key ? null : key));
+
 	const setSchemaItem = ({
 		index,
 		item,
@@ -54,8 +58,10 @@ export function useCreditSchemaList({
 	}) => onChange(schema.map((existing, i) => (i === index ? item : existing)));
 
 	const addSchemaItem = () => {
-		schemaKeysRef.current = [...schemaKeysRef.current, crypto.randomUUID()];
+		const key = crypto.randomUUID();
+		schemaKeysRef.current = [...schemaKeysRef.current, key];
 		onChange([...schema, createSchemaItem()]);
+		setExpandedKey(key);
 	};
 
 	const removeSchemaItem = (index: number) => {
@@ -71,6 +77,8 @@ export function useCreditSchemaList({
 		schemaKeys,
 		allSchemaCandidateFeatures,
 		availableFeaturesFor,
+		expandedKey,
+		toggleExpandedKey,
 		setSchemaItem,
 		addSchemaItem,
 		removeSchemaItem,

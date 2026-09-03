@@ -17,6 +17,8 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 		schemaKeys,
 		allSchemaCandidateFeatures,
 		availableFeaturesFor,
+		expandedKey,
+		toggleExpandedKey,
 		invoiceCredit,
 		setInvoiceCredit,
 		setSchemaItem,
@@ -42,32 +44,39 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 				</div>
 			)}
 
-			<div className="flex flex-col gap-2">
+			<div className="flex flex-col gap-1">
 				<FormLabel>Rate card</FormLabel>
 
-				{schema.map((item: CreditSchemaItem, index: number) => (
-					<CreditRateCardRow
-						key={schemaKeys[index]}
-						item={item}
-						availableFeatures={availableFeaturesFor(item)}
-						allFeatures={allSchemaCandidateFeatures}
-						onChange={(next) => setSchemaItem({ index, item: next })}
-						onRemove={() => removeSchemaItem(index)}
-						showRateCardControls={isAdmin}
-					/>
-				))}
-			</div>
+				{schema.map((item: CreditSchemaItem, index: number) => {
+					const rowKey = schemaKeys[index];
 
-			<IconButton
-				type="button"
-				variant="muted"
-				onClick={addSchemaItem}
-				disabled={schema.length >= allSchemaCandidateFeatures.length}
-				className="w-fit"
-				icon={<PlusIcon />}
-			>
-				Add
-			</IconButton>
+					return (
+						<CreditRateCardRow
+							key={rowKey}
+							item={item}
+							availableFeatures={availableFeaturesFor(item)}
+							allFeatures={allSchemaCandidateFeatures}
+							onChange={(next) => setSchemaItem({ index, item: next })}
+							onRemove={() => removeSchemaItem(index)}
+							isExpanded={expandedKey === rowKey}
+							onToggle={() => toggleExpandedKey(rowKey)}
+							showRateCardControls={isAdmin}
+						/>
+					);
+				})}
+
+				<IconButton
+					type="button"
+					variant="muted"
+					size="sm"
+					onClick={addSchemaItem}
+					disabled={schema.length >= allSchemaCandidateFeatures.length}
+					className="w-full text-tertiary-foreground text-xs"
+					icon={<PlusIcon size={10} />}
+				>
+					Add feature
+				</IconButton>
+			</div>
 		</div>
 	);
 }
