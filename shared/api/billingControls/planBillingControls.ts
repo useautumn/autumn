@@ -7,7 +7,7 @@ type PlanBillingControlsInput = z.input<
 	typeof CustomerBillingControlsParamsSchema
 >;
 
-const usageLimitAlertsResolveWithinPlan = (ctx: {
+const pushUnresolvableUsageLimitAlertIssues = (ctx: {
 	value: PlanBillingControlsInput;
 	issues: unknown[];
 }) => {
@@ -30,7 +30,9 @@ const usageLimitAlertsResolveWithinPlan = (ctx: {
 
 /** A new plan is the only place its alerts can resolve a cap from; catalog updates check the merged row in handleUsageLimitAlertErrors. */
 export const PlanBillingControlsParamsSchema =
-	CustomerBillingControlsParamsSchema.check(usageLimitAlertsResolveWithinPlan);
+	CustomerBillingControlsParamsSchema.check(
+		pushUnresolvableUsageLimitAlertIssues,
+	);
 
 export type PlanBillingControlsParams = z.input<
 	typeof PlanBillingControlsParamsSchema
