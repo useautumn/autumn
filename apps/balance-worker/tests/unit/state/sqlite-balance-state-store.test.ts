@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,9 +14,11 @@ import {
 	parseTrackCommand,
 	type TrackOutcome,
 } from "@autumn/balance-engine";
+import { CorruptBalanceStateError } from "../../../src/state/sqliteBalanceStateErrors.js";
 import {
 	ConflictingMeteringStateInitializationError,
 	ConflictingPartitionInitializationError,
+	MeteringStatePartitionMismatchError,
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
 } from "../../../src/state/sqliteBalanceStateStore.js";
@@ -70,6 +73,7 @@ const createOutcome = ({
 				overageBehavior: "reject",
 				properties: null,
 				occurredAt: 1_700_000_000_000,
+				deduplicationExpiresAt: 1_700_086_400_000,
 			},
 		}),
 	});
@@ -111,11 +115,124 @@ const closeStoreFixture = ({
 };
 
 describe("SQLite balance state store", () => {
+	test.concurrent(
+		"initializes a new customer and advances partition progress atomically",
+		() => {
+			const fixture = createStoreFixture();
+			try {
+				const state = createState();
+				const result = fixture.store.applyDurableStateInitialization({
+					position: { topic, partition, offset: 0n },
+					initialization: {
+						schemaVersion: 1,
+						type: "state_initialized",
+						initializationId: "init_1",
+						initializedAt: 1_700_000_000_000,
+						state,
+					},
+				});
+
+				expect(result).toMatchObject({ kind: "initialized", nextOffset: 1n });
+				expect(fixture.store.readState({ identity })).toEqual(state);
+				expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+			} finally {
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
+	test.concurrent(
+		"does not reset mutated state when the same initialization is delivered again",
+		() => {
+			const fixture = createStoreFixture();
+			try {
+				const state = createState();
+				const initialization = {
+					schemaVersion: 1,
+					type: "state_initialized",
+					initializationId: "init_1",
+					initializedAt: 1_700_000_000_000,
+					state,
+				} as const;
+				fixture.store.applyDurableStateInitialization({
+					position: { topic, partition, offset: 0n },
+					initialization,
+				});
+				fixture.store.applyDurableTrackOutcome({
+					position: { topic, partition, offset: 1n },
+					outcome: createOutcome({ state }),
+				});
+
+				const result = fixture.store.applyDurableStateInitialization({
+					position: { topic, partition, offset: 2n },
+					initialization: {
+						...initialization,
+						initializedAt: initialization.initializedAt + 1,
+					},
+				});
+
+				expect(result).toMatchObject({ kind: "duplicate", nextOffset: 3n });
+				expect(fixture.store.readState({ identity })).toMatchObject({
+					revision: 1,
+					featureStatesById: {
+						messages: {
+							customerEntitlements: [{ balance: 5, usage: 5 }],
+						},
+					},
+				});
+			} finally {
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
+	test.concurrent(
+		"rolls back progress when an initialization id is reused for different state",
+		() => {
+			const fixture = createStoreFixture();
+			try {
+				const state = createState();
+				fixture.store.applyDurableStateInitialization({
+					position: { topic, partition, offset: 0n },
+					initialization: {
+						schemaVersion: 1,
+						type: "state_initialized",
+						initializationId: "init_1",
+						initializedAt: 1_700_000_000_000,
+						state,
+					},
+				});
+
+				expect(() =>
+					fixture.store.applyDurableStateInitialization({
+						position: { topic, partition, offset: 1n },
+						initialization: {
+							schemaVersion: 1,
+							type: "state_initialized",
+							initializationId: "init_1",
+							initializedAt: 1_700_000_000_001,
+							state: createState({ balance: 9 }),
+						},
+					}),
+				).toThrow(ConflictingMeteringStateInitializationError);
+				expect(fixture.store.readState({ identity })).toEqual(state);
+				expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+			} finally {
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
 	test.concurrent("commits state, receipt, and next offset together", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({ state });
+			fixture.store.initializeState({
+				topic,
+				partition,
+				initializationId: "init_1",
+				state,
+			});
 			const outcome = createOutcome({ state });
 
 			const result = fixture.store.applyDurableTrackOutcome({
@@ -144,11 +261,85 @@ describe("SQLite balance state store", () => {
 		}
 	});
 
+	test.concurrent(
+		"rejects receipt expiry metadata that disagrees with its outcome",
+		() => {
+			const fixture = createStoreFixture();
+			try {
+				const state = createState();
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
+				const outcome = createOutcome({ state });
+				fixture.store.applyDurableTrackOutcome({
+					position: { topic, partition, offset: 0n },
+					outcome,
+				});
+
+				const database = new Database(fixture.databasePath, {
+					readwrite: true,
+				});
+				try {
+					database.run(
+						"UPDATE track_receipts SET deduplication_expires_at = 0",
+					);
+				} finally {
+					database.close();
+				}
+
+				expect(() =>
+					fixture.store.readTrackReceipt({
+						identity,
+						commandId: outcome.commandId,
+					}),
+				).toThrow(CorruptBalanceStateError);
+			} finally {
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
+	test.concurrent("rejects an outcome stored on another partition", () => {
+		const fixture = createStoreFixture();
+		try {
+			const state = createState();
+			fixture.store.initializePartition({
+				topic,
+				partition: 1,
+				nextOffset: 0n,
+			});
+			fixture.store.initializeState({
+				topic,
+				partition,
+				initializationId: "init_1",
+				state,
+			});
+
+			expect(() =>
+				fixture.store.applyDurableTrackOutcome({
+					position: { topic, partition: 1, offset: 0n },
+					outcome: createOutcome({ state }),
+				}),
+			).toThrow(MeteringStatePartitionMismatchError);
+			expect(fixture.store.readNextOffset({ topic, partition: 1 })).toBe(0n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test.concurrent("applies a durable outcome batch in one transaction", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({ state });
+			fixture.store.initializeState({
+				topic,
+				partition,
+				initializationId: "init_1",
+				state,
+			});
 			const firstOutcome = createOutcome({ state });
 			const projectedState = executeTrack({
 				state,
@@ -194,7 +385,12 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState();
-				fixture.store.initializeState({ state });
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
 				const firstOutcome = createOutcome({ state });
 				const staleOutcome = createOutcome({
 					state,
@@ -236,7 +432,12 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState();
-				fixture.store.initializeState({ state });
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
 				const outcome = createOutcome({ state });
 
 				fixture.store.applyDurableTrackOutcome({
@@ -275,7 +476,12 @@ describe("SQLite balance state store", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({ state });
+			fixture.store.initializeState({
+				topic,
+				partition,
+				initializationId: "init_1",
+				state,
+			});
 			const firstOutcome = createOutcome({ state });
 			const staleOutcome = createOutcome({
 				state,
@@ -318,7 +524,12 @@ describe("SQLite balance state store", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({ state });
+			fixture.store.initializeState({
+				topic,
+				partition,
+				initializationId: "init_1",
+				state,
+			});
 			const firstOutcome = createOutcome({ state });
 			fixture.store.applyDurableTrackOutcome({
 				position: { topic, partition, offset: 0n },
@@ -364,7 +575,12 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState();
-				fixture.store.initializeState({ state });
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
 				const outcome = createOutcome({ state });
 				fixture.store.applyDurableTrackOutcome({
 					position: { topic, partition, offset: 0n },
@@ -398,8 +614,18 @@ describe("SQLite balance state store", () => {
 			const secondIdentity = { ...identity, customerId: "cus_2" };
 			const firstState = createState();
 			const secondState = createState({ meteringIdentity: secondIdentity });
-			fixture.store.initializeState({ state: firstState });
-			fixture.store.initializeState({ state: secondState });
+			fixture.store.initializeState({
+				topic,
+				partition,
+				initializationId: "init_1",
+				state: firstState,
+			});
+			fixture.store.initializeState({
+				topic,
+				partition,
+				initializationId: "init_1",
+				state: secondState,
+			});
 
 			fixture.store.applyDurableTrackOutcome({
 				position: { topic, partition, offset: 0n },
@@ -441,8 +667,18 @@ describe("SQLite balance state store", () => {
 			try {
 				const state = createState();
 				fixture.store.initializePartition({ topic, partition, nextOffset: 0n });
-				fixture.store.initializeState({ state });
-				fixture.store.initializeState({ state });
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
 
 				expect(() =>
 					fixture.store.initializePartition({
@@ -452,7 +688,12 @@ describe("SQLite balance state store", () => {
 					}),
 				).toThrow(ConflictingPartitionInitializationError);
 				expect(() =>
-					fixture.store.initializeState({ state: createState({ balance: 9 }) }),
+					fixture.store.initializeState({
+						topic,
+						partition,
+						initializationId: "init_1",
+						state: createState({ balance: 9 }),
+					}),
 				).toThrow(ConflictingMeteringStateInitializationError);
 				expect(fixture.store.readState({ identity })).toEqual(state);
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
@@ -468,8 +709,18 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState({ balance: -0 });
-				fixture.store.initializeState({ state });
-				fixture.store.initializeState({ state });
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
 
 				expect(fixture.store.readState({ identity })).toMatchObject({
 					featureStatesById: {
@@ -489,7 +740,12 @@ describe("SQLite balance state store", () => {
 			let reopenedStore: SqliteBalanceStateStore | null = null;
 			try {
 				const state = createState();
-				fixture.store.initializeState({ state });
+				fixture.store.initializeState({
+					topic,
+					partition,
+					initializationId: "init_1",
+					state,
+				});
 				const outcome = createOutcome({ state });
 				fixture.store.applyDurableTrackOutcome({
 					position: { topic, partition, offset: 0n },

@@ -1,12 +1,13 @@
 import type { Database } from "bun:sqlite";
-import { isDeepStrictEqual } from "node:util";
 import {
 	type CustomerMeteringState,
 	executeTrack as executeEngineTrack,
 	type MeteringIdentity,
 	meteringPartitionKeyOf,
-	parseCustomerMeteringState,
+	parseStateInitializedEvent,
 	parseTrackOutcome,
+	type StateInitializedEvent,
+	stateInitializationFingerprintOf,
 	type TrackOutcome,
 } from "@autumn/balance-engine";
 import {
@@ -14,6 +15,7 @@ import {
 	ConflictingPartitionInitializationError,
 	CorruptBalanceStateError,
 	MeteringStateNotFoundError,
+	MeteringStatePartitionMismatchError,
 	PartitionProgressNotFoundError,
 	UnexpectedKafkaOffsetError,
 } from "./sqliteBalanceStateErrors.js";
@@ -24,6 +26,7 @@ import {
 	insertTrackReceipt,
 	readNextOffset,
 	readState,
+	readStoredState,
 	readTrackReceipt,
 	updateState,
 } from "./sqliteBalanceStateRows.js";
@@ -32,6 +35,7 @@ import { openBalanceStateDatabase } from "./sqliteBalanceStateSchema.js";
 export {
 	ConflictingMeteringStateInitializationError,
 	ConflictingPartitionInitializationError,
+	MeteringStatePartitionMismatchError,
 	UnexpectedKafkaOffsetError,
 } from "./sqliteBalanceStateErrors.js";
 
@@ -46,11 +50,27 @@ export type DurableTrackOutcomeRecord = {
 	outcome: TrackOutcome;
 };
 
+export type DurableStateInitializationRecord = {
+	position: KafkaRecordPosition;
+	initialization: StateInitializedEvent;
+};
+
 export type DurableTrackOutcomeApplyResult =
 	| {
 			kind: "applied" | "duplicate";
 			state: CustomerMeteringState;
 			receipt: TrackOutcome;
+			nextOffset: bigint;
+	  }
+	| {
+			kind: "position_already_applied";
+			nextOffset: bigint;
+	  };
+
+export type DurableStateInitializationApplyResult =
+	| {
+			kind: "initialized" | "duplicate";
+			state: CustomerMeteringState;
 			nextOffset: bigint;
 	  }
 	| {
@@ -117,33 +137,69 @@ export class SqliteBalanceStateStore {
 			.immediate();
 	}
 
-	initializeState({ state }: { state: CustomerMeteringState }): void {
-		const parsedState = parseCustomerMeteringState({ input: state });
-		const persistedState = parseCustomerMeteringState({
-			input: JSON.parse(JSON.stringify(parsedState)),
-		});
-		const partitionKey = meteringPartitionKeyOf({
-			identity: persistedState.identity,
+	initializeState({
+		topic,
+		partition,
+		initializationId,
+		state,
+	}: {
+		topic: string;
+		partition: number;
+		initializationId: string;
+		state: CustomerMeteringState;
+	}): void {
+		assertTopic({ topic });
+		assertPartition({ partition });
+		const persistedInitialization = this.parsePersistedInitialization({
+			initialization: {
+				schemaVersion: 1,
+				type: "state_initialized",
+				initializationId,
+				initializedAt: 0,
+				state,
+			},
 		});
 
 		this.database
 			.transaction(() => {
-				const existingState = readState({
-					database: this.database,
-					identity: persistedState.identity,
+				this.initializeParsedState({
+					topic,
+					partition,
+					initialization: persistedInitialization,
 				});
-				if (isDeepStrictEqual(existingState, persistedState)) return;
-				if (existingState !== null) {
-					throw new ConflictingMeteringStateInitializationError({
-						partitionKey,
-					});
+			})
+			.immediate();
+	}
+
+	applyDurableStateInitialization({
+		position,
+		initialization,
+	}: DurableStateInitializationRecord): DurableStateInitializationApplyResult {
+		assertTopic({ topic: position.topic });
+		assertPartition({ partition: position.partition });
+		assertOffset({ offset: position.offset });
+		const persistedInitialization = this.parsePersistedInitialization({
+			initialization,
+		});
+
+		return this.database
+			.transaction(() => {
+				const expectedOffset = this.requireNextOffset({ position });
+				if (position.offset < expectedOffset) {
+					return {
+						kind: "position_already_applied" as const,
+						nextOffset: expectedOffset,
+					};
 				}
 
-				insertState({
-					database: this.database,
-					partitionKey,
-					state: persistedState,
+				const initialized = this.initializeParsedState({
+					topic: position.topic,
+					partition: position.partition,
+					initialization: persistedInitialization,
 				});
+				const nextOffset = position.offset + 1n;
+				this.advanceProgress({ position, expectedOffset, nextOffset });
+				return { ...initialized, nextOffset };
 			})
 			.immediate();
 	}
@@ -216,17 +272,7 @@ export class SqliteBalanceStateStore {
 		position,
 		outcome,
 	}: DurableTrackOutcomeRecord): DurableTrackOutcomeApplyResult {
-		const expectedOffset = readNextOffset({
-			database: this.database,
-			topic: position.topic,
-			partition: position.partition,
-		});
-		if (expectedOffset === null) {
-			throw new PartitionProgressNotFoundError({
-				topic: position.topic,
-				partition: position.partition,
-			});
-		}
+		const expectedOffset = this.requireNextOffset({ position });
 		if (position.offset < expectedOffset) {
 			return {
 				kind: "position_already_applied",
@@ -235,11 +281,18 @@ export class SqliteBalanceStateStore {
 		}
 
 		const partitionKey = meteringPartitionKeyOf({ identity: outcome.identity });
-		const state = readState({
+		const storedState = readStoredState({
 			database: this.database,
 			identity: outcome.identity,
 		});
-		if (!state) throw new MeteringStateNotFoundError({ partitionKey });
+		if (!storedState) throw new MeteringStateNotFoundError({ partitionKey });
+		if (
+			storedState.topic !== position.topic ||
+			storedState.partition !== position.partition
+		) {
+			throw new MeteringStatePartitionMismatchError({ partitionKey });
+		}
+		const { state } = storedState;
 
 		const existingReceipt = readTrackReceipt({
 			database: this.database,
@@ -272,6 +325,101 @@ export class SqliteBalanceStateStore {
 			});
 		}
 
+		this.advanceProgress({ position, expectedOffset, nextOffset });
+
+		return {
+			kind: executed.kind,
+			state: executed.state,
+			receipt: executed.receipt,
+			nextOffset,
+		};
+	}
+
+	private parsePersistedInitialization({
+		initialization,
+	}: {
+		initialization: StateInitializedEvent;
+	}): StateInitializedEvent {
+		const parsedInitialization = parseStateInitializedEvent({
+			input: initialization,
+		});
+		return parseStateInitializedEvent({
+			input: JSON.parse(JSON.stringify(parsedInitialization)),
+		});
+	}
+
+	private initializeParsedState({
+		topic,
+		partition,
+		initialization,
+	}: {
+		topic: string;
+		partition: number;
+		initialization: StateInitializedEvent;
+	}): {
+		kind: "initialized" | "duplicate";
+		state: CustomerMeteringState;
+	} {
+		const partitionKey = meteringPartitionKeyOf({
+			identity: initialization.state.identity,
+		});
+		const initializationFingerprint = stateInitializationFingerprintOf({
+			initialization,
+		});
+		const existing = readStoredState({
+			database: this.database,
+			identity: initialization.state.identity,
+		});
+		if (existing) {
+			if (
+				existing.topic === topic &&
+				existing.partition === partition &&
+				existing.initializationId === initialization.initializationId &&
+				existing.initializationFingerprint === initializationFingerprint
+			) {
+				return { kind: "duplicate", state: existing.state };
+			}
+			throw new ConflictingMeteringStateInitializationError({ partitionKey });
+		}
+
+		insertState({
+			database: this.database,
+			partitionKey,
+			topic,
+			partition,
+			initializationId: initialization.initializationId,
+			initializationFingerprint,
+			state: initialization.state,
+		});
+		return { kind: "initialized", state: initialization.state };
+	}
+
+	private requireNextOffset({
+		position,
+	}: {
+		position: KafkaRecordPosition;
+	}): bigint {
+		const expectedOffset = readNextOffset({
+			database: this.database,
+			topic: position.topic,
+			partition: position.partition,
+		});
+		if (expectedOffset !== null) return expectedOffset;
+		throw new PartitionProgressNotFoundError({
+			topic: position.topic,
+			partition: position.partition,
+		});
+	}
+
+	private advanceProgress({
+		position,
+		expectedOffset,
+		nextOffset,
+	}: {
+		position: KafkaRecordPosition;
+		expectedOffset: bigint;
+		nextOffset: bigint;
+	}): void {
 		const progressUpdate = advancePartitionProgress({
 			database: this.database,
 			topic: position.topic,
@@ -287,13 +435,6 @@ export class SqliteBalanceStateStore {
 				receivedOffset: position.offset,
 			});
 		}
-
-		return {
-			kind: executed.kind,
-			state: executed.state,
-			receipt: executed.receipt,
-			nextOffset,
-		};
 	}
 
 	close(): void {

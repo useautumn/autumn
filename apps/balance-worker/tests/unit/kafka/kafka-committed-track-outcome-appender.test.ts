@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
-	type KafkaProducer,
-	type KafkaTransaction,
-	KafkaTransactionStateUnknownError,
-	parseMeteringTrackOutcome,
-} from "@autumn/kafka";
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
-import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
+	createKafkaCommittedTrackOutcomeAppender,
+	type KafkaTrackOutcomeProducerPort,
+	type KafkaTrackOutcomeTransactionPort,
+	KafkaTrackOutcomeTransactionStateUnknownError,
+} from "../../../src/kafka/kafkaCommittedTrackOutcomeAppender.js";
+import { parseKafkaTrackOutcomeRecord } from "../../../src/kafka/kafkaMeteringRecord.js";
 import { TrackOutcomeBatchNotCommittedError } from "../../../src/writer/committedTrackOutcomeAppender.js";
 import {
 	createOutcome,

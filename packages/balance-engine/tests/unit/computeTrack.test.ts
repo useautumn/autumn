@@ -52,6 +52,7 @@ const createCommand = ({
 			overageBehavior,
 			properties: null,
 			occurredAt: 1_700_000_000_000,
+			deduplicationExpiresAt: 1_700_086_400_000,
 		},
 	});
 
