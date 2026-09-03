@@ -1,4 +1,9 @@
 import type { ToolUse } from "../driver/types/toolUse.ts";
+import type { ProbeResult } from "../grading/fixtureProbe.ts";
+import type {
+	OracleCustomer,
+	OracleLicenseAssignment,
+} from "../grading/sandboxOracle.ts";
 import type { InspectedConfig } from "../grading/types/inspectedConfig.ts";
 import type { Arm } from "./arm.ts";
 
@@ -26,4 +31,12 @@ export type AxRunOutput = {
 	costUsd: number;
 	wallMs: number;
 	timedOut: boolean;
+	/** integration cases: requests replayed against the agent-edited fixture */
+	probe?: ProbeResult;
+	/** integration cases: the run org's customer state after the probe */
+	oracle?: OracleCustomer;
+	/** integration cases: active license assignments after the probe */
+	licenseAssignments?: OracleLicenseAssignment[];
+	/** integration cases: unified diff of the agent's fixture edits */
+	fixtureDiff?: string;
 };

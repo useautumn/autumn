@@ -27,13 +27,51 @@ const readSource = (source: Source): string => {
 	return readFileSync(resolve(legacyRoot, source.file), "utf8");
 };
 
+const headingAnchor = (heading: string): string =>
+	heading
+		.toLowerCase()
+		.replace(/[^a-z0-9\s-]/g, "")
+		.trim()
+		.replace(/\s+/g, "-");
+
+// `#anchor` slices one section: its heading through to the next heading of the
+// same or higher level. Build fails on an anchor that matches no heading.
+const sliceSection = ({
+	markdown,
+	anchor,
+	url,
+}: {
+	markdown: string;
+	anchor: string;
+	url: string;
+}): string => {
+	const lines = markdown.split("\n");
+	const headingAt = (line: string) => /^(#{1,6})\s+(.*)$/.exec(line);
+	const start = lines.findIndex((line) => {
+		const heading = headingAt(line);
+		return heading && headingAnchor(heading[2] ?? "") === anchor;
+	});
+	if (start === -1) {
+		throw new Error(`No heading matches anchor "#${anchor}" in ${url}`);
+	}
+	const level = (headingAt(lines[start] ?? "")?.[1] ?? "#").length;
+	const end = lines.findIndex((line, index) => {
+		if (index <= start) return false;
+		const heading = headingAt(line);
+		return Boolean(heading && (heading[1]?.length ?? 6) <= level);
+	});
+	return lines.slice(start, end === -1 ? undefined : end).join("\n");
+};
+
 // `<docs url="/documentation/..." />` → translated docs page (with its title).
 const resolveDocs = (url: string): string => {
-	const page = `${url.replace(/^\//, "")}.mdx`;
-	return docsPageToMarkdown({
+	const [path = "", anchor] = url.split("#");
+	const page = `${path.replace(/^\//, "")}.mdx`;
+	const markdown = docsPageToMarkdown({
 		path: page,
 		text: readFileSync(resolve(docsRoot, page), "utf8"),
 	});
+	return anchor ? sliceSection({ markdown, anchor, url }) : markdown;
 };
 
 // `<part file="…" />` → a sibling content file, resolved next to its document.

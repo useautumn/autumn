@@ -180,12 +180,20 @@ Structure agreed — now finish it. Four moves, in order.
 - **Carry-over** — any allowance that resets: "Should unused messages carry over month to month, or reset clean?"
 - **Running out** — any metered feature: "When they run out — hard stop, or keep going and bill the extra?" (often settled in Shape; skip if so)
 - **Top-ups** — credits present or buying-more mentioned: "Can they buy more before the reset?" → a one-off prepaid item
+- **Guardrails** — any plan with overage or heavy usage: "Any caps on how fast or how far usage can run — like a daily limit, or a ceiling on overage? Want customers warned as they approach limits?" → plan-level billing controls
 - **Anything else on/off** — always, it's cheap: "Any other on/off differences between plans — SSO, priority support, API access?"
 
 The sweep exists so the user hears what's configurable without being marched through every item. Behind it, check every knob yourself — this list is internal, never show it:
 
-- per plan: base price · trial (length, unit, card — all explicit) · default plan · group
+- per plan: base price · trial (length, unit, card — all explicit) · default plan · group · billing controls (guardrails answered → `billingControls(...)` on the plan)
 - per item: billing method · included · price or tiers (tier behavior explicit) · reset · rollover · pooled (if Shape chose shared balances) · purchase caps · the one-off item auto-recharge needs
+
+Landing a guardrail answer means picking the right control — windowed cap vs overage ceiling vs alert vs allow-past-balance vs auto-recharge are different knobs with different fields. What each one is, the three overage knobs, and the plan→customer inheritance are the `autumn-concepts` skill's billing-controls reference — read it before writing `billingControls(...)`. The flow rules here:
+
+- Plan-level controls are defaults every subscriber inherits — the right home for anything true of the whole plan ("free users max 20 emails/day"). Per-customer exceptions are a billing/customer operation, not catalog work.
+- A cap stated alongside an allowance ("1,000 a month but never more than 20 a day") is a usage limit on the plan, not a second item or a smaller allowance.
+- "Track it but don't bill it" / "let them run over, we'll invoice manually" → overage knobs on the plan, not a $0 price.
+- Auto-recharge needs its one-off prepaid item (already on the per-item list) AND the `auto_topups` control.
 
 **4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push`, fix what it flags, and show the final catalog — same format, no assumptions list. Note: on a clean org that command applies as it validates (see `references/atmn.md`) — that's fine, just describe it accurately. **Done means the config is written and valid — a summary is not done.**
 
@@ -219,6 +227,8 @@ The Features line names every feature and its kind in plain words: `(usage, rese
 
 Configured item properties — carry-over, purchase caps, top-up behavior — are never their own `-` lines: indent them under the item they belong to as `·` lines, one behavior each, so the hierarchy is visible. Only show what's configured; defaults (like usage simply stopping when no overage price is set) get no line.
 
+Billing controls follow the same rule: `·` lines under the item they guard, in plain words — `· max 200 per day` · `· overage capped at 20% over` · `· overage tracked, not billed` · `· warned at 80%` · `· auto-buys 1,000 credits when below 100`. Never the schema names (usage_limits, spend_limits) in user-facing text.
+
 ### Config gotchas
 
 - Amounts are plain dollars everywhere — base prices, tier `flatAmount`s, unit prices: $20 is `20`, never `2000`, and a $100 tier is `flatAmount: 100`, never `10000`. Re-check every number before writing; cents is the most common wrong config.
@@ -228,6 +238,7 @@ Configured item properties — carry-over, purchase caps, top-up behavior — ar
 - Set explicitly, never lean on defaults: `billingMethod`, `tierBehavior`, all three trial fields. Explicit defaults cause no spurious diffs.
 - Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
 - Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
+- `billingControls(...)` fields are snake_case (`feature_id`, `overage_limit`) unlike the rest of the config, and each control list replaces wholesale on update. The builder isn't validated at push — double-check feature ids and field names yourself.
 - Pooled balances are config: `pooled: true` on the entity plan's item. Concluding "shared across workspaces" in Shape and then omitting the flag is the classic miss.
 - Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
 - Don't write `proration` — leave it out and take server defaults.

@@ -4,9 +4,13 @@
  * concurrent runs never share state and a real `atmn push` lands somewhere
  * disposable.
  *
- *   bun scripts/setupTestUtils/evalOrg.ts create <runId>   → prints {orgId, secretKey}
+ *   bun scripts/setupTestUtils/evalOrg.ts create <runId> [--stripe]  → prints {orgId, secretKey}
  *   bun scripts/setupTestUtils/evalOrg.ts delete <runId>
  *   bun scripts/setupTestUtils/evalOrg.ts sweep            → deletes eval orgs older than a day
+ *
+ * --stripe mints a sandbox Stripe connect sub-account and binds it, so paid
+ * attach/checkout flows work. No webhook endpoint — evals only read
+ * synchronous API responses.
  *
  * Worktree .env.local (DATABASE_URL) loads via scripts/preload-env.ts.
  */
@@ -28,9 +32,11 @@ const orgIdFor = (runId: string) => `${SLUG_PREFIX}${runId}`;
 const createEvalOrg = async ({
 	db,
 	runId,
+	withStripe,
 }: {
 	db: DrizzleCli;
 	runId: string;
+	withStripe: boolean;
 }): Promise<{ orgId: string; secretKey: string }> => {
 	const orgId = orgIdFor(runId);
 	const now = Date.now();
@@ -44,6 +50,7 @@ const createEvalOrg = async ({
 		default_currency: "usd",
 		onboarded: true,
 	});
+	if (withStripe) await bindStripeAccount({ db, orgId, runId });
 	const secretKey = await createKey({
 		db,
 		env: AppEnv.Sandbox,
@@ -53,6 +60,29 @@ const createEvalOrg = async ({
 		meta: { createdBy: "ax-evals", createdAt: new Date(now).toISOString() },
 	});
 	return { orgId, secretKey };
+};
+
+const bindStripeAccount = async ({
+	db,
+	orgId,
+	runId,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	runId: string;
+}): Promise<void> => {
+	const { createConnectAccount } = await import(
+		"@server/internal/orgs/orgUtils/createConnectAccount.js"
+	);
+	const account = await createConnectAccount({
+		org: { id: orgId, name: `AX Eval ${runId}` } as never,
+		user: { email: "ax-evals@useautumn.com" } as never,
+		metadata: { ax_eval: runId },
+	});
+	await db
+		.update(organizations)
+		.set({ test_stripe_connect: { default_account_id: account.id } })
+		.where(eq(organizations.id, orgId));
 };
 
 const deleteEvalOrg = async ({
@@ -127,7 +157,9 @@ const assertDevDatabase = async () => {
 };
 
 const main = async () => {
-	const [command, runId] = process.argv.slice(2);
+	const args = process.argv.slice(2);
+	const withStripe = args.includes("--stripe");
+	const [command, runId] = args.filter((arg) => arg !== "--stripe");
 	await assertDevDatabase();
 	const { db, client } = (
 		await import("@server/db/initDrizzle.js")
@@ -138,7 +170,7 @@ const main = async () => {
 	});
 	try {
 		if (command === "create" && runId) {
-			const result = await createEvalOrg({ db, runId });
+			const result = await createEvalOrg({ db, runId, withStripe });
 			console.log(JSON.stringify(result));
 		} else if (command === "delete" && runId) {
 			await deleteEvalOrg({ db, orgId: orgIdFor(runId) });

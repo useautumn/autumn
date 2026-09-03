@@ -32,11 +32,12 @@ const parseAttrs = (raw: string): Record<string, string> => {
 };
 
 const slugFromUrl = (url: string): string => {
-	const slug = url.replace(/^\//, "").split("/").pop();
-	if (!slug) {
+	const [path, anchor] = url.split("#");
+	const page = path?.replace(/^\//, "").split("/").pop();
+	if (!page) {
 		throw new Error(`Cannot derive a reference name from url "${url}"`);
 	}
-	return slug;
+	return anchor ? `${page}-${anchor}` : page;
 };
 
 /**
