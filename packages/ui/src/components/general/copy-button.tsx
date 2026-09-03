@@ -103,7 +103,10 @@ export const CopyButton = ({
 						icon={<AnimatedCopyIcon copied={copied} />}
 						className={cn("", props.className)}
 					>
-						<span title={text} className={cn("truncate", innerClassName)}>
+						<span
+							title={props.title ?? (children == null ? text : undefined)}
+							className={cn("truncate", innerClassName)}
+						>
 							{children ?? text}
 						</span>
 					</IconButton>
