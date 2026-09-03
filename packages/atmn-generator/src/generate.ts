@@ -8,6 +8,7 @@ import { wirePathHints } from "./emit/freeFormPaths";
 import { emitLintRulesModule } from "./lint/emitLintRules";
 import { LINT_REGISTRY } from "./lint/rules/registry";
 import { nodeRulesFromSpec } from "./lint/specRules/nodeRulesFromSpec";
+import { validateRegistry } from "./lint/validateRegistry";
 import { OVERLAY } from "./overlay/overlay";
 import {
 	catalogUpdateSchema,
@@ -79,6 +80,9 @@ export const generate = async (): Promise<string[]> => {
 	});
 	written.push(lintRuntimePath);
 
+	// A typo in a rule's path or field would otherwise ship as a rule that
+	// never fires.
+	validateRegistry({ registry: LINT_REGISTRY, schema: envelope, root });
 	write({
 		name: "lintRules.ts",
 		source: emitLintRulesModule({
