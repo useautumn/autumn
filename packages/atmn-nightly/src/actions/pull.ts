@@ -1,11 +1,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { loadConfig } from "../config/loadConfig";
+import { ConfigNotFoundError, loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
 import type { AutumnClient } from "../generated/client";
 import { COLLECTIONS } from "../generated/emit";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { listSourceFiles } from "./pull/listSourceFiles";
+import { type ConfigImports, scaffoldConfig } from "./pull/scaffoldConfig";
 import { configSearchDirs } from "./push";
 
 export type PullResult = {
@@ -22,6 +23,30 @@ export type PullOptions = {
 	includeMappings?: boolean;
 	/** Where to write progress. Injected so tests can capture it. */
 	write?: (text: string) => void;
+	/** Module specifiers a scaffolded config imports from; the package by default. */
+	imports?: ConfigImports;
+};
+
+/** No config means a first pull: scaffold one at `cwd`, then pull into it. */
+const loadOrScaffold = async ({
+	dirs,
+	cwd,
+	imports,
+	write,
+}: {
+	dirs: string[];
+	cwd: string;
+	imports: ConfigImports | undefined;
+	write: (text: string) => void;
+}) => {
+	try {
+		return await loadConfig({ dirs });
+	} catch (error) {
+		if (!(error instanceof ConfigNotFoundError)) throw error;
+		const configPath = scaffoldConfig({ directory: cwd, imports });
+		write(`Scaffolded ${configPath}\n`);
+		return loadConfig({ dirs: [cwd] });
+	}
 };
 
 const entriesOf = (value: unknown): PreviewEntry[] =>
@@ -40,11 +65,17 @@ export const runPull = async ({
 	cwd = process.cwd(),
 	includeMappings = false,
 	write = (text) => process.stdout.write(text),
+	imports,
 }: PullOptions): Promise<PullResult> => {
 	const dirs = configSearchDirs({ cwd });
 	loadEnvFiles({ dirs });
 
-	const { path: configPath, wire } = await loadConfig({ dirs });
+	const { path: configPath, wire } = await loadOrScaffold({
+		dirs,
+		cwd,
+		imports,
+		write,
+	});
 
 	const [preview, catalog] = await Promise.all([
 		client.previewUpdate(wire),
