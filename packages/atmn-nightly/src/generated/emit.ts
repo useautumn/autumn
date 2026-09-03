@@ -237,7 +237,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"licenses.licensePlanId",
 			"licenses.metadata",
 			"licenses.prepaidOnly",
-			"licenses.versionSlug",
 			"metadata",
 			"name",
 			"newPlanId",

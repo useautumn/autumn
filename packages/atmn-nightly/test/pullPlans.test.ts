@@ -237,3 +237,61 @@ test("a config-only version is deleted by planId and slug, leaving its sibling",
 	expect(configText()).toContain('versionSlug: "v2"');
 	expect(configText()).not.toContain("Never pushed");
 });
+
+test("a nested variant is pulled nested, pruned to its fixture shape", async () => {
+	fresh(`${imports}export default atmn({\n\tfeatures: [],\n});\n`);
+	const rows = {
+		features: [],
+		plans: [
+			{
+				id: "pro",
+				internalId: "prod_v1",
+				name: "Pro",
+				version: 1,
+				versionSlug: "v1",
+				active: true,
+				archived: false,
+				items: [],
+				variants: [
+					{
+						variantPlanId: "pro_annual",
+						name: "Pro (annual)",
+						customize: { price: { amount: 490, interval: "year" } },
+						plan: {
+							id: "pro_annual",
+							name: "Pro (annual)",
+							version: 1,
+							active: true,
+						},
+					},
+				],
+			},
+		],
+	};
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 1,
+				versionSlug: "v1",
+				active: true,
+				action: "delete",
+				internalId: "prod_v1",
+				state: { hasCustomers: false },
+			},
+		],
+	};
+	const client = {
+		previewUpdate: async () => preview,
+		update: async () => ({}),
+		get: async () => rows,
+	};
+	// biome-ignore lint/suspicious/noExplicitAny: a fake client
+	await runPull({ client: client as any, cwd: dir, write: () => {} });
+	const text = configText();
+	expect(text).toContain('variantPlanId: "pro_annual"');
+	expect(text).toContain("amount: 490");
+	expect(text).not.toContain("plan: {");
+	expect(text).not.toContain("baseVariantId");
+});

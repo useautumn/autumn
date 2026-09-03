@@ -41,6 +41,11 @@ export const OVERLAY: Overlay = {
 	exposeInternal: ["internal_id"],
 	collections: {
 		plans: {
+			"licenses.version_slug": {
+				hidden: true,
+				reason:
+					"A link always follows the child's active version (wire/07_licenses); pinning it from config is a change the server reports forever.",
+			},
 			versioning: {
 				hidden: true,
 				reason:

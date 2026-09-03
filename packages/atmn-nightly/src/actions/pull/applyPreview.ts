@@ -150,7 +150,8 @@ export const applyPreview = ({
 					: (spec.historyKey ?? collection);
 			// Variants come back nested under their base; pulling them is later work.
 			// Membership says active; only a draft spells it out.
-			const { variants: _nested, active: _stamped, ...bare } = row;
+			// Variants stay nested: that is the form the server edits them through.
+			const { active: _stamped, ...bare } = row;
 			emitted = route.draft ? { ...bare, active: false } : bare;
 		}
 		let configSource = files.get(configPath) ?? "";
@@ -235,7 +236,7 @@ export const applyPreview = ({
 			result.lines.push(`~ ${keyOf({ id, slug: slugOf(entry) })}`);
 			return;
 		}
-		const { variants: _nested, ...emitted } = row;
+		const emitted = row;
 		// The emitter's indent is the found call's own line indent, so the
 		// closing `})` lines up with the text it replaces.
 		const indent = leadingIndentOfLine(
