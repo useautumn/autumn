@@ -13,5 +13,6 @@ describe("isDeploymentApiKeyMeta", () => {
 		expect(isDeploymentApiKeyMeta({ fromCli: true })).toBe(false);
 		expect(isDeploymentApiKeyMeta({ fromCli: "true" })).toBe(false);
 		expect(isDeploymentApiKeyMeta({ created_via: "oauth" })).toBe(false);
+		expect(isDeploymentApiKeyMeta({ created_via: "agent_cli" })).toBe(false);
 	});
 });

@@ -3,6 +3,7 @@ export const isDeploymentApiKeyMeta = (meta: unknown) => {
 	return (
 		(value as { fromCli?: unknown }).fromCli !== true &&
 		(value as { fromCli?: unknown }).fromCli !== "true" &&
-		(value as { created_via?: unknown }).created_via !== "oauth"
+		(value as { created_via?: unknown }).created_via !== "oauth" &&
+		(value as { created_via?: unknown }).created_via !== "agent_cli"
 	);
 };

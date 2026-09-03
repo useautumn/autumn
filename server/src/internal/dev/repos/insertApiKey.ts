@@ -5,7 +5,7 @@ export const insertApiKey = async ({
 	db,
 	apiKey,
 }: {
-	db: DrizzleCli;
+	db: Pick<DrizzleCli, "insert">;
 	apiKey: ApiKey;
 }) => {
 	await db.insert(apiKeys).values(apiKey);
