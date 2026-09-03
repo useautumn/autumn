@@ -28,19 +28,9 @@ const usageLimitAlertsResolveWithinPlan = (ctx: {
 	}
 };
 
-/** A new plan is the only place its alerts can resolve a cap from. */
+/** A new plan is the only place its alerts can resolve a cap from; catalog updates check the merged row in handleUsageLimitAlertErrors. */
 export const PlanBillingControlsParamsSchema =
 	CustomerBillingControlsParamsSchema.check(usageLimitAlertsResolveWithinPlan);
-
-/**
- * Plan updates merge sparsely: omitted usage_limits keep the stored ones, which
- * this schema cannot see, so the check only runs when both lists are stated.
- */
-export const PlanBillingControlsPatchParamsSchema =
-	CustomerBillingControlsParamsSchema.check((ctx) => {
-		if (ctx.value.usage_limits === undefined) return;
-		usageLimitAlertsResolveWithinPlan(ctx);
-	});
 
 export type PlanBillingControlsParams = z.input<
 	typeof PlanBillingControlsParamsSchema

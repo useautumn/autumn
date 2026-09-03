@@ -2,11 +2,11 @@ import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1
 import { ApiPlanProcessorsSchema } from "@api/products/components/processors.js";
 import { PlanLicenseParamsSchema } from "@api/products/crud/licenses/planLicenseParams.js";
 import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
+import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
-import { PlanBillingControlsPatchParamsSchema } from "../../../billingControls/planBillingControls.js";
 import { CatalogPlanVersioningStrategySchema } from "../versioning.js";
 import { CatalogBasePriceParamsSchema } from "./catalogBasePriceParams.js";
 import { CatalogPlanItemParamsV1Schema } from "./catalogPlanItemParams.js";
@@ -75,7 +75,7 @@ export const UpdateCatalogPlanParamsSchema = z
 		config: ProductConfigParamsSchema.optional().meta({
 			description: "Miscellaneous plan-level configuration flags.",
 		}),
-		billing_controls: PlanBillingControlsPatchParamsSchema.optional().meta({
+		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
 			description: "Plan-level billing controls used as customer defaults.",
 		}),
 		metadata: ProductMetadataSchema.optional().meta({
