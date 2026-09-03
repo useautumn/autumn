@@ -3,7 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-export const useStripeCouponsQuery = () => {
+export const useStripeCouponsQuery = ({
+	enabled = true,
+}: {
+	enabled?: boolean;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
@@ -11,6 +15,7 @@ export const useStripeCouponsQuery = () => {
 		queryKey: buildKey(["stripe_coupons"]),
 		queryFn: () =>
 			axiosInstance.get("/products/stripe_coupons").then((r) => r.data),
+		enabled,
 	});
 
 	return {
