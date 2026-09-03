@@ -1,7 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { COLLECTIONS } from "./collections";
 import { copyRuntime } from "./emit/copyRuntime";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
+import { emitEmitModule } from "./emit/emitEmitModule";
 import { emitFeaturesModule } from "./emit/emitFeatures";
 import { emitWireModule } from "./emit/emitWire";
 import { wirePathHints } from "./emit/freeFormPaths";
@@ -24,6 +26,11 @@ const REPO_ROOT = join(import.meta.dir, "../../..");
 const LINT_RUNTIME_SOURCE = join(
 	import.meta.dir,
 	"lint/runtime/lintDocument.ts",
+);
+
+const FIXTURE_RUNTIME_SOURCE = join(
+	import.meta.dir,
+	"emit/runtime/emitFixture.ts",
 );
 
 /**
@@ -79,6 +86,23 @@ export const generate = async (): Promise<string[]> => {
 		sourceLabel: "packages/atmn-generator/src/lint/runtime/lintDocument.ts",
 	});
 	written.push(lintRuntimePath);
+
+	const emitRuntimePath = join(OUTPUT_DIR, "emitRuntime.ts");
+	copyRuntime({
+		from: FIXTURE_RUNTIME_SOURCE,
+		to: emitRuntimePath,
+		sourceLabel: "packages/atmn-generator/src/emit/runtime/emitFixture.ts",
+	});
+	written.push(emitRuntimePath);
+
+	write({
+		name: "emit.ts",
+		source: emitEmitModule({
+			spec,
+			overlay: OVERLAY,
+			collections: COLLECTIONS,
+		}),
+	});
 
 	// A typo in a rule's path or field would otherwise ship as a rule that
 	// never fires.
