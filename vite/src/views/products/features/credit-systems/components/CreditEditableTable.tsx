@@ -42,7 +42,7 @@ export function CreditEditableTable<T>({
 						}}
 					>
 						<Table.Container>
-							<Table.Content className="!rounded-none !border-0 !shadow-none">
+							<Table.Content className="!rounded-none !border-0 !shadow-none [&_[data-slot=table-container]]:rounded-none">
 								<Table.Header />
 								<Table.Body />
 							</Table.Content>
