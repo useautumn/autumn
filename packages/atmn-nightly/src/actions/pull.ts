@@ -100,6 +100,8 @@ export const runPull = async ({
 	const catalogRows = catalog as unknown as Record<string, unknown>;
 
 	for (const [collection, spec] of Object.entries(COLLECTIONS)) {
+		// Versions share an id; until internal_id lands, pull cannot address them.
+		if (!spec.pull) continue;
 		const applied = applyPreview({
 			collection,
 			spec,

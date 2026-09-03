@@ -110,6 +110,8 @@ export const LINT_RULES: LintRules = {
 		},
 	},
 	plans: {
+		label: "plan",
+		idField: "planId",
 		required: ["planId"],
 		fields: {
 			planId: {
@@ -236,12 +238,23 @@ export const LINT_RULES: LintRules = {
 		},
 	},
 	"plans.items": {
+		label: "item",
+		idField: "featureId",
 		required: ["featureId"],
 		fields: {
 			included: {
 				maximum: 10000000000000,
 			},
 		},
+		rules: [
+			{
+				kind: "exists",
+				field: "featureId",
+				in: "features",
+				matching: "featureId",
+				because: "A plan item meters a feature this config does not declare.",
+			},
+		],
 	},
 	"plans.items.featureOverride.creditSchema": {
 		variants: {
@@ -356,6 +369,8 @@ export const LINT_RULES: LintRules = {
 		},
 	},
 	"plans.licenses": {
+		label: "license",
+		idField: "licensePlanId",
 		required: ["licensePlanId"],
 		fields: {
 			included: {

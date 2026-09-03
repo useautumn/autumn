@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { COLLECTIONS } from "./collections";
 import { copyRuntime } from "./emit/copyRuntime";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
+import { emitCollectionModule } from "./emit/emitCollection";
 import { emitEmitModule } from "./emit/emitEmitModule";
-import { emitFeaturesModule } from "./emit/emitFeatures";
 import { emitWireModule } from "./emit/emitWire";
 import { wirePathHints } from "./emit/freeFormPaths";
 import { emitLintRulesModule } from "./lint/emitLintRules";
@@ -71,13 +71,18 @@ export const generate = async (): Promise<string[]> => {
 		written.push(path);
 	};
 
-	write({
-		name: "features.ts",
-		source: emitFeaturesModule({
-			schema: collectionItemSchema({ spec, collection: "features" }),
-			overlay: OVERLAY,
-		}),
-	});
+	for (const [name, meta] of Object.entries(COLLECTIONS)) {
+		write({
+			name: `${name}.ts`,
+			source: emitCollectionModule({
+				name,
+				builder: meta.builder,
+				typeName: meta.typeName,
+				schema: collectionItemSchema({ spec, collection: name }),
+				overlay: OVERLAY,
+			}),
+		});
+	}
 
 	const lintRuntimePath = join(OUTPUT_DIR, "lintRuntime.ts");
 	copyRuntime({
@@ -128,6 +133,7 @@ export const generate = async (): Promise<string[]> => {
 		name: "wire.ts",
 		source: emitWireModule({
 			catalogHints: wirePathHints({ schema: envelope, root }),
+			collections: COLLECTIONS,
 		}),
 	});
 
