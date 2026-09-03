@@ -3,9 +3,10 @@ import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import { CreditBucketsTable } from "./blogComponents/ai-billing-infrastructure/CreditBucketsTable";
 import { CreditsTable } from "./blogComponents/ai-billing-infrastructure/CreditsTable";
 import { LockAndReleaseDiagram } from "./blogComponents/ai-billing-infrastructure/LockAndReleaseDiagram";
+import { AxiomLogLeakAnimation } from "./blogComponents/eliminating-memory-leaks/AxiomLogLeakAnimation";
+import { CreditDrawdownDiagram } from "./blogComponents/how-firecrawl-runs-pricing-experiments-every-week/CreditDrawdownDiagram";
 import { HierarchyDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/HierarchyDiagram";
 import { PlanRecordDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/PlanRecordDiagram";
-import { AxiomLogLeakAnimation } from "./blogComponents/eliminating-memory-leaks/AxiomLogLeakAnimation";
 import { TestimonialQuote } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/TestimonialQuote";
 import { ConfigAsCodeSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/ConfigAsCodeSimulator";
 import {
@@ -130,6 +131,7 @@ export const mdxComponents = {
 	Expand,
 	CreditsTable,
 	CreditBucketsTable,
+	CreditDrawdownDiagram,
 	LockAndReleaseDiagram,
 	ConfigAsCodeSimulator,
 	ConfigSim,
