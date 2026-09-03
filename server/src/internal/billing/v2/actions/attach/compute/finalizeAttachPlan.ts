@@ -30,9 +30,9 @@ export const finalizeAttachPlan = async ({
 		customLineItems: params.custom_line_items,
 	});
 
-	// Refund lines can appear for siblings on an add-on attach, so the outgoing
-	// plan itself is the signal — otherwise a "full" refund would return the
-	// last invoice when nothing was actually replaced.
+	// Compute runs before the error pass rejects an unpayable refund, so the
+	// outgoing plan is checked here too. Sibling refund lines on an add-on attach
+	// make line items an unreliable signal.
 	const replacesExistingPlan = Boolean(
 		attachBillingContext.currentCustomerProduct,
 	);

@@ -211,9 +211,8 @@ export function AttachAdvancedSection() {
 	const resetsBillingCycleNow =
 		resetBillingCycle && billingCycleAnchorMode === "now";
 
-	// Only an immediate, prorated switch produces credit that can go back to the card.
-	// Multi-plan attach has no refund support, and without an outgoing plan
-	// there is no credit to hand back.
+	// Only an immediate, prorated switch off an outgoing plan produces credit
+	// that can go back to the card. Multi-plan attach has no refund support.
 	const canRefundOutgoingPlan =
 		hasOutgoing &&
 		!isMultiPlan &&
@@ -223,11 +222,19 @@ export function AttachAdvancedSection() {
 		effectiveProrationBehavior === "prorate_immediately" &&
 		effectivePlanSchedule !== "end_of_cycle";
 
+	// Wait for the preview before clearing, so a hydrated approval link keeps its
+	// refund while `hasOutgoing` is still unknown.
+	const previewSettled = Boolean(previewQuery.data);
+
 	useEffect(() => {
-		if (!canRefundOutgoingPlan && refundLastPayment !== null) {
+		if (
+			previewSettled &&
+			!canRefundOutgoingPlan &&
+			refundLastPayment !== null
+		) {
 			form.setFieldValue("refundLastPayment", null);
 		}
-	}, [canRefundOutgoingPlan, refundLastPayment, form]);
+	}, [previewSettled, canRefundOutgoingPlan, refundLastPayment, form]);
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
