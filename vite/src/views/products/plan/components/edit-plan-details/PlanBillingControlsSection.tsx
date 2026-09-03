@@ -33,6 +33,7 @@ import {
 } from "@/components/billing-controls/BillingControlsDisplay";
 import { OVERAGE_BILLING_OPTIONS } from "@/components/billing-controls/overageBillingOptions";
 import { UsageAnchorTooltip } from "@/components/billing-controls/UsageAnchorTooltip";
+import { ALL_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
 import { FieldInfo } from "@/components/general/form/field-info";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -74,6 +75,8 @@ const USAGE_INTERVAL_OPTIONS: SelectOption[] = [
 	{ value: ResetInterval.Month, label: "Month" },
 	{ value: ResetInterval.Year, label: "Year" },
 ];
+
+const ALERT_BASIS_OPTIONS: SelectOption[] = ALL_BASIS_OPTIONS;
 
 const THRESHOLD_TYPE_OPTIONS: SelectOption[] = [
 	{ value: "usage", label: "Absolute usage" },
@@ -225,6 +228,7 @@ function SelectFieldRow({
 		| "purchase_limit_interval"
 		| "usage_interval"
 		| "threshold_type"
+		| "alert_basis"
 		| "overage_billing";
 	label: string;
 	placeholder: string;
@@ -480,6 +484,13 @@ function UsageAlertFields({ form }: { form: UsePlanBillingControlForm }) {
 					options={THRESHOLD_TYPE_OPTIONS}
 				/>
 			</div>
+			<SelectFieldRow
+				form={form}
+				name="alert_basis"
+				label="Measured against"
+				placeholder="Measured against"
+				options={ALERT_BASIS_OPTIONS}
+			/>
 		</div>
 	);
 }

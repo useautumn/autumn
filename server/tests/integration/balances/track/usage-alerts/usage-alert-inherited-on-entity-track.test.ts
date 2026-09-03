@@ -20,6 +20,7 @@
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import type { CustomerBillingControls } from "@autumn/shared";
 import {
 	getPlayHistory,
 	getTestSvixAppId,
@@ -29,7 +30,6 @@ import {
 	waitForWebhook,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import type { CustomerBillingControls } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
@@ -88,6 +88,7 @@ const fortyPercentAlert = {
 	feature_id: TestFeature.Messages,
 	threshold: 40,
 	threshold_type: "remaining_percentage" as const,
+	basis: "balance" as const,
 	enabled: true,
 };
 

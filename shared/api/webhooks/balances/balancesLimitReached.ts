@@ -1,4 +1,6 @@
 import { z } from "zod/v4";
+import { UsageLimitFilterSchema } from "../../../models/cusModels/billingControls/usageLimit.js";
+import { UsageLimitWebhookBlockSchema } from "./usageLimitWebhookBlock.js";
 
 export const LimitType = z.enum([
 	"included",
@@ -29,6 +31,14 @@ export const BalancesLimitReachedSchema = z
 		limit_type: LimitType.meta({
 			description:
 				"Which limit was hit: included allowance, max purchase cap, spend limit, or a usage-limit billing control.",
+		}),
+		filter: UsageLimitFilterSchema.optional().meta({
+			description:
+				"The filter of the usage limit that blocked, when a filtered cap was hit.",
+		}),
+		usage_limit: UsageLimitWebhookBlockSchema.optional().meta({
+			description:
+				"The usage limit that blocked, with its live window. Present only when limit_type is usage_limit.",
 		}),
 	})
 	.meta({

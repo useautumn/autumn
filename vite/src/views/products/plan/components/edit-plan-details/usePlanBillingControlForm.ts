@@ -44,6 +44,7 @@ export type PlanBillingControlFormValues = {
 	alert_name: string;
 	alert_threshold: number | null;
 	threshold_type: DbUsageAlert["threshold_type"];
+	alert_basis: DbUsageAlert["basis"];
 };
 
 const requireNumber = (min: number, message: string) =>
@@ -187,6 +188,7 @@ export function buildControlItem(
 			enabled: values.enabled,
 			threshold: values.alert_threshold ?? 0,
 			threshold_type: values.threshold_type,
+			basis: values.alert_basis,
 			name: emptyToUndefined(values.alert_name),
 		} satisfies DbUsageAlert;
 	}
@@ -246,6 +248,7 @@ function toDefaultValues(
 		alert_name: usageAlert?.name ?? "",
 		alert_threshold: usageAlert?.threshold ?? null,
 		threshold_type: usageAlert?.threshold_type ?? "usage",
+		alert_basis: usageAlert?.basis ?? "balance",
 	};
 }
 

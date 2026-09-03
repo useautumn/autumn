@@ -21,9 +21,7 @@ import {
 import { expectVariantPlanCorrect } from "../utils/expectVariantPointer.js";
 import { seedBaseWithVariant } from "../utils/seedVariantPlans.js";
 
-const overageAllowed = [
-	{ feature_id: TestFeature.Messages, enabled: true },
-];
+const overageAllowed = [{ feature_id: TestFeature.Messages, enabled: true }];
 const autoTopups = [
 	{
 		feature_id: TestFeature.Messages,
@@ -45,6 +43,7 @@ const usageAlerts = [
 		enabled: true,
 		threshold: 80,
 		threshold_type: "usage_percentage" as const,
+		basis: "balance" as const,
 	},
 ];
 
@@ -207,7 +206,8 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: variantId,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 						metadata: { stamp: "v2" },
 					},
 				],

@@ -1,5 +1,22 @@
 import { z } from "zod/v4";
 import { DbUsageAlertSchema } from "../cusModels/billingControls/usageAlert.js";
+import { isUsageLimitBasisAlert } from "../cusModels/billingControls/usageAlertIdentity.js";
+
+// Org alerts apply to every customer, so there is no single usage limit to measure against.
+const OrgUsageAlertsSchema = z
+	.array(DbUsageAlertSchema)
+	.optional()
+	.default([])
+	.check((ctx) => {
+		const index = ctx.value.findIndex(isUsageLimitBasisAlert);
+		if (index === -1) return;
+		ctx.issues.push({
+			code: "custom",
+			message: "Org-level usage alerts cannot use basis usage_limit",
+			input: ctx.value[index],
+			path: [index, "basis"],
+		});
+	});
 
 /** Invoice-capable subset of Stripe's subscription
  *  `payment_settings.payment_method_types`. */
@@ -16,10 +33,10 @@ export const InvoicePaymentMethodSchema = z.enum([
 export type InvoicePaymentMethod = z.infer<typeof InvoicePaymentMethodSchema>;
 
 export const OrgConfigSchema = z.object({
-	usage_alerts: z.array(DbUsageAlertSchema).optional().default([]),
+	usage_alerts: OrgUsageAlertsSchema,
 	/** Sandbox-env-only usage alerts. `checkUsageAlerts` reads this list when
 	 *  `ctx.env === AppEnv.Sandbox` and `usage_alerts` when env is live. */
-	sandbox_usage_alerts: z.array(DbUsageAlertSchema).optional().default([]),
+	sandbox_usage_alerts: OrgUsageAlertsSchema,
 
 	bill_upgrade_immediately: z.boolean().default(true),
 	convert_to_charge_automatically: z.boolean().default(true),

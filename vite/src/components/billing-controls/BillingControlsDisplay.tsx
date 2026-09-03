@@ -21,6 +21,7 @@ import { createContext, Fragment, type ReactNode, useContext } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
 import { skipOverageBillingLabel } from "./overageBillingOptions";
+import { USAGE_ALERT_BASIS_LABELS } from "./usageAlertBasisOptions";
 
 const ROW_SWAP_TRANSITION = {
 	duration: 0.2,
@@ -361,10 +362,12 @@ export const UsageAlertRow = ({
 
 	const thresholdTypeLabel: Record<string, string> = {
 		usage: "Absolute usage",
-		usage_percentage: "% used of allowance",
+		usage_percentage: "% used",
 		remaining: "Absolute remaining",
-		remaining_percentage: "% remaining of allowance",
+		remaining_percentage: "% remaining",
 	};
+	const basis = usageAlert.basis ?? "balance";
+	const filterEntries = Object.entries(usageAlert.filter?.properties ?? {});
 
 	return (
 		<RowButton enabled={usageAlert.enabled} onClick={onClick}>
@@ -382,6 +385,18 @@ export const UsageAlertRow = ({
 					{
 						label: "Type",
 						value: thresholdTypeLabel[usageAlert.threshold_type],
+					},
+					{ label: "Of", value: USAGE_ALERT_BASIS_LABELS[basis] },
+					{
+						label: "Filter",
+						value: filterEntries.length
+							? filterEntries
+									.map(
+										([key, value]) =>
+											`${key} = ${truncateFilterValue(String(value))}`,
+									)
+									.join(", ")
+							: null,
 					},
 					{ label: "Name", value: usageAlert.name || null },
 				]}
