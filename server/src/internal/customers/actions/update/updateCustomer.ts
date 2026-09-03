@@ -18,6 +18,7 @@ import {
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
+import { assertCustomerUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertCustomerUsageLimitAlertsResolvable";
 import { CusService } from "@/internal/customers/CusService";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
 import {
@@ -82,6 +83,12 @@ export const updateCustomer = async ({
 			});
 		}
 	}
+
+	await assertCustomerUsageLimitAlertsResolvable({
+		ctx,
+		customer: originalCustomer,
+		billingControls: billing_controls,
+	});
 
 	// Try to update stripe ID. Distinguish omitted (undefined -> leave as is)
 	// from explicitly cleared (null/"" -> unlink the Stripe customer).

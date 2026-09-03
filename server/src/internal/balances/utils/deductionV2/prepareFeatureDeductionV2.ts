@@ -8,7 +8,6 @@ import {
 	fullSubjectToOverageAllowedByFeatureId,
 	fullSubjectToSpendLimitByFeatureId,
 	fullSubjectToUsageBasedCusEntsByFeatureId,
-	fullSubjectToUsageWindowLimits,
 	getMaxOverage,
 	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
@@ -19,6 +18,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
+import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 import { generateId } from "@/utils/genUtils.js";
 import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
 import type {
@@ -37,15 +37,11 @@ export const prepareFeatureDeductionV2 = ({
 	fullSubject,
 	deduction,
 	options = {},
-	now,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	deduction: FeatureDeduction;
 	options?: DeductionOptions;
-	// Single timestamp shared with the Lua param so the resolved window key and
-	// the script agree on which window a boundary-crossing request lands in.
-	now: number;
 }): PreparedFeatureDeduction => {
 	const { org, env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
@@ -103,12 +99,10 @@ export const prepareFeatureDeductionV2 = ({
 				featureId: feature.id,
 			}).map((candidate) => candidate.id)
 		: effectiveFeatureIds;
-	const allUsageWindowLimits = fullSubjectToUsageWindowLimits({
+	const allUsageWindowLimits = resolveUsageWindowLimits({
+		ctx,
 		fullSubject,
 		featureIds: windowFeatureIds,
-		features: ctx.features,
-		now,
-		inStatuses: orgToInStatuses({ org }),
 	});
 
 	// Filtered limits only bind events whose properties match; the script never

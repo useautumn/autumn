@@ -1,4 +1,7 @@
-import type { CustomerBillingControls, DbUsageAlert } from "@autumn/shared";
+import type {
+	CustomerBillingControlsParams,
+	DbUsageAlertParams,
+} from "@autumn/shared";
 import type { AutumnV2_1Client } from "../spend-limit-utils/entitySpendLimitUtils.js";
 
 export const setCustomerUsageAlerts = async ({
@@ -8,9 +11,9 @@ export const setCustomerUsageAlerts = async ({
 }: {
 	autumn: AutumnV2_1Client;
 	customerId: string;
-	usageAlerts: DbUsageAlert[];
+	usageAlerts: DbUsageAlertParams[];
 }) => {
-	const billingControls: CustomerBillingControls = {
+	const billingControls: CustomerBillingControlsParams = {
 		usage_alerts: usageAlerts,
 	};
 

@@ -8,5 +8,7 @@ export * from "./utils/apiBalanceUtils";
 export * from "./utils/check/index";
 export * from "./utils/convert/apiBalanceToAllowed";
 export * from "./utils/convert/apiBalanceV1ToAvailableOverage";
+export * from "./utils/convert/apiBalanceV1ToIncludedGrant";
+export * from "./utils/convert/apiBalanceV1ToRecurringGrant";
 export * from "./utils/getApiBalance";
 export * from "./utils/getApiBalances";

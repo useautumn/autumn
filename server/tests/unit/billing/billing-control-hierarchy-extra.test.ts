@@ -18,7 +18,7 @@ import {
 	type FullCustomer,
 	resolveBillingControl,
 } from "@autumn/shared";
-import { resolveCustomerScopeAlerts } from "@/internal/balances/trackWebhooks/checkUsageAlerts";
+import { resolveCustomerScopeAlerts } from "@/internal/balances/usageAlerts/check/resolve/resolveCustomerScopeAlerts";
 
 const FEATURE = "messages";
 const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);

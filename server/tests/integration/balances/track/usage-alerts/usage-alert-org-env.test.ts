@@ -109,6 +109,7 @@ test(`${chalk.yellowBright("org-alert-env1: sandbox_usage_alerts triggers webhoo
 				feature_id: TestFeature.Messages,
 				threshold: 500,
 				threshold_type: "usage",
+				basis: "balance",
 				enabled: true,
 				name: "sandbox-only-alert",
 			},
@@ -157,6 +158,7 @@ test(`${chalk.yellowBright("org-alert-env2: usage_alerts (live field) is ignored
 				feature_id: TestFeature.Messages,
 				threshold: 400,
 				threshold_type: "usage",
+				basis: "balance",
 				enabled: true,
 				name: "live-only-alert-should-not-fire",
 			},
@@ -202,6 +204,7 @@ test(`${chalk.yellowBright("org-alert-env3: with both fields set in sandbox, onl
 				feature_id: TestFeature.Messages,
 				threshold: 300,
 				threshold_type: "usage",
+				basis: "balance",
 				enabled: true,
 				name: "sandbox-side",
 			},
@@ -211,6 +214,7 @@ test(`${chalk.yellowBright("org-alert-env3: with both fields set in sandbox, onl
 				feature_id: TestFeature.Messages,
 				threshold: 300,
 				threshold_type: "usage",
+				basis: "balance",
 				enabled: true,
 				name: "live-side",
 			},
@@ -229,14 +233,15 @@ test(`${chalk.yellowBright("org-alert-env3: with both fields set in sandbox, onl
 		value: 500,
 	});
 
-	const sandboxResult = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "balances.usage_alert_triggered" &&
-			payload.data?.customer_id === customerId &&
-			payload.data?.usage_alert?.name === "sandbox-side",
-		timeoutMs: 15000,
-	});
+	const sandboxResult =
+		await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "balances.usage_alert_triggered" &&
+				payload.data?.customer_id === customerId &&
+				payload.data?.usage_alert?.name === "sandbox-side",
+			timeoutMs: 15000,
+		});
 	expect(sandboxResult).not.toBeNull();
 
 	const liveResult = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({

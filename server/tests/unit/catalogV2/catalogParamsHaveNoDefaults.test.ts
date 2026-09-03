@@ -56,6 +56,7 @@ const ALLOWED_DEFAULTS: Record<string, string> = {
 	"plans.billing_controls.spend_limits.enabled": "gated by `billing_controls`",
 	"plans.billing_controls.usage_limits.enabled": "gated by `billing_controls`",
 	"plans.billing_controls.usage_alerts.enabled": "gated by `billing_controls`",
+	"plans.billing_controls.usage_alerts.basis": "gated by `billing_controls`",
 	"plans.billing_controls.overage_allowed.enabled":
 		"gated by `billing_controls`",
 };

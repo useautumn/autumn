@@ -79,6 +79,12 @@ type UsageLimit = {
 	enabled?: boolean;
 	limit: number;
 	interval: "day" | "week" | "month" | "year";
+	anchor?: "billing_cycle" | "utc";
+	filter?: UsageLimitFilter;
+};
+
+type UsageLimitFilter = {
+	properties: Record<string, string>;
 };
 
 type UsageAlert = {
@@ -90,6 +96,8 @@ type UsageAlert = {
 		| "usage_percentage"
 		| "remaining"
 		| "remaining_percentage";
+	basis?: "balance" | "included" | "recurring" | "usage_limit";
+	filter?: UsageLimitFilter;
 	name?: string;
 };
 

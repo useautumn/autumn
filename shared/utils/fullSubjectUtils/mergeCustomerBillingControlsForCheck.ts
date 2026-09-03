@@ -6,6 +6,7 @@ import type {
 	DbSpendLimit,
 	DbUsageLimit,
 } from "../../models/cusModels/billingControls/customerBillingControls.js";
+import { usageLimitIdentity } from "../../models/cusModels/billingControls/identity/usageLimitIdentity.js";
 import { usageLimitFilterKey } from "../../models/cusModels/billingControls/usageLimit.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
@@ -13,10 +14,6 @@ import type { Feature } from "../../models/featureModels/featureModels.js";
 import { getCurrentUsageWindowUsage } from "../usageWindowUtils/getCurrentUsageWindowUsage.js";
 import { fullSubjectToUsageWindowLimits } from "./fullSubjectToUsageWindowLimits.js";
 import { resolveBillingControl } from "./planBillingControlUtils.js";
-
-/** Usage limits are identified per (feature, filter); other controls per feature. */
-export const usageLimitIdentity = (entry: DbUsageLimit): string =>
-	`${entry.feature_id}|${usageLimitFilterKey(entry.filter)}`;
 
 export const mergeControlsByFeature = <
 	TControl extends { feature_id?: string },

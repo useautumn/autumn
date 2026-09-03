@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { assertEntityUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertEntityUsageLimitAlertsResolvable.js";
 import { updateCachedEntityData } from "@/internal/customers/cache/fullSubject/actions/updateCachedEntityData.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 
@@ -45,6 +46,13 @@ export const updateEntity = async ({
 	if (!entity) {
 		throw new EntityNotFoundError({ entityId });
 	}
+
+	assertEntityUsageLimitAlertsResolvable({
+		ctx,
+		entity,
+		fullSubject,
+		billingControls: billing_controls,
+	});
 
 	const filteredUpdates = Object.fromEntries(
 		Object.entries({

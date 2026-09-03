@@ -4,11 +4,14 @@ import {
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
 	type DbUsageAlert,
+	DEFAULT_USAGE_ALERT_BASIS,
 	type Feature,
 	FeatureType,
 	type FullCustomer,
+	filterUnresolvableUsageLimitAlerts,
 	fullCustomerToCustomerEntitlements,
 	nullish,
+	type UsageAlertBasis,
 } from "@autumn/shared";
 import {
 	Button,
@@ -23,6 +26,12 @@ import {
 } from "@autumn/ui";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { UsageAlertBasisSelect } from "@/components/billing-controls/UsageAlertBasisSelect";
+import { USAGE_ALERT_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
+import {
+	USAGE_ALERT_THRESHOLD_TYPE_LABELS,
+	USAGE_ALERT_THRESHOLD_TYPE_OPTIONS,
+} from "@/components/billing-controls/usageAlertThresholdTypeOptions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -37,6 +46,15 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import {
+	type UsageLimitCondition,
+	UsageLimitConditionRows,
+} from "./UsageLimitConditionRows";
+import {
+	conditionsFromFilter,
+	conditionsToFilter,
+} from "./usageLimitFilterConditions";
+import { useCustomerPropertyKeys } from "./useCustomerPropertyKeys";
 
 export function BillingUsageAlertSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
@@ -68,6 +86,18 @@ export function BillingUsageAlertSheet() {
 	const [thresholdType, setThresholdType] = useState<string>(
 		existingItem?.threshold_type ?? "usage",
 	);
+	const [basis, setBasis] = useState<UsageAlertBasis>(
+		existingItem?.basis ?? DEFAULT_USAGE_ALERT_BASIS,
+	);
+	const [conditions, setConditions] = useState<UsageLimitCondition[]>(
+		conditionsFromFilter(existingItem?.filter),
+	);
+	const measuresUsageLimit = basis === "usage_limit";
+	const propertySuggestions = useCustomerPropertyKeys({
+		customerId: measuresUsageLimit
+			? fullCustomer?.id || fullCustomer?.internal_id
+			: undefined,
+	});
 
 	const nonArchivedFeatures = (features ?? []).filter(
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
@@ -152,13 +182,42 @@ export function BillingUsageAlertSheet() {
 			return;
 		}
 
+		if (measuresUsageLimit && !featureId) {
+			toast.error("Choose a feature to measure against a usage limit");
+			return;
+		}
+
+		const { filter, error: filterError } = measuresUsageLimit
+			? conditionsToFilter(conditions)
+			: {};
+		if (filterError) {
+			toast.error(filterError);
+			return;
+		}
+
 		const item: DbUsageAlert = {
 			feature_id: featureId || undefined,
 			enabled,
 			threshold: parsedThreshold,
 			threshold_type: thresholdType as DbUsageAlert["threshold_type"],
+			basis,
+			...(filter && { filter }),
 			name: name.trim() || undefined,
 		};
+		const unresolvable = filterUnresolvableUsageLimitAlerts({
+			usageAlerts: [item],
+			usageLimitLists: [
+				selectedEntity?.usage_limits,
+				fullCustomer?.usage_limits,
+				fullCustomer?.customer_products?.flatMap(
+					(customerProduct) => customerProduct.product?.usage_limits ?? [],
+				),
+			],
+		});
+		if (unresolvable.length > 0) {
+			toast.error("No usage limit matches this feature and conditions");
+			return;
+		}
 
 		const currentUsageAlerts = getCurrentUsageAlerts();
 
@@ -269,30 +328,42 @@ export function BillingUsageAlertSheet() {
 							<Select
 								value={thresholdType}
 								onValueChange={setThresholdType}
-								items={{
-									usage: "Usage (absolute value)",
-									usage_percentage: "Percentage used of allowance",
-									remaining: "Remaining (absolute value)",
-									remaining_percentage: "Percentage remaining of allowance",
-								}}
+								items={USAGE_ALERT_THRESHOLD_TYPE_LABELS}
 							>
 								<SelectTrigger className="w-full">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="usage">Usage (absolute value)</SelectItem>
-									<SelectItem value="usage_percentage">
-										Percentage used of allowance
-									</SelectItem>
-									<SelectItem value="remaining">
-										Remaining (absolute value)
-									</SelectItem>
-									<SelectItem value="remaining_percentage">
-										Percentage remaining of allowance
-									</SelectItem>
+									{USAGE_ALERT_THRESHOLD_TYPE_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 						</div>
+
+						<UsageAlertBasisSelect
+							value={basis}
+							options={USAGE_ALERT_BASIS_OPTIONS}
+							onChange={setBasis}
+						/>
+
+						{measuresUsageLimit && (
+							<div>
+								<FormLabel>Conditions</FormLabel>
+								<UsageLimitConditionRows
+									conditions={conditions}
+									onChange={setConditions}
+									suggestions={propertySuggestions}
+								/>
+								<p className="mt-2 text-tertiary-foreground text-xs">
+									Leave empty to measure this feature's usage limit without
+									conditions. Add conditions only to target a limit that has the
+									same ones.
+								</p>
+							</div>
+						)}
 
 						<div>
 							<FormLabel>

@@ -1,15 +1,19 @@
 import {
 	AppEnv,
 	type DbUsageAlert,
+	DEFAULT_USAGE_ALERT_BASIS,
 	type Feature,
 	type FrontendOrg,
 	type OrgConfig,
+	usageAlertIdentity,
 } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { USAGE_ALERT_BASIS_LABELS } from "@/components/billing-controls/usageAlertBasisOptions";
+import { USAGE_ALERT_THRESHOLD_TYPE_LABELS } from "@/components/billing-controls/usageAlertThresholdTypeOptions";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
@@ -19,13 +23,6 @@ import { OrgUsageAlertDialog } from "./OrgUsageAlertDialog";
 
 const pillClassName =
 	"rounded-md bg-muted px-1.5 py-0.5 text-xs text-tertiary-foreground whitespace-nowrap";
-
-const thresholdTypeLabel: Record<DbUsageAlert["threshold_type"], string> = {
-	usage: "absolute usage",
-	usage_percentage: "% used of allowance",
-	remaining: "absolute remaining",
-	remaining_percentage: "% remaining of allowance",
-};
 
 const formatThreshold = (alert: DbUsageAlert) => {
 	const isPct =
@@ -151,7 +148,7 @@ export const OrgUsageAlertsSubsection = () => {
 				<div className="flex flex-col gap-1.5">
 					{orgAlerts.map((alert, index) => (
 						<div
-							key={`org-alert-${alert.feature_id ?? "global"}-${alert.threshold_type}-${alert.threshold}-${alert.name ?? index}`}
+							key={usageAlertIdentity(alert)}
 							className={cn(
 								"flex items-center gap-2 rounded-lg border bg-interactive-secondary px-3 py-2 min-w-0",
 							)}
@@ -187,7 +184,14 @@ export const OrgUsageAlertsSubsection = () => {
 										At: {formatThreshold(alert)}
 									</span>
 									<span className={cn(pillClassName, "hidden sm:inline")}>
-										{thresholdTypeLabel[alert.threshold_type]}
+										{USAGE_ALERT_THRESHOLD_TYPE_LABELS[alert.threshold_type]}
+									</span>
+									<span className={cn(pillClassName, "hidden sm:inline")}>
+										{
+											USAGE_ALERT_BASIS_LABELS[
+												alert.basis ?? DEFAULT_USAGE_ALERT_BASIS
+											]
+										}
 									</span>
 								</div>
 							</button>
