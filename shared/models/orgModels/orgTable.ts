@@ -62,6 +62,14 @@ export type OrgRedisConfig = {
 	migrationChangedAt: number;
 };
 
+export const OrgClaimState = {
+	Pending: "pending",
+	Claimed: "claimed",
+	Expiring: "expiring",
+} as const;
+
+export type OrgClaimState = (typeof OrgClaimState)[keyof typeof OrgClaimState];
+
 export const organizations = pgTable(
 	"organizations",
 	{
@@ -119,6 +127,9 @@ export const organizations = pgTable(
 		sandbox_icon: text("sandbox_icon"),
 
 		redis_config: jsonb("redis_config").$type<OrgRedisConfig>(),
+		claim_state: text("claim_state").$type<OrgClaimState>(),
+		claim_token_hash: text("claim_token_hash"),
+		claim_expires_at: timestamp("claim_expires_at", { withTimezone: true }),
 	},
 	(table) => [
 		index("idx_organizations_name_trgm")
@@ -131,6 +142,10 @@ export const organizations = pgTable(
 			sql`${table.createdAt} DESC`,
 			sql`${table.id} DESC`,
 		),
+		index("idx_organizations_pending_claim_expiry")
+			.on(table.claim_expires_at)
+			.where(sql`${table.claim_state} = 'pending'`),
+		unique("organizations_claim_token_hash_key").on(table.claim_token_hash),
 		// Stripe Connect webhooks resolve an org by external account id. Without
 		// these, the three OR'd ->> predicates in OrgService.getByAccountId force a
 		// seq scan; Postgres turns them into a BitmapOr instead. The table is only

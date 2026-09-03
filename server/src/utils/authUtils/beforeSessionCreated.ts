@@ -14,6 +14,7 @@ import {
 	removeRejectedSsoAccount,
 	userRequiresSso,
 } from "@/internal/auth/sso/ssoInvitationProvisioning.js";
+import { shouldSkipDefaultOrgForAgentClaim } from "@/internal/orgs/agentOnboarding/agentAuthUtils.js";
 import { createDefaultOrg } from "@/utils/authUtils/createDefaultOrg.js";
 
 export const beforeSessionCreated = async (
@@ -26,6 +27,14 @@ export const beforeSessionCreated = async (
 	);
 	let requiresSso = false;
 	try {
+		if (
+			shouldSkipDefaultOrgForAgentClaim({
+				headers: context?.headers,
+			})
+		) {
+			return;
+		}
+
 		// Impersonation sets its own active org; don't override with the
 		// target user's most-recent membership.
 		if ((session as { impersonatedBy?: string | null }).impersonatedBy) {
