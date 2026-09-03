@@ -23,6 +23,10 @@ import {
 } from "@autumn/ui";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+	ALL_BASIS_OPTIONS,
+	USAGE_ALERT_BASIS_DESCRIPTIONS,
+} from "@/components/billing-controls/usageAlertBasisOptions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -37,6 +41,15 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import {
+	type UsageLimitCondition,
+	UsageLimitConditionRows,
+} from "./UsageLimitConditionRows";
+import {
+	conditionsFromFilter,
+	conditionsToFilter,
+} from "./usageLimitFilterConditions";
+import { useCustomerPropertyKeys } from "./useCustomerPropertyKeys";
 
 export function BillingUsageAlertSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
@@ -68,6 +81,16 @@ export function BillingUsageAlertSheet() {
 	const [thresholdType, setThresholdType] = useState<string>(
 		existingItem?.threshold_type ?? "usage",
 	);
+	const [basis, setBasis] = useState<DbUsageAlert["basis"]>(
+		existingItem?.basis ?? "balance",
+	);
+	const [conditions, setConditions] = useState<UsageLimitCondition[]>(
+		conditionsFromFilter(existingItem?.filter),
+	);
+	const measuresUsageLimit = basis === "usage_limit";
+	const propertySuggestions = useCustomerPropertyKeys({
+		customerId: fullCustomer?.id || fullCustomer?.internal_id,
+	});
 
 	const nonArchivedFeatures = (features ?? []).filter(
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
@@ -152,11 +175,21 @@ export function BillingUsageAlertSheet() {
 			return;
 		}
 
+		const { filter, error: filterError } = measuresUsageLimit
+			? conditionsToFilter(conditions)
+			: {};
+		if (filterError) {
+			toast.error(filterError);
+			return;
+		}
+
 		const item: DbUsageAlert = {
 			feature_id: featureId || undefined,
 			enabled,
 			threshold: parsedThreshold,
 			threshold_type: thresholdType as DbUsageAlert["threshold_type"],
+			basis,
+			...(filter && { filter }),
 			name: name.trim() || undefined,
 		};
 
@@ -293,6 +326,51 @@ export function BillingUsageAlertSheet() {
 								</SelectContent>
 							</Select>
 						</div>
+
+						<div>
+							<FormLabel>Measured against</FormLabel>
+							<Select
+								value={basis}
+								onValueChange={(value) =>
+									setBasis(value as DbUsageAlert["basis"])
+								}
+								items={Object.fromEntries(
+									ALL_BASIS_OPTIONS.map((option) => [
+										option.value,
+										option.label,
+									]),
+								)}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{ALL_BASIS_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="mt-1 text-tertiary-foreground text-xs">
+								{USAGE_ALERT_BASIS_DESCRIPTIONS[basis]}
+							</p>
+						</div>
+
+						{measuresUsageLimit && (
+							<div>
+								<FormLabel>Conditions</FormLabel>
+								<UsageLimitConditionRows
+									conditions={conditions}
+									onChange={setConditions}
+									suggestions={propertySuggestions}
+								/>
+								<p className="mt-2 text-tertiary-foreground text-xs">
+									Match the conditions of the usage limit this alert should
+									measure.
+								</p>
+							</div>
+						)}
 
 						<div>
 							<FormLabel>

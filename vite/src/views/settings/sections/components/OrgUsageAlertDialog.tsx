@@ -17,6 +17,10 @@ import {
 } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	BALANCE_BASIS_OPTIONS,
+	USAGE_ALERT_BASIS_DESCRIPTIONS,
+} from "@/components/billing-controls/usageAlertBasisOptions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 
 type ThresholdType = DbUsageAlert["threshold_type"];
@@ -47,6 +51,7 @@ export const OrgUsageAlertDialog = ({
 			enabled: true,
 			threshold: 0,
 			threshold_type: "usage",
+			basis: "balance",
 			feature_id: undefined,
 			name: undefined,
 		},
@@ -143,6 +148,30 @@ export const OrgUsageAlertDialog = ({
 								</SelectItem>
 							</SelectContent>
 						</Select>
+					</div>
+
+					<div>
+						<FormLabel>Measured against</FormLabel>
+						<Select
+							value={draft.basis ?? "balance"}
+							onValueChange={(value) =>
+								updateDraft({ basis: value as DbUsageAlert["basis"] })
+							}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{BALANCE_BASIS_OPTIONS.map((option) => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<p className="mt-1 text-tertiary-foreground text-xs">
+							{USAGE_ALERT_BASIS_DESCRIPTIONS[draft.basis ?? "balance"]}
+						</p>
 					</div>
 
 					<div>
