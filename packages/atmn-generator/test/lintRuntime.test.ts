@@ -151,3 +151,125 @@ test("requiredWhen fires only when the selector matches", () => {
 		'consumable is required when type is "metered". Because.',
 	]);
 });
+
+// --- the rule vocabulary: each kind fires, and stays quiet when satisfied ---
+
+const messagesWith = ({
+	rules,
+	entry,
+	document = {},
+}: {
+	rules: LintRules[string]["rules"];
+	entry: Record<string, unknown>;
+	document?: Record<string, unknown>;
+}) =>
+	lint({
+		document: { ...document, things: [entry] },
+		rules: { things: { rules } },
+	}).map((issue) => issue.message);
+
+test("forbiddenWhen", () => {
+	const rules = [
+		{
+			kind: "forbiddenWhen" as const,
+			when: "type",
+			equals: "boolean",
+			forbid: ["creditSchema"],
+			because: "Because.",
+		},
+	];
+	expect(messagesWith({ rules, entry: { type: "boolean" } })).toEqual([]);
+	expect(
+		messagesWith({ rules, entry: { type: "metered", creditSchema: [] } }),
+	).toEqual([]);
+	expect(
+		messagesWith({ rules, entry: { type: "boolean", creditSchema: [] } }),
+	).toEqual(['creditSchema cannot be set when type is "boolean". Because.']);
+});
+
+test("mutex and exactlyOne", () => {
+	const mutex = [
+		{ kind: "mutex" as const, fields: ["amount", "tiers"], because: "M." },
+	];
+	expect(messagesWith({ rules: mutex, entry: {} })).toEqual([]);
+	expect(messagesWith({ rules: mutex, entry: { amount: 1 } })).toEqual([]);
+	expect(
+		messagesWith({ rules: mutex, entry: { amount: 1, tiers: [] } }),
+	).toEqual(["amount and tiers cannot be set together. M."]);
+
+	const one = [
+		{ kind: "exactlyOne" as const, fields: ["amount", "tiers"], because: "O." },
+	];
+	expect(messagesWith({ rules: one, entry: { tiers: [] } })).toEqual([]);
+	expect(messagesWith({ rules: one, entry: {} })).toEqual([
+		"One of amount and tiers is required. O.",
+	]);
+	expect(messagesWith({ rules: one, entry: { amount: 1, tiers: [] } })).toEqual(
+		["amount and tiers cannot be set together. O."],
+	);
+});
+
+test("unique reports every repeat on the repeating entry", () => {
+	const issues = lint({
+		document: { things: [{ id: "a" }, { id: "b" }, { id: "a" }, { id: "a" }] },
+		rules: {
+			things: {
+				label: "thing",
+				idField: "id",
+				rules: [{ kind: "unique", field: "id", because: "U." }],
+			},
+		},
+	});
+	expect(issues).toEqual([
+		{ path: 'thing "a"', message: 'id "a" is used more than once. U.' },
+		{ path: 'thing "a"', message: 'id "a" is used more than once. U.' },
+	]);
+});
+
+test("exists checks a present collection and skips an absent one", () => {
+	const rules = [
+		{
+			kind: "exists" as const,
+			field: "featureId",
+			in: "features",
+			matching: "featureId",
+			because: "E.",
+		},
+	];
+	const entry = { featureId: "seats" };
+	expect(
+		messagesWith({
+			rules,
+			entry,
+			document: { features: [{ featureId: "seats" }] },
+		}),
+	).toEqual([]);
+	expect(
+		messagesWith({
+			rules,
+			entry,
+			document: { features: [{ featureId: "other" }] },
+		}),
+	).toEqual(['featureId "seats" is not in features. E.']);
+	// Omitted means "not mine": the feature may well exist on the server.
+	expect(messagesWith({ rules, entry, document: {} })).toEqual([]);
+});
+
+test("compare", () => {
+	const rules = [
+		{
+			kind: "compare" as const,
+			field: "included",
+			op: "<=" as const,
+			than: "limit",
+			because: "C.",
+		},
+	];
+	expect(messagesWith({ rules, entry: { included: 5, limit: 10 } })).toEqual(
+		[],
+	);
+	expect(messagesWith({ rules, entry: { included: 5 } })).toEqual([]);
+	expect(messagesWith({ rules, entry: { included: 50, limit: 10 } })).toEqual([
+		"included must be at most limit — got 50 and 10. C.",
+	]);
+});

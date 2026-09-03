@@ -42,13 +42,55 @@ export type FieldConstraints = {
 };
 
 /** Rules the spec cannot express. Data, never predicates: they are serialised. */
-export type LintRule = {
-	readonly kind: "requiredWhen";
-	readonly when: string;
-	readonly equals: string;
-	readonly require: readonly string[];
-	readonly because: string;
-};
+export type LintRule =
+	| {
+			readonly kind: "requiredWhen";
+			readonly when: string;
+			readonly equals: string;
+			readonly require: readonly string[];
+			readonly because: string;
+	  }
+	| {
+			readonly kind: "forbiddenWhen";
+			readonly when: string;
+			readonly equals: string;
+			readonly forbid: readonly string[];
+			readonly because: string;
+	  }
+	| {
+			/** At most one of `fields` may be set. */
+			readonly kind: "mutex";
+			readonly fields: readonly string[];
+			readonly because: string;
+	  }
+	| {
+			/** Precisely one of `fields` must be set. */
+			readonly kind: "exactlyOne";
+			readonly fields: readonly string[];
+			readonly because: string;
+	  }
+	| {
+			/** No two entries of the collection share a value of `field`. */
+			readonly kind: "unique";
+			readonly field: string;
+			readonly because: string;
+	  }
+	| {
+			/** `field` names an entry of top-level collection `in` by `matching`.
+			 * Skipped when that collection is absent: absent means "not mine". */
+			readonly kind: "exists";
+			readonly field: string;
+			readonly in: string;
+			readonly matching: string;
+			readonly because: string;
+	  }
+	| {
+			readonly kind: "compare";
+			readonly field: string;
+			readonly op: "<" | "<=" | ">" | ">=";
+			readonly than: string;
+			readonly because: string;
+	  };
 
 /** The part of a node's rules that an anyOf/oneOf branch can override. */
 export type ShapeRules = {
@@ -84,6 +126,7 @@ export type LintHints = {
 type Entry = Record<string, unknown>;
 
 type Walk = {
+	readonly document: Entry;
 	readonly rules: LintRules;
 	readonly hints: LintHints;
 	readonly issues: LintIssue[];
@@ -226,47 +269,6 @@ const checkVariants = ({
 	checkShape({ entry, shape: chosen, at, issues });
 };
 
-const checkRule = ({
-	entry,
-	rule,
-	at,
-	issues,
-}: {
-	entry: Entry;
-	rule: LintRule;
-	at: string;
-	issues: LintIssue[];
-}): void => {
-	if (entry[rule.when] !== rule.equals) return;
-	for (const field of rule.require) {
-		if (entry[field] !== undefined) continue;
-		issues.push({
-			path: at,
-			message: `${field} is required when ${rule.when} is ${show(rule.equals)}. ${rule.because}`,
-		});
-	}
-};
-
-const checkEntry = ({
-	entry,
-	node,
-	at,
-	issues,
-}: {
-	entry: Entry;
-	node: NodeRules;
-	at: string;
-	issues: LintIssue[];
-}): void => {
-	checkShape({ entry, shape: node, at, issues });
-	if (node.variants) {
-		checkVariants({ entry, variants: node.variants, at, issues });
-	}
-	for (const rule of node.rules ?? []) {
-		checkRule({ entry, rule, at, issues });
-	}
-};
-
 const crumbFor = ({
 	node,
 	key,
@@ -288,6 +290,153 @@ const crumbFor = ({
 const render = (trail: readonly string[]): string =>
 	trail.length === 0 ? "config" : trail.join(" › ");
 
+const setFields = ({
+	entry,
+	fields,
+}: {
+	entry: Entry;
+	fields: readonly string[];
+}): string[] => fields.filter((field) => entry[field] !== undefined);
+
+const joinNames = (names: readonly string[]): string =>
+	names.length <= 1
+		? names.join("")
+		: `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+
+const COMPARE = {
+	"<": { holds: (a: number, b: number) => a < b, words: "less than" },
+	"<=": { holds: (a: number, b: number) => a <= b, words: "at most" },
+	">": { holds: (a: number, b: number) => a > b, words: "greater than" },
+	">=": { holds: (a: number, b: number) => a >= b, words: "at least" },
+} as const;
+
+const entryRuleFailures = ({
+	entry,
+	rule,
+	document,
+}: {
+	entry: Entry;
+	rule: LintRule;
+	document: Entry;
+}): string[] => {
+	switch (rule.kind) {
+		case "requiredWhen": {
+			if (entry[rule.when] !== rule.equals) return [];
+			return rule.require
+				.filter((field) => entry[field] === undefined)
+				.map(
+					(field) =>
+						`${field} is required when ${rule.when} is ${show(rule.equals)}. ${rule.because}`,
+				);
+		}
+		case "forbiddenWhen": {
+			if (entry[rule.when] !== rule.equals) return [];
+			return setFields({ entry, fields: rule.forbid }).map(
+				(field) =>
+					`${field} cannot be set when ${rule.when} is ${show(rule.equals)}. ${rule.because}`,
+			);
+		}
+		case "mutex": {
+			const set = setFields({ entry, fields: rule.fields });
+			if (set.length <= 1) return [];
+			return [`${joinNames(set)} cannot be set together. ${rule.because}`];
+		}
+		case "exactlyOne": {
+			const set = setFields({ entry, fields: rule.fields });
+			if (set.length === 1) return [];
+			if (set.length === 0)
+				return [
+					`One of ${joinNames(rule.fields)} is required. ${rule.because}`,
+				];
+			return [`${joinNames(set)} cannot be set together. ${rule.because}`];
+		}
+		case "exists": {
+			const value = entry[rule.field];
+			const target = document[rule.in];
+			if (value === undefined || !Array.isArray(target)) return [];
+			const found = target.some(
+				(candidate) => isEntry(candidate) && candidate[rule.matching] === value,
+			);
+			return found
+				? []
+				: [
+						`${rule.field} ${show(value)} is not in ${rule.in}. ${rule.because}`,
+					];
+		}
+		case "compare": {
+			const a = entry[rule.field];
+			const b = entry[rule.than];
+			if (typeof a !== "number" || typeof b !== "number") return [];
+			const { holds, words } = COMPARE[rule.op];
+			return holds(a, b)
+				? []
+				: [
+						`${rule.field} must be ${words} ${rule.than} — got ${a} and ${b}. ${rule.because}`,
+					];
+		}
+		case "unique":
+			return [];
+	}
+};
+
+/** Rules about the collection as a whole, reported on the offending entry. */
+const checkCollection = ({
+	entries,
+	node,
+	key,
+	trail,
+	issues,
+}: {
+	entries: unknown[];
+	node: NodeRules;
+	key: string;
+	trail: readonly string[];
+	issues: LintIssue[];
+}): void => {
+	for (const rule of node.rules ?? []) {
+		if (rule.kind !== "unique") continue;
+		const seen = new Set<string>();
+		for (const [index, entry] of entries.entries()) {
+			if (!isEntry(entry)) continue;
+			const value = entry[rule.field];
+			if (typeof value !== "string") continue;
+			if (seen.has(value)) {
+				issues.push({
+					path: render([...trail, crumbFor({ node, key, entry, index })]),
+					message: `${rule.field} ${show(value)} is used more than once. ${rule.because}`,
+				});
+			}
+			seen.add(value);
+		}
+	}
+};
+
+const checkEntry = ({
+	entry,
+	node,
+	at,
+	walk,
+}: {
+	entry: Entry;
+	node: NodeRules;
+	at: string;
+	walk: Walk;
+}): void => {
+	checkShape({ entry, shape: node, at, issues: walk.issues });
+	if (node.variants) {
+		checkVariants({ entry, variants: node.variants, at, issues: walk.issues });
+	}
+	for (const rule of node.rules ?? []) {
+		for (const message of entryRuleFailures({
+			entry,
+			rule,
+			document: walk.document,
+		})) {
+			walk.issues.push({ path: at, message });
+		}
+	}
+};
+
 const walkEntry = ({
 	entry,
 	path,
@@ -300,7 +449,7 @@ const walkEntry = ({
 	walk: Walk;
 }): void => {
 	const node = walk.rules[path];
-	if (node) checkEntry({ entry, node, at: render(trail), issues: walk.issues });
+	if (node) checkEntry({ entry, node, at: render(trail), walk });
 
 	for (const [key, child] of Object.entries(entry)) {
 		walkValue({
@@ -331,6 +480,15 @@ const walkValue = ({
 
 	if (Array.isArray(value)) {
 		const node = walk.rules[path];
+		if (node) {
+			checkCollection({
+				entries: value,
+				node,
+				key,
+				trail,
+				issues: walk.issues,
+			});
+		}
 		for (const [index, entry] of value.entries()) {
 			if (!isEntry(entry)) continue;
 			walkEntry({
@@ -383,7 +541,7 @@ export const lintDocument = ({
 	rules: LintRules;
 	hints: LintHints;
 }): LintIssue[] => {
-	const walk: Walk = { rules, hints, issues: [] };
+	const walk: Walk = { document, rules, hints, issues: [] };
 	walkEntry({ entry: document, path: "", trail: [], walk });
 	return walk.issues;
 };
