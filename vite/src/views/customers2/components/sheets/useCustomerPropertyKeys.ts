@@ -1,12 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import type { CustomerPropertySuggestions } from "@/components/billing-controls/UsageLimitConditionRows";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-
-export type CustomerPropertySuggestions = {
-	propertyKeys: string[];
-	valuesByKey: Record<string, string[]>;
-};
 
 const MAX_EVENTS_TO_SCAN = 1000;
 
