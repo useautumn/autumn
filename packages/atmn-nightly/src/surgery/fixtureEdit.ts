@@ -131,7 +131,10 @@ export const removeSpecifierEdit = ({
 	const after = source.slice(end);
 	const commaAfter = after.indexOf(",");
 	if (commaAfter !== -1 && after.slice(0, commaAfter).trim() === "") {
-		return { startPos: start, endPos: end + commaAfter + 1, insertedText: "" };
+		// Take the space after the comma too, or `{ a, b }` becomes `{  b }`.
+		const afterComma = end + commaAfter + 1;
+		const spaces = /^[ \t]*/.exec(source.slice(afterComma))?.[0].length ?? 0;
+		return { startPos: start, endPos: afterComma + spaces, insertedText: "" };
 	}
 	const commaBefore = source.lastIndexOf(",", start);
 	return {
