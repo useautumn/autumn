@@ -126,7 +126,7 @@ export const executeRedisDeductionV2 = async ({
 
 	// One timestamp for the whole operation: the resolver keys windows from it
 	// and Lua receives the same value, so they never disagree on the window.
-	const usageWindowNow = Date.now();
+	const usageWindowNow = ctx.timestamp;
 
 	const duplicateFeatureIds: string[] = [];
 	const mutationLogCustomerEntitlementById = new Map(

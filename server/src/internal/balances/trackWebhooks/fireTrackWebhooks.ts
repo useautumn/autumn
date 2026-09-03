@@ -61,6 +61,8 @@ export const fireTrackWebhooks = ({
 			ctx,
 			oldFullCus,
 			newFullCus,
+			oldFullSubject,
+			newFullSubject,
 			feature: affectedFeature,
 			entityId,
 		}).catch((error) => {

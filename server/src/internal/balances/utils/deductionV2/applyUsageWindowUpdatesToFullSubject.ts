@@ -6,8 +6,8 @@ import type { FullSubject, UsageWindow } from "@autumn/shared";
  * from this subject) reflects the deduction. Sibling of
  * applyDeductionUpdateToFullSubject / applyRolloverUpdatesToFullSubject.
  *
- * The Lua result carries ALL scopes; the subject keeps its own scope only
- * (entity subjects hold just their entity's rows).
+ * The Lua result carries ALL scopes. An entity subject keeps its own rows
+ * plus the customer-scope rows, which back caps it inherits from the customer.
  */
 export const applyUsageWindowUpdatesToFullSubject = ({
 	fullSubject,
@@ -21,10 +21,10 @@ export const applyUsageWindowUpdatesToFullSubject = ({
 	const updatedFeatureIds = new Set(Object.keys(usageWindowsByFeatureId));
 	const updatedWindows = Object.values(usageWindowsByFeatureId)
 		.flat()
-		.filter((usageWindow) =>
-			fullSubject.internalEntityId
-				? usageWindow.internal_entity_id === fullSubject.internalEntityId
-				: true,
+		.filter(
+			(usageWindow) =>
+				usageWindow.internal_entity_id == null ||
+				usageWindow.internal_entity_id === fullSubject.internalEntityId,
 		);
 
 	fullSubject.usage_windows = [
