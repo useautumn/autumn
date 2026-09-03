@@ -42,8 +42,11 @@ const mergeLookedUpCoupon = ({
  */
 export const useDiscountSearch = ({
 	options,
+	isCouponAllowed = () => true,
 }: {
 	options: DiscountOption[];
+	/** Same rule the caller used to build `options`, so a lookup can't bypass it. */
+	isCouponAllowed?: (coupon: StripeCouponWithPromoCodes) => boolean;
 }) => {
 	const [search, setSearch] = useState("");
 	const [lookedUpCoupons, setLookedUpCoupons] = useState<
@@ -66,13 +69,13 @@ export const useDiscountSearch = ({
 	// Keep every coupon found, so a picked one stays resolvable after the
 	// search text moves on.
 	useEffect(() => {
-		if (!coupon) return;
+		if (!coupon || !isCouponAllowed(coupon)) return;
 		setLookedUpCoupons((previous) =>
 			previous.some((known) => known.id === coupon.id)
 				? previous
 				: [...previous, coupon],
 		);
-	}, [coupon]);
+	}, [coupon, isCouponAllowed]);
 
 	const mergedOptions = lookedUpCoupons.reduce(
 		(merged, lookedUp) =>

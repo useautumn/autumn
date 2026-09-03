@@ -91,20 +91,29 @@ export const stripeCouponToOption = (
 	searchTerms: coupon.promotion_codes,
 });
 
+/** Whether a Stripe coupon can be applied when picking for `productId`. */
+export const stripeCouponAppliesToProduct = ({
+	coupon,
+	productId,
+}: {
+	coupon: Stripe.Coupon;
+	productId: string | undefined;
+}): boolean => {
+	if (!productId) return true;
+	const productIds = coupon.applies_to?.products;
+	return !productIds?.length || productIds.includes(productId);
+};
+
 const filterStripeCouponsByProduct = ({
 	stripeCoupons,
 	productId,
 }: {
 	stripeCoupons: StripeCouponWithPromoCodes[];
 	productId: string | undefined;
-}) => {
-	if (!productId) return stripeCoupons;
-
-	return stripeCoupons.filter((coupon) => {
-		const productIds = coupon.applies_to?.products;
-		return !productIds?.length || productIds.includes(productId);
-	});
-};
+}) =>
+	stripeCoupons.filter((coupon) =>
+		stripeCouponAppliesToProduct({ coupon, productId }),
+	);
 
 /** Builds a merged, deduplicated list of discount options from Autumn rewards and Stripe coupons */
 export const buildDiscountOptions = ({
