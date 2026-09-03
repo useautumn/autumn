@@ -212,7 +212,11 @@ export function AttachAdvancedSection() {
 		resetBillingCycle && billingCycleAnchorMode === "now";
 
 	// Only an immediate, prorated switch produces credit that can go back to the card.
+	// Multi-plan attach has no refund support, and without an outgoing plan
+	// there is no credit to hand back.
 	const canRefundOutgoingPlan =
+		hasOutgoing &&
+		!isMultiPlan &&
 		rules.proration.visible &&
 		!rules.proration.disabled &&
 		showProrationBehavior &&

@@ -30,13 +30,14 @@ export const finalizeAttachPlan = async ({
 		customLineItems: params.custom_line_items,
 	});
 
-	// Without an outgoing plan there is nothing to refund, and a "full" refund
-	// would otherwise return the last invoice on a plain add-on attach.
-	const removesOutgoingPlan = (plan.lineItems ?? []).some(
-		(lineItem) => lineItem.context.direction === "refund",
+	// Refund lines can appear for siblings on an add-on attach, so the outgoing
+	// plan itself is the signal — otherwise a "full" refund would return the
+	// last invoice when nothing was actually replaced.
+	const replacesExistingPlan = Boolean(
+		attachBillingContext.currentCustomerProduct,
 	);
 
-	if (removesOutgoingPlan) {
+	if (replacesExistingPlan) {
 		const { lineItems, refundPlan } = await computeRefundPlan({
 			ctx,
 			billingContext: attachBillingContext,

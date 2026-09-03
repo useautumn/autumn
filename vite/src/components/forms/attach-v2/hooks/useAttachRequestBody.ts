@@ -195,12 +195,12 @@ export function buildAttachRequestBody({
 		disableProration,
 	});
 
-	if (normalizedProrationBehavior) {
-		body.billing_behavior = normalizedProrationBehavior;
-	}
-
+	// A refund already implies immediate proration, and the two are mutually
+	// exclusive on the wire.
 	if (refundLastPayment) {
 		body.refund_last_payment = refundLastPayment;
+	} else if (normalizedProrationBehavior) {
+		body.billing_behavior = normalizedProrationBehavior;
 	}
 
 	if (newBillingSubscription) {

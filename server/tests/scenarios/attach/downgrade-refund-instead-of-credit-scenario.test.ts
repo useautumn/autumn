@@ -66,14 +66,11 @@ test(`${chalk.yellowBright("attach annual -> monthly: refunds prorated credit to
 
 	await autumnV1.billing.attach(switchWithRefund);
 
+	// Poll, since the customer cache may not have settled right after the attach.
+	await expectProductActive({ customerId, productId: proMonthly.id });
+
 	const customerAfterSwitch =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// The customer ends up on the monthly plan, billed for it.
-	await expectProductActive({
-		customer: customerAfterSwitch,
-		productId: proMonthly.id,
-	});
 	const switchInvoice = getLatestInvoice({ customer: customerAfterSwitch });
 	expect(switchInvoice.total).toBeCloseTo(preview.total, 2);
 
@@ -99,4 +96,30 @@ test(`${chalk.yellowBright("attach annual -> monthly: refunds prorated credit to
 		preview.refund?.amount,
 		2,
 	);
+});
+
+test(`${chalk.yellowBright("attach premium -> pro: rejects a refund on a defaulted end-of-cycle downgrade")}`, async () => {
+	const customerId = "attach-refund-defaulted-schedule";
+
+	const premium = products.premium({ id: "premium-sched", items: [] });
+	const pro = products.pro({ id: "pro-sched", items: [] });
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [s.attach({ productId: premium.id })],
+	});
+
+	// A downgrade with no plan_schedule resolves to end_of_cycle, where the
+	// outgoing plan stays active — so the refund must be refused, not dropped.
+	await expect(
+		autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			refund_last_payment: "prorated" as const,
+		}),
+	).rejects.toThrow(/immediate plan switch/);
 });
