@@ -1,11 +1,15 @@
-import type { Reward, RewardProgram } from "@autumn/shared";
+import type {
+	Reward,
+	RewardProgram,
+	StripeCouponWithPromoCodes,
+} from "@autumn/shared";
 import {
 	filterRewardsByProduct,
 	formatAmount,
 	RewardType,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { StripeCouponWithPromoCodes } from "@/utils/product/couponUtils";
 
 /** Unified type for discount options from both Autumn rewards and Stripe coupons */
 export type DiscountOption = {
@@ -44,16 +48,21 @@ export const rewardToOption = (reward: Reward): DiscountOption => {
 /** Formats a Stripe coupon's discount value for display, e.g. "$1,500.00 off" */
 export const formatCouponDiscount = (coupon: Stripe.Coupon): string => {
 	if (coupon.percent_off) return `${coupon.percent_off}% off`;
-	if (coupon.amount_off) {
-		const amount = formatAmount({
-			amount: coupon.amount_off / 100,
-			currency: coupon.currency,
-			minFractionDigits: 2,
-			maxFractionDigits: 2,
-		});
-		return `${amount} off`;
-	}
-	return "";
+	if (!coupon.amount_off) return "";
+
+	const currency = coupon.currency ?? undefined;
+	const amount = formatAmount({
+		amount: stripeToAtmnAmount({ amount: coupon.amount_off, currency }),
+		currency,
+		// Leave the fraction digits to Intl so each currency keeps its own
+		// precision: $1,500.00, but ¥1,850.
+		amountFormatOptions: {
+			minimumFractionDigits: undefined,
+			maximumFractionDigits: undefined,
+		},
+	});
+
+	return `${amount} off`;
 };
 
 /** Converts a Stripe coupon to a unified discount option */
@@ -64,7 +73,7 @@ export const stripeCouponToOption = (
 	label: coupon.name || coupon.id,
 	sublabel: formatCouponDiscount(coupon),
 	source: "stripe",
-	searchTerms: coupon.promotion_codes ?? [],
+	searchTerms: coupon.promotion_codes,
 });
 
 const filterStripeCouponsByProduct = ({

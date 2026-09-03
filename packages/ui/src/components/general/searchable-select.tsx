@@ -28,7 +28,7 @@ export type SearchableSelectProps<T> = {
 	options: T[];
 	getOptionValue: (option: T) => string;
 	getOptionLabel: (option: T) => string;
-	/** Extra strings the option can be matched on, e.g. codes shown as sublabels */
+	/** Extra strings to match on, alongside the option's label and value. */
 	getOptionSearchTerms?: (option: T) => (string | null | undefined)[];
 	getOptionDisabled?: (option: T) => boolean;
 	renderOption?: (option: T, isSelected: boolean) => ReactNode;

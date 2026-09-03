@@ -1,7 +1,7 @@
+import type { StripeCouponWithPromoCodes } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import type { StripeCouponWithPromoCodes } from "@/utils/product/couponUtils";
 
 export const useStripeCouponsQuery = () => {
 	const axiosInstance = useAxiosInstance();
