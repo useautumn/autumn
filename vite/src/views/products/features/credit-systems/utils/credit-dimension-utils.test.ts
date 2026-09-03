@@ -2,8 +2,11 @@ import { expect, test } from "bun:test";
 import type { CreditSchemaItem } from "@autumn/shared";
 import {
 	dimensionValues,
+	filledRateRows,
 	mergeDimensionValues,
+	missingCombinationCount,
 	multiplierRules,
+	rateRowsOf,
 	rateRules,
 	setMatchValue,
 	withAllowedValues,
@@ -137,4 +140,36 @@ test("the switch strips everything", () => {
 		metered_feature_id: "cpu_minutes",
 		credit_amount: 1,
 	});
+});
+
+test("missing combinations count the full grid minus rows already there", () => {
+	expect(
+		missingCombinationCount({
+			values: { size: ["small", "large"], region: ["eu", "us"], tier: [] },
+			rows: rateRowsOf({ rules: rateRules(row), drafts: [] }),
+		}),
+	).toBe(3);
+	expect(missingCombinationCount({ values: { size: [] }, rows: [] })).toBe(0);
+});
+
+test("filling keeps exact rows, inherits from covering rules, drafts the rest, and folds partial rows away", () => {
+	const filled = filledRateRows({
+		values: { size: ["small", "large"], region: ["eu", "us"] },
+		rows: rateRowsOf({ rules: rateRules(row), drafts: [{ size: "small" }] }),
+	});
+
+	expect(filled).toEqual([
+		{ name: "", match: { size: "small", region: "eu" } },
+		{ name: "", match: { size: "small", region: "us" } },
+		{
+			name: "size_large_region_eu",
+			match: { size: "large", region: "eu" },
+			dimension: { match: { size: "large", region: "eu" }, credit_amount: 20 },
+		},
+		{
+			name: "",
+			match: { size: "large", region: "us" },
+			dimension: { match: { size: "large", region: "us" }, credit_amount: 16 },
+		},
+	]);
 });

@@ -1,4 +1,10 @@
-import { IconButton } from "@autumn/ui";
+import {
+	IconButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import { WarningIcon } from "@phosphor-icons/react";
 import type {
 	ColumnDef,
 	Row,
@@ -18,6 +24,8 @@ export interface MatchRow {
 	index: number;
 	label: string;
 	match: CreditMatch;
+	/** Set when this row and another could match the same event; the save is blocked until fixed. */
+	warning?: string;
 }
 
 export interface MatchTableMeta {
@@ -59,13 +67,26 @@ export const matchColumns = <T extends MatchRow>(
 		},
 	}));
 
+/** Wide enough for the warning glyph beside the remove button. */
+const ACTIONS_COLUMN_WIDTH = 64;
+
 export const removeColumn = <T extends MatchRow>(): ColumnDef<T, unknown> => ({
 	header: "",
 	id: "actions",
-	size: 40,
+	size: ACTIONS_COLUMN_WIDTH,
 	enableSorting: false,
 	cell: ({ row, table }: MatchCellContext<T>) => (
-		<div className="flex justify-end">
+		<div className="flex justify-end items-center gap-1">
+			{row.original.warning && (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<span className="inline-flex text-amber-600 dark:text-amber-500">
+							<WarningIcon size={14} weight="fill" />
+						</span>
+					</TooltipTrigger>
+					<TooltipContent>{row.original.warning}</TooltipContent>
+				</Tooltip>
+			)}
 			<IconButton
 				aria-label={`Remove ${row.original.label}`}
 				variant="skeleton"

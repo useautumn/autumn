@@ -119,7 +119,7 @@ export const withMultiplierRules = ({
 	};
 };
 
-const isMatchAllowed = (match: CreditMatch, allowed: DimensionValues) =>
+export const isMatchAllowed = (match: CreditMatch, allowed: DimensionValues) =>
 	Object.entries(match).every(([field, value]) =>
 		allowed[field]?.includes(value),
 	);
@@ -156,11 +156,6 @@ export const withoutDimensions = (item: CreditSchemaItem): CreditSchemaItem => {
 	return rest;
 };
 
-export const createRateRule = (): CreditRateRule => ({
-	name: "",
-	dimension: { match: {}, credit_amount: 0 },
-});
-
 export const createMultiplierRule = (): CreditMultiplierRule => ({
 	name: "",
 	multiplier: { match: {}, factor: 1 },
@@ -178,4 +173,137 @@ export const setMatchValue = ({
 }): CreditMatch => {
 	const { [field]: _current, ...others } = match;
 	return value === undefined ? others : { ...others, [field]: value };
+};
+
+/** A row of the rates table: a saved rule, or a draft that only has its match so far. */
+export type CreditRateRow = {
+	name: string;
+	match: CreditMatch;
+	dimension?: CreditDimension;
+};
+
+export const rateRowsOf = ({
+	rules,
+	drafts,
+}: {
+	rules: CreditRateRule[];
+	drafts: CreditMatch[];
+}): CreditRateRow[] => [
+	...rules.map(({ name, dimension }) => ({
+		name,
+		match: dimension.match,
+		dimension,
+	})),
+	...drafts.map((match) => ({ name: "", match })),
+];
+
+export const rulesOf = (rows: CreditRateRow[]): CreditRateRule[] =>
+	rows.flatMap((row) =>
+		row.dimension ? [{ name: row.name, dimension: row.dimension }] : [],
+	);
+
+export const draftsOf = (rows: CreditRateRow[]): CreditMatch[] =>
+	rows.flatMap((row) => (row.dimension ? [] : [row.match]));
+
+export const withRateCredits = ({
+	row,
+	credits,
+}: {
+	row: CreditRateRow;
+	credits: number | undefined;
+}): CreditRateRow => {
+	if (credits === undefined) return { name: row.name, match: row.match };
+	const dimension =
+		row.dimension?.tier_behavior === "graduated"
+			? row.dimension
+			: { ...row.dimension, match: row.match, credit_amount: credits };
+	return { ...row, dimension };
+};
+
+export const withRateMatch = ({
+	row,
+	match,
+}: {
+	row: CreditRateRow;
+	match: CreditMatch;
+}): CreditRateRow => ({
+	...row,
+	match,
+	...(row.dimension ? { dimension: { ...row.dimension, match } } : {}),
+});
+
+const specificity = (match: CreditMatch) => Object.keys(match).length;
+
+const sameMatch = (left: CreditMatch, right: CreditMatch) =>
+	specificity(left) === specificity(right) &&
+	Object.entries(left).every(([key, value]) => right[key] === value);
+
+const covers = (partial: CreditMatch, full: CreditMatch) =>
+	Object.entries(partial).every(([key, value]) => full[key] === value);
+
+/** The saved rule that would price this match at runtime: the most specific one covering it. */
+export const coveringRule = ({
+	rules,
+	match,
+}: {
+	rules: CreditRateRule[];
+	match: CreditMatch;
+}): CreditRateRule | undefined =>
+	rules
+		.filter((rule) => covers(rule.dimension.match, match))
+		.sort(
+			(left, right) =>
+				specificity(right.dimension.match) - specificity(left.dimension.match),
+		)[0];
+
+export const MAX_FILLED_COMBINATIONS = 100;
+
+const cartesian = (lists: string[][]): string[][] =>
+	lists.reduce<string[][]>(
+		(combos, list) => combos.flatMap((combo) => list.map((v) => [...combo, v])),
+		[[]],
+	);
+
+const fullCombinations = (values: DimensionValues): CreditMatch[] => {
+	const fields = Object.keys(values).filter(
+		(field) => values[field].length > 0,
+	);
+	if (fields.length === 0) return [];
+	return cartesian(fields.map((field) => values[field])).map((combo) =>
+		Object.fromEntries(fields.map((field, i) => [field, combo[i]])),
+	);
+};
+
+export const missingCombinationCount = ({
+	values,
+	rows,
+}: {
+	values: DimensionValues;
+	rows: CreditRateRow[];
+}): number =>
+	fullCombinations(values).filter(
+		(match) => !rows.some((row) => sameMatch(row.match, match)),
+	).length;
+
+/**
+ * One row per full combination: exact rows stay, combinations under a partial
+ * rule inherit its rate, the rest become drafts. Partial rows are folded into
+ * the grid and dropped, so the table never mixes both.
+ */
+export const filledRateRows = ({
+	values,
+	rows,
+}: {
+	values: DimensionValues;
+	rows: CreditRateRow[];
+}): CreditRateRow[] => {
+	const rules = rulesOf(rows);
+	return fullCombinations(values).map((match) => {
+		const exact = rows.find((row) => sameMatch(row.match, match));
+		if (exact) return exact;
+		const seed = coveringRule({ rules, match });
+		return seed
+			? { name: "", match, dimension: { ...seed.dimension, match } }
+			: { name: "", match };
+	});
 };

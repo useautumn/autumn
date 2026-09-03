@@ -10,6 +10,7 @@ export { isAnyCreditSystem } from "@utils/featureUtils/classifyFeature/isAnyCred
 export * from "./apiFeatureToDbFeature";
 export * from "./convertFeatureUtils";
 export * from "./creditDimensions/creditDimensionRulesEqual";
+export * from "./creditDimensions/findAmbiguousCreditDimensions";
 export * from "./creditSystemUtils";
 export * from "./findFeatureUtils";
 export * from "./sortFeatures";

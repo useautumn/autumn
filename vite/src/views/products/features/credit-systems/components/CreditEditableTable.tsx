@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface CreditEditableTableProps<T> {
 	title: string;
 	hint: string;
+	action?: ReactNode;
 	table: TableInstance<T>;
 	columnCount: number;
 	footer: ReactNode;
@@ -17,6 +18,7 @@ interface CreditEditableTableProps<T> {
 export function CreditEditableTable<T>({
 	title,
 	hint,
+	action,
 	table,
 	columnCount,
 	footer,
@@ -25,10 +27,13 @@ export function CreditEditableTable<T>({
 
 	return (
 		<div className="flex flex-col gap-2">
-			<span className="flex items-center gap-1.5 text-sm font-medium">
-				{title}
-				<InfoTooltip>{hint}</InfoTooltip>
-			</span>
+			<div className="flex items-center justify-between gap-2">
+				<span className="flex items-center gap-1.5 text-sm font-medium">
+					{title}
+					<InfoTooltip>{hint}</InfoTooltip>
+				</span>
+				{action}
+			</div>
 			<div className="rounded-lg border shadow-card overflow-hidden">
 				{hasRows && (
 					<Table.Provider

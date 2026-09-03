@@ -34,11 +34,16 @@ export function CreditDimensionPriceList({
 				<>
 					<CreditDimensionRateTable
 						values={editor.values}
-						rules={editor.rules}
+						rows={editor.rows}
+						inheritedCredits={editor.inheritedCredits}
+						rateWarnings={editor.rateWarnings}
 						baseRate={baseRate}
-						onRuleChange={editor.setRule}
-						onRuleRemove={editor.removeRule}
-						onRuleAdd={editor.addRule}
+						onMatchChange={editor.setRowMatch}
+						onCreditsChange={editor.setRowCredits}
+						onRemove={editor.removeRow}
+						onAdd={editor.addRow}
+						missingCombinationCount={editor.missingCombinationCount}
+						onFillCombinations={editor.fillCombinations}
 					/>
 					<CreditDimensionMultiplierTable
 						values={editor.values}

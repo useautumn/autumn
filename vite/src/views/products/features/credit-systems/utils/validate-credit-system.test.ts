@@ -170,3 +170,22 @@ test("multiplier factors must be positive", () => {
 		),
 	).toBe("Multiplier factors must be greater than 0");
 });
+
+test("two rates that can match the same event block the save", () => {
+	expect(
+		validateCreditSystem(
+			creditSystem([
+				{
+					metered_feature_id: "cpu_minutes",
+					credit_amount: 1,
+					dimensions: {
+						size_large: { match: { size: "large" }, credit_amount: 16 },
+						region_eu: { match: { region: "eu" }, credit_amount: 12 },
+					},
+				},
+			]),
+		),
+	).toBe(
+		"Two rates both match size=large, region=eu. Add a value to one of them",
+	);
+});

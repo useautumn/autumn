@@ -11,8 +11,8 @@ export const validateCreditDimensionRules = ({
 	schemaItem: CreditSchemaItem;
 	invalidCreditSystem: (message: string) => never;
 }): void => {
-	const dimensions = Object.entries(schemaItem.dimensions ?? {});
-	for (const [name, dimension] of dimensions) {
+	const dimensions = schemaItem.dimensions ?? {};
+	for (const [name, dimension] of Object.entries(dimensions)) {
 		if (
 			dimension.priority !== undefined &&
 			!Number.isInteger(dimension.priority)

@@ -1,6 +1,8 @@
 import {
 	type CreateFeature,
 	type CreditSchemaItem,
+	findAmbiguousCreditDimensions,
+	formatCreditMatch,
 	Infinite,
 	isAiCreditSystem,
 	isCustomModel,
@@ -23,6 +25,10 @@ const validateDimensionMatches = (item: CreditSchemaItem): string | null => {
 			if (!key.trim()) return "Each dimension needs a property";
 			if (!value.trim()) return `Each ${key} value needs a name`;
 		}
+	}
+	const [ambiguous] = findAmbiguousCreditDimensions(item.dimensions ?? {});
+	if (ambiguous) {
+		return `Two rates both match ${formatCreditMatch(ambiguous.example)}. Add a value to one of them`;
 	}
 	for (const multiplier of Object.values(item.multipliers ?? {})) {
 		const factor = Number(multiplier.factor);

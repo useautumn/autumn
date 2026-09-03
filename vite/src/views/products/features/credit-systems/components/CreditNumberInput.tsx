@@ -5,6 +5,8 @@ import { useState } from "react";
 interface CreditNumberInputProps {
 	value: number | undefined;
 	onValueChange: (value: number) => void;
+	/** Blurring while empty clears instead of writing 0. */
+	onClear?: () => void;
 	placeholder?: string;
 	className?: string;
 	disabled?: boolean;
@@ -17,6 +19,7 @@ interface CreditNumberInputProps {
 export function CreditNumberInput({
 	value,
 	onValueChange,
+	onClear,
 	placeholder,
 	className,
 	disabled,
@@ -45,7 +48,7 @@ export function CreditNumberInput({
 				if (raw !== "" && Number.isFinite(parsed)) onValueChange(parsed);
 			}}
 			onBlur={() => {
-				if (draft === "") onValueChange(0);
+				if (draft === "") (onClear ?? (() => onValueChange(0)))();
 				setDraft(null);
 			}}
 		/>
