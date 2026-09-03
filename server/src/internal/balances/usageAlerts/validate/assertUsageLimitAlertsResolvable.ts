@@ -1,58 +1,25 @@
 import {
-	type CusProductStatus,
 	type DbUsageAlertLike,
-	type DbUsageLimit,
+	type DbUsageLimitLike,
 	ErrCode,
-	type FullSubject,
 	findUnresolvableUsageLimitAlerts,
-	fullSubjectToPlanProducts,
-	getPlanBillingControlProducts,
-	isUsageLimitBasisAlert,
 	RecaseError,
 } from "@autumn/shared";
 
-const planUsageLimitsOf = ({
-	fullSubject,
-	inStatuses,
-}: {
-	fullSubject: FullSubject;
-	inStatuses: CusProductStatus[];
-}): DbUsageLimit[] =>
-	getPlanBillingControlProducts({
-		customerProducts: fullSubjectToPlanProducts({ fullSubject }),
-		inStatuses,
-	}).flatMap((customerProduct) => customerProduct.product?.usage_limits ?? []);
-
-export const writesUsageLimitAlert = (
-	usageAlerts: DbUsageAlertLike[] | null | undefined,
-): boolean => (usageAlerts ?? []).some(isUsageLimitBasisAlert);
-
-/**
- * A usage_limit alert must point at a cap the subject will see after this
- * write: the caller passes the scope's limits as they will be stored, and the
- * plans enforcement reads are added here. Throws 400 naming the first orphan.
- */
+/** Every usage_limit alert must match a cap in one of the lists the scope will see after this write. */
 export const assertUsageLimitAlertsResolvable = ({
 	usageAlerts,
-	scopeUsageLimits,
-	fullSubject,
-	inStatuses,
+	usageLimitLists,
 }: {
 	usageAlerts: DbUsageAlertLike[];
-	scopeUsageLimits: Array<DbUsageLimit[] | null | undefined>;
-	fullSubject: FullSubject | null | undefined;
-	inStatuses: CusProductStatus[];
+	usageLimitLists: Array<
+		Array<Pick<DbUsageLimitLike, "feature_id" | "filter">> | null | undefined
+	>;
 }): void => {
-	if (!writesUsageLimitAlert(usageAlerts)) return;
-
-	const unresolvable = findUnresolvableUsageLimitAlerts({
+	const orphan = findUnresolvableUsageLimitAlerts({
 		usageAlerts,
-		usageLimitLists: [
-			...scopeUsageLimits,
-			fullSubject ? planUsageLimitsOf({ fullSubject, inStatuses }) : [],
-		],
-	});
-	const orphan = unresolvable[0];
+		usageLimitLists,
+	})[0];
 	if (!orphan) return;
 
 	throw new RecaseError({

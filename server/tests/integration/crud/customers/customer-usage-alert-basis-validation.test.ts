@@ -334,6 +334,53 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("alert-basis-validation8: catalog updates check usage_limit alerts against the merged plan")}`,
+	async () => {
+		const planId = "alert-basis-catalog-merged";
+		await initScenario({ setup: [], actions: [] });
+		const messages = [items.monthlyMessages({ includedUsage: 1000 })];
+		const usageLimitAlerts = [percentAlert({ basis: "usage_limit" })];
+
+		await expectAutumnError({
+			func: () =>
+				autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: planId,
+							items: messages,
+							billing_controls: { usage_alerts: usageLimitAlerts },
+						},
+					],
+				}),
+		});
+
+		await autumnV2_3.catalogV2.update({
+			plans: [
+				{
+					plan_id: planId,
+					items: messages,
+					billing_controls: { usage_limits: [dailyLimit()] },
+				},
+			],
+		});
+		await autumnV2_3.catalogV2.update({
+			plans: [
+				{
+					plan_id: planId,
+					billing_controls: { usage_alerts: usageLimitAlerts },
+				},
+			],
+		});
+		await expectAutumnError({
+			func: () =>
+				autumnV2_3.catalogV2.update({
+					plans: [{ plan_id: planId, billing_controls: { usage_limits: [] } }],
+				}),
+		});
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("alert-basis-validation7: org config rejects basis usage_limit")}`,
 	async () => {
 		const rejected = OrgConfigSchema.safeParse({

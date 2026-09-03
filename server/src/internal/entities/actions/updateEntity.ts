@@ -2,16 +2,12 @@ import {
 	CustomerNotFoundError,
 	EntityNotFoundError,
 	ErrCode,
-	orgToInStatuses,
 	RecaseError,
 	type UpdateEntityParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
-import {
-	assertUsageLimitAlertsResolvable,
-	writesUsageLimitAlert,
-} from "@/internal/balances/usageAlerts/validate/assertUsageLimitAlertsResolvable.js";
+import { assertEntityUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertEntityUsageLimitAlertsResolvable.js";
 import { updateCachedEntityData } from "@/internal/customers/cache/fullSubject/actions/updateCachedEntityData.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 
@@ -51,17 +47,12 @@ export const updateEntity = async ({
 		throw new EntityNotFoundError({ entityId });
 	}
 
-	if (writesUsageLimitAlert(billing_controls?.usage_alerts)) {
-		assertUsageLimitAlertsResolvable({
-			usageAlerts: billing_controls?.usage_alerts ?? [],
-			scopeUsageLimits: [
-				billing_controls?.usage_limits ?? entity.usage_limits,
-				fullSubject.customer.usage_limits,
-			],
-			fullSubject,
-			inStatuses: orgToInStatuses({ org: ctx.org }),
-		});
-	}
+	assertEntityUsageLimitAlertsResolvable({
+		ctx,
+		entity,
+		fullSubject,
+		billingControls: billing_controls,
+	});
 
 	const filteredUpdates = Object.fromEntries(
 		Object.entries({
