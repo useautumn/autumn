@@ -79,7 +79,8 @@ export const runPull = async ({
 
 	const [preview, catalog] = await Promise.all([
 		client.previewUpdate(wire),
-		client.get({}),
+		// History rows too: pull routes them into plans or planVersions.
+		client.get({ include_versions: true }),
 	]);
 
 	const files = new Map<string, string>();
