@@ -8,7 +8,6 @@ import { assertUsageLimitAlertsResolvable } from "./assertUsageLimitAlertsResolv
 import { fullSubjectToPlanUsageLimits } from "./fullSubjectToPlanUsageLimits.js";
 import { writesUsageLimitAlert } from "./writesUsageLimitAlert.js";
 
-/** Entity alerts see the entity's limits as this write leaves them, then the customer's, then the plans'. */
 export const assertEntityUsageLimitAlertsResolvable = ({
 	ctx,
 	entity,

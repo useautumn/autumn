@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Caps the subject's plans supply, on the statuses enforcement reads. */
 export const fullSubjectToPlanUsageLimits = ({
 	ctx,
 	fullSubject,

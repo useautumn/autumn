@@ -5,7 +5,6 @@ import { assertUsageLimitAlertsResolvable } from "./assertUsageLimitAlertsResolv
 import { fullSubjectToPlanUsageLimits } from "./fullSubjectToPlanUsageLimits.js";
 import { writesUsageLimitAlert } from "./writesUsageLimitAlert.js";
 
-/** Customer alerts see the customer's limits as this write leaves them, then the plans'. */
 export const assertCustomerUsageLimitAlertsResolvable = async ({
 	ctx,
 	customer,

@@ -6,7 +6,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 
-/** Every usage_limit alert must match a cap in one of the lists the scope will see after this write. */
 export const assertUsageLimitAlertsResolvable = ({
 	usageAlerts,
 	usageLimitLists,
