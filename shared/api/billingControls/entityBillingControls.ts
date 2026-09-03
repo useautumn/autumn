@@ -1,4 +1,8 @@
 import { z } from "zod/v4";
+import {
+	featureIdIdentity,
+	findDuplicateBillingControlIssue,
+} from "../../models/cusModels/billingControls/findDuplicateBillingControlIssue.js";
 import { DbOverageAllowedSchema } from "../../models/cusModels/billingControls/overageAllowed.js";
 import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
 import { DbUsageAlertSchema } from "../../models/cusModels/billingControls/usageAlert.js";
@@ -51,85 +55,38 @@ const ApiEntityBillingControlsParamsBaseSchema = z.object({
 export const ApiEntityBillingControlsParamsSchema =
 	ApiEntityBillingControlsParamsBaseSchema.check((ctx) => {
 		const billingControls = ctx.value;
-		const spendLimitFeatureIds = new Set<string>();
-
-		for (const [index, spendLimit] of (
-			billingControls.spend_limits ?? []
-		).entries()) {
-			if (!spendLimit.feature_id) {
-				continue;
-			}
-
-			if (spendLimitFeatureIds.has(spendLimit.feature_id)) {
-				ctx.issues.push({
-					code: "custom",
-					message: "Only one spend limit entry is allowed per feature_id",
-					input: spendLimit.feature_id,
-					path: ["spend_limits", index, "feature_id"],
-				});
-				return;
-			}
-
-			spendLimitFeatureIds.add(spendLimit.feature_id);
-		}
-
-		const usageLimitIdentities = new Set<string>();
-
-		for (const [index, usageLimit] of (
-			billingControls.usage_limits ?? []
-		).entries()) {
-			const identity = usageLimitIdentity(usageLimit);
-			if (usageLimitIdentities.has(identity)) {
-				ctx.issues.push({
-					code: "custom",
-					message:
-						"Only one usage limit entry is allowed per feature_id and filter",
-					input: usageLimit.feature_id,
-					path: ["usage_limits", index, "feature_id"],
-				});
-				return;
-			}
-
-			usageLimitIdentities.add(identity);
-		}
-
-		const usageAlertIdentities = new Set<string>();
-
-		for (const [index, usageAlert] of (
-			billingControls.usage_alerts ?? []
-		).entries()) {
-			const identity = usageAlertIdentity(usageAlert);
-			if (usageAlertIdentities.has(identity)) {
-				ctx.issues.push({
-					code: "custom",
-					message:
-						"Only one usage alert entry is allowed per feature_id, basis, filter, threshold_type and threshold",
-					input: usageAlert.threshold,
-					path: ["usage_alerts", index, "threshold"],
-				});
-				return;
-			}
-
-			usageAlertIdentities.add(identity);
-		}
-
-		const overageAllowedFeatureIds = new Set<string>();
-
-		for (const [index, overageAllowed] of (
-			billingControls.overage_allowed ?? []
-		).entries()) {
-			if (overageAllowedFeatureIds.has(overageAllowed.feature_id)) {
-				ctx.issues.push({
-					code: "custom",
-					message: "Only one overage_allowed entry is allowed per feature_id",
-					input: overageAllowed.feature_id,
-					path: ["overage_allowed", index, "feature_id"],
-				});
-				return;
-			}
-
-			overageAllowedFeatureIds.add(overageAllowed.feature_id);
-		}
+		const issue =
+			findDuplicateBillingControlIssue({
+				controlKey: "spend_limits",
+				controls: billingControls.spend_limits,
+				identityOf: featureIdIdentity,
+				field: "feature_id",
+				message: "Only one spend limit entry is allowed per feature_id",
+			}) ??
+			findDuplicateBillingControlIssue({
+				controlKey: "usage_limits",
+				controls: billingControls.usage_limits,
+				identityOf: usageLimitIdentity,
+				field: "feature_id",
+				message:
+					"Only one usage limit entry is allowed per feature_id and filter",
+			}) ??
+			findDuplicateBillingControlIssue({
+				controlKey: "usage_alerts",
+				controls: billingControls.usage_alerts,
+				identityOf: usageAlertIdentity,
+				field: "threshold",
+				message:
+					"Only one usage alert entry is allowed per feature_id, basis, filter, threshold_type and threshold",
+			}) ??
+			findDuplicateBillingControlIssue({
+				controlKey: "overage_allowed",
+				controls: billingControls.overage_allowed,
+				identityOf: featureIdIdentity,
+				field: "feature_id",
+				message: "Only one overage_allowed entry is allowed per feature_id",
+			});
+		if (issue) ctx.issues.push(issue);
 	});
 
 export type ApiEntityBillingControls = z.infer<
