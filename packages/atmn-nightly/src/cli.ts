@@ -28,7 +28,7 @@ const withEnvironmentFlags = (command: Command): Command =>
 		.option("--sandbox <sandboxId>", "target a specific sandbox")
 		.option("-l, --local", "target a local server (default port 8080)")
 		// Long-only: -p is prod.
-		.option("--port <port>", "port for --local")
+		.option("--port <port>", "port of a local server (implies --local)")
 		.option("-b, --base-url <url>", "send to this URL instead");
 
 export const buildProgram = (): Command => {
