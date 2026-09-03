@@ -16,7 +16,7 @@ export const USAGE_ALERT_BASIS_DESCRIPTIONS: Record<UsageAlertBasis, string> = {
 	included: "Only the allowance granted by plans.",
 	recurring: "Only grants that reset each period.",
 	usage_limit:
-		"The cap of the usage limit with the same feature and conditions.",
+		"The cap of this feature's usage limit. With no conditions, that is the limit without conditions.",
 };
 
 export type UsageAlertBasisOption = { value: UsageAlertBasis; label: string };

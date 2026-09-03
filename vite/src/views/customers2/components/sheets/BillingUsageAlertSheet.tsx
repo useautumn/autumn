@@ -358,8 +358,9 @@ export function BillingUsageAlertSheet() {
 									suggestions={propertySuggestions}
 								/>
 								<p className="mt-2 text-tertiary-foreground text-xs">
-									Match the conditions of the usage limit this alert should
-									measure.
+									Leave empty to measure this feature's usage limit without
+									conditions. Add conditions only to target a limit that has the
+									same ones.
 								</p>
 							</div>
 						)}
