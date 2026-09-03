@@ -89,7 +89,9 @@ export function BillingUsageAlertSheet() {
 	);
 	const measuresUsageLimit = basis === "usage_limit";
 	const propertySuggestions = useCustomerPropertyKeys({
-		customerId: fullCustomer?.id || fullCustomer?.internal_id,
+		customerId: measuresUsageLimit
+			? fullCustomer?.id || fullCustomer?.internal_id
+			: undefined,
 	});
 
 	const nonArchivedFeatures = (features ?? []).filter(
@@ -172,6 +174,11 @@ export function BillingUsageAlertSheet() {
 
 		if (thresholdType === "remaining_percentage" && parsedThreshold > 100) {
 			toast.error("Remaining percentage threshold must be between 0 and 100");
+			return;
+		}
+
+		if (measuresUsageLimit && !featureId) {
+			toast.error("Choose a feature to measure against a usage limit");
 			return;
 		}
 
