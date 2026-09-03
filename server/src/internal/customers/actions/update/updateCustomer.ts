@@ -18,7 +18,9 @@ import {
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
+import { assertUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertUsageLimitAlertsResolvable";
 import { CusService } from "@/internal/customers/CusService";
+import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
 import {
 	syncAutoTopupPurchaseLimitCounts,
@@ -58,6 +60,16 @@ export const updateCustomer = async ({
 	validateAutoTopupPurchaseLimitCounts({
 		autoTopups: billing_controls?.auto_topups ?? [],
 	});
+
+	if (billing_controls?.usage_alerts !== undefined) {
+		assertUsageLimitAlertsResolvable({
+			usageAlerts: billing_controls.usage_alerts,
+			ownUsageLimits: [
+				billing_controls.usage_limits ?? originalCustomer.usage_limits,
+			],
+			fullSubject: await getFullSubject({ ctx, customerId }),
+		});
+	}
 
 	if (newCustomerId === null) {
 		throw new RecaseError({
