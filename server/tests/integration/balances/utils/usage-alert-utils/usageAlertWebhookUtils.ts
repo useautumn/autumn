@@ -97,20 +97,25 @@ export const expectNoUsageAlert = async ({
 	).toBeNull();
 };
 
-export const countUsageAlertWebhooks = async ({
+export const listUsageAlertWebhooks = async ({
 	token,
 	...match
 }: UsageAlertMatch & { token: string }) => {
 	const matches = matchesUsageAlert(match);
 	const history = await getPlayHistory({ token });
-	let count = 0;
+	const payloads: UsageAlertWebhookPayload["data"][] = [];
 	for (const event of history.data) {
 		try {
-			if (matches(parseEventBody<UsageAlertWebhookPayload>(event))) count++;
+			const payload = parseEventBody<UsageAlertWebhookPayload>(event);
+			if (matches(payload)) payloads.push(payload.data);
 		} catch {}
 	}
-	return count;
+	return payloads;
 };
+
+export const countUsageAlertWebhooks = async (
+	params: UsageAlertMatch & { token: string },
+) => (await listUsageAlertWebhooks(params)).length;
 
 export const waitForUsageAlertCount = async ({
 	token,
