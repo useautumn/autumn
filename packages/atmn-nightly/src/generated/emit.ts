@@ -14,7 +14,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"consumable",
 			"display",
 			"creditSchema",
-			"invoiceCredit",
 			"modelMarkups",
 			"defaultMarkup",
 			"providerMarkups",

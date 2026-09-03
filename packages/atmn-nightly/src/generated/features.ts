@@ -37,8 +37,6 @@ export type Feature = {
 				creditCost: number;
 		  }
 	>;
-	/** Whether usage of this classic credit system should be itemized as invoice credits. */
-	invoiceCredit?: boolean;
 	/** Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. */
 	modelMarkups?: Record<
 		string,
