@@ -1,5 +1,8 @@
 import type { AutumnOrgContext } from "../../autumnMcp/orgContextService.js";
-import type { AgentTurnParams } from "../domain/agentTurnContext.js";
+import type {
+	AgentTurnParams,
+	PendingApprovalNote,
+} from "../domain/agentTurnContext.js";
 
 const USER_MESSAGE_OPEN = "<user_message>";
 const USER_MESSAGE_CLOSE = "</user_message>";
@@ -9,6 +12,31 @@ export const extractUserMessageText = (text: string): string => {
 	const end = text.lastIndexOf(USER_MESSAGE_CLOSE);
 	if (start === -1 || end === -1 || end < start) return text;
 	return text.slice(start + USER_MESSAGE_OPEN.length, end).trim();
+};
+
+const PENDING_APPROVAL_GUIDANCE =
+	"If this message changes the request, re-preview and re-issue the write with the adjusted body; the old card withdraws automatically.";
+
+/** The cards still awaiting the user's decision, as the exact write bodies
+ * the model issued — the same `tool: {json}` lines the Edit-details path
+ * sends, so a reply that changes the request has the body to adjust. */
+const pendingApprovalsSection = (
+	pendingApprovals: ReadonlyArray<PendingApprovalNote>,
+) => {
+	if (!pendingApprovals.length) return null;
+	const cards = pendingApprovals.map((approval, index) => {
+		const heading =
+			pendingApprovals.length > 1
+				? `Pending approval ${index + 1} of ${pendingApprovals.length}`
+				: "Pending approval";
+		return [
+			`${heading} (awaiting the user's decision on the card):`,
+			...approval.writes.map(
+				(write) => `${write.toolName}: ${JSON.stringify(write.request)}`,
+			),
+		].join("\n");
+	});
+	return [...cards, PENDING_APPROVAL_GUIDANCE].join("\n");
 };
 
 const adminBypassPreamble = ({
@@ -30,6 +58,7 @@ export const buildAgentMessageText = ({
 	orgContext,
 	orgSlug,
 	params,
+	pendingApprovals = [],
 }: {
 	env: string;
 	isAdminInstall?: boolean;
@@ -38,7 +67,11 @@ export const buildAgentMessageText = ({
 	orgContext?: AutumnOrgContext;
 	orgSlug?: string;
 	params: AgentTurnParams;
+	pendingApprovals?: ReadonlyArray<PendingApprovalNote>;
 }) => {
+	// The Edit-details modal already sends the exact body with its own
+	// instruction; a second copy would compete with it.
+	const approvalEdit = Boolean(params.clientContext?.approvalEdit);
 	const preamble = [
 		// The model has no clock; without this it guesses the year for date
 		// ranges (log windows, custom_range) and queries the wrong one.
@@ -56,6 +89,9 @@ export const buildAgentMessageText = ({
 						(m) => `${m.author}${m.isBot === true ? " (bot)" : ""}: ${m.text}`,
 					)
 					.join("\n")}`
+			: null,
+		!newSession && !approvalEdit
+			? pendingApprovalsSection(pendingApprovals)
 			: null,
 	]
 		.filter((section): section is string => Boolean(section))

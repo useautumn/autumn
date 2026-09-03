@@ -48,6 +48,18 @@ export type AgentTurnContext = Readonly<{
 	token: string;
 }>;
 
+/** One write on a pending approval card: the tool and the exact request
+ * body the model issued, as the model would call it again. */
+export type PendingApprovalWrite = Readonly<{
+	request: Record<string, unknown>;
+	toolName: string;
+}>;
+
+/** A card still awaiting the user's decision — its writes in execution order. */
+export type PendingApprovalNote = Readonly<{
+	writes: ReadonlyArray<PendingApprovalWrite>;
+}>;
+
 export type AgentTurnParams = Readonly<{
 	attachments?: ReadonlyArray<AgentTurnAttachment>;
 	clientContext?: Readonly<Record<string, unknown>>;

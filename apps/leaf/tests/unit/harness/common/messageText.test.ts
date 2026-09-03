@@ -82,6 +82,92 @@ describe("Harness message text", () => {
 		expect(extractUserMessageText(text)).toBe("attach pro");
 	});
 
+	test("echoes pending approval writes with the adjust guidance on a resumed session", () => {
+		const request = {
+			customer_id: "cus_1",
+			enable_plan_immediately: true,
+			invoice_mode: { enabled: true, finalize: false },
+			plan_id: "startup",
+		};
+		const text = buildAgentMessageText({
+			env: "live",
+			newSession: false,
+			params: { text: "finalize the invoice and provision after payment" },
+			pendingApprovals: [{ writes: [{ request, toolName: "attach" }] }],
+		});
+
+		expect(text).toContain("Pending approval (awaiting the user's decision");
+		expect(text).toContain(`attach: ${JSON.stringify(request)}`);
+		expect(text).toContain(
+			"If this message changes the request, re-preview and re-issue the write with the adjusted body; the old card withdraws automatically.",
+		);
+		expect(text.indexOf("Pending approval")).toBeLessThan(
+			text.indexOf("<user_message>"),
+		);
+		expect(extractUserMessageText(text)).toBe(
+			"finalize the invoice and provision after payment",
+		);
+	});
+
+	test("lists every write of a batch card and numbers multiple cards", () => {
+		const text = buildAgentMessageText({
+			env: "live",
+			newSession: false,
+			params: { text: "make it $50" },
+			pendingApprovals: [
+				{
+					writes: [
+						{ request: { customer_id: "cus_1" }, toolName: "updateCustomer" },
+						{
+							request: { customer_id: "cus_1", plan_id: "pro" },
+							toolName: "attach",
+						},
+					],
+				},
+				{ writes: [{ request: { customer_id: "cus_2" }, toolName: "attach" }] },
+			],
+		});
+
+		expect(text).toContain("Pending approval 1 of 2 (awaiting");
+		expect(text).toContain("Pending approval 2 of 2 (awaiting");
+		expect(text).toContain('updateCustomer: {"customer_id":"cus_1"}');
+		expect(text).toContain('attach: {"customer_id":"cus_1","plan_id":"pro"}');
+		expect(text).toContain('attach: {"customer_id":"cus_2"}');
+		expect(text.match(/re-preview and re-issue/g)).toHaveLength(1);
+	});
+
+	test("omits the pending approval note on the edit-details path and on a new session", () => {
+		const pendingApprovals = [
+			{ writes: [{ request: { customer_id: "cus_1" }, toolName: "attach" }] },
+		];
+		const editText = buildAgentMessageText({
+			env: "live",
+			newSession: false,
+			params: {
+				clientContext: { approvalEdit: { toolName: "attach", writes: [] } },
+				text: "Preview this exact attach request and request approval again.",
+			},
+			pendingApprovals,
+		});
+		expect(editText).not.toContain("Pending approval");
+
+		const freshText = buildAgentMessageText({
+			env: "live",
+			newSession: true,
+			params: { text: "attach pro" },
+			pendingApprovals,
+		});
+		expect(freshText).not.toContain("Pending approval");
+
+		const noCardsText = buildAgentMessageText({
+			env: "live",
+			newSession: false,
+			params: { text: "attach pro" },
+			pendingApprovals: [],
+		});
+		expect(noCardsText).not.toContain("Pending approval");
+	});
+
 	test("extractUserMessageText returns the raw text when unwrapped", () => {
 		expect(extractUserMessageText("just text")).toBe("just text");
 	});
