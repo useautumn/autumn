@@ -34,6 +34,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { deleteDbPlans } from "../../catalog-v2/plans/utils/expectCatalogPlans.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
@@ -337,31 +338,32 @@ test.concurrent(
 	`${chalk.yellowBright("alert-basis-validation8: catalog updates check usage_limit alerts against the merged plan")}`,
 	async () => {
 		const planId = "alert-basis-catalog-merged";
-		await initScenario({ setup: [], actions: [] });
-		const messages = [items.monthlyMessages({ includedUsage: 1000 })];
+		const { ctx } = await initScenario({ setup: [], actions: [] });
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		const plan = {
+			plan_id: planId,
+			name: "Alert basis catalog",
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					included: 1000,
+					reset: { interval: ResetInterval.Month },
+				},
+			],
+		};
 		const usageLimitAlerts = [percentAlert({ basis: "usage_limit" })];
 
 		await expectAutumnError({
 			func: () =>
 				autumnV2_3.catalogV2.update({
 					plans: [
-						{
-							plan_id: planId,
-							items: messages,
-							billing_controls: { usage_alerts: usageLimitAlerts },
-						},
+						{ ...plan, billing_controls: { usage_alerts: usageLimitAlerts } },
 					],
 				}),
 		});
 
 		await autumnV2_3.catalogV2.update({
-			plans: [
-				{
-					plan_id: planId,
-					items: messages,
-					billing_controls: { usage_limits: [dailyLimit()] },
-				},
-			],
+			plans: [{ ...plan, billing_controls: { usage_limits: [dailyLimit()] } }],
 		});
 		await autumnV2_3.catalogV2.update({
 			plans: [
