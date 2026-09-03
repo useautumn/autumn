@@ -14,7 +14,11 @@ export const handleGetStripeCoupons = createRoute({
 		const { org, env, logger } = c.get("ctx");
 
 		const stripeCli = createStripeCli({ org, env });
-		const coupons = await listCouponsWithPromoCodes({ stripeCli, logger });
+		const coupons = await listCouponsWithPromoCodes({
+			stripeCli,
+			logger,
+			orgId: org.id,
+		});
 
 		return c.json({ coupons });
 	},

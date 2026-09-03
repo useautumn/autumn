@@ -2,11 +2,21 @@ import type { StripeCouponWithPromoCodes } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getPromoCouponId } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils";
 
+type WarnLogger = { warn: (message: string) => void };
+
 /** Upper bound on promotion codes pulled from Stripe, so the listing stays fast. */
 const MAX_PROMOTION_CODES = 1000;
 
 /** Groups active promotion codes by the coupon they belong to. */
-const listPromoCodesByCoupon = async ({ stripeCli }: { stripeCli: Stripe }) => {
+const listPromoCodesByCoupon = async ({
+	stripeCli,
+	logger,
+	orgId,
+}: {
+	stripeCli: Stripe;
+	logger: WarnLogger;
+	orgId: string;
+}) => {
 	const codesByCouponId = new Map<string, string[]>();
 	let fetched = 0;
 
@@ -26,7 +36,12 @@ const listPromoCodesByCoupon = async ({ stripeCli }: { stripeCli: Stripe }) => {
 			}
 		}
 
-		if (fetched >= MAX_PROMOTION_CODES) break;
+		if (fetched >= MAX_PROMOTION_CODES) {
+			logger.warn(
+				`Stopped listing Stripe promotion codes for org ${orgId} at ${MAX_PROMOTION_CODES}; coupons past this point won't be searchable by code`,
+			);
+			break;
+		}
 	}
 
 	return codesByCouponId;
@@ -40,21 +55,30 @@ const listPromoCodesByCoupon = async ({ stripeCli }: { stripeCli: Stripe }) => {
 export const listCouponsWithPromoCodes = async ({
 	stripeCli,
 	logger,
+	orgId,
 }: {
 	stripeCli: Stripe;
-	logger: { warn: (message: string) => void };
+	logger: WarnLogger;
+	orgId: string;
 }): Promise<StripeCouponWithPromoCodes[]> => {
-	const codesByCouponId = await listPromoCodesByCoupon({ stripeCli }).catch(
-		(error) => {
-			logger.warn(`Failed to fetch Stripe promotion codes: ${error}`);
-			return new Map<string, string[]>();
-		},
-	);
+	// Started before the coupon listing so the two paginate in parallel.
+	const codesByCouponIdPromise = listPromoCodesByCoupon({
+		stripeCli,
+		logger,
+		orgId,
+	}).catch((error) => {
+		logger.warn(
+			`Failed to fetch Stripe promotion codes for org ${orgId}: ${error}`,
+		);
+		return new Map<string, string[]>();
+	});
 
 	const coupons: StripeCouponWithPromoCodes[] = [];
 	for await (const coupon of stripeCli.coupons.list({ limit: 100 })) {
 		if (!coupon.valid) continue;
 
+		// Already in flight, so only the first valid coupon can actually wait.
+		const codesByCouponId = await codesByCouponIdPromise;
 		coupons.push({
 			...coupon,
 			promotion_codes: codesByCouponId.get(coupon.id) ?? [],
