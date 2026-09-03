@@ -161,7 +161,7 @@ test("server-only versions are routed: active to plans, draft to plans with acti
 	expect(byVersion).toEqual({ v1: false, v2: true, v3: false });
 });
 
-test("an update is replaced in place, found by its stable id even after a rename", async () => {
+test("an update is re-placed by its state, found by its stable id even after a rename", async () => {
 	fresh(`${imports}export default atmn({
 	features: [],
 	plans: [
@@ -189,7 +189,7 @@ test("an update is replaced in place, found by its stable id even after a rename
 		cwd: dir,
 		write: () => {},
 	});
-	expect(result.replaced).toEqual(["pro"]);
+	expect(result.replaced).toEqual(["pro@v2"]);
 	expect(configText()).toContain('planId: "pro"');
 	expect(configText()).not.toContain("pro_old_name");
 	expect(configText()).toContain('name: "Pro"');

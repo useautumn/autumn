@@ -149,10 +149,9 @@ export const applyPreview = ({
 					? collection
 					: (spec.historyKey ?? collection);
 			// Variants come back nested under their base; pulling them is later work.
-			const { variants: _nested, ...rest } = row;
-			emitted = route.draft
-				? { ...rest, active: false }
-				: { ...rest, active: true };
+			// Membership says active; only a draft spells it out.
+			const { variants: _nested, active: _stamped, ...bare } = row;
+			emitted = route.draft ? { ...bare, active: false } : bare;
 		}
 		let configSource = files.get(configPath) ?? "";
 		// A config that never mentioned the collection gets the key, then the row.
@@ -202,7 +201,38 @@ export const applyPreview = ({
 			where: constraintsFor(entry),
 		});
 		if (located === null) {
+			// A version the config never had is missing, not unlocatable.
+			if (versioned) {
+				appendRow({ id, entry });
+				return;
+			}
 			result.unlocated.push({ id, action: "replace with the server's copy" });
+			return;
+		}
+		// A version's array is its state: a row that stopped being active belongs
+		// in history now, so versioned rows are re-placed rather than rewritten.
+		if (versioned) {
+			const removed = deleteFixtureLiteral({
+				source: located.source,
+				builder: spec.builder,
+				idField: located.idField,
+				id: located.id,
+				where: located.where,
+			});
+			if (removed === null) return;
+			files.set(located.file, removed.source);
+			if (removed.exportedName !== undefined) {
+				const configSource = files.get(configPath) ?? "";
+				files.set(
+					configPath,
+					deleteReference({ source: configSource, name: removed.exportedName }),
+				);
+			}
+			appendRow({ id, entry });
+			result.appended.pop();
+			result.lines.pop();
+			result.replaced.push(keyOf({ id, slug: slugOf(entry) }));
+			result.lines.push(`~ ${keyOf({ id, slug: slugOf(entry) })}`);
 			return;
 		}
 		const { variants: _nested, ...emitted } = row;
@@ -227,6 +257,32 @@ export const applyPreview = ({
 		result.lines.push(`~ ${id}`);
 	};
 
+	// The preview speaks for what the config states. A version the config never
+	// mentions is still the server's truth, so versioned rows the config has no
+	// fixture for are appended straight from the catalog.
+	const appendUnstatedVersions = (): void => {
+		if (!versioned) return;
+		for (const row of rowsById.values()) {
+			const id = row[spec.responseIdField];
+			if (typeof id !== "string") continue;
+			const slug = slugOf(row);
+			const stated = entries.some(
+				(entry) => entry[spec.idField] === id && slugOf(entry) === slug,
+			);
+			if (stated) continue;
+			const located = locateFixture({
+				configPath,
+				files,
+				builder: spec.builder,
+				idField: spec.idField,
+				id,
+				internalId: typeof row.internalId === "string" ? row.internalId : null,
+				where: [{ field: "versionSlug", equals: slug, absentMeans: "v1" }],
+			});
+			if (located === null) appendRow({ id, entry: { versionSlug: slug } });
+		}
+	};
+
 	for (const entry of entries) {
 		const id = entry[spec.idField];
 		if (typeof id !== "string") continue;
@@ -235,6 +291,7 @@ export const applyPreview = ({
 		else if (entry.action === "delete") appendRow({ id, entry });
 		else if (entry.action === "update") replaceRow({ id, entry });
 	}
+	appendUnstatedVersions();
 
 	return result;
 };
