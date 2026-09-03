@@ -37,11 +37,32 @@ test("--local and --prod compose: local server, prod key", () => {
 	});
 });
 
-test("contradictory targets are refused, not silently ranked", () => {
-	expect(() =>
-		resolveTarget({ local: true, baseUrl: "https://example.com" }),
-	).toThrow(/either --base-url or --local/);
-	expect(() => resolveTarget({ port: "3001" })).toThrow(/only applies with/);
+test("the most specific target wins: base-url over local over port", () => {
+	// A URL is more specific than a host, which is more specific than a port;
+	// refusing the combination made a scripted `-l` plus an ad-hoc `-b` a
+	// two-step edit instead of an override.
+	expect(
+		resolveTarget({ local: true, baseUrl: "https://example.com" }).baseUrl,
+	).toBe("https://example.com");
+	expect(
+		resolveTarget({ port: "3001", baseUrl: "https://example.com" }).baseUrl,
+	).toBe("https://example.com");
+	// --port alone is a local target: the port implies the host.
+	expect(resolveTarget({ port: "3001" }).baseUrl).toBe("http://localhost:3001");
+});
+
+test("flags beat AUTUMN_BASE_URL, which beats the spec's server", () => {
+	const previous = process.env.AUTUMN_BASE_URL;
+	process.env.AUTUMN_BASE_URL = "http://localhost:11380";
+	try {
+		expect(resolveTarget({}).baseUrl).toBe("http://localhost:11380");
+		expect(resolveTarget({ local: true }).baseUrl).toBe(
+			"http://localhost:8080",
+		);
+	} finally {
+		if (previous === undefined) delete process.env.AUTUMN_BASE_URL;
+		else process.env.AUTUMN_BASE_URL = previous;
+	}
 });
 
 test("a missing key names the variable it wants", () => {

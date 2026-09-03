@@ -17,10 +17,11 @@ export type Target = {
 /**
  * Where to send, and which key to send it with.
  *
- * Precedence is flags, then `AUTUMN_BASE_URL`, then the spec's server. The env
- * var exists so a directory can pin itself to a local server through its own
- * `.env` — otherwise the safe target is the one you have to remember, and the
- * default is production.
+ * The most specific target wins: `--base-url`, then `--local`/`--port`, then
+ * `AUTUMN_BASE_URL`, then the spec's server. Ranking rather than refusing
+ * means a scripted `-l` can be overridden by an ad-hoc `-b` without editing
+ * the script. The env var exists so a directory can pin itself to a local
+ * server through its own `.env` — the default is production.
  */
 export const resolveTarget = ({
 	prod,
@@ -28,17 +29,11 @@ export const resolveTarget = ({
 	port,
 	baseUrl,
 }: TargetFlags): Target => {
-	if (baseUrl && local) {
-		throw new Error("Pass either --base-url or --local, not both.");
-	}
-	if (port && !local) {
-		throw new Error("--port only applies with --local.");
-	}
-
 	const secretKeyName = prod ? "AUTUMN_PROD_SECRET_KEY" : "AUTUMN_SECRET_KEY";
 
 	if (baseUrl) return { baseUrl, secretKeyName };
-	if (local) {
+	// A port implies the host: `--port 3001` alone is a local target.
+	if (local || port) {
 		return {
 			baseUrl: `${LOCAL_HOST}:${port ?? DEFAULT_LOCAL_PORT}`,
 			secretKeyName,
