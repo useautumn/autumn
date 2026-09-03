@@ -14,6 +14,7 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -168,19 +169,16 @@ test(`${chalk.yellowBright("free-tier-cap1: 80, 100 and 200 emails fire in order
 	expect(await canSendOneMore(customerId)).toBe(false);
 
 	await track(customerId, 1);
-	await expectNoUsageAlert({
-		token: playToken,
-		customerId,
-		threshold: 80,
-		timeoutMs: 2000,
-	});
-	expect(
-		await countUsageAlertWebhooks({
-			token: playToken,
-			customerId,
-			threshold: 200,
-		}),
-	).toBe(1);
+	await timeout(3000);
+	for (const threshold of ALERT_THRESHOLDS) {
+		expect(
+			await countUsageAlertWebhooks({
+				token: playToken,
+				customerId,
+				threshold,
+			}),
+		).toBe(1);
+	}
 });
 
 test(`${chalk.yellowBright("free-tier-cap2: one batch of 150 fires 80 and 100 together, not 200")}`, async () => {
@@ -271,7 +269,7 @@ test(`${chalk.yellowBright("free-tier-cap4: an uncapped plan silences the alerts
 
 	await autumnV2_3.billing.attach({
 		customer_id: customerId,
-		product_id: uncapped.id,
+		plan_id: uncapped.id,
 		redirect_mode: "if_required",
 	});
 	await track(customerId, 100);
@@ -285,7 +283,7 @@ test(`${chalk.yellowBright("free-tier-cap4: an uncapped plan silences the alerts
 
 	await autumnV2_3.billing.attach({
 		customer_id: customerId,
-		product_id: capped.id,
+		plan_id: capped.id,
 		redirect_mode: "if_required",
 	});
 	await track(customerId, 80);
