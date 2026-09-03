@@ -5,11 +5,11 @@ import type {
 } from "@autumn/shared";
 import {
 	filterRewardsByProduct,
-	formatAmount,
 	RewardType,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { formatAmountWithCurrencyPrecision } from "@/utils/formatUtils/formatCurrencyUtils";
 
 /** Unified type for discount options from both Autumn rewards and Stripe coupons */
 export type DiscountOption = {
@@ -66,15 +66,9 @@ export const formatCouponDiscount = (coupon: Stripe.Coupon): string => {
 	if (!coupon.amount_off) return "";
 
 	const currency = coupon.currency ?? undefined;
-	const amount = formatAmount({
+	const amount = formatAmountWithCurrencyPrecision({
 		amount: stripeToAtmnAmount({ amount: coupon.amount_off, currency }),
 		currency,
-		// Leave the fraction digits to Intl so each currency keeps its own
-		// precision: $1,500.00, but ¥1,850.
-		amountFormatOptions: {
-			minimumFractionDigits: undefined,
-			maximumFractionDigits: undefined,
-		},
 	});
 
 	return `${amount} off`;
