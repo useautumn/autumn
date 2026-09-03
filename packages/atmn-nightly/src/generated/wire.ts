@@ -2,6 +2,8 @@
 // Do not edit — run `bun generate` in packages/atmn-generator instead.
 
 import type { Feature } from "./features";
+import { LINT_RULES } from "./lintRules";
+import { ConfigError, lintDocument } from "./lintRuntime";
 
 /** Operators like `$startsWith` are literal API keys, not snake_case fields. */
 const isOperatorKey = (key: string): boolean => key.startsWith("$");
@@ -116,9 +118,18 @@ export const hintsOf = (hints: {
 	frozenPaths: new Set(hints.frozenPaths),
 });
 
-const FEATURE_HINTS = hintsOf({
-	recordPaths: ["modelMarkups", "providerMarkups"],
-	frozenPaths: [],
+const CATALOG_HINTS = hintsOf({
+	recordPaths: [
+		"features.modelMarkups",
+		"features.providerMarkups",
+		"plans.billingControls.usageLimits.filter.properties",
+	],
+	frozenPaths: [
+		"plans.licenses.metadata",
+		"plans.metadata",
+		"plans.variants.customize.billingControls.usageLimits.filter.properties",
+		"plans.variants.customize.upsertLicenses.metadata",
+	],
 });
 
 export type AtmnConfig = {
@@ -127,13 +138,26 @@ export type AtmnConfig = {
 	features: Feature[];
 };
 
-export const atmn = (config: AtmnConfig): WireDocument => ({
-	features: config.features.map((feature) =>
-		toWire({ value: feature, path: "", hints: FEATURE_HINTS }),
-	),
-	// The payload is the complete desired catalog, so omission is a removal.
-	skip_deletions: false,
-	// A constant, not a decision: "draft wherever one is warranted". The server
-	// works out which rows actually need one.
-	migration: { draft: true },
-});
+export const atmn = (config: AtmnConfig): WireDocument => {
+	// Linted before anything is sent, and every problem is reported at once —
+	// a round trip per mistake is what makes a config painful to write.
+	const issues = lintDocument({
+		document: config,
+		rules: LINT_RULES,
+		hints: CATALOG_HINTS,
+	});
+	if (issues.length > 0) throw new ConfigError(issues);
+
+	return {
+		...(toWire({
+			value: config,
+			path: "",
+			hints: CATALOG_HINTS,
+		}) as WireDocument),
+		// The payload is the complete desired catalog, so omission is a removal.
+		skip_deletions: false,
+		// A constant, not a decision: "draft wherever one is warranted". The server
+		// works out which rows actually need one.
+		migration: { draft: true },
+	};
+};
