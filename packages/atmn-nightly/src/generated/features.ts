@@ -58,6 +58,8 @@ export type Feature = {
 	/** The ID of the feature to create. */
 	featureId: string;
 } & {
+	/** Address an existing feature by its stable id. Omit when creating — the server generates one. A differing feature_id alongside it is a rename. */
+	internalId?: string;
 	/** Rename the feature to this id. */
 	newFeatureId?: string;
 	/** Archive or unarchive the feature. Omit to leave archived state unchanged. */

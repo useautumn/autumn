@@ -17,6 +17,11 @@ export const CatalogPreviewStateSchema = z.object({
 /** Shared kernel for a plan row in catalog preview (direct, sibling, or license parent). */
 export const CatalogCorePreviewSchema = z.object({
 	plan_id: z.string(),
+	internal_id: z.string().nullable().meta({
+		description:
+			"Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received.",
+		internal: true,
+	}),
 	new_plan_id: z.string().optional().meta({
 		description: "Present only when this row's public plan id changes.",
 	}),

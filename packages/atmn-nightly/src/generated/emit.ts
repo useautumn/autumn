@@ -18,6 +18,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"defaultMarkup",
 			"providerMarkups",
 			"featureId",
+			"internalId",
 			"newFeatureId",
 			"archived",
 			"processors",
