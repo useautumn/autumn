@@ -2,9 +2,17 @@
 	"name": "atmn-nightly",
 	"version": "3.0.0-nightly.1",
 	"license": "MIT",
-	"description": "Autumn CLI — nightly. Renamed to `atmn` at 3.0.0.",
+	"description": "Autumn CLI \u2014 nightly. Renamed to `atmn` at 3.0.0.",
 	"bin": {
 		"atmn-nightly": "dist/cli.js"
+	},
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
 	},
 	"repository": {
 		"type": "git",
