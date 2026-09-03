@@ -2,9 +2,9 @@ import {
 	type ApiBalanceV1,
 	apiBalanceV1ToIncludedGrant,
 	apiBalanceV1ToRecurringGrant,
+	type BalanceBasis,
 	subtractSafe,
 } from "@autumn/shared";
-import type { BalanceBasis } from "../types/balanceBasis.js";
 import type { UsageAlertMeasurement } from "../types/usageAlertMeasurement.js";
 
 const basisToDenominator = ({

@@ -1,8 +1,8 @@
 import type {
+	BalanceBasis,
 	BalancesUsageAlertBalanceBlock,
 	UsageLimitWebhookBlock,
 } from "@autumn/shared";
-import type { BalanceBasis } from "./balanceBasis.js";
 
 export type UsageAlertPayloadBlock =
 	| { basis: BalanceBasis; balance: BalancesUsageAlertBalanceBlock }

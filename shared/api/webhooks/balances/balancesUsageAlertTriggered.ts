@@ -1,12 +1,13 @@
 import { z } from "zod/v4";
 import {
+	BALANCE_BASES,
 	UsageAlertBasisSchema,
 	UsageAlertThresholdType,
 } from "../../../models/cusModels/billingControls/usageAlert.js";
 import { UsageLimitFilterSchema } from "../../../models/cusModels/billingControls/usageLimit.js";
 import { UsageLimitWebhookBlockSchema } from "./usageLimitWebhookBlock.js";
 
-const BalanceBasisSchema = UsageAlertBasisSchema.exclude(["usage_limit"]);
+const BalanceBasisSchema = z.enum(BALANCE_BASES);
 
 const AlertFieldsSchema = z.object({
 	name: z.string().optional().meta({
@@ -45,7 +46,8 @@ export const BalancesUsageAlertBalanceBlockSchema = z.object({
 		description: "Grants from plan allowances only.",
 	}),
 	remaining: z.number().meta({
-		description: "The alert's denominator minus usage, never below zero.",
+		description:
+			"The alert's denominator minus usage. Clamped at zero for included and recurring; balance can go negative on overage.",
 	}),
 });
 
@@ -88,13 +90,37 @@ export const BALANCES_USAGE_ALERT_TRIGGERED_EXAMPLE = {
 	balance: { usage: 1600, granted: 2000, included: 2000, remaining: 400 },
 };
 
+export const BALANCES_USAGE_ALERT_ON_USAGE_LIMIT_EXAMPLE = {
+	customer_id: "org_123",
+	feature_id: "api_calls",
+	usage_alert: {
+		name: "Daily cap warning",
+		threshold: 80,
+		threshold_type: "usage_percentage",
+		basis: "usage_limit",
+		filter: { properties: { api_key_id: "key_abc" } },
+	},
+	usage_limit: {
+		limit: 1000,
+		interval: "day",
+		anchor: "utc",
+		usage: 800,
+		remaining: 200,
+		window_start_at: 1735689600000,
+		window_end_at: 1735776000000,
+	},
+};
+
 export const BalancesUsageAlertTriggeredSchema = z
 	.union([
 		BalancesUsageAlertOnBalanceSchema,
 		BalancesUsageAlertOnUsageLimitSchema,
 	])
 	.meta({
-		examples: [BALANCES_USAGE_ALERT_TRIGGERED_EXAMPLE],
+		examples: [
+			BALANCES_USAGE_ALERT_TRIGGERED_EXAMPLE,
+			BALANCES_USAGE_ALERT_ON_USAGE_LIMIT_EXAMPLE,
+		],
 	});
 
 export type BalancesUsageAlertTriggered = z.infer<

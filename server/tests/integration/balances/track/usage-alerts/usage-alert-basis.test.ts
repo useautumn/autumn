@@ -311,11 +311,6 @@ test(`${chalk.yellowBright("alert-basis3: remaining and remaining_percentage und
 	expect(remainingPercentFire.usage_alert.threshold_type).toBe(
 		"remaining_percentage",
 	);
-
-	// Usage past the included denominator clamps remaining to 0, never negative.
-	await track(customerId, 200);
-	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-	expect(customer.balances[TestFeature.Messages]?.usage).toBe(1410);
 });
 
 // ── A5: included = 0 skips percentage alerts ────────────────────────────────

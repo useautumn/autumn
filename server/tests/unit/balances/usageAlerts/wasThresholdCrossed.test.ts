@@ -144,6 +144,91 @@ describe("wasThresholdCrossed", () => {
 		).toBe(false);
 	});
 
+	test("every threshold type fires on the exact boundary and not one step past it", () => {
+		const boundary = ({
+			thresholdType,
+			threshold,
+			before,
+			after,
+		}: {
+			thresholdType: Parameters<typeof crossed>[0]["thresholdType"];
+			threshold: number;
+			before: number;
+			after: number;
+		}) =>
+			crossed({
+				threshold,
+				thresholdType,
+				before: measurement({ usage: before }),
+				after: measurement({ usage: after }),
+			});
+
+		expect(
+			boundary({
+				thresholdType: "usage",
+				threshold: 500,
+				before: 490,
+				after: 500,
+			}),
+		).toBe(true);
+		expect(
+			boundary({
+				thresholdType: "usage",
+				threshold: 500,
+				before: 500,
+				after: 510,
+			}),
+		).toBe(false);
+		expect(
+			boundary({
+				thresholdType: "usage_percentage",
+				threshold: 100,
+				before: 990,
+				after: 1000,
+			}),
+		).toBe(true);
+		expect(
+			boundary({
+				thresholdType: "usage_percentage",
+				threshold: 100,
+				before: 1000,
+				after: 1010,
+			}),
+		).toBe(false);
+		expect(
+			boundary({
+				thresholdType: "remaining",
+				threshold: 200,
+				before: 790,
+				after: 800,
+			}),
+		).toBe(true);
+		expect(
+			boundary({
+				thresholdType: "remaining",
+				threshold: 200,
+				before: 800,
+				after: 810,
+			}),
+		).toBe(false);
+		expect(
+			boundary({
+				thresholdType: "remaining_percentage",
+				threshold: 20,
+				before: 790,
+				after: 800,
+			}),
+		).toBe(true);
+		expect(
+			boundary({
+				thresholdType: "remaining_percentage",
+				threshold: 20,
+				before: 800,
+				after: 810,
+			}),
+		).toBe(false);
+	});
+
 	test("a bulk step crosses every threshold it passes", () => {
 		const before = measurement({ usage: 0 });
 		const after = measurement({ usage: 1000 });

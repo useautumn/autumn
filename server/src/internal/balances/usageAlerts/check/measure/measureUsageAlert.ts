@@ -1,4 +1,9 @@
-import type { ApiBalanceV1, DbUsageAlert, Feature } from "@autumn/shared";
+import {
+	type ApiBalanceV1,
+	type DbUsageAlert,
+	DEFAULT_USAGE_ALERT_BASIS,
+	type Feature,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { BeforeAfter } from "../types/beforeAfter.js";
 import type { TrackedSubjects } from "../types/trackedSubjects.js";
@@ -21,7 +26,7 @@ export const measureUsageAlert = ({
 	apiBalances: BeforeAfter<ApiBalanceV1>;
 	entityId?: string;
 }): BeforeAfter<UsageAlertMeasurement> | null => {
-	const basis = alert.basis ?? "balance";
+	const basis = alert.basis ?? DEFAULT_USAGE_ALERT_BASIS;
 	if (basis === "usage_limit") {
 		return measureUsageLimitAlert({ ctx, alert, feature, tracked, entityId });
 	}

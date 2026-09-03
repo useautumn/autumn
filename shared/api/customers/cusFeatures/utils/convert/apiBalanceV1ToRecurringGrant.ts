@@ -1,5 +1,5 @@
+import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { sumValues } from "@utils/utils";
-import { ResetInterval } from "../../../../../models/productModels/intervals/resetInterval";
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../../apiBalanceV1";
 
 const isRecurringBreakdownItem = (item: ApiBalanceBreakdownV1): boolean =>

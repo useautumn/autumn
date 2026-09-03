@@ -1,5 +1,6 @@
 import {
 	type DbUsageAlert,
+	DEFAULT_USAGE_ALERT_BASIS,
 	type Feature,
 	ms,
 	usageLimitFilterKey,
@@ -32,7 +33,7 @@ export const buildUsageAlertIdempotencyKey = ({
 		entityId ?? "_",
 		scope,
 		feature.id,
-		alert.basis ?? "balance",
+		alert.basis ?? DEFAULT_USAGE_ALERT_BASIS,
 		usageLimitFilterKey(alert.filter) || "_",
 		alert.threshold_type,
 		alert.threshold,

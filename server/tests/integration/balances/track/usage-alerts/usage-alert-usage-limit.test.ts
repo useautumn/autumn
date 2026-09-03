@@ -32,6 +32,7 @@ import {
 	type EntityBillingControls,
 	ms,
 	ResetInterval,
+	usageLimitFilterKey,
 } from "@autumn/shared";
 import {
 	getTestSvixAppId,
@@ -401,6 +402,60 @@ test(`${chalk.yellowBright("ul-alert7: customer cap inherited by an entity alert
 	expect(data.usage_limit?.usage).toBe(160);
 });
 
+// ── B8b: an entity's own cap is not the customer alert's cap ────────────────
+test(`${chalk.yellowBright("ul-alert14: a customer alert ignores an entity-owned cap on entity tracks")}`, async () => {
+	const customerId = "ul-alert-entity-override-1";
+	const entity = await setupCustomer({
+		customerId,
+		planId: "ul-alert-entity-override",
+		withEntity: true,
+	});
+	await setDailyLimit(customerId);
+	await setCustomerUsageAlerts({
+		autumn: autumnV2_3,
+		customerId,
+		usageAlerts: [usageLimitAlert({ threshold: 80 })],
+	});
+	await setEntityUsageLimit({
+		autumn: autumnV2_3,
+		customerId,
+		entityId: entity!.id,
+		featureId: TestFeature.Messages,
+		limit: 100,
+		interval: ResetInterval.Day,
+	});
+
+	await track({ customerId, value: 90, entityId: entity!.id });
+	await expectNoUsageAlert({ token: playToken, customerId, threshold: 80 });
+});
+
+// ── B8c: an entity alert may point at the cap it inherits from the customer ─
+test(`${chalk.yellowBright("ul-alert15: an entity alert on an inherited customer cap fires with the entity id")}`, async () => {
+	const customerId = "ul-alert-entity-inherited-alert-1";
+	const entity = await setupCustomer({
+		customerId,
+		planId: "ul-alert-entity-inherited-alert",
+		withEntity: true,
+	});
+	await setDailyLimit(customerId);
+	await autumnV2_3.entities.update(customerId, entity!.id, {
+		billing_controls: {
+			usage_alerts: [usageLimitAlert({ threshold: 80 })],
+		} as EntityBillingControls,
+	});
+
+	await track({ customerId, value: 160, entityId: entity!.id });
+	const data = await waitForUsageAlert({
+		token: playToken,
+		customerId,
+		threshold: 80,
+		entityId: entity!.id,
+	});
+	expect(data.entity_id).toBe(entity!.id);
+	expect(data.usage_limit?.limit).toBe(200);
+	expect(data.usage_limit?.usage).toBe(160);
+});
+
 // ── B9: unlimited feature + usage_limit alert → never fires ─────────────────
 test(`${chalk.yellowBright("ul-alert8: unlimited feature never fires a usage_limit alert")}`, async () => {
 	const customerId = "ul-alert-unlimited-1";
@@ -452,7 +507,7 @@ test(`${chalk.yellowBright("ul-alert9: the alert fires again after the window ro
 	});
 });
 
-// ── B11: rollover never produces a false remaining alert ────────────────────
+// ── B11: a rolled-over window re-arms remaining thresholds ──────────────────
 test(`${chalk.yellowBright("ul-alert10: a rolled-over window measures a fresh cap so remaining re-arms")}`, async () => {
 	const customerId = "ul-alert-rollover-1";
 	await setupCustomer({ customerId, planId: "ul-alert-rollover" });
@@ -559,7 +614,7 @@ test(`${chalk.yellowBright("ul-alert12: filtered and unfiltered caps alert indep
 		token: playToken,
 		customerId,
 		threshold: 80,
-		filterKey: "apiKeyId=key-a",
+		filterKey: usageLimitFilterKey({ properties: { apiKeyId: "key-a" } }),
 	});
 	expect(filtered.usage_limit?.limit).toBe(50);
 	await expectNoUsageAlert({
@@ -584,7 +639,7 @@ test(`${chalk.yellowBright("ul-alert12: filtered and unfiltered caps alert indep
 			token: playToken,
 			customerId,
 			threshold: 80,
-			filterKey: "apiKeyId=key-a",
+			filterKey: usageLimitFilterKey({ properties: { apiKeyId: "key-a" } }),
 		}),
 	).toBe(1);
 });

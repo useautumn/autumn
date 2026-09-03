@@ -1,5 +1,6 @@
 import {
 	type DbUsageAlert,
+	DEFAULT_USAGE_ALERT_BASIS,
 	type Feature,
 	type FullCustomer,
 	fullCustomerToTags,
@@ -54,6 +55,6 @@ export const sendUsageAlertWebhook = async ({
 	});
 
 	ctx.logger.info(
-		`Usage alert triggered (scope=${scope}, basis=${alert.basis ?? "balance"}) for customer ${customerId}, feature ${feature.id}, threshold ${alert.threshold} (${alert.threshold_type})${entityId ? `, entity ${entityId}` : ""}`,
+		`Usage alert triggered (scope=${scope}, basis=${alert.basis ?? DEFAULT_USAGE_ALERT_BASIS}) for customer ${customerId}, feature ${feature.id}, threshold ${alert.threshold} (${alert.threshold_type})${entityId ? `, entity ${entityId}` : ""}`,
 	);
 };
