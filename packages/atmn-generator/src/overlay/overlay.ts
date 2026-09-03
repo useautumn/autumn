@@ -32,13 +32,19 @@ export type Overlay = {
 };
 
 /**
- * Empty on purpose. The entries this will grow — `event_names` hidden,
- * `purchase_limit.count` hidden, `version_slug` required — belong to concepts
- * that are not built yet, and adding them before their fixtures exist would be
- * guessing at paths.
+ * Entries land with the concept they belong to, never ahead of it — an entry
+ * for a fixture that does not exist yet is a guess at a path.
  */
 export const OVERLAY: Overlay = {
-	collections: {},
+	collections: {
+		features: {
+			event_names: {
+				hidden: true,
+				reason:
+					"Deprecated on the server (plans/atmn-v3/03_prereqs). The CLI must not teach it to anyone new.",
+			},
+		},
+	},
 };
 
 export const fieldOverlay = ({
