@@ -19,6 +19,9 @@ export const hasSamePrice = (
 	(a.price_id != null && a.price_id === b.price_id) ||
 	(a.stripe_price_id != null && a.stripe_price_id === b.stripe_price_id);
 
+const sharesInvoice = (a: DbInvoiceLineItem, b: DbInvoiceLineItem): boolean =>
+	a.invoice_id != null && b.invoice_id != null && a.invoice_id === b.invoice_id;
+
 export const computeProratedCredit = ({
 	chargeRow,
 	now,
@@ -49,25 +52,40 @@ export const computeProratedCredit = ({
 	return prorationFraction.mul(refundable).neg().toNumber();
 };
 
-export const computeAlreadyRefundedForCharge = ({
-	chargeRow,
+export const computeAlreadyRefundedByCharge = ({
+	chargeRows,
 	refundRows,
 }: {
-	chargeRow: DbInvoiceLineItem;
+	chargeRows: DbInvoiceLineItem[];
 	refundRows: DbInvoiceLineItem[];
-}): number => {
-	const matchingRefunds = refundRows.filter(
-		(refund) =>
-			isWithinPeriod(refund, chargeRow) && hasSamePrice(refund, chargeRow),
+}): Map<string, number> => {
+	const alreadyRefundedByCharge = new Map<string, number>();
+	const chronologicalRefunds = [...refundRows].sort(
+		(a, b) => a.created_at - b.created_at,
 	);
 
-	return matchingRefunds.reduce(
-		(sum, r) =>
-			new Decimal(sum)
-				.plus(Math.abs(splitMultiEntityAmount(r)))
+	for (const refund of chronologicalRefunds) {
+		const matchingCharge = chargeRows
+			.filter(
+				(charge) =>
+					charge.created_at < refund.created_at &&
+					!sharesInvoice(charge, refund) &&
+					isWithinPeriod(refund, charge) &&
+					hasSamePrice(refund, charge),
+			)
+			.sort((a, b) => b.created_at - a.created_at)[0];
+		if (!matchingCharge) continue;
+
+		const alreadyRefunded = alreadyRefundedByCharge.get(matchingCharge.id) ?? 0;
+		alreadyRefundedByCharge.set(
+			matchingCharge.id,
+			new Decimal(alreadyRefunded)
+				.plus(Math.abs(splitMultiEntityAmount(refund)))
 				.toNumber(),
-		0,
-	);
+		);
+	}
+
+	return alreadyRefundedByCharge;
 };
 
 export const splitMultiEntityAmount = (
