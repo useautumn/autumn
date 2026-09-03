@@ -6,6 +6,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { attachRefundSourceCustomerProduct } from "@/internal/billing/v2/actions/attach/utils/attachRefundSourceCustomerProduct";
 
 const refundRejected = ({ reason }: { reason: string }) =>
 	new RecaseError({
@@ -25,8 +26,7 @@ export const handleRefundLastPaymentErrors = ({
 	billingContext: AttachBillingContext;
 	params: AttachParamsV1;
 }) => {
-	const { refundLastPayment, planTiming, currentCustomerProduct } =
-		billingContext;
+	const { refundLastPayment, planTiming } = billingContext;
 
 	if (!refundLastPayment) return;
 
@@ -45,17 +45,29 @@ export const handleRefundLastPaymentErrors = ({
 		});
 	}
 
-	if (!currentCustomerProduct) {
+	const refundSource = attachRefundSourceCustomerProduct({
+		billingContext,
+		params,
+	});
+
+	if (!refundSource) {
 		throw refundRejected({
 			reason:
 				"requires an outgoing plan to refund. This attach does not replace an existing plan.",
 		});
 	}
 
-	if (isCustomerProductFree(currentCustomerProduct)) {
+	if (isCustomerProductFree(refundSource)) {
 		throw refundRejected({
 			reason:
 				"requires a paid outgoing plan. The plan being replaced was free, so there is no payment to return.",
+		});
+	}
+
+	if (refundSource.canceled_at) {
+		throw refundRejected({
+			reason:
+				"cannot refund a plan that is already cancelled, since its payment may have been settled or refunded already.",
 		});
 	}
 };

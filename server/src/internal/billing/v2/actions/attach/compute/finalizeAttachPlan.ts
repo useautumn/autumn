@@ -4,6 +4,7 @@ import type {
 	AutumnBillingPlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { attachRefundSourceCustomerProduct } from "@/internal/billing/v2/actions/attach/utils/attachRefundSourceCustomerProduct";
 import { computeRefundPlan } from "@/internal/billing/v2/compute/finalize/computeRefundPlan";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 
@@ -33,11 +34,12 @@ export const finalizeAttachPlan = async ({
 	// Compute runs before the error pass rejects an unpayable refund, so the
 	// outgoing plan is checked here too. Sibling refund lines on an add-on attach
 	// make line items an unreliable signal.
-	const replacesExistingPlan = Boolean(
-		attachBillingContext.currentCustomerProduct,
-	);
+	const refundSource = attachRefundSourceCustomerProduct({
+		billingContext: attachBillingContext,
+		params,
+	});
 
-	if (replacesExistingPlan) {
+	if (refundSource) {
 		const { lineItems, refundPlan } = await computeRefundPlan({
 			ctx,
 			billingContext: attachBillingContext,
