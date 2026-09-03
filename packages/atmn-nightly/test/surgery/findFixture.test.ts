@@ -137,6 +137,91 @@ export default atmn({
 	).toBeNull();
 });
 
+const planVersionsSource = `import { plan } from "atmn";
+
+export default atmn({
+	plans: [
+		plan({
+			planId: "pro",
+			versionSlug: "v1",
+			name: "Pro",
+		}),
+		plan({
+			planId: "pro",
+			versionSlug: "v2",
+			name: "Pro v2",
+		}),
+	],
+});
+`;
+
+test("where narrows same-planId versions by versionSlug", () => {
+	const call = findFixture({
+		source: planVersionsSource,
+		builder: "plan",
+		idField: "planId",
+		id: "pro",
+		where: [{ field: "versionSlug", equals: "v2" }],
+	});
+	expect(call?.text()).toContain('versionSlug: "v2"');
+	expect(call?.text()).not.toContain('versionSlug: "v1"');
+});
+
+test("absentMeans matches a fixture missing the field, and only that value", () => {
+	const source = `import { plan } from "atmn";
+
+export default atmn({
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+		}),
+	],
+});
+`;
+	const foundByDefault = findFixture({
+		source,
+		builder: "plan",
+		idField: "planId",
+		id: "pro",
+		where: [{ field: "versionSlug", equals: "v1", absentMeans: "v1" }],
+	});
+	expect(foundByDefault?.text()).toContain('planId: "pro"');
+
+	const notFoundForOtherValue = findFixture({
+		source,
+		builder: "plan",
+		idField: "planId",
+		id: "pro",
+		where: [{ field: "versionSlug", equals: "v2", absentMeans: "v1" }],
+	});
+	expect(notFoundForOtherValue).toBeNull();
+});
+
+test("a where constraint on a non-string value never matches", () => {
+	const source = `import { plan } from "atmn";
+
+export default atmn({
+	plans: [
+		plan({
+			planId: "pro",
+			versionSlug: 1,
+			name: "Pro",
+		}),
+	],
+});
+`;
+	expect(
+		findFixture({
+			source,
+			builder: "plan",
+			idField: "planId",
+			id: "pro",
+			where: [{ field: "versionSlug", equals: "1" }],
+		}),
+	).toBeNull();
+});
+
 test("a mapped fixture with dynamic values is not found", () => {
 	const source = `const ids = ["messages"];
 export default atmn({
