@@ -17,6 +17,7 @@ export const fullSubjectToPlanUsageLimits = ({
 	fullSubject
 		? getPlanBillingControlProducts({
 				customerProducts: fullSubjectToPlanProducts({ fullSubject }),
+				now: ctx.timestamp,
 				inStatuses: orgToInStatuses({ org: ctx.org }),
 			}).flatMap(
 				(customerProduct) => customerProduct.product?.usage_limits ?? [],

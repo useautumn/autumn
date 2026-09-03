@@ -120,6 +120,7 @@ test.concurrent(
 		await setupCustomer(customerId, "alert-basis-filter-only-ul");
 
 		await expectAutumnError({
+			errMessage: "filter is only valid when basis is usage_limit",
 			func: () =>
 				autumnV2_3.customers.update(customerId, {
 					billing_controls: {
@@ -133,6 +134,7 @@ test.concurrent(
 				}),
 		});
 		await expectAutumnError({
+			errMessage: "filter is only valid when basis is usage_limit",
 			func: () =>
 				autumnV2_3.customers.update(customerId, {
 					billing_controls: {
@@ -152,6 +154,7 @@ test.concurrent(
 		await setupCustomer(customerId, "alert-basis-identity");
 
 		await expectAutumnError({
+			errMessage: "Only one usage alert entry",
 			func: () =>
 				autumnV2_3.customers.update(customerId, {
 					billing_controls: {
@@ -180,6 +183,7 @@ test.concurrent(
 		await setupCustomer(customerId, "alert-basis-needs-limit");
 
 		await expectAutumnError({
+			errMessage: "no usage limit matches",
 			func: () =>
 				autumnV2_3.customers.update(customerId, {
 					billing_controls: {
@@ -192,6 +196,7 @@ test.concurrent(
 			billing_controls: { usage_limits: [dailyLimit()] },
 		});
 		await expectAutumnError({
+			errMessage: "no usage limit matches",
 			func: () =>
 				autumnV2_3.customers.update(customerId, {
 					billing_controls: {
@@ -259,6 +264,7 @@ test.concurrent(
 		const entityId = entities[0].id;
 
 		await expectAutumnError({
+			errMessage: "no usage limit matches",
 			func: () =>
 				autumnV2_3.entities.update(customerId, entityId, {
 					billing_controls: {
@@ -268,6 +274,7 @@ test.concurrent(
 		});
 
 		await expectAutumnError({
+			errMessage: "Only one usage limit entry",
 			func: () =>
 				autumnV2_3.entities.update(customerId, entityId, {
 					billing_controls: {
@@ -316,6 +323,7 @@ test.concurrent(
 			},
 		});
 		await expectAutumnError({
+			errMessage: "No usage limit on this plan matches",
 			func: () => autumnV2_3.products.create(withoutLimit),
 		});
 
@@ -354,6 +362,7 @@ test.concurrent(
 		const usageLimitAlerts = [percentAlert({ basis: "usage_limit" })];
 
 		await expectAutumnError({
+			errMessage: "no usage limit matches",
 			func: () =>
 				autumnV2_3.catalogV2.update({
 					plans: [
@@ -373,10 +382,24 @@ test.concurrent(
 				},
 			],
 		});
+		await autumnV2_3.catalogV2.update({
+			plans: [{ plan_id: planId, billing_controls: { usage_limits: [] } }],
+		});
 		await expectAutumnError({
+			errMessage: "no usage limit matches",
 			func: () =>
 				autumnV2_3.catalogV2.update({
-					plans: [{ plan_id: planId, billing_controls: { usage_limits: [] } }],
+					plans: [
+						{
+							plan_id: planId,
+							billing_controls: {
+								usage_alerts: [
+									...usageLimitAlerts,
+									percentAlert({ basis: "usage_limit", threshold: 90 }),
+								],
+							},
+						},
+					],
 				}),
 		});
 	},

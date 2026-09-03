@@ -6,7 +6,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { assertUsageLimitAlertsResolvable } from "./assertUsageLimitAlertsResolvable.js";
 import { fullSubjectToPlanUsageLimits } from "./fullSubjectToPlanUsageLimits.js";
-import { writesUsageLimitAlert } from "./writesUsageLimitAlert.js";
+import { hasUsageLimitBasisAlert } from "./hasUsageLimitBasisAlert.js";
 
 export const assertEntityUsageLimitAlertsResolvable = ({
 	ctx,
@@ -20,10 +20,11 @@ export const assertEntityUsageLimitAlertsResolvable = ({
 	billingControls: ApiEntityBillingControlsParams | null | undefined;
 }): void => {
 	const usageAlerts = billingControls?.usage_alerts;
-	if (!writesUsageLimitAlert(usageAlerts)) return;
+	if (!hasUsageLimitBasisAlert(usageAlerts)) return;
 
 	assertUsageLimitAlertsResolvable({
 		usageAlerts,
+		storedUsageAlerts: entity.usage_alerts,
 		usageLimitLists: [
 			billingControls?.usage_limits ?? entity.usage_limits,
 			fullSubject.customer.usage_limits,

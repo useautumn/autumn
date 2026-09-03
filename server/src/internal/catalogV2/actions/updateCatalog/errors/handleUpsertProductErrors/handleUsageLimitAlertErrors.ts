@@ -3,10 +3,13 @@ import { assertUsageLimitAlertsResolvable } from "@/internal/balances/usageAlert
 
 export const handleUsageLimitAlertErrors = ({
 	nextFullProduct,
+	currentFullProduct,
 }: {
 	nextFullProduct: FullProduct;
+	currentFullProduct: FullProduct | null | undefined;
 }): void =>
 	assertUsageLimitAlertsResolvable({
 		usageAlerts: nextFullProduct.usage_alerts ?? [],
+		storedUsageAlerts: currentFullProduct?.usage_alerts,
 		usageLimitLists: [nextFullProduct.usage_limits],
 	});

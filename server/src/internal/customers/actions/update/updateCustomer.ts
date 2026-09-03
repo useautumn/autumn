@@ -60,12 +60,6 @@ export const updateCustomer = async ({
 		autoTopups: billing_controls?.auto_topups ?? [],
 	});
 
-	await assertCustomerUsageLimitAlertsResolvable({
-		ctx,
-		customer: originalCustomer,
-		billingControls: billing_controls,
-	});
-
 	if (newCustomerId === null) {
 		throw new RecaseError({
 			message: "Customer ID cannot be set to null",
@@ -89,6 +83,12 @@ export const updateCustomer = async ({
 			});
 		}
 	}
+
+	await assertCustomerUsageLimitAlertsResolvable({
+		ctx,
+		customer: originalCustomer,
+		billingControls: billing_controls,
+	});
 
 	// Try to update stripe ID. Distinguish omitted (undefined -> leave as is)
 	// from explicitly cleared (null/"" -> unlink the Stripe customer).

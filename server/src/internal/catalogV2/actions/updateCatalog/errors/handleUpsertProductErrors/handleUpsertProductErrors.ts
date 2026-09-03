@@ -66,9 +66,12 @@ export const handleUpsertProductErrors = ({
 		});
 		const latestExistingVersion = maxVersion === 0 ? undefined : maxVersion;
 
-		// 1. Free trial errors (one-off products cannot trial)
+		// 1. Free trial errors (one-off products cannot trial); new usage_limit alerts need a cap
 		handleFreeTrialErrors({ nextFullProduct });
-		handleUsageLimitAlertErrors({ nextFullProduct });
+		handleUsageLimitAlertErrors({
+			nextFullProduct,
+			currentFullProduct: upsert.row.currentFullProduct,
+		});
 
 		// 2. Default flag errors (historical version; paid default; never on a variant)
 		handleDefaultFlagErrors({
