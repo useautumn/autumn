@@ -61,11 +61,12 @@ test("overlay and spec-order rules hold for features", () => {
 		"modelMarkups",
 		"processors",
 		"archived",
-		"newFeatureId",
 	]) {
 		expect(keys).toContain(expected);
 	}
 	expect(keys).not.toContain("eventNames");
+	// Dead since internal_id: a changed featureId is the rename.
+	expect(keys).not.toContain("newFeatureId");
 	// Spec order across the allOf branches, not alphabetical.
 	expect(keys.indexOf("name")).toBeLessThan(keys.indexOf("featureId"));
 	expect(keys.indexOf("featureId")).toBeLessThan(keys.indexOf("processors"));
