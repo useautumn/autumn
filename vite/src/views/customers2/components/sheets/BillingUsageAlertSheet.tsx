@@ -23,10 +23,8 @@ import {
 } from "@autumn/ui";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-	ALL_BASIS_OPTIONS,
-	USAGE_ALERT_BASIS_DESCRIPTIONS,
-} from "@/components/billing-controls/usageAlertBasisOptions";
+import { UsageAlertBasisSelect } from "@/components/billing-controls/UsageAlertBasisSelect";
+import { ALL_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -334,35 +332,11 @@ export function BillingUsageAlertSheet() {
 							</Select>
 						</div>
 
-						<div>
-							<FormLabel>Measured against</FormLabel>
-							<Select
-								value={basis}
-								onValueChange={(value) =>
-									setBasis(value as DbUsageAlert["basis"])
-								}
-								items={Object.fromEntries(
-									ALL_BASIS_OPTIONS.map((option) => [
-										option.value,
-										option.label,
-									]),
-								)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{ALL_BASIS_OPTIONS.map((option) => (
-										<SelectItem key={option.value} value={option.value}>
-											{option.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<p className="mt-1 text-tertiary-foreground text-xs">
-								{USAGE_ALERT_BASIS_DESCRIPTIONS[basis]}
-							</p>
-						</div>
+						<UsageAlertBasisSelect
+							value={basis}
+							options={ALL_BASIS_OPTIONS}
+							onChange={setBasis}
+						/>
 
 						{measuresUsageLimit && (
 							<div>

@@ -76,8 +76,6 @@ const USAGE_INTERVAL_OPTIONS: SelectOption[] = [
 	{ value: ResetInterval.Year, label: "Year" },
 ];
 
-const ALERT_BASIS_OPTIONS: SelectOption[] = ALL_BASIS_OPTIONS;
-
 const THRESHOLD_TYPE_OPTIONS: SelectOption[] = [
 	{ value: "usage", label: "Absolute usage" },
 	{ value: "usage_percentage", label: "% used of allowance" },
@@ -489,7 +487,7 @@ function UsageAlertFields({ form }: { form: UsePlanBillingControlForm }) {
 				name="alert_basis"
 				label="Measured against"
 				placeholder="Measured against"
-				options={ALERT_BASIS_OPTIONS}
+				options={ALL_BASIS_OPTIONS}
 			/>
 		</div>
 	);
