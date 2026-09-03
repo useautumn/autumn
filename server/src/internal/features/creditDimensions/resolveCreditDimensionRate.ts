@@ -1,90 +1,15 @@
-import {
-	type CreditDimension,
-	type CreditMultiplier,
-	type CreditSchemaItem,
-	usageLimitFilterMatchesProperties,
-} from "@autumn/shared";
-import { Decimal } from "decimal.js";
+import type { CreditSchemaItem } from "@autumn/shared";
 import { invalidCreditRateCard } from "../creditSystemUtils.js";
+import { combineCreditMultipliers } from "./combineCreditMultipliers.js";
+import type { EventProperties } from "./matchesEventProperties.js";
+import { pickWinningDimension } from "./pickWinningDimension.js";
+import { scaleCreditAmount } from "./scaleCreditAmount.js";
 
-export type EventProperties = Record<string, unknown> | undefined;
+export type { EventProperties } from "./matchesEventProperties.js";
 
 /** A rate-card row with its dimension rules applied: a plain flat or graduated rate, plus which dimension won. */
 export type ResolvedCreditSchemaItem = CreditSchemaItem & {
 	dimension_name?: string;
-};
-
-// An empty match applies to every event, so a missing property bag still matches it.
-const matchesEvent = ({
-	match,
-	eventProperties,
-}: {
-	match: CreditDimension["match"];
-	eventProperties: EventProperties;
-}): boolean =>
-	usageLimitFilterMatchesProperties({
-		filterProperties: match,
-		eventProperties: eventProperties ?? {},
-	});
-
-const specificity = (dimension: CreditDimension) =>
-	Object.keys(dimension.match).length;
-
-const pickWinningDimension = ({
-	dimensions,
-	eventProperties,
-}: {
-	dimensions: Record<string, CreditDimension>;
-	eventProperties: EventProperties;
-}): [string, CreditDimension] | undefined =>
-	Object.entries(dimensions)
-		.filter(([, dimension]) =>
-			matchesEvent({ match: dimension.match, eventProperties }),
-		)
-		.sort(
-			([leftName, left], [rightName, right]) =>
-				specificity(right) - specificity(left) ||
-				(right.priority ?? 0) - (left.priority ?? 0) ||
-				leftName.localeCompare(rightName),
-		)[0];
-
-const combineMultipliers = ({
-	multipliers,
-	eventProperties,
-}: {
-	multipliers: Record<string, CreditMultiplier>;
-	eventProperties: EventProperties;
-}) => {
-	const matching = Object.values(multipliers).filter((multiplier) =>
-		matchesEvent({ match: multiplier.match, eventProperties }),
-	);
-	const factor = matching.reduce(
-		(product, multiplier) => product.mul(multiplier.factor ?? 1),
-		new Decimal(1),
-	);
-	const add = matching.reduce(
-		(sum, multiplier) => sum.add(multiplier.add ?? 0),
-		new Decimal(0),
-	);
-	return { factor, add };
-};
-
-const scaleAmount = ({
-	amount,
-	factor,
-	add,
-	invalidRate,
-}: {
-	amount: number;
-	factor: Decimal;
-	add: Decimal;
-	invalidRate: (message: string) => never;
-}): number => {
-	const scaled = new Decimal(amount).mul(factor).add(add);
-	if (scaled.lt(0)) {
-		invalidRate("Credit multipliers took the rate below zero");
-	}
-	return scaled.toNumber();
 };
 
 /**
@@ -114,12 +39,12 @@ export const resolveCreditDimensionRate = ({
 		eventProperties,
 	});
 	const [dimensionName, rate] = winner ?? [undefined, row];
-	const { factor, add } = combineMultipliers({
+	const combined = combineCreditMultipliers({
 		multipliers: multipliers ?? {},
 		eventProperties,
 	});
 	const scale = (amount: number) =>
-		scaleAmount({ amount, factor, add, invalidRate });
+		scaleCreditAmount({ amount, multipliers: combined, invalidRate });
 
 	const base = {
 		metered_feature_id: row.metered_feature_id,

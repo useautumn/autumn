@@ -15,7 +15,7 @@ import {
 import { ACTIVE_STATUSES } from "@server/internal/customers/cusProducts/CusProductService";
 import RecaseError from "@server/utils/errorUtils";
 import { StatusCodes } from "http-status-codes";
-import { validateCreditDimensionRules } from "./validateCreditDimensionRules.js";
+import { validateCreditDimensionRules } from "./creditDimensions/validateCreditDimensionRules.js";
 import { validateCreditRate } from "./validateCreditRate.js";
 
 export const validateFeatureId = (featureId: string) => {
