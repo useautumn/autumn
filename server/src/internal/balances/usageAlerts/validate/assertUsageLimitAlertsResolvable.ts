@@ -1,6 +1,6 @@
 import {
-	type DbUsageAlert,
-	type DbUsageAlertParams,
+	type CusProductStatus,
+	type DbUsageAlertLike,
 	type DbUsageLimit,
 	ErrCode,
 	type FullSubject,
@@ -11,33 +11,46 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 
-const planUsageLimitsOf = (fullSubject: FullSubject): DbUsageLimit[] =>
+const planUsageLimitsOf = ({
+	fullSubject,
+	inStatuses,
+}: {
+	fullSubject: FullSubject;
+	inStatuses: CusProductStatus[];
+}): DbUsageLimit[] =>
 	getPlanBillingControlProducts({
 		customerProducts: fullSubjectToPlanProducts({ fullSubject }),
+		inStatuses,
 	}).flatMap((customerProduct) => customerProduct.product?.usage_limits ?? []);
+
+export const writesUsageLimitAlert = (
+	usageAlerts: DbUsageAlertLike[] | null | undefined,
+): boolean => (usageAlerts ?? []).some(isUsageLimitBasisAlert);
 
 /**
  * A usage_limit alert must point at a cap the subject can already see:
  * its own limits (as they will be after this write), then the customer's,
- * then the active plans'. Throws 400 naming the first orphaned alert.
+ * then the plans enforcement reads. Throws 400 naming the first orphaned alert.
  */
 export const assertUsageLimitAlertsResolvable = ({
 	usageAlerts,
 	ownUsageLimits,
 	fullSubject,
+	inStatuses,
 }: {
-	usageAlerts: Array<DbUsageAlert | DbUsageAlertParams>;
+	usageAlerts: DbUsageAlertLike[];
 	ownUsageLimits: Array<DbUsageLimit[] | null | undefined>;
 	fullSubject: FullSubject | null | undefined;
+	inStatuses: CusProductStatus[];
 }): void => {
-	if (!usageAlerts.some(isUsageLimitBasisAlert)) return;
+	if (!writesUsageLimitAlert(usageAlerts)) return;
 
 	const unresolvable = findUnresolvableUsageLimitAlerts({
 		usageAlerts,
 		usageLimitLists: [
 			...ownUsageLimits,
 			fullSubject?.customer.usage_limits,
-			fullSubject ? planUsageLimitsOf(fullSubject) : [],
+			fullSubject ? planUsageLimitsOf({ fullSubject, inStatuses }) : [],
 		],
 	});
 	const orphan = unresolvable[0];

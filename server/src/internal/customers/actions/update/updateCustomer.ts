@@ -3,6 +3,7 @@ import {
 	CustomerAlreadyExistsError,
 	CustomerNotFoundError,
 	notNullish,
+	orgToInStatuses,
 	ProcessorType,
 	RecaseError,
 	shouldForwardCustomerMetadata,
@@ -18,7 +19,10 @@ import {
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
-import { assertUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertUsageLimitAlertsResolvable";
+import {
+	assertUsageLimitAlertsResolvable,
+	writesUsageLimitAlert,
+} from "@/internal/balances/usageAlerts/validate/assertUsageLimitAlertsResolvable";
 import { CusService } from "@/internal/customers/CusService";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
@@ -61,13 +65,14 @@ export const updateCustomer = async ({
 		autoTopups: billing_controls?.auto_topups ?? [],
 	});
 
-	if (billing_controls?.usage_alerts !== undefined) {
+	if (writesUsageLimitAlert(billing_controls?.usage_alerts)) {
 		assertUsageLimitAlertsResolvable({
-			usageAlerts: billing_controls.usage_alerts,
+			usageAlerts: billing_controls?.usage_alerts ?? [],
 			ownUsageLimits: [
-				billing_controls.usage_limits ?? originalCustomer.usage_limits,
+				billing_controls?.usage_limits ?? originalCustomer.usage_limits,
 			],
 			fullSubject: await getFullSubject({ ctx, customerId }),
+			inStatuses: orgToInStatuses({ org }),
 		});
 	}
 
