@@ -34,7 +34,6 @@ export const checkLimitReached = async ({
 	entityId?: string;
 	eventProperties?: Record<string, unknown> | null;
 }) => {
-	const now = ctx.timestamp;
 	try {
 		const oldBalance = oldEvalSubject.balances?.[feature.id];
 		const newBalance = newEvalSubject.balances?.[feature.id];
@@ -67,7 +66,6 @@ export const checkLimitReached = async ({
 						fullSubject: newFullSubject,
 						feature,
 						eventProperties,
-						now,
 					})
 				: undefined;
 		const blockedFilter =

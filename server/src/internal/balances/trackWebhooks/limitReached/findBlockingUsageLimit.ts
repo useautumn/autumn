@@ -18,16 +18,15 @@ export const findBlockingUsageLimit = ({
 	fullSubject,
 	feature,
 	eventProperties,
-	now,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	feature: Feature;
 	eventProperties?: Record<string, unknown> | null;
-	now: number;
 }): BlockingUsageLimit | undefined => {
+	const now = ctx.timestamp;
 	const usageWindows = fullSubject.usage_windows ?? [];
-	const measured = resolveUsageWindowLimits({ ctx, fullSubject, feature, now })
+	const measured = resolveUsageWindowLimits({ ctx, fullSubject, feature })
 		.filter((limit) =>
 			usageLimitFilterMatchesProperties({
 				filterProperties: limit.filter_properties,
