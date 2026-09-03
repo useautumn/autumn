@@ -1,4 +1,3 @@
-import type { CreditSchemaItem } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import type {
 	ColumnDef,
@@ -20,15 +19,13 @@ import { CreditNumberInput } from "./CreditNumberInput";
 interface RateTableRow {
 	id: string;
 	index: number;
-	rule?: CreditRateRule;
-	base?: CreditSchemaItem;
+	rule: CreditRateRule;
 }
 
 interface RateTableMeta {
 	values: DimensionValues;
 	onRuleChange: (index: number, rule: CreditRateRule) => void;
 	onRuleRemove: (index: number) => void;
-	onBaseCreditsChange: (credit_amount: number) => void;
 }
 
 interface RateCellContext {
@@ -42,31 +39,26 @@ const metaOf = (table: TableInstance<RateTableRow>): RateTableMeta =>
 interface CreditDimensionRateTableProps {
 	values: DimensionValues;
 	rules: CreditRateRule[];
-	base: CreditSchemaItem;
+	baseRate: string;
 	onRuleChange: (index: number, rule: CreditRateRule) => void;
 	onRuleRemove: (index: number) => void;
 	onRuleAdd: () => void;
-	onBaseCreditsChange: (credit_amount: number) => void;
 }
 
-/** One column per dimension, a credits column, and a final "any" row that is the item's own rate.
+/** One column per dimension and a credits column; the strip beneath adds a rate and names the fallback.
  * Cells are components to the table, so `data` and `columns` must stay referentially
- * stable while typing: values and handlers ride on `meta`, the base item on its row. */
+ * stable while typing: values and handlers ride on `meta`. */
 export function CreditDimensionRateTable({
 	values,
 	rules,
-	base,
+	baseRate,
 	onRuleChange,
 	onRuleRemove,
 	onRuleAdd,
-	onBaseCreditsChange,
 }: CreditDimensionRateTableProps) {
 	const data: RateTableRow[] = useMemo(
-		() => [
-			...rules.map((rule, index) => ({ id: String(index), index, rule })),
-			{ id: "base", index: rules.length, base },
-		],
-		[rules, base],
+		() => rules.map((rule, index) => ({ id: String(index), index, rule })),
+		[rules],
 	);
 
 	const fields = Object.keys(values);
@@ -78,7 +70,6 @@ export function CreditDimensionRateTable({
 					id: `field:${field}`,
 					cell: ({ row, table }: RateCellContext) => {
 						const { rule, index } = row.original;
-						if (!rule) return <MutedCell>any</MutedCell>;
 						return (
 							<CreditDimensionValueSelect
 								ariaLabel={`${rule.name || "new rate"} ${field}`}
@@ -100,28 +91,23 @@ export function CreditDimensionRateTable({
 				id: "credits",
 				size: 90,
 				cell: ({ row, table }: RateCellContext) => {
-					const { rule, index, base } = row.original;
-					const rate = rule?.dimension ?? base;
-					if (!rate) return null;
-					if (rate.tier_behavior === "graduated") {
+					const { rule, index } = row.original;
+					const { dimension } = rule;
+					if (dimension.tier_behavior === "graduated") {
 						return <MutedCell>tiered</MutedCell>;
 					}
-					const onCreditsChange = (credit_amount: number) => {
-						if (!rule) return metaOf(table).onBaseCreditsChange(credit_amount);
-						const { dimension } = rule;
-						if (dimension.tier_behavior === "graduated") return;
-						metaOf(table).onRuleChange(index, {
-							...rule,
-							dimension: { ...dimension, credit_amount },
-						});
-					};
 					return (
 						<CreditNumberInput
 							variant="headless"
-							ariaLabel={`${rule?.name || (rule ? "new rate" : "base rate")} credit cost`}
+							ariaLabel={`${rule.name || "new rate"} credit cost`}
 							placeholder="0"
-							value={rate.credit_amount}
-							onValueChange={onCreditsChange}
+							value={dimension.credit_amount}
+							onValueChange={(credit_amount) =>
+								metaOf(table).onRuleChange(index, {
+									...rule,
+									dimension: { ...dimension, credit_amount },
+								})
+							}
 							className="text-sm"
 						/>
 					);
@@ -134,7 +120,6 @@ export function CreditDimensionRateTable({
 				enableSorting: false,
 				cell: ({ row, table }: RateCellContext) => {
 					const { rule, index } = row.original;
-					if (!rule) return null;
 					return (
 						<div className="flex justify-end">
 							<IconButton
@@ -153,12 +138,7 @@ export function CreditDimensionRateTable({
 		[fields.join(",")],
 	);
 
-	const meta: RateTableMeta = {
-		values,
-		onRuleChange,
-		onRuleRemove,
-		onBaseCreditsChange,
-	};
+	const meta: RateTableMeta = { values, onRuleChange, onRuleRemove };
 	const table = useProductTable({
 		data,
 		columns,
@@ -172,14 +152,19 @@ export function CreditDimensionRateTable({
 			table={table}
 			columnCount={columns.length}
 			footer={
-				<button
-					type="button"
-					onClick={onRuleAdd}
-					className="flex items-center gap-1 w-full hover:text-foreground transition-colors"
-				>
-					<PlusIcon className="h-3 w-3" />
-					New rate
-				</button>
+				<>
+					<button
+						type="button"
+						onClick={onRuleAdd}
+						className="flex items-center gap-1 flex-1 hover:text-foreground transition-colors"
+					>
+						<PlusIcon className="h-3 w-3" />
+						New rate
+					</button>
+					<span className="shrink-0 text-tertiary-foreground">
+						anything else · {baseRate}
+					</span>
+				</>
 			}
 		/>
 	);
