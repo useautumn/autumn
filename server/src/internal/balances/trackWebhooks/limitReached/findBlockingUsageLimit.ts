@@ -9,10 +9,7 @@ import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows
 import { usageWindowLimitToWebhookBlock } from "@/internal/balances/utils/usageWindows/usageWindowLimitToWebhookBlock.js";
 import type { BlockingUsageLimit } from "./types/blockingUsageLimit.js";
 
-/**
- * The cap that blocked this event. Enforcement stops at the cap with the least
- * headroom, so the webhook reports that one, filter included, from one source.
- */
+// Enforcement stops at the cap with the least headroom; report that one, filter included.
 export const findBlockingUsageLimit = ({
 	ctx,
 	fullSubject,
