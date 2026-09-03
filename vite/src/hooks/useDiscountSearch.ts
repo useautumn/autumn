@@ -69,19 +69,23 @@ export const useDiscountSearch = ({
 	// Keep every coupon found, so a picked one stays resolvable after the
 	// search text moves on.
 	useEffect(() => {
-		if (!coupon || !isCouponAllowed(coupon)) return;
+		if (!coupon) return;
 		setLookedUpCoupons((previous) =>
 			previous.some((known) => known.id === coupon.id)
 				? previous
 				: [...previous, coupon],
 		);
-	}, [coupon, isCouponAllowed]);
+	}, [coupon]);
 
-	const mergedOptions = lookedUpCoupons.reduce(
-		(merged, lookedUp) =>
-			mergeLookedUpCoupon({ options: merged, coupon: lookedUp }),
-		options,
-	);
+	// The allowance is applied on every render rather than when a coupon is
+	// stored, so a change in scope (e.g. the product) re-filters what's kept.
+	const mergedOptions = lookedUpCoupons
+		.filter(isCouponAllowed)
+		.reduce(
+			(merged, lookedUp) =>
+				mergeLookedUpCoupon({ options: merged, coupon: lookedUp }),
+			options,
+		);
 
 	return { options: mergedOptions, setSearch, isLookingUp: isFetching };
 };
