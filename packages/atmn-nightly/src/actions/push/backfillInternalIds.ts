@@ -5,26 +5,55 @@ import { insertFirstProperty } from "../../surgery/insertFirstProperty";
 import { listSourceFiles } from "../pull/listSourceFiles";
 import { locateFixture } from "../pull/locateFixture";
 
-type AppliedRow = {
+export type IdentityRow = {
 	id?: string;
 	internalId?: string | null;
-	action?: string;
 	versionSlug?: string | null;
 };
+
+/** Push: created features from `results`, every direct plan row in full. */
+export const identityRowsFromApplied = ({
+	applied,
+}: {
+	applied: { results?: Record<string, unknown> } & Record<string, unknown>;
+}): Record<string, IdentityRow[]> =>
+	Object.fromEntries(
+		Object.entries(COLLECTIONS).map(([collection, spec]) => {
+			const rows = spec.historyKey
+				? applied[collection]
+				: (
+						applied.results?.[collection] as { action?: string }[] | undefined
+					)?.filter((row) => row.action === "create");
+			return [collection, Array.isArray(rows) ? (rows as IdentityRow[]) : []];
+		}),
+	);
+
+/** Pull: every row the catalog returned. */
+export const identityRowsFromCatalog = ({
+	catalog,
+}: {
+	catalog: Record<string, unknown>;
+}): Record<string, IdentityRow[]> =>
+	Object.fromEntries(
+		Object.keys(COLLECTIONS).map((collection) => {
+			const rows = catalog[collection];
+			return [collection, Array.isArray(rows) ? (rows as IdentityRow[]) : []];
+		}),
+	);
 
 const HAS_INTERNAL_ID = /\binternalId\s*:/;
 
 /**
- * After apply, each created row's minted id is written into its fixture, so
- * the next push addresses the row by identity and a changed public id is a
- * rename rather than a delete and a create.
+ * Every row's stable id is written into its fixture when the fixture lacks one,
+ * so the next push addresses the row by identity and a changed public id is a
+ * rename rather than a delete and a create. Push feeds it the applied rows,
+ * pull the whole catalog.
  */
 export const backfillInternalIds = ({
-	applied,
+	rows,
 	configPath,
 }: {
-	/** The update response: `results` per collection, plus full plan rows. */
-	applied: { results?: Record<string, unknown> } & Record<string, unknown>;
+	rows: Record<string, IdentityRow[]>;
 	configPath: string;
 }): { backfilled: string[] } => {
 	const files = new Map<string, string>();
@@ -36,13 +65,8 @@ export const backfillInternalIds = ({
 	const backfilled: string[] = [];
 
 	for (const [collection, spec] of Object.entries(COLLECTIONS)) {
-		// Versioned rows come back in full with their slug; others in `results`.
-		const rows = spec.historyKey
-			? applied[collection]
-			: applied.results?.[collection];
-		if (!Array.isArray(rows)) continue;
-		for (const row of rows as AppliedRow[]) {
-			if (!spec.historyKey && row.action !== "create") continue;
+		const collectionRows = rows[collection] ?? [];
+		for (const row of collectionRows) {
 			if (typeof row.id !== "string" || typeof row.internalId !== "string")
 				continue;
 			const located = locateFixture({
