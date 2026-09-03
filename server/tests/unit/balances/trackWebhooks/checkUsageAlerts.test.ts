@@ -29,6 +29,7 @@ const alert = ({
 }: Pick<DbUsageAlert, "threshold" | "threshold_type">): DbUsageAlert => ({
 	threshold,
 	threshold_type,
+	basis: "balance",
 	enabled: true,
 	feature_id: "messages",
 });

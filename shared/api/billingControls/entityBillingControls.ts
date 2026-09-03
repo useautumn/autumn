@@ -2,7 +2,11 @@ import { z } from "zod/v4";
 import { DbOverageAllowedSchema } from "../../models/cusModels/billingControls/overageAllowed.js";
 import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
 import { DbUsageAlertSchema } from "../../models/cusModels/billingControls/usageAlert.js";
-import { DbUsageLimitSchema } from "../../models/cusModels/billingControls/usageLimit.js";
+import { usageAlertIdentity } from "../../models/cusModels/billingControls/usageAlertIdentity.js";
+import {
+	DbUsageLimitSchema,
+	usageLimitIdentity,
+} from "../../models/cusModels/billingControls/usageLimit.js";
 import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
 import { ApiUsageAlertSchema } from "./usageAlert.js";
@@ -69,22 +73,44 @@ export const ApiEntityBillingControlsParamsSchema =
 			spendLimitFeatureIds.add(spendLimit.feature_id);
 		}
 
-		const usageLimitFeatureIds = new Set<string>();
+		const usageLimitIdentities = new Set<string>();
 
 		for (const [index, usageLimit] of (
 			billingControls.usage_limits ?? []
 		).entries()) {
-			if (usageLimitFeatureIds.has(usageLimit.feature_id)) {
+			const identity = usageLimitIdentity(usageLimit);
+			if (usageLimitIdentities.has(identity)) {
 				ctx.issues.push({
 					code: "custom",
-					message: "Only one usage limit entry is allowed per feature_id",
+					message:
+						"Only one usage limit entry is allowed per feature_id and filter",
 					input: usageLimit.feature_id,
 					path: ["usage_limits", index, "feature_id"],
 				});
 				return;
 			}
 
-			usageLimitFeatureIds.add(usageLimit.feature_id);
+			usageLimitIdentities.add(identity);
+		}
+
+		const usageAlertIdentities = new Set<string>();
+
+		for (const [index, usageAlert] of (
+			billingControls.usage_alerts ?? []
+		).entries()) {
+			const identity = usageAlertIdentity(usageAlert);
+			if (usageAlertIdentities.has(identity)) {
+				ctx.issues.push({
+					code: "custom",
+					message:
+						"Only one usage alert entry is allowed per feature_id, basis, filter, threshold_type and threshold",
+					input: usageAlert.threshold,
+					path: ["usage_alerts", index, "threshold"],
+				});
+				return;
+			}
+
+			usageAlertIdentities.add(identity);
 		}
 
 		const overageAllowedFeatureIds = new Set<string>();

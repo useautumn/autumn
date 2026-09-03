@@ -48,6 +48,7 @@ const usageAlertControls: CustomerBillingControls = {
 			feature_id: TestFeature.Messages,
 			threshold: 90,
 			threshold_type: "usage_percentage",
+			basis: "balance",
 			enabled: true,
 		},
 	],

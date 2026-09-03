@@ -58,6 +58,7 @@ export const UsageLimitFilterSchema = z.object({
 });
 
 export type UsageLimitFilter = z.infer<typeof UsageLimitFilterSchema>;
+export type UsageLimitFilterParams = z.input<typeof UsageLimitFilterSchema>;
 
 export const DbUsageLimitSchema = z.object({
 	feature_id: z.string().meta({
@@ -90,7 +91,7 @@ export type DbUsageLimit = z.infer<typeof DbUsageLimitSchema>;
  * dedup checks key off this, so config edits can never orphan a live counter.
  */
 export const usageLimitFilterKey = (
-	filter: UsageLimitFilter | null | undefined,
+	filter: UsageLimitFilter | UsageLimitFilterParams | null | undefined,
 ): string => {
 	if (!filter?.properties) return "";
 	return Object.entries(filter.properties)
@@ -99,6 +100,13 @@ export const usageLimitFilterKey = (
 		.map(([key, value]) => `${key}=${value}`)
 		.join("&");
 };
+
+/** A limit is identified by its feature and its canonical filter. */
+export const usageLimitIdentity = (usageLimit: {
+	feature_id: string;
+	filter?: UsageLimitFilter | UsageLimitFilterParams | null;
+}): string =>
+	`${usageLimit.feature_id}|${usageLimitFilterKey(usageLimit.filter)}`;
 
 /**
  * Whether an event's properties satisfy a limit's filter: every condition

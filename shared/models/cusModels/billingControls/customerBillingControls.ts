@@ -16,11 +16,12 @@ import {
 	pickStricterSpendLimit,
 } from "./spendLimit.js";
 import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
+import { usageAlertIdentity } from "./usageAlertIdentity.js";
 import {
 	type DbUsageLimit,
 	DbUsageLimitSchema,
 	pickStricterUsageLimit,
-	usageLimitFilterKey,
+	usageLimitIdentity,
 } from "./usageLimit.js";
 
 export const BILLING_CONTROL_KEYS = [
@@ -248,8 +249,7 @@ export const normalizeBillingControlsForCompare = (
 
 	const normalized = Object.fromEntries(
 		BILLING_CONTROL_KEYS.flatMap((key) => {
-			const value =
-				key === "spend_limits" ? spendLimits : billingControls[key];
+			const value = key === "spend_limits" ? spendLimits : billingControls[key];
 			if (value == null || value.length === 0) return [];
 			return [[key, value]];
 		}),
@@ -322,7 +322,7 @@ export const CustomerBillingControlsParamsSchema =
 		for (const [index, usageLimit] of (
 			billingControls.usage_limits ?? []
 		).entries()) {
-			const identity = `${usageLimit.feature_id}|${usageLimitFilterKey(usageLimit.filter)}`;
+			const identity = usageLimitIdentity(usageLimit);
 			if (usageLimitIdentities.has(identity)) {
 				ctx.issues.push({
 					code: "custom",
@@ -335,6 +335,26 @@ export const CustomerBillingControlsParamsSchema =
 			}
 
 			usageLimitIdentities.add(identity);
+		}
+
+		const usageAlertIdentities = new Set<string>();
+
+		for (const [index, usageAlert] of (
+			billingControls.usage_alerts ?? []
+		).entries()) {
+			const identity = usageAlertIdentity(usageAlert);
+			if (usageAlertIdentities.has(identity)) {
+				ctx.issues.push({
+					code: "custom",
+					message:
+						"Only one usage alert entry is allowed per feature_id, basis, filter, threshold_type and threshold",
+					input: usageAlert.threshold,
+					path: ["usage_alerts", index, "threshold"],
+				});
+				return;
+			}
+
+			usageAlertIdentities.add(identity);
 		}
 
 		const overageAllowedFeatureIds = new Set<string>();
@@ -379,11 +399,27 @@ export {
 	pickStricterUsageLimit,
 };
 export {
+	type DbUsageAlertParams,
+	USAGE_ALERT_BASES,
+	type UsageAlertBasis,
+	UsageAlertBasisSchema,
+} from "./usageAlert.js";
+export {
+	isUsageLimitBasisAlert,
+	usageAlertIdentity,
+} from "./usageAlertIdentity.js";
+export {
+	USAGE_LIMIT_ANCHORS,
 	USAGE_LIMIT_FILTER_MAX_KEY_LENGTH,
 	USAGE_LIMIT_FILTER_MAX_KEYS,
 	USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH,
+	USAGE_LIMIT_INTERVALS,
+	type UsageLimitAnchor,
+	UsageLimitAnchorSchema,
 	type UsageLimitFilter,
+	type UsageLimitFilterParams,
 	UsageLimitFilterSchema,
 	usageLimitFilterKey,
 	usageLimitFilterMatchesProperties,
+	usageLimitIdentity,
 } from "./usageLimit.js";

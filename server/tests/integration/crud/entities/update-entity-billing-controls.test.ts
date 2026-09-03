@@ -23,6 +23,7 @@ const usageAlertControls: EntityBillingControls = {
 			feature_id: TestFeature.Messages,
 			threshold: 80,
 			threshold_type: "usage_percentage",
+			basis: "balance",
 			enabled: true,
 		},
 	],

@@ -17,13 +17,13 @@
 
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import type { DbUsageAlert } from "@autumn/shared";
+import { setCustomerOverageAllowed } from "@tests/integration/balances/utils/overage-allowed-utils/customerOverageAllowedUtils.js";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
 	type WebhookTestSetup,
 	waitForWebhook,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
-import { setCustomerOverageAllowed } from "@tests/integration/balances/utils/overage-allowed-utils/customerOverageAllowedUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -93,6 +93,7 @@ test(`${chalk.yellowBright("org-pct-200: usage_percentage threshold of 200% fire
 			feature_id: TestFeature.Messages,
 			threshold: 200,
 			threshold_type: "usage_percentage",
+			basis: "balance",
 			enabled: true,
 			name: "org-200pct",
 		},
@@ -148,6 +149,7 @@ test(`${chalk.yellowBright("org-pct-300: usage_percentage threshold of 300% fire
 			feature_id: TestFeature.Messages,
 			threshold: 300,
 			threshold_type: "usage_percentage",
+			basis: "balance",
 			enabled: true,
 			name: "org-300pct",
 		},
@@ -203,6 +205,7 @@ test(`${chalk.yellowBright("org-pct-200-not-yet: usage_percentage threshold of 2
 			feature_id: TestFeature.Messages,
 			threshold: 200,
 			threshold_type: "usage_percentage",
+			basis: "balance",
 			enabled: true,
 			name: "org-200pct-not-yet",
 		},

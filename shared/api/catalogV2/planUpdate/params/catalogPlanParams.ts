@@ -4,7 +4,7 @@ import { ApiPlanProcessorsSchema } from "@api/products/components/processors.js"
 import { PlanLicenseParamsSchema } from "@api/products/crud/licenses/planLicenseParams.js";
 import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
 import { CatalogPlanItemParamsV1Schema } from "./catalogPlanItemParams.js";
-import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
+import { PlanBillingControlsParamsSchema } from "../../../billingControls/planBillingControls.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { idRegex } from "@utils/utils.js";
@@ -73,7 +73,7 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	config: ProductConfigParamsSchema.optional().meta({
 		description: "Miscellaneous plan-level configuration flags.",
 	}),
-	billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+	billing_controls: PlanBillingControlsParamsSchema.optional().meta({
 		description: "Plan-level billing controls used as customer defaults.",
 	}),
 	metadata: ProductMetadataSchema.optional().meta({

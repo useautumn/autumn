@@ -90,6 +90,8 @@ type UsageAlert = {
 		| "usage_percentage"
 		| "remaining"
 		| "remaining_percentage";
+	basis?: "balance" | "included" | "recurring" | "usage_limit";
+	filter?: { properties: Record<string, string | number | boolean> };
 	name?: string;
 };
 
