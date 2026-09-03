@@ -42,6 +42,7 @@ export const handleUpdateSubscriptionErrors = async ({
 		action: "update",
 		cancelAction: params.cancel_action,
 		noBillingChanges: params.no_billing_changes,
+		intent: billingContext.intent,
 	});
 
 	// 1. Current customer product errors

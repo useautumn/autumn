@@ -18,6 +18,7 @@ import {
 	PriceType,
 	ProcessorType,
 	type RecaseError,
+	UpdateSubscriptionIntent,
 } from "@autumn/shared";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices as priceFixtures } from "@tests/utils/fixtures/db/prices";
@@ -158,6 +159,7 @@ describe(
 					action: "update",
 					cancelAction: "cancel_end_of_cycle",
 					noBillingChanges: true,
+					intent: UpdateSubscriptionIntent.CancelAction,
 				}),
 			).not.toThrow();
 		});
@@ -170,6 +172,7 @@ describe(
 						customerProduct: cp,
 						action: "update",
 						cancelAction: "cancel_immediately",
+						intent: UpdateSubscriptionIntent.CancelAction,
 					}),
 				"managed by RevenueCat",
 			);
@@ -183,6 +186,37 @@ describe(
 						customerProduct: cp,
 						action: "update",
 						noBillingChanges: true,
+						intent: UpdateSubscriptionIntent.None,
+					}),
+				"managed by RevenueCat",
+			);
+		});
+
+		test("THROWS: uncancel + no_billing_changes on an RC-managed cusProduct", () => {
+			const cp = buildRcCusProduct();
+			expectThrows(
+				() =>
+					handleExternalPSPErrors({
+						customerProduct: cp,
+						action: "update",
+						cancelAction: "uncancel",
+						noBillingChanges: true,
+						intent: UpdateSubscriptionIntent.CancelAction,
+					}),
+				"managed by RevenueCat",
+			);
+		});
+
+		test("THROWS: cancel + no_billing_changes riding along a plan restructure (intent != CancelAction)", () => {
+			const cp = buildRcCusProduct();
+			expectThrows(
+				() =>
+					handleExternalPSPErrors({
+						customerProduct: cp,
+						action: "update",
+						cancelAction: "cancel_end_of_cycle",
+						noBillingChanges: true,
+						intent: UpdateSubscriptionIntent.UpdatePlan,
 					}),
 				"managed by RevenueCat",
 			);
