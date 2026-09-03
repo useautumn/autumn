@@ -1,22 +1,10 @@
-import type {
-	DbUsageAlert,
-	DbUsageAlertParams,
-} from "../../models/cusModels/billingControls/usageAlert.js";
+import { isUsageLimitBasisAlert } from "../../models/cusModels/billingControls/classify/isUsageLimitBasisAlert.js";
+import { usageAlertTargetLimitIdentity } from "../../models/cusModels/billingControls/identity/usageAlertTargetLimitIdentity.js";
+import type { DbUsageAlertLike } from "../../models/cusModels/billingControls/usageAlert.js";
 import {
-	isUsageLimitBasisAlert,
-	usageAlertTargetLimitIdentity,
-} from "../../models/cusModels/billingControls/usageAlertIdentity.js";
-import {
-	type DbUsageLimit,
-	type DbUsageLimitParams,
+	type DbUsageLimitLike,
 	usageLimitIdentity,
 } from "../../models/cusModels/billingControls/usageLimit.js";
-
-type UsageAlertLike = DbUsageAlert | DbUsageAlertParams;
-type UsageLimitLike = Pick<
-	DbUsageLimit | DbUsageLimitParams,
-	"feature_id" | "filter"
->;
 
 /**
  * usage_limit alerts whose (feature_id, filter) matches no limit in any of the
@@ -27,9 +15,11 @@ export const findUnresolvableUsageLimitAlerts = ({
 	usageAlerts,
 	usageLimitLists,
 }: {
-	usageAlerts: UsageAlertLike[];
-	usageLimitLists: Array<UsageLimitLike[] | null | undefined>;
-}): Array<{ index: number; usageAlert: UsageAlertLike }> => {
+	usageAlerts: DbUsageAlertLike[];
+	usageLimitLists: Array<
+		Array<Pick<DbUsageLimitLike, "feature_id" | "filter">> | null | undefined
+	>;
+}): Array<{ index: number; usageAlert: DbUsageAlertLike }> => {
 	const limitIdentities = new Set(
 		usageLimitLists.flatMap((list) => (list ?? []).map(usageLimitIdentity)),
 	);

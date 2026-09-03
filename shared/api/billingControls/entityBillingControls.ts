@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { findDuplicateBillingControlIssue } from "../../models/cusModels/billingControls/findDuplicateBillingControlIssue.js";
+import { findDuplicateBillingControlIssue } from "../../models/cusModels/billingControls/duplicates/findDuplicateBillingControlIssue.js";
 import { DbOverageAllowedSchema } from "../../models/cusModels/billingControls/overageAllowed.js";
 import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
 import { DbUsageAlertSchema } from "../../models/cusModels/billingControls/usageAlert.js";

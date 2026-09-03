@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
+import { isUsageLimitBasisAlert } from "../cusModels/billingControls/classify/isUsageLimitBasisAlert.js";
 import { DbUsageAlertSchema } from "../cusModels/billingControls/usageAlert.js";
-import { isUsageLimitBasisAlert } from "../cusModels/billingControls/usageAlertIdentity.js";
 
 // Org alerts apply to every customer, so there is no single usage limit to measure against.
 const OrgUsageAlertsSchema = z

@@ -72,3 +72,4 @@ export const DbUsageAlertSchema = z
 
 export type DbUsageAlert = z.infer<typeof DbUsageAlertSchema>;
 export type DbUsageAlertParams = z.input<typeof DbUsageAlertSchema>;
+export type DbUsageAlertLike = DbUsageAlert | DbUsageAlertParams;

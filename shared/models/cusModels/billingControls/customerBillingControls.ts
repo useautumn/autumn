@@ -1,10 +1,10 @@
 import { z } from "zod/v4";
+import { findDuplicateBillingControlIssue } from "./duplicates/findDuplicateBillingControlIssue.js";
 import {
 	type EntityBillingControls,
 	type EntityBillingControlsParams,
 	EntityBillingControlsSchema,
 } from "./entityBillingControls.js";
-import { findDuplicateBillingControlIssue } from "./findDuplicateBillingControlIssue.js";
 import {
 	type DbOverageAllowed,
 	DbOverageAllowedSchema,
@@ -301,18 +301,18 @@ export {
 	pickStricterSpendLimit,
 	pickStricterUsageLimit,
 };
+export { isUsageLimitBasisAlert } from "./classify/isUsageLimitBasisAlert.js";
+export { usageAlertIdentity } from "./identity/usageAlertIdentity.js";
+export { usageAlertTargetLimitIdentity } from "./identity/usageAlertTargetLimitIdentity.js";
 export {
+	type DbUsageAlertLike,
 	type DbUsageAlertParams,
 	USAGE_ALERT_BASES,
 	type UsageAlertBasis,
 	UsageAlertBasisSchema,
 } from "./usageAlert.js";
 export {
-	isUsageLimitBasisAlert,
-	usageAlertIdentity,
-	usageAlertTargetLimitIdentity,
-} from "./usageAlertIdentity.js";
-export {
+	type DbUsageLimitLike,
 	type DbUsageLimitParams,
 	USAGE_LIMIT_ANCHORS,
 	USAGE_LIMIT_FILTER_MAX_KEY_LENGTH,
