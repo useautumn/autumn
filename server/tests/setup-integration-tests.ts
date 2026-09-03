@@ -141,6 +141,22 @@ if (process.env.TESTS_ORG && !process.env.UNIT_TESTS) {
 	);
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 
+	// Cache clears fan out to the instances the edge config names; without it
+	// the test process only clears "main" while the server may read elsewhere.
+	await import("@/internal/misc/miscRedisConfig/miscRedisConfigStore.js");
+	const { startAllEdgeConfigPolling } = await import(
+		"@/internal/misc/edgeConfig/edgeConfigRegistry.js"
+	);
+	const { logger } = await import("@/external/logtail/logtailUtils.js");
+	await startAllEdgeConfigPolling({ logger });
+	const { getMiscRedisTargets } = await import(
+		"@/external/redis/miscCache/resolveMiscRedis.js"
+	);
+	const { waitForRedisReady } = await import("@/external/redis/initRedis.js");
+	for (const target of getMiscRedisTargets()) {
+		await waitForRedisReady(target.redis, target.instanceName);
+	}
+
 	if (!testContext.org.config.multi_currency) {
 		const { db } = await import("@/db/initDrizzle.js");
 		const { OrgService } = await import("@/internal/orgs/OrgService.js");
