@@ -17,7 +17,6 @@ import {
 	getTestSvixAppId,
 	setupWebhookTest,
 	type WebhookTestSetup,
-	waitForWebhook,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -27,30 +26,11 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { waitForLimitReached } from "../../utils/limit-reached-utils/limitReachedWebhookUtils.js";
 import { setCustomerUsageLimit } from "../../utils/usage-limit-utils/customerUsageLimitUtils.js";
 import { expectUsageLimitWindowContains } from "../../utils/usage-limit-utils/expectUsageLimitWindowContains.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
-
-type LimitReachedPayload = {
-	type: string;
-	data: {
-		customer_id: string;
-		feature_id: string;
-		limit_type: string;
-		entity_id?: string;
-		filter?: { properties: Record<string, string> };
-		usage_limit?: {
-			limit: number;
-			interval: string;
-			anchor: string;
-			usage: number;
-			remaining: number;
-			window_start_at: number;
-			window_end_at: number;
-		};
-	};
-};
 
 let webhook: WebhookTestSetup;
 let playToken: string;
@@ -67,22 +47,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-const waitForLimitReached = ({
-	customerId,
-	limitType,
-}: {
-	customerId: string;
-	limitType: string;
-}) =>
-	waitForWebhook<LimitReachedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "balances.limit_reached" &&
-			payload.data?.customer_id === customerId &&
-			payload.data?.limit_type === limitType,
-		timeoutMs: 15000,
-	});
 
 test(`${chalk.yellowBright("limit-reached-ul1: a usage_limit block describes the cap that blocked")}`, async () => {
 	const customerId = "lr-ul-block-1";
@@ -112,6 +76,7 @@ test(`${chalk.yellowBright("limit-reached-ul1: a usage_limit block describes the
 	});
 
 	const result = await waitForLimitReached({
+		token: playToken,
 		customerId,
 		limitType: "usage_limit",
 	});
@@ -167,6 +132,7 @@ test(`${chalk.yellowBright("limit-reached-ul2: a filtered cap echoes its filter 
 	});
 
 	const result = await waitForLimitReached({
+		token: playToken,
 		customerId,
 		limitType: "usage_limit",
 	});
@@ -198,6 +164,7 @@ test(`${chalk.yellowBright("limit-reached-ul3: an included-allowance block carri
 	});
 
 	const result = await waitForLimitReached({
+		token: playToken,
 		customerId,
 		limitType: "included",
 	});

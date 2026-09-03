@@ -59,7 +59,7 @@ export const checkLimitReached = async ({
 		if (!oldResult.allowed || newResult.allowed) return;
 
 		const blockedByUsageLimit = newResult.limitType === "usage_limit";
-		const blocking =
+		const blockingUsageLimit =
 			blockedByUsageLimit && newFullSubject
 				? findBlockingUsageLimit({
 						ctx,
@@ -68,15 +68,15 @@ export const checkLimitReached = async ({
 						eventProperties,
 					})
 				: undefined;
-		const blockedFilter =
-			blocking?.filter ??
-			(blockedByUsageLimit && eventProperties
+		const blockedFilter = blockingUsageLimit
+			? blockingUsageLimit.filter
+			: blockedByUsageLimit && eventProperties
 				? findBlockedFilterOnSubject({
 						subject: newEvalSubject,
 						feature,
 						eventProperties,
 					})
-				: undefined);
+				: undefined;
 
 		const customerId = newFullCus.id || newFullCus.internal_id;
 		const tags = fullCustomerToTags({ fullCustomer: newFullCus });
@@ -90,7 +90,7 @@ export const checkLimitReached = async ({
 				limit_type: newResult.limitType ?? "included",
 				...(entityId && { entity_id: entityId }),
 				...(blockedFilter && { filter: blockedFilter }),
-				...(blocking && { usage_limit: blocking.block }),
+				...(blockingUsageLimit && { usage_limit: blockingUsageLimit.block }),
 			},
 			tags,
 		});
