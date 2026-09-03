@@ -1,7 +1,7 @@
 /**
  * Stripe Checkout — Top-level enable_plan_immediately
  *
- * Feature under test (currently unimplemented — these tests are RED on purpose):
+ * Feature under test:
  * - Top-level `enable_plan_immediately` on attach params (no longer nested under `invoice_mode`).
  * - When set on a stripe_checkout flow, the customer_product is inserted as Active
  *   BEFORE the customer completes the Stripe-hosted checkout, with a new
@@ -26,6 +26,7 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
@@ -156,11 +157,12 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 // TEST 2: Abandoned checkout — cusProduct cleaned up on session.expired
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// NOTE: Skipped until the implementation lands. Stripe checkout sessions auto-expire
-// 24h after creation; we'll drive expiry via `s.advanceTestClock` once the handler
-// for `checkout.session.expired` exists. The assertions are written out so flipping
-// `test.skip` → `test.concurrent` is the only change needed.
-test.skip(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: expired session cleans up cusProduct")}`, async () => {
+// Expiry is driven by expiring the session on Stripe, which emits
+// `checkout.session.expired`. The API assertion at the end is the regression
+// check for the subject cache: the handler expires the row in Postgres, and the
+// webhook refresh middleware must drop the cached subject so `customers.get`
+// stops reporting the plan as active.
+test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: expired session cleans up cusProduct")}`, async () => {
 	const customerId = "stripe-checkout-eppi-expired";
 
 	const prepaidMessagesItem = items.prepaidMessages({
@@ -197,6 +199,9 @@ test.skip(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: expire
 	const result = await autumnV1.billing.attach(attachParams);
 	expect(result.payment_url).toBeDefined();
 
+	const checkoutSessionId = parseCheckoutSessionId(result.payment_url!);
+	expect(checkoutSessionId).toBeTruthy();
+
 	// Sanity: cusProduct exists Active before expiry.
 	const before = await CusProductService.list({
 		db: ctx.db,
@@ -205,19 +210,29 @@ test.skip(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: expire
 	});
 	expect(before.some((cp) => cp.product.id === pro.id)).toBe(true);
 
-	// 2. Drive past the Stripe session expiry (sessions auto-expire after 24h).
-	// TODO: replace with the proper test-clock advance helper once we wire up
-	// `checkout.session.expired` simulation alongside the implementation.
-	// For now this test is `.skip`'d so the typed shape doesn't have to be exact.
-	void s;
+	// 2. Abandon the checkout: expire the session on Stripe, which emits
+	// `checkout.session.expired`, then wait for Autumn to expire the row.
+	await ctx.stripeCli.checkout.sessions.expire(checkoutSessionId!);
+
+	const isProActiveInDb = async () => {
+		const active = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId,
+			inStatuses: [CusProductStatus.Active],
+		});
+		return active.some((cp) => cp.product.id === pro.id);
+	};
+
+	await waitForStripeWebhook({
+		stripeCli: ctx.stripeCli,
+		env: ctx.env,
+		types: ["checkout.session.expired"],
+		objectId: checkoutSessionId!,
+		until: async () => !(await isProActiveInDb()),
+	});
 
 	// 3. After expiry: cusProduct should no longer be Active.
-	const after = await CusProductService.list({
-		db: ctx.db,
-		internalCustomerId,
-		inStatuses: [CusProductStatus.Active],
-	});
-	expect(after.some((cp) => cp.product.id === pro.id)).toBe(false);
+	expect(await isProActiveInDb()).toBe(false);
 
 	// API view: pro is not active.
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
