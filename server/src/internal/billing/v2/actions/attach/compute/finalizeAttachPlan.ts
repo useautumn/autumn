@@ -36,7 +36,6 @@ export const finalizeAttachPlan = async ({
 	// make line items an unreliable signal.
 	const refundSource = attachRefundSourceCustomerProduct({
 		billingContext: attachBillingContext,
-		params,
 	});
 
 	if (refundSource) {

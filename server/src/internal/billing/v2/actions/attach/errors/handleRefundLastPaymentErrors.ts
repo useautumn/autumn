@@ -45,19 +45,18 @@ export const handleRefundLastPaymentErrors = ({
 		});
 	}
 
-	const refundSource = attachRefundSourceCustomerProduct({
-		billingContext,
-		params,
-	});
+	const refundSource = attachRefundSourceCustomerProduct({ billingContext });
 
 	if (!refundSource) {
 		throw refundRejected({
 			reason:
-				"requires an outgoing plan to refund. This attach does not replace an existing plan.",
+				"requires an outgoing plan on the same subscription to refund. This attach does not replace an existing plan.",
 		});
 	}
 
-	if (isCustomerProductFree(refundSource)) {
+	// "prorated" is derived from the refund line items, so a free source simply
+	// yields nothing; only "full" would wrongly return the last invoice.
+	if (refundLastPayment === "full" && isCustomerProductFree(refundSource)) {
 		throw refundRejected({
 			reason:
 				"requires a paid outgoing plan. The plan being replaced was free, so there is no payment to return.",
