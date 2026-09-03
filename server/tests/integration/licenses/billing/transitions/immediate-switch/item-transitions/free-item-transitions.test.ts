@@ -1,5 +1,8 @@
-/** Contract: replacements preserve usage/reset state; additions inherit Stripe cycles.
- * Mixed metered/boolean transitions repoint assignments and keep Stripe converged. */
+/** Contract: replacements RESET consumable usage by default — seats start the
+ * incoming plan at its full grant (reset cycles untouched); additions inherit
+ * Stripe cycles. Mixed metered/boolean transitions repoint assignments and
+ * keep Stripe converged. Usage carry-over is opt-in via carry_over_usages
+ * (see carry-over-item-transitions.test.ts). */
 import { expect, test } from "bun:test";
 import type { ApiEntityV2 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -62,7 +65,7 @@ const captureMeteredStates = async ({
 	return states;
 };
 
-const expectMessagesPreserved = async ({
+const expectMessagesReset = async ({
 	scenario,
 	states,
 }: {
@@ -81,8 +84,8 @@ const expectMessagesPreserved = async ({
 			featureId: TestFeature.Messages,
 			planId: scenario.toSeat.id,
 			granted: TO_MESSAGES,
-			remaining: TO_MESSAGES - before.usage,
-			usage: before.usage,
+			remaining: TO_MESSAGES,
+			usage: 0,
 			nextResetAt: before.nextResetAt,
 			toleranceMs: 0,
 		});
@@ -90,7 +93,7 @@ const expectMessagesPreserved = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("license item transition: increases the monthly grant without resetting usage")}`,
+	`${chalk.yellowBright("license item transition: increases the monthly grant and resets usage by default")}`,
 	async () => {
 		const scenario = await setupItemTransitionScenario({
 			idPrefix: "license-item-replace",
@@ -105,7 +108,7 @@ test.concurrent(
 		});
 
 		await completeImmediateItemTransition({ scenario });
-		await expectMessagesPreserved({ scenario, states });
+		await expectMessagesReset({ scenario, states });
 	},
 );
 
@@ -129,7 +132,7 @@ test.concurrent(
 		});
 
 		await completeImmediateItemTransition({ scenario });
-		await expectMessagesPreserved({ scenario, states });
+		await expectMessagesReset({ scenario, states });
 		for (const entity of scenario.entities) {
 			const apiEntity = await scenario.autumnV2_3.entities.get<ApiEntityV2>(
 				scenario.customerId,
@@ -172,7 +175,7 @@ test.concurrent(
 		});
 
 		await completeImmediateItemTransition({ scenario });
-		await expectMessagesPreserved({ scenario, states });
+		await expectMessagesReset({ scenario, states });
 		for (const entity of scenario.entities) {
 			const apiEntity = await scenario.autumnV2_3.entities.get<ApiEntityV2>(
 				scenario.customerId,

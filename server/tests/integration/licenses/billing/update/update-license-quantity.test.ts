@@ -15,6 +15,8 @@
  *     -$60/+$100 — assigned-seat portions must NOT collapse into a
  *     delta-only line.
  *   - quantity 3 -> 5 partially assigned (1 included): pair -$40/+$80.
+ *   - sequential 5 -> 7 -> 9: the old 5-seat refund is not reused against
+ *     the 7-seat replacement charge; the second update bills only 2 seats.
  *   - same quantity: pair cancels -> no line items, no new invoice.
  *   - included-only pool (0 paid) grown: charge line only, no $0 refund.
  *   - quantity below live assignments -> 400.
@@ -101,6 +103,45 @@ test.concurrent(
 		});
 
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license-update-quantity: sequential 5 -> 7 -> 9 changes credit each prior charge once")}`,
+	async () => {
+		const customerId = "license-update-quantity-sequential";
+		const { autumnV2_3, parent, devSeat, advancedTo } =
+			await setupLicenseUpdateScenario({
+				customerId,
+				idPrefix: "lic-qty-sequential",
+				seatPrice: DEV_SEAT_PRICE,
+				includedSeats: 0,
+				attachedSeats: 5,
+			});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			license_quantities: [{ license_plan_id: devSeat.id, quantity: 7 }],
+		});
+
+		const preview =
+			await autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				{
+					customer_id: customerId,
+					plan_id: parent.id,
+					license_quantities: [{ license_plan_id: devSeat.id, quantity: 9 }],
+				},
+			);
+
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo,
+			oldRecurringTotal: 7 * DEV_SEAT_PRICE,
+			newRecurringTotal: 9 * DEV_SEAT_PRICE,
+			expectQuantityLineItemPair: { oldQuantity: 7, newQuantity: 9 },
+		});
 	},
 );
 

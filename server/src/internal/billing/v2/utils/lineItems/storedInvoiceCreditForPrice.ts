@@ -9,7 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
 import { chargeRowToRefundLineItem } from "./chargeRowToRefundLineItem";
 import {
-	computeAlreadyRefundedForCharge,
+	computeAlreadyRefundedByCharge,
 	computeProratedCredit,
 	splitMultiEntityAmount,
 } from "./storedLineItemUtils";
@@ -78,6 +78,10 @@ export const storedInvoiceCreditForPrice = ({
 	const creditableRows = consumedChargeRowIds
 		? usableRows.filter((row) => !consumedChargeRowIds.has(row.id))
 		: usableRows;
+	const alreadyRefundedByCharge = computeAlreadyRefundedByCharge({
+		chargeRows: usableRows,
+		refundRows: currentPeriodRefunds,
+	});
 
 	for (const chargeRow of creditableRows) {
 		const periodStart = chargeRow.effective_period_start;
@@ -93,10 +97,7 @@ export const storedInvoiceCreditForPrice = ({
 		consumedChargeRowIds?.add(chargeRow.id);
 		const effectiveNow =
 			action.type === "use_snapped_now" ? action.snappedNow : now;
-		const alreadyRefunded = computeAlreadyRefundedForCharge({
-			chargeRow,
-			refundRows: currentPeriodRefunds,
-		});
+		const alreadyRefunded = alreadyRefundedByCharge.get(chargeRow.id) ?? 0;
 		const creditAmount = computeProratedCredit({
 			chargeRow: {
 				...chargeRow,

@@ -25,11 +25,6 @@ const executeReplacement = async ({
 	operation: ReplaceEntitlementPriceOperation;
 }) => {
 	if (operation.fromEntitlementIds.length === 0) return 0;
-	if (operation.fromEntitlementIds.includes(operation.toEntitlementId)) {
-		throw new Error(
-			"Batch replacement requires different outgoing and incoming entitlement IDs",
-		);
-	}
 
 	return executeBatchedMutation({
 		db: ctx.db,

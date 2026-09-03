@@ -43,6 +43,7 @@ export const batchTransition = async ({
 
 	const hasEntitlementPriceTransitions =
 		entitlementPriceTransitions.transitions.length > 0 ||
+		entitlementPriceTransitions.retained.length > 0 ||
 		entitlementPriceTransitions.added.length > 0 ||
 		entitlementPriceTransitions.deleted.length > 0;
 

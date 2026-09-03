@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { CarryOverUsagesSchema } from "../../../api/billing/common/carryOverUsages.js";
 import { FullCustomerLicenseSchema } from "../../licenseModels/fullCustomerLicense.js";
 import type { DbPlanLicense } from "../../licenseModels/planLicenseTable.js";
 import { EntitlementSchema } from "../../productModels/entModels/entModels.js";
@@ -37,6 +38,10 @@ export const CustomerLicenseTransitionSchema = z.object({
 		remaining: z.number(),
 		paidQuantity: z.number(),
 	}),
+	// Resolved at plan compute (request param or org transition rule) and
+	// carried on the transition so the async batch task sees the same choice.
+	// Absent means reset: seat usage clears to the incoming grant.
+	carryOverUsages: CarryOverUsagesSchema,
 });
 export type CustomerLicenseTransition = z.infer<
 	typeof CustomerLicenseTransitionSchema

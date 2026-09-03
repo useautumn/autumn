@@ -37,7 +37,7 @@ import {
 	versionPinnedFilter,
 } from "../utils/expectLicenseMigrationDrafts.js";
 import {
-	expectAssignmentCustomerProductUntouched,
+	expectAssignmentCustomerProductNotChildMatched,
 	expectCustomerLicenseEntitlementsCorrect,
 } from "./utils/expectCustomerLicenseEntitlementsCorrect.js";
 import { runCatalogDraftInline } from "./utils/runCatalogDraftInline.js";
@@ -313,9 +313,10 @@ test.concurrent(
 						migrationId,
 						customerIds: [parentCustomerId, childCustomerId],
 					});
-					await expectAssignmentCustomerProductUntouched({
+					await expectAssignmentCustomerProductNotChildMatched({
 						ctx,
 						assignmentCustomerProductId: assigned.assignmentCustomerProductId,
+						internalProductId: assigned.internalProductId,
 					});
 					expectFlagCorrect({
 						customer: await autumnV2_3.customers.get<ApiCustomerV5>(

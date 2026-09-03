@@ -1,12 +1,14 @@
 import {
+	type CarryOverUsages,
 	EntInterval,
 	type EntitlementPrice,
 	type EntitlementWithFeature,
-	entToPooledBalanceIdentity,
 	entsAreSame,
 	entsHaveSamePooledIdentity,
+	entToPooledBalanceIdentity,
 	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
+	isBooleanEntitlement,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import { initCustomerEntitlementFields } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementFields";
@@ -23,6 +25,7 @@ import type {
 import {
 	computeCustomerEntitlementInitialState,
 	computeCustomerEntitlementPatch,
+	shouldCarryOverUsage,
 } from "./computeCustomerEntitlementPatch";
 
 const findCandidateEntitlementIds = ({
@@ -47,9 +50,11 @@ const findCandidateEntitlementIds = ({
 const computeReplaceOperation = ({
 	candidateOutgoingEntitlements,
 	transition,
+	carryOverUsages,
 }: {
 	candidateOutgoingEntitlements: EntitlementWithFeature[];
 	transition: EntitlementPriceTransition;
+	carryOverUsages?: CarryOverUsages;
 }): ReplaceEntitlementPriceOperation | undefined => {
 	const { fromEntitlementPrice, toEntitlementPrice } = transition;
 	const fromEntitlement = fromEntitlementPrice.entitlement;
@@ -62,15 +67,19 @@ const computeReplaceOperation = ({
 		(entitlementId) =>
 			!definitionsAreSame || entitlementId !== toEntitlement.id,
 	);
-	if (fromEntitlementIds.length === 0) return undefined;
+	if (fromEntitlementIds.length === 0) {
+		if (!definitionsAreSame) return undefined;
+		fromEntitlementIds.push(toEntitlement.id);
+	}
 
-	const customerEntitlementPatch = computeCustomerEntitlementPatch({
-		fromEntitlement,
-		toEntitlement,
-	});
 	const fromIsPooled = fromEntitlement.pooled === true;
 	const toIsPooled = toEntitlement.pooled === true;
 	const isPooledReplace = fromIsPooled && toIsPooled;
+	const customerEntitlementPatch = computeCustomerEntitlementPatch({
+		fromEntitlement,
+		toEntitlement,
+		carryOverUsages,
+	});
 	if (!isPooledReplace) {
 		return {
 			type: "replace",
@@ -82,10 +91,15 @@ const computeReplaceOperation = ({
 		};
 	}
 
-	const incrementAmount =
+	const pooledContributionPatch =
 		customerEntitlementPatch.balance?.type === "increment"
-			? customerEntitlementPatch.balance.amount
-			: 0;
+			? customerEntitlementPatch.balance
+			: {
+					type: "set" as const,
+					amount: computeCustomerEntitlementInitialState({
+						entitlement: toEntitlement,
+					}).granted,
+				};
 
 	return {
 		type: "replace",
@@ -96,7 +110,7 @@ const computeReplaceOperation = ({
 		customerEntitlementPatch: {
 			unlimited: customerEntitlementPatch.unlimited,
 		},
-		pooledContributionPatch: { type: "increment", amount: incrementAmount },
+		pooledContributionPatch,
 	};
 };
 
@@ -196,11 +210,13 @@ const computeTransitionOperations = ({
 	transition,
 	initContext,
 	initOptions,
+	carryOverUsages,
 }: {
 	candidateOutgoingEntitlements: EntitlementWithFeature[];
 	transition: EntitlementPriceTransition;
 	initContext: InitCustomerEntitlementContext;
 	initOptions: InitFullCustomerProductOptions;
+	carryOverUsages?: CarryOverUsages;
 }): EntitlementPriceOperation[] => {
 	const fromEntitlement = transition.fromEntitlementPrice.entitlement;
 	const toEntitlement = transition.toEntitlementPrice.entitlement;
@@ -215,6 +231,7 @@ const computeTransitionOperations = ({
 		const operation = computeReplaceOperation({
 			candidateOutgoingEntitlements,
 			transition,
+			carryOverUsages,
 		});
 		return operation ? [operation] : [];
 	}
@@ -244,11 +261,13 @@ export const computeEntitlementPriceOperations = ({
 	entitlementPriceTransitions,
 	customerEntitlementInitContext,
 	customerEntitlementInitOptions,
+	carryOverUsages,
 }: {
 	candidateOutgoingEntitlements: EntitlementWithFeature[];
 	entitlementPriceTransitions: ComputedEntitlementPriceTransitions;
 	customerEntitlementInitContext: InitCustomerEntitlementContext;
 	customerEntitlementInitOptions: InitFullCustomerProductOptions;
+	carryOverUsages?: CarryOverUsages;
 }): {
 	operations: EntitlementPriceOperation[];
 	unhandled: ComputedEntitlementPriceTransitions;
@@ -256,6 +275,7 @@ export const computeEntitlementPriceOperations = ({
 	const operations: EntitlementPriceOperation[] = [];
 	const unhandled: ComputedEntitlementPriceTransitions = {
 		transitions: [],
+		retained: [],
 		added: [],
 		deleted: [],
 	};
@@ -275,8 +295,42 @@ export const computeEntitlementPriceOperations = ({
 				transition,
 				initContext: customerEntitlementInitContext,
 				initOptions: customerEntitlementInitOptions,
+				carryOverUsages,
 			}),
 		);
+	}
+
+	for (const transition of entitlementPriceTransitions.retained) {
+		if (
+			isBooleanEntitlement({
+				entitlement: transition.toEntitlementPrice.entitlement,
+			})
+		) {
+			continue;
+		}
+		if (
+			hasPrice(transition.fromEntitlementPrice) ||
+			hasPrice(transition.toEntitlementPrice)
+		) {
+			unhandled.retained.push(transition);
+			continue;
+		}
+
+		if (
+			shouldCarryOverUsage({
+				toEntitlement: transition.toEntitlementPrice.entitlement,
+				carryOverUsages,
+			})
+		) {
+			continue;
+		}
+
+		const operation = computeReplaceOperation({
+			candidateOutgoingEntitlements,
+			transition,
+			carryOverUsages,
+		});
+		if (operation) operations.push(operation);
 	}
 
 	for (const entitlementPrice of entitlementPriceTransitions.added) {
