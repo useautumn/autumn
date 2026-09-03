@@ -1,26 +1,17 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { runLogin } from "./actions/login";
 import { runPush } from "./actions/push";
+import {
+	requireSecretKey,
+	resolveTarget,
+	type TargetFlags,
+} from "./env/resolveTarget";
 import { createClient } from "./generated/client";
 import { version } from "./version";
 
 const NOT_IMPLEMENTED = (step: string) => () => {
 	throw new Error(`Not implemented yet — lands in ${step}.`);
-};
-
-/**
- * Sandbox unless --prod, matching the two keys people already have. Multi
- * sandbox selection is still to be designed.
- */
-const requireSecretKey = ({ prod }: { prod?: boolean }): string => {
-	const name = prod ? "AUTUMN_PROD_SECRET_KEY" : "AUTUMN_SECRET_KEY";
-	const key = process.env[name];
-	if (!key) {
-		throw new Error(
-			`${name} is not set. Put it in your .env, or export it before running.`,
-		);
-	}
-	return key;
 };
 
 /**
@@ -32,8 +23,12 @@ const normalizeVersionFlag = ({ argv }: { argv: string[] }): string[] =>
 
 const withEnvironmentFlags = (command: Command): Command =>
 	command
-		.option("--prod", "target production instead of sandbox")
-		.option("--sandbox <sandboxId>", "target a specific sandbox");
+		.option("-p, --prod", "target production instead of sandbox")
+		.option("--sandbox <sandboxId>", "target a specific sandbox")
+		.option("-l, --local", "target a local server (default port 8080)")
+		// Long-only: -p is prod.
+		.option("--port <port>", "port for --local")
+		.option("-b, --base-url <url>", "send to this URL instead");
 
 export const buildProgram = (): Command => {
 	const program = new Command();
@@ -47,7 +42,9 @@ export const buildProgram = (): Command => {
 	program
 		.command("login")
 		.description("authenticate and write org keys to your .env")
-		.action(NOT_IMPLEMENTED("3.0"));
+		.action(async () => {
+			await runLogin();
+		});
 
 	withEnvironmentFlags(
 		program
@@ -55,9 +52,13 @@ export const buildProgram = (): Command => {
 			.description("apply autumn.config.ts to your catalog")
 			.option("-y, --yes", "skip confirmation prompts")
 			.option("-d, --dry-run", "preview without applying"),
-	).action(async (options: { prod?: boolean; dryRun?: boolean }) => {
+	).action(async (options: TargetFlags & { dryRun?: boolean }) => {
+		const target = resolveTarget(options);
 		await runPush({
-			client: createClient({ secretKey: requireSecretKey(options) }),
+			client: createClient({
+				secretKey: requireSecretKey({ target }),
+				...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+			}),
 			dryRun: options.dryRun === true,
 		});
 	});
