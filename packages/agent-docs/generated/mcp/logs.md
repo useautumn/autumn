@@ -4,7 +4,7 @@ First read the `autumn-concepts` knowledge — it defines Autumn's data model �
 
 ## Goal
 
-- Answer "what happened and why" using two sources: current account state (customer, plan, balance lookup tools) and the request-log interface (`searchRequestLogs`, `queryRequestLogs`).
+- Answer "what happened and why" using three sources: current account state (customer, plan, balance lookup tools), the usage-event store (`aggregateEvents` — usage totals, last usage, usage over time), and the request-log interface (`searchRequestLogs`, `queryRequestLogs`).
 - End with a conclusion the user can act on: a timeline of what happened, the cause when the logs show it, and a clear statement of what the logs cannot show when they don't.
 - Logs record API requests and Stripe webhook deliveries — each entry is one request with its payload and response. They do not expose Autumn's internal processing, so conclusions must come from observable requests, responses, and state.
 
@@ -206,7 +206,7 @@ Read this when investigating: denied checks (`allowed: false`), balance or credi
 | Check feature access | `/v1/balances.check` | `/v1/check`, `/v1/entitled` |
 | Track usage | `/v1/balances.track` | `/v1/track`, `/v1/events` |
 | Update balances directly | `/v1/balances.update` | `/v1/balances` |
-| List/aggregate usage events | `/v1/events.list`, `/v1/events.aggregate` | — |
+| Aggregate usage events (`aggregateEvents`) | `/v1/events.aggregate` | — |
 
 Cover both generations with a grouped filter:
 
@@ -259,21 +259,23 @@ where customer_id == 'cus_123' and response_body.allowed == false | order by tim
 2. Read `balance.remaining`, `balance.next_reset_at`, and `breakdown` on the denial — they show which grant ran out and when it would have reset.
 3. Walk backwards for the tracks that drained it (usage totals recipe below), and check current plan state for whether the feature is granted at all on their plan.
 
-### "How much did they actually use?" (usage totals)
+### "How much did they actually use?" / "When was their last usage?" (usage totals)
 
-Aggregate tracked values by event over the window in question:
-
-```
-where customer_id == 'cus_123' and (request_path contains 'balances.track' or request_path contains 'track' or request_path contains 'events') | summarize tracked = sum(request_body.value), events = count() by request_body.event_name | order by tracked desc | limit 20
-```
-
-Compare the total against what the user believes was used or billed. To see *when* the usage happened, bucket it:
+Use `aggregateEvents` first — it reads the usage-event store (what the dashboard's Usage chart shows), so it sees every tracked event regardless of which endpoint recorded it or log retention. Request logs are the fallback for *why* a track call failed, not for totals.
 
 ```
-where customer_id == 'cus_123' and request_path contains 'track' | summarize tracked = sum(request_body.value) by bin(timestamp, 1d) | order by timestamp asc | limit 100
+aggregateEvents { customer_id: "cus_123", feature_id: "emails", range: "30d", bin_size: "day" }
 ```
 
-A large single-day spike, or tracks with unexpectedly large `value`s, usually explains "impossible" usage totals — list the raw records for that day to see the individual calls.
+- `list` is one row per time bin with the summed value per feature; `total` is the overall sum. The latest non-zero bin is the last usage.
+- Use `range` (`24h`, `7d`, `30d`, `90d`, `last_cycle`, `1bc` = current billing cycle, `3bc`) or `custom_range` with epoch-millisecond `start`/`end`. Derive the dates from the current date given in the turn, never from memory.
+- Add `entity_id` for per-seat/per-resource usage, `group_by: "$entity_id"` to split by entity, or `aggregate_on: "deducted"` to see which balance each event drained.
+
+Compare the total against what the user believes was used or billed. A large single-bin spike usually explains "impossible" usage totals — then list the raw track calls for that window in the request logs to see the individual values:
+
+```
+where customer_id == 'cus_123' and request_path contains 'track' | project timestamp, feature = request_body.feature_id, value = request_body.value, remaining = response_body.balance.remaining | order by timestamp asc | limit 100
+```
 
 ### "Their usage didn't reset this cycle"
 
