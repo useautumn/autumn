@@ -726,7 +726,7 @@ export type UpdatePlanBasePriceResponse = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const UpdatePlanAddItemResetIntervalResponse = {
+export const UpdatePlanVariantDetailsResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -740,8 +740,8 @@ export const UpdatePlanAddItemResetIntervalResponse = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type UpdatePlanAddItemResetIntervalResponse = OpenEnum<
-  typeof UpdatePlanAddItemResetIntervalResponse
+export type UpdatePlanVariantDetailsResetInterval = OpenEnum<
+  typeof UpdatePlanVariantDetailsResetInterval
 >;
 
 /**
@@ -751,7 +751,7 @@ export type UpdatePlanVariantDetailsReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: UpdatePlanAddItemResetIntervalResponse;
+  interval: UpdatePlanVariantDetailsResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
@@ -806,7 +806,7 @@ export type UpdatePlanVariantDetailsTierBehavior = OpenEnum<
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const UpdatePlanAddItemPriceIntervalResponse = {
+export const UpdatePlanVariantDetailsAddItemPriceInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -817,8 +817,8 @@ export const UpdatePlanAddItemPriceIntervalResponse = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type UpdatePlanAddItemPriceIntervalResponse = OpenEnum<
-  typeof UpdatePlanAddItemPriceIntervalResponse
+export type UpdatePlanVariantDetailsAddItemPriceInterval = OpenEnum<
+  typeof UpdatePlanVariantDetailsAddItemPriceInterval
 >;
 
 /**
@@ -857,7 +857,7 @@ export type UpdatePlanVariantDetailsPrice = {
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: UpdatePlanAddItemPriceIntervalResponse;
+  interval: UpdatePlanVariantDetailsAddItemPriceInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -1067,7 +1067,7 @@ export type UpdatePlanRemoveItemBillingMethodResponse = OpenEnum<
   typeof UpdatePlanRemoveItemBillingMethodResponse
 >;
 
-export const UpdatePlanIntervalRemoveItemResponseEnum2 = {
+export const UpdatePlanIntervalVariantDetailsRemoveItemEnum2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1078,11 +1078,11 @@ export const UpdatePlanIntervalRemoveItemResponseEnum2 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type UpdatePlanIntervalRemoveItemResponseEnum2 = OpenEnum<
-  typeof UpdatePlanIntervalRemoveItemResponseEnum2
+export type UpdatePlanIntervalVariantDetailsRemoveItemEnum2 = OpenEnum<
+  typeof UpdatePlanIntervalVariantDetailsRemoveItemEnum2
 >;
 
-export const UpdatePlanIntervalRemoveItemResponseEnum1 = {
+export const UpdatePlanIntervalVariantDetailsRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1090,16 +1090,16 @@ export const UpdatePlanIntervalRemoveItemResponseEnum1 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type UpdatePlanIntervalRemoveItemResponseEnum1 = OpenEnum<
-  typeof UpdatePlanIntervalRemoveItemResponseEnum1
+export type UpdatePlanIntervalVariantDetailsRemoveItemEnum1 = OpenEnum<
+  typeof UpdatePlanIntervalVariantDetailsRemoveItemEnum1
 >;
 
 /**
  * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
  */
-export type UpdatePlanIntervalResponseUnion =
-  | UpdatePlanIntervalRemoveItemResponseEnum1
-  | UpdatePlanIntervalRemoveItemResponseEnum2;
+export type UpdatePlanVariantDetailsIntervalUnion =
+  | UpdatePlanIntervalVariantDetailsRemoveItemEnum1
+  | UpdatePlanIntervalVariantDetailsRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
@@ -1117,8 +1117,8 @@ export type UpdatePlanPlanItemFilterResponse = {
    * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
   interval?:
-    | UpdatePlanIntervalRemoveItemResponseEnum1
-    | UpdatePlanIntervalRemoveItemResponseEnum2
+    | UpdatePlanIntervalVariantDetailsRemoveItemEnum1
+    | UpdatePlanIntervalVariantDetailsRemoveItemEnum2
     | undefined;
   /**
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
@@ -2963,9 +2963,10 @@ export function updatePlanBasePriceResponseFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanAddItemResetIntervalResponse$inboundSchema:
-  z.ZodMiniType<UpdatePlanAddItemResetIntervalResponse, unknown> = openEnums
-    .inboundSchema(UpdatePlanAddItemResetIntervalResponse);
+export const UpdatePlanVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
+  UpdatePlanVariantDetailsResetInterval,
+  unknown
+> = openEnums.inboundSchema(UpdatePlanVariantDetailsResetInterval);
 
 /** @internal */
 export const UpdatePlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
@@ -2973,7 +2974,7 @@ export const UpdatePlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: UpdatePlanAddItemResetIntervalResponse$inboundSchema,
+    interval: UpdatePlanVariantDetailsResetInterval$inboundSchema,
     interval_count: types.optional(types.number()),
   }),
   z.transform((v) => {
@@ -3103,9 +3104,9 @@ export const UpdatePlanVariantDetailsTierBehavior$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdatePlanVariantDetailsTierBehavior);
 
 /** @internal */
-export const UpdatePlanAddItemPriceIntervalResponse$inboundSchema:
-  z.ZodMiniType<UpdatePlanAddItemPriceIntervalResponse, unknown> = openEnums
-    .inboundSchema(UpdatePlanAddItemPriceIntervalResponse);
+export const UpdatePlanVariantDetailsAddItemPriceInterval$inboundSchema:
+  z.ZodMiniType<UpdatePlanVariantDetailsAddItemPriceInterval, unknown> =
+    openEnums.inboundSchema(UpdatePlanVariantDetailsAddItemPriceInterval);
 
 /** @internal */
 export const UpdatePlanAddItemBillingMethodResponse$inboundSchema:
@@ -3128,7 +3129,7 @@ export const UpdatePlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
     tier_behavior: types.optional(
       UpdatePlanVariantDetailsTierBehavior$inboundSchema,
     ),
-    interval: UpdatePlanAddItemPriceIntervalResponse$inboundSchema,
+    interval: UpdatePlanVariantDetailsAddItemPriceInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     billing_units: z._default(types.number(), 1),
     billing_method: UpdatePlanAddItemBillingMethodResponse$inboundSchema,
@@ -3432,31 +3433,32 @@ export const UpdatePlanRemoveItemBillingMethodResponse$inboundSchema:
     .inboundSchema(UpdatePlanRemoveItemBillingMethodResponse);
 
 /** @internal */
-export const UpdatePlanIntervalRemoveItemResponseEnum2$inboundSchema:
-  z.ZodMiniType<UpdatePlanIntervalRemoveItemResponseEnum2, unknown> = openEnums
-    .inboundSchema(UpdatePlanIntervalRemoveItemResponseEnum2);
+export const UpdatePlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema:
+  z.ZodMiniType<UpdatePlanIntervalVariantDetailsRemoveItemEnum2, unknown> =
+    openEnums.inboundSchema(UpdatePlanIntervalVariantDetailsRemoveItemEnum2);
 
 /** @internal */
-export const UpdatePlanIntervalRemoveItemResponseEnum1$inboundSchema:
-  z.ZodMiniType<UpdatePlanIntervalRemoveItemResponseEnum1, unknown> = openEnums
-    .inboundSchema(UpdatePlanIntervalRemoveItemResponseEnum1);
+export const UpdatePlanIntervalVariantDetailsRemoveItemEnum1$inboundSchema:
+  z.ZodMiniType<UpdatePlanIntervalVariantDetailsRemoveItemEnum1, unknown> =
+    openEnums.inboundSchema(UpdatePlanIntervalVariantDetailsRemoveItemEnum1);
 
 /** @internal */
-export const UpdatePlanIntervalResponseUnion$inboundSchema: z.ZodMiniType<
-  UpdatePlanIntervalResponseUnion,
+export const UpdatePlanVariantDetailsIntervalUnion$inboundSchema: z.ZodMiniType<
+  UpdatePlanVariantDetailsIntervalUnion,
   unknown
 > = smartUnion([
-  UpdatePlanIntervalRemoveItemResponseEnum1$inboundSchema,
-  UpdatePlanIntervalRemoveItemResponseEnum2$inboundSchema,
+  UpdatePlanIntervalVariantDetailsRemoveItemEnum1$inboundSchema,
+  UpdatePlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema,
 ]);
 
-export function updatePlanIntervalResponseUnionFromJSON(
+export function updatePlanVariantDetailsIntervalUnionFromJSON(
   jsonString: string,
-): SafeParseResult<UpdatePlanIntervalResponseUnion, SDKValidationError> {
+): SafeParseResult<UpdatePlanVariantDetailsIntervalUnion, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdatePlanIntervalResponseUnion$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdatePlanIntervalResponseUnion' from JSON`,
+    (x) =>
+      UpdatePlanVariantDetailsIntervalUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanVariantDetailsIntervalUnion' from JSON`,
   );
 }
 
@@ -3472,8 +3474,8 @@ export const UpdatePlanPlanItemFilterResponse$inboundSchema: z.ZodMiniType<
     ),
     interval: types.optional(
       smartUnion([
-        UpdatePlanIntervalRemoveItemResponseEnum1$inboundSchema,
-        UpdatePlanIntervalRemoveItemResponseEnum2$inboundSchema,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum1$inboundSchema,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema,
       ]),
     ),
     interval_count: types.optional(types.number()),

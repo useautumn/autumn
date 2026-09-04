@@ -38,7 +38,11 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		sdkFile: "preview-multi-attach-op.ts",
 		outputFile: "previewMultiAttachSchemas.ts",
 	},
-	{ sdkFile: "list-plans-op.ts", outputFile: "listPlansSchemas.ts" },
+	{ sdkFile: "list-plans-response.ts", outputFile: "listPlansSchemas.ts" },
+	{
+		sdkFile: "list-plans-variant-add-item-reset-interval.ts",
+		outputFile: "listPlansParamsSchemas.ts",
+	},
 	{ sdkFile: "list-events-op.ts", outputFile: "listEventsSchemas.ts" },
 	{
 		sdkFile: "aggregate-events-op.ts",

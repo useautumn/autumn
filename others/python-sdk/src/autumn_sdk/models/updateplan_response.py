@@ -1335,7 +1335,7 @@ class UpdatePlanBasePriceResponse(BaseModel):
         return m
 
 
-UpdatePlanAddItemResetIntervalResponse = Union[
+UpdatePlanVariantDetailsResetInterval = Union[
     Literal[
         "one_off",
         "minute",
@@ -1355,7 +1355,7 @@ r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable feat
 class UpdatePlanVariantDetailsResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: UpdatePlanAddItemResetIntervalResponse
+    interval: UpdatePlanVariantDetailsResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
@@ -1364,7 +1364,7 @@ class UpdatePlanVariantDetailsResetTypedDict(TypedDict):
 class UpdatePlanVariantDetailsReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: UpdatePlanAddItemResetIntervalResponse
+    interval: UpdatePlanVariantDetailsResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -1494,7 +1494,7 @@ UpdatePlanVariantDetailsTierBehavior = Union[
 ]
 
 
-UpdatePlanAddItemPriceIntervalResponse = Union[
+UpdatePlanVariantDetailsAddItemPriceInterval = Union[
     Literal[
         "one_off",
         "week",
@@ -1521,7 +1521,7 @@ r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 class UpdatePlanVariantDetailsPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: UpdatePlanAddItemPriceIntervalResponse
+    interval: UpdatePlanVariantDetailsAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
     billing_method: UpdatePlanAddItemBillingMethodResponse
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
@@ -1545,7 +1545,7 @@ class UpdatePlanVariantDetailsPriceTypedDict(TypedDict):
 class UpdatePlanVariantDetailsPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: UpdatePlanAddItemPriceIntervalResponse
+    interval: UpdatePlanVariantDetailsAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
     billing_method: UpdatePlanAddItemBillingMethodResponse
@@ -1947,7 +1947,7 @@ UpdatePlanRemoveItemBillingMethodResponse = Union[
 r"""Match items with this billing method (prepaid or usage_based)."""
 
 
-UpdatePlanIntervalRemoveItemResponseEnum2 = Union[
+UpdatePlanIntervalVariantDetailsRemoveItemEnum2 = Union[
     Literal[
         "one_off",
         "minute",
@@ -1963,7 +1963,7 @@ UpdatePlanIntervalRemoveItemResponseEnum2 = Union[
 ]
 
 
-UpdatePlanIntervalRemoveItemResponseEnum1 = Union[
+UpdatePlanIntervalVariantDetailsRemoveItemEnum1 = Union[
     Literal[
         "one_off",
         "week",
@@ -1976,21 +1976,21 @@ UpdatePlanIntervalRemoveItemResponseEnum1 = Union[
 ]
 
 
-UpdatePlanIntervalResponseUnionTypedDict = TypeAliasType(
-    "UpdatePlanIntervalResponseUnionTypedDict",
+UpdatePlanVariantDetailsIntervalUnionTypedDict = TypeAliasType(
+    "UpdatePlanVariantDetailsIntervalUnionTypedDict",
     Union[
-        UpdatePlanIntervalRemoveItemResponseEnum1,
-        UpdatePlanIntervalRemoveItemResponseEnum2,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum1,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum2,
     ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-UpdatePlanIntervalResponseUnion = TypeAliasType(
-    "UpdatePlanIntervalResponseUnion",
+UpdatePlanVariantDetailsIntervalUnion = TypeAliasType(
+    "UpdatePlanVariantDetailsIntervalUnion",
     Union[
-        UpdatePlanIntervalRemoveItemResponseEnum1,
-        UpdatePlanIntervalRemoveItemResponseEnum2,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum1,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum2,
     ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
@@ -2003,7 +2003,7 @@ class UpdatePlanPlanItemFilterResponseTypedDict(TypedDict):
     r"""Match items linked to this feature."""
     billing_method: NotRequired[UpdatePlanRemoveItemBillingMethodResponse]
     r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[UpdatePlanIntervalResponseUnionTypedDict]
+    interval: NotRequired[UpdatePlanVariantDetailsIntervalUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
@@ -2020,7 +2020,7 @@ class UpdatePlanPlanItemFilterResponse(BaseModel):
     billing_method: Optional[UpdatePlanRemoveItemBillingMethodResponse] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
-    interval: Optional[UpdatePlanIntervalResponseUnion] = None
+    interval: Optional[UpdatePlanVariantDetailsIntervalUnion] = None
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
     interval_count: Optional[int] = None

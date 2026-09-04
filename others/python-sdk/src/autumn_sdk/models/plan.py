@@ -181,7 +181,7 @@ class PlanPrice(BaseModel):
         return m
 
 
-PlanType1 = Union[
+PlanType = Union[
     Literal[
         "static",
         "boolean",
@@ -195,14 +195,14 @@ PlanType1 = Union[
 r"""The type of the feature"""
 
 
-class PlanFeatureDisplay1TypedDict(TypedDict):
+class PlanFeatureDisplayTypedDict(TypedDict):
     singular: str
     r"""The singular display name for the feature."""
     plural: str
     r"""The plural display name for the feature."""
 
 
-class PlanFeatureDisplay1(BaseModel):
+class PlanFeatureDisplay(BaseModel):
     singular: str
     r"""The singular display name for the feature."""
 
@@ -210,14 +210,14 @@ class PlanFeatureDisplay1(BaseModel):
     r"""The plural display name for the feature."""
 
 
-class PlanFeatureCreditSchema1TypedDict(TypedDict):
+class PlanFeatureCreditSchemaTypedDict(TypedDict):
     metered_feature_id: str
     r"""The ID of the metered feature (should be a single_use feature)."""
     credit_cost: float
     r"""The credit cost of the metered feature."""
 
 
-class PlanFeatureCreditSchema1(BaseModel):
+class PlanFeatureCreditSchema(BaseModel):
     metered_feature_id: str
     r"""The ID of the metered feature (should be a single_use feature)."""
 
@@ -225,39 +225,39 @@ class PlanFeatureCreditSchema1(BaseModel):
     r"""The credit cost of the metered feature."""
 
 
-class PlanFeature1TypedDict(TypedDict):
+class PlanFeatureTypedDict(TypedDict):
     r"""The full feature object if expanded."""
 
     id: str
     r"""The ID of the feature, used to refer to it in other API calls like /track or /check."""
-    type: PlanType1
+    type: PlanType
     r"""The type of the feature"""
     name: NotRequired[Nullable[str]]
     r"""The name of the feature."""
-    display: NotRequired[Nullable[PlanFeatureDisplay1TypedDict]]
+    display: NotRequired[Nullable[PlanFeatureDisplayTypedDict]]
     r"""Singular and plural display names for the feature."""
-    credit_schema: NotRequired[Nullable[List[PlanFeatureCreditSchema1TypedDict]]]
+    credit_schema: NotRequired[Nullable[List[PlanFeatureCreditSchemaTypedDict]]]
     r"""Credit cost schema for credit system features."""
     archived: NotRequired[Nullable[bool]]
     r"""Whether or not the feature is archived."""
 
 
-class PlanFeature1(BaseModel):
+class PlanFeature(BaseModel):
     r"""The full feature object if expanded."""
 
     id: str
     r"""The ID of the feature, used to refer to it in other API calls like /track or /check."""
 
-    type: PlanType1
+    type: PlanType
     r"""The type of the feature"""
 
     name: OptionalNullable[str] = UNSET
     r"""The name of the feature."""
 
-    display: OptionalNullable[PlanFeatureDisplay1] = UNSET
+    display: OptionalNullable[PlanFeatureDisplay] = UNSET
     r"""Singular and plural display names for the feature."""
 
-    credit_schema: OptionalNullable[List[PlanFeatureCreditSchema1]] = UNSET
+    credit_schema: OptionalNullable[List[PlanFeatureCreditSchema]] = UNSET
     r"""Credit cost schema for credit system features."""
 
     archived: OptionalNullable[bool] = UNSET
@@ -460,26 +460,26 @@ PlanItemBillingMethod = Union[
 r"""'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage."""
 
 
-class PlanItemStripe1TypedDict(TypedDict):
+class PlanItemStripeTypedDict(TypedDict):
     price_id: str
     r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
 
 
-class PlanItemStripe1(BaseModel):
+class PlanItemStripe(BaseModel):
     price_id: str
     r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
 
 
-class PlanItemProcessors1TypedDict(TypedDict):
+class PlanItemProcessorsTypedDict(TypedDict):
     r"""Payment processors this item price is connected to. Omitted when unset."""
 
-    stripe: NotRequired[Nullable[PlanItemStripe1TypedDict]]
+    stripe: NotRequired[Nullable[PlanItemStripeTypedDict]]
 
 
-class PlanItemProcessors1(BaseModel):
+class PlanItemProcessors(BaseModel):
     r"""Payment processors this item price is connected to. Omitted when unset."""
 
-    stripe: OptionalNullable[PlanItemStripe1] = UNSET
+    stripe: OptionalNullable[PlanItemStripe] = UNSET
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -525,7 +525,7 @@ class PlanItemPriceTypedDict(TypedDict):
     tier_behavior: NotRequired[PlanItemTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    processors: NotRequired[PlanItemProcessors1TypedDict]
+    processors: NotRequired[PlanItemProcessorsTypedDict]
     r"""Payment processors this item price is connected to. Omitted when unset."""
 
 
@@ -556,7 +556,7 @@ class PlanItemPrice(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    processors: Optional[PlanItemProcessors1] = None
+    processors: Optional[PlanItemProcessors] = None
     r"""Payment processors this item price is connected to. Omitted when unset."""
 
     @model_serializer(mode="wrap")
@@ -594,7 +594,7 @@ class PlanItemPrice(BaseModel):
         return m
 
 
-class PlanItemDisplay1TypedDict(TypedDict):
+class PlanItemDisplayTypedDict(TypedDict):
     r"""Display text for showing this item in pricing pages."""
 
     primary_text: str
@@ -603,7 +603,7 @@ class PlanItemDisplay1TypedDict(TypedDict):
     r"""Secondary display text (e.g. 'per month' or 'then $0.5 per 100')."""
 
 
-class PlanItemDisplay1(BaseModel):
+class PlanItemDisplay(BaseModel):
     r"""Display text for showing this item in pricing pages."""
 
     primary_text: str
@@ -855,11 +855,11 @@ class ItemTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles."""
     price: Nullable[PlanItemPriceTypedDict]
     r"""Pricing configuration for usage beyond included units. Null if feature is entirely free."""
-    feature: NotRequired[PlanFeature1TypedDict]
+    feature: NotRequired[PlanFeatureTypedDict]
     r"""The full feature object if expanded."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    display: NotRequired[PlanItemDisplay1TypedDict]
+    display: NotRequired[PlanItemDisplayTypedDict]
     r"""Display text for showing this item in pricing pages."""
     rollover: NotRequired[PlanItemRolloverTypedDict]
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
@@ -883,13 +883,13 @@ class Item(BaseModel):
     price: Nullable[PlanItemPrice]
     r"""Pricing configuration for usage beyond included units. Null if feature is entirely free."""
 
-    feature: Optional[PlanFeature1] = None
+    feature: Optional[PlanFeature] = None
     r"""The full feature object if expanded."""
 
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    display: Optional[PlanItemDisplay1] = None
+    display: Optional[PlanItemDisplay] = None
     r"""Display text for showing this item in pricing pages."""
 
     rollover: Optional[PlanItemRollover] = None
@@ -926,14 +926,14 @@ class Item(BaseModel):
         return m
 
 
-class PlanStripe1TypedDict(TypedDict):
+class PlanStripeTypedDict(TypedDict):
     product_id: str
     r"""Stripe product ID this plan is billed under."""
     additional_product_ids: NotRequired[List[str]]
     r"""Extra Stripe product IDs aliased to this plan."""
 
 
-class PlanStripe1(BaseModel):
+class PlanStripe(BaseModel):
     product_id: str
     r"""Stripe product ID this plan is billed under."""
 
@@ -1015,29 +1015,29 @@ class Product(BaseModel):
         return m
 
 
-class PlanRevenuecat1TypedDict(TypedDict):
+class PlanRevenuecatTypedDict(TypedDict):
     products: List[ProductTypedDict]
     r"""Every RevenueCat product that maps to this plan. Replaces the current set."""
 
 
-class PlanRevenuecat1(BaseModel):
+class PlanRevenuecat(BaseModel):
     products: List[Product]
     r"""Every RevenueCat product that maps to this plan. Replaces the current set."""
 
 
-class PlanProcessors1TypedDict(TypedDict):
+class PlanProcessorsTypedDict(TypedDict):
     r"""Payment processors this plan is connected to. Omitted when unset."""
 
-    stripe: NotRequired[Nullable[PlanStripe1TypedDict]]
-    revenuecat: NotRequired[Nullable[PlanRevenuecat1TypedDict]]
+    stripe: NotRequired[Nullable[PlanStripeTypedDict]]
+    revenuecat: NotRequired[Nullable[PlanRevenuecatTypedDict]]
 
 
-class PlanProcessors1(BaseModel):
+class PlanProcessors(BaseModel):
     r"""Payment processors this plan is connected to. Omitted when unset."""
 
-    stripe: OptionalNullable[PlanStripe1] = UNSET
+    stripe: OptionalNullable[PlanStripe] = UNSET
 
-    revenuecat: OptionalNullable[PlanRevenuecat1] = UNSET
+    revenuecat: OptionalNullable[PlanRevenuecat] = UNSET
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -1065,7 +1065,7 @@ class PlanProcessors1(BaseModel):
         return m
 
 
-PlanDurationType1 = Union[
+PlanDurationType = Union[
     Literal[
         "day",
         "month",
@@ -1090,7 +1090,7 @@ class FreeTrialTypedDict(TypedDict):
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
-    duration_type: PlanDurationType1
+    duration_type: PlanDurationType
     r"""Unit of time for the trial duration ('day', 'month', 'year')."""
     card_required: bool
     r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
@@ -1104,7 +1104,7 @@ class FreeTrial(BaseModel):
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
-    duration_type: PlanDurationType1
+    duration_type: PlanDurationType
     r"""Unit of time for the trial duration ('day', 'month', 'year')."""
 
     card_required: bool
@@ -1149,14 +1149,14 @@ PlanEnv = Union[
 r"""Environment this plan belongs to ('sandbox' or 'live')."""
 
 
-class PlanConfig1TypedDict(TypedDict):
+class PlanConfigTypedDict(TypedDict):
     r"""Miscellaneous plan-level configuration flags."""
 
     ignore_past_due: NotRequired[bool]
     r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
 
 
-class PlanConfig1(BaseModel):
+class PlanConfig(BaseModel):
     r"""Miscellaneous plan-level configuration flags."""
 
     ignore_past_due: Optional[bool] = False
@@ -2272,7 +2272,7 @@ class VariantDetailsFeatureOverride(BaseModel):
         return m
 
 
-class PlanPlanItemTypedDict(TypedDict):
+class PlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2295,7 +2295,7 @@ class PlanPlanItemTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class PlanPlanItem(BaseModel):
+class PlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -3056,7 +3056,7 @@ PlanUpsertLicenseResetInterval1 = Union[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class PlanUpsertLicenseReset1TypedDict(TypedDict):
+class PlanUpsertLicenseResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
     interval: PlanUpsertLicenseResetInterval1
@@ -3065,7 +3065,7 @@ class PlanUpsertLicenseReset1TypedDict(TypedDict):
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class PlanUpsertLicenseReset1(BaseModel):
+class PlanUpsertLicenseReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
     interval: PlanUpsertLicenseResetInterval1
@@ -3327,7 +3327,7 @@ UpsertLicenseExpiryDurationType = Union[
 r"""When rolled over units expire."""
 
 
-class PlanUpsertLicenseRollover1TypedDict(TypedDict):
+class PlanUpsertLicenseRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     expiry_duration_type: UpsertLicenseExpiryDurationType
@@ -3340,7 +3340,7 @@ class PlanUpsertLicenseRollover1TypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class PlanUpsertLicenseRollover1(BaseModel):
+class PlanUpsertLicenseRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     expiry_duration_type: UpsertLicenseExpiryDurationType
@@ -3413,13 +3413,13 @@ class UpsertLicensePlanItemTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[PlanUpsertLicenseReset1TypedDict]
+    reset: NotRequired[PlanUpsertLicenseResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[PlanUpsertLicensePriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
     proration: NotRequired[UpsertLicenseProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[PlanUpsertLicenseRollover1TypedDict]
+    rollover: NotRequired[PlanUpsertLicenseRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
     feature_override: NotRequired[UpsertLicenseFeatureOverrideTypedDict]
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
@@ -3440,7 +3440,7 @@ class UpsertLicensePlanItem(BaseModel):
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    reset: Optional[PlanUpsertLicenseReset1] = None
+    reset: Optional[PlanUpsertLicenseReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
     price: Optional[PlanUpsertLicensePrice] = None
@@ -3449,7 +3449,7 @@ class UpsertLicensePlanItem(BaseModel):
     proration: Optional[UpsertLicenseProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[PlanUpsertLicenseRollover1] = None
+    rollover: Optional[PlanUpsertLicenseRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     feature_override: Optional[UpsertLicenseFeatureOverride] = None
@@ -3696,7 +3696,7 @@ class Customize1TypedDict(TypedDict):
 
     price: NotRequired[Nullable[BasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
-    add_items: NotRequired[List[PlanPlanItemTypedDict]]
+    add_items: NotRequired[List[PlanItemTypedDict]]
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[PlanItemFilterTypedDict]]
     r"""Filters selecting items to remove from the plan."""
@@ -3716,7 +3716,7 @@ class Customize1(BaseModel):
     price: OptionalNullable[BasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
-    add_items: Optional[List[PlanPlanItem]] = None
+    add_items: Optional[List[PlanItem]] = None
     r"""Items to add to the plan."""
 
     remove_items: Optional[List[PlanItemFilter]] = None
@@ -3830,7 +3830,7 @@ class PlanTypedDict(TypedDict):
     r"""Environment this plan belongs to ('sandbox' or 'live')."""
     archived: bool
     r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
-    config: PlanConfig1TypedDict
+    config: PlanConfigTypedDict
     r"""Miscellaneous plan-level configuration flags."""
     metadata: Dict[str, Any]
     r"""Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan."""
@@ -3840,7 +3840,7 @@ class PlanTypedDict(TypedDict):
     r"""User-facing version identity. Defaults to v{n} when the version is minted."""
     active: NotRequired[bool]
     r"""Whether this is the active version of the plan. At most one version is active."""
-    processors: NotRequired[PlanProcessors1TypedDict]
+    processors: NotRequired[PlanProcessorsTypedDict]
     r"""Payment processors this plan is connected to. Omitted when unset."""
     free_trial: NotRequired[FreeTrialTypedDict]
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
@@ -3888,7 +3888,7 @@ class Plan(BaseModel):
     archived: bool
     r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
 
-    config: PlanConfig1
+    config: PlanConfig
     r"""Miscellaneous plan-level configuration flags."""
 
     metadata: Dict[str, Any]
@@ -3903,7 +3903,7 @@ class Plan(BaseModel):
     active: Optional[bool] = None
     r"""Whether this is the active version of the plan. At most one version is active."""
 
-    processors: Optional[PlanProcessors1] = None
+    processors: Optional[PlanProcessors] = None
     r"""Payment processors this plan is connected to. Omitted when unset."""
 
     free_trial: Optional[FreeTrial] = None

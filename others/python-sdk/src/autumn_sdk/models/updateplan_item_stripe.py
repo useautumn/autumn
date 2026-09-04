@@ -2095,15 +2095,15 @@ class UpdateLicenseParent(BaseModel):
     version: int
 
 
-class CustomizeVariant2TypedDict(TypedDict):
+class UpdatePlanCustomizeVariant2TypedDict(TypedDict):
     pass
 
 
-class CustomizeVariant2(BaseModel):
+class UpdatePlanCustomizeVariant2(BaseModel):
     pass
 
 
-PriceVariantInterval = Literal[
+UpdatePlanPriceVariantInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -2114,14 +2114,14 @@ PriceVariantInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class VariantAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanVariantAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class VariantAdditionalCurrency(BaseModel):
+class UpdatePlanVariantAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -2129,32 +2129,34 @@ class VariantAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class VariantBasePriceTypedDict(TypedDict):
+class UpdatePlanVariantBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
-    interval: PriceVariantInterval
+    interval: UpdatePlanPriceVariantInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    additional_currencies: NotRequired[List[VariantAdditionalCurrencyTypedDict]]
+    additional_currencies: NotRequired[
+        List[UpdatePlanVariantAdditionalCurrencyTypedDict]
+    ]
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class VariantBasePrice(BaseModel):
+class UpdatePlanVariantBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
-    interval: PriceVariantInterval
+    interval: UpdatePlanPriceVariantInterval
     r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[List[VariantAdditionalCurrency]] = None
+    additional_currencies: Optional[List[UpdatePlanVariantAdditionalCurrency]] = None
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
     @model_serializer(mode="wrap")
@@ -2174,7 +2176,7 @@ class VariantBasePrice(BaseModel):
         return m
 
 
-VariantResetInterval = Literal[
+UpdatePlanVariantResetInterval = Literal[
     "one_off",
     "minute",
     "hour",
@@ -2188,19 +2190,19 @@ VariantResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class VariantResetTypedDict(TypedDict):
+class UpdatePlanVariantResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: VariantResetInterval
+    interval: UpdatePlanVariantResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class VariantReset(BaseModel):
+class UpdatePlanVariantReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: VariantResetInterval
+    interval: UpdatePlanVariantResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -2223,14 +2225,14 @@ class VariantReset(BaseModel):
         return m
 
 
-class VariantAddItemAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanVariantAddItemAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class VariantAddItemAdditionalCurrency(BaseModel):
+class UpdatePlanVariantAddItemAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -2238,7 +2240,7 @@ class VariantAddItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class VariantTierTypedDict(TypedDict):
+class UpdatePlanVariantTierTypedDict(TypedDict):
     to: NotRequired[Any]
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
@@ -2246,7 +2248,7 @@ class VariantTierTypedDict(TypedDict):
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class VariantTier(BaseModel):
+class UpdatePlanVariantTier(BaseModel):
     to: Optional[Any] = None
 
     amount: Optional[float] = None
@@ -2273,13 +2275,13 @@ class VariantTier(BaseModel):
         return m
 
 
-VariantTierBehavior = Literal[
+UpdatePlanVariantTierBehavior = Literal[
     "graduated",
     "volume",
 ]
 
 
-VariantAddItemPriceInterval = Literal[
+UpdatePlanVariantAddItemPriceInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -2290,27 +2292,29 @@ VariantAddItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-VariantAddItemBillingMethod = Literal[
+UpdatePlanVariantAddItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class VariantPriceTypedDict(TypedDict):
+class UpdatePlanVariantPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: VariantAddItemPriceInterval
+    interval: UpdatePlanVariantAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: VariantAddItemBillingMethod
+    billing_method: UpdatePlanVariantAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[List[VariantAddItemAdditionalCurrencyTypedDict]]
+    additional_currencies: NotRequired[
+        List[UpdatePlanVariantAddItemAdditionalCurrencyTypedDict]
+    ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[VariantTierTypedDict]]
+    tiers: NotRequired[List[UpdatePlanVariantTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[VariantTierBehavior]
+    tier_behavior: NotRequired[UpdatePlanVariantTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -2319,25 +2323,27 @@ class VariantPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class VariantPrice(BaseModel):
+class UpdatePlanVariantPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: VariantAddItemPriceInterval
+    interval: UpdatePlanVariantAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: VariantAddItemBillingMethod
+    billing_method: UpdatePlanVariantAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[VariantAddItemAdditionalCurrency]] = None
+    additional_currencies: Optional[
+        List[UpdatePlanVariantAddItemAdditionalCurrency]
+    ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[VariantTier]] = None
+    tiers: Optional[List[UpdatePlanVariantTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[VariantTierBehavior] = None
+    tier_behavior: Optional[UpdatePlanVariantTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -2384,7 +2390,7 @@ class VariantPrice(BaseModel):
         return m
 
 
-VariantOnIncrease = Literal[
+UpdatePlanVariantOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -2393,7 +2399,7 @@ VariantOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-VariantOnDecrease = Literal[
+UpdatePlanVariantOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -2403,36 +2409,36 @@ VariantOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class VariantProrationTypedDict(TypedDict):
+class UpdatePlanVariantProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: VariantOnIncrease
+    on_increase: UpdatePlanVariantOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: VariantOnDecrease
+    on_decrease: UpdatePlanVariantOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class VariantProration(BaseModel):
+class UpdatePlanVariantProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: VariantOnIncrease
+    on_increase: UpdatePlanVariantOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: VariantOnDecrease
+    on_decrease: UpdatePlanVariantOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-VariantExpiryDurationType = Literal[
+UpdatePlanVariantExpiryDurationType = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class VariantRolloverTypedDict(TypedDict):
+class UpdatePlanVariantRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: VariantExpiryDurationType
+    expiry_duration_type: UpdatePlanVariantExpiryDurationType
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -2442,10 +2448,10 @@ class VariantRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class VariantRollover(BaseModel):
+class UpdatePlanVariantRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: VariantExpiryDurationType
+    expiry_duration_type: UpdatePlanVariantExpiryDurationType
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -2474,13 +2480,13 @@ class VariantRollover(BaseModel):
         return m
 
 
-class CreditSchemaVariant2TypedDict(TypedDict):
+class UpdatePlanCreditSchemaVariant2TypedDict(TypedDict):
     metered_feature_id: NotRequired[Any]
     billing_units: NotRequired[Any]
     credit_cost: NotRequired[Any]
 
 
-class CreditSchemaVariant2(BaseModel):
+class UpdatePlanCreditSchemaVariant2(BaseModel):
     metered_feature_id: Optional[Any] = None
 
     billing_units: Optional[Any] = None
@@ -2504,14 +2510,14 @@ class CreditSchemaVariant2(BaseModel):
         return m
 
 
-class CreditSchemaVariant1TypedDict(TypedDict):
+class UpdatePlanCreditSchemaVariant1TypedDict(TypedDict):
     metered_feature_id: NotRequired[Any]
     billing_units: NotRequired[Any]
     tier_behavior: NotRequired[Any]
     tiers: NotRequired[Any]
 
 
-class CreditSchemaVariant1(BaseModel):
+class UpdatePlanCreditSchemaVariant1(BaseModel):
     metered_feature_id: Optional[Any] = None
 
     billing_units: Optional[Any] = None
@@ -2541,23 +2547,26 @@ class CreditSchemaVariant1(BaseModel):
 
 VariantCreditSchemaUnionTypedDict = TypeAliasType(
     "VariantCreditSchemaUnionTypedDict",
-    Union[CreditSchemaVariant2TypedDict, CreditSchemaVariant1TypedDict],
+    Union[
+        UpdatePlanCreditSchemaVariant2TypedDict, UpdatePlanCreditSchemaVariant1TypedDict
+    ],
 )
 
 
 VariantCreditSchemaUnion = TypeAliasType(
-    "VariantCreditSchemaUnion", Union[CreditSchemaVariant2, CreditSchemaVariant1]
+    "VariantCreditSchemaUnion",
+    Union[UpdatePlanCreditSchemaVariant2, UpdatePlanCreditSchemaVariant1],
 )
 
 
-class VariantFeatureOverrideTypedDict(TypedDict):
+class UpdatePlanVariantFeatureOverrideTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: NotRequired[List[VariantCreditSchemaUnionTypedDict]]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
 
-class VariantFeatureOverride(BaseModel):
+class UpdatePlanVariantFeatureOverride(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: Optional[List[VariantCreditSchemaUnion]] = None
@@ -2580,7 +2589,7 @@ class VariantFeatureOverride(BaseModel):
         return m
 
 
-class VariantPlanItemTypedDict(TypedDict):
+class UpdatePlanVariantPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2591,19 +2600,19 @@ class VariantPlanItemTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[VariantResetTypedDict]
+    reset: NotRequired[UpdatePlanVariantResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[VariantPriceTypedDict]
+    price: NotRequired[UpdatePlanVariantPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[VariantProrationTypedDict]
+    proration: NotRequired[UpdatePlanVariantProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[VariantRolloverTypedDict]
+    rollover: NotRequired[UpdatePlanVariantRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
-    feature_override: NotRequired[VariantFeatureOverrideTypedDict]
+    feature_override: NotRequired[UpdatePlanVariantFeatureOverrideTypedDict]
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class VariantPlanItem(BaseModel):
+class UpdatePlanVariantPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2618,19 +2627,19 @@ class VariantPlanItem(BaseModel):
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    reset: Optional[VariantReset] = None
+    reset: Optional[UpdatePlanVariantReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[VariantPrice] = None
+    price: Optional[UpdatePlanVariantPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[VariantProration] = None
+    proration: Optional[UpdatePlanVariantProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[VariantRollover] = None
+    rollover: Optional[UpdatePlanVariantRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    feature_override: Optional[VariantFeatureOverride] = None
+    feature_override: Optional[UpdatePlanVariantFeatureOverride] = None
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     @model_serializer(mode="wrap")
@@ -2661,14 +2670,14 @@ class VariantPlanItem(BaseModel):
         return m
 
 
-VariantRemoveItemBillingMethod = Literal[
+UpdatePlanVariantRemoveItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""Match items with this billing method (prepaid or usage_based)."""
 
 
-IntervalVariantRemoveItemEnum2 = Literal[
+UpdatePlanIntervalVariantRemoveItemEnum2 = Literal[
     "one_off",
     "minute",
     "hour",
@@ -2681,7 +2690,7 @@ IntervalVariantRemoveItemEnum2 = Literal[
 ]
 
 
-IntervalVariantRemoveItemEnum1 = Literal[
+UpdatePlanIntervalVariantRemoveItemEnum1 = Literal[
     "one_off",
     "week",
     "month",
@@ -2691,28 +2700,34 @@ IntervalVariantRemoveItemEnum1 = Literal[
 ]
 
 
-VariantIntervalUnionTypedDict = TypeAliasType(
-    "VariantIntervalUnionTypedDict",
-    Union[IntervalVariantRemoveItemEnum1, IntervalVariantRemoveItemEnum2],
+UpdatePlanVariantIntervalUnionTypedDict = TypeAliasType(
+    "UpdatePlanVariantIntervalUnionTypedDict",
+    Union[
+        UpdatePlanIntervalVariantRemoveItemEnum1,
+        UpdatePlanIntervalVariantRemoveItemEnum2,
+    ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-VariantIntervalUnion = TypeAliasType(
-    "VariantIntervalUnion",
-    Union[IntervalVariantRemoveItemEnum1, IntervalVariantRemoveItemEnum2],
+UpdatePlanVariantIntervalUnion = TypeAliasType(
+    "UpdatePlanVariantIntervalUnion",
+    Union[
+        UpdatePlanIntervalVariantRemoveItemEnum1,
+        UpdatePlanIntervalVariantRemoveItemEnum2,
+    ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-class VariantPlanItemFilterTypedDict(TypedDict):
+class UpdatePlanVariantPlanItemFilterTypedDict(TypedDict):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: NotRequired[str]
     r"""Match items linked to this feature."""
-    billing_method: NotRequired[VariantRemoveItemBillingMethod]
+    billing_method: NotRequired[UpdatePlanVariantRemoveItemBillingMethod]
     r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[VariantIntervalUnionTypedDict]
+    interval: NotRequired[UpdatePlanVariantIntervalUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
@@ -2720,16 +2735,16 @@ class VariantPlanItemFilterTypedDict(TypedDict):
     r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
-class VariantPlanItemFilter(BaseModel):
+class UpdatePlanVariantPlanItemFilter(BaseModel):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: Optional[str] = None
     r"""Match items linked to this feature."""
 
-    billing_method: Optional[VariantRemoveItemBillingMethod] = None
+    billing_method: Optional[UpdatePlanVariantRemoveItemBillingMethod] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
-    interval: Optional[VariantIntervalUnion] = None
+    interval: Optional[UpdatePlanVariantIntervalUnion] = None
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
     interval_count: Optional[int] = None
@@ -2757,7 +2772,7 @@ class VariantPlanItemFilter(BaseModel):
         return m
 
 
-VariantDurationType = Literal[
+UpdatePlanVariantDurationType = Literal[
     "day",
     "month",
     "year",
@@ -2765,39 +2780,39 @@ VariantDurationType = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
-VariantOnEnd = Literal[
+UpdatePlanVariantOnEnd = Literal[
     "bill",
     "revert",
 ]
 r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class VariantFreeTrialParamsTypedDict(TypedDict):
+class UpdatePlanVariantFreeTrialParamsTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[VariantDurationType]
+    duration_type: NotRequired[UpdatePlanVariantDurationType]
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
     r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
-    on_end: NotRequired[VariantOnEnd]
+    on_end: NotRequired[UpdatePlanVariantOnEnd]
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class VariantFreeTrialParams(BaseModel):
+class UpdatePlanVariantFreeTrialParams(BaseModel):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
-    duration_type: Optional[VariantDurationType] = "month"
+    duration_type: Optional[UpdatePlanVariantDurationType] = "month"
     r"""Unit of time for the trial ('day', 'month', 'year')."""
 
     card_required: Optional[bool] = False
     r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
 
-    on_end: Optional[VariantOnEnd] = None
+    on_end: Optional[UpdatePlanVariantOnEnd] = None
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
     @model_serializer(mode="wrap")
@@ -2817,7 +2832,7 @@ class VariantFreeTrialParams(BaseModel):
         return m
 
 
-VariantPurchaseLimitInterval = Literal[
+UpdatePlanVariantPurchaseLimitInterval = Literal[
     "hour",
     "day",
     "week",
@@ -2826,10 +2841,10 @@ VariantPurchaseLimitInterval = Literal[
 r"""The time interval for the purchase limit window."""
 
 
-class VariantPurchaseLimitTypedDict(TypedDict):
+class UpdatePlanVariantPurchaseLimitTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: VariantPurchaseLimitInterval
+    interval: UpdatePlanVariantPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -2839,10 +2854,10 @@ class VariantPurchaseLimitTypedDict(TypedDict):
     r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
-class VariantPurchaseLimit(BaseModel):
+class UpdatePlanVariantPurchaseLimit(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: VariantPurchaseLimitInterval
+    interval: UpdatePlanVariantPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -2871,7 +2886,7 @@ class VariantPurchaseLimit(BaseModel):
         return m
 
 
-class VariantAutoTopupTypedDict(TypedDict):
+class UpdatePlanVariantAutoTopupTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
     threshold: float
@@ -2880,13 +2895,13 @@ class VariantAutoTopupTypedDict(TypedDict):
     r"""Amount of credits to add per auto top-up."""
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[VariantPurchaseLimitTypedDict]
+    purchase_limit: NotRequired[UpdatePlanVariantPurchaseLimitTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
-class VariantAutoTopup(BaseModel):
+class UpdatePlanVariantAutoTopup(BaseModel):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
 
@@ -2899,7 +2914,7 @@ class VariantAutoTopup(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether auto top-up is enabled."""
 
-    purchase_limit: Optional[VariantPurchaseLimit] = None
+    purchase_limit: Optional[UpdatePlanVariantPurchaseLimit] = None
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
@@ -2922,19 +2937,19 @@ class VariantAutoTopup(BaseModel):
         return m
 
 
-VariantLimitType = Literal[
+UpdatePlanVariantLimitType = Literal[
     "absolute",
     "usage_percentage",
 ]
 r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
 
-class VariantSpendLimitTypedDict(TypedDict):
+class UpdatePlanVariantSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[VariantLimitType]
+    limit_type: NotRequired[UpdatePlanVariantLimitType]
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
@@ -2942,14 +2957,14 @@ class VariantSpendLimitTypedDict(TypedDict):
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
-class VariantSpendLimit(BaseModel):
+class UpdatePlanVariantSpendLimit(BaseModel):
     feature_id: Optional[str] = None
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[VariantLimitType] = None
+    limit_type: Optional[UpdatePlanVariantLimitType] = None
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
     overage_limit: Optional[float] = None
@@ -2983,7 +2998,7 @@ class VariantSpendLimit(BaseModel):
         return m
 
 
-VariantUsageLimitInterval = Literal[
+UpdatePlanVariantUsageLimitInterval = Literal[
     "day",
     "week",
     "month",
@@ -2992,58 +3007,58 @@ VariantUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
-VariantAnchor = Literal[
+UpdatePlanVariantAnchor = Literal[
     "billing_cycle",
     "utc",
 ]
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class VariantUsageLimitFilterTypedDict(TypedDict):
+class UpdatePlanVariantUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, Any]
 
 
-class VariantUsageLimitFilter(BaseModel):
+class UpdatePlanVariantUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, Any]
 
 
-class VariantUsageLimitTypedDict(TypedDict):
+class UpdatePlanVariantUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
     limit: float
     r"""Maximum units allowed per interval."""
-    interval: VariantUsageLimitInterval
+    interval: UpdatePlanVariantUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
-    anchor: NotRequired[VariantAnchor]
+    anchor: NotRequired[UpdatePlanVariantAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[VariantUsageLimitFilterTypedDict]
+    filter_: NotRequired[UpdatePlanVariantUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
-class VariantUsageLimit(BaseModel):
+class UpdatePlanVariantUsageLimit(BaseModel):
     feature_id: str
     r"""The feature this usage limit applies to."""
 
     limit: float
     r"""Maximum units allowed per interval."""
 
-    interval: VariantUsageLimitInterval
+    interval: UpdatePlanVariantUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
-    anchor: Optional[VariantAnchor] = None
+    anchor: Optional[UpdatePlanVariantAnchor] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[VariantUsageLimitFilter], pydantic.Field(alias="filter")
+        Optional[UpdatePlanVariantUsageLimitFilter], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -3064,7 +3079,7 @@ class VariantUsageLimit(BaseModel):
         return m
 
 
-VariantThresholdType = Literal[
+UpdatePlanVariantThresholdType = Literal[
     "usage",
     "usage_percentage",
     "remaining",
@@ -3073,7 +3088,7 @@ VariantThresholdType = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
-VariantBasis = Literal[
+UpdatePlanVariantBasis = Literal[
     "balance",
     "included",
     "recurring",
@@ -3082,40 +3097,40 @@ VariantBasis = Literal[
 r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
 
 
-class VariantUsageAlertFilterTypedDict(TypedDict):
+class UpdatePlanVariantUsageAlertFilterTypedDict(TypedDict):
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
 
     properties: Dict[str, Any]
 
 
-class VariantUsageAlertFilter(BaseModel):
+class UpdatePlanVariantUsageAlertFilter(BaseModel):
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
 
     properties: Dict[str, Any]
 
 
-class VariantUsageAlertTypedDict(TypedDict):
+class UpdatePlanVariantUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-    threshold_type: VariantThresholdType
+    threshold_type: UpdatePlanVariantThresholdType
     r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
-    basis: NotRequired[VariantBasis]
+    basis: NotRequired[UpdatePlanVariantBasis]
     r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
-    filter_: NotRequired[VariantUsageAlertFilterTypedDict]
+    filter_: NotRequired[UpdatePlanVariantUsageAlertFilterTypedDict]
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
 
-class VariantUsageAlert(BaseModel):
+class UpdatePlanVariantUsageAlert(BaseModel):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
-    threshold_type: VariantThresholdType
+    threshold_type: UpdatePlanVariantThresholdType
     r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
@@ -3124,11 +3139,11 @@ class VariantUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
-    basis: Optional[VariantBasis] = "balance"
+    basis: Optional[UpdatePlanVariantBasis] = "balance"
     r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
 
     filter_: Annotated[
-        Optional[VariantUsageAlertFilter], pydantic.Field(alias="filter")
+        Optional[UpdatePlanVariantUsageAlertFilter], pydantic.Field(alias="filter")
     ] = None
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
 
@@ -3152,14 +3167,14 @@ class VariantUsageAlert(BaseModel):
         return m
 
 
-class VariantOverageAllowedTypedDict(TypedDict):
+class UpdatePlanVariantOverageAllowedTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
 
 
-class VariantOverageAllowed(BaseModel):
+class UpdatePlanVariantOverageAllowed(BaseModel):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
 
@@ -3183,37 +3198,37 @@ class VariantOverageAllowed(BaseModel):
         return m
 
 
-class VariantBillingControlsTypedDict(TypedDict):
+class UpdatePlanVariantBillingControlsTypedDict(TypedDict):
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
-    auto_topups: NotRequired[List[VariantAutoTopupTypedDict]]
+    auto_topups: NotRequired[List[UpdatePlanVariantAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
-    spend_limits: NotRequired[List[VariantSpendLimitTypedDict]]
+    spend_limits: NotRequired[List[UpdatePlanVariantSpendLimitTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[VariantUsageLimitTypedDict]]
+    usage_limits: NotRequired[List[UpdatePlanVariantUsageLimitTypedDict]]
     r"""List of hard usage caps per feature (max units per interval)."""
-    usage_alerts: NotRequired[List[VariantUsageAlertTypedDict]]
+    usage_alerts: NotRequired[List[UpdatePlanVariantUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[VariantOverageAllowedTypedDict]]
+    overage_allowed: NotRequired[List[UpdatePlanVariantOverageAllowedTypedDict]]
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
-class VariantBillingControls(BaseModel):
+class UpdatePlanVariantBillingControls(BaseModel):
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
-    auto_topups: Optional[List[VariantAutoTopup]] = None
+    auto_topups: Optional[List[UpdatePlanVariantAutoTopup]] = None
     r"""List of auto top-up configurations per feature."""
 
-    spend_limits: Optional[List[VariantSpendLimit]] = None
+    spend_limits: Optional[List[UpdatePlanVariantSpendLimit]] = None
     r"""List of overage spend limits per feature (caps overage spend)."""
 
-    usage_limits: Optional[List[VariantUsageLimit]] = None
+    usage_limits: Optional[List[UpdatePlanVariantUsageLimit]] = None
     r"""List of hard usage caps per feature (max units per interval)."""
 
-    usage_alerts: Optional[List[VariantUsageAlert]] = None
+    usage_alerts: Optional[List[UpdatePlanVariantUsageAlert]] = None
     r"""List of usage alert configurations per feature."""
 
-    overage_allowed: Optional[List[VariantOverageAllowed]] = None
+    overage_allowed: Optional[List[UpdatePlanVariantOverageAllowed]] = None
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
     @model_serializer(mode="wrap")
@@ -3241,33 +3256,33 @@ class VariantBillingControls(BaseModel):
         return m
 
 
-class CustomizeVariant1TypedDict(TypedDict):
-    price: NotRequired[Nullable[VariantBasePriceTypedDict]]
+class UpdatePlanCustomizeVariant1TypedDict(TypedDict):
+    price: NotRequired[Nullable[UpdatePlanVariantBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
-    add_items: NotRequired[List[VariantPlanItemTypedDict]]
+    add_items: NotRequired[List[UpdatePlanVariantPlanItemTypedDict]]
     r"""Items to add to the plan."""
-    remove_items: NotRequired[List[VariantPlanItemFilterTypedDict]]
+    remove_items: NotRequired[List[UpdatePlanVariantPlanItemFilterTypedDict]]
     r"""Filters selecting items to remove from the plan."""
-    free_trial: NotRequired[Nullable[VariantFreeTrialParamsTypedDict]]
+    free_trial: NotRequired[Nullable[UpdatePlanVariantFreeTrialParamsTypedDict]]
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
-    billing_controls: NotRequired[VariantBillingControlsTypedDict]
+    billing_controls: NotRequired[UpdatePlanVariantBillingControlsTypedDict]
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
 
-class CustomizeVariant1(BaseModel):
-    price: OptionalNullable[VariantBasePrice] = UNSET
+class UpdatePlanCustomizeVariant1(BaseModel):
+    price: OptionalNullable[UpdatePlanVariantBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
-    add_items: Optional[List[VariantPlanItem]] = None
+    add_items: Optional[List[UpdatePlanVariantPlanItem]] = None
     r"""Items to add to the plan."""
 
-    remove_items: Optional[List[VariantPlanItemFilter]] = None
+    remove_items: Optional[List[UpdatePlanVariantPlanItemFilter]] = None
     r"""Filters selecting items to remove from the plan."""
 
-    free_trial: OptionalNullable[VariantFreeTrialParams] = UNSET
+    free_trial: OptionalNullable[UpdatePlanVariantFreeTrialParams] = UNSET
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
 
-    billing_controls: Optional[VariantBillingControls] = None
+    billing_controls: Optional[UpdatePlanVariantBillingControls] = None
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
     @model_serializer(mode="wrap")
@@ -3299,12 +3314,15 @@ class CustomizeVariant1(BaseModel):
 
 
 Customize2TypedDict = TypeAliasType(
-    "Customize2TypedDict", Union[CustomizeVariant2TypedDict, CustomizeVariant1TypedDict]
+    "Customize2TypedDict",
+    Union[UpdatePlanCustomizeVariant2TypedDict, UpdatePlanCustomizeVariant1TypedDict],
 )
 r"""The exact customize patch to apply to this variant."""
 
 
-Customize2 = TypeAliasType("Customize2", Union[CustomizeVariant2, CustomizeVariant1])
+Customize2 = TypeAliasType(
+    "Customize2", Union[UpdatePlanCustomizeVariant2, UpdatePlanCustomizeVariant1]
+)
 r"""The exact customize patch to apply to this variant."""
 
 
@@ -3339,7 +3357,7 @@ class VariantMigration(BaseModel):
         return m
 
 
-class VariantTypedDict(TypedDict):
+class UpdatePlanVariantTypedDict(TypedDict):
     variant_plan_id: str
     r"""The variant plan ID to update or create."""
     customize: Customize2TypedDict
@@ -3354,7 +3372,7 @@ class VariantTypedDict(TypedDict):
     r"""Migration draft options for an in-place direct variant update."""
 
 
-class Variant(BaseModel):
+class UpdatePlanVariant(BaseModel):
     variant_plan_id: str
     r"""The variant plan ID to update or create."""
 
@@ -3432,7 +3450,7 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""Variant plan IDs to apply this update to. Empty or omitted means no propagation."""
     update_license_parents: NotRequired[List[UpdateLicenseParentTypedDict]]
     r"""Parent plan versions that should receive this license-plan update."""
-    variants: NotRequired[List[VariantTypedDict]]
+    variants: NotRequired[List[UpdatePlanVariantTypedDict]]
     r"""Additive variant updates for this base plan. Missing variants are created when name is provided."""
     is_default: NotRequired[bool]
     r"""Whether this is the org's default plan. Cannot be true on a variant."""
@@ -3504,7 +3522,7 @@ class UpdatePlanParams(BaseModel):
     update_license_parents: Optional[List[UpdateLicenseParent]] = None
     r"""Parent plan versions that should receive this license-plan update."""
 
-    variants: Optional[List[Variant]] = None
+    variants: Optional[List[UpdatePlanVariant]] = None
     r"""Additive variant updates for this base plan. Missing variants are created when name is provided."""
 
     is_default: Optional[bool] = None
@@ -4044,10 +4062,10 @@ try:
 except NameError:
     pass
 try:
-    VariantUsageLimit.model_rebuild()
+    UpdatePlanVariantUsageLimit.model_rebuild()
 except NameError:
     pass
 try:
-    VariantUsageAlert.model_rebuild()
+    UpdatePlanVariantUsageAlert.model_rebuild()
 except NameError:
     pass

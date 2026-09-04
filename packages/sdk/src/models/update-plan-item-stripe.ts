@@ -1229,12 +1229,12 @@ export type UpdateLicenseParent = {
   version: number;
 };
 
-export type CustomizeVariant2 = {};
+export type UpdatePlanCustomizeVariant2 = {};
 
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const PriceVariantInterval = {
+export const UpdatePlanPriceVariantInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1245,9 +1245,11 @@ export const PriceVariantInterval = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type PriceVariantInterval = ClosedEnum<typeof PriceVariantInterval>;
+export type UpdatePlanPriceVariantInterval = ClosedEnum<
+  typeof UpdatePlanPriceVariantInterval
+>;
 
-export type VariantAdditionalCurrency = {
+export type UpdatePlanVariantAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -1261,7 +1263,7 @@ export type VariantAdditionalCurrency = {
 /**
  * Base price configuration for a plan.
  */
-export type VariantBasePrice = {
+export type UpdatePlanVariantBasePrice = {
   /**
    * Base price amount for the plan, in major currency units (e.g. dollars).
    */
@@ -1269,7 +1271,7 @@ export type VariantBasePrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: PriceVariantInterval;
+  interval: UpdatePlanPriceVariantInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -1277,13 +1279,13 @@ export type VariantBasePrice = {
   /**
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
-  additionalCurrencies?: Array<VariantAdditionalCurrency> | undefined;
+  additionalCurrencies?: Array<UpdatePlanVariantAdditionalCurrency> | undefined;
 };
 
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const VariantResetInterval = {
+export const UpdatePlanVariantResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1297,23 +1299,25 @@ export const VariantResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type VariantResetInterval = ClosedEnum<typeof VariantResetInterval>;
+export type UpdatePlanVariantResetInterval = ClosedEnum<
+  typeof UpdatePlanVariantResetInterval
+>;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type VariantReset = {
+export type UpdatePlanVariantReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: VariantResetInterval;
+  interval: UpdatePlanVariantResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type VariantAddItemAdditionalCurrency = {
+export type UpdatePlanVariantAddItemAdditionalCurrency = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -1324,7 +1328,7 @@ export type VariantAddItemAdditionalCurrency = {
   amount: number;
 };
 
-export type VariantTier = {
+export type UpdatePlanVariantTier = {
   to?: any | undefined;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -1334,16 +1338,18 @@ export type VariantTier = {
   additionalCurrencies?: Array<any> | undefined;
 };
 
-export const VariantTierBehavior = {
+export const UpdatePlanVariantTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type VariantTierBehavior = ClosedEnum<typeof VariantTierBehavior>;
+export type UpdatePlanVariantTierBehavior = ClosedEnum<
+  typeof UpdatePlanVariantTierBehavior
+>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const VariantAddItemPriceInterval = {
+export const UpdatePlanVariantAddItemPriceInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1354,28 +1360,28 @@ export const VariantAddItemPriceInterval = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type VariantAddItemPriceInterval = ClosedEnum<
-  typeof VariantAddItemPriceInterval
+export type UpdatePlanVariantAddItemPriceInterval = ClosedEnum<
+  typeof UpdatePlanVariantAddItemPriceInterval
 >;
 
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const VariantAddItemBillingMethod = {
+export const UpdatePlanVariantAddItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type VariantAddItemBillingMethod = ClosedEnum<
-  typeof VariantAddItemBillingMethod
+export type UpdatePlanVariantAddItemBillingMethod = ClosedEnum<
+  typeof UpdatePlanVariantAddItemBillingMethod
 >;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type VariantPrice = {
+export type UpdatePlanVariantPrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -1383,16 +1389,18 @@ export type VariantPrice = {
   /**
    * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
    */
-  additionalCurrencies?: Array<VariantAddItemAdditionalCurrency> | undefined;
+  additionalCurrencies?:
+    | Array<UpdatePlanVariantAddItemAdditionalCurrency>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<VariantTier> | undefined;
-  tierBehavior?: VariantTierBehavior | undefined;
+  tiers?: Array<UpdatePlanVariantTier> | undefined;
+  tierBehavior?: UpdatePlanVariantTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: VariantAddItemPriceInterval;
+  interval: UpdatePlanVariantAddItemPriceInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -1404,7 +1412,7 @@ export type VariantPrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: VariantAddItemBillingMethod;
+  billingMethod: UpdatePlanVariantAddItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
@@ -1414,7 +1422,7 @@ export type VariantPrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const VariantOnIncrease = {
+export const UpdatePlanVariantOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -1423,12 +1431,14 @@ export const VariantOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type VariantOnIncrease = ClosedEnum<typeof VariantOnIncrease>;
+export type UpdatePlanVariantOnIncrease = ClosedEnum<
+  typeof UpdatePlanVariantOnIncrease
+>;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const VariantOnDecrease = {
+export const UpdatePlanVariantOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -1438,40 +1448,42 @@ export const VariantOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type VariantOnDecrease = ClosedEnum<typeof VariantOnDecrease>;
+export type UpdatePlanVariantOnDecrease = ClosedEnum<
+  typeof UpdatePlanVariantOnDecrease
+>;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type VariantProration = {
+export type UpdatePlanVariantProration = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: VariantOnIncrease;
+  onIncrease: UpdatePlanVariantOnIncrease;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: VariantOnDecrease;
+  onDecrease: UpdatePlanVariantOnDecrease;
 };
 
 /**
  * When rolled over units expire.
  */
-export const VariantExpiryDurationType = {
+export const UpdatePlanVariantExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type VariantExpiryDurationType = ClosedEnum<
-  typeof VariantExpiryDurationType
+export type UpdatePlanVariantExpiryDurationType = ClosedEnum<
+  typeof UpdatePlanVariantExpiryDurationType
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type VariantRollover = {
+export type UpdatePlanVariantRollover = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -1483,20 +1495,20 @@ export type VariantRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: VariantExpiryDurationType;
+  expiryDurationType: UpdatePlanVariantExpiryDurationType;
   /**
    * Number of periods before expiry.
    */
   expiryDurationLength?: number | undefined;
 };
 
-export type CreditSchemaVariant2 = {
+export type UpdatePlanCreditSchemaVariant2 = {
   meteredFeatureId?: any | undefined;
   billingUnits?: any | undefined;
   creditCost?: any | undefined;
 };
 
-export type CreditSchemaVariant1 = {
+export type UpdatePlanCreditSchemaVariant1 = {
   meteredFeatureId?: any | undefined;
   billingUnits?: any | undefined;
   tierBehavior?: any | undefined;
@@ -1504,23 +1516,25 @@ export type CreditSchemaVariant1 = {
 };
 
 export type VariantCreditSchemaUnion =
-  | CreditSchemaVariant1
-  | CreditSchemaVariant2;
+  | UpdatePlanCreditSchemaVariant1
+  | UpdatePlanCreditSchemaVariant2;
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
  */
-export type VariantFeatureOverride = {
+export type UpdatePlanVariantFeatureOverride = {
   /**
    * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
    */
-  creditSchema?: Array<CreditSchemaVariant1 | CreditSchemaVariant2> | undefined;
+  creditSchema?:
+    | Array<UpdatePlanCreditSchemaVariant1 | UpdatePlanCreditSchemaVariant2>
+    | undefined;
 };
 
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type VariantPlanItem = {
+export type UpdatePlanVariantPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -1540,40 +1554,40 @@ export type VariantPlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: VariantReset | undefined;
+  reset?: UpdatePlanVariantReset | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: VariantPrice | undefined;
+  price?: UpdatePlanVariantPrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: VariantProration | undefined;
+  proration?: UpdatePlanVariantProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: VariantRollover | undefined;
+  rollover?: UpdatePlanVariantRollover | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
-  featureOverride?: VariantFeatureOverride | undefined;
+  featureOverride?: UpdatePlanVariantFeatureOverride | undefined;
 };
 
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export const VariantRemoveItemBillingMethod = {
+export const UpdatePlanVariantRemoveItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export type VariantRemoveItemBillingMethod = ClosedEnum<
-  typeof VariantRemoveItemBillingMethod
+export type UpdatePlanVariantRemoveItemBillingMethod = ClosedEnum<
+  typeof UpdatePlanVariantRemoveItemBillingMethod
 >;
 
-export const IntervalVariantRemoveItemEnum2 = {
+export const UpdatePlanIntervalVariantRemoveItemEnum2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1584,11 +1598,11 @@ export const IntervalVariantRemoveItemEnum2 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type IntervalVariantRemoveItemEnum2 = ClosedEnum<
-  typeof IntervalVariantRemoveItemEnum2
+export type UpdatePlanIntervalVariantRemoveItemEnum2 = ClosedEnum<
+  typeof UpdatePlanIntervalVariantRemoveItemEnum2
 >;
 
-export const IntervalVariantRemoveItemEnum1 = {
+export const UpdatePlanIntervalVariantRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1596,21 +1610,21 @@ export const IntervalVariantRemoveItemEnum1 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type IntervalVariantRemoveItemEnum1 = ClosedEnum<
-  typeof IntervalVariantRemoveItemEnum1
+export type UpdatePlanIntervalVariantRemoveItemEnum1 = ClosedEnum<
+  typeof UpdatePlanIntervalVariantRemoveItemEnum1
 >;
 
 /**
  * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
  */
-export type VariantIntervalUnion =
-  | IntervalVariantRemoveItemEnum1
-  | IntervalVariantRemoveItemEnum2;
+export type UpdatePlanVariantIntervalUnion =
+  | UpdatePlanIntervalVariantRemoveItemEnum1
+  | UpdatePlanIntervalVariantRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
  */
-export type VariantPlanItemFilter = {
+export type UpdatePlanVariantPlanItemFilter = {
   /**
    * Match items linked to this feature.
    */
@@ -1618,13 +1632,13 @@ export type VariantPlanItemFilter = {
   /**
    * Match items with this billing method (prepaid or usage_based).
    */
-  billingMethod?: VariantRemoveItemBillingMethod | undefined;
+  billingMethod?: UpdatePlanVariantRemoveItemBillingMethod | undefined;
   /**
    * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
   interval?:
-    | IntervalVariantRemoveItemEnum1
-    | IntervalVariantRemoveItemEnum2
+    | UpdatePlanIntervalVariantRemoveItemEnum1
+    | UpdatePlanIntervalVariantRemoveItemEnum2
     | undefined;
   /**
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
@@ -1639,7 +1653,7 @@ export type VariantPlanItemFilter = {
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export const VariantDurationType = {
+export const UpdatePlanVariantDurationType = {
   Day: "day",
   Month: "month",
   Year: "year",
@@ -1647,24 +1661,26 @@ export const VariantDurationType = {
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export type VariantDurationType = ClosedEnum<typeof VariantDurationType>;
+export type UpdatePlanVariantDurationType = ClosedEnum<
+  typeof UpdatePlanVariantDurationType
+>;
 
 /**
  * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
  */
-export const VariantOnEnd = {
+export const UpdatePlanVariantOnEnd = {
   Bill: "bill",
   Revert: "revert",
 } as const;
 /**
  * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
  */
-export type VariantOnEnd = ClosedEnum<typeof VariantOnEnd>;
+export type UpdatePlanVariantOnEnd = ClosedEnum<typeof UpdatePlanVariantOnEnd>;
 
 /**
  * Free trial configuration for a plan.
  */
-export type VariantFreeTrialParams = {
+export type UpdatePlanVariantFreeTrialParams = {
   /**
    * Number of duration_type periods the trial lasts.
    */
@@ -1672,7 +1688,7 @@ export type VariantFreeTrialParams = {
   /**
    * Unit of time for the trial ('day', 'month', 'year').
    */
-  durationType?: VariantDurationType | undefined;
+  durationType?: UpdatePlanVariantDurationType | undefined;
   /**
    * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
    */
@@ -1680,13 +1696,13 @@ export type VariantFreeTrialParams = {
   /**
    * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
    */
-  onEnd?: VariantOnEnd | undefined;
+  onEnd?: UpdatePlanVariantOnEnd | undefined;
 };
 
 /**
  * The time interval for the purchase limit window.
  */
-export const VariantPurchaseLimitInterval = {
+export const UpdatePlanVariantPurchaseLimitInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -1695,18 +1711,18 @@ export const VariantPurchaseLimitInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type VariantPurchaseLimitInterval = ClosedEnum<
-  typeof VariantPurchaseLimitInterval
+export type UpdatePlanVariantPurchaseLimitInterval = ClosedEnum<
+  typeof UpdatePlanVariantPurchaseLimitInterval
 >;
 
 /**
  * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
-export type VariantPurchaseLimit = {
+export type UpdatePlanVariantPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: VariantPurchaseLimitInterval;
+  interval: UpdatePlanVariantPurchaseLimitInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -1721,7 +1737,7 @@ export type VariantPurchaseLimit = {
   count?: number | undefined;
 };
 
-export type VariantAutoTopup = {
+export type UpdatePlanVariantAutoTopup = {
   /**
    * The ID of the feature (credit balance) to auto top-up.
    */
@@ -1741,7 +1757,7 @@ export type VariantAutoTopup = {
   /**
    * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
-  purchaseLimit?: VariantPurchaseLimit | undefined;
+  purchaseLimit?: UpdatePlanVariantPurchaseLimit | undefined;
   /**
    * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
    */
@@ -1751,16 +1767,18 @@ export type VariantAutoTopup = {
 /**
  * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
  */
-export const VariantLimitType = {
+export const UpdatePlanVariantLimitType = {
   Absolute: "absolute",
   UsagePercentage: "usage_percentage",
 } as const;
 /**
  * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
  */
-export type VariantLimitType = ClosedEnum<typeof VariantLimitType>;
+export type UpdatePlanVariantLimitType = ClosedEnum<
+  typeof UpdatePlanVariantLimitType
+>;
 
-export type VariantSpendLimit = {
+export type UpdatePlanVariantSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
    */
@@ -1772,7 +1790,7 @@ export type VariantSpendLimit = {
   /**
    * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
    */
-  limitType?: VariantLimitType | undefined;
+  limitType?: UpdatePlanVariantLimitType | undefined;
   /**
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
@@ -1786,7 +1804,7 @@ export type VariantSpendLimit = {
 /**
  * Interval for the cap, aligned to the customer's billing cycle.
  */
-export const VariantUsageLimitInterval = {
+export const UpdatePlanVariantUsageLimitInterval = {
   Day: "day",
   Week: "week",
   Month: "month",
@@ -1795,30 +1813,32 @@ export const VariantUsageLimitInterval = {
 /**
  * Interval for the cap, aligned to the customer's billing cycle.
  */
-export type VariantUsageLimitInterval = ClosedEnum<
-  typeof VariantUsageLimitInterval
+export type UpdatePlanVariantUsageLimitInterval = ClosedEnum<
+  typeof UpdatePlanVariantUsageLimitInterval
 >;
 
 /**
  * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
  */
-export const VariantAnchor = {
+export const UpdatePlanVariantAnchor = {
   BillingCycle: "billing_cycle",
   Utc: "utc",
 } as const;
 /**
  * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
  */
-export type VariantAnchor = ClosedEnum<typeof VariantAnchor>;
+export type UpdatePlanVariantAnchor = ClosedEnum<
+  typeof UpdatePlanVariantAnchor
+>;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type VariantUsageLimitFilter = {
+export type UpdatePlanVariantUsageLimitFilter = {
   properties: { [k: string]: any };
 };
 
-export type VariantUsageLimit = {
+export type UpdatePlanVariantUsageLimit = {
   /**
    * The feature this usage limit applies to.
    */
@@ -1834,21 +1854,21 @@ export type VariantUsageLimit = {
   /**
    * Interval for the cap, aligned to the customer's billing cycle.
    */
-  interval: VariantUsageLimitInterval;
+  interval: UpdatePlanVariantUsageLimitInterval;
   /**
    * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
    */
-  anchor?: VariantAnchor | undefined;
+  anchor?: UpdatePlanVariantAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: VariantUsageLimitFilter | undefined;
+  filter?: UpdatePlanVariantUsageLimitFilter | undefined;
 };
 
 /**
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
-export const VariantThresholdType = {
+export const UpdatePlanVariantThresholdType = {
   Usage: "usage",
   UsagePercentage: "usage_percentage",
   Remaining: "remaining",
@@ -1857,12 +1877,14 @@ export const VariantThresholdType = {
 /**
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
-export type VariantThresholdType = ClosedEnum<typeof VariantThresholdType>;
+export type UpdatePlanVariantThresholdType = ClosedEnum<
+  typeof UpdatePlanVariantThresholdType
+>;
 
 /**
  * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
  */
-export const VariantBasis = {
+export const UpdatePlanVariantBasis = {
   Balance: "balance",
   Included: "included",
   Recurring: "recurring",
@@ -1871,16 +1893,16 @@ export const VariantBasis = {
 /**
  * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
  */
-export type VariantBasis = ClosedEnum<typeof VariantBasis>;
+export type UpdatePlanVariantBasis = ClosedEnum<typeof UpdatePlanVariantBasis>;
 
 /**
  * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
  */
-export type VariantUsageAlertFilter = {
+export type UpdatePlanVariantUsageAlertFilter = {
   properties: { [k: string]: any };
 };
 
-export type VariantUsageAlert = {
+export type UpdatePlanVariantUsageAlert = {
   /**
    * The feature ID this alert applies to.
    */
@@ -1896,22 +1918,22 @@ export type VariantUsageAlert = {
   /**
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
-  thresholdType: VariantThresholdType;
+  thresholdType: UpdatePlanVariantThresholdType;
   /**
    * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
    */
-  basis?: VariantBasis | undefined;
+  basis?: UpdatePlanVariantBasis | undefined;
   /**
    * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
    */
-  filter?: VariantUsageAlertFilter | undefined;
+  filter?: UpdatePlanVariantUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
   name?: string | undefined;
 };
 
-export type VariantOverageAllowed = {
+export type UpdatePlanVariantOverageAllowed = {
   /**
    * The feature ID this overage allowed control applies to.
    */
@@ -1925,56 +1947,58 @@ export type VariantOverageAllowed = {
 /**
  * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
  */
-export type VariantBillingControls = {
+export type UpdatePlanVariantBillingControls = {
   /**
    * List of auto top-up configurations per feature.
    */
-  autoTopups?: Array<VariantAutoTopup> | undefined;
+  autoTopups?: Array<UpdatePlanVariantAutoTopup> | undefined;
   /**
    * List of overage spend limits per feature (caps overage spend).
    */
-  spendLimits?: Array<VariantSpendLimit> | undefined;
+  spendLimits?: Array<UpdatePlanVariantSpendLimit> | undefined;
   /**
    * List of hard usage caps per feature (max units per interval).
    */
-  usageLimits?: Array<VariantUsageLimit> | undefined;
+  usageLimits?: Array<UpdatePlanVariantUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
-  usageAlerts?: Array<VariantUsageAlert> | undefined;
+  usageAlerts?: Array<UpdatePlanVariantUsageAlert> | undefined;
   /**
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
-  overageAllowed?: Array<VariantOverageAllowed> | undefined;
+  overageAllowed?: Array<UpdatePlanVariantOverageAllowed> | undefined;
 };
 
-export type CustomizeVariant1 = {
+export type UpdatePlanCustomizeVariant1 = {
   /**
    * Override the base price of the plan. Pass null to remove the base price.
    */
-  price?: VariantBasePrice | null | undefined;
+  price?: UpdatePlanVariantBasePrice | null | undefined;
   /**
    * Items to add to the plan.
    */
-  addItems?: Array<VariantPlanItem> | undefined;
+  addItems?: Array<UpdatePlanVariantPlanItem> | undefined;
   /**
    * Filters selecting items to remove from the plan.
    */
-  removeItems?: Array<VariantPlanItemFilter> | undefined;
+  removeItems?: Array<UpdatePlanVariantPlanItemFilter> | undefined;
   /**
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
-  freeTrial?: VariantFreeTrialParams | null | undefined;
+  freeTrial?: UpdatePlanVariantFreeTrialParams | null | undefined;
   /**
    * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
    */
-  billingControls?: VariantBillingControls | undefined;
+  billingControls?: UpdatePlanVariantBillingControls | undefined;
 };
 
 /**
  * The exact customize patch to apply to this variant.
  */
-export type Customize2 = CustomizeVariant1 | CustomizeVariant2;
+export type Customize2 =
+  | UpdatePlanCustomizeVariant1
+  | UpdatePlanCustomizeVariant2;
 
 /**
  * Migration draft options for an in-place direct variant update.
@@ -1984,7 +2008,7 @@ export type VariantMigration = {
   includeCustom?: boolean | undefined;
 };
 
-export type Variant = {
+export type UpdatePlanVariant = {
   /**
    * The variant plan ID to update or create.
    */
@@ -1996,7 +2020,7 @@ export type Variant = {
   /**
    * The exact customize patch to apply to this variant.
    */
-  customize: CustomizeVariant1 | CustomizeVariant2;
+  customize: UpdatePlanCustomizeVariant1 | UpdatePlanCustomizeVariant2;
   /**
    * Edit this variant in place instead of versioning it for this update.
    */
@@ -2090,7 +2114,7 @@ export type UpdatePlanParams = {
   /**
    * Additive variant updates for this base plan. Missing variants are created when name is provided.
    */
-  variants?: Array<Variant> | undefined;
+  variants?: Array<UpdatePlanVariant> | undefined;
   /**
    * Whether this is the org's default plan. Cannot be true on a variant.
    */
@@ -4320,69 +4344,75 @@ export function updateLicenseParentToJSON(
 }
 
 /** @internal */
-export type CustomizeVariant2$Outbound = {};
+export type UpdatePlanCustomizeVariant2$Outbound = {};
 
 /** @internal */
-export const CustomizeVariant2$outboundSchema: z.ZodMiniType<
-  CustomizeVariant2$Outbound,
-  CustomizeVariant2
+export const UpdatePlanCustomizeVariant2$outboundSchema: z.ZodMiniType<
+  UpdatePlanCustomizeVariant2$Outbound,
+  UpdatePlanCustomizeVariant2
 > = z.object({});
 
-export function customizeVariant2ToJSON(
-  customizeVariant2: CustomizeVariant2,
+export function updatePlanCustomizeVariant2ToJSON(
+  updatePlanCustomizeVariant2: UpdatePlanCustomizeVariant2,
 ): string {
   return JSON.stringify(
-    CustomizeVariant2$outboundSchema.parse(customizeVariant2),
+    UpdatePlanCustomizeVariant2$outboundSchema.parse(
+      updatePlanCustomizeVariant2,
+    ),
   );
 }
 
 /** @internal */
-export const PriceVariantInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PriceVariantInterval
-> = z.enum(PriceVariantInterval);
+export const UpdatePlanPriceVariantInterval$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanPriceVariantInterval
+> = z.enum(UpdatePlanPriceVariantInterval);
 
 /** @internal */
-export type VariantAdditionalCurrency$Outbound = {
+export type UpdatePlanVariantAdditionalCurrency$Outbound = {
   currency: string;
   amount: number;
 };
 
 /** @internal */
-export const VariantAdditionalCurrency$outboundSchema: z.ZodMiniType<
-  VariantAdditionalCurrency$Outbound,
-  VariantAdditionalCurrency
+export const UpdatePlanVariantAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantAdditionalCurrency$Outbound,
+  UpdatePlanVariantAdditionalCurrency
 > = z.object({
   currency: z.string(),
   amount: z.number(),
 });
 
-export function variantAdditionalCurrencyToJSON(
-  variantAdditionalCurrency: VariantAdditionalCurrency,
+export function updatePlanVariantAdditionalCurrencyToJSON(
+  updatePlanVariantAdditionalCurrency: UpdatePlanVariantAdditionalCurrency,
 ): string {
   return JSON.stringify(
-    VariantAdditionalCurrency$outboundSchema.parse(variantAdditionalCurrency),
+    UpdatePlanVariantAdditionalCurrency$outboundSchema.parse(
+      updatePlanVariantAdditionalCurrency,
+    ),
   );
 }
 
 /** @internal */
-export type VariantBasePrice$Outbound = {
+export type UpdatePlanVariantBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
-  additional_currencies?: Array<VariantAdditionalCurrency$Outbound> | undefined;
+  additional_currencies?:
+    | Array<UpdatePlanVariantAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
-export const VariantBasePrice$outboundSchema: z.ZodMiniType<
-  VariantBasePrice$Outbound,
-  VariantBasePrice
+export const UpdatePlanVariantBasePrice$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantBasePrice$Outbound,
+  UpdatePlanVariantBasePrice
 > = z.pipe(
   z.object({
     amount: z.number(),
-    interval: PriceVariantInterval$outboundSchema,
+    interval: UpdatePlanPriceVariantInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
     additionalCurrencies: z.optional(
-      z.array(z.lazy(() => VariantAdditionalCurrency$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanVariantAdditionalCurrency$outboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -4393,32 +4423,32 @@ export const VariantBasePrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantBasePriceToJSON(
-  variantBasePrice: VariantBasePrice,
+export function updatePlanVariantBasePriceToJSON(
+  updatePlanVariantBasePrice: UpdatePlanVariantBasePrice,
 ): string {
   return JSON.stringify(
-    VariantBasePrice$outboundSchema.parse(variantBasePrice),
+    UpdatePlanVariantBasePrice$outboundSchema.parse(updatePlanVariantBasePrice),
   );
 }
 
 /** @internal */
-export const VariantResetInterval$outboundSchema: z.ZodMiniEnum<
-  typeof VariantResetInterval
-> = z.enum(VariantResetInterval);
+export const UpdatePlanVariantResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantResetInterval
+> = z.enum(UpdatePlanVariantResetInterval);
 
 /** @internal */
-export type VariantReset$Outbound = {
+export type UpdatePlanVariantReset$Outbound = {
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const VariantReset$outboundSchema: z.ZodMiniType<
-  VariantReset$Outbound,
-  VariantReset
+export const UpdatePlanVariantReset$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantReset$Outbound,
+  UpdatePlanVariantReset
 > = z.pipe(
   z.object({
-    interval: VariantResetInterval$outboundSchema,
+    interval: UpdatePlanVariantResetInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -4428,37 +4458,43 @@ export const VariantReset$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantResetToJSON(variantReset: VariantReset): string {
-  return JSON.stringify(VariantReset$outboundSchema.parse(variantReset));
+export function updatePlanVariantResetToJSON(
+  updatePlanVariantReset: UpdatePlanVariantReset,
+): string {
+  return JSON.stringify(
+    UpdatePlanVariantReset$outboundSchema.parse(updatePlanVariantReset),
+  );
 }
 
 /** @internal */
-export type VariantAddItemAdditionalCurrency$Outbound = {
+export type UpdatePlanVariantAddItemAdditionalCurrency$Outbound = {
   currency: string;
   amount: number;
 };
 
 /** @internal */
-export const VariantAddItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
-  VariantAddItemAdditionalCurrency$Outbound,
-  VariantAddItemAdditionalCurrency
-> = z.object({
-  currency: z.string(),
-  amount: z.number(),
-});
+export const UpdatePlanVariantAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    UpdatePlanVariantAddItemAdditionalCurrency$Outbound,
+    UpdatePlanVariantAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
 
-export function variantAddItemAdditionalCurrencyToJSON(
-  variantAddItemAdditionalCurrency: VariantAddItemAdditionalCurrency,
+export function updatePlanVariantAddItemAdditionalCurrencyToJSON(
+  updatePlanVariantAddItemAdditionalCurrency:
+    UpdatePlanVariantAddItemAdditionalCurrency,
 ): string {
   return JSON.stringify(
-    VariantAddItemAdditionalCurrency$outboundSchema.parse(
-      variantAddItemAdditionalCurrency,
+    UpdatePlanVariantAddItemAdditionalCurrency$outboundSchema.parse(
+      updatePlanVariantAddItemAdditionalCurrency,
     ),
   );
 }
 
 /** @internal */
-export type VariantTier$Outbound = {
+export type UpdatePlanVariantTier$Outbound = {
   to?: any | undefined;
   amount?: number | undefined;
   flat_amount?: number | undefined;
@@ -4466,9 +4502,9 @@ export type VariantTier$Outbound = {
 };
 
 /** @internal */
-export const VariantTier$outboundSchema: z.ZodMiniType<
-  VariantTier$Outbound,
-  VariantTier
+export const UpdatePlanVariantTier$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantTier$Outbound,
+  UpdatePlanVariantTier
 > = z.pipe(
   z.object({
     to: z.optional(z.any()),
@@ -4484,32 +4520,38 @@ export const VariantTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantTierToJSON(variantTier: VariantTier): string {
-  return JSON.stringify(VariantTier$outboundSchema.parse(variantTier));
+export function updatePlanVariantTierToJSON(
+  updatePlanVariantTier: UpdatePlanVariantTier,
+): string {
+  return JSON.stringify(
+    UpdatePlanVariantTier$outboundSchema.parse(updatePlanVariantTier),
+  );
 }
 
 /** @internal */
-export const VariantTierBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof VariantTierBehavior
-> = z.enum(VariantTierBehavior);
+export const UpdatePlanVariantTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantTierBehavior
+> = z.enum(UpdatePlanVariantTierBehavior);
 
 /** @internal */
-export const VariantAddItemPriceInterval$outboundSchema: z.ZodMiniEnum<
-  typeof VariantAddItemPriceInterval
-> = z.enum(VariantAddItemPriceInterval);
+export const UpdatePlanVariantAddItemPriceInterval$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanVariantAddItemPriceInterval> = z.enum(
+    UpdatePlanVariantAddItemPriceInterval,
+  );
 
 /** @internal */
-export const VariantAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof VariantAddItemBillingMethod
-> = z.enum(VariantAddItemBillingMethod);
+export const UpdatePlanVariantAddItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanVariantAddItemBillingMethod> = z.enum(
+    UpdatePlanVariantAddItemBillingMethod,
+  );
 
 /** @internal */
-export type VariantPrice$Outbound = {
+export type UpdatePlanVariantPrice$Outbound = {
   amount?: number | undefined;
   additional_currencies?:
-    | Array<VariantAddItemAdditionalCurrency$Outbound>
+    | Array<UpdatePlanVariantAddItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<VariantTier$Outbound> | undefined;
+  tiers?: Array<UpdatePlanVariantTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -4519,21 +4561,23 @@ export type VariantPrice$Outbound = {
 };
 
 /** @internal */
-export const VariantPrice$outboundSchema: z.ZodMiniType<
-  VariantPrice$Outbound,
-  VariantPrice
+export const UpdatePlanVariantPrice$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantPrice$Outbound,
+  UpdatePlanVariantPrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    additionalCurrencies: z.optional(
-      z.array(z.lazy(() => VariantAddItemAdditionalCurrency$outboundSchema)),
-    ),
-    tiers: z.optional(z.array(z.lazy(() => VariantTier$outboundSchema))),
-    tierBehavior: z.optional(VariantTierBehavior$outboundSchema),
-    interval: VariantAddItemPriceInterval$outboundSchema,
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      UpdatePlanVariantAddItemAdditionalCurrency$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      UpdatePlanVariantTier$outboundSchema
+    ))),
+    tierBehavior: z.optional(UpdatePlanVariantTierBehavior$outboundSchema),
+    interval: UpdatePlanVariantAddItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod: VariantAddItemBillingMethod$outboundSchema,
+    billingMethod: UpdatePlanVariantAddItemBillingMethod$outboundSchema,
     maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
@@ -4548,34 +4592,38 @@ export const VariantPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantPriceToJSON(variantPrice: VariantPrice): string {
-  return JSON.stringify(VariantPrice$outboundSchema.parse(variantPrice));
+export function updatePlanVariantPriceToJSON(
+  updatePlanVariantPrice: UpdatePlanVariantPrice,
+): string {
+  return JSON.stringify(
+    UpdatePlanVariantPrice$outboundSchema.parse(updatePlanVariantPrice),
+  );
 }
 
 /** @internal */
-export const VariantOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof VariantOnIncrease
-> = z.enum(VariantOnIncrease);
+export const UpdatePlanVariantOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantOnIncrease
+> = z.enum(UpdatePlanVariantOnIncrease);
 
 /** @internal */
-export const VariantOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof VariantOnDecrease
-> = z.enum(VariantOnDecrease);
+export const UpdatePlanVariantOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantOnDecrease
+> = z.enum(UpdatePlanVariantOnDecrease);
 
 /** @internal */
-export type VariantProration$Outbound = {
+export type UpdatePlanVariantProration$Outbound = {
   on_increase: string;
   on_decrease: string;
 };
 
 /** @internal */
-export const VariantProration$outboundSchema: z.ZodMiniType<
-  VariantProration$Outbound,
-  VariantProration
+export const UpdatePlanVariantProration$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantProration$Outbound,
+  UpdatePlanVariantProration
 > = z.pipe(
   z.object({
-    onIncrease: VariantOnIncrease$outboundSchema,
-    onDecrease: VariantOnDecrease$outboundSchema,
+    onIncrease: UpdatePlanVariantOnIncrease$outboundSchema,
+    onDecrease: UpdatePlanVariantOnDecrease$outboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4585,21 +4633,21 @@ export const VariantProration$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantProrationToJSON(
-  variantProration: VariantProration,
+export function updatePlanVariantProrationToJSON(
+  updatePlanVariantProration: UpdatePlanVariantProration,
 ): string {
   return JSON.stringify(
-    VariantProration$outboundSchema.parse(variantProration),
+    UpdatePlanVariantProration$outboundSchema.parse(updatePlanVariantProration),
   );
 }
 
 /** @internal */
-export const VariantExpiryDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof VariantExpiryDurationType
-> = z.enum(VariantExpiryDurationType);
+export const UpdatePlanVariantExpiryDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantExpiryDurationType
+> = z.enum(UpdatePlanVariantExpiryDurationType);
 
 /** @internal */
-export type VariantRollover$Outbound = {
+export type UpdatePlanVariantRollover$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -4607,14 +4655,14 @@ export type VariantRollover$Outbound = {
 };
 
 /** @internal */
-export const VariantRollover$outboundSchema: z.ZodMiniType<
-  VariantRollover$Outbound,
-  VariantRollover
+export const UpdatePlanVariantRollover$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantRollover$Outbound,
+  UpdatePlanVariantRollover
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType: VariantExpiryDurationType$outboundSchema,
+    expiryDurationType: UpdatePlanVariantExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -4626,23 +4674,25 @@ export const VariantRollover$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantRolloverToJSON(
-  variantRollover: VariantRollover,
+export function updatePlanVariantRolloverToJSON(
+  updatePlanVariantRollover: UpdatePlanVariantRollover,
 ): string {
-  return JSON.stringify(VariantRollover$outboundSchema.parse(variantRollover));
+  return JSON.stringify(
+    UpdatePlanVariantRollover$outboundSchema.parse(updatePlanVariantRollover),
+  );
 }
 
 /** @internal */
-export type CreditSchemaVariant2$Outbound = {
+export type UpdatePlanCreditSchemaVariant2$Outbound = {
   metered_feature_id?: any | undefined;
   billing_units?: any | undefined;
   credit_cost?: any | undefined;
 };
 
 /** @internal */
-export const CreditSchemaVariant2$outboundSchema: z.ZodMiniType<
-  CreditSchemaVariant2$Outbound,
-  CreditSchemaVariant2
+export const UpdatePlanCreditSchemaVariant2$outboundSchema: z.ZodMiniType<
+  UpdatePlanCreditSchemaVariant2$Outbound,
+  UpdatePlanCreditSchemaVariant2
 > = z.pipe(
   z.object({
     meteredFeatureId: z.optional(z.any()),
@@ -4658,16 +4708,18 @@ export const CreditSchemaVariant2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function creditSchemaVariant2ToJSON(
-  creditSchemaVariant2: CreditSchemaVariant2,
+export function updatePlanCreditSchemaVariant2ToJSON(
+  updatePlanCreditSchemaVariant2: UpdatePlanCreditSchemaVariant2,
 ): string {
   return JSON.stringify(
-    CreditSchemaVariant2$outboundSchema.parse(creditSchemaVariant2),
+    UpdatePlanCreditSchemaVariant2$outboundSchema.parse(
+      updatePlanCreditSchemaVariant2,
+    ),
   );
 }
 
 /** @internal */
-export type CreditSchemaVariant1$Outbound = {
+export type UpdatePlanCreditSchemaVariant1$Outbound = {
   metered_feature_id?: any | undefined;
   billing_units?: any | undefined;
   tier_behavior?: any | undefined;
@@ -4675,9 +4727,9 @@ export type CreditSchemaVariant1$Outbound = {
 };
 
 /** @internal */
-export const CreditSchemaVariant1$outboundSchema: z.ZodMiniType<
-  CreditSchemaVariant1$Outbound,
-  CreditSchemaVariant1
+export const UpdatePlanCreditSchemaVariant1$outboundSchema: z.ZodMiniType<
+  UpdatePlanCreditSchemaVariant1$Outbound,
+  UpdatePlanCreditSchemaVariant1
 > = z.pipe(
   z.object({
     meteredFeatureId: z.optional(z.any()),
@@ -4694,26 +4746,28 @@ export const CreditSchemaVariant1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function creditSchemaVariant1ToJSON(
-  creditSchemaVariant1: CreditSchemaVariant1,
+export function updatePlanCreditSchemaVariant1ToJSON(
+  updatePlanCreditSchemaVariant1: UpdatePlanCreditSchemaVariant1,
 ): string {
   return JSON.stringify(
-    CreditSchemaVariant1$outboundSchema.parse(creditSchemaVariant1),
+    UpdatePlanCreditSchemaVariant1$outboundSchema.parse(
+      updatePlanCreditSchemaVariant1,
+    ),
   );
 }
 
 /** @internal */
 export type VariantCreditSchemaUnion$Outbound =
-  | CreditSchemaVariant1$Outbound
-  | CreditSchemaVariant2$Outbound;
+  | UpdatePlanCreditSchemaVariant1$Outbound
+  | UpdatePlanCreditSchemaVariant2$Outbound;
 
 /** @internal */
 export const VariantCreditSchemaUnion$outboundSchema: z.ZodMiniType<
   VariantCreditSchemaUnion$Outbound,
   VariantCreditSchemaUnion
 > = smartUnion([
-  z.lazy(() => CreditSchemaVariant1$outboundSchema),
-  z.lazy(() => CreditSchemaVariant2$outboundSchema),
+  z.lazy(() => UpdatePlanCreditSchemaVariant1$outboundSchema),
+  z.lazy(() => UpdatePlanCreditSchemaVariant2$outboundSchema),
 ]);
 
 export function variantCreditSchemaUnionToJSON(
@@ -4725,22 +4779,25 @@ export function variantCreditSchemaUnionToJSON(
 }
 
 /** @internal */
-export type VariantFeatureOverride$Outbound = {
+export type UpdatePlanVariantFeatureOverride$Outbound = {
   credit_schema?:
-    | Array<CreditSchemaVariant1$Outbound | CreditSchemaVariant2$Outbound>
+    | Array<
+      | UpdatePlanCreditSchemaVariant1$Outbound
+      | UpdatePlanCreditSchemaVariant2$Outbound
+    >
     | undefined;
 };
 
 /** @internal */
-export const VariantFeatureOverride$outboundSchema: z.ZodMiniType<
-  VariantFeatureOverride$Outbound,
-  VariantFeatureOverride
+export const UpdatePlanVariantFeatureOverride$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantFeatureOverride$Outbound,
+  UpdatePlanVariantFeatureOverride
 > = z.pipe(
   z.object({
     creditSchema: z.optional(z.array(smartUnion([
-      z.lazy(() => CreditSchemaVariant1$outboundSchema),
+      z.lazy(() => UpdatePlanCreditSchemaVariant1$outboundSchema),
       z.lazy(() =>
-        CreditSchemaVariant2$outboundSchema
+        UpdatePlanCreditSchemaVariant2$outboundSchema
       ),
     ]))),
   }),
@@ -4751,43 +4808,49 @@ export const VariantFeatureOverride$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantFeatureOverrideToJSON(
-  variantFeatureOverride: VariantFeatureOverride,
+export function updatePlanVariantFeatureOverrideToJSON(
+  updatePlanVariantFeatureOverride: UpdatePlanVariantFeatureOverride,
 ): string {
   return JSON.stringify(
-    VariantFeatureOverride$outboundSchema.parse(variantFeatureOverride),
+    UpdatePlanVariantFeatureOverride$outboundSchema.parse(
+      updatePlanVariantFeatureOverride,
+    ),
   );
 }
 
 /** @internal */
-export type VariantPlanItem$Outbound = {
+export type UpdatePlanVariantPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
   pooled: boolean;
-  reset?: VariantReset$Outbound | undefined;
-  price?: VariantPrice$Outbound | undefined;
-  proration?: VariantProration$Outbound | undefined;
-  rollover?: VariantRollover$Outbound | undefined;
-  feature_override?: VariantFeatureOverride$Outbound | undefined;
+  reset?: UpdatePlanVariantReset$Outbound | undefined;
+  price?: UpdatePlanVariantPrice$Outbound | undefined;
+  proration?: UpdatePlanVariantProration$Outbound | undefined;
+  rollover?: UpdatePlanVariantRollover$Outbound | undefined;
+  feature_override?: UpdatePlanVariantFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
-export const VariantPlanItem$outboundSchema: z.ZodMiniType<
-  VariantPlanItem$Outbound,
-  VariantPlanItem
+export const UpdatePlanVariantPlanItem$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantPlanItem$Outbound,
+  UpdatePlanVariantPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() => VariantReset$outboundSchema)),
-    price: z.optional(z.lazy(() => VariantPrice$outboundSchema)),
-    proration: z.optional(z.lazy(() => VariantProration$outboundSchema)),
-    rollover: z.optional(z.lazy(() => VariantRollover$outboundSchema)),
+    reset: z.optional(z.lazy(() => UpdatePlanVariantReset$outboundSchema)),
+    price: z.optional(z.lazy(() => UpdatePlanVariantPrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => UpdatePlanVariantProration$outboundSchema),
+    ),
+    rollover: z.optional(
+      z.lazy(() => UpdatePlanVariantRollover$outboundSchema),
+    ),
     featureOverride: z.optional(
-      z.lazy(() => VariantFeatureOverride$outboundSchema),
+      z.lazy(() => UpdatePlanVariantFeatureOverride$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -4798,49 +4861,56 @@ export const VariantPlanItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantPlanItemToJSON(
-  variantPlanItem: VariantPlanItem,
-): string {
-  return JSON.stringify(VariantPlanItem$outboundSchema.parse(variantPlanItem));
-}
-
-/** @internal */
-export const VariantRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof VariantRemoveItemBillingMethod
-> = z.enum(VariantRemoveItemBillingMethod);
-
-/** @internal */
-export const IntervalVariantRemoveItemEnum2$outboundSchema: z.ZodMiniEnum<
-  typeof IntervalVariantRemoveItemEnum2
-> = z.enum(IntervalVariantRemoveItemEnum2);
-
-/** @internal */
-export const IntervalVariantRemoveItemEnum1$outboundSchema: z.ZodMiniEnum<
-  typeof IntervalVariantRemoveItemEnum1
-> = z.enum(IntervalVariantRemoveItemEnum1);
-
-/** @internal */
-export type VariantIntervalUnion$Outbound = string | string;
-
-/** @internal */
-export const VariantIntervalUnion$outboundSchema: z.ZodMiniType<
-  VariantIntervalUnion$Outbound,
-  VariantIntervalUnion
-> = smartUnion([
-  IntervalVariantRemoveItemEnum1$outboundSchema,
-  IntervalVariantRemoveItemEnum2$outboundSchema,
-]);
-
-export function variantIntervalUnionToJSON(
-  variantIntervalUnion: VariantIntervalUnion,
+export function updatePlanVariantPlanItemToJSON(
+  updatePlanVariantPlanItem: UpdatePlanVariantPlanItem,
 ): string {
   return JSON.stringify(
-    VariantIntervalUnion$outboundSchema.parse(variantIntervalUnion),
+    UpdatePlanVariantPlanItem$outboundSchema.parse(updatePlanVariantPlanItem),
   );
 }
 
 /** @internal */
-export type VariantPlanItemFilter$Outbound = {
+export const UpdatePlanVariantRemoveItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanVariantRemoveItemBillingMethod> = z.enum(
+    UpdatePlanVariantRemoveItemBillingMethod,
+  );
+
+/** @internal */
+export const UpdatePlanIntervalVariantRemoveItemEnum2$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanIntervalVariantRemoveItemEnum2> = z.enum(
+    UpdatePlanIntervalVariantRemoveItemEnum2,
+  );
+
+/** @internal */
+export const UpdatePlanIntervalVariantRemoveItemEnum1$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanIntervalVariantRemoveItemEnum1> = z.enum(
+    UpdatePlanIntervalVariantRemoveItemEnum1,
+  );
+
+/** @internal */
+export type UpdatePlanVariantIntervalUnion$Outbound = string | string;
+
+/** @internal */
+export const UpdatePlanVariantIntervalUnion$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantIntervalUnion$Outbound,
+  UpdatePlanVariantIntervalUnion
+> = smartUnion([
+  UpdatePlanIntervalVariantRemoveItemEnum1$outboundSchema,
+  UpdatePlanIntervalVariantRemoveItemEnum2$outboundSchema,
+]);
+
+export function updatePlanVariantIntervalUnionToJSON(
+  updatePlanVariantIntervalUnion: UpdatePlanVariantIntervalUnion,
+): string {
+  return JSON.stringify(
+    UpdatePlanVariantIntervalUnion$outboundSchema.parse(
+      updatePlanVariantIntervalUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdatePlanVariantPlanItemFilter$Outbound = {
   feature_id?: string | undefined;
   billing_method?: string | undefined;
   interval?: string | string | undefined;
@@ -4849,17 +4919,19 @@ export type VariantPlanItemFilter$Outbound = {
 };
 
 /** @internal */
-export const VariantPlanItemFilter$outboundSchema: z.ZodMiniType<
-  VariantPlanItemFilter$Outbound,
-  VariantPlanItemFilter
+export const UpdatePlanVariantPlanItemFilter$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantPlanItemFilter$Outbound,
+  UpdatePlanVariantPlanItemFilter
 > = z.pipe(
   z.object({
     featureId: z.optional(z.string()),
-    billingMethod: z.optional(VariantRemoveItemBillingMethod$outboundSchema),
+    billingMethod: z.optional(
+      UpdatePlanVariantRemoveItemBillingMethod$outboundSchema,
+    ),
     interval: z.optional(
       smartUnion([
-        IntervalVariantRemoveItemEnum1$outboundSchema,
-        IntervalVariantRemoveItemEnum2$outboundSchema,
+        UpdatePlanIntervalVariantRemoveItemEnum1$outboundSchema,
+        UpdatePlanIntervalVariantRemoveItemEnum2$outboundSchema,
       ]),
     ),
     intervalCount: z.optional(z.int()),
@@ -4874,25 +4946,28 @@ export const VariantPlanItemFilter$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantPlanItemFilterToJSON(
-  variantPlanItemFilter: VariantPlanItemFilter,
+export function updatePlanVariantPlanItemFilterToJSON(
+  updatePlanVariantPlanItemFilter: UpdatePlanVariantPlanItemFilter,
 ): string {
   return JSON.stringify(
-    VariantPlanItemFilter$outboundSchema.parse(variantPlanItemFilter),
+    UpdatePlanVariantPlanItemFilter$outboundSchema.parse(
+      updatePlanVariantPlanItemFilter,
+    ),
   );
 }
 
 /** @internal */
-export const VariantDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof VariantDurationType
-> = z.enum(VariantDurationType);
+export const UpdatePlanVariantDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantDurationType
+> = z.enum(UpdatePlanVariantDurationType);
 
 /** @internal */
-export const VariantOnEnd$outboundSchema: z.ZodMiniEnum<typeof VariantOnEnd> = z
-  .enum(VariantOnEnd);
+export const UpdatePlanVariantOnEnd$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantOnEnd
+> = z.enum(UpdatePlanVariantOnEnd);
 
 /** @internal */
-export type VariantFreeTrialParams$Outbound = {
+export type UpdatePlanVariantFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
@@ -4900,15 +4975,18 @@ export type VariantFreeTrialParams$Outbound = {
 };
 
 /** @internal */
-export const VariantFreeTrialParams$outboundSchema: z.ZodMiniType<
-  VariantFreeTrialParams$Outbound,
-  VariantFreeTrialParams
+export const UpdatePlanVariantFreeTrialParams$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantFreeTrialParams$Outbound,
+  UpdatePlanVariantFreeTrialParams
 > = z.pipe(
   z.object({
     durationLength: z.number(),
-    durationType: z._default(VariantDurationType$outboundSchema, "month"),
+    durationType: z._default(
+      UpdatePlanVariantDurationType$outboundSchema,
+      "month",
+    ),
     cardRequired: z._default(z.boolean(), false),
-    onEnd: z.optional(VariantOnEnd$outboundSchema),
+    onEnd: z.optional(UpdatePlanVariantOnEnd$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4920,21 +4998,24 @@ export const VariantFreeTrialParams$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantFreeTrialParamsToJSON(
-  variantFreeTrialParams: VariantFreeTrialParams,
+export function updatePlanVariantFreeTrialParamsToJSON(
+  updatePlanVariantFreeTrialParams: UpdatePlanVariantFreeTrialParams,
 ): string {
   return JSON.stringify(
-    VariantFreeTrialParams$outboundSchema.parse(variantFreeTrialParams),
+    UpdatePlanVariantFreeTrialParams$outboundSchema.parse(
+      updatePlanVariantFreeTrialParams,
+    ),
   );
 }
 
 /** @internal */
-export const VariantPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
-  typeof VariantPurchaseLimitInterval
-> = z.enum(VariantPurchaseLimitInterval);
+export const UpdatePlanVariantPurchaseLimitInterval$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanVariantPurchaseLimitInterval> = z.enum(
+    UpdatePlanVariantPurchaseLimitInterval,
+  );
 
 /** @internal */
-export type VariantPurchaseLimit$Outbound = {
+export type UpdatePlanVariantPurchaseLimit$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
@@ -4942,12 +5023,12 @@ export type VariantPurchaseLimit$Outbound = {
 };
 
 /** @internal */
-export const VariantPurchaseLimit$outboundSchema: z.ZodMiniType<
-  VariantPurchaseLimit$Outbound,
-  VariantPurchaseLimit
+export const UpdatePlanVariantPurchaseLimit$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantPurchaseLimit$Outbound,
+  UpdatePlanVariantPurchaseLimit
 > = z.pipe(
   z.object({
-    interval: VariantPurchaseLimitInterval$outboundSchema,
+    interval: UpdatePlanVariantPurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
     count: z.optional(z.number()),
@@ -4959,28 +5040,30 @@ export const VariantPurchaseLimit$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantPurchaseLimitToJSON(
-  variantPurchaseLimit: VariantPurchaseLimit,
+export function updatePlanVariantPurchaseLimitToJSON(
+  updatePlanVariantPurchaseLimit: UpdatePlanVariantPurchaseLimit,
 ): string {
   return JSON.stringify(
-    VariantPurchaseLimit$outboundSchema.parse(variantPurchaseLimit),
+    UpdatePlanVariantPurchaseLimit$outboundSchema.parse(
+      updatePlanVariantPurchaseLimit,
+    ),
   );
 }
 
 /** @internal */
-export type VariantAutoTopup$Outbound = {
+export type UpdatePlanVariantAutoTopup$Outbound = {
   feature_id: string;
   enabled: boolean;
   threshold: number;
   quantity: number;
-  purchase_limit?: VariantPurchaseLimit$Outbound | undefined;
+  purchase_limit?: UpdatePlanVariantPurchaseLimit$Outbound | undefined;
   invoice_mode?: boolean | undefined;
 };
 
 /** @internal */
-export const VariantAutoTopup$outboundSchema: z.ZodMiniType<
-  VariantAutoTopup$Outbound,
-  VariantAutoTopup
+export const UpdatePlanVariantAutoTopup$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantAutoTopup$Outbound,
+  UpdatePlanVariantAutoTopup
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -4988,7 +5071,7 @@ export const VariantAutoTopup$outboundSchema: z.ZodMiniType<
     threshold: z.number(),
     quantity: z.number(),
     purchaseLimit: z.optional(
-      z.lazy(() => VariantPurchaseLimit$outboundSchema),
+      z.lazy(() => UpdatePlanVariantPurchaseLimit$outboundSchema),
     ),
     invoiceMode: z.optional(z.boolean()),
   }),
@@ -5001,21 +5084,21 @@ export const VariantAutoTopup$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantAutoTopupToJSON(
-  variantAutoTopup: VariantAutoTopup,
+export function updatePlanVariantAutoTopupToJSON(
+  updatePlanVariantAutoTopup: UpdatePlanVariantAutoTopup,
 ): string {
   return JSON.stringify(
-    VariantAutoTopup$outboundSchema.parse(variantAutoTopup),
+    UpdatePlanVariantAutoTopup$outboundSchema.parse(updatePlanVariantAutoTopup),
   );
 }
 
 /** @internal */
-export const VariantLimitType$outboundSchema: z.ZodMiniEnum<
-  typeof VariantLimitType
-> = z.enum(VariantLimitType);
+export const UpdatePlanVariantLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantLimitType
+> = z.enum(UpdatePlanVariantLimitType);
 
 /** @internal */
-export type VariantSpendLimit$Outbound = {
+export type UpdatePlanVariantSpendLimit$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   limit_type?: string | undefined;
@@ -5024,14 +5107,14 @@ export type VariantSpendLimit$Outbound = {
 };
 
 /** @internal */
-export const VariantSpendLimit$outboundSchema: z.ZodMiniType<
-  VariantSpendLimit$Outbound,
-  VariantSpendLimit
+export const UpdatePlanVariantSpendLimit$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantSpendLimit$Outbound,
+  UpdatePlanVariantSpendLimit
 > = z.pipe(
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
-    limitType: z.optional(VariantLimitType$outboundSchema),
+    limitType: z.optional(UpdatePlanVariantLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
     skipOverageBilling: z.optional(z.boolean()),
   }),
@@ -5045,66 +5128,73 @@ export const VariantSpendLimit$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantSpendLimitToJSON(
-  variantSpendLimit: VariantSpendLimit,
+export function updatePlanVariantSpendLimitToJSON(
+  updatePlanVariantSpendLimit: UpdatePlanVariantSpendLimit,
 ): string {
   return JSON.stringify(
-    VariantSpendLimit$outboundSchema.parse(variantSpendLimit),
+    UpdatePlanVariantSpendLimit$outboundSchema.parse(
+      updatePlanVariantSpendLimit,
+    ),
   );
 }
 
 /** @internal */
-export const VariantUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
-  typeof VariantUsageLimitInterval
-> = z.enum(VariantUsageLimitInterval);
+export const UpdatePlanVariantUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantUsageLimitInterval
+> = z.enum(UpdatePlanVariantUsageLimitInterval);
 
 /** @internal */
-export const VariantAnchor$outboundSchema: z.ZodMiniEnum<typeof VariantAnchor> =
-  z.enum(VariantAnchor);
+export const UpdatePlanVariantAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantAnchor
+> = z.enum(UpdatePlanVariantAnchor);
 
 /** @internal */
-export type VariantUsageLimitFilter$Outbound = {
+export type UpdatePlanVariantUsageLimitFilter$Outbound = {
   properties: { [k: string]: any };
 };
 
 /** @internal */
-export const VariantUsageLimitFilter$outboundSchema: z.ZodMiniType<
-  VariantUsageLimitFilter$Outbound,
-  VariantUsageLimitFilter
+export const UpdatePlanVariantUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantUsageLimitFilter$Outbound,
+  UpdatePlanVariantUsageLimitFilter
 > = z.object({
   properties: z.record(z.string(), z.any()),
 });
 
-export function variantUsageLimitFilterToJSON(
-  variantUsageLimitFilter: VariantUsageLimitFilter,
+export function updatePlanVariantUsageLimitFilterToJSON(
+  updatePlanVariantUsageLimitFilter: UpdatePlanVariantUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    VariantUsageLimitFilter$outboundSchema.parse(variantUsageLimitFilter),
+    UpdatePlanVariantUsageLimitFilter$outboundSchema.parse(
+      updatePlanVariantUsageLimitFilter,
+    ),
   );
 }
 
 /** @internal */
-export type VariantUsageLimit$Outbound = {
+export type UpdatePlanVariantUsageLimit$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: VariantUsageLimitFilter$Outbound | undefined;
+  filter?: UpdatePlanVariantUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
-export const VariantUsageLimit$outboundSchema: z.ZodMiniType<
-  VariantUsageLimit$Outbound,
-  VariantUsageLimit
+export const UpdatePlanVariantUsageLimit$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantUsageLimit$Outbound,
+  UpdatePlanVariantUsageLimit
 > = z.pipe(
   z.object({
     featureId: z.string(),
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
-    interval: VariantUsageLimitInterval$outboundSchema,
-    anchor: z.optional(VariantAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => VariantUsageLimitFilter$outboundSchema)),
+    interval: UpdatePlanVariantUsageLimitInterval$outboundSchema,
+    anchor: z.optional(UpdatePlanVariantAnchor$outboundSchema),
+    filter: z.optional(
+      z.lazy(() => UpdatePlanVariantUsageLimitFilter$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5113,67 +5203,74 @@ export const VariantUsageLimit$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantUsageLimitToJSON(
-  variantUsageLimit: VariantUsageLimit,
+export function updatePlanVariantUsageLimitToJSON(
+  updatePlanVariantUsageLimit: UpdatePlanVariantUsageLimit,
 ): string {
   return JSON.stringify(
-    VariantUsageLimit$outboundSchema.parse(variantUsageLimit),
+    UpdatePlanVariantUsageLimit$outboundSchema.parse(
+      updatePlanVariantUsageLimit,
+    ),
   );
 }
 
 /** @internal */
-export const VariantThresholdType$outboundSchema: z.ZodMiniEnum<
-  typeof VariantThresholdType
-> = z.enum(VariantThresholdType);
+export const UpdatePlanVariantThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantThresholdType
+> = z.enum(UpdatePlanVariantThresholdType);
 
 /** @internal */
-export const VariantBasis$outboundSchema: z.ZodMiniEnum<typeof VariantBasis> = z
-  .enum(VariantBasis);
+export const UpdatePlanVariantBasis$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanVariantBasis
+> = z.enum(UpdatePlanVariantBasis);
 
 /** @internal */
-export type VariantUsageAlertFilter$Outbound = {
+export type UpdatePlanVariantUsageAlertFilter$Outbound = {
   properties: { [k: string]: any };
 };
 
 /** @internal */
-export const VariantUsageAlertFilter$outboundSchema: z.ZodMiniType<
-  VariantUsageAlertFilter$Outbound,
-  VariantUsageAlertFilter
+export const UpdatePlanVariantUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantUsageAlertFilter$Outbound,
+  UpdatePlanVariantUsageAlertFilter
 > = z.object({
   properties: z.record(z.string(), z.any()),
 });
 
-export function variantUsageAlertFilterToJSON(
-  variantUsageAlertFilter: VariantUsageAlertFilter,
+export function updatePlanVariantUsageAlertFilterToJSON(
+  updatePlanVariantUsageAlertFilter: UpdatePlanVariantUsageAlertFilter,
 ): string {
   return JSON.stringify(
-    VariantUsageAlertFilter$outboundSchema.parse(variantUsageAlertFilter),
+    UpdatePlanVariantUsageAlertFilter$outboundSchema.parse(
+      updatePlanVariantUsageAlertFilter,
+    ),
   );
 }
 
 /** @internal */
-export type VariantUsageAlert$Outbound = {
+export type UpdatePlanVariantUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
   basis: string;
-  filter?: VariantUsageAlertFilter$Outbound | undefined;
+  filter?: UpdatePlanVariantUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
 /** @internal */
-export const VariantUsageAlert$outboundSchema: z.ZodMiniType<
-  VariantUsageAlert$Outbound,
-  VariantUsageAlert
+export const UpdatePlanVariantUsageAlert$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantUsageAlert$Outbound,
+  UpdatePlanVariantUsageAlert
 > = z.pipe(
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
-    thresholdType: VariantThresholdType$outboundSchema,
-    basis: z._default(VariantBasis$outboundSchema, "balance"),
-    filter: z.optional(z.lazy(() => VariantUsageAlertFilter$outboundSchema)),
+    thresholdType: UpdatePlanVariantThresholdType$outboundSchema,
+    basis: z._default(UpdatePlanVariantBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => UpdatePlanVariantUsageAlertFilter$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -5184,24 +5281,26 @@ export const VariantUsageAlert$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantUsageAlertToJSON(
-  variantUsageAlert: VariantUsageAlert,
+export function updatePlanVariantUsageAlertToJSON(
+  updatePlanVariantUsageAlert: UpdatePlanVariantUsageAlert,
 ): string {
   return JSON.stringify(
-    VariantUsageAlert$outboundSchema.parse(variantUsageAlert),
+    UpdatePlanVariantUsageAlert$outboundSchema.parse(
+      updatePlanVariantUsageAlert,
+    ),
   );
 }
 
 /** @internal */
-export type VariantOverageAllowed$Outbound = {
+export type UpdatePlanVariantOverageAllowed$Outbound = {
   feature_id: string;
   enabled: boolean;
 };
 
 /** @internal */
-export const VariantOverageAllowed$outboundSchema: z.ZodMiniType<
-  VariantOverageAllowed$Outbound,
-  VariantOverageAllowed
+export const UpdatePlanVariantOverageAllowed$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantOverageAllowed$Outbound,
+  UpdatePlanVariantOverageAllowed
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -5214,43 +5313,45 @@ export const VariantOverageAllowed$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantOverageAllowedToJSON(
-  variantOverageAllowed: VariantOverageAllowed,
+export function updatePlanVariantOverageAllowedToJSON(
+  updatePlanVariantOverageAllowed: UpdatePlanVariantOverageAllowed,
 ): string {
   return JSON.stringify(
-    VariantOverageAllowed$outboundSchema.parse(variantOverageAllowed),
+    UpdatePlanVariantOverageAllowed$outboundSchema.parse(
+      updatePlanVariantOverageAllowed,
+    ),
   );
 }
 
 /** @internal */
-export type VariantBillingControls$Outbound = {
-  auto_topups?: Array<VariantAutoTopup$Outbound> | undefined;
-  spend_limits?: Array<VariantSpendLimit$Outbound> | undefined;
-  usage_limits?: Array<VariantUsageLimit$Outbound> | undefined;
-  usage_alerts?: Array<VariantUsageAlert$Outbound> | undefined;
-  overage_allowed?: Array<VariantOverageAllowed$Outbound> | undefined;
+export type UpdatePlanVariantBillingControls$Outbound = {
+  auto_topups?: Array<UpdatePlanVariantAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<UpdatePlanVariantSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<UpdatePlanVariantUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<UpdatePlanVariantUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<UpdatePlanVariantOverageAllowed$Outbound> | undefined;
 };
 
 /** @internal */
-export const VariantBillingControls$outboundSchema: z.ZodMiniType<
-  VariantBillingControls$Outbound,
-  VariantBillingControls
+export const UpdatePlanVariantBillingControls$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantBillingControls$Outbound,
+  UpdatePlanVariantBillingControls
 > = z.pipe(
   z.object({
     autoTopups: z.optional(
-      z.array(z.lazy(() => VariantAutoTopup$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanVariantAutoTopup$outboundSchema)),
     ),
     spendLimits: z.optional(
-      z.array(z.lazy(() => VariantSpendLimit$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanVariantSpendLimit$outboundSchema)),
     ),
     usageLimits: z.optional(
-      z.array(z.lazy(() => VariantUsageLimit$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanVariantUsageLimit$outboundSchema)),
     ),
     usageAlerts: z.optional(
-      z.array(z.lazy(() => VariantUsageAlert$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanVariantUsageAlert$outboundSchema)),
     ),
     overageAllowed: z.optional(
-      z.array(z.lazy(() => VariantOverageAllowed$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanVariantOverageAllowed$outboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -5264,41 +5365,45 @@ export const VariantBillingControls$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantBillingControlsToJSON(
-  variantBillingControls: VariantBillingControls,
+export function updatePlanVariantBillingControlsToJSON(
+  updatePlanVariantBillingControls: UpdatePlanVariantBillingControls,
 ): string {
   return JSON.stringify(
-    VariantBillingControls$outboundSchema.parse(variantBillingControls),
+    UpdatePlanVariantBillingControls$outboundSchema.parse(
+      updatePlanVariantBillingControls,
+    ),
   );
 }
 
 /** @internal */
-export type CustomizeVariant1$Outbound = {
-  price?: VariantBasePrice$Outbound | null | undefined;
-  add_items?: Array<VariantPlanItem$Outbound> | undefined;
-  remove_items?: Array<VariantPlanItemFilter$Outbound> | undefined;
-  free_trial?: VariantFreeTrialParams$Outbound | null | undefined;
-  billing_controls?: VariantBillingControls$Outbound | undefined;
+export type UpdatePlanCustomizeVariant1$Outbound = {
+  price?: UpdatePlanVariantBasePrice$Outbound | null | undefined;
+  add_items?: Array<UpdatePlanVariantPlanItem$Outbound> | undefined;
+  remove_items?: Array<UpdatePlanVariantPlanItemFilter$Outbound> | undefined;
+  free_trial?: UpdatePlanVariantFreeTrialParams$Outbound | null | undefined;
+  billing_controls?: UpdatePlanVariantBillingControls$Outbound | undefined;
 };
 
 /** @internal */
-export const CustomizeVariant1$outboundSchema: z.ZodMiniType<
-  CustomizeVariant1$Outbound,
-  CustomizeVariant1
+export const UpdatePlanCustomizeVariant1$outboundSchema: z.ZodMiniType<
+  UpdatePlanCustomizeVariant1$Outbound,
+  UpdatePlanCustomizeVariant1
 > = z.pipe(
   z.object({
     price: z.optional(
-      z.nullable(z.lazy(() => VariantBasePrice$outboundSchema)),
+      z.nullable(z.lazy(() => UpdatePlanVariantBasePrice$outboundSchema)),
     ),
-    addItems: z.optional(z.array(z.lazy(() => VariantPlanItem$outboundSchema))),
+    addItems: z.optional(
+      z.array(z.lazy(() => UpdatePlanVariantPlanItem$outboundSchema)),
+    ),
     removeItems: z.optional(
-      z.array(z.lazy(() => VariantPlanItemFilter$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanVariantPlanItemFilter$outboundSchema)),
     ),
     freeTrial: z.optional(
-      z.nullable(z.lazy(() => VariantFreeTrialParams$outboundSchema)),
+      z.nullable(z.lazy(() => UpdatePlanVariantFreeTrialParams$outboundSchema)),
     ),
     billingControls: z.optional(
-      z.lazy(() => VariantBillingControls$outboundSchema),
+      z.lazy(() => UpdatePlanVariantBillingControls$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -5311,26 +5416,28 @@ export const CustomizeVariant1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function customizeVariant1ToJSON(
-  customizeVariant1: CustomizeVariant1,
+export function updatePlanCustomizeVariant1ToJSON(
+  updatePlanCustomizeVariant1: UpdatePlanCustomizeVariant1,
 ): string {
   return JSON.stringify(
-    CustomizeVariant1$outboundSchema.parse(customizeVariant1),
+    UpdatePlanCustomizeVariant1$outboundSchema.parse(
+      updatePlanCustomizeVariant1,
+    ),
   );
 }
 
 /** @internal */
 export type Customize2$Outbound =
-  | CustomizeVariant1$Outbound
-  | CustomizeVariant2$Outbound;
+  | UpdatePlanCustomizeVariant1$Outbound
+  | UpdatePlanCustomizeVariant2$Outbound;
 
 /** @internal */
 export const Customize2$outboundSchema: z.ZodMiniType<
   Customize2$Outbound,
   Customize2
 > = smartUnion([
-  z.lazy(() => CustomizeVariant1$outboundSchema),
-  z.lazy(() => CustomizeVariant2$outboundSchema),
+  z.lazy(() => UpdatePlanCustomizeVariant1$outboundSchema),
+  z.lazy(() => UpdatePlanCustomizeVariant2$outboundSchema),
 ]);
 
 export function customize2ToJSON(customize2: Customize2): string {
@@ -5368,40 +5475,48 @@ export function variantMigrationToJSON(
 }
 
 /** @internal */
-export type Variant$Outbound = {
+export type UpdatePlanVariant$Outbound = {
   variant_plan_id: string;
   name?: string | undefined;
-  customize: CustomizeVariant1$Outbound | CustomizeVariant2$Outbound;
+  customize:
+    | UpdatePlanCustomizeVariant1$Outbound
+    | UpdatePlanCustomizeVariant2$Outbound;
   disable_version?: boolean | undefined;
   force_version?: boolean | undefined;
   migration?: VariantMigration$Outbound | undefined;
 };
 
 /** @internal */
-export const Variant$outboundSchema: z.ZodMiniType<Variant$Outbound, Variant> =
-  z.pipe(
-    z.object({
-      variantPlanId: z.string(),
-      name: z.optional(z.string()),
-      customize: smartUnion([
-        z.lazy(() => CustomizeVariant1$outboundSchema),
-        z.lazy(() => CustomizeVariant2$outboundSchema),
-      ]),
-      disableVersion: z.optional(z.boolean()),
-      forceVersion: z.optional(z.boolean()),
-      migration: z.optional(z.lazy(() => VariantMigration$outboundSchema)),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        variantPlanId: "variant_plan_id",
-        disableVersion: "disable_version",
-        forceVersion: "force_version",
-      });
-    }),
-  );
+export const UpdatePlanVariant$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariant$Outbound,
+  UpdatePlanVariant
+> = z.pipe(
+  z.object({
+    variantPlanId: z.string(),
+    name: z.optional(z.string()),
+    customize: smartUnion([
+      z.lazy(() => UpdatePlanCustomizeVariant1$outboundSchema),
+      z.lazy(() => UpdatePlanCustomizeVariant2$outboundSchema),
+    ]),
+    disableVersion: z.optional(z.boolean()),
+    forceVersion: z.optional(z.boolean()),
+    migration: z.optional(z.lazy(() => VariantMigration$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      variantPlanId: "variant_plan_id",
+      disableVersion: "disable_version",
+      forceVersion: "force_version",
+    });
+  }),
+);
 
-export function variantToJSON(variant: Variant): string {
-  return JSON.stringify(Variant$outboundSchema.parse(variant));
+export function updatePlanVariantToJSON(
+  updatePlanVariant: UpdatePlanVariant,
+): string {
+  return JSON.stringify(
+    UpdatePlanVariant$outboundSchema.parse(updatePlanVariant),
+  );
 }
 
 /** @internal */
@@ -5430,7 +5545,7 @@ export type UpdatePlanParams$Outbound = {
   force_version?: boolean | undefined;
   update_variant_ids?: Array<string> | undefined;
   update_license_parents?: Array<UpdateLicenseParent$Outbound> | undefined;
-  variants?: Array<Variant$Outbound> | undefined;
+  variants?: Array<UpdatePlanVariant$Outbound> | undefined;
   is_default?: boolean | undefined;
 };
 
@@ -5480,7 +5595,9 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
     updateLicenseParents: z.optional(
       z.array(z.lazy(() => UpdateLicenseParent$outboundSchema)),
     ),
-    variants: z.optional(z.array(z.lazy(() => Variant$outboundSchema))),
+    variants: z.optional(
+      z.array(z.lazy(() => UpdatePlanVariant$outboundSchema)),
+    ),
     isDefault: z.optional(z.boolean()),
   }),
   z.transform((v) => {

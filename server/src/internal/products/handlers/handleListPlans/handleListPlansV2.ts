@@ -70,6 +70,7 @@ export const handleListPlansV2 = createRoute({
 					currency: org.default_currency || undefined,
 					baseFullProduct: findBaseFullProduct({ product, products }),
 					resolveBaseFullProduct: false,
+					expandVariants: true,
 				}),
 			),
 		);

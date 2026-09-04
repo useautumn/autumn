@@ -2239,7 +2239,7 @@ export type CreatePlanBasePriceResponse = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const CreatePlanAddItemResetIntervalResponse = {
+export const CreatePlanVariantDetailsResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -2253,8 +2253,8 @@ export const CreatePlanAddItemResetIntervalResponse = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type CreatePlanAddItemResetIntervalResponse = OpenEnum<
-  typeof CreatePlanAddItemResetIntervalResponse
+export type CreatePlanVariantDetailsResetInterval = OpenEnum<
+  typeof CreatePlanVariantDetailsResetInterval
 >;
 
 /**
@@ -2264,7 +2264,7 @@ export type CreatePlanVariantDetailsReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: CreatePlanAddItemResetIntervalResponse;
+  interval: CreatePlanVariantDetailsResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
@@ -5632,9 +5632,10 @@ export function createPlanBasePriceResponseFromJSON(
 }
 
 /** @internal */
-export const CreatePlanAddItemResetIntervalResponse$inboundSchema:
-  z.ZodMiniType<CreatePlanAddItemResetIntervalResponse, unknown> = openEnums
-    .inboundSchema(CreatePlanAddItemResetIntervalResponse);
+export const CreatePlanVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
+  CreatePlanVariantDetailsResetInterval,
+  unknown
+> = openEnums.inboundSchema(CreatePlanVariantDetailsResetInterval);
 
 /** @internal */
 export const CreatePlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
@@ -5642,7 +5643,7 @@ export const CreatePlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: CreatePlanAddItemResetIntervalResponse$inboundSchema,
+    interval: CreatePlanVariantDetailsResetInterval$inboundSchema,
     interval_count: types.optional(types.number()),
   }),
   z.transform((v) => {

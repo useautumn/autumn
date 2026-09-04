@@ -43,7 +43,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
-CreatePlanAddItemPriceIntervalResponse = Union[
+CreatePlanVariantDetailsAddItemPriceInterval = Union[
     Literal[
         "one_off",
         "week",
@@ -70,7 +70,7 @@ r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 class CreatePlanVariantDetailsPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: CreatePlanAddItemPriceIntervalResponse
+    interval: CreatePlanVariantDetailsAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
     billing_method: CreatePlanAddItemBillingMethodResponse
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
@@ -94,7 +94,7 @@ class CreatePlanVariantDetailsPriceTypedDict(TypedDict):
 class CreatePlanVariantDetailsPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: CreatePlanAddItemPriceIntervalResponse
+    interval: CreatePlanVariantDetailsAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
     billing_method: CreatePlanAddItemBillingMethodResponse
@@ -496,7 +496,7 @@ CreatePlanRemoveItemBillingMethodResponse = Union[
 r"""Match items with this billing method (prepaid or usage_based)."""
 
 
-CreatePlanIntervalRemoveItemResponseEnum2 = Union[
+CreatePlanIntervalVariantDetailsRemoveItemEnum2 = Union[
     Literal[
         "one_off",
         "minute",
@@ -512,7 +512,7 @@ CreatePlanIntervalRemoveItemResponseEnum2 = Union[
 ]
 
 
-CreatePlanIntervalRemoveItemResponseEnum1 = Union[
+CreatePlanIntervalVariantDetailsRemoveItemEnum1 = Union[
     Literal[
         "one_off",
         "week",
@@ -525,21 +525,21 @@ CreatePlanIntervalRemoveItemResponseEnum1 = Union[
 ]
 
 
-CreatePlanIntervalResponseUnionTypedDict = TypeAliasType(
-    "CreatePlanIntervalResponseUnionTypedDict",
+CreatePlanVariantDetailsIntervalUnionTypedDict = TypeAliasType(
+    "CreatePlanVariantDetailsIntervalUnionTypedDict",
     Union[
-        CreatePlanIntervalRemoveItemResponseEnum1,
-        CreatePlanIntervalRemoveItemResponseEnum2,
+        CreatePlanIntervalVariantDetailsRemoveItemEnum1,
+        CreatePlanIntervalVariantDetailsRemoveItemEnum2,
     ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-CreatePlanIntervalResponseUnion = TypeAliasType(
-    "CreatePlanIntervalResponseUnion",
+CreatePlanVariantDetailsIntervalUnion = TypeAliasType(
+    "CreatePlanVariantDetailsIntervalUnion",
     Union[
-        CreatePlanIntervalRemoveItemResponseEnum1,
-        CreatePlanIntervalRemoveItemResponseEnum2,
+        CreatePlanIntervalVariantDetailsRemoveItemEnum1,
+        CreatePlanIntervalVariantDetailsRemoveItemEnum2,
     ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
@@ -552,7 +552,7 @@ class CreatePlanPlanItemFilterResponseTypedDict(TypedDict):
     r"""Match items linked to this feature."""
     billing_method: NotRequired[CreatePlanRemoveItemBillingMethodResponse]
     r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[CreatePlanIntervalResponseUnionTypedDict]
+    interval: NotRequired[CreatePlanVariantDetailsIntervalUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
@@ -569,7 +569,7 @@ class CreatePlanPlanItemFilterResponse(BaseModel):
     billing_method: Optional[CreatePlanRemoveItemBillingMethodResponse] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
-    interval: Optional[CreatePlanIntervalResponseUnion] = None
+    interval: Optional[CreatePlanVariantDetailsIntervalUnion] = None
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
     interval_count: Optional[int] = None
