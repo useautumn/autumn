@@ -20,9 +20,7 @@ const buildPlanRenameSql = ({
 }): SQL => {
 	const { planId, toId } = renamePlan;
 	const vercelAllowlistKey =
-		env === "live"
-			? "allowed_product_ids_live"
-			: "allowed_product_ids_sandbox";
+		env === "live" ? "allowed_product_ids_live" : "allowed_product_ids_sandbox";
 
 	return sql`
 		WITH upd_products AS (
@@ -121,7 +119,12 @@ export const executeRenamePlans = async ({
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
-	for (const renamePlan of updateCatalogPlan.renamePlans) {
+	// One SQL per (from, to): the statement already renames every version, and
+	// a second run for another version would re-insert the same alias.
+	const byPair = new Map<string, RenameProductPlan>();
+	for (const renamePlan of updateCatalogPlan.renamePlans)
+		byPair.set(`${renamePlan.planId}\u2192${renamePlan.toId}`, renamePlan);
+	for (const renamePlan of byPair.values()) {
 		await ctx.db.execute(
 			buildPlanRenameSql({
 				orgId: ctx.org.id,
