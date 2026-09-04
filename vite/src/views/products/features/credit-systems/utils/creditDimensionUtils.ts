@@ -274,15 +274,31 @@ export const createRateDraft = (match: CreditMatch = {}): CreditRateDraft => ({
 	match,
 });
 
+/**
+ * The names these rows will be saved under, so a caller can carry a row's key
+ * across the draft-to-rule transition before the item is rebuilt.
+ */
+export const nameRateRows = (rows: CreditRateRow[]): CreditRateRow[] => {
+	const taken = new Set<string>();
+	return rows.map((row) =>
+		row.dimension
+			? { ...row, name: uniqueName(ruleName(row.match), taken) }
+			: row,
+	);
+};
+
 export const rateRowsOf = ({
 	rules,
 	drafts,
+	keysByRuleName,
 }: {
 	rules: CreditRateRule[];
 	drafts: CreditRateDraft[];
+	/** Keys claimed by a row before it was saved, so it keeps its identity. */
+	keysByRuleName?: Map<string, string>;
 }): CreditRateRow[] => [
 	...rules.map(({ name, dimension }) => ({
-		key: `rule:${name}`,
+		key: keysByRuleName?.get(name) ?? `rule:${name}`,
 		name,
 		match: dimension.match,
 		dimension,

@@ -5,7 +5,7 @@ import {
 	findAmbiguousCreditDimensions,
 	formatCreditMatch,
 } from "@autumn/shared";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
 	type CreditMatch,
 	type CreditRateDraft,
@@ -16,6 +16,7 @@ import {
 	draftsOf,
 	filledRateRows,
 	missingCombinationCount,
+	nameRateRows,
 	rateRowsOf,
 	rateRules,
 	rulesOf,
@@ -42,9 +43,16 @@ export function useCreditRateRows({
 	onChange: (item: CreditSchemaItem) => void;
 }) {
 	const [drafts, setDrafts] = useState<CreditRateDraft[]>([]);
+	// A draft that gains a cost is reborn as a saved rule, so its key is carried
+	// over by name — otherwise the row remounts on the first keystroke and the
+	// cell being typed into loses focus.
+	const keysByRuleName = useRef(new Map<string, string>());
 
 	const rules = useMemo(() => rateRules(item), [item.dimensions]);
-	const rows = useMemo(() => rateRowsOf({ rules, drafts }), [rules, drafts]);
+	const rows = useMemo(
+		() => rateRowsOf({ rules, drafts, keysByRuleName: keysByRuleName.current }),
+		[rules, drafts],
+	);
 
 	const baseRate = item.tier_behavior === "graduated" ? undefined : item;
 
@@ -91,6 +99,11 @@ export function useCreditRateRows({
 	}, [item.dimensions]);
 
 	const setRows = (next: CreditRateRow[]) => {
+		// Names are derived from the match, so claim each row's key under the name
+		// it will be saved as before the item is rebuilt from it.
+		for (const { key, name, dimension } of nameRateRows(next)) {
+			if (dimension) keysByRuleName.current.set(name, key);
+		}
 		setDrafts(draftsOf(next));
 		onChange(withRateRules({ item, rules: rulesOf(next) }));
 	};

@@ -11,12 +11,14 @@ import {
 	mergeDimensionValues,
 	missingCombinationCount,
 	multiplierRules,
+	nameRateRows,
 	rateRowsOf,
 	rateRules,
 	setMatchValue,
 	withAllowedValues,
 	withMultiplierRules,
 	withoutDimensions,
+	withRateCredits,
 	withRateMatch,
 	withRateRules,
 } from "./creditDimensionUtils";
@@ -237,4 +239,23 @@ test("two rows with the same match stay independently addressable", () => {
 		{ size: "large" },
 		{},
 	]);
+});
+
+test("a draft keeps its key once it is saved as a rule", () => {
+	const draft = createRateDraft({ size: "large" });
+	const [row] = rateRowsOf({ rules: [], drafts: [draft] });
+
+	// Typing a cost turns the draft into a rule, which the item is rebuilt from.
+	const priced = withRateCredits({ row, credits: 5 });
+	const [named] = nameRateRows([priced]);
+	const keysByRuleName = new Map([[named.name, named.key]]);
+
+	const dimension = named.dimension ?? { match: {}, credit_amount: 0 };
+	const [rebuilt] = rateRowsOf({
+		rules: [{ name: named.name, dimension }],
+		drafts: [],
+		keysByRuleName,
+	});
+
+	expect(rebuilt.key).toBe(draft.key);
 });
