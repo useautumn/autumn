@@ -3,5 +3,7 @@
  * Source-backed for workspace links; a built entry follows for npm.
  */
 export { type Feature, feature } from "./generated/features";
+export { type License, license } from "./generated/licenses";
 export { type Plan, plan } from "./generated/plans";
+export { type Variant, variant } from "./generated/variants";
 export { type AtmnConfig, atmn } from "./generated/wire";
