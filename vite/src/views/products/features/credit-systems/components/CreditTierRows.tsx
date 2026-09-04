@@ -1,20 +1,22 @@
-import type { CreditSchemaItem } from "@autumn/shared";
 import { IconButton, Input } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import {
 	addTier,
-	type GraduatedCreditSchemaItem,
+	type GraduatedCreditRate,
 	removeTier,
 	updateTier,
 } from "../utils/creditSchemaUtils";
 import { CreditNumberInput } from "./CreditNumberInput";
 
-interface CreditTierRowsProps {
-	item: GraduatedCreditSchemaItem;
-	onChange: (item: CreditSchemaItem) => void;
+interface CreditTierRowsProps<T extends GraduatedCreditRate> {
+	item: T;
+	onChange: (item: T) => void;
 }
 
-export function CreditTierRows({ item, onChange }: CreditTierRowsProps) {
+export function CreditTierRows<T extends GraduatedCreditRate>({
+	item,
+	onChange,
+}: CreditTierRowsProps<T>) {
 	const { tiers } = item;
 
 	return (

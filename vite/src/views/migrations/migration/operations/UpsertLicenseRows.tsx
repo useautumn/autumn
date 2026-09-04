@@ -11,6 +11,7 @@ import {
 import { CurrencyCircleDollarIcon, PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
+import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
@@ -18,7 +19,6 @@ import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
 } from "../shared/migrationItemUtils";
-import { RemoveButton } from "../shared/RemoveButton";
 import { ItemSummaryRow } from "./ItemSummaryRow";
 import {
 	MigrationOperationSheet,

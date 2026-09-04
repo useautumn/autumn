@@ -20,6 +20,7 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 
 	return {
 		schema,
+		setSchema,
 		invoiceCredit: Boolean(config?.invoice_credit),
 		setInvoiceCredit: (invoiceCredit: boolean) =>
 			form.setFieldValue("config", {

@@ -1,16 +1,22 @@
 import {
 	CusProductStatus,
 	type FullCusEntWithFullCusProduct,
+	isCusEntExpired,
 	isPooledBalanceSourceCustomerEntitlement,
 } from "@autumn/shared";
+import type { CustomerProductsStatusOption } from "@/views/customers2/hooks/useCustomerProductsTableState";
 
 export function filterCustomerFeatureUsage({
 	entitlements,
-	showExpired,
+	statuses,
 }: {
 	entitlements: FullCusEntWithFullCusProduct[];
-	showExpired: boolean;
+	/** Mirrors the Plans table's status filter (nuqs customerProductsStatuses). */
+	statuses: CustomerProductsStatusOption[];
 }): FullCusEntWithFullCusProduct[] {
+	const showActive = statuses.includes("active");
+	const showExpired = statuses.includes("expired");
+
 	return entitlements
 		.filter((ent: FullCusEntWithFullCusProduct) => {
 			if (
@@ -20,18 +26,17 @@ export function filterCustomerFeatureUsage({
 			) {
 				return false;
 			}
-			if (showExpired) {
-				return true;
-			}
-			// Extra entitlements (no customer_product) are always shown
 			if (!ent.customer_product) {
-				return true;
+				return isCusEntExpired({ cusEnt: ent }) ? showExpired : showActive;
 			}
-			// Exclude expired and scheduled products from balance calculations
-			return (
-				ent.customer_product.status !== CusProductStatus.Expired &&
-				ent.customer_product.status !== CusProductStatus.Scheduled
-			);
+			if (ent.customer_product.status === CusProductStatus.Expired) {
+				return showExpired;
+			}
+			// Scheduled products stay hidden from balance views.
+			if (ent.customer_product.status === CusProductStatus.Scheduled) {
+				return false;
+			}
+			return showActive;
 		})
 		.sort(
 			(a: FullCusEntWithFullCusProduct, b: FullCusEntWithFullCusProduct) => {

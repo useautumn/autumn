@@ -71,6 +71,7 @@ export * from "./models/cusModels/billingControls/autoTopupLimitTable";
 // 8. Customer Models
 export * from "./models/cusModels/billingControls/customerBillingControls";
 export * from "./models/cusModels/billingControls/purchaseLimitInterval";
+export * from "./models/cusModels/billingControls/usageLimit";
 export * from "./models/cusModels/cusModels";
 export * from "./models/leafModels/chatThreadContextsTable";
 export * from "./models/leafModels/cmaMemoryTable";

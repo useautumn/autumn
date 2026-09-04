@@ -23,6 +23,7 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
+import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -37,7 +38,6 @@ import {
 	productItemToMigrationItem,
 } from "../shared/migrationItemUtils";
 import { PlanVersionPicker } from "../shared/PlanVersionPicker";
-import { RemoveButton } from "../shared/RemoveButton";
 import { ItemSummaryRow } from "./ItemSummaryRow";
 import {
 	MigrationOperationSheet,
@@ -407,8 +407,7 @@ export function planIdsFromFilter(
 	filter: UpdatePlanOp["plan_filter"],
 ): string[] {
 	const keys = planFilterToPlanKeys(filter);
-	if (keys)
-		return [...new Set(keys.map((key) => parsePlanKey(key).planId))];
+	if (keys) return [...new Set(keys.map((key) => parsePlanKey(key).planId))];
 	return extractPlanIds(filter.plan_id);
 }
 

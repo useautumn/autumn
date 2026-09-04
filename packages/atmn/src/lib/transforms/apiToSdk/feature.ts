@@ -1,5 +1,6 @@
-import { isGraduatedCreditSchemaItem } from "@autumn/shared";
+import { mapRecordValues } from "@autumn/shared";
 import type {
+	CreditDimension,
 	CreditSchemaItem,
 	Feature,
 	ModelMarkupEntry,
@@ -9,34 +10,67 @@ import { createTransformer } from "./Transformer.js";
 
 type RawApiFeature = Omit<ApiFeature, "type"> & { type: string };
 
-function mapCreditSchema(api: RawApiFeature): CreditSchemaItem[] {
-	return (api.credit_schema ?? []).map((creditSchemaItem) => {
-		const base = {
-			meteredFeatureId: creditSchemaItem.metered_feature_id,
-			...(creditSchemaItem.billing_units !== undefined && {
-				billingUnits: creditSchemaItem.billing_units,
-			}),
-		};
+type ApiCreditSchemaItem = NonNullable<RawApiFeature["credit_schema"]>[number];
+type ApiCreditDimension = NonNullable<
+	ApiCreditSchemaItem["dimensions"]
+>[string];
+type ApiCreditRate =
+	| {
+			tier_behavior: "graduated";
+			tiers: { to: number | "inf"; credit_cost: number }[];
+	  }
+	| { credit_cost: number };
 
-		if (isGraduatedCreditSchemaItem(creditSchemaItem)) {
-			return {
-				...base,
-				tierBehavior: "graduated",
-				tiers: creditSchemaItem.tiers.map((tier) => ({
-					to: tier.to,
-					creditCost: tier.credit_cost,
-				})),
-			};
-		}
-
+/** The flat-or-graduated part of a rate, API → SDK naming. Rows and dimensions share it. */
+function mapCreditRate(rate: ApiCreditRate) {
+	if ("tier_behavior" in rate) {
 		return {
-			...base,
-			creditCost: creditSchemaItem.credit_cost,
+			tierBehavior: "graduated" as const,
+			tiers: rate.tiers.map((tier) => ({
+				to: tier.to,
+				creditCost: tier.credit_cost,
+			})),
 		};
-	});
+	}
+	return { creditCost: rate.credit_cost };
 }
 
-function mapModelMarkups(api: RawApiFeature): Record<string, ModelMarkupEntry> | undefined {
+function mapCreditDimension(dimension: ApiCreditDimension): CreditDimension {
+	return {
+		match: dimension.match,
+		...(dimension.priority !== undefined && { priority: dimension.priority }),
+		...mapCreditRate(dimension),
+	};
+}
+
+function mapCreditDimensionRules(creditSchemaItem: ApiCreditSchemaItem) {
+	return {
+		...(creditSchemaItem.dimensions !== undefined && {
+			dimensions: mapRecordValues({
+				record: creditSchemaItem.dimensions,
+				mapValue: mapCreditDimension,
+			}),
+		}),
+		...(creditSchemaItem.multipliers !== undefined && {
+			multipliers: creditSchemaItem.multipliers,
+		}),
+	};
+}
+
+function mapCreditSchema(api: RawApiFeature): CreditSchemaItem[] {
+	return (api.credit_schema ?? []).map((creditSchemaItem) => ({
+		meteredFeatureId: creditSchemaItem.metered_feature_id,
+		...(creditSchemaItem.billing_units !== undefined && {
+			billingUnits: creditSchemaItem.billing_units,
+		}),
+		...mapCreditDimensionRules(creditSchemaItem),
+		...mapCreditRate(creditSchemaItem),
+	}));
+}
+
+function mapModelMarkups(
+	api: RawApiFeature,
+): Record<string, ModelMarkupEntry> | undefined {
 	if (!api.model_markups) return undefined;
 	return Object.fromEntries(
 		Object.entries(api.model_markups).map(([modelId, entry]) => [
@@ -46,7 +80,7 @@ function mapModelMarkups(api: RawApiFeature): Record<string, ModelMarkupEntry> |
 				inputCost: entry.input_cost,
 				outputCost: entry.output_cost,
 			},
-		])
+		]),
 	);
 }
 

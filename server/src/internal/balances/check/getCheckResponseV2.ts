@@ -42,6 +42,7 @@ export const getCheckResponseV2 = async ({
 			amount: requiredBalance,
 			reverseOrder: ctx.org.config?.reverse_deduction_order,
 			inStatuses: orgToInStatuses({ org: ctx.org }),
+			eventProperties: properties ?? undefined,
 		});
 	}
 

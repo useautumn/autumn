@@ -1,5 +1,6 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1.js";
 import { isGraduatedCreditSchemaItem } from "@api/features/creditRateCard.js";
+import { creditDimensionRulesEqual } from "../creditDimensions/creditDimensionRulesEqual.js";
 
 type FeatureDisplay = ApiFeatureV1["display"];
 type CreditSchema = ApiFeatureV1["credit_schema"];
@@ -36,11 +37,9 @@ const creditSchemaItemsEqual = ({
 	right: NonNullable<CreditSchema>[number];
 }) => {
 	if ((left.billing_units ?? 1) !== (right.billing_units ?? 1)) return false;
+	if (!creditDimensionRulesEqual({ left, right })) return false;
 
-	if (
-		isGraduatedCreditSchemaItem(left) &&
-		isGraduatedCreditSchemaItem(right)
-	) {
+	if (isGraduatedCreditSchemaItem(left) && isGraduatedCreditSchemaItem(right)) {
 		return (
 			left.tiers.length === right.tiers.length &&
 			left.tiers.every(
@@ -51,10 +50,7 @@ const creditSchemaItemsEqual = ({
 		);
 	}
 
-	if (
-		isGraduatedCreditSchemaItem(left) ||
-		isGraduatedCreditSchemaItem(right)
-	) {
+	if (isGraduatedCreditSchemaItem(left) || isGraduatedCreditSchemaItem(right)) {
 		return false;
 	}
 

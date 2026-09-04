@@ -265,7 +265,7 @@ test(`${chalk.yellowBright("in-place isolation: an entity-scoped customer on ano
 // carry normal customer_entitlements, so the reference check retires (not
 // deletes) any ent they hold — the same guarantee the other cases prove.
 
-test(`${chalk.yellowBright("in-place isolation: no-customer plan mutates in place (no retired rows)")}`, async () => {
+test(`${chalk.yellowBright("in-place isolation: no-customer plan retires replaced rows")}`, async () => {
 	const owner = "iso-nocus-owner";
 	const pro = products.pro({
 		id: "iso_nocus",
@@ -281,7 +281,7 @@ test(`${chalk.yellowBright("in-place isolation: no-customer plan mutates in plac
 		actions: [],
 	});
 
-	// No customers on the plan -> mutate in place, no is_custom:true rows left.
+	// Replaced catalog rows stay as is_custom so deferred FKs stay valid.
 	await rpcFor(ctx).plans.update<ApiPlanV1, RpcInput>(pro.id, {
 		disable_version: true,
 		price: monthPrice,
@@ -307,5 +307,6 @@ test(`${chalk.yellowBright("in-place isolation: no-customer plan mutates in plac
 				eq(entitlements.is_custom, true),
 			),
 		);
-	expect(customEnts).toHaveLength(0);
+	expect(customEnts).toHaveLength(1);
+	expect(customEnts[0]?.allowance).toBe(100);
 });

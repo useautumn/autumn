@@ -9,6 +9,7 @@ import {
 	getStartingBalance,
 	type InitCustomerEntitlementContext,
 	isBooleanEntitlement,
+	isLosingPrepaidQuantityPrice,
 	isUnlimitedEntitlement,
 } from "@autumn/shared";
 import { initCustomerEntitlementEntities } from "./initCustomerEntitlementEntities";
@@ -42,10 +43,21 @@ export const initCustomerEntitlementBalance = ({
 		prices: initContext.fullProduct?.prices ?? [],
 	});
 
-	const options = entToOptions({
-		ent: entitlement,
-		options: featureQuantities,
-	});
+	// Tie-break: a losing prepaid price (e.g. one-off alongside a recurring
+	// prepaid of the same feature) must not read the feature-keyed quantity.
+	const priceLosesQuantity =
+		price &&
+		isLosingPrepaidQuantityPrice({
+			price,
+			prices: initContext.fullProduct?.prices ?? [],
+		});
+
+	const options = priceLosesQuantity
+		? undefined
+		: entToOptions({
+				ent: entitlement,
+				options: featureQuantities,
+			});
 
 	const startingBalance = getStartingBalance({
 		entitlement,

@@ -17,8 +17,8 @@ import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureD
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
 import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
 import { featureToCatalogFeatureParams } from "../utils/buildFeatureMutationParams";
-import { featureStripeProductChanged } from "../utils/featureStripeProductChanged";
 import { getDefaultFeature } from "../utils/defaultFeature";
+import { featureStripeProductChanged } from "../utils/featureStripeProductChanged";
 
 function CreateFeatureSheet({
 	open: controlledOpen,
@@ -110,7 +110,7 @@ function CreateFeatureSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent className="flex flex-col overflow-hidden">
+			<SheetContent className="flex flex-col overflow-hidden md:max-w-2xl">
 				<SheetHeader
 					title="Create a feature"
 					description="Create a feature to control based on a customer's plan."

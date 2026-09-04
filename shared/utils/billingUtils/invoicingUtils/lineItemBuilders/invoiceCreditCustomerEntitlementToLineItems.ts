@@ -4,6 +4,7 @@ import type { LineItemContext } from "../../../../models/billingModels/lineItem/
 import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
 import { cusEntToInvoiceOverage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceOverage.js";
+import { parseUsageAttributionKey } from "../../../cusEntUtils/usageAttribution/parseUsageAttributionKey.js";
 import { findFeatureByInternalId } from "../../../featureUtils/findFeatureUtils.js";
 import {
 	atmnToStripeAmount,
@@ -69,12 +70,19 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 
 	let totalCredits = new Decimal(0);
 	let totalRoundedCredits = new Decimal(0);
-	for (const [sourceInternalFeatureId, sourceAttribution] of attribution) {
+	for (const [attributionKey, sourceAttribution] of attribution) {
+		const { internalFeatureId, dimensionName } = parseUsageAttributionKey({
+			key: attributionKey,
+		});
 		const sourceFeature = findFeatureByInternalId({
 			features,
-			internalId: sourceInternalFeatureId,
+			internalId: internalFeatureId,
 			errorOnNotFound: false,
 		});
+		const sourceName = sourceFeature?.name ?? "Removed feature";
+		const sourceLabel = dimensionName
+			? `${sourceName} — ${dimensionName}`
+			: sourceName;
 		totalCredits = totalCredits.add(sourceAttribution.credits);
 		const roundedCredits = roundToCurrency({
 			amount: sourceAttribution.credits,
@@ -88,7 +96,7 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 				direction: "charge",
 			},
 			amount: roundedCredits,
-			description: `${sourceFeature?.name ?? "Removed feature"}, ${creditQuantityFormatter.format(sourceAttribution.units)} units`,
+			description: `${sourceLabel}, ${creditQuantityFormatter.format(sourceAttribution.units)} units`,
 			shouldProrate: false,
 			usage: sourceAttribution.units,
 		});
@@ -96,7 +104,7 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 			withStableInvoiceCreditId({
 				lineItem: sourceLineItem,
 				idempotencyScope,
-				position: `${customerEntitlement.id}_${sourceInternalFeatureId}`,
+				position: `${customerEntitlement.id}_${attributionKey}`,
 			}),
 		);
 	}

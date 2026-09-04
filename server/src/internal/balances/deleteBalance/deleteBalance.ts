@@ -2,6 +2,7 @@ import {
 	cusEntsToUsage,
 	type DeleteBalanceParamsV0,
 	fullCustomerToCustomerEntitlements,
+	isCusEntExpired,
 	isPaidCustomerEntitlement,
 	isPooledBalanceSourceCustomerEntitlement,
 	isSyntheticPooledBalanceCustomerEntitlement,
@@ -23,9 +24,11 @@ import {
 export const deleteBalance = async ({
 	ctx,
 	params,
+	includeExpired = false,
 }: {
 	ctx: AutumnContext;
 	params: DeleteBalanceParamsV0;
+	includeExpired?: boolean;
 }) => {
 	const { customer_id, entity_id, feature_id, recalculate_balances } = params;
 
@@ -43,14 +46,15 @@ export const deleteBalance = async ({
 		entityId: entity_id,
 		withEntities: true,
 		withSubs: true,
+		includeExpiredLooseEntitlements: includeExpired,
 	});
 
-	// 2. Get balance
 	const customerEntitlements = fullCustomerToCustomerEntitlements({
 		fullCustomer,
 		featureId: feature_id,
 		entity: fullCustomer.entity,
 		customerEntitlementFilters: buildCustomerEntitlementFilters({ params }),
+		includeExpired,
 	});
 
 	if (customerEntitlements.length === 0) {
@@ -87,9 +91,12 @@ export const deleteBalance = async ({
 		}
 	}
 
+	// Expired usage must never be redistributed onto live balances.
 	const usageToRecalculate = recalculate_balances
 		? cusEntsToUsage({
-				cusEnts: customerEntitlements,
+				cusEnts: customerEntitlements.filter(
+					(cusEnt) => !isCusEntExpired({ cusEnt }),
+				),
 				entityId: fullCustomer.entity?.id ?? undefined,
 			})
 		: 0;

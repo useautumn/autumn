@@ -3,15 +3,24 @@ import type {
 	FullCusEntWithFullCusProduct,
 	FullCustomerEntitlement,
 } from "@autumn/shared";
-import { FeatureType, type FullCusProduct } from "@autumn/shared";
+import {
+	FeatureType,
+	type FullCusProduct,
+	isCusEntDisplayExpired,
+} from "@autumn/shared";
 import { Button, SectionTag } from "@autumn/ui";
 import { LegoIcon, PlusIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
+import { parseAsArrayOf, parseAsStringEnum, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import {
+	type CustomerProductsStatusOption,
+	DEFAULT_PRODUCT_STATUSES,
+} from "@/views/customers2/hooks/useCustomerProductsTableState";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { CustomerBalanceTable } from "../customer-balance/CustomerBalanceTable";
 import { EmptyState } from "../EmptyState";
@@ -96,13 +105,21 @@ export function CustomerFeatureUsageTable() {
 		[features],
 	);
 
+	// Same nuqs key as the Plans table filter.
+	const [productStatuses] = useQueryState(
+		"customerProductsStatuses",
+		parseAsArrayOf(
+			parseAsStringEnum<CustomerProductsStatusOption>(["active", "expired"]),
+		).withDefault(DEFAULT_PRODUCT_STATUSES),
+	);
+
 	const filteredCusEnts = useMemo(
 		() =>
 			filterCustomerFeatureUsage({
 				entitlements: cusEnts,
-				showExpired: false,
+				statuses: productStatuses,
 			}),
-		[cusEnts],
+		[cusEnts, productStatuses],
 	);
 
 	const { entitlements: deduplicatedCusEnts, aggregatedMap } = useMemo(
@@ -117,6 +134,9 @@ export function CustomerFeatureUsageTable() {
 				cusEnts: deduplicatedCusEnts,
 				featuresMap,
 			}).sort((a, b) => {
+				const aExpired = isCusEntDisplayExpired({ cusEnt: a });
+				const bExpired = isCusEntDisplayExpired({ cusEnt: b });
+				if (aExpired !== bExpired) return aExpired ? 1 : -1;
 				const aAllowance = a.entitlement.allowance ?? 0;
 				const bAllowance = b.entitlement.allowance ?? 0;
 				if (aAllowance > 0 && bAllowance <= 0) return -1;
@@ -157,10 +177,13 @@ export function CustomerFeatureUsageTable() {
 		[meteredEnts],
 	);
 
+	// The flags section has no greyed state, so an expired flag reads as ungranted.
 	const booleanEnts = useMemo(
 		() =>
 			deduplicatedCusEnts.filter(
-				(ent) => ent.entitlement.feature.type === FeatureType.Boolean,
+				(ent) =>
+					ent.entitlement.feature.type === FeatureType.Boolean &&
+					!isCusEntDisplayExpired({ cusEnt: ent }),
 			),
 		[deduplicatedCusEnts],
 	);

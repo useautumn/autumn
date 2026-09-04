@@ -8,7 +8,13 @@ import type {
 	FullCustomer,
 	RangeEnum,
 } from "@autumn/shared";
-import { findFeatureById, isAnyCreditSystem, notNullish } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	findFeatureById,
+	hasCreditDimensionRules,
+	isAnyCreditSystem,
+	notNullish,
+} from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import type { AggregateDeductionsPipeRow } from "@/external/tinybird/initTinybird.js";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
@@ -145,6 +151,15 @@ export const resolveCreditCost = ({
 		errorOnNotFound: false,
 	});
 	if (!sourceFeature) return null;
+	// A plan item can override the schema with dimensions the catalog does not
+	// have, and this view has no entitlement to check, so any dimensioned rate on
+	// the feature makes every rate for it unreportable rather than wrong.
+	const schema: CreditSchemaItem[] = creditSystem.config?.schema ?? [];
+	if (schema.some(hasCreditDimensionRules)) return null;
+	const schemaItem = schema.find(
+		(item: CreditSchemaItem) => item.metered_feature_id === sourceFeatureId,
+	);
+	if (!schemaItem) return null;
 	const rateCard = getCreditRateCard({ sourceFeature, creditSystem });
 	if (rateCard?.tier_behavior === "graduated") return null;
 

@@ -28,6 +28,8 @@ export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./classifyCusEnt/cusEntsHaveUnlimited";
 export * from "./classifyCusEnt/cusEntsHaveUsageAllowed";
 export * from "./classifyCusEnt/customerEntitlementFundsFeature";
+export * from "./classifyCusEnt/isCusEntDisplayExpired";
+export * from "./classifyCusEnt/isCusEntExpired";
 export * from "./classifyCusEnt/isPooledBalanceCustomerEntitlement";
 // Classify utils
 export * from "./classifyCusEntUtils";
@@ -62,3 +64,5 @@ export * from "./overageUtils/cusEntToInvoiceOverage";
 export * from "./overageUtils/cusEntToInvoiceUsage";
 export * from "./overageUtils/cusEntToOptions";
 export * from "./sortCusEntsForDeduction";
+export * from "./usageAttribution/buildUsageAttributionKey";
+export * from "./usageAttribution/parseUsageAttributionKey";

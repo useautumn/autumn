@@ -46,6 +46,12 @@ function normalizeFeatureForCompare(f: Feature): Rec {
 						creditSchemaItem.billingUnits !== 1 && {
 							billingUnits: creditSchemaItem.billingUnits,
 						}),
+					...(creditSchemaItem.dimensions !== undefined && {
+						dimensions: creditSchemaItem.dimensions,
+					}),
+					...(creditSchemaItem.multipliers !== undefined && {
+						multipliers: creditSchemaItem.multipliers,
+					}),
 				};
 
 				return creditSchemaItem.tierBehavior === "graduated"

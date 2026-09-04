@@ -12,15 +12,15 @@ import { CaretDownIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
+import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { RemoveButton } from "../shared/RemoveButton";
 import {
 	BillingMethodDropdown,
 	filterToProductItem,
 	getFilterSummary,
-	includedFilterInputValue,
 	INTERVAL_OPTIONS,
 	type ItemFilter,
+	includedFilterInputValue,
 	setItemFilterIncluded,
 } from "./operationItemUtils";
 

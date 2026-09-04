@@ -1,6 +1,6 @@
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { getModelsDevPricing } from "@/internal/features/utils/getModelPricing";
-import { Scopes } from "@autumn/shared";
 
 export const handleGetModelPricing = createRoute({
 	scopes: [Scopes.Features.Read],

@@ -7,9 +7,9 @@ export type RowBuckets<Row> = {
 	updated: Row[];
 	/** Untouched — id carried forward. */
 	same: Row[];
-	/** Hard-delete candidates — only when not protecting referenced rows. */
+	/** Unused — execute retires these the same as `retired`. */
 	deleted: Row[];
-	/** Leave catalog; execute may is_custom or hard-delete by refs. */
+	/** Leave catalog; execute stamps is_custom and never deletes. */
 	retired: Row[];
 };
 

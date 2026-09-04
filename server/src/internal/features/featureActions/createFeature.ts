@@ -1,8 +1,4 @@
-import {
-	type CreateFeature,
-	type Feature,
-	type ModelMarkups,
-} from "@autumn/shared";
+import type { CreateFeature, Feature, ModelMarkups } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validateFeature } from "@/internal/features/utils/validateFeature.js";
 import { workflows } from "@/queue/workflows.js";

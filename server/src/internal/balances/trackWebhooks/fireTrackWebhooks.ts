@@ -1,4 +1,5 @@
 import {
+	type EventProperties,
 	type Feature,
 	type FullCustomer,
 	type FullSubject,
@@ -31,7 +32,7 @@ export const fireTrackWebhooks = ({
 	feature: Feature;
 	entityId?: string;
 	featuresFromMutationLogs?: Feature[];
-	eventProperties?: Record<string, unknown> | null;
+	eventProperties?: EventProperties;
 }) => {
 	const oldFullCus = oldFullSubject
 		? fullSubjectToFullCustomer({ fullSubject: oldFullSubject })
