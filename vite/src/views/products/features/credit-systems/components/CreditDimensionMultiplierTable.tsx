@@ -77,7 +77,7 @@ export function CreditDimensionMultiplierTable() {
 	const data: MultiplierRow[] = useMemo(
 		() =>
 			multipliers.map((rule, index) => ({
-				id: rule.name || `draft:${JSON.stringify(rule.multiplier.match)}`,
+				id: JSON.stringify(rule.multiplier.match),
 				index,
 				label: ruleLabel(rule),
 				match: rule.multiplier.match,
