@@ -13,4 +13,9 @@ export const featureRules: LintRule[] = [
 		field: "featureId",
 		because: "Two features claiming one id race to define the same row.",
 	}),
+	unique({
+		field: "internalId",
+		because:
+			"A stable id names exactly one row; two fixtures cannot both be it.",
+	}),
 ];
