@@ -1,4 +1,5 @@
 import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
+import { isLosingPrepaidQuantityPrice } from "@utils/productUtils/priceUtils/findPrice/findPrepaidQuantityTargetPrice";
 import { Decimal } from "decimal.js";
 import {
 	type FullCusEntWithFullCusProduct,
@@ -23,6 +24,19 @@ export const cusEntToPrepaidQuantity = ({
 	if (!cusPrice || !isPrepaidPrice(cusPrice.price)) return 0;
 
 	if (!cusEnt.customer_product) return 0;
+
+	// Tie-break: a losing prepaid price (one-off alongside a recurring prepaid
+	// of the same feature) never owns the feature-keyed quantity.
+	const siblingPrices = cusEnt.customer_product.customer_prices.map(
+		(customerPrice) => customerPrice.price,
+	);
+	if (
+		isLosingPrepaidQuantityPrice({
+			price: cusPrice.price,
+			prices: siblingPrices,
+		})
+	)
+		return 0;
 
 	// 3. Get quantity
 	const options = cusProductToFeatureOptions({

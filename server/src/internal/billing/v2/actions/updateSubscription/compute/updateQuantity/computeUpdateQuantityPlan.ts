@@ -1,5 +1,6 @@
 import {
 	type AutumnBillingPlan,
+	findPrepaidQuantityTargetPrice,
 	isOneOffPrice,
 	notNullish,
 	type UpdateSubscriptionBillingContext,
@@ -17,15 +18,19 @@ export const computeUpdateQuantityPlan = ({
 }): AutumnBillingPlan => {
 	const { customerProduct, featureQuantities } = updateSubscriptionContext;
 
-	// One-off prepaid mutations belong to the ManualTopUp intent. setupFeature-
-	// QuantitiesContext synthesizes placeholders for every prepaid price (incl.
-	// one-off), so filter them out here before computeUpdateQuantityDetails.
+	// One-off prepaid mutations belong to the ManualTopUp intent. Drop an option
+	// only when the feature's prepaid tie-break target is one-off — a recurring
+	// prepaid sibling of the same feature wins the quantity instead.
+	const customerPrices = customerProduct.customer_prices.map(
+		(customerPrice) => customerPrice.price,
+	);
 	const newOptions = featureQuantities.filter((option) => {
-		const cusPrice = customerProduct.customer_prices.find(
-			(cp) =>
-				cp.price.config.internal_feature_id === option.internal_feature_id,
-		);
-		return cusPrice ? !isOneOffPrice(cusPrice.price) : true;
+		const targetPrice = findPrepaidQuantityTargetPrice({
+			prices: customerPrices,
+			internalFeatureId: option.internal_feature_id,
+			featureId: option.feature_id,
+		});
+		return targetPrice ? !isOneOffPrice(targetPrice) : true;
 	});
 
 	const quantityUpdateDetails = newOptions.map((updatedOptions) =>

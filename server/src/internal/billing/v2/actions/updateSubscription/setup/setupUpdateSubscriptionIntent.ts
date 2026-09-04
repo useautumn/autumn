@@ -1,10 +1,12 @@
 import { hasCustomItems } from "@api/billing/common/customizePlan/customizePlanV1";
 import {
 	type CheckoutMode,
-	customerProductHasOneOffPrepaidForFeature,
+	cusProductToPrices,
 	customerProductHasPrepaidPrice,
 	type FullCusProduct,
+	findPrepaidQuantityTargetPrice,
 	isCustomerProductOneOff,
+	isOneOffPrice,
 	resolveFreeTrialParam,
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
@@ -37,19 +39,21 @@ export const setupUpdateSubscriptionIntent = ({
 		return UpdateSubscriptionIntent.UpdateLicenseQuantity;
 
 	// ManualTopUp wins over UpdateQuantity (and CancelAction/None): once we know
-	// this isn't a plan restructure, any feature_quantities entry targeting a
-	// one-off prepaid price on a recurring host routes here. handleManualTopUpErrors
-	// then rejects extra fields with "Update too complex to perform."
+	// this isn't a plan restructure, a feature_quantities entry whose prepaid
+	// tie-break target is a one-off price on a recurring host routes here.
+	// A recurring prepaid of the same feature wins the tie-break instead.
 	if (
 		!isCustomerProductOneOff(customerProduct) &&
 		featureQuantitiesParams.length > 0
 	) {
-		const targetsOneOffPrepaid = featureQuantitiesParams.some((fq) =>
-			customerProductHasOneOffPrepaidForFeature({
-				customerProduct,
+		const prices = cusProductToPrices({ cusProduct: customerProduct });
+		const targetsOneOffPrepaid = featureQuantitiesParams.some((fq) => {
+			const targetPrice = findPrepaidQuantityTargetPrice({
+				prices,
 				featureId: fq.feature_id,
-			}),
-		);
+			});
+			return targetPrice !== undefined && isOneOffPrice(targetPrice);
+		});
 
 		if (targetsOneOffPrepaid) return UpdateSubscriptionIntent.ManualTopUp;
 	}

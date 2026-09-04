@@ -13,6 +13,7 @@ export * from "./convertPrice/priceToRequiredStripeSlots.js";
 export * from "./convertPrice/priceToStripeNickname.js";
 export * from "./convertPrice/priceToStripeTiersMode.js";
 export * from "./convertPriceUtils.js";
+export * from "./findPrice/findPrepaidQuantityTargetPrice.js";
 export * from "./findPrice/findPriceByFeatureId.js";
 export * from "./findPrice/findPriceSuccessor.js";
 export * from "./formatPriceUtils.js";
