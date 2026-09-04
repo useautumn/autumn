@@ -13,6 +13,11 @@ export const handleRemovePlanErrors = ({
 	const upsertedPlanIds = new Set(
 		updateCatalogPlan.upsertProducts.map((upsert) => upsert.row.planId),
 	);
+	const upsertedVersions = new Set(
+		updateCatalogPlan.upsertProducts.map(
+			(upsert) => `${upsert.row.planId}@${upsert.row.version}`,
+		),
+	);
 
 	for (const removePlan of updateCatalogPlan.removePlans) {
 		if (!removePlan.current) {
@@ -21,7 +26,12 @@ export const handleRemovePlanErrors = ({
 				version: removePlan.allVersions ? undefined : removePlan.version,
 			});
 		}
-		if (upsertedPlanIds.has(removePlan.planId)) {
+		// Removing one version beside an upsert of another is a version-level
+		// full-state edit; only the same row cannot be both.
+		const collides = removePlan.allVersions
+			? upsertedPlanIds.has(removePlan.planId)
+			: upsertedVersions.has(`${removePlan.planId}@${removePlan.version}`);
+		if (collides) {
 			throw new RecaseError({
 				message: `Cannot update and remove plan ${removePlan.planId} in the same call`,
 				code: ErrCode.InvalidRequest,
