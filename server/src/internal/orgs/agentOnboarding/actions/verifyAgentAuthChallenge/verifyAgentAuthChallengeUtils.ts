@@ -45,11 +45,7 @@ export const toAgentVerifyError = (error: unknown): RecaseError => {
 	return temporarilyUnavailable();
 };
 
-export const takeAgentChallenge = async ({
-	email,
-}: {
-	email: string;
-}) => {
+export const takeAgentChallenge = async ({ email }: { email: string }) => {
 	const authContext = await auth.$context.catch(() => {
 		throw temporarilyUnavailable();
 	});
@@ -103,8 +99,7 @@ export const rearmAgentChallengeIfRetryable = async ({
 	error: unknown;
 	now: Date;
 }) => {
-	const hasAttemptsRemaining =
-		challenge.attempts + 1 < AGENT_AUTH_MAX_ATTEMPTS;
+	const hasAttemptsRemaining = challenge.attempts + 1 < AGENT_AUTH_MAX_ATTEMPTS;
 	const challengeIsLive = new Date(challenge.expiresAt) > now;
 	const retryable =
 		isRetryableInvalidOtpError(error) &&
