@@ -458,8 +458,14 @@ function BalanceActionsCell({
 			: [row.original]
 	).filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
 
+	// A row with no actions still reserves the slot, so the column edge stays
+	// straight rather than going ragged down the table.
 	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
-		return null;
+		return (
+			<div className="flex justify-end" aria-hidden>
+				<ToolbarButton className="invisible" tabIndex={-1} />
+			</div>
+		);
 
 	return (
 		<div className="flex justify-end">
