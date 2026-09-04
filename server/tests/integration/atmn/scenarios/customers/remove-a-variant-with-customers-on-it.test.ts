@@ -82,7 +82,10 @@ export default atmn(${catalogConfig({ basePlanId, variantPlanId, archiveVariant:
 				env: scenario.ctx.env,
 				inIds: [variantPlanId],
 				returnAll: true,
+				includeDeleted: true,
 			});
+			// The row must still exist (a customer holds it) and be archived.
+			expect(variant).toBeDefined();
 			expect(variant?.archived).toBe(true);
 
 			const customer = await scenario.autumnV2_3.customers.get(
