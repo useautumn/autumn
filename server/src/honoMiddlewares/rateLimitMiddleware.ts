@@ -53,11 +53,17 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			getRateLimitKey({ c, rateLimitType: aggregateType }),
 		);
 		const aggregateLimiter = getLimiterForType(aggregateType);
+		const skipPrimaryLimiter =
+			rateLimitType === RateLimitType.EntitiesList && !ctx.customerId;
 
 		let innerResponse: Response | undefined;
 		const aggregateResponse = await aggregateLimiter(
 			c as Context<Env>,
 			async () => {
+				if (skipPrimaryLimiter) {
+					innerResponse = (await next()) ?? undefined;
+					return;
+				}
 				setRateLimitKeyInContext(c as Context, rateLimitKey);
 				innerResponse = (await limiter(c as Context<Env>, next)) ?? undefined;
 			},
