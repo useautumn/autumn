@@ -1,10 +1,15 @@
-import { BillingBehaviorSchema, type ProductItem } from "@autumn/shared";
+import {
+	BillingBehaviorSchema,
+	type CustomizePlanLicense,
+	type ProductItem,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const SchedulePlanSchema = z.object({
 	productId: z.string().min(1),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative()),
 	items: z.custom<ProductItem[]>().nullable(),
+	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 	isCustom: z.boolean(),
 	version: z.number().positive().optional(),
 	// Only meaningful on the first phase — later phases inherit its scope.
@@ -17,6 +22,7 @@ export const EMPTY_SCHEDULE_PLAN: SchedulePlan = {
 	productId: "",
 	prepaidOptions: {},
 	items: null,
+	addLicenses: null,
 	isCustom: false,
 	version: undefined,
 	// null is customer-level: a plan picks its own scope, the sheet has none.
