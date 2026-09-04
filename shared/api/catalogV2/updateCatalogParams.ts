@@ -8,6 +8,11 @@ import { UpdateCatalogPlanParamsSchema } from "./planUpdate/params/catalogPlanPa
 export const UpdateCatalogFeatureParamsSchema = z.intersection(
 	CreateFeatureV2ParamsSchema,
 	z.object({
+		internal_id: z.string().nonempty().optional().meta({
+			description:
+				"Address an existing feature by its stable id. Omit when creating — the server generates one. A differing feature_id alongside it is a rename.",
+			internal: true,
+		}),
 		new_feature_id: z.string().optional().meta({
 			description: "Rename the feature to this id.",
 		}),

@@ -297,16 +297,19 @@ export const executeUpdateCatalogPlan = async ({
 		features: [
 			...updateCatalogPlan.insertFeatures.map((feature) => ({
 				id: feature.id,
+				internal_id: feature.internal_id,
 				action: "create" as const,
 			})),
 			...updateCatalogPlan.updateFeatures.map((updateFeaturePlan) => ({
 				id: updateFeaturePlan.next.id,
+				internal_id: updateFeaturePlan.current.internal_id,
 				action: updateFeaturePlan.previousAttributes
 					? ("update" as const)
 					: ("none" as const),
 			})),
 			...updateCatalogPlan.removeFeatures.map((removeFeaturePlan) => ({
 				id: removeFeaturePlan.featureId,
+				internal_id: removeFeaturePlan.current?.internal_id ?? null,
 				action: "delete" as const,
 			})),
 		],

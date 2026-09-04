@@ -48,3 +48,15 @@ export const compare = (rule: RuleOf<"compare">): LintRule => ({
 	kind: "compare",
 	...rule,
 });
+
+/** `field` must equal `mustBe` when `when` is `equals`. */
+export const valueWhen = (rule: RuleOf<"valueWhen">): LintRule => ({
+	kind: "valueWhen",
+	...rule,
+});
+
+/** `field` names a row of top-level collection `in`; that row's `target` must equal `equals`. */
+export const targetHas = (rule: RuleOf<"targetHas">): LintRule => ({
+	kind: "targetHas",
+	...rule,
+});

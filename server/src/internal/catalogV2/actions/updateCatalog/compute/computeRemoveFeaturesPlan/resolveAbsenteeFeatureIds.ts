@@ -1,14 +1,25 @@
 import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { resolveCurrentFeature } from "../../utils/featureUpdateUtils/resolveCurrentFeature";
 
 /** Every feature id the payload speaks for — stated, removed, or skipped. */
 const statedFeatureIds = ({
+	ctx,
 	params,
 }: {
+	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 }): Set<string> =>
 	new Set([
-		...(params.features ?? []).map((entry) => entry.feature_id),
+		...(params.features ?? []).flatMap((entry) => {
+			// A row addressed by internal_id is spoken for under its CURRENT id
+			// too, or renaming it would propose deleting the id it is leaving.
+			const current =
+				entry.internal_id === undefined
+					? null
+					: resolveCurrentFeature({ features: ctx.features, entry });
+			return current ? [entry.feature_id, current.id] : [entry.feature_id];
+		}),
 		...params.remove_features.map((entry) => entry.feature_id),
 		...params.skip_feature_ids,
 	]);
@@ -37,7 +48,7 @@ export const resolveAbsenteeFeatureIds = ({
 	// rule the legacy path already follows for rewards and referral programs.
 	if (params.features === undefined) return [];
 
-	const stated = statedFeatureIds({ params });
+	const stated = statedFeatureIds({ ctx, params });
 	return ctx.features
 		.filter((feature) => !stated.has(feature.id) && !feature.archived)
 		.map((feature) => feature.id);

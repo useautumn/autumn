@@ -14,6 +14,9 @@ export const LINT_RULES: LintRules = {
 			defaultMarkup: {
 				minimum: -100,
 			},
+			internalId: {
+				minLength: 1,
+			},
 		},
 		rules: [
 			{
@@ -254,6 +257,17 @@ export const LINT_RULES: LintRules = {
 				matching: "featureId",
 				because: "A plan item meters a feature this config does not declare.",
 			},
+			{
+				kind: "targetHas",
+				when: "featureOverride",
+				field: "featureId",
+				in: "features",
+				matching: "featureId",
+				target: "type",
+				equals: "credit_system",
+				because:
+					"featureOverride is only honoured on classic credit-system features.",
+			},
 		],
 	},
 	"plans.items.featureOverride.creditSchema": {
@@ -295,6 +309,7 @@ export const LINT_RULES: LintRules = {
 		},
 	},
 	"plans.items.price": {
+		label: "price",
 		required: ["billingMethod", "interval"],
 		fields: {
 			tierBehavior: {
@@ -307,6 +322,16 @@ export const LINT_RULES: LintRules = {
 				enum: ["prepaid", "usage_based"],
 			},
 		},
+		rules: [
+			{
+				kind: "valueWhen",
+				when: "tierBehavior",
+				equals: "volume",
+				field: "billingMethod",
+				mustBe: "prepaid",
+				because: "Volume tiers are prepaid-only.",
+			},
+		],
 	},
 	"plans.items.price.additionalCurrencies": {
 		required: ["amount", "currency"],

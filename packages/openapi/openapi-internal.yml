@@ -53212,6 +53212,12 @@ paths:
                           - feature_id
                       - type: object
                         properties:
+                          internal_id:
+                            type: string
+                            minLength: 1
+                            description: Address an existing feature by its stable id. Omit when creating —
+                              the server generates one. A differing feature_id
+                              alongside it is a rename.
                           new_feature_id:
                             type: string
                             description: Rename the feature to this id.
@@ -55600,6 +55606,11 @@ paths:
                       properties:
                         plan_id:
                           type: string
+                        internal_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Stable id of this row; null when the row is minted by this update.
                         new_plan_id:
                           type: string
                           description: Present only when this row's public plan id changes.
@@ -59002,6 +59013,11 @@ paths:
                             properties:
                               plan_id:
                                 type: string
+                              internal_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: Stable id of this row; null when the row is minted by this update.
                               new_plan_id:
                                 type: string
                                 description: Present only when this row's public plan id changes.
@@ -61225,6 +61241,11 @@ paths:
                                   properties:
                                     plan_id:
                                       type: string
+                                    internal_id:
+                                      anyOf:
+                                        - type: string
+                                        - type: "null"
+                                      description: Stable id of this row; null when the row is minted by this update.
                                     new_plan_id:
                                       type: string
                                       description: Present only when this row's public plan id changes.
@@ -62192,6 +62213,11 @@ paths:
                                         properties:
                                           plan_id:
                                             type: string
+                                          internal_id:
+                                            anyOf:
+                                              - type: string
+                                              - type: "null"
+                                            description: Stable id of this row; null when the row is minted by this update.
                                           new_plan_id:
                                             type: string
                                             description: Present only when this row's public plan id changes.
@@ -62338,6 +62364,7 @@ paths:
                                             description: How this parent version treated the child edit.
                                         required:
                                           - plan_id
+                                          - internal_id
                                           - version
                                           - version_slug
                                           - active
@@ -62347,6 +62374,7 @@ paths:
                                         linked.
                                   required:
                                     - plan_id
+                                    - internal_id
                                     - version
                                     - version_slug
                                     - active
@@ -62362,6 +62390,11 @@ paths:
                                   properties:
                                     plan_id:
                                       type: string
+                                    internal_id:
+                                      anyOf:
+                                        - type: string
+                                        - type: "null"
+                                      description: Stable id of this row; null when the row is minted by this update.
                                     new_plan_id:
                                       type: string
                                       description: Present only when this row's public plan id changes.
@@ -63325,6 +63358,11 @@ paths:
                                         properties:
                                           plan_id:
                                             type: string
+                                          internal_id:
+                                            anyOf:
+                                              - type: string
+                                              - type: "null"
+                                            description: Stable id of this row; null when the row is minted by this update.
                                           new_plan_id:
                                             type: string
                                             description: Present only when this row's public plan id changes.
@@ -63471,6 +63509,7 @@ paths:
                                             description: How this variant version treated the base edit.
                                         required:
                                           - plan_id
+                                          - internal_id
                                           - version
                                           - version_slug
                                           - active
@@ -63494,6 +63533,7 @@ paths:
                                         the id is free.
                                   required:
                                     - plan_id
+                                    - internal_id
                                     - version
                                     - version_slug
                                     - active
@@ -63503,6 +63543,7 @@ paths:
                                   receives its own follow diff.
                             required:
                               - plan_id
+                              - internal_id
                               - version
                               - version_slug
                               - active
@@ -63519,6 +63560,11 @@ paths:
                             properties:
                               plan_id:
                                 type: string
+                              internal_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: Stable id of this row; null when the row is minted by this update.
                               new_plan_id:
                                 type: string
                                 description: Present only when this row's public plan id changes.
@@ -65791,6 +65837,11 @@ paths:
                                   properties:
                                     plan_id:
                                       type: string
+                                    internal_id:
+                                      anyOf:
+                                        - type: string
+                                        - type: "null"
+                                      description: Stable id of this row; null when the row is minted by this update.
                                     new_plan_id:
                                       type: string
                                       description: Present only when this row's public plan id changes.
@@ -66711,6 +66762,7 @@ paths:
                                       description: How this parent version treated the child edit.
                                   required:
                                     - plan_id
+                                    - internal_id
                                     - version
                                     - version_slug
                                     - active
@@ -66720,6 +66772,7 @@ paths:
                                   linked.
                             required:
                               - plan_id
+                              - internal_id
                               - version
                               - version_slug
                               - active
@@ -66735,6 +66788,11 @@ paths:
                             properties:
                               plan_id:
                                 type: string
+                              internal_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: Stable id of this row; null when the row is minted by this update.
                               new_plan_id:
                                 type: string
                                 description: Present only when this row's public plan id changes.
@@ -69004,6 +69062,11 @@ paths:
                                   properties:
                                     plan_id:
                                       type: string
+                                    internal_id:
+                                      anyOf:
+                                        - type: string
+                                        - type: "null"
+                                      description: Stable id of this row; null when the row is minted by this update.
                                     new_plan_id:
                                       type: string
                                       description: Present only when this row's public plan id changes.
@@ -69923,6 +69986,7 @@ paths:
                                       description: How this variant version treated the base edit.
                                   required:
                                     - plan_id
+                                    - internal_id
                                     - version
                                     - version_slug
                                     - active
@@ -69946,6 +70010,7 @@ paths:
                                   the id is free.
                             required:
                               - plan_id
+                              - internal_id
                               - version
                               - version_slug
                               - active
@@ -70322,6 +70387,7 @@ paths:
                             free.
                       required:
                         - plan_id
+                        - internal_id
                         - version
                         - version_slug
                         - active
@@ -70335,6 +70401,12 @@ paths:
                       properties:
                         feature_id:
                           type: string
+                        internal_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Stable id of the row this preview is about; on create, the id the
+                            row will receive.
                         name:
                           type: string
                         action:
@@ -70498,6 +70570,7 @@ paths:
                             nothing changed or the feature is new.
                       required:
                         - feature_id
+                        - internal_id
                         - action
                         - state
                         - previous_attributes
@@ -72953,6 +73026,12 @@ paths:
                           - feature_id
                       - type: object
                         properties:
+                          internal_id:
+                            type: string
+                            minLength: 1
+                            description: Address an existing feature by its stable id. Omit when creating —
+                              the server generates one. A differing feature_id
+                              alongside it is a rename.
                           new_feature_id:
                             type: string
                             description: Rename the feature to this id.
@@ -75546,6 +75625,11 @@ paths:
                           properties:
                             id:
                               type: string
+                            internal_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: Stable id of the row this result is about (features today).
                             action:
                               enum:
                                 - create
@@ -75565,6 +75649,11 @@ paths:
                           properties:
                             id:
                               type: string
+                            internal_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: Stable id of the row this result is about (features today).
                             action:
                               enum:
                                 - create

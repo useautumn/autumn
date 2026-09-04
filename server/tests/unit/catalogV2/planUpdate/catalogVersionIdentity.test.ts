@@ -144,6 +144,7 @@ describe("catalogRowIdentity", () => {
 			}),
 		).toEqual({
 			plan_id: "pro",
+			internal_id: null,
 			version: 2,
 			version_slug: "v2",
 			active: false,
@@ -160,6 +161,7 @@ describe("catalogRowIdentity", () => {
 			}),
 		).toEqual({
 			plan_id: "pro",
+			internal_id: null,
 			version: 2,
 			version_slug: "v2",
 			new_version_slug: "summer",
@@ -177,6 +179,7 @@ describe("catalogRowIdentity", () => {
 			}),
 		).toEqual({
 			plan_id: "pro",
+			internal_id: null,
 			version: 1,
 			version_slug: "abc",
 			new_version_slug: "newSlug",
@@ -208,6 +211,7 @@ describe("catalogRowIdentity", () => {
 			}),
 		).toEqual({
 			plan_id: "pro",
+			internal_id: null,
 			version: 1,
 			version_slug: "v1",
 			new_plan_id: "pro_2",
