@@ -164,6 +164,13 @@ export function CustomerBalanceTable({
 					mobileCards: true,
 					selectedItemId: getSelectedRowId(),
 					rowClassName: "h-10 py-0",
+					// An expired row without sub-rows has no click target, so it must
+					// not inherit the table's default pointer.
+					getRowClassName: (balance: CustomerBalanceRowData) =>
+						isCusEntDisplayExpired({ cusEnt: balance }) &&
+						(balance.subRows?.length ?? 0) === 0
+							? "cursor-default!"
+							: undefined,
 				}}
 			>
 				<Table.Container>

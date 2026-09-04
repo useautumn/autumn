@@ -46,7 +46,7 @@ export function CustomerBalanceSourceCell({
 	}
 
 	return (
-		<div className="flex flex-col gap-0.5 min-w-0">
+		<div className={cn("flex flex-col gap-0.5 min-w-0", expiredClass)}>
 			<div className="flex items-center gap-2">
 				<CustomerBalanceBillingIcon balance={balance} />
 				<AdminHover
