@@ -6,6 +6,12 @@ import {
 	serializePartitionCheckpoint,
 } from "../../checkpoint/partitionCheckpoint.js";
 import {
+	assertPartitionCheckpointLimits,
+	assertPartitionCheckpointWithinLimit,
+	PartitionCheckpointLimitExceededError,
+	type PartitionCheckpointLimits,
+} from "../../checkpoint/partitionCheckpointLimits.js";
+import {
 	insertPartitionProgress,
 	insertState,
 	insertTrackReceipt,
@@ -14,37 +20,8 @@ import {
 
 export type PartitionCheckpointRestoreMode = "replace" | "restore";
 
-export type PartitionCheckpointRestoreLimits = {
-	maxSerializedBytes: number;
-	maxStates: number;
-	maxReceipts: number;
-};
-
-type PartitionCheckpointLimitName = "receipts" | "serialized_bytes" | "states";
-
-export class PartitionCheckpointLimitExceededError extends Error {
-	readonly limitName: PartitionCheckpointLimitName;
-	readonly limit: number;
-	readonly observed: number;
-
-	constructor({
-		limitName,
-		limit,
-		observed,
-	}: {
-		limitName: PartitionCheckpointLimitName;
-		limit: number;
-		observed: number;
-	}) {
-		super(
-			`Partition checkpoint ${limitName} limit ${limit} exceeded by ${observed}`,
-		);
-		this.name = "PartitionCheckpointLimitExceededError";
-		this.limitName = limitName;
-		this.limit = limit;
-		this.observed = observed;
-	}
-}
+export type PartitionCheckpointRestoreLimits = PartitionCheckpointLimits;
+export { PartitionCheckpointLimitExceededError };
 
 export class PartitionCheckpointRestoreConflictError extends Error {
 	constructor({
@@ -63,35 +40,6 @@ export class PartitionCheckpointRestoreConflictError extends Error {
 	}
 }
 
-const assertLimit = ({
-	name,
-	value,
-}: {
-	name: string;
-	value: number;
-}): void => {
-	if (!Number.isSafeInteger(value) || value <= 0) {
-		throw new RangeError(`${name} must be a positive safe integer`);
-	}
-};
-
-const assertWithinLimit = ({
-	limitName,
-	limit,
-	observed,
-}: {
-	limitName: PartitionCheckpointLimitName;
-	limit: number;
-	observed: number;
-}): void => {
-	if (observed <= limit) return;
-	throw new PartitionCheckpointLimitExceededError({
-		limitName,
-		limit,
-		observed,
-	});
-};
-
 const validateCheckpoint = ({
 	checkpoint,
 	limits,
@@ -101,15 +49,13 @@ const validateCheckpoint = ({
 	limits: PartitionCheckpointRestoreLimits;
 	partitionResolver: PartitionCheckpointPartitionResolver;
 }): void => {
-	assertLimit({ name: "maxSerializedBytes", value: limits.maxSerializedBytes });
-	assertLimit({ name: "maxStates", value: limits.maxStates });
-	assertLimit({ name: "maxReceipts", value: limits.maxReceipts });
-	assertWithinLimit({
+	assertPartitionCheckpointLimits({ limits });
+	assertPartitionCheckpointWithinLimit({
 		limitName: "states",
 		limit: limits.maxStates,
 		observed: checkpoint.states.length,
 	});
-	assertWithinLimit({
+	assertPartitionCheckpointWithinLimit({
 		limitName: "receipts",
 		limit: limits.maxReceipts,
 		observed: checkpoint.receipts.length,
@@ -118,7 +64,7 @@ const validateCheckpoint = ({
 		serializePartitionCheckpoint({ checkpoint }),
 		"utf8",
 	);
-	assertWithinLimit({
+	assertPartitionCheckpointWithinLimit({
 		limitName: "serialized_bytes",
 		limit: limits.maxSerializedBytes,
 		observed: serializedBytes,

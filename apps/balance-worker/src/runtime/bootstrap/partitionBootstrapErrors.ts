@@ -3,6 +3,7 @@ import {
 	PartitionCheckpointContentHashMismatchError,
 	UnsupportedPartitionCheckpointSchemaVersionError,
 } from "../../checkpoint/partitionCheckpoint.js";
+import { PartitionCheckpointBodyLimitExceededError } from "../../checkpoint/partitionCheckpointEncoding.js";
 import { PartitionCheckpointSourceError } from "../../checkpoint/partitionCheckpointSource.js";
 import { PartitionCheckpointLimitExceededError } from "../../state/checkpoint/restorePartitionCheckpoint.js";
 import type { PartitionBootstrapRefusalReason } from "./types/partitionBootstrap.js";
@@ -37,6 +38,7 @@ function isBlockedBootstrapError(cause: unknown): boolean {
 		cause instanceof InvalidPartitionCheckpointError ||
 		cause instanceof UnsupportedPartitionCheckpointSchemaVersionError ||
 		cause instanceof PartitionCheckpointContentHashMismatchError ||
+		cause instanceof PartitionCheckpointBodyLimitExceededError ||
 		cause instanceof PartitionCheckpointLimitExceededError
 	);
 }
