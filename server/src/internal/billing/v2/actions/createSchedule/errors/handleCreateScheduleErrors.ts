@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { handleUnsupportedLicenseActionErrors } from "@/internal/billing/v2/common/errors/handleUnsupportedLicenseActionErrors";
+import { handleUnsupportedOutgoingLicenseErrors } from "@/internal/billing/v2/common/errors/handleUnsupportedLicenseActionErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import {
 	getDeleteCustomerProducts,
@@ -47,7 +47,6 @@ export const handleCreateScheduleErrors = async ({
 };
 
 export const handleCreateScheduleComputeErrors = ({
-	billingContext,
 	autumnBillingPlan,
 }: {
 	billingContext: CreateScheduleBillingContext;
@@ -57,14 +56,8 @@ export const handleCreateScheduleComputeErrors = ({
 		...getExpiredUpdatedCustomerProducts({ autumnBillingPlan }),
 		...getDeleteCustomerProducts({ autumnBillingPlan }),
 	];
-	handleUnsupportedLicenseActionErrors({
+	handleUnsupportedOutgoingLicenseErrors({
 		actionLabel: "billing.create_schedule",
-		fullProducts: [
-			...billingContext.fullProducts,
-			...billingContext.scheduledPhaseContexts.flatMap((phase) =>
-				phase.productContexts.map(({ fullProduct }) => fullProduct),
-			),
-		],
 		customerProducts: outgoingCustomerProducts,
 	});
 };

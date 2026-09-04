@@ -192,7 +192,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		(params.plans ?? []).map(async (plan) => {
 			const scopedFullCustomer = await getScopedFullCustomer(plan.entity_id);
 
-			const { fullProduct, customPrices, customEnts } =
+			const { fullProduct, customPrices, customEnts, insertPlanLicenses } =
 				await setupAttachProductContext({
 					ctx,
 					params: {
@@ -225,6 +225,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 				customPrices: customPrices ?? [],
 				customEnts: customEnts ?? [],
 				featureQuantities,
+				insertPlanLicenses,
 				fullCustomer: scopedFullCustomer,
 				currentCustomerProduct,
 				scheduledCustomerProduct,
