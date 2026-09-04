@@ -7,6 +7,7 @@ import type { Overlay } from "../overlay/overlay";
 import {
 	fixtureNameFor,
 	isHidden,
+	isInternalField,
 	isRequiredByOverlay,
 } from "../overlay/overlay";
 
@@ -17,7 +18,7 @@ import {
  * of the problem and keeps this function about shape only.
  */
 
-type EmitContext = {
+export type EmitContext = {
 	overlay: Overlay;
 	collection: string;
 };
@@ -90,6 +91,94 @@ export const typeExpression = ({
 	return "unknown";
 };
 
+/** One object-schema property that survives the skip rules, in spec order. */
+export type ObjectMember = {
+	name: string;
+	optional: boolean;
+	description: string | undefined;
+	fieldPath: string;
+	schema: JsonSchema;
+};
+
+export const objectMembers = ({
+	schema,
+	path,
+	context,
+}: {
+	schema: JsonSchema;
+	path: string;
+	context: EmitContext;
+}): ObjectMember[] => {
+	const properties = schema.properties ?? {};
+	const required = new Set(
+		Array.isArray(schema.required) ? (schema.required as string[]) : [],
+	);
+
+	return Object.entries(properties).flatMap(([wireKey, propertySchema]) => {
+		const fieldPath = childPath({ path, key: wireKey });
+		if (
+			isInternalField({
+				overlay: context.overlay,
+				wireKey,
+				schema: propertySchema,
+			})
+		) {
+			return [];
+		}
+		if (
+			isHidden({
+				overlay: context.overlay,
+				collection: context.collection,
+				path: fieldPath,
+			})
+		) {
+			return [];
+		}
+
+		return [
+			{
+				name: fixtureNameFor({
+					overlay: context.overlay,
+					collection: context.collection,
+					path: fieldPath,
+					recased: toCamelCase(wireKey),
+				}),
+				optional: !(
+					required.has(wireKey) ||
+					isRequiredByOverlay({
+						overlay: context.overlay,
+						collection: context.collection,
+						path: fieldPath,
+					})
+				),
+				description:
+					typeof propertySchema.description === "string"
+						? propertySchema.description.replace(/\s+/g, " ").trim()
+						: undefined,
+				fieldPath,
+				schema: propertySchema,
+			},
+		];
+	});
+};
+
+const memberText = ({
+	member,
+	context,
+}: {
+	member: ObjectMember;
+	context: EmitContext;
+}): string => {
+	const description =
+		member.description === undefined ? "" : `/** ${member.description} */\n`;
+	const optional = member.optional ? "?" : "";
+	return `${description}${member.name}${optional}: ${typeExpression({
+		schema: member.schema,
+		path: member.fieldPath,
+		context,
+	})};`;
+};
+
 const objectTypeExpression = ({
 	schema,
 	path,
@@ -99,53 +188,8 @@ const objectTypeExpression = ({
 	path: string;
 	context: EmitContext;
 }): string => {
-	const properties = schema.properties ?? {};
-	const required = new Set(
-		Array.isArray(schema.required) ? (schema.required as string[]) : [],
-	);
-
-	const members = Object.entries(properties).flatMap(
-		([wireKey, propertySchema]) => {
-			const fieldPath = childPath({ path, key: wireKey });
-			if (
-				isHidden({
-					overlay: context.overlay,
-					collection: context.collection,
-					path: fieldPath,
-				})
-			) {
-				return [];
-			}
-
-			const name = fixtureNameFor({
-				overlay: context.overlay,
-				collection: context.collection,
-				path: fieldPath,
-				recased: toCamelCase(wireKey),
-			});
-			const optional =
-				required.has(wireKey) ||
-				isRequiredByOverlay({
-					overlay: context.overlay,
-					collection: context.collection,
-					path: fieldPath,
-				})
-					? ""
-					: "?";
-
-			const description =
-				typeof propertySchema.description === "string"
-					? `/** ${propertySchema.description.replace(/\s+/g, " ").trim()} */\n`
-					: "";
-
-			return [
-				`${description}${name}${optional}: ${typeExpression({
-					schema: propertySchema,
-					path: fieldPath,
-					context,
-				})};`,
-			];
-		},
+	const members = objectMembers({ schema, path, context }).map((member) =>
+		memberText({ member, context }),
 	);
 
 	return `{\n${members.join("\n")}\n}`;

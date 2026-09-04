@@ -55,7 +55,7 @@ test.concurrent(
 			],
 			config: `{ features: [
 				feature({ featureId: "${messages}", name: "Messages", type: "metered", consumable: true }),
-				feature({ featureId: "${seats}", name: "Seats", type: "metered" }),
+				feature({ featureId: "${seats}", name: "Seats", type: "metered", consumable: false }),
 			] }`,
 		});
 
@@ -103,7 +103,7 @@ test.concurrent(
 				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
 			config: `{ features: [
-				feature({ featureId: "${featureId}", name: "Wire", type: "metered" }),
+				feature({ featureId: "${featureId}", name: "Wire", type: "metered", consumable: true }),
 			] }`,
 		});
 
@@ -122,7 +122,12 @@ test.concurrent(
 
 			// camelCase in the config, snake_case on the wire.
 			expect(wire.features).toEqual([
-				{ feature_id: featureId, name: "Wire", type: "metered" },
+				{
+					feature_id: featureId,
+					name: "Wire",
+					type: "metered",
+					consumable: true,
+				},
 			]);
 
 			await scenario.push();

@@ -299,8 +299,6 @@ export type PreviewUpdateCatalogResponse = {
 						| "year";
 					/** Number of intervals per billing cycle. Defaults to 1. */
 					intervalCount?: number;
-					entitlementId?: string;
-					priceId?: string;
 					/** Display text for showing this price in pricing pages. */
 					display?: {
 						/** Main display text (e.g. '$10' or '100 messages'). */
@@ -337,8 +335,6 @@ export type PreviewUpdateCatalogResponse = {
 						| "year";
 					/** Number of intervals per billing cycle. Defaults to 1. */
 					intervalCount?: number;
-					entitlementId?: string;
-					priceId?: string;
 					/** Display text for showing this price in pricing pages. */
 					display?: {
 						/** Main display text (e.g. '$10' or '100 messages'). */
@@ -504,21 +500,6 @@ export type PreviewUpdateCatalogResponse = {
 						/** Number of periods before expiry. */
 						expiryDurationLength?: number;
 					};
-					proration?: {
-						/** How to handle billing when quantity increases mid-cycle. */
-						onIncrease?:
-							| "bill_immediately"
-							| "prorate_immediately"
-							| "prorate_next_cycle"
-							| "bill_next_cycle";
-						/** How to handle credits when quantity decreases mid-cycle. */
-						onDecrease?:
-							| "prorate"
-							| "prorate_immediately"
-							| "prorate_next_cycle"
-							| "none"
-							| "no_prorations";
-					};
 					/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 					featureOverride?: {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -536,9 +517,6 @@ export type PreviewUpdateCatalogResponse = {
 							  }
 						>;
 					};
-					entityFeatureId?: string;
-					entitlementId?: string;
-					priceId?: string;
 				};
 			}>;
 			/** Params that would transform the previous plan into the current one, including license upserts/removes. */
@@ -564,10 +542,6 @@ export type PreviewUpdateCatalogResponse = {
 						/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 						amount: number;
 					}>;
-					baseCurrency?: string;
-					entitlementId?: string;
-					priceId?: string;
-					stripePriceId?: string;
 				} | null;
 				/** Items to add to the plan. */
 				addItems?: Array<{
@@ -597,7 +571,6 @@ export type PreviewUpdateCatalogResponse = {
 					};
 					/** Pricing for usage beyond included units. Omit for free features. */
 					price?: {
-						stripePriceId?: unknown;
 						/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 						amount?: number;
 						/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -676,9 +649,6 @@ export type PreviewUpdateCatalogResponse = {
 							  }
 						>;
 					};
-					entityFeatureId?: string;
-					entitlementId?: string;
-					priceId?: string;
 				}>;
 				/** Filters selecting items to remove from the plan. */
 				removeItems?: Array<{
@@ -707,49 +677,6 @@ export type PreviewUpdateCatalogResponse = {
 					intervalCount?: number;
 					/** Match items whose grant equals this included usage. Omitted is a wildcard. */
 					included?: number;
-				}>;
-				updateItems?: Array<{
-					/** Filter selecting which existing plan item(s) to update. Same shape as remove_items filters. */
-					filter: {
-						/** Match items linked to this feature. */
-						featureId?: string;
-						/** Match items with this billing method (prepaid or usage_based). */
-						billingMethod?: "prepaid" | "usage_based";
-						/** Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated. */
-						interval?:
-							| "one_off"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year"
-							| "one_off"
-							| "minute"
-							| "hour"
-							| "day"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year";
-						/** Match items with this interval_count. Disambiguates between items that share an interval but differ in count. */
-						intervalCount?: number;
-						/** Match items whose grant equals this included usage. Omitted is a wildcard. */
-						included?: number;
-					};
-					/** Override the matched item's included usage / allowance. Existing usage carries forward. */
-					included?: number;
-					/** Override the matched item's reset interval. Use 'one_off' for non-resetting balances. */
-					interval?:
-						| "one_off"
-						| "minute"
-						| "hour"
-						| "day"
-						| "week"
-						| "month"
-						| "quarter"
-						| "semi_annual"
-						| "year";
 				}>;
 				/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 				freeTrial?: {
@@ -868,10 +795,6 @@ export type PreviewUpdateCatalogResponse = {
 								currency?: unknown;
 								amount?: unknown;
 							}>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						addItems?: Array<{
 							/** The ID of the feature to configure. */
@@ -916,9 +839,6 @@ export type PreviewUpdateCatalogResponse = {
 							featureOverride?: {
 								creditSchema?: unknown;
 							};
-							entityFeatureId?: string;
-							entitlementId?: string;
-							priceId?: string;
 						}>;
 						removeItems?: Array<{
 							/** Match items linked to this feature. */
@@ -974,10 +894,6 @@ export type PreviewUpdateCatalogResponse = {
 							/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 							amount: number;
 						}>;
-						baseCurrency?: string;
-						entitlementId?: string;
-						priceId?: string;
-						stripePriceId?: string;
 					} | null;
 					addItems?: Array<{
 						/** The ID of the feature to configure. */
@@ -1006,7 +922,6 @@ export type PreviewUpdateCatalogResponse = {
 						};
 						/** Pricing for usage beyond included units. Omit for free features. */
 						price?: {
-							stripePriceId?: unknown;
 							/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 							amount?: number;
 							/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -1063,9 +978,6 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
-						entityFeatureId?: string;
-						entitlementId?: string;
-						priceId?: string;
 					}>;
 					removeItems?: Array<{
 						/** Match items linked to this feature. */
@@ -1225,8 +1137,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								/** Main display text (e.g. '$10' or '100 messages'). */
@@ -1260,8 +1170,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								/** Main display text (e.g. '$10' or '100 messages'). */
@@ -1357,17 +1265,10 @@ export type PreviewUpdateCatalogResponse = {
 								expiryDurationType?: unknown;
 								expiryDurationLength?: unknown;
 							};
-							proration?: {
-								onIncrease?: unknown;
-								onDecrease?: unknown;
-							};
 							/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 							featureOverride?: {
 								creditSchema?: unknown;
 							};
-							entityFeatureId?: string;
-							entitlementId?: string;
-							priceId?: string;
 						};
 					}>;
 					/** Params that would transform the previous plan into the current one. Omitted when nothing customizable changed. */
@@ -1391,10 +1292,6 @@ export type PreviewUpdateCatalogResponse = {
 								currency?: unknown;
 								amount?: unknown;
 							}>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						/** Items to add to the plan. */
 						addItems?: Array<{
@@ -1440,9 +1337,6 @@ export type PreviewUpdateCatalogResponse = {
 							featureOverride?: {
 								creditSchema?: unknown;
 							};
-							entityFeatureId?: string;
-							entitlementId?: string;
-							priceId?: string;
 						}>;
 						/** Filters selecting items to remove from the plan. */
 						removeItems?: Array<{
@@ -1456,29 +1350,6 @@ export type PreviewUpdateCatalogResponse = {
 							intervalCount?: number;
 							/** Match items whose grant equals this included usage. Omitted is a wildcard. */
 							included?: number;
-						}>;
-						updateItems?: Array<{
-							/** Filter selecting which existing plan item(s) to update. Same shape as remove_items filters. */
-							filter: {
-								featureId?: unknown;
-								billingMethod?: unknown;
-								interval?: unknown;
-								intervalCount?: unknown;
-								included?: unknown;
-							};
-							/** Override the matched item's included usage / allowance. Existing usage carries forward. */
-							included?: number;
-							/** Override the matched item's reset interval. Use 'one_off' for non-resetting balances. */
-							interval?:
-								| "one_off"
-								| "minute"
-								| "hour"
-								| "day"
-								| "week"
-								| "month"
-								| "quarter"
-								| "semi_annual"
-								| "year";
 						}>;
 						/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 						freeTrial?: {
@@ -1767,8 +1638,6 @@ export type PreviewUpdateCatalogResponse = {
 							| "year";
 						/** Number of intervals per billing cycle. Defaults to 1. */
 						intervalCount?: number;
-						entitlementId?: string;
-						priceId?: string;
 						/** Display text for showing this price in pricing pages. */
 						display?: {
 							/** Main display text (e.g. '$10' or '100 messages'). */
@@ -1805,8 +1674,6 @@ export type PreviewUpdateCatalogResponse = {
 							| "year";
 						/** Number of intervals per billing cycle. Defaults to 1. */
 						intervalCount?: number;
-						entitlementId?: string;
-						priceId?: string;
 						/** Display text for showing this price in pricing pages. */
 						display?: {
 							/** Main display text (e.g. '$10' or '100 messages'). */
@@ -1952,29 +1819,11 @@ export type PreviewUpdateCatalogResponse = {
 							/** Number of periods before expiry. */
 							expiryDurationLength?: number;
 						};
-						proration?: {
-							/** How to handle billing when quantity increases mid-cycle. */
-							onIncrease?:
-								| "bill_immediately"
-								| "prorate_immediately"
-								| "prorate_next_cycle"
-								| "bill_next_cycle";
-							/** How to handle credits when quantity decreases mid-cycle. */
-							onDecrease?:
-								| "prorate"
-								| "prorate_immediately"
-								| "prorate_next_cycle"
-								| "none"
-								| "no_prorations";
-						};
 						/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 						featureOverride?: {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
-						entityFeatureId?: string;
-						entitlementId?: string;
-						priceId?: string;
 					};
 				}>;
 				/** Params that would transform the previous plan into the current one, including license upserts/removes. */
@@ -2000,10 +1849,6 @@ export type PreviewUpdateCatalogResponse = {
 							/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 							amount: number;
 						}>;
-						baseCurrency?: string;
-						entitlementId?: string;
-						priceId?: string;
-						stripePriceId?: string;
 					} | null;
 					/** Items to add to the plan. */
 					addItems?: Array<{
@@ -2033,7 +1878,6 @@ export type PreviewUpdateCatalogResponse = {
 						};
 						/** Pricing for usage beyond included units. Omit for free features. */
 						price?: {
-							stripePriceId?: unknown;
 							/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 							amount?: number;
 							/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -2090,9 +1934,6 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
-						entityFeatureId?: string;
-						entitlementId?: string;
-						priceId?: string;
 					}>;
 					/** Filters selecting items to remove from the plan. */
 					removeItems?: Array<{
@@ -2121,34 +1962,6 @@ export type PreviewUpdateCatalogResponse = {
 						intervalCount?: number;
 						/** Match items whose grant equals this included usage. Omitted is a wildcard. */
 						included?: number;
-					}>;
-					updateItems?: Array<{
-						/** Filter selecting which existing plan item(s) to update. Same shape as remove_items filters. */
-						filter: {
-							/** Match items linked to this feature. */
-							featureId?: string;
-							/** Match items with this billing method (prepaid or usage_based). */
-							billingMethod?: "prepaid" | "usage_based";
-							/** Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated. */
-							interval?: unknown;
-							/** Match items with this interval_count. Disambiguates between items that share an interval but differ in count. */
-							intervalCount?: number;
-							/** Match items whose grant equals this included usage. Omitted is a wildcard. */
-							included?: number;
-						};
-						/** Override the matched item's included usage / allowance. Existing usage carries forward. */
-						included?: number;
-						/** Override the matched item's reset interval. Use 'one_off' for non-resetting balances. */
-						interval?:
-							| "one_off"
-							| "minute"
-							| "hour"
-							| "day"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year";
 					}>;
 					/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 					freeTrial?: {
@@ -2294,10 +2107,6 @@ export type PreviewUpdateCatalogResponse = {
 							intervalCount?: number;
 							/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
 							additionalCurrencies?: Array<unknown | null>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						addItems?: Array<{
 							featureId?: unknown;
@@ -2448,7 +2257,6 @@ export type PreviewUpdateCatalogResponse = {
 							addItems?: Array<unknown | null>;
 							/** Filters selecting items to remove from the plan. */
 							removeItems?: Array<unknown | null>;
-							updateItems?: Array<unknown | null>;
 							/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 							freeTrial?: {
 								durationLength?: unknown;
@@ -2640,8 +2448,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								primaryText?: unknown;
@@ -2668,8 +2474,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								primaryText?: unknown;
@@ -2748,10 +2552,6 @@ export type PreviewUpdateCatalogResponse = {
 							intervalCount?: number;
 							/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
 							additionalCurrencies?: Array<unknown | null>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						/** Items to add to the plan. */
 						addItems?: Array<{
@@ -2775,11 +2575,6 @@ export type PreviewUpdateCatalogResponse = {
 							interval?: unknown;
 							intervalCount?: unknown;
 							included?: unknown;
-						}>;
-						updateItems?: Array<{
-							filter?: unknown;
-							included?: unknown;
-							interval?: unknown;
 						}>;
 						/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 						freeTrial?: {
@@ -3114,8 +2909,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								primaryText?: unknown;
@@ -3142,8 +2935,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								primaryText?: unknown;
@@ -3222,10 +3013,6 @@ export type PreviewUpdateCatalogResponse = {
 							intervalCount?: number;
 							/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
 							additionalCurrencies?: Array<unknown | null>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						/** Items to add to the plan. */
 						addItems?: Array<{
@@ -3249,11 +3036,6 @@ export type PreviewUpdateCatalogResponse = {
 							interval?: unknown;
 							intervalCount?: unknown;
 							included?: unknown;
-						}>;
-						updateItems?: Array<{
-							filter?: unknown;
-							included?: unknown;
-							interval?: unknown;
 						}>;
 						/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 						freeTrial?: {
@@ -3680,8 +3462,6 @@ export type PreviewUpdateCatalogResponse = {
 							| "year";
 						/** Number of intervals per billing cycle. Defaults to 1. */
 						intervalCount?: number;
-						entitlementId?: string;
-						priceId?: string;
 						/** Display text for showing this price in pricing pages. */
 						display?: {
 							/** Main display text (e.g. '$10' or '100 messages'). */
@@ -3718,8 +3498,6 @@ export type PreviewUpdateCatalogResponse = {
 							| "year";
 						/** Number of intervals per billing cycle. Defaults to 1. */
 						intervalCount?: number;
-						entitlementId?: string;
-						priceId?: string;
 						/** Display text for showing this price in pricing pages. */
 						display?: {
 							/** Main display text (e.g. '$10' or '100 messages'). */
@@ -3865,29 +3643,11 @@ export type PreviewUpdateCatalogResponse = {
 							/** Number of periods before expiry. */
 							expiryDurationLength?: number;
 						};
-						proration?: {
-							/** How to handle billing when quantity increases mid-cycle. */
-							onIncrease?:
-								| "bill_immediately"
-								| "prorate_immediately"
-								| "prorate_next_cycle"
-								| "bill_next_cycle";
-							/** How to handle credits when quantity decreases mid-cycle. */
-							onDecrease?:
-								| "prorate"
-								| "prorate_immediately"
-								| "prorate_next_cycle"
-								| "none"
-								| "no_prorations";
-						};
 						/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 						featureOverride?: {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
-						entityFeatureId?: string;
-						entitlementId?: string;
-						priceId?: string;
 					};
 				}>;
 				/** Params that would transform the previous plan into the current one, including license upserts/removes. */
@@ -3913,10 +3673,6 @@ export type PreviewUpdateCatalogResponse = {
 							/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 							amount: number;
 						}>;
-						baseCurrency?: string;
-						entitlementId?: string;
-						priceId?: string;
-						stripePriceId?: string;
 					} | null;
 					/** Items to add to the plan. */
 					addItems?: Array<{
@@ -3946,7 +3702,6 @@ export type PreviewUpdateCatalogResponse = {
 						};
 						/** Pricing for usage beyond included units. Omit for free features. */
 						price?: {
-							stripePriceId?: unknown;
 							/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 							amount?: number;
 							/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -4003,9 +3758,6 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
-						entityFeatureId?: string;
-						entitlementId?: string;
-						priceId?: string;
 					}>;
 					/** Filters selecting items to remove from the plan. */
 					removeItems?: Array<{
@@ -4034,34 +3786,6 @@ export type PreviewUpdateCatalogResponse = {
 						intervalCount?: number;
 						/** Match items whose grant equals this included usage. Omitted is a wildcard. */
 						included?: number;
-					}>;
-					updateItems?: Array<{
-						/** Filter selecting which existing plan item(s) to update. Same shape as remove_items filters. */
-						filter: {
-							/** Match items linked to this feature. */
-							featureId?: string;
-							/** Match items with this billing method (prepaid or usage_based). */
-							billingMethod?: "prepaid" | "usage_based";
-							/** Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated. */
-							interval?: unknown;
-							/** Match items with this interval_count. Disambiguates between items that share an interval but differ in count. */
-							intervalCount?: number;
-							/** Match items whose grant equals this included usage. Omitted is a wildcard. */
-							included?: number;
-						};
-						/** Override the matched item's included usage / allowance. Existing usage carries forward. */
-						included?: number;
-						/** Override the matched item's reset interval. Use 'one_off' for non-resetting balances. */
-						interval?:
-							| "one_off"
-							| "minute"
-							| "hour"
-							| "day"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year";
 					}>;
 					/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 					freeTrial?: {
@@ -4207,10 +3931,6 @@ export type PreviewUpdateCatalogResponse = {
 							intervalCount?: number;
 							/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
 							additionalCurrencies?: Array<unknown | null>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						addItems?: Array<{
 							featureId?: unknown;
@@ -4361,7 +4081,6 @@ export type PreviewUpdateCatalogResponse = {
 							addItems?: Array<unknown | null>;
 							/** Filters selecting items to remove from the plan. */
 							removeItems?: Array<unknown | null>;
-							updateItems?: Array<unknown | null>;
 							/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 							freeTrial?: {
 								durationLength?: unknown;
@@ -4567,8 +4286,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								primaryText?: unknown;
@@ -4595,8 +4312,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								primaryText?: unknown;
@@ -4675,10 +4390,6 @@ export type PreviewUpdateCatalogResponse = {
 							intervalCount?: number;
 							/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
 							additionalCurrencies?: Array<unknown | null>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						/** Items to add to the plan. */
 						addItems?: Array<{
@@ -4702,11 +4413,6 @@ export type PreviewUpdateCatalogResponse = {
 							interval?: unknown;
 							intervalCount?: unknown;
 							included?: unknown;
-						}>;
-						updateItems?: Array<{
-							filter?: unknown;
-							included?: unknown;
-							interval?: unknown;
 						}>;
 						/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 						freeTrial?: {
@@ -5033,8 +4739,6 @@ export type PreviewUpdateCatalogResponse = {
 							| "year";
 						/** Number of intervals per billing cycle. Defaults to 1. */
 						intervalCount?: number;
-						entitlementId?: string;
-						priceId?: string;
 						/** Display text for showing this price in pricing pages. */
 						display?: {
 							/** Main display text (e.g. '$10' or '100 messages'). */
@@ -5071,8 +4775,6 @@ export type PreviewUpdateCatalogResponse = {
 							| "year";
 						/** Number of intervals per billing cycle. Defaults to 1. */
 						intervalCount?: number;
-						entitlementId?: string;
-						priceId?: string;
 						/** Display text for showing this price in pricing pages. */
 						display?: {
 							/** Main display text (e.g. '$10' or '100 messages'). */
@@ -5218,29 +4920,11 @@ export type PreviewUpdateCatalogResponse = {
 							/** Number of periods before expiry. */
 							expiryDurationLength?: number;
 						};
-						proration?: {
-							/** How to handle billing when quantity increases mid-cycle. */
-							onIncrease?:
-								| "bill_immediately"
-								| "prorate_immediately"
-								| "prorate_next_cycle"
-								| "bill_next_cycle";
-							/** How to handle credits when quantity decreases mid-cycle. */
-							onDecrease?:
-								| "prorate"
-								| "prorate_immediately"
-								| "prorate_next_cycle"
-								| "none"
-								| "no_prorations";
-						};
 						/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 						featureOverride?: {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
-						entityFeatureId?: string;
-						entitlementId?: string;
-						priceId?: string;
 					};
 				}>;
 				/** Params that would transform the previous plan into the current one, including license upserts/removes. */
@@ -5266,10 +4950,6 @@ export type PreviewUpdateCatalogResponse = {
 							/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 							amount: number;
 						}>;
-						baseCurrency?: string;
-						entitlementId?: string;
-						priceId?: string;
-						stripePriceId?: string;
 					} | null;
 					/** Items to add to the plan. */
 					addItems?: Array<{
@@ -5299,7 +4979,6 @@ export type PreviewUpdateCatalogResponse = {
 						};
 						/** Pricing for usage beyond included units. Omit for free features. */
 						price?: {
-							stripePriceId?: unknown;
 							/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 							amount?: number;
 							/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -5356,9 +5035,6 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
-						entityFeatureId?: string;
-						entitlementId?: string;
-						priceId?: string;
 					}>;
 					/** Filters selecting items to remove from the plan. */
 					removeItems?: Array<{
@@ -5387,34 +5063,6 @@ export type PreviewUpdateCatalogResponse = {
 						intervalCount?: number;
 						/** Match items whose grant equals this included usage. Omitted is a wildcard. */
 						included?: number;
-					}>;
-					updateItems?: Array<{
-						/** Filter selecting which existing plan item(s) to update. Same shape as remove_items filters. */
-						filter: {
-							/** Match items linked to this feature. */
-							featureId?: string;
-							/** Match items with this billing method (prepaid or usage_based). */
-							billingMethod?: "prepaid" | "usage_based";
-							/** Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated. */
-							interval?: unknown;
-							/** Match items with this interval_count. Disambiguates between items that share an interval but differ in count. */
-							intervalCount?: number;
-							/** Match items whose grant equals this included usage. Omitted is a wildcard. */
-							included?: number;
-						};
-						/** Override the matched item's included usage / allowance. Existing usage carries forward. */
-						included?: number;
-						/** Override the matched item's reset interval. Use 'one_off' for non-resetting balances. */
-						interval?:
-							| "one_off"
-							| "minute"
-							| "hour"
-							| "day"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year";
 					}>;
 					/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 					freeTrial?: {
@@ -5560,10 +5208,6 @@ export type PreviewUpdateCatalogResponse = {
 							intervalCount?: number;
 							/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
 							additionalCurrencies?: Array<unknown | null>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						addItems?: Array<{
 							featureId?: unknown;
@@ -5714,7 +5358,6 @@ export type PreviewUpdateCatalogResponse = {
 							addItems?: Array<unknown | null>;
 							/** Filters selecting items to remove from the plan. */
 							removeItems?: Array<unknown | null>;
-							updateItems?: Array<unknown | null>;
 							/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 							freeTrial?: {
 								durationLength?: unknown;
@@ -5918,8 +5561,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								primaryText?: unknown;
@@ -5946,8 +5587,6 @@ export type PreviewUpdateCatalogResponse = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							entitlementId?: string;
-							priceId?: string;
 							/** Display text for showing this price in pricing pages. */
 							display?: {
 								primaryText?: unknown;
@@ -6026,10 +5665,6 @@ export type PreviewUpdateCatalogResponse = {
 							intervalCount?: number;
 							/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
 							additionalCurrencies?: Array<unknown | null>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						/** Items to add to the plan. */
 						addItems?: Array<{
@@ -6053,11 +5688,6 @@ export type PreviewUpdateCatalogResponse = {
 							interval?: unknown;
 							intervalCount?: unknown;
 							included?: unknown;
-						}>;
-						updateItems?: Array<{
-							filter?: unknown;
-							included?: unknown;
-							interval?: unknown;
 						}>;
 						/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 						freeTrial?: {
@@ -6207,10 +5837,6 @@ export type PreviewUpdateCatalogResponse = {
 						/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 						amount: number;
 					}>;
-					baseCurrency?: string;
-					entitlementId?: string;
-					priceId?: string;
-					stripePriceId?: string;
 				} | null;
 				addItems?: Array<{
 					/** The ID of the feature to configure. */
@@ -6239,7 +5865,6 @@ export type PreviewUpdateCatalogResponse = {
 					};
 					/** Pricing for usage beyond included units. Omit for free features. */
 					price?: {
-						stripePriceId?: unknown;
 						/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 						amount?: number;
 						/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -6304,9 +5929,6 @@ export type PreviewUpdateCatalogResponse = {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 						creditSchema?: Array<unknown | null>;
 					};
-					entityFeatureId?: string;
-					entitlementId?: string;
-					priceId?: string;
 				}>;
 				removeItems?: Array<{
 					/** Match items linked to this feature. */
@@ -7357,10 +6979,6 @@ export type PreviewUpdateCatalogResponse = {
 									currency?: unknown;
 									amount?: unknown;
 								}>;
-								baseCurrency?: string;
-								entitlementId?: string;
-								priceId?: string;
-								stripePriceId?: string;
 							} | null;
 							/** Base price before the plan update that created this migration. Display-only. */
 							previousPrice?: {
@@ -7381,10 +6999,6 @@ export type PreviewUpdateCatalogResponse = {
 									currency?: unknown;
 									amount?: unknown;
 								}>;
-								baseCurrency?: string;
-								entitlementId?: string;
-								priceId?: string;
-								stripePriceId?: string;
 							} | null;
 							addItems?: Array<{
 								/** The ID of the feature to configure. */
@@ -7429,9 +7043,6 @@ export type PreviewUpdateCatalogResponse = {
 								featureOverride?: {
 									creditSchema?: unknown;
 								};
-								entityFeatureId?: string;
-								entitlementId?: string;
-								priceId?: string;
 							}>;
 							removeItems?: Array<{
 								/** Match items linked to this feature. */
@@ -8547,10 +8158,6 @@ export type UpdateCatalogResponse = {
 									currency?: unknown;
 									amount?: unknown;
 								}>;
-								baseCurrency?: string;
-								entitlementId?: string;
-								priceId?: string;
-								stripePriceId?: string;
 							} | null;
 							/** Base price before the plan update that created this migration. Display-only. */
 							previousPrice?: {
@@ -8571,10 +8178,6 @@ export type UpdateCatalogResponse = {
 									currency?: unknown;
 									amount?: unknown;
 								}>;
-								baseCurrency?: string;
-								entitlementId?: string;
-								priceId?: string;
-								stripePriceId?: string;
 							} | null;
 							addItems?: Array<{
 								/** The ID of the feature to configure. */
@@ -8619,9 +8222,6 @@ export type UpdateCatalogResponse = {
 								featureOverride?: {
 									creditSchema?: unknown;
 								};
-								entityFeatureId?: string;
-								entitlementId?: string;
-								priceId?: string;
 							}>;
 							removeItems?: Array<{
 								/** Match items linked to this feature. */
@@ -8810,8 +8410,6 @@ export type GetCatalogResponse = {
 				| "year";
 			/** Number of intervals per billing cycle. Defaults to 1. */
 			intervalCount?: number;
-			entitlementId?: string;
-			priceId?: string;
 			/** Display text for showing this price in pricing pages. */
 			display?: {
 				/** Main display text (e.g. '$10' or '100 messages'). */
@@ -8952,21 +8550,6 @@ export type GetCatalogResponse = {
 				/** Number of periods before expiry. */
 				expiryDurationLength?: number;
 			};
-			proration?: {
-				/** How to handle billing when quantity increases mid-cycle. */
-				onIncrease?:
-					| "bill_immediately"
-					| "prorate_immediately"
-					| "prorate_next_cycle"
-					| "bill_next_cycle";
-				/** How to handle credits when quantity decreases mid-cycle. */
-				onDecrease?:
-					| "prorate"
-					| "prorate_immediately"
-					| "prorate_next_cycle"
-					| "none"
-					| "no_prorations";
-			};
 			/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 			featureOverride?: {
 				/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
@@ -8992,9 +8575,6 @@ export type GetCatalogResponse = {
 					  }
 				>;
 			};
-			entityFeatureId?: string;
-			entitlementId?: string;
-			priceId?: string;
 		}>;
 		/** Payment processors this plan is connected to. Omitted when unset. */
 		processors?: {
@@ -9121,7 +8701,6 @@ export type GetCatalogResponse = {
 		/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
 		metadata: Record<string, unknown>;
 		customerEligibility?: {
-			object?: "customer_eligibility";
 			/** Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false. */
 			trialAvailable?: boolean;
 			/** The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation. */
@@ -9132,17 +8711,6 @@ export type GetCatalogResponse = {
 			trialing?: boolean;
 			/** The action that would occur if this plan were attached to the customer. */
 			attachAction: "activate" | "upgrade" | "downgrade" | "none" | "purchase";
-			scenario?:
-				| "scheduled"
-				| "active"
-				| "new"
-				| "renew"
-				| "upgrade"
-				| "update_prepaid_quantity"
-				| "downgrade"
-				| "cancel"
-				| "expired"
-				| "past_due";
 		};
 		/** Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from. */
 		baseVariantId: string | null;
@@ -9173,10 +8741,6 @@ export type GetCatalogResponse = {
 						/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 						amount: number;
 					}>;
-					baseCurrency?: string;
-					entitlementId?: string;
-					priceId?: string;
-					stripePriceId?: string;
 				} | null;
 				/** Items to add to the plan. */
 				addItems?: Array<{
@@ -9206,7 +8770,6 @@ export type GetCatalogResponse = {
 					};
 					/** Pricing for usage beyond included units. Omit for free features. */
 					price?: {
-						stripePriceId?: unknown;
 						/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 						amount?: number;
 						/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -9285,9 +8848,6 @@ export type GetCatalogResponse = {
 							  }
 						>;
 					};
-					entityFeatureId?: string;
-					entitlementId?: string;
-					priceId?: string;
 				}>;
 				/** Filters selecting items to remove from the plan. */
 				removeItems?: Array<{
@@ -9316,49 +8876,6 @@ export type GetCatalogResponse = {
 					intervalCount?: number;
 					/** Match items whose grant equals this included usage. Omitted is a wildcard. */
 					included?: number;
-				}>;
-				updateItems?: Array<{
-					/** Filter selecting which existing plan item(s) to update. Same shape as remove_items filters. */
-					filter: {
-						/** Match items linked to this feature. */
-						featureId?: string;
-						/** Match items with this billing method (prepaid or usage_based). */
-						billingMethod?: "prepaid" | "usage_based";
-						/** Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated. */
-						interval?:
-							| "one_off"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year"
-							| "one_off"
-							| "minute"
-							| "hour"
-							| "day"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year";
-						/** Match items with this interval_count. Disambiguates between items that share an interval but differ in count. */
-						intervalCount?: number;
-						/** Match items whose grant equals this included usage. Omitted is a wildcard. */
-						included?: number;
-					};
-					/** Override the matched item's included usage / allowance. Existing usage carries forward. */
-					included?: number;
-					/** Override the matched item's reset interval. Use 'one_off' for non-resetting balances. */
-					interval?:
-						| "one_off"
-						| "minute"
-						| "hour"
-						| "day"
-						| "week"
-						| "month"
-						| "quarter"
-						| "semi_annual"
-						| "year";
 				}>;
 				/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 				freeTrial?: {
@@ -9477,10 +8994,6 @@ export type GetCatalogResponse = {
 								currency?: unknown;
 								amount?: unknown;
 							}>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						addItems?: Array<{
 							/** The ID of the feature to configure. */
@@ -9525,9 +9038,6 @@ export type GetCatalogResponse = {
 							featureOverride?: {
 								creditSchema?: unknown;
 							};
-							entityFeatureId?: string;
-							entitlementId?: string;
-							priceId?: string;
 						}>;
 						removeItems?: Array<{
 							/** Match items linked to this feature. */
@@ -9584,10 +9094,6 @@ export type GetCatalogResponse = {
 						/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 						amount: number;
 					}>;
-					baseCurrency?: string;
-					entitlementId?: string;
-					priceId?: string;
-					stripePriceId?: string;
 				} | null;
 				addItems?: Array<{
 					/** The ID of the feature to configure. */
@@ -9616,7 +9122,6 @@ export type GetCatalogResponse = {
 					};
 					/** Pricing for usage beyond included units. Omit for free features. */
 					price?: {
-						stripePriceId?: unknown;
 						/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 						amount?: number;
 						/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -9681,9 +9186,6 @@ export type GetCatalogResponse = {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 						creditSchema?: Array<unknown | null>;
 					};
-					entityFeatureId?: string;
-					entitlementId?: string;
-					priceId?: string;
 				}>;
 				removeItems?: Array<{
 					/** Match items linked to this feature. */
@@ -9745,10 +9247,6 @@ export type GetCatalogResponse = {
 						/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
 						amount: number;
 					}>;
-					baseCurrency?: string;
-					entitlementId?: string;
-					priceId?: string;
-					stripePriceId?: string;
 				} | null;
 				/** Items to add to the plan. */
 				addItems?: Array<{
@@ -9778,7 +9276,6 @@ export type GetCatalogResponse = {
 					};
 					/** Pricing for usage beyond included units. Omit for free features. */
 					price?: {
-						stripePriceId?: unknown;
 						/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
 						amount?: number;
 						/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
@@ -9843,9 +9340,6 @@ export type GetCatalogResponse = {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 						creditSchema?: Array<unknown | null>;
 					};
-					entityFeatureId?: string;
-					entitlementId?: string;
-					priceId?: string;
 				}>;
 				/** Filters selecting items to remove from the plan. */
 				removeItems?: Array<{
@@ -9874,49 +9368,6 @@ export type GetCatalogResponse = {
 					intervalCount?: number;
 					/** Match items whose grant equals this included usage. Omitted is a wildcard. */
 					included?: number;
-				}>;
-				updateItems?: Array<{
-					/** Filter selecting which existing plan item(s) to update. Same shape as remove_items filters. */
-					filter: {
-						/** Match items linked to this feature. */
-						featureId?: string;
-						/** Match items with this billing method (prepaid or usage_based). */
-						billingMethod?: "prepaid" | "usage_based";
-						/** Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated. */
-						interval?:
-							| "one_off"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year"
-							| "one_off"
-							| "minute"
-							| "hour"
-							| "day"
-							| "week"
-							| "month"
-							| "quarter"
-							| "semi_annual"
-							| "year";
-						/** Match items with this interval_count. Disambiguates between items that share an interval but differ in count. */
-						intervalCount?: number;
-						/** Match items whose grant equals this included usage. Omitted is a wildcard. */
-						included?: number;
-					};
-					/** Override the matched item's included usage / allowance. Existing usage carries forward. */
-					included?: number;
-					/** Override the matched item's reset interval. Use 'one_off' for non-resetting balances. */
-					interval?:
-						| "one_off"
-						| "minute"
-						| "hour"
-						| "day"
-						| "week"
-						| "month"
-						| "quarter"
-						| "semi_annual"
-						| "year";
 				}>;
 				/** Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely. */
 				freeTrial?: {
@@ -10032,10 +9483,6 @@ export type GetCatalogResponse = {
 							intervalCount?: number;
 							/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
 							additionalCurrencies?: Array<unknown | null>;
-							baseCurrency?: string;
-							entitlementId?: string;
-							priceId?: string;
-							stripePriceId?: string;
 						} | null;
 						addItems?: Array<{
 							featureId?: unknown;
@@ -10108,8 +9555,6 @@ export type GetCatalogResponse = {
 						| "year";
 					/** Number of intervals per billing cycle. Defaults to 1. */
 					intervalCount?: number;
-					entitlementId?: string;
-					priceId?: string;
 					/** Display text for showing this price in pricing pages. */
 					display?: {
 						/** Main display text (e.g. '$10' or '100 messages'). */
@@ -10238,29 +9683,11 @@ export type GetCatalogResponse = {
 						/** Number of periods before expiry. */
 						expiryDurationLength?: number;
 					};
-					proration?: {
-						/** How to handle billing when quantity increases mid-cycle. */
-						onIncrease?:
-							| "bill_immediately"
-							| "prorate_immediately"
-							| "prorate_next_cycle"
-							| "bill_next_cycle";
-						/** How to handle credits when quantity decreases mid-cycle. */
-						onDecrease?:
-							| "prorate"
-							| "prorate_immediately"
-							| "prorate_next_cycle"
-							| "none"
-							| "no_prorations";
-					};
 					/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 					featureOverride?: {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 						creditSchema?: Array<unknown | null>;
 					};
-					entityFeatureId?: string;
-					entitlementId?: string;
-					priceId?: string;
 				}>;
 				/** Payment processors this plan is connected to. Omitted when unset. */
 				processors?: {
@@ -10384,7 +9811,6 @@ export type GetCatalogResponse = {
 				/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
 				metadata: Record<string, unknown>;
 				customerEligibility?: {
-					object?: "customer_eligibility";
 					/** Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false. */
 					trialAvailable?: boolean;
 					/** The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation. */
@@ -10400,17 +9826,6 @@ export type GetCatalogResponse = {
 						| "downgrade"
 						| "none"
 						| "purchase";
-					scenario?:
-						| "scheduled"
-						| "active"
-						| "new"
-						| "renew"
-						| "upgrade"
-						| "update_prepaid_quantity"
-						| "downgrade"
-						| "cancel"
-						| "expired"
-						| "past_due";
 				};
 				/** Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from. */
 				baseVariantId: string | null;

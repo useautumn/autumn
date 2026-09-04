@@ -29,6 +29,8 @@ export type CollectionOverlay = Record<FieldPath, FieldOverlay>;
 export type Overlay = {
 	/** Keyed by top-level wire collection: "features", "plans", … */
 	collections: Record<string, CollectionOverlay>;
+	/** Wire names allowed through despite `x-internal` — the ids the CLI must carry. */
+	exposeInternal: string[];
 };
 
 /**
@@ -36,6 +38,7 @@ export type Overlay = {
  * for a fixture that does not exist yet is a guess at a path.
  */
 export const OVERLAY: Overlay = {
+	exposeInternal: ["internal_id"],
 	collections: {
 		features: {
 			event_names: {
@@ -89,3 +92,18 @@ export const isRequiredByOverlay = ({
 	collection: string;
 	path: FieldPath;
 }): boolean => fieldOverlay({ overlay, collection, path })?.required === true;
+
+/** Server-owned unless the overlay names it: `x-internal` is opt-out, so a new
+ * internal field can never leak into a fixture by default. */
+export const isInternalField = ({
+	overlay,
+	wireKey,
+	schema,
+}: {
+	overlay: Overlay;
+	wireKey: string;
+	schema: JsonSchemaLike;
+}): boolean =>
+	schema["x-internal"] === true && !overlay.exposeInternal.includes(wireKey);
+
+type JsonSchemaLike = { [key: string]: unknown };

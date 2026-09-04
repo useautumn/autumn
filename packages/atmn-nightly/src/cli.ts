@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runLogin } from "./actions/login";
+import { runPull } from "./actions/pull";
 import { configSearchDirs, runPush } from "./actions/push";
 import { loadEnvFiles } from "./env/loadEnv";
 import {
@@ -72,8 +73,26 @@ export const buildProgram = (): Command => {
 	withEnvironmentFlags(
 		program
 			.command("pull")
-			.description("write your remote catalog back into autumn.config.ts"),
-	).action(NOT_IMPLEMENTED("3.2"));
+			.description("write your remote catalog back into autumn.config.ts")
+			.option(
+				"--include-mappings",
+				"keep processor mappings in pulled fixtures",
+			),
+	).action(async (options: TargetFlags & { includeMappings?: boolean }) => {
+		// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
+		// the config, so reading them after building the client would never see
+		// them — which is what the "put it in your .env" error message promises.
+		loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+
+		const target = resolveTarget(options);
+		await runPull({
+			client: createClient({
+				secretKey: requireSecretKey({ target }),
+				...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+			}),
+			includeMappings: options.includeMappings === true,
+		});
+	});
 
 	const sandbox = program
 		.command("sandbox")

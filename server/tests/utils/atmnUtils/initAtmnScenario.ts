@@ -30,6 +30,8 @@ type ScenarioSetup = Parameters<typeof initScenario>[0]["setup"];
 export type AtmnScenario = {
 	/** Directory holding autumn.config.ts — the CLI's cwd. */
 	cwd: string;
+	/** Base URL the scenario's client talks to — reuse for any client a test builds itself. */
+	baseUrl: string;
 	/** Rewrite the config between steps. */
 	writeConfig: (source: string) => void;
 	push: (options?: { dryRun?: boolean }) => Promise<{
@@ -82,6 +84,7 @@ export const initAtmnScenario = async ({
 	return {
 		...scenario,
 		cwd,
+		baseUrl,
 		writeConfig,
 		push: async ({ dryRun = false } = {}) => {
 			let output = "";
