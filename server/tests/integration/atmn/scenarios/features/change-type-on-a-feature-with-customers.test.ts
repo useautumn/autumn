@@ -5,17 +5,60 @@
  */
 
 import { expect, test } from "bun:test";
+import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+	atmnConfigSource,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
-test.todo("change type on a feature with customers \u2192 blocked, error surfaced", () => {});
+test.concurrent(
+	`${chalk.yellowBright("atmn scenarios/features: changing a customered feature's type is refused, the type stays put")}`,
+	async () => {
+		const featureId = uniqueTestId("atmn_type_change");
+		const planId = uniqueTestId("atmn_type_change_plan");
+
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+				s.customer(),
+			],
+			config: configBody({
+				features: `\n\t\tfeature({ featureId: "${featureId}", name: "Type Change", type: "metered", consumable: true }),`,
+				plans: `\n\t\tplan({ planId: "${planId}", name: "Type Change Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
+			}),
+		});
+
+		try {
+			await scenario.push();
+			await scenario.attachCustomer({ planId });
+
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: configBody({
+						features: `\n\t\tfeature({ featureId: "${featureId}", name: "Type Change", type: "boolean" }),`,
+						plans: `\n\t\tplan({ planId: "${planId}", name: "Type Change Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
+					}),
+				}),
+			);
+
+			await expect(scenario.push()).rejects.toThrow(
+				/Cannot change type of feature .* because it has been attached to a customer before/,
+			);
+
+			const dbFeatures = await FeatureService.list({
+				db: scenario.ctx.db,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+			});
+			expect(dbFeatures.find((feature) => feature.id === featureId)?.type).toBe(
+				"metered",
+			);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

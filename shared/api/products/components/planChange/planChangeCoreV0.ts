@@ -7,7 +7,8 @@ import { PlanPreviousAttributesV0Schema } from "./planPreviousAttributesV0.js";
 
 /** Before/after for the plan's price. Absent when the price is unchanged. */
 export const PlanPriceChangeV0Schema = z.object({
-	previous: ApiPlanV1Schema.shape.price.meta({
+	// Null when the plan is new: a create has no previous price.
+	previous: ApiPlanV1Schema.shape.price.nullable().meta({
 		description: "The plan's price before the change.",
 	}),
 	current: ApiPlanV1Schema.shape.price.meta({

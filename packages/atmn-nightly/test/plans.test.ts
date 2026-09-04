@@ -37,7 +37,9 @@ test("active rows and history rows become one wire collection with active stampe
 
 test("a draft is a row in plans with explicit active: false", () => {
 	const wire = atmn({
-		plans: [plan({ planId: "pro", versionSlug: "v3", active: false })],
+		plans: [
+			plan({ planId: "pro", name: "Pro", versionSlug: "v3", active: false }),
+		],
 		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
 	}) as any;
 	expect(wire.plans[0].active).toBe(false);
@@ -55,7 +57,9 @@ test("an omitted collection stays omitted", () => {
 
 test("history without plans is refused: it would remove every active version", () => {
 	const issues = issuesOf(() =>
-		atmn({ planVersions: [plan({ planId: "pro", versionSlug: "v1" })] }),
+		atmn({
+			planVersions: [plan({ planId: "pro", name: "Pro", versionSlug: "v1" })],
+		}),
 	);
 	expect(issues).toHaveLength(1);
 	expect(issues[0]?.message).toContain("planVersions needs plans");
@@ -70,6 +74,7 @@ test("a plan item must meter a declared feature, named by breadcrumb", () => {
 			plans: [
 				plan({
 					planId: "pro",
+					name: "Pro",
 					items: [{ featureId: "seats" }, { featureId: "ghost", included: 5 }],
 				}),
 			],
@@ -86,7 +91,11 @@ test("a plan item must meter a declared feature, named by breadcrumb", () => {
 
 test("with features omitted, item references are not checked: absent means not mine", () => {
 	expect(() =>
-		atmn({ plans: [plan({ planId: "pro", items: [{ featureId: "ghost" }] })] }),
+		atmn({
+			plans: [
+				plan({ planId: "pro", name: "Pro", items: [{ featureId: "ghost" }] }),
+			],
+		}),
 	).not.toThrow();
 });
 
@@ -104,6 +113,7 @@ test("a volume-tiered item price must be prepaid", () => {
 			plans: [
 				plan({
 					planId: "pro",
+					name: "Pro",
 					items: [
 						{
 							featureId: "api",
@@ -143,7 +153,7 @@ test("featureOverride is only honoured on classic credit-system features", () =>
 					consumable: true,
 				}),
 			],
-			plans: [plan({ planId: "pro", items })],
+			plans: [plan({ planId: "pro", name: "Pro", items })],
 		}),
 	);
 	expect(withMetered).toEqual([
@@ -163,7 +173,7 @@ test("featureOverride is only honoured on classic credit-system features", () =>
 					type: "credit_system",
 				}),
 			],
-			plans: [plan({ planId: "pro", items })],
+			plans: [plan({ planId: "pro", name: "Pro", items })],
 		}),
 	).not.toThrow();
 });

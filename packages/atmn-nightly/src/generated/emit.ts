@@ -17,6 +17,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"modelMarkups",
 			"defaultMarkup",
 			"providerMarkups",
+			"eventNames",
 			"featureId",
 			"internalId",
 			"archived",
@@ -37,6 +38,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"display",
 			"display.plural",
 			"display.singular",
+			"eventNames",
 			"featureId",
 			"internalId",
 			"modelMarkups",
@@ -53,6 +55,13 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"type",
 		],
 		pull: true,
+		deprecated: [
+			{
+				path: "event_names",
+				reason:
+					"Deprecated on the server, but existing catalogs carry it, so a config must keep round-tripping the field.",
+			},
+		],
 	},
 	plans: {
 		builder: "plan",
@@ -60,7 +69,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		responseIdField: "id",
 		keys: [
 			"planId",
-			"newPlanId",
 			"internalId",
 			"name",
 			"description",
@@ -78,7 +86,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"billingControls",
 			"metadata",
 			"versionSlug",
-			"newVersionSlug",
 			"createInStripe",
 			"variants",
 			"licenses",
@@ -138,6 +145,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"internalId",
 			"isDefault",
 			"items",
+			"items.entityFeatureId",
 			"items.featureId",
 			"items.featureOverride",
 			"items.featureOverride.creditSchema",
@@ -187,6 +195,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"licenses",
 			"licenses.customize",
 			"licenses.customize.addItems",
+			"licenses.customize.addItems.entityFeatureId",
 			"licenses.customize.addItems.featureId",
 			"licenses.customize.addItems.featureOverride",
 			"licenses.customize.addItems.featureOverride.creditSchema",
@@ -239,8 +248,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"licenses.prepaidOnly",
 			"metadata",
 			"name",
-			"newPlanId",
-			"newVersionSlug",
 			"planId",
 			"price",
 			"price.additionalCurrencies",
@@ -267,6 +274,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.baseVariantId",
 			"variants.customize",
 			"variants.customize.addItems",
+			"variants.customize.addItems.entityFeatureId",
 			"variants.customize.addItems.featureId",
 			"variants.customize.addItems.featureOverride",
 			"variants.customize.addItems.featureOverride.creditSchema",
@@ -341,6 +349,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.freeTrial.durationType",
 			"variants.customize.freeTrial.onEnd",
 			"variants.customize.items",
+			"variants.customize.items.entityFeatureId",
 			"variants.customize.items.featureId",
 			"variants.customize.items.featureOverride",
 			"variants.customize.items.featureOverride.creditSchema",
@@ -422,7 +431,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.upsertLicenses.versionSlug",
 			"variants.internalId",
 			"variants.name",
-			"variants.newPlanId",
 			"variants.newVersionSlug",
 			"variants.processors",
 			"variants.processors.revenuecat",
@@ -441,5 +449,33 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		],
 		historyKey: "planVersions",
 		pull: true,
+		deprecated: [
+			{
+				path: "items.entity_feature_id",
+				reason:
+					"Per-entity items are deprecated but existing catalogs carry them, so a config must keep round-tripping the field.",
+			},
+		],
+	},
+};
+
+/** Fixtures nested in a collection item: builder, id field, and where they live. */
+export const NESTED_FIXTURES: Readonly<
+	Record<
+		string,
+		{ builder: string; idField: string; parent: string; path: string }
+	>
+> = {
+	variants: {
+		builder: "variant",
+		idField: "variantPlanId",
+		parent: "plans",
+		path: "variants",
+	},
+	licenses: {
+		builder: "license",
+		idField: "licensePlanId",
+		parent: "plans",
+		path: "licenses",
 	},
 };

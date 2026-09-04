@@ -3,6 +3,7 @@ import { appendToBinding } from "../../surgery/appendToBinding";
 import { appendToCollection } from "../../surgery/appendToCollection";
 import { deleteFixtureLiteral } from "../../surgery/deleteFixtureLiteral";
 import { deleteReference } from "../../surgery/deleteReference";
+import { ensureBuilderImport } from "../../surgery/ensureBuilderImport";
 import { leadingIndentOfLine } from "../../surgery/fixtureEdit";
 import { insertCollection } from "../../surgery/insertCollection";
 import { replaceFixture } from "../../surgery/replaceFixture";
@@ -235,7 +236,15 @@ export const applyPreview = ({
 			});
 			return false;
 		}
-		files.set(resolved.file, updated);
+		// The file now holds an inline literal, so it must import the builder.
+		files.set(
+			resolved.file,
+			ensureBuilderImport({
+				source: updated,
+				builder: spec.builder,
+				collection,
+			}),
+		);
 		result.appended.push(key);
 		result.lines.push(`+ ${key}`);
 		return true;
@@ -260,8 +269,19 @@ export const applyPreview = ({
 			where: constraintsFor(entry),
 		});
 		if (located === null) {
-			// A version the config never had is missing, not unlocatable.
-			if (versioned) {
+			// A literal built from spreads or calls is there but cannot be edited;
+			// only a version the config never had is missing rather than unlocatable.
+			const dynamic = locateFixture({
+				configPath,
+				files,
+				builder: spec.builder,
+				idField: spec.idField,
+				id,
+				internalId: internalIdOf(entry),
+				where: constraintsFor(entry),
+				allowDynamic: true,
+			});
+			if (versioned && dynamic === null) {
 				appendRow({ id, entry });
 				return;
 			}
@@ -277,6 +297,8 @@ export const applyPreview = ({
 			const serverActive = row.active === true;
 			const configActive = configActiveOf({ id, entry });
 			const moves = configActive !== undefined && configActive !== serverActive;
+			// A sibling version only matters when its state changed.
+			if (entry.siblingOf !== undefined && !moves) return;
 			if (moves) {
 				const removed = deleteFixtureLiteral({
 					source: located.source,

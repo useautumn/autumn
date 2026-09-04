@@ -1,5 +1,6 @@
 import { Lang, parse } from "@ast-grep/napi";
 import { type AppendText, appendElementToArray } from "./appendToArray";
+import { findArrayBinding } from "./arrayBinding";
 
 /** Append to `const name = [...]`, exported or not; null when no such array literal exists. */
 export const appendToBinding = ({
@@ -12,10 +13,7 @@ export const appendToBinding = ({
 	text: AppendText;
 }): string | null => {
 	const root = parse(Lang.TypeScript, source).root();
-	const declaration = root.find(`const ${name} = [$$$ITEMS]`);
-	if (declaration === null) return null;
-	// Pre-order: the initializer itself comes before any array nested in it.
-	const array = declaration.find({ rule: { kind: "array" } });
+	const array = findArrayBinding({ root, name });
 	if (array === null) return null;
 	return appendElementToArray({ source, root, array, text });
 };

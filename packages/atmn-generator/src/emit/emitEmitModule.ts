@@ -1,5 +1,6 @@
+import type { NestedFixtureMeta } from "../collections";
 import { schemaPaths } from "../fuzz/schemaPaths";
-import type { Overlay } from "../overlay/overlay";
+import { deprecatedFieldsOf, type Overlay } from "../overlay/overlay";
 import {
 	catalogUpdateSchema,
 	collectionItemSchema,
@@ -29,10 +30,12 @@ export const emitEmitModule = ({
 	spec,
 	overlay,
 	collections,
+	nested,
 }: {
 	spec: OpenApiDocument;
 	overlay: Overlay;
 	collections: Readonly<Record<string, EmittedCollection>>;
+	nested: Readonly<Record<string, NestedFixtureMeta>>;
 }): string => {
 	const allPaths = schemaPaths({
 		schema: catalogUpdateSchema({ spec }),
@@ -65,8 +68,30 @@ export const emitEmitModule = ({
 		if (meta.historyKey !== undefined)
 			lines.push(`\t\thistoryKey: ${JSON.stringify(meta.historyKey)},`);
 		lines.push(`\t\tpull: ${meta.pull},`);
+		lines.push(
+			`\t\tdeprecated: ${JSON.stringify(deprecatedFieldsOf({ overlay, collection: name }))},`,
+		);
 		lines.push("\t},");
 	}
 	lines.push("};");
+	lines.push("");
+	lines.push(
+		"/** Fixtures nested in a collection item: builder, id field, and where they live. */",
+	);
+	lines.push(
+		`export const NESTED_FIXTURES: Readonly<Record<string, { builder: string; idField: string; parent: string; path: string }>> = ${JSON.stringify(
+			Object.fromEntries(
+				Object.entries(nested).map(([name, meta]) => [
+					name,
+					{
+						builder: meta.builder,
+						idField: meta.idField,
+						parent: meta.parent,
+						path: meta.path,
+					},
+				]),
+			),
+		)};`,
+	);
 	return `${lines.join("\n")}\n`;
 };

@@ -33,3 +33,36 @@ export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
 		pull: true,
 	},
 };
+
+/**
+ * Fixtures that live inside a collection item rather than at the top level:
+ * a builder so they can be written in their own file and placed into the
+ * parent's array. The wire is unchanged; the builder is an identity.
+ */
+export type NestedFixtureMeta = {
+	readonly builder: string;
+	readonly typeName: string;
+	/** Fixture field naming one entry. */
+	readonly idField: string;
+	/** The top-level collection holding the parent item. */
+	readonly parent: string;
+	/** The array field on the parent item, item-rooted (overlay paths hang off it). */
+	readonly path: string;
+};
+
+export const NESTED_FIXTURES: Readonly<Record<string, NestedFixtureMeta>> = {
+	variants: {
+		builder: "variant",
+		typeName: "Variant",
+		idField: "variantPlanId",
+		parent: "plans",
+		path: "variants",
+	},
+	licenses: {
+		builder: "license",
+		typeName: "License",
+		idField: "licensePlanId",
+		parent: "plans",
+		path: "licenses",
+	},
+};

@@ -18,15 +18,24 @@ export const emitCollectionModule = ({
 	typeName,
 	schema,
 	overlay,
+	path = "",
 }: {
 	name: string;
 	builder: string;
 	typeName: string;
 	schema: JsonSchema;
 	overlay: Overlay;
+	/** Item-rooted path when the fixture nests inside a collection item. */
+	path?: string;
 }): string =>
 	[
 		GENERATED_HEADER,
-		emitFixtureType({ name: typeName, schema, collection: name, overlay }),
+		emitFixtureType({
+			name: typeName,
+			schema,
+			collection: name,
+			overlay,
+			path,
+		}),
 		`export const ${builder} = (input: ${typeName}): ${typeName} => input;\n`,
 	].join("\n");

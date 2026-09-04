@@ -15,8 +15,15 @@ export const insertCollection = ({
 	if (object === null || object.kind() !== "object") return null;
 
 	const pairs = object.children().filter((child) => child.kind() === "pair");
-	if (pairs.some((pair) => pair.namedChildren()[0]?.text() === collection))
-		return source;
+	const named = object
+		.children()
+		.some((child) =>
+			child.kind() === "pair"
+				? child.namedChildren()[0]?.text() === collection
+				: child.kind() === "shorthand_property_identifier" &&
+					child.text() === collection,
+		);
+	if (named) return source;
 
 	if (pairs.length === 0) {
 		const callLineIndent = leadingIndentOfLine(
@@ -41,6 +48,17 @@ export const insertCollection = ({
 		commaAfter !== -1 && after.slice(0, commaAfter).trim() === "";
 	const insertAt = hasTrailingComma ? lastEnd + commaAfter + 1 : lastEnd;
 	const missingComma = hasTrailingComma ? "" : ",";
+	// A one-line object keeps its shape: the key goes inline after the last pair.
+	const spansLines = object.text().includes("\n");
+	if (!spansLines) {
+		return root.commitEdits([
+			{
+				startPos: insertAt,
+				endPos: insertAt,
+				insertedText: `${missingComma} ${collection}: [],`,
+			},
+		]);
+	}
 	const indent = source.slice(
 		lineStartOf(source, last.range().start.index),
 		last.range().start.index,

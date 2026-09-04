@@ -10,10 +10,18 @@ export const dynamicValueKinds = [
 	"computed_property_name",
 ] as const;
 
+/** An array element naming another fixture (`variants: [proAnnual]`, or
+ * `[...annualVariants]`) is a reference, not a computed value. */
+const isFixtureReference = (element: SgNode): boolean =>
+	element.kind() === "identifier" ||
+	(element.kind() === "spread_element" &&
+		element.namedChildren()[0]?.kind() === "identifier");
+
 export const containsDynamicValue = (node: SgNode): boolean => {
 	if (dynamicValueKinds.some((dynamicKind) => node.kind() === dynamicKind))
 		return true;
 	for (const child of node.children()) {
+		if (node.kind() === "array" && isFixtureReference(child)) continue;
 		if (containsDynamicValue(child)) return true;
 	}
 	return false;
@@ -104,8 +112,11 @@ export const removeArrayElementEdits = ({
 		];
 	}
 	if (hasTrailingComma) {
+		// Inline siblings: take the comma and the spacing before the next one.
+		const afterComma = end + commaIndex + 1;
+		const spacing = /^[ \t]*/.exec(source.slice(afterComma))?.[0].length ?? 0;
 		return [
-			{ startPos: start, endPos: end + commaIndex + 1, insertedText: "" },
+			{ startPos: start, endPos: afterComma + spacing, insertedText: "" },
 		];
 	}
 	const commaBefore = source.lastIndexOf(",", start);

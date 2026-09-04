@@ -145,20 +145,38 @@ export type AtmnConfig = {
 };
 
 /** The document as the server sees it: history rows folded into their collection. */
+/** A declared variant with no customize of its own follows its base: the
+ * server needs the pin stated, so it is derived here, never typed. */
+const followDeclaredVariants = <
+	T extends { variants?: { variantPlanId: string }[] },
+>(
+	row: T,
+): T & { propagate?: { variants: { planId: string }[] } } =>
+	Array.isArray(row.variants) && row.variants.length > 0
+		? {
+				...row,
+				propagate: {
+					variants: row.variants.map((variant) => ({
+						planId: variant.variantPlanId,
+					})),
+				},
+			}
+		: row;
+
 const stated = (config: AtmnConfig): Record<string, unknown> => ({
 	...(config.features !== undefined ? { features: config.features } : {}),
 	...(config.plans !== undefined
 		? {
 				plans: [
-					...config.plans.map((row) => ({
-						...row,
-						active: row.active ?? true,
-					})),
-					...(config.planVersions ?? []).map((row) => ({
-						...row,
-						active: false,
-					})),
+					...config.plans.map((row) =>
+						followDeclaredVariants({ ...row, active: row.active ?? true }),
+					),
+					...(config.planVersions ?? []).map((row) =>
+						followDeclaredVariants({ ...row, active: false }),
+					),
 				],
+				// Absent history is "not mine"; stated history removes the versions it omits.
+				skip_version_deletions: config.planVersions === undefined,
 			}
 		: {}),
 });

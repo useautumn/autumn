@@ -1,16 +1,7 @@
+import { PLAN_PREVIOUS_ATTRIBUTE_LABELS } from "@autumn/shared";
 export type SettingChange = { key: string; label: string; detail: string };
 
-const SETTING_LABELS: Record<string, string> = {
-	name: "Name",
-	description: "Description",
-	group: "Group",
-	add_on: "Add-on",
-	auto_enable: "Default plan",
-	free_trial: "Free trial",
-	config: "Config",
-	billing_controls: "Billing controls",
-	processors: "Stripe mapping",
-};
+const SETTING_LABELS = PLAN_PREVIOUS_ATTRIBUTE_LABELS;
 
 // Derived entirely from the backend preview's previous_attributes — the
 // frontend never diffs plan objects itself. A null previous value means the

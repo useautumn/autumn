@@ -5,17 +5,44 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
+import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-test.todo("draft on a brand-new plan \u2192 server error surfaced verbatim", () => {});
+test.concurrent(
+	"active: false on a plan_id with no prior row is refused, not silently minted",
+	async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: "atmn_versions_new_draft@autumn.test" }),
+			],
+			config: configBody({
+				plans: `
+		plan({
+			planId: "pro",
+			name: "Pro",
+			versionSlug: "v1",
+			active: false,
+			price: { amount: 49, interval: "month" },
+		}),`,
+			}),
+		});
+
+		try {
+			const error = await scenario.push().catch((thrown) => thrown as Error);
+
+			expect(error).toBeInstanceOf(Error);
+			expect((error as Error).message).toContain(
+				"/v1/catalogV2.preview_update failed (400):",
+			);
+			expect((error as Error).message).toContain("Cannot set active to false");
+
+			const catalog = (await scenario.client.get({})) as unknown as {
+				plans: Array<{ id: string }>;
+			};
+			expect(catalog.plans.find((row) => row.id === "pro")).toBeUndefined();
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { COLLECTIONS } from "./collections";
+import { COLLECTIONS, NESTED_FIXTURES } from "./collections";
 import { copyRuntime } from "./emit/copyRuntime";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
 import { emitCollectionModule } from "./emit/emitCollection";
 import { emitEmitModule } from "./emit/emitEmitModule";
+import { emitLabelsModule } from "./emit/emitLabelsModule";
 import { emitWireModule } from "./emit/emitWire";
 import { wirePathHints } from "./emit/freeFormPaths";
 import { emitLintRulesModule } from "./lint/emitLintRules";
@@ -84,6 +85,26 @@ export const generate = async (): Promise<string[]> => {
 		});
 	}
 
+	for (const [name, meta] of Object.entries(NESTED_FIXTURES)) {
+		const parentItem = collectionItemSchema({ spec, collection: meta.parent });
+		const itemSchema = parentItem.properties?.[meta.path]?.items;
+		if (!itemSchema)
+			throw new Error(
+				`\`${meta.parent}.${meta.path}\` is not an array of objects on the catalogV2.update body.`,
+			);
+		write({
+			name: `${name}.ts`,
+			source: emitCollectionModule({
+				name: meta.parent,
+				builder: meta.builder,
+				typeName: meta.typeName,
+				schema: itemSchema,
+				overlay: OVERLAY,
+				path: meta.path,
+			}),
+		});
+	}
+
 	const lintRuntimePath = join(OUTPUT_DIR, "lintRuntime.ts");
 	copyRuntime({
 		from: LINT_RUNTIME_SOURCE,
@@ -106,6 +127,7 @@ export const generate = async (): Promise<string[]> => {
 			spec,
 			overlay: OVERLAY,
 			collections: COLLECTIONS,
+			nested: NESTED_FIXTURES,
 		}),
 	});
 
@@ -127,6 +149,10 @@ export const generate = async (): Promise<string[]> => {
 			}),
 			registry: LINT_REGISTRY,
 		}),
+	});
+	write({
+		name: "labels.ts",
+		source: emitLabelsModule(),
 	});
 
 	write({

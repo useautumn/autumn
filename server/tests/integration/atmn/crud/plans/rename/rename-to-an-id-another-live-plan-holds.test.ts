@@ -8,16 +8,78 @@
 
 import { expect, test } from "bun:test";
 import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+	atmnConfigSource,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 
-test.todo("rename to an id another live plan holds \u2192 refused, error surfaced", () => {});
+const activeInternalId = async ({
+	ctx,
+	planId,
+}: {
+	ctx: AutumnContext;
+	planId: string;
+}): Promise<string> => {
+	const [product] = await ProductService.listFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		inIds: [planId],
+	});
+	if (!product) throw new Error(`No plan row for ${planId}`);
+	return product.internal_id;
+};
+
+test.concurrent(
+	`${chalk.yellowBright("rename to an id another live plan holds → refused, error surfaced")}`,
+	async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: "atmn_rename_collision@autumn.test" }),
+			],
+			config: `{
+	plans: [
+		plan({ planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ planId: "enterprise", name: "Enterprise", price: { amount: 999, interval: "month" } }),
+	],
+}`,
+		});
+
+		try {
+			await scenario.push();
+			const internalId = await activeInternalId({
+				ctx: scenario.ctx,
+				planId: "pro",
+			});
+
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: `{
+	plans: [
+		plan({ planId: "enterprise", internalId: "${internalId}", name: "Pro" }),
+	],
+}`,
+				}),
+			);
+
+			// Decision pending: exact error shape isn't pinned down here, only
+			// that a live id can't be stolen out from under another plan.
+			await expect(scenario.push()).rejects.toThrow();
+
+			// Nothing moved — `pro` is still `pro`, `enterprise` is untouched.
+			expect(
+				await ProductService.getFull({
+					db: scenario.ctx.db,
+					orgId: scenario.ctx.org.id,
+					env: scenario.ctx.env,
+					idOrInternalId: internalId,
+				}),
+			).toEqual(expect.objectContaining({ id: "pro" }));
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

@@ -7,17 +7,108 @@
  */
 
 import { expect, test } from "bun:test";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+	atmnConfigSource,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
+import { ProductService } from "@/internal/products/ProductService.js";
 
-test.todo("renamed base with a nested variant \u2192 variant keeps its own id, attach by the base's old id still resolves", () => {});
+test.concurrent(
+	`${chalk.yellowBright("renamed base with a nested variant → variant keeps its own id, attach by the base's old id still resolves")}`,
+	async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({
+					userEmail: "atmn_rename_base_with_variant@autumn.test",
+				}),
+				s.otherCustomers([
+					{ id: "cus_on_base_old_id", paymentMethod: "success" },
+				]),
+			],
+			config: `{
+	plans: [
+		plan({
+			planId: "base",
+			name: "Base",
+			price: { amount: 49, interval: "month" },
+			variants: [
+				{
+					variantPlanId: "addon",
+					name: "Addon",
+					customize: { price: { amount: 79, interval: "month" } },
+				},
+			],
+		}),
+	],
+}`,
+		});
+
+		try {
+			await scenario.push();
+			const base = await ProductService.getFull({
+				db: scenario.ctx.db,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+				idOrInternalId: "base",
+			});
+			const variantBefore = await ProductService.getFull({
+				db: scenario.ctx.db,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+				idOrInternalId: "addon",
+			});
+
+			// Only the base is renamed. A push is the whole desired catalog
+			// (skip_deletions: false), so the nested variant has to be restated
+			// too — an omitted `variants` array reads as "remove them", not
+			// "leave them alone" — while restating it unchanged leaves the link
+			// itself untouched.
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: `{
+	plans: [
+		plan({
+			planId: "baseNew",
+			internalId: "${base.internal_id}",
+			name: "Base",
+			variants: [
+				{
+					variantPlanId: "addon",
+					name: "Addon",
+					customize: { price: { amount: 79, interval: "month" } },
+				},
+			],
+		}),
+	],
+}`,
+				}),
+			);
+			await scenario.push();
+
+			const variantAfter = await ProductService.getFull({
+				db: scenario.ctx.db,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+				idOrInternalId: "addon",
+			});
+			expect(variantAfter.id).toBe("addon");
+			expect(variantAfter.internal_id).toBe(variantBefore.internal_id);
+			expect(variantAfter.base_internal_product_id).toBe(base.internal_id);
+
+			await scenario.attachCustomer({
+				planId: "base",
+				customerId: "cus_on_base_old_id",
+			});
+			await expectCustomerProducts({
+				customerId: "cus_on_base_old_id",
+				autumn: scenario.autumnV2_3,
+				active: ["baseNew"],
+			});
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

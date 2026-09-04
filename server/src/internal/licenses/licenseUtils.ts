@@ -18,6 +18,9 @@ export const toApiPlanLicenses = (
 			: {}),
 		included: license.included,
 		prepaid_only: license.prepaid_only,
+		...(license.metadata && Object.keys(license.metadata).length > 0
+			? { metadata: license.metadata }
+			: {}),
 	}));
 
 export const getFullLicenseProduct = async ({

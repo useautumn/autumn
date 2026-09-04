@@ -12,6 +12,10 @@ import {
 	backfillInternalIds,
 	identityRowsFromApplied,
 } from "./push/backfillInternalIds";
+import {
+	deprecatedUsesIn,
+	renderDeprecatedUses,
+} from "./push/deprecatedFields";
 
 export type PushResult = {
 	configPath: string;
@@ -53,6 +57,12 @@ export const runPush = async ({
 
 	const { path: configPath, wire } = await loadConfig({ dirs });
 
+	const deprecated = deprecatedUsesIn({
+		wire: wire as Record<string, unknown>,
+	});
+	if (deprecated.length > 0)
+		write(`${renderDeprecatedUses({ uses: deprecated })}\n\n`);
+
 	const preview = (await client.previewUpdate(
 		wire as Record<string, unknown>,
 	)) as CatalogPreview;
@@ -78,10 +88,22 @@ export const runPush = async ({
 
 	write("\nApplied.\n");
 
-	const { backfilled } = backfillInternalIds({
-		rows: identityRowsFromApplied({ applied }),
-		configPath,
-	});
+	// The update response has no variant edges; when the config states any,
+	// the catalog's plan rows (with each variant's resolved plan) fill them in.
+	const statesVariants = (
+		(wire as { plans?: { variants?: unknown[] }[] }).plans ?? []
+	).some((row) => Array.isArray(row.variants) && row.variants.length > 0);
+	const rows = identityRowsFromApplied({ applied });
+	if (statesVariants) {
+		const catalog = (await client.get({
+			include_versions: true,
+		})) as unknown as {
+			plans?: unknown;
+		};
+		if (Array.isArray(catalog.plans))
+			rows.plans = catalog.plans as typeof rows.plans;
+	}
+	const { backfilled } = backfillInternalIds({ rows, configPath });
 	if (backfilled.length > 0) {
 		write(
 			`Wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}.\n`,

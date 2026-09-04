@@ -5,7 +5,9 @@ import {
 } from "../casing/schemaKeyCasing";
 import type { Overlay } from "../overlay/overlay";
 import {
+	fieldOverlay,
 	fixtureNameFor,
+	isDeprecatedByOverlay,
 	isHidden,
 	isInternalField,
 	isRequiredByOverlay,
@@ -96,6 +98,8 @@ export type ObjectMember = {
 	name: string;
 	optional: boolean;
 	description: string | undefined;
+	/** The overlay's reason when the field is kept for existing catalogs only. */
+	deprecated: string | undefined;
 	fieldPath: string;
 	schema: JsonSchema;
 };
@@ -155,6 +159,17 @@ export const objectMembers = ({
 					typeof propertySchema.description === "string"
 						? propertySchema.description.replace(/\s+/g, " ").trim()
 						: undefined,
+				deprecated: isDeprecatedByOverlay({
+					overlay: context.overlay,
+					collection: context.collection,
+					path: fieldPath,
+				})
+					? fieldOverlay({
+							overlay: context.overlay,
+							collection: context.collection,
+							path: fieldPath,
+						})?.reason
+					: undefined,
 				fieldPath,
 				schema: propertySchema,
 			},
@@ -169,8 +184,13 @@ const memberText = ({
 	member: ObjectMember;
 	context: EmitContext;
 }): string => {
-	const description =
-		member.description === undefined ? "" : `/** ${member.description} */\n`;
+	const notes = [
+		...(member.description === undefined ? [] : [member.description]),
+		...(member.deprecated === undefined
+			? []
+			: [`@deprecated ${member.deprecated}`]),
+	];
+	const description = notes.length === 0 ? "" : `/** ${notes.join(" ")} */\n`;
 	const optional = member.optional ? "?" : "";
 	return `${description}${member.name}${optional}: ${typeExpression({
 		schema: member.schema,
@@ -201,14 +221,17 @@ export const emitFixtureType = ({
 	schema,
 	collection,
 	overlay,
+	path = "",
 }: {
 	name: string;
 	schema: JsonSchema;
 	collection: string;
 	overlay: Overlay;
+	/** Item-rooted path of a nested fixture, so overlay entries under it apply. */
+	path?: string;
 }): string =>
 	`export type ${name} = ${typeExpression({
 		schema,
-		path: "",
+		path,
 		context: { overlay, collection },
 	})};\n`;

@@ -5,17 +5,39 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
+import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
+import { ConfigError } from "../../../../../../packages/atmn-nightly/src/generated/lintRuntime";
 
-test.todo("two rows same planId same slug \u2192 lint `unique`, no request", () => {});
+test.concurrent(
+	`${chalk.yellowBright("atmn scenarios/versions: two rows declaring the same planId and versionSlug are rejected locally, no request")}`,
+	async () => {
+		const row = (amount: number): string =>
+			paidMonthly({
+				planId: "pro",
+				amount,
+				extra: `\n\t\t\t\tversionSlug: "v1",`,
+			});
+
+		const scenario = await initAtmnScenario({
+			setup: [s.platform.create({ userEmail: "atmn@autumn.test" })],
+			// Decision pending: same guard as two-absent-slug-rows — the `unique`
+			// lint rule kind exists for featureId already; the plans rule set
+			// doesn't declare a composite (planId, versionSlug) rule yet.
+			config: `{
+	plans: [
+		${row(20)}
+		${row(30)}
+	],
+}`,
+		});
+
+		try {
+			await expect(scenario.push()).rejects.toThrow(ConfigError);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

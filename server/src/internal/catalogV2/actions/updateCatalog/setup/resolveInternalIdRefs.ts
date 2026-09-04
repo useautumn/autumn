@@ -1,8 +1,6 @@
 import {
-	ErrCode,
 	type ProductKey,
 	products,
-	RecaseError,
 	type UpdateCatalogParams,
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
@@ -66,16 +64,7 @@ export const resolveInternalIdRefs = async ({
 		]),
 	);
 
-	// An id nothing owns is a caller bug — minting a fresh row under it would
-	// silently disconnect the config from the row it meant to address.
-	const unknown = internalIds.filter((id) => !refs.has(id));
-	if (unknown.length > 0) {
-		throw new RecaseError({
-			code: ErrCode.InvalidRequest,
-			message: `No plan row exists for internal_id ${unknown.join(", ")}`,
-			statusCode: 400,
-		});
-	}
-
+	// An id nothing owns names a new resource: the entry falls back to its
+	// plan_id, the row is minted fresh, and the config takes the real id back.
 	return refs;
 };
