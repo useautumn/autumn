@@ -77,7 +77,7 @@ export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
 	const data: RateRow[] = useMemo(
 		() =>
 			rows.map((rate, index) => ({
-				id: String(index),
+				id: rate.name || `draft:${JSON.stringify(rate.match)}`,
 				index,
 				label: rowLabel(rate),
 				match: rate.match,

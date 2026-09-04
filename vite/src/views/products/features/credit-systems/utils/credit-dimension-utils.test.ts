@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import type { CreditSchemaItem } from "@autumn/shared";
+import {
+	CREDIT_DIMENSION_NAME_MAX_LENGTH,
+	type CreditSchemaItem,
+} from "@autumn/shared";
 import {
 	dimensionValues,
 	filledRateRows,
@@ -201,5 +204,6 @@ test("collision suffixes keep names within the API limit", () => {
 
 	const names = Object.keys(next.dimensions ?? {});
 	expect(names).toHaveLength(2);
-	for (const name of names) expect(name.length).toBeLessThanOrEqual(64);
+	for (const name of names)
+		expect(name.length).toBeLessThanOrEqual(CREDIT_DIMENSION_NAME_MAX_LENGTH);
 });

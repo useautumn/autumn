@@ -15,7 +15,7 @@ const VIOLATION_MESSAGES: Record<CreditTierViolation["reason"], string> = {
 
 /**
  * The graduated tier ladder rules, in one place: boundaries strictly increase,
- * only the final tier is unbounded, and the final tier must be.
+ * only the final tier may use an "inf" boundary, and the final tier must use one.
  */
 export const findCreditTierViolations = (
 	boundaries: CreditTierBoundary[],

@@ -207,11 +207,21 @@ export const withRenamedField = ({
 			}),
 		});
 
-	return {
+	// Names are derived from the match, so renaming a field renames the rules too.
+	const renamed = {
 		...item,
 		...(item.dimensions ? { dimensions: rename(item.dimensions) } : {}),
 		...(item.multipliers ? { multipliers: rename(item.multipliers) } : {}),
 	};
+
+	const withRates = withRateRules({
+		item: renamed,
+		rules: rateRules(renamed),
+	});
+	return withMultiplierRules({
+		item: withRates,
+		rules: multiplierRules(renamed),
+	});
 };
 
 export const renameDimensionValuesKey = ({
@@ -302,6 +312,10 @@ export const withRateMatch = ({
 
 const specificity = (match: CreditMatch) => Object.keys(match).length;
 
+// Mirrors the server resolver: an omitted priority ranks below an explicit 0.
+const priorityRank = (dimension: CreditDimension) =>
+	dimension.priority ?? Number.NEGATIVE_INFINITY;
+
 const sameMatch = (left: CreditMatch, right: CreditMatch) =>
 	specificity(left) === specificity(right) &&
 	Object.entries(left).every(([key, value]) => right[key] === value);
@@ -321,7 +335,10 @@ export const coveringRule = ({
 		.filter((rule) => covers(rule.dimension.match, match))
 		.sort(
 			(left, right) =>
-				specificity(right.dimension.match) - specificity(left.dimension.match),
+				specificity(right.dimension.match) -
+					specificity(left.dimension.match) ||
+				priorityRank(right.dimension) - priorityRank(left.dimension) ||
+				left.name.localeCompare(right.name),
 		)[0];
 
 export const MAX_FILLED_COMBINATIONS = 100;
@@ -342,16 +359,29 @@ const fullCombinations = (values: DimensionValues): CreditMatch[] => {
 	);
 };
 
+/** Counted from the grid size rather than the grid: a wide product would freeze the editor. */
 export const missingCombinationCount = ({
 	values,
 	rows,
 }: {
 	values: DimensionValues;
 	rows: CreditRateRow[];
-}): number =>
-	fullCombinations(values).filter(
+}): number => {
+	const fields = Object.keys(values).filter(
+		(field) => values[field].length > 0,
+	);
+	if (fields.length === 0) return 0;
+
+	const total = fields.reduce(
+		(product, field) => product * values[field].length,
+		1,
+	);
+	if (total > MAX_FILLED_COMBINATIONS) return total;
+
+	return fullCombinations(values).filter(
 		(match) => !rows.some((row) => sameMatch(row.match, match)),
 	).length;
+};
 
 /**
  * One row per full combination: exact rows stay, combinations under a partial

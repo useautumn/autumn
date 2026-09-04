@@ -106,12 +106,12 @@ export function CreditDimensionFieldTable() {
 	const data: FieldTableRow[] = useMemo(
 		() => [
 			...Object.entries(values).map(([field, fieldValues]) => ({
-				id: field,
+				id: `field:${field}`,
 				field,
 				values: fieldValues,
 			})),
 			...Array.from({ length: unnamedFields }, (_, index) => ({
-				id: `unnamed-${index}`,
+				id: `unnamed:${index}`,
 				field: "",
 				values: [],
 			})),

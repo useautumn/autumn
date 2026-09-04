@@ -6,7 +6,9 @@ import {
 	SelectValue,
 } from "@autumn/ui";
 
-const ANY_VALUE = "__any__";
+// Values are non-empty (the editor rejects blanks), so the empty string is the
+// one sentinel a real dimension value can never collide with.
+const ANY_VALUE = "";
 
 interface CreditDimensionValueSelectProps {
 	values: string[];

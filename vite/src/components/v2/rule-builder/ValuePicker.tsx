@@ -65,6 +65,7 @@ export function ValuePicker({
 											label={opt?.label ?? val}
 											icon={opt?.icon}
 											onRemove={() => onRemove(val)}
+											interactive={false}
 										/>
 									);
 								})}

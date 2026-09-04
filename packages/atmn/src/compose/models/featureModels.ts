@@ -23,7 +23,10 @@ const CreditDimensionNameSchema = z
 
 const CreditMatchSchema = z.record(
 	z.string(),
-	z.union([z.string(), z.number(), z.boolean()]).transform(String),
+	z.codec(z.union([z.string(), z.number(), z.boolean()]), z.string(), {
+		decode: String,
+		encode: (value) => value,
+	}),
 );
 
 const CreditDimensionBaseSchema = z.object({
