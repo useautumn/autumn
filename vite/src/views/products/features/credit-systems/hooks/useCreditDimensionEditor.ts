@@ -9,9 +9,11 @@ import { useMemo, useState } from "react";
 import {
 	type CreditMatch,
 	type CreditMultiplierRule,
+	type CreditRateDraft,
 	type CreditRateRow,
 	coveringRule,
 	createMultiplierRule,
+	createRateDraft,
 	type DimensionValues,
 	dimensionValues,
 	draftsOf,
@@ -60,7 +62,7 @@ export function useCreditDimensionEditor({
 	const [draftValues, setDraftValues] = useState<DimensionValues>(() =>
 		dimensionValues(item),
 	);
-	const [draftRows, setDraftRows] = useState<CreditMatch[]>([]);
+	const [draftRows, setDraftRows] = useState<CreditRateDraft[]>([]);
 	// Unnamed dimension rows have no key to live under yet, so they are counted
 	// separately until they are named. A row with nothing configured starts with
 	// one, since configuring dimensions always begins by naming one.
@@ -139,7 +141,9 @@ export function useCreditDimensionEditor({
 
 	const restrictTo = (allowed: DimensionValues) => {
 		setDraftValues(allowed);
-		setDraftRows(draftRows.filter((match) => isMatchAllowed(match, allowed)));
+		setDraftRows(
+			draftRows.filter((draft) => isMatchAllowed(draft.match, allowed)),
+		);
 		onChange(withAllowedValues({ item, allowed }));
 	};
 
@@ -178,7 +182,7 @@ export function useCreditDimensionEditor({
 			})),
 		removeValue: (field: string, value: string) =>
 			restrictTo({ ...values, [field]: without(values[field], value) }),
-		addRow: () => setDraftRows([...draftRows, {}]),
+		addRow: () => setDraftRows([...draftRows, createRateDraft()]),
 		setRowMatch: (index: number, match: CreditMatch) =>
 			setRows(
 				replaceAt(rows, index, withRateMatch({ row: rows[index], match })),

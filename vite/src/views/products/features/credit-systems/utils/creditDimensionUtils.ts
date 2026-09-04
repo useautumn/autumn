@@ -254,25 +254,40 @@ export const setMatchValue = ({
 };
 
 /** A row of the rates table: a saved rule, or a draft that only has its match so far. */
+/**
+ * A row in the rates table. `key` is its identity for React and the table: rows
+ * are reassembled from the item on every render, and every content-derived id
+ * (index, name, match) collides or changes as the row is edited.
+ */
 export type CreditRateRow = {
+	key: string;
 	name: string;
 	match: CreditMatch;
 	dimension?: CreditDimension;
 };
+
+/** A draft row is only a match until a cost is typed, so it carries its own key. */
+export type CreditRateDraft = { key: string; match: CreditMatch };
+
+export const createRateDraft = (match: CreditMatch = {}): CreditRateDraft => ({
+	key: crypto.randomUUID(),
+	match,
+});
 
 export const rateRowsOf = ({
 	rules,
 	drafts,
 }: {
 	rules: CreditRateRule[];
-	drafts: CreditMatch[];
+	drafts: CreditRateDraft[];
 }): CreditRateRow[] => [
 	...rules.map(({ name, dimension }) => ({
+		key: `rule:${name}`,
 		name,
 		match: dimension.match,
 		dimension,
 	})),
-	...drafts.map((match) => ({ name: "", match })),
+	...drafts.map(({ key, match }) => ({ key, name: "", match })),
 ];
 
 export const rulesOf = (rows: CreditRateRow[]): CreditRateRule[] =>
@@ -280,8 +295,10 @@ export const rulesOf = (rows: CreditRateRow[]): CreditRateRule[] =>
 		row.dimension ? [{ name: row.name, dimension: row.dimension }] : [],
 	);
 
-export const draftsOf = (rows: CreditRateRow[]): CreditMatch[] =>
-	rows.flatMap((row) => (row.dimension ? [] : [row.match]));
+export const draftsOf = (rows: CreditRateRow[]): CreditRateDraft[] =>
+	rows.flatMap((row) =>
+		row.dimension ? [] : [{ key: row.key, match: row.match }],
+	);
 
 export const withRateCredits = ({
 	row,
@@ -290,7 +307,8 @@ export const withRateCredits = ({
 	row: CreditRateRow;
 	credits: number | undefined;
 }): CreditRateRow => {
-	if (credits === undefined) return { name: row.name, match: row.match };
+	if (credits === undefined)
+		return { key: row.key, name: row.name, match: row.match };
 	const dimension =
 		row.dimension?.tier_behavior === "graduated"
 			? row.dimension
@@ -400,8 +418,9 @@ export const filledRateRows = ({
 		const exact = rows.find((row) => sameMatch(row.match, match));
 		if (exact) return exact;
 		const seed = coveringRule({ rules, match });
+		const key = crypto.randomUUID();
 		return seed
-			? { name: "", match, dimension: { ...seed.dimension, match } }
-			: { name: "", match };
+			? { key, name: "", match, dimension: { ...seed.dimension, match } }
+			: { key, name: "", match };
 	});
 };

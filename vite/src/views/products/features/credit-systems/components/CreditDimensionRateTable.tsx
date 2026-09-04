@@ -92,7 +92,7 @@ export function CreditDimensionRateTable() {
 			rows.map((rate, index) => ({
 				// Keyed by match, not name: typing a cost turns a draft into a named
 				// rule, and a changing id would remount the row mid-keystroke.
-				id: JSON.stringify(rate.match),
+				id: rate.key,
 				index,
 				label: rowLabel(rate),
 				match: rate.match,

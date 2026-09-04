@@ -4,7 +4,9 @@ import {
 	type CreditSchemaItem,
 } from "@autumn/shared";
 import {
+	createRateDraft,
 	dimensionValues,
+	draftsOf,
 	filledRateRows,
 	mergeDimensionValues,
 	missingCombinationCount,
@@ -15,6 +17,7 @@ import {
 	withAllowedValues,
 	withMultiplierRules,
 	withoutDimensions,
+	withRateMatch,
 	withRateRules,
 } from "./creditDimensionUtils";
 
@@ -158,12 +161,17 @@ test("missing combinations count the full grid minus rows already there", () => 
 test("filling keeps exact rows, inherits from covering rules, drafts the rest, and folds partial rows away", () => {
 	const filled = filledRateRows({
 		values: { size: ["small", "large"], region: ["eu", "us"] },
-		rows: rateRowsOf({ rules: rateRules(row), drafts: [{ size: "small" }] }),
+		rows: rateRowsOf({
+			rules: rateRules(row),
+			drafts: [createRateDraft({ size: "small" })],
+		}),
 	});
 
-	expect(filled).toEqual([
-		{ name: "", match: { size: "small", region: "eu" } },
-		{ name: "", match: { size: "small", region: "us" } },
+	expect(
+		filled.map(({ name, match, dimension }) => ({ name, match, dimension })),
+	).toEqual([
+		{ name: "", match: { size: "small", region: "eu" }, dimension: undefined },
+		{ name: "", match: { size: "small", region: "us" }, dimension: undefined },
 		{
 			name: "size_large_region_eu",
 			match: { size: "large", region: "eu" },
@@ -175,6 +183,9 @@ test("filling keeps exact rows, inherits from covering rules, drafts the rest, a
 			dimension: { match: { size: "large", region: "us" }, credit_amount: 16 },
 		},
 	]);
+
+	// Every row is independently addressable, even when two share a match.
+	expect(new Set(filled.map((r) => r.key)).size).toBe(filled.length);
 });
 
 test("dropping the last rate that used a value keeps the value in the merged set", () => {
@@ -206,4 +217,24 @@ test("collision suffixes keep names within the API limit", () => {
 	expect(names).toHaveLength(2);
 	for (const name of names)
 		expect(name.length).toBeLessThanOrEqual(CREDIT_DIMENSION_NAME_MAX_LENGTH);
+});
+
+test("two rows with the same match stay independently addressable", () => {
+	const rows = rateRowsOf({
+		rules: [],
+		drafts: [createRateDraft(), createRateDraft()],
+	});
+
+	expect(rows).toHaveLength(2);
+	expect(rows[0].key).not.toBe(rows[1].key);
+
+	// Editing one leaves the other alone, which a match-derived id could not do.
+	const edited = [
+		withRateMatch({ row: rows[0], match: { size: "large" } }),
+		rows[1],
+	];
+	expect(draftsOf(edited).map((draft) => draft.match)).toEqual([
+		{ size: "large" },
+		{},
+	]);
 });

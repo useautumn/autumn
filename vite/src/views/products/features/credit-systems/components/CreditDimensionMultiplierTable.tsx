@@ -78,7 +78,8 @@ export function CreditDimensionMultiplierTable() {
 	const data: MultiplierRow[] = useMemo(
 		() =>
 			multipliers.map((rule, index) => ({
-				id: JSON.stringify(rule.multiplier.match),
+				// Multipliers are saved as typed, so their names are already unique.
+				id: rule.name,
 				index,
 				label: ruleLabel(rule),
 				match: rule.multiplier.match,

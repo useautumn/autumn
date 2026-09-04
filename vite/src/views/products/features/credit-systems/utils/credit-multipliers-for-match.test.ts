@@ -15,7 +15,9 @@ test("a spot multiplier still applies to a dimension that pins spot", () => {
 		match: { size: "large", lifecycle: "spot" },
 	});
 	expect(applied).toHaveLength(1);
-	expect(applyCreditMultipliers({ amount: 12, multipliers: applied })).toBe(3.6);
+	expect(applyCreditMultipliers({ amount: 12, multipliers: applied })).toBe(
+		3.6,
+	);
 });
 
 test("a multiplier on a property the row does not pin is not shown", () => {
