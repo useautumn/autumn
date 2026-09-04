@@ -1,3 +1,4 @@
+import { LATEST_VERSION } from "@autumn/shared";
 import {
 	generateMintlifyDocs,
 	syncSvixTransforms,
@@ -12,14 +13,16 @@ import { generateZodSchemas } from "./utils/zodSchemaGeneration.js";
 async function main() {
 	const paths = resolvePaths();
 
-	const { writeOpenApi_2_3_0, writeOpenApi_2_3_0_Stripped } = await import(
-		"./v2.3/openapi2.3.js"
+	const { writeLatestOpenApi, writeLatestOpenApiStripped } = await import(
+		"./latest/openapi.js"
 	);
 
-	console.log("Generating OpenAPI specs v2.3 (full + stripped)...");
+	console.log(
+		`Generating OpenAPI specs v${LATEST_VERSION} (full + stripped)...`,
+	);
 	await Promise.all([
-		writeOpenApi_2_3_0({ outputFilePath: paths.openApiOutput }),
-		writeOpenApi_2_3_0_Stripped({
+		writeLatestOpenApi({ outputFilePath: paths.openApiOutput }),
+		writeLatestOpenApiStripped({
 			outputFilePath: paths.openApiStrippedOutput,
 		}),
 	]);

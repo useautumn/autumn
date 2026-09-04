@@ -223,7 +223,6 @@ export const ApiPlanV1WithMeta = ApiPlanV1Schema.meta({
 /** ApiPlanV1 plus its license and variant edges. */
 export const ApiPlanExpandedV1Schema = ApiPlanV1Schema.extend({
 	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
-		internal: true,
 		description:
 			"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
 	}),

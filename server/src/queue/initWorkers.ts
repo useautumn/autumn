@@ -102,6 +102,9 @@ const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
 	[JobName.AutoTopUp]: {
 		visibilityTimeoutSeconds: seconds.minutes(2),
 	},
+	[JobName.StripeWebhookReplay]: {
+		visibilityTimeoutSeconds: seconds.minutes(1),
+	},
 };
 
 const getJobOverride = (jobName: string): JobOverride | undefined =>

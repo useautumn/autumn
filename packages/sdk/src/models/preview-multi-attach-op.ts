@@ -305,6 +305,50 @@ export type PreviewMultiAttachRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type PreviewMultiAttachCreditSchema2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type PreviewMultiAttachCreditSchema1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<any>;
+};
+
+export type PreviewMultiAttachCreditSchemaUnion =
+  | PreviewMultiAttachCreditSchema1
+  | PreviewMultiAttachCreditSchema2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type PreviewMultiAttachFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<PreviewMultiAttachCreditSchema1 | PreviewMultiAttachCreditSchema2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -341,6 +385,10 @@ export type PreviewMultiAttachPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: PreviewMultiAttachRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: PreviewMultiAttachFeatureOverride | undefined;
 };
 
 /**
@@ -589,12 +637,12 @@ export type PreviewMultiAttachAnchor = ClosedEnum<
   typeof PreviewMultiAttachAnchor
 >;
 
-export type PreviewMultiAttachProperties = string | number | boolean;
+export type PreviewMultiAttachUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type PreviewMultiAttachFilter = {
+export type PreviewMultiAttachUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -622,7 +670,7 @@ export type PreviewMultiAttachUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: PreviewMultiAttachFilter | undefined;
+  filter?: PreviewMultiAttachUsageLimitFilter | undefined;
 };
 
 /**
@@ -641,6 +689,31 @@ export type PreviewMultiAttachThresholdType = ClosedEnum<
   typeof PreviewMultiAttachThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const PreviewMultiAttachBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type PreviewMultiAttachBasis = ClosedEnum<
+  typeof PreviewMultiAttachBasis
+>;
+
+export type PreviewMultiAttachUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type PreviewMultiAttachUsageAlertFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type PreviewMultiAttachUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -658,6 +731,14 @@ export type PreviewMultiAttachUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: PreviewMultiAttachThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: PreviewMultiAttachBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: PreviewMultiAttachUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1532,6 +1613,144 @@ export function previewMultiAttachRolloverToJSON(
 }
 
 /** @internal */
+export type PreviewMultiAttachCreditSchema2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachCreditSchema2$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachCreditSchema2$Outbound,
+  PreviewMultiAttachCreditSchema2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function previewMultiAttachCreditSchema2ToJSON(
+  previewMultiAttachCreditSchema2: PreviewMultiAttachCreditSchema2,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachCreditSchema2$outboundSchema.parse(
+      previewMultiAttachCreditSchema2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachCreditSchema1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<any>;
+};
+
+/** @internal */
+export const PreviewMultiAttachCreditSchema1$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachCreditSchema1$Outbound,
+  PreviewMultiAttachCreditSchema1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function previewMultiAttachCreditSchema1ToJSON(
+  previewMultiAttachCreditSchema1: PreviewMultiAttachCreditSchema1,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachCreditSchema1$outboundSchema.parse(
+      previewMultiAttachCreditSchema1,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachCreditSchemaUnion$Outbound =
+  | PreviewMultiAttachCreditSchema1$Outbound
+  | PreviewMultiAttachCreditSchema2$Outbound;
+
+/** @internal */
+export const PreviewMultiAttachCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachCreditSchemaUnion$Outbound,
+  PreviewMultiAttachCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => PreviewMultiAttachCreditSchema1$outboundSchema),
+  z.lazy(() => PreviewMultiAttachCreditSchema2$outboundSchema),
+]);
+
+export function previewMultiAttachCreditSchemaUnionToJSON(
+  previewMultiAttachCreditSchemaUnion: PreviewMultiAttachCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachCreditSchemaUnion$outboundSchema.parse(
+      previewMultiAttachCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | PreviewMultiAttachCreditSchema1$Outbound
+      | PreviewMultiAttachCreditSchema2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachFeatureOverride$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachFeatureOverride$Outbound,
+  PreviewMultiAttachFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => PreviewMultiAttachCreditSchema1$outboundSchema),
+      z.lazy(() =>
+        PreviewMultiAttachCreditSchema2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function previewMultiAttachFeatureOverrideToJSON(
+  previewMultiAttachFeatureOverride: PreviewMultiAttachFeatureOverride,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachFeatureOverride$outboundSchema.parse(
+      previewMultiAttachFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -1541,6 +1760,7 @@ export type PreviewMultiAttachPlanItem$Outbound = {
   price?: PreviewMultiAttachPrice$Outbound | undefined;
   proration?: PreviewMultiAttachProration$Outbound | undefined;
   rollover?: PreviewMultiAttachRollover$Outbound | undefined;
+  feature_override?: PreviewMultiAttachFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -1561,10 +1781,14 @@ export const PreviewMultiAttachPlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => PreviewMultiAttachRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => PreviewMultiAttachFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -1882,33 +2106,38 @@ export const PreviewMultiAttachAnchor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiAttachAnchor);
 
 /** @internal */
-export type PreviewMultiAttachProperties$Outbound = string | number | boolean;
+export type PreviewMultiAttachUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
 
 /** @internal */
-export const PreviewMultiAttachProperties$outboundSchema: z.ZodMiniType<
-  PreviewMultiAttachProperties$Outbound,
-  PreviewMultiAttachProperties
-> = smartUnion([z.string(), z.number(), z.boolean()]);
+export const PreviewMultiAttachUsageLimitProperties$outboundSchema:
+  z.ZodMiniType<
+    PreviewMultiAttachUsageLimitProperties$Outbound,
+    PreviewMultiAttachUsageLimitProperties
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function previewMultiAttachPropertiesToJSON(
-  previewMultiAttachProperties: PreviewMultiAttachProperties,
+export function previewMultiAttachUsageLimitPropertiesToJSON(
+  previewMultiAttachUsageLimitProperties:
+    PreviewMultiAttachUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    PreviewMultiAttachProperties$outboundSchema.parse(
-      previewMultiAttachProperties,
+    PreviewMultiAttachUsageLimitProperties$outboundSchema.parse(
+      previewMultiAttachUsageLimitProperties,
     ),
   );
 }
 
 /** @internal */
-export type PreviewMultiAttachFilter$Outbound = {
+export type PreviewMultiAttachUsageLimitFilter$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const PreviewMultiAttachFilter$outboundSchema: z.ZodMiniType<
-  PreviewMultiAttachFilter$Outbound,
-  PreviewMultiAttachFilter
+export const PreviewMultiAttachUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachUsageLimitFilter$Outbound,
+  PreviewMultiAttachUsageLimitFilter
 > = z.object({
   properties: z.record(
     z.string(),
@@ -1916,11 +2145,13 @@ export const PreviewMultiAttachFilter$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function previewMultiAttachFilterToJSON(
-  previewMultiAttachFilter: PreviewMultiAttachFilter,
+export function previewMultiAttachUsageLimitFilterToJSON(
+  previewMultiAttachUsageLimitFilter: PreviewMultiAttachUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    PreviewMultiAttachFilter$outboundSchema.parse(previewMultiAttachFilter),
+    PreviewMultiAttachUsageLimitFilter$outboundSchema.parse(
+      previewMultiAttachUsageLimitFilter,
+    ),
   );
 }
 
@@ -1931,7 +2162,7 @@ export type PreviewMultiAttachUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: PreviewMultiAttachFilter$Outbound | undefined;
+  filter?: PreviewMultiAttachUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -1945,7 +2176,9 @@ export const PreviewMultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: PreviewMultiAttachEntityDataInterval$outboundSchema,
     anchor: z.optional(PreviewMultiAttachAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => PreviewMultiAttachFilter$outboundSchema)),
+    filter: z.optional(
+      z.lazy(() => PreviewMultiAttachUsageLimitFilter$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1970,11 +2203,68 @@ export const PreviewMultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiAttachThresholdType);
 
 /** @internal */
+export const PreviewMultiAttachBasis$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachBasis
+> = z.enum(PreviewMultiAttachBasis);
+
+/** @internal */
+export type PreviewMultiAttachUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewMultiAttachUsageAlertProperties$outboundSchema:
+  z.ZodMiniType<
+    PreviewMultiAttachUsageAlertProperties$Outbound,
+    PreviewMultiAttachUsageAlertProperties
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewMultiAttachUsageAlertPropertiesToJSON(
+  previewMultiAttachUsageAlertProperties:
+    PreviewMultiAttachUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachUsageAlertProperties$outboundSchema.parse(
+      previewMultiAttachUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const PreviewMultiAttachUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachUsageAlertFilter$Outbound,
+  PreviewMultiAttachUsageAlertFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function previewMultiAttachUsageAlertFilterToJSON(
+  previewMultiAttachUsageAlertFilter: PreviewMultiAttachUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachUsageAlertFilter$outboundSchema.parse(
+      previewMultiAttachUsageAlertFilter,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: PreviewMultiAttachUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -1988,6 +2278,10 @@ export const PreviewMultiAttachUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: PreviewMultiAttachThresholdType$outboundSchema,
+    basis: z._default(PreviewMultiAttachBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => PreviewMultiAttachUsageAlertFilter$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {

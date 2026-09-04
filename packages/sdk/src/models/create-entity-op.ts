@@ -90,12 +90,12 @@ export type CreateEntityAnchorRequestBody = ClosedEnum<
   typeof CreateEntityAnchorRequestBody
 >;
 
-export type CreateEntityProperties = string | number | boolean;
+export type CreateEntityUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type CreateEntityFilterRequestBody = {
+export type CreateEntityUsageLimitFilterRequestBody = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -123,7 +123,7 @@ export type CreateEntityUsageLimitRequestBody = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: CreateEntityFilterRequestBody | undefined;
+  filter?: CreateEntityUsageLimitFilterRequestBody | undefined;
 };
 
 /**
@@ -142,6 +142,31 @@ export type CreateEntityThresholdTypeRequestBody = ClosedEnum<
   typeof CreateEntityThresholdTypeRequestBody
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const CreateEntityBasisRequestBody = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type CreateEntityBasisRequestBody = ClosedEnum<
+  typeof CreateEntityBasisRequestBody
+>;
+
+export type CreateEntityUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type CreateEntityUsageAlertFilterRequestBody = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type CreateEntityUsageAlertRequestBody = {
   /**
    * The feature ID this alert applies to.
@@ -159,6 +184,14 @@ export type CreateEntityUsageAlertRequestBody = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: CreateEntityThresholdTypeRequestBody;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: CreateEntityBasisRequestBody | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: CreateEntityUsageAlertFilterRequestBody | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -661,7 +694,7 @@ export type CreateEntityAnchorResponse = OpenEnum<
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type CreateEntityFilterResponse = {
+export type CreateEntityUsageLimitFilterResponse = {
   properties: { [k: string]: string };
 };
 
@@ -703,7 +736,7 @@ export type CreateEntityUsageLimitResponse = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: CreateEntityFilterResponse | undefined;
+  filter?: CreateEntityUsageLimitFilterResponse | undefined;
   /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
@@ -729,6 +762,29 @@ export const CreateEntityThresholdTypeResponse = {
 export type CreateEntityThresholdTypeResponse = OpenEnum<
   typeof CreateEntityThresholdTypeResponse
 >;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const CreateEntityBasisResponse = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type CreateEntityBasisResponse = OpenEnum<
+  typeof CreateEntityBasisResponse
+>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type CreateEntityUsageAlertFilterResponse = {
+  properties: { [k: string]: string };
+};
 
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
@@ -761,6 +817,14 @@ export type CreateEntityUsageAlertResponse = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: CreateEntityThresholdTypeResponse;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: CreateEntityBasisResponse;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: CreateEntityUsageAlertFilterResponse | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -970,44 +1034,51 @@ export const CreateEntityAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateEntityAnchorRequestBody);
 
 /** @internal */
-export type CreateEntityProperties$Outbound = string | number | boolean;
+export type CreateEntityUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
 
 /** @internal */
-export const CreateEntityProperties$outboundSchema: z.ZodMiniType<
-  CreateEntityProperties$Outbound,
-  CreateEntityProperties
+export const CreateEntityUsageLimitProperties$outboundSchema: z.ZodMiniType<
+  CreateEntityUsageLimitProperties$Outbound,
+  CreateEntityUsageLimitProperties
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function createEntityPropertiesToJSON(
-  createEntityProperties: CreateEntityProperties,
+export function createEntityUsageLimitPropertiesToJSON(
+  createEntityUsageLimitProperties: CreateEntityUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    CreateEntityProperties$outboundSchema.parse(createEntityProperties),
+    CreateEntityUsageLimitProperties$outboundSchema.parse(
+      createEntityUsageLimitProperties,
+    ),
   );
 }
 
 /** @internal */
-export type CreateEntityFilterRequestBody$Outbound = {
+export type CreateEntityUsageLimitFilterRequestBody$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const CreateEntityFilterRequestBody$outboundSchema: z.ZodMiniType<
-  CreateEntityFilterRequestBody$Outbound,
-  CreateEntityFilterRequestBody
-> = z.object({
-  properties: z.record(
-    z.string(),
-    smartUnion([z.string(), z.number(), z.boolean()]),
-  ),
-});
+export const CreateEntityUsageLimitFilterRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreateEntityUsageLimitFilterRequestBody$Outbound,
+    CreateEntityUsageLimitFilterRequestBody
+  > = z.object({
+    properties: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+  });
 
-export function createEntityFilterRequestBodyToJSON(
-  createEntityFilterRequestBody: CreateEntityFilterRequestBody,
+export function createEntityUsageLimitFilterRequestBodyToJSON(
+  createEntityUsageLimitFilterRequestBody:
+    CreateEntityUsageLimitFilterRequestBody,
 ): string {
   return JSON.stringify(
-    CreateEntityFilterRequestBody$outboundSchema.parse(
-      createEntityFilterRequestBody,
+    CreateEntityUsageLimitFilterRequestBody$outboundSchema.parse(
+      createEntityUsageLimitFilterRequestBody,
     ),
   );
 }
@@ -1019,7 +1090,7 @@ export type CreateEntityUsageLimitRequestBody$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: CreateEntityFilterRequestBody$Outbound | undefined;
+  filter?: CreateEntityUsageLimitFilterRequestBody$Outbound | undefined;
 };
 
 /** @internal */
@@ -1034,7 +1105,7 @@ export const CreateEntityUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
     interval: CreateEntityIntervalRequestBody$outboundSchema,
     anchor: z.optional(CreateEntityAnchorRequestBody$outboundSchema),
     filter: z.optional(
-      z.lazy(() => CreateEntityFilterRequestBody$outboundSchema),
+      z.lazy(() => CreateEntityUsageLimitFilterRequestBody$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -1060,11 +1131,68 @@ export const CreateEntityThresholdTypeRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateEntityThresholdTypeRequestBody);
 
 /** @internal */
+export const CreateEntityBasisRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof CreateEntityBasisRequestBody
+> = z.enum(CreateEntityBasisRequestBody);
+
+/** @internal */
+export type CreateEntityUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateEntityUsageAlertProperties$outboundSchema: z.ZodMiniType<
+  CreateEntityUsageAlertProperties$Outbound,
+  CreateEntityUsageAlertProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createEntityUsageAlertPropertiesToJSON(
+  createEntityUsageAlertProperties: CreateEntityUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    CreateEntityUsageAlertProperties$outboundSchema.parse(
+      createEntityUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateEntityUsageAlertFilterRequestBody$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const CreateEntityUsageAlertFilterRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreateEntityUsageAlertFilterRequestBody$Outbound,
+    CreateEntityUsageAlertFilterRequestBody
+  > = z.object({
+    properties: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+  });
+
+export function createEntityUsageAlertFilterRequestBodyToJSON(
+  createEntityUsageAlertFilterRequestBody:
+    CreateEntityUsageAlertFilterRequestBody,
+): string {
+  return JSON.stringify(
+    CreateEntityUsageAlertFilterRequestBody$outboundSchema.parse(
+      createEntityUsageAlertFilterRequestBody,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateEntityUsageAlertRequestBody$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: CreateEntityUsageAlertFilterRequestBody$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -1078,6 +1206,10 @@ export const CreateEntityUsageAlertRequestBody$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: CreateEntityThresholdTypeRequestBody$outboundSchema,
+    basis: z._default(CreateEntityBasisRequestBody$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => CreateEntityUsageAlertFilterRequestBody$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -1750,20 +1882,21 @@ export const CreateEntityAnchorResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreateEntityAnchorResponse);
 
 /** @internal */
-export const CreateEntityFilterResponse$inboundSchema: z.ZodMiniType<
-  CreateEntityFilterResponse,
+export const CreateEntityUsageLimitFilterResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityUsageLimitFilterResponse,
   unknown
 > = z.object({
   properties: z.record(z.string(), types.string()),
 });
 
-export function createEntityFilterResponseFromJSON(
+export function createEntityUsageLimitFilterResponseFromJSON(
   jsonString: string,
-): SafeParseResult<CreateEntityFilterResponse, SDKValidationError> {
+): SafeParseResult<CreateEntityUsageLimitFilterResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CreateEntityFilterResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreateEntityFilterResponse' from JSON`,
+    (x) =>
+      CreateEntityUsageLimitFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityUsageLimitFilterResponse' from JSON`,
   );
 }
 
@@ -1785,7 +1918,7 @@ export const CreateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
     interval: CreateEntityIntervalResponse$inboundSchema,
     anchor: types.optional(CreateEntityAnchorResponse$inboundSchema),
     filter: types.optional(
-      z.lazy(() => CreateEntityFilterResponse$inboundSchema),
+      z.lazy(() => CreateEntityUsageLimitFilterResponse$inboundSchema),
     ),
     usage: types.optional(types.number()),
     source: types.optional(CreateEntityUsageLimitSource$inboundSchema),
@@ -1814,6 +1947,31 @@ export const CreateEntityThresholdTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreateEntityThresholdTypeResponse);
 
 /** @internal */
+export const CreateEntityBasisResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityBasisResponse,
+  unknown
+> = openEnums.inboundSchema(CreateEntityBasisResponse);
+
+/** @internal */
+export const CreateEntityUsageAlertFilterResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityUsageAlertFilterResponse,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function createEntityUsageAlertFilterResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityUsageAlertFilterResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateEntityUsageAlertFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityUsageAlertFilterResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateEntityUsageAlertSource$inboundSchema: z.ZodMiniType<
   CreateEntityUsageAlertSource,
   unknown
@@ -1829,6 +1987,10 @@ export const CreateEntityUsageAlertResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     threshold: types.number(),
     threshold_type: CreateEntityThresholdTypeResponse$inboundSchema,
+    basis: z._default(CreateEntityBasisResponse$inboundSchema, "balance"),
+    filter: types.optional(
+      z.lazy(() => CreateEntityUsageAlertFilterResponse$inboundSchema),
+    ),
     name: types.optional(types.string()),
     source: types.optional(CreateEntityUsageAlertSource$inboundSchema),
   }),

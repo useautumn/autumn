@@ -9,9 +9,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -25,7 +26,7 @@ class BillingUpdateGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -323,7 +324,7 @@ class BillingUpdateItemTierAdditionalCurrency(BaseModel):
         return m
 
 
-class BillingUpdateItemTierTypedDict(TypedDict):
+class BillingUpdateItemPriceTierTypedDict(TypedDict):
     to: BillingUpdateItemToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
@@ -333,7 +334,7 @@ class BillingUpdateItemTierTypedDict(TypedDict):
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class BillingUpdateItemTier(BaseModel):
+class BillingUpdateItemPriceTier(BaseModel):
     to: BillingUpdateItemTo
 
     amount: Optional[float] = None
@@ -399,7 +400,7 @@ class BillingUpdateItemPriceTypedDict(TypedDict):
         List[BillingUpdateItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[BillingUpdateItemTierTypedDict]]
+    tiers: NotRequired[List[BillingUpdateItemPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[BillingUpdateItemTierBehavior]
     interval_count: NotRequired[float]
@@ -425,7 +426,7 @@ class BillingUpdateItemPrice(BaseModel):
     additional_currencies: Optional[List[BillingUpdateItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[BillingUpdateItemTier]] = None
+    tiers: Optional[List[BillingUpdateItemPriceTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[BillingUpdateItemTierBehavior] = None
@@ -565,6 +566,157 @@ class BillingUpdateItemRollover(BaseModel):
         return m
 
 
+class BillingUpdateCreditSchemaItem2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class BillingUpdateCreditSchemaItem2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class BillingUpdateItemFeatureOverrideTierTypedDict(TypedDict):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+    to: NotRequired[Any]
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class BillingUpdateItemFeatureOverrideTier(BaseModel):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+    to: Optional[Any] = None
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["to"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class BillingUpdateCreditSchemaItem1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[BillingUpdateItemFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class BillingUpdateCreditSchemaItem1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[BillingUpdateItemFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+BillingUpdateItemCreditSchemaUnionTypedDict = TypeAliasType(
+    "BillingUpdateItemCreditSchemaUnionTypedDict",
+    Union[
+        BillingUpdateCreditSchemaItem2TypedDict, BillingUpdateCreditSchemaItem1TypedDict
+    ],
+)
+
+
+BillingUpdateItemCreditSchemaUnion = TypeAliasType(
+    "BillingUpdateItemCreditSchemaUnion",
+    Union[BillingUpdateCreditSchemaItem2, BillingUpdateCreditSchemaItem1],
+)
+
+
+class BillingUpdateItemFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[BillingUpdateItemCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class BillingUpdateItemFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[BillingUpdateItemCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class BillingUpdateItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -584,6 +736,8 @@ class BillingUpdateItemPlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[BillingUpdateItemRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[BillingUpdateItemFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class BillingUpdateItemPlanItem(BaseModel):
@@ -613,6 +767,9 @@ class BillingUpdateItemPlanItem(BaseModel):
     rollover: Optional[BillingUpdateItemRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[BillingUpdateItemFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -624,6 +781,7 @@ class BillingUpdateItemPlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -748,7 +906,7 @@ class BillingUpdateAddItemTierAdditionalCurrency(BaseModel):
         return m
 
 
-class BillingUpdateAddItemTierTypedDict(TypedDict):
+class BillingUpdateAddItemPriceTierTypedDict(TypedDict):
     to: BillingUpdateAddItemToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
@@ -758,7 +916,7 @@ class BillingUpdateAddItemTierTypedDict(TypedDict):
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class BillingUpdateAddItemTier(BaseModel):
+class BillingUpdateAddItemPriceTier(BaseModel):
     to: BillingUpdateAddItemTo
 
     amount: Optional[float] = None
@@ -824,7 +982,7 @@ class BillingUpdateAddItemPriceTypedDict(TypedDict):
         List[BillingUpdateAddItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[BillingUpdateAddItemTierTypedDict]]
+    tiers: NotRequired[List[BillingUpdateAddItemPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[BillingUpdateAddItemTierBehavior]
     interval_count: NotRequired[float]
@@ -850,7 +1008,7 @@ class BillingUpdateAddItemPrice(BaseModel):
     additional_currencies: Optional[List[BillingUpdateAddItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[BillingUpdateAddItemTier]] = None
+    tiers: Optional[List[BillingUpdateAddItemPriceTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[BillingUpdateAddItemTierBehavior] = None
@@ -990,6 +1148,158 @@ class BillingUpdateAddItemRollover(BaseModel):
         return m
 
 
+class BillingUpdateCreditSchemaAddItem2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class BillingUpdateCreditSchemaAddItem2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class BillingUpdateAddItemFeatureOverrideTierTypedDict(TypedDict):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+    to: NotRequired[Any]
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class BillingUpdateAddItemFeatureOverrideTier(BaseModel):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+    to: Optional[Any] = None
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["to"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class BillingUpdateCreditSchemaAddItem1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[BillingUpdateAddItemFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class BillingUpdateCreditSchemaAddItem1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[BillingUpdateAddItemFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+BillingUpdateAddItemCreditSchemaUnionTypedDict = TypeAliasType(
+    "BillingUpdateAddItemCreditSchemaUnionTypedDict",
+    Union[
+        BillingUpdateCreditSchemaAddItem2TypedDict,
+        BillingUpdateCreditSchemaAddItem1TypedDict,
+    ],
+)
+
+
+BillingUpdateAddItemCreditSchemaUnion = TypeAliasType(
+    "BillingUpdateAddItemCreditSchemaUnion",
+    Union[BillingUpdateCreditSchemaAddItem2, BillingUpdateCreditSchemaAddItem1],
+)
+
+
+class BillingUpdateAddItemFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[BillingUpdateAddItemCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class BillingUpdateAddItemFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[BillingUpdateAddItemCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class BillingUpdateAddItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -1009,6 +1319,8 @@ class BillingUpdateAddItemPlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[BillingUpdateAddItemRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[BillingUpdateAddItemFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class BillingUpdateAddItemPlanItem(BaseModel):
@@ -1038,6 +1350,9 @@ class BillingUpdateAddItemPlanItem(BaseModel):
     rollover: Optional[BillingUpdateAddItemRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[BillingUpdateAddItemFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1049,6 +1364,7 @@ class BillingUpdateAddItemPlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -1403,26 +1719,26 @@ BillingUpdateAnchor = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-BillingUpdatePropertiesTypedDict = TypeAliasType(
-    "BillingUpdatePropertiesTypedDict", Union[str, float, bool]
+BillingUpdateUsageLimitPropertiesTypedDict = TypeAliasType(
+    "BillingUpdateUsageLimitPropertiesTypedDict", Union[str, float, bool]
 )
 
 
-BillingUpdateProperties = TypeAliasType(
-    "BillingUpdateProperties", Union[str, float, bool]
+BillingUpdateUsageLimitProperties = TypeAliasType(
+    "BillingUpdateUsageLimitProperties", Union[str, float, bool]
 )
 
 
-class BillingUpdateFilterTypedDict(TypedDict):
+class BillingUpdateUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, BillingUpdatePropertiesTypedDict]
+    properties: Dict[str, BillingUpdateUsageLimitPropertiesTypedDict]
 
 
-class BillingUpdateFilter(BaseModel):
+class BillingUpdateUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, BillingUpdateProperties]
+    properties: Dict[str, BillingUpdateUsageLimitProperties]
 
 
 class BillingUpdateUsageLimitTypedDict(TypedDict):
@@ -1436,7 +1752,7 @@ class BillingUpdateUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[BillingUpdateAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[BillingUpdateFilterTypedDict]
+    filter_: NotRequired[BillingUpdateUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -1457,7 +1773,7 @@ class BillingUpdateUsageLimit(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[BillingUpdateFilter], pydantic.Field(alias="filter")
+        Optional[BillingUpdateUsageLimitFilter], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1487,6 +1803,37 @@ BillingUpdateThresholdType = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+BillingUpdateBasis = Literal[
+    "balance",
+    "included",
+    "recurring",
+    "usage_limit",
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+BillingUpdateUsageAlertPropertiesTypedDict = TypeAliasType(
+    "BillingUpdateUsageAlertPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+BillingUpdateUsageAlertProperties = TypeAliasType(
+    "BillingUpdateUsageAlertProperties", Union[str, float, bool]
+)
+
+
+class BillingUpdateUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, BillingUpdateUsageAlertPropertiesTypedDict]
+
+
+class BillingUpdateUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, BillingUpdateUsageAlertProperties]
+
+
 class BillingUpdateUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -1496,6 +1843,10 @@ class BillingUpdateUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[BillingUpdateBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[BillingUpdateUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -1513,12 +1864,20 @@ class BillingUpdateUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[BillingUpdateBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[BillingUpdateUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -2001,6 +2360,120 @@ class BillingUpdateUpsertLicenseRollover(BaseModel):
         return m
 
 
+class BillingUpdateCreditSchemaUpsertLicense2TypedDict(TypedDict):
+    metered_feature_id: NotRequired[Any]
+    billing_units: NotRequired[Any]
+    credit_cost: NotRequired[Any]
+
+
+class BillingUpdateCreditSchemaUpsertLicense2(BaseModel):
+    metered_feature_id: Optional[Any] = None
+
+    billing_units: Optional[Any] = None
+
+    credit_cost: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["metered_feature_id", "billing_units", "credit_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class BillingUpdateCreditSchemaUpsertLicense1TypedDict(TypedDict):
+    metered_feature_id: NotRequired[Any]
+    billing_units: NotRequired[Any]
+    tier_behavior: NotRequired[Any]
+    tiers: NotRequired[Any]
+
+
+class BillingUpdateCreditSchemaUpsertLicense1(BaseModel):
+    metered_feature_id: Optional[Any] = None
+
+    billing_units: Optional[Any] = None
+
+    tier_behavior: Optional[Any] = None
+
+    tiers: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["metered_feature_id", "billing_units", "tier_behavior", "tiers"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+BillingUpdateUpsertLicenseCreditSchemaUnionTypedDict = TypeAliasType(
+    "BillingUpdateUpsertLicenseCreditSchemaUnionTypedDict",
+    Union[
+        BillingUpdateCreditSchemaUpsertLicense2TypedDict,
+        BillingUpdateCreditSchemaUpsertLicense1TypedDict,
+    ],
+)
+
+
+BillingUpdateUpsertLicenseCreditSchemaUnion = TypeAliasType(
+    "BillingUpdateUpsertLicenseCreditSchemaUnion",
+    Union[
+        BillingUpdateCreditSchemaUpsertLicense2, BillingUpdateCreditSchemaUpsertLicense1
+    ],
+)
+
+
+class BillingUpdateUpsertLicenseFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[
+        List[BillingUpdateUpsertLicenseCreditSchemaUnionTypedDict]
+    ]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class BillingUpdateUpsertLicenseFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[BillingUpdateUpsertLicenseCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class BillingUpdateUpsertLicensePlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -2020,6 +2493,8 @@ class BillingUpdateUpsertLicensePlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[BillingUpdateUpsertLicenseRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[BillingUpdateUpsertLicenseFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class BillingUpdateUpsertLicensePlanItem(BaseModel):
@@ -2049,6 +2524,9 @@ class BillingUpdateUpsertLicensePlanItem(BaseModel):
     rollover: Optional[BillingUpdateUpsertLicenseRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[BillingUpdateUpsertLicenseFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -2060,6 +2538,7 @@ class BillingUpdateUpsertLicensePlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -2219,6 +2698,7 @@ class BillingUpdateUpsertLicenseCustomize(BaseModel):
 
 class BillingUpdateUpsertLicenseTypedDict(TypedDict):
     license_plan_id: str
+    version_slug: NotRequired[str]
     included: NotRequired[int]
     prepaid_only: NotRequired[bool]
     customize: NotRequired[Nullable[BillingUpdateUpsertLicenseCustomizeTypedDict]]
@@ -2227,6 +2707,8 @@ class BillingUpdateUpsertLicenseTypedDict(TypedDict):
 
 class BillingUpdateUpsertLicense(BaseModel):
     license_plan_id: str
+
+    version_slug: Optional[str] = None
 
     included: Optional[int] = None
 
@@ -2238,7 +2720,9 @@ class BillingUpdateUpsertLicense(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["included", "prepaid_only", "customize", "metadata"])
+        optional_fields = set(
+            ["version_slug", "included", "prepaid_only", "customize", "metadata"]
+        )
         nullable_fields = set(["customize"])
         serialized = handler(self)
         m = {}
@@ -2844,6 +3328,18 @@ class BillingUpdateResponse(BaseModel):
 
 
 try:
+    BillingUpdateCreditSchemaItem1.model_rebuild()
+except NameError:
+    pass
+try:
+    BillingUpdateCreditSchemaAddItem1.model_rebuild()
+except NameError:
+    pass
+try:
     BillingUpdateUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    BillingUpdateUsageAlert.model_rebuild()
 except NameError:
     pass

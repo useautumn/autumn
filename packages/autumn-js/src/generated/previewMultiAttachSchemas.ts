@@ -35,6 +35,38 @@ export const previewMultiAttachTierSchema = z.object({
 		.optional(),
 });
 
+export const previewMultiAttachCreditSchema2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const previewMultiAttachCreditSchema1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(z.any()),
+});
+
+export const previewMultiAttachCreditSchemaUnionSchema = z.union([
+	previewMultiAttachCreditSchema1Schema,
+	previewMultiAttachCreditSchema2Schema,
+]);
+
+export const previewMultiAttachFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					previewMultiAttachCreditSchema1Schema,
+					previewMultiAttachCreditSchema2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const previewMultiAttachPlanFeatureQuantitySchema = z.object({
 	featureId: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
@@ -54,13 +86,26 @@ export const previewMultiAttachAttachDiscountSchema = z.object({
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const previewMultiAttachPropertiesSchema = z.union([
+export const previewMultiAttachUsageLimitPropertiesSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const previewMultiAttachFilterSchema = z.object({
+export const previewMultiAttachUsageLimitFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
+export const previewMultiAttachUsageAlertPropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const previewMultiAttachUsageAlertFilterSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -246,6 +291,38 @@ export const previewMultiAttachRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachCreditSchema2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const previewMultiAttachCreditSchema1OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(z.any()),
+});
+
+export const previewMultiAttachCreditSchemaUnionOutboundSchema = z.union([
+	previewMultiAttachCreditSchema1OutboundSchema,
+	previewMultiAttachCreditSchema2OutboundSchema,
+]);
+
+export const previewMultiAttachFeatureOverrideOutboundSchema = z.object({
+	credit_schema: z
+		.union([
+			z.array(
+				z.union([
+					previewMultiAttachCreditSchema1OutboundSchema,
+					previewMultiAttachCreditSchema2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const previewMultiAttachPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -262,6 +339,9 @@ export const previewMultiAttachPlanItemOutboundSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([previewMultiAttachRolloverOutboundSchema, z.undefined()])
+		.optional(),
+	feature_override: z
+		.union([previewMultiAttachFeatureOverrideOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -325,13 +405,13 @@ export const previewMultiAttachSpendLimitOutboundSchema = z.object({
 	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const previewMultiAttachPropertiesOutboundSchema = z.union([
+export const previewMultiAttachUsageLimitPropertiesOutboundSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const previewMultiAttachFilterOutboundSchema = z.object({
+export const previewMultiAttachUsageLimitFilterOutboundSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -345,8 +425,21 @@ export const previewMultiAttachUsageLimitOutboundSchema = z.object({
 	interval: z.string(),
 	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z
-		.union([previewMultiAttachFilterOutboundSchema, z.undefined()])
+		.union([previewMultiAttachUsageLimitFilterOutboundSchema, z.undefined()])
 		.optional(),
+});
+
+export const previewMultiAttachUsageAlertPropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const previewMultiAttachUsageAlertFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const previewMultiAttachUsageAlertOutboundSchema = z.object({
@@ -354,6 +447,10 @@ export const previewMultiAttachUsageAlertOutboundSchema = z.object({
 	enabled: z.boolean(),
 	threshold: z.number(),
 	threshold_type: z.string(),
+	basis: z.string(),
+	filter: z
+		.union([previewMultiAttachUsageAlertFilterOutboundSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
@@ -474,6 +571,9 @@ export const previewMultiAttachPlanItemSchema = z.object({
 	rollover: z
 		.union([previewMultiAttachRolloverSchema, z.undefined()])
 		.optional(),
+	featureOverride: z
+		.union([previewMultiAttachFeatureOverrideSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewMultiAttachCustomizeSchema = z.object({
@@ -541,16 +641,24 @@ export const previewMultiAttachUsageLimitSchema = z.object({
 	limit: z.number(),
 	interval: previewMultiAttachEntityDataIntervalSchema,
 	anchor: z.union([previewMultiAttachAnchorSchema, z.undefined()]).optional(),
-	filter: z.union([previewMultiAttachFilterSchema, z.undefined()]).optional(),
+	filter: z
+		.union([previewMultiAttachUsageLimitFilterSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewMultiAttachThresholdTypeSchema = closedEnumSchema;
+
+export const previewMultiAttachBasisSchema = closedEnumSchema;
 
 export const previewMultiAttachUsageAlertSchema = z.object({
 	featureId: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	threshold: z.number(),
 	thresholdType: previewMultiAttachThresholdTypeSchema,
+	basis: z.union([previewMultiAttachBasisSchema, z.undefined()]).optional(),
+	filter: z
+		.union([previewMultiAttachUsageAlertFilterSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 

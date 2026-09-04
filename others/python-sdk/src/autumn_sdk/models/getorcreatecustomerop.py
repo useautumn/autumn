@@ -25,7 +25,7 @@ class GetOrCreateCustomerGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -226,26 +226,26 @@ GetOrCreateCustomerAnchor = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-GetOrCreateCustomerPropertiesTypedDict = TypeAliasType(
-    "GetOrCreateCustomerPropertiesTypedDict", Union[str, float, bool]
+GetOrCreateCustomerUsageLimitPropertiesTypedDict = TypeAliasType(
+    "GetOrCreateCustomerUsageLimitPropertiesTypedDict", Union[str, float, bool]
 )
 
 
-GetOrCreateCustomerProperties = TypeAliasType(
-    "GetOrCreateCustomerProperties", Union[str, float, bool]
+GetOrCreateCustomerUsageLimitProperties = TypeAliasType(
+    "GetOrCreateCustomerUsageLimitProperties", Union[str, float, bool]
 )
 
 
-class GetOrCreateCustomerFilterTypedDict(TypedDict):
+class GetOrCreateCustomerUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, GetOrCreateCustomerPropertiesTypedDict]
+    properties: Dict[str, GetOrCreateCustomerUsageLimitPropertiesTypedDict]
 
 
-class GetOrCreateCustomerFilter(BaseModel):
+class GetOrCreateCustomerUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, GetOrCreateCustomerProperties]
+    properties: Dict[str, GetOrCreateCustomerUsageLimitProperties]
 
 
 class GetOrCreateCustomerUsageLimitTypedDict(TypedDict):
@@ -259,7 +259,7 @@ class GetOrCreateCustomerUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[GetOrCreateCustomerAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[GetOrCreateCustomerFilterTypedDict]
+    filter_: NotRequired[GetOrCreateCustomerUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -280,7 +280,7 @@ class GetOrCreateCustomerUsageLimit(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[GetOrCreateCustomerFilter], pydantic.Field(alias="filter")
+        Optional[GetOrCreateCustomerUsageLimitFilter], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -310,6 +310,37 @@ GetOrCreateCustomerThresholdType = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+GetOrCreateCustomerBasis = Literal[
+    "balance",
+    "included",
+    "recurring",
+    "usage_limit",
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+GetOrCreateCustomerUsageAlertPropertiesTypedDict = TypeAliasType(
+    "GetOrCreateCustomerUsageAlertPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+GetOrCreateCustomerUsageAlertProperties = TypeAliasType(
+    "GetOrCreateCustomerUsageAlertProperties", Union[str, float, bool]
+)
+
+
+class GetOrCreateCustomerUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, GetOrCreateCustomerUsageAlertPropertiesTypedDict]
+
+
+class GetOrCreateCustomerUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, GetOrCreateCustomerUsageAlertProperties]
+
+
 class GetOrCreateCustomerUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -319,6 +350,10 @@ class GetOrCreateCustomerUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[GetOrCreateCustomerBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[GetOrCreateCustomerUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -336,12 +371,20 @@ class GetOrCreateCustomerUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[GetOrCreateCustomerBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[GetOrCreateCustomerUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -600,5 +643,9 @@ class GetOrCreateCustomerParams(BaseModel):
 
 try:
     GetOrCreateCustomerUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    GetOrCreateCustomerUsageAlert.model_rebuild()
 except NameError:
     pass

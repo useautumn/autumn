@@ -5,11 +5,11 @@ openapi: "api/openapi.yml webhook balances.usage_alert_triggered"
 
 ### Payload Fields
 
-<ParamField body="customer_id" type="string" required>
+<ParamField body="customer_id" type="string">
   The ID of the customer whose usage alert was triggered.
 </ParamField>
 
-<ParamField body="feature_id" type="string" required>
+<ParamField body="feature_id" type="string">
   The feature ID the alert applies to.
 </ParamField>
 
@@ -17,7 +17,7 @@ openapi: "api/openapi.yml webhook balances.usage_alert_triggered"
   The entity ID the alert applies to, if the usage was entity-scoped.
 </ParamField>
 
-<ParamField body="usage_alert" type="object" required>
+<ParamField body="usage_alert" type="object">
   Details of the usage alert that was triggered.
   <Expandable title="properties">
     <ParamField body="name" type="string">
@@ -30,6 +30,32 @@ openapi: "api/openapi.yml webhook balances.usage_alert_triggered"
 
     <ParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
       Whether the threshold is an absolute usage count or a percentage.
+    </ParamField>
+
+    <ParamField body="basis" type="'balance' | 'included' | 'recurring'" required>
+      What 100% meant for this alert.
+    </ParamField>
+
+  </Expandable>
+</ParamField>
+
+<ParamField body="balance" type="object">
+  The balance the alert measured.
+  <Expandable title="properties">
+    <ParamField body="usage" type="number" required>
+      Units consumed on the feature, after this event.
+    </ParamField>
+
+    <ParamField body="granted" type="number" required>
+      Every grant on the feature: included, prepaid and rollover.
+    </ParamField>
+
+    <ParamField body="included" type="number" required>
+      Grants from plan allowances only.
+    </ParamField>
+
+    <ParamField body="remaining" type="number" required>
+      The alert's denominator minus usage. Clamped at zero for included and recurring; balance can go negative on overage.
     </ParamField>
 
   </Expandable>

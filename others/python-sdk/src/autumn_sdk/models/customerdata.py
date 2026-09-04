@@ -196,22 +196,24 @@ CustomerDataAnchor = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-PropertiesTypedDict = TypeAliasType("PropertiesTypedDict", Union[str, float, bool])
+UsageLimitPropertiesTypedDict = TypeAliasType(
+    "UsageLimitPropertiesTypedDict", Union[str, float, bool]
+)
 
 
-Properties = TypeAliasType("Properties", Union[str, float, bool])
+UsageLimitProperties = TypeAliasType("UsageLimitProperties", Union[str, float, bool])
 
 
-class CustomerDataFilterTypedDict(TypedDict):
+class CustomerDataUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, PropertiesTypedDict]
+    properties: Dict[str, UsageLimitPropertiesTypedDict]
 
 
-class CustomerDataFilter(BaseModel):
+class CustomerDataUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Properties]
+    properties: Dict[str, UsageLimitProperties]
 
 
 class CustomerDataUsageLimitTypedDict(TypedDict):
@@ -225,7 +227,7 @@ class CustomerDataUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[CustomerDataAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[CustomerDataFilterTypedDict]
+    filter_: NotRequired[CustomerDataUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -245,9 +247,9 @@ class CustomerDataUsageLimit(BaseModel):
     anchor: Optional[CustomerDataAnchor] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
-    filter_: Annotated[Optional[CustomerDataFilter], pydantic.Field(alias="filter")] = (
-        None
-    )
+    filter_: Annotated[
+        Optional[CustomerDataUsageLimitFilter], pydantic.Field(alias="filter")
+    ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
@@ -276,6 +278,35 @@ CustomerDataThresholdType = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+CustomerDataBasis = Literal[
+    "balance",
+    "included",
+    "recurring",
+    "usage_limit",
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+UsageAlertPropertiesTypedDict = TypeAliasType(
+    "UsageAlertPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+UsageAlertProperties = TypeAliasType("UsageAlertProperties", Union[str, float, bool])
+
+
+class CustomerDataUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, UsageAlertPropertiesTypedDict]
+
+
+class CustomerDataUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, UsageAlertProperties]
+
+
 class CustomerDataUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -285,6 +316,10 @@ class CustomerDataUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[CustomerDataBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[CustomerDataUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -302,12 +337,20 @@ class CustomerDataUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[CustomerDataBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[CustomerDataUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -553,5 +596,9 @@ class CustomerData(BaseModel):
 
 try:
     CustomerDataUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    CustomerDataUsageAlert.model_rebuild()
 except NameError:
     pass

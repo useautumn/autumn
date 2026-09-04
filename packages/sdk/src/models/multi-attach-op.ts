@@ -294,6 +294,50 @@ export type MultiAttachRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type MultiAttachCreditSchema2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type MultiAttachCreditSchema1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<any>;
+};
+
+export type MultiAttachCreditSchemaUnion =
+  | MultiAttachCreditSchema1
+  | MultiAttachCreditSchema2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type MultiAttachFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<MultiAttachCreditSchema1 | MultiAttachCreditSchema2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -330,6 +374,10 @@ export type MultiAttachPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: MultiAttachRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: MultiAttachFeatureOverride | undefined;
 };
 
 /**
@@ -572,12 +620,12 @@ export const MultiAttachAnchor = {
  */
 export type MultiAttachAnchor = ClosedEnum<typeof MultiAttachAnchor>;
 
-export type MultiAttachProperties = string | number | boolean;
+export type MultiAttachUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type MultiAttachFilter = {
+export type MultiAttachUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -605,7 +653,7 @@ export type MultiAttachUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: MultiAttachFilter | undefined;
+  filter?: MultiAttachUsageLimitFilter | undefined;
 };
 
 /**
@@ -624,6 +672,29 @@ export type MultiAttachThresholdType = ClosedEnum<
   typeof MultiAttachThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const MultiAttachBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type MultiAttachBasis = ClosedEnum<typeof MultiAttachBasis>;
+
+export type MultiAttachUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type MultiAttachUsageAlertFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type MultiAttachUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -641,6 +712,14 @@ export type MultiAttachUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: MultiAttachThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: MultiAttachBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: MultiAttachUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1207,6 +1286,137 @@ export function multiAttachRolloverToJSON(
 }
 
 /** @internal */
+export type MultiAttachCreditSchema2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const MultiAttachCreditSchema2$outboundSchema: z.ZodMiniType<
+  MultiAttachCreditSchema2$Outbound,
+  MultiAttachCreditSchema2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function multiAttachCreditSchema2ToJSON(
+  multiAttachCreditSchema2: MultiAttachCreditSchema2,
+): string {
+  return JSON.stringify(
+    MultiAttachCreditSchema2$outboundSchema.parse(multiAttachCreditSchema2),
+  );
+}
+
+/** @internal */
+export type MultiAttachCreditSchema1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<any>;
+};
+
+/** @internal */
+export const MultiAttachCreditSchema1$outboundSchema: z.ZodMiniType<
+  MultiAttachCreditSchema1$Outbound,
+  MultiAttachCreditSchema1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function multiAttachCreditSchema1ToJSON(
+  multiAttachCreditSchema1: MultiAttachCreditSchema1,
+): string {
+  return JSON.stringify(
+    MultiAttachCreditSchema1$outboundSchema.parse(multiAttachCreditSchema1),
+  );
+}
+
+/** @internal */
+export type MultiAttachCreditSchemaUnion$Outbound =
+  | MultiAttachCreditSchema1$Outbound
+  | MultiAttachCreditSchema2$Outbound;
+
+/** @internal */
+export const MultiAttachCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  MultiAttachCreditSchemaUnion$Outbound,
+  MultiAttachCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => MultiAttachCreditSchema1$outboundSchema),
+  z.lazy(() => MultiAttachCreditSchema2$outboundSchema),
+]);
+
+export function multiAttachCreditSchemaUnionToJSON(
+  multiAttachCreditSchemaUnion: MultiAttachCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    MultiAttachCreditSchemaUnion$outboundSchema.parse(
+      multiAttachCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type MultiAttachFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      MultiAttachCreditSchema1$Outbound | MultiAttachCreditSchema2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const MultiAttachFeatureOverride$outboundSchema: z.ZodMiniType<
+  MultiAttachFeatureOverride$Outbound,
+  MultiAttachFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => MultiAttachCreditSchema1$outboundSchema),
+      z.lazy(() =>
+        MultiAttachCreditSchema2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function multiAttachFeatureOverrideToJSON(
+  multiAttachFeatureOverride: MultiAttachFeatureOverride,
+): string {
+  return JSON.stringify(
+    MultiAttachFeatureOverride$outboundSchema.parse(multiAttachFeatureOverride),
+  );
+}
+
+/** @internal */
 export type MultiAttachPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -1216,6 +1426,7 @@ export type MultiAttachPlanItem$Outbound = {
   price?: MultiAttachPrice$Outbound | undefined;
   proration?: MultiAttachProration$Outbound | undefined;
   rollover?: MultiAttachRollover$Outbound | undefined;
+  feature_override?: MultiAttachFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -1232,10 +1443,14 @@ export const MultiAttachPlanItem$outboundSchema: z.ZodMiniType<
     price: z.optional(z.lazy(() => MultiAttachPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => MultiAttachProration$outboundSchema)),
     rollover: z.optional(z.lazy(() => MultiAttachRollover$outboundSchema)),
+    featureOverride: z.optional(
+      z.lazy(() => MultiAttachFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -1527,31 +1742,36 @@ export const MultiAttachAnchor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachAnchor);
 
 /** @internal */
-export type MultiAttachProperties$Outbound = string | number | boolean;
+export type MultiAttachUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
 
 /** @internal */
-export const MultiAttachProperties$outboundSchema: z.ZodMiniType<
-  MultiAttachProperties$Outbound,
-  MultiAttachProperties
+export const MultiAttachUsageLimitProperties$outboundSchema: z.ZodMiniType<
+  MultiAttachUsageLimitProperties$Outbound,
+  MultiAttachUsageLimitProperties
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function multiAttachPropertiesToJSON(
-  multiAttachProperties: MultiAttachProperties,
+export function multiAttachUsageLimitPropertiesToJSON(
+  multiAttachUsageLimitProperties: MultiAttachUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    MultiAttachProperties$outboundSchema.parse(multiAttachProperties),
+    MultiAttachUsageLimitProperties$outboundSchema.parse(
+      multiAttachUsageLimitProperties,
+    ),
   );
 }
 
 /** @internal */
-export type MultiAttachFilter$Outbound = {
+export type MultiAttachUsageLimitFilter$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const MultiAttachFilter$outboundSchema: z.ZodMiniType<
-  MultiAttachFilter$Outbound,
-  MultiAttachFilter
+export const MultiAttachUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  MultiAttachUsageLimitFilter$Outbound,
+  MultiAttachUsageLimitFilter
 > = z.object({
   properties: z.record(
     z.string(),
@@ -1559,11 +1779,13 @@ export const MultiAttachFilter$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function multiAttachFilterToJSON(
-  multiAttachFilter: MultiAttachFilter,
+export function multiAttachUsageLimitFilterToJSON(
+  multiAttachUsageLimitFilter: MultiAttachUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    MultiAttachFilter$outboundSchema.parse(multiAttachFilter),
+    MultiAttachUsageLimitFilter$outboundSchema.parse(
+      multiAttachUsageLimitFilter,
+    ),
   );
 }
 
@@ -1574,7 +1796,7 @@ export type MultiAttachUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: MultiAttachFilter$Outbound | undefined;
+  filter?: MultiAttachUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -1588,7 +1810,9 @@ export const MultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: MultiAttachEntityDataInterval$outboundSchema,
     anchor: z.optional(MultiAttachAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => MultiAttachFilter$outboundSchema)),
+    filter: z.optional(
+      z.lazy(() => MultiAttachUsageLimitFilter$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1611,11 +1835,66 @@ export const MultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachThresholdType);
 
 /** @internal */
+export const MultiAttachBasis$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachBasis
+> = z.enum(MultiAttachBasis);
+
+/** @internal */
+export type MultiAttachUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const MultiAttachUsageAlertProperties$outboundSchema: z.ZodMiniType<
+  MultiAttachUsageAlertProperties$Outbound,
+  MultiAttachUsageAlertProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function multiAttachUsageAlertPropertiesToJSON(
+  multiAttachUsageAlertProperties: MultiAttachUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    MultiAttachUsageAlertProperties$outboundSchema.parse(
+      multiAttachUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type MultiAttachUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const MultiAttachUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  MultiAttachUsageAlertFilter$Outbound,
+  MultiAttachUsageAlertFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function multiAttachUsageAlertFilterToJSON(
+  multiAttachUsageAlertFilter: MultiAttachUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    MultiAttachUsageAlertFilter$outboundSchema.parse(
+      multiAttachUsageAlertFilter,
+    ),
+  );
+}
+
+/** @internal */
 export type MultiAttachUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: MultiAttachUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -1629,6 +1908,10 @@ export const MultiAttachUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: MultiAttachThresholdType$outboundSchema,
+    basis: z._default(MultiAttachBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => MultiAttachUsageAlertFilter$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {

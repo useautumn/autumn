@@ -313,13 +313,13 @@ CustomerAnchor = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class CustomerFilterTypedDict(TypedDict):
+class CustomerUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class CustomerFilter(BaseModel):
+class CustomerUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -346,7 +346,7 @@ class CustomerUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[CustomerAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[CustomerFilterTypedDict]
+    filter_: NotRequired[CustomerUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
@@ -370,7 +370,9 @@ class CustomerUsageLimit(BaseModel):
     anchor: Optional[CustomerAnchor] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
-    filter_: Annotated[Optional[CustomerFilter], pydantic.Field(alias="filter")] = None
+    filter_: Annotated[
+        Optional[CustomerUsageLimitFilter], pydantic.Field(alias="filter")
+    ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     usage: Optional[float] = None
@@ -408,6 +410,30 @@ CustomerThresholdType = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+CustomerBasis = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class CustomerUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class CustomerUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 UsageAlertSource = Union[
     Literal[
         "customer",
@@ -427,6 +453,10 @@ class CustomerUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[CustomerBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[CustomerUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
     source: NotRequired[UsageAlertSource]
@@ -446,6 +476,14 @@ class CustomerUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[CustomerBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[CustomerUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -454,7 +492,9 @@ class CustomerUsageAlert(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name", "source"])
+        optional_fields = set(
+            ["feature_id", "enabled", "basis", "filter", "name", "source"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1355,14 +1395,14 @@ class Vercel(BaseModel):
     r"""Vercel account ID associated with the installation."""
 
 
-class RevenuecatTypedDict(TypedDict):
+class CustomerRevenuecatTypedDict(TypedDict):
     r"""RevenueCat processor connection for the customer."""
 
     id: Nullable[str]
     r"""Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set."""
 
 
-class Revenuecat(BaseModel):
+class CustomerRevenuecat(BaseModel):
     r"""RevenueCat processor connection for the customer."""
 
     id: Nullable[str]
@@ -1390,7 +1430,7 @@ class CustomerProcessorsTypedDict(TypedDict):
     r"""Stripe processor connection for the customer."""
     vercel: NotRequired[VercelTypedDict]
     r"""Vercel processor connection for the customer (public-safe subset)."""
-    revenuecat: NotRequired[RevenuecatTypedDict]
+    revenuecat: NotRequired[CustomerRevenuecatTypedDict]
     r"""RevenueCat processor connection for the customer."""
 
 
@@ -1403,7 +1443,7 @@ class CustomerProcessors(BaseModel):
     vercel: Optional[Vercel] = None
     r"""Vercel processor connection for the customer (public-safe subset)."""
 
-    revenuecat: Optional[Revenuecat] = None
+    revenuecat: Optional[CustomerRevenuecat] = None
     r"""RevenueCat processor connection for the customer."""
 
     @model_serializer(mode="wrap")
@@ -2141,6 +2181,10 @@ class Customer(BaseModel):
 
 try:
     CustomerUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    CustomerUsageAlert.model_rebuild()
 except NameError:
     pass
 try:
