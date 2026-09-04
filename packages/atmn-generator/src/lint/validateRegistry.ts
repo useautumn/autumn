@@ -21,7 +21,9 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return [...rule.fields];
 		case "unique":
 		case "exists":
-			return [rule.field];
+			return rule.alongside === undefined
+				? [rule.field]
+				: [rule.field, rule.alongside];
 		case "compare":
 			return [rule.field, rule.than];
 		case "valueWhen":

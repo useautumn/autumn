@@ -70,9 +70,12 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** No two entries of the collection share a value of `field`. */
+			/** No two entries of the collection share a value of `field`, paired
+			 * with `alongside` when given (an absent `alongside` reads as `absentMeans`). */
 			readonly kind: "unique";
 			readonly field: string;
+			readonly alongside?: string;
+			readonly absentMeans?: string;
 			readonly because: string;
 	  }
 	| {
@@ -442,13 +445,23 @@ const checkCollection = ({
 			if (!isEntry(entry)) continue;
 			const value = entry[rule.field];
 			if (typeof value !== "string") continue;
-			if (seen.has(value)) {
+			const pair =
+				rule.alongside === undefined
+					? undefined
+					: (entry[rule.alongside] ?? rule.absentMeans);
+			const composite =
+				rule.alongside === undefined ? value : `${value}@${String(pair)}`;
+			if (seen.has(composite)) {
+				const label =
+					rule.alongside === undefined
+						? `${rule.field} ${show(value)}`
+						: `${rule.field} ${show(value)} with ${rule.alongside} ${show(pair)}`;
 				issues.push({
 					path: render([...trail, crumbFor({ node, key, entry, index })]),
-					message: `${rule.field} ${show(value)} is used more than once. ${rule.because}`,
+					message: `${label} is used more than once. ${rule.because}`,
 				});
 			}
-			seen.add(value);
+			seen.add(composite);
 		}
 	}
 };

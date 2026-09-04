@@ -15,8 +15,15 @@ export const insertCollection = ({
 	if (object === null || object.kind() !== "object") return null;
 
 	const pairs = object.children().filter((child) => child.kind() === "pair");
-	if (pairs.some((pair) => pair.namedChildren()[0]?.text() === collection))
-		return source;
+	const named = object
+		.children()
+		.some((child) =>
+			child.kind() === "pair"
+				? child.namedChildren()[0]?.text() === collection
+				: child.kind() === "shorthand_property_identifier" &&
+					child.text() === collection,
+		);
+	if (named) return source;
 
 	if (pairs.length === 0) {
 		const callLineIndent = leadingIndentOfLine(

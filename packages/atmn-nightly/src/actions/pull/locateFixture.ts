@@ -28,6 +28,7 @@ export const locateFixture = ({
 	id,
 	internalId,
 	where,
+	allowDynamic = false,
 }: {
 	configPath: string;
 	files: Map<string, string>;
@@ -36,6 +37,7 @@ export const locateFixture = ({
 	id: string;
 	internalId?: string | null;
 	where?: FixtureConstraint[];
+	allowDynamic?: boolean;
 }): LocatedFixture | null => {
 	const others = [...files.keys()].filter((file) => file !== configPath);
 	const ordered = [configPath, ...others];
@@ -53,7 +55,7 @@ export const locateFixture = ({
 		for (const file of ordered) {
 			const source = files.get(file);
 			if (source === undefined) continue;
-			const node = findFixture({ source, builder, ...attempt });
+			const node = findFixture({ source, builder, allowDynamic, ...attempt });
 			if (node !== null) return { file, source, node, ...attempt };
 		}
 	}
