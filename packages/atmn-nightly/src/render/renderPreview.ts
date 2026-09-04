@@ -139,24 +139,31 @@ const renderPreviousAttributes = ({
 	attributes,
 	indent,
 	current = {},
+	skip = [],
 }: {
 	attributes: Record<string, unknown> | null | undefined;
 	indent: string;
 	current?: Record<string, unknown>;
+	/** Keys a dedicated change line already covers. */
+	skip?: string[];
 }): string[] =>
-	Object.entries(attributes ?? {}).map(([key, previous]) => {
-		const label = humanizeKey(key);
-		const added = previous === null || previous === undefined;
-		const { symbol, paint } = marker(added ? "create" : "update");
-		const now = current[key];
-		const text =
-			now !== undefined
-				? `${formatValue(previous)} -> ${formatValue(now)}`
-				: added
-					? "added"
-					: `was ${formatValue(previous)}`;
-		return `${indent}${paint(`${symbol} ${label}: ${text}`)}`;
-	});
+	Object.entries(attributes ?? {})
+		.filter(([key]) => !skip.includes(key))
+		.map(([key, previous]) => {
+			const label = humanizeKey(key);
+			const added = previous === null || previous === undefined;
+			const { symbol, paint } = marker(added ? "create" : "update");
+			const now = current[key];
+			const text =
+				now !== undefined
+					? added
+						? formatValue(now)
+						: `${formatValue(previous)} -> ${formatValue(now)}`
+					: added
+						? "added"
+						: `was ${formatValue(previous)}`;
+			return `${indent}${paint(`${symbol} ${label}: ${text}`)}`;
+		});
 
 const formatMoney = (amount: number): string =>
 	`$${Number.isInteger(amount) ? amount : amount.toFixed(2)}`;
@@ -322,6 +329,7 @@ const renderPlanChangeDetail = ({
 }): string[] => [
 	...renderPreviousAttributes({
 		attributes: planChange.previousAttributes,
+		skip: planChange.freeTrialChange === undefined ? [] : ["freeTrial"],
 		indent,
 		current,
 	}),
