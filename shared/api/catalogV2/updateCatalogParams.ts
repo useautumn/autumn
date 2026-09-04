@@ -83,6 +83,10 @@ export const UpdateCatalogParamsSchema = z.object({
 		description:
 			"When false the payload is the complete desired catalog: plans missing from it are removed. Defaults true, which leaves anything unmentioned alone.",
 	}),
+	skip_version_deletions: z.boolean().optional().default(true).meta({
+		description:
+			"When false, a stated plan's versions the payload does not state are removed: archived while any customer holds them, hidden otherwise. Defaults true, which leaves unstated versions alone.",
+	}),
 	skip_plan_ids: z.array(z.string()).optional().default([]).meta({
 		description:
 			"Plans to leave untouched under skip_deletions:false, matched against plan_id and new_plan_id.",
