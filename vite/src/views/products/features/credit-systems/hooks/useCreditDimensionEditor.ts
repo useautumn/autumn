@@ -1,5 +1,7 @@
 import {
+	applyCreditMultipliers,
 	type CreditSchemaItem,
+	creditMultipliersForMatch,
 	findAmbiguousCreditDimensions,
 	formatCreditMatch,
 } from "@autumn/shared";
@@ -85,6 +87,8 @@ export function useCreditDimensionEditor({
 		return warnings;
 	}, [item.dimensions]);
 
+	const baseCredits =
+		item.tier_behavior === "graduated" ? undefined : item.credit_amount;
 	const fallbackCredits =
 		item.tier_behavior === "graduated" ? "tiered" : String(item.credit_amount);
 	const inheritedCredits = useMemo(
@@ -97,6 +101,30 @@ export function useCreditDimensionEditor({
 					: String(rule.dimension.credit_amount);
 			},
 		[rules, fallbackCredits],
+	);
+
+	/**
+	 * What a track matching this row would actually cost: the row's rate after
+	 * every multiplier the row pins. With no multiplier applying this is the rate
+	 * itself — a blank cell would read as "free".
+	 */
+	const effectiveCredits = useMemo(
+		() =>
+			(row: CreditRateRow): string => {
+				const rate =
+					row.dimension ?? coveringRule({ rules, match: row.match })?.dimension;
+				if (rate?.tier_behavior === "graduated") return "tiered";
+
+				const amount = rate?.credit_amount ?? baseCredits;
+				if (amount === undefined) return "";
+
+				const applied = creditMultipliersForMatch({
+					multipliers: item.multipliers ?? {},
+					match: row.match,
+				});
+				return String(applyCreditMultipliers({ amount, multipliers: applied }));
+			},
+		[item.multipliers, rules, baseCredits],
 	);
 
 	const setRows = (next: CreditRateRow[]) => {
@@ -118,6 +146,8 @@ export function useCreditDimensionEditor({
 		rows,
 		multipliers,
 		inheritedCredits,
+		effectiveCredits,
+		hasMultipliers: Object.keys(item.multipliers ?? {}).length > 0,
 		rateWarnings,
 		unnamedFields,
 		addField: () => setUnnamedFields(unnamedFields + 1),

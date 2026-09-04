@@ -24,6 +24,7 @@ import {
 interface RateRow extends MatchRow {
 	rate: CreditRateRow;
 	inherited: string;
+	effective: string;
 }
 
 interface RateTableMeta extends MatchTableMeta {
@@ -31,6 +32,16 @@ interface RateTableMeta extends MatchTableMeta {
 }
 
 const rowLabel = (row: CreditRateRow) => row.name || "new rate";
+
+/** What a matching track actually costs once multipliers stack on the rate. */
+const effectiveColumn: ColumnDef<RateRow, unknown> = {
+	header: "Effective",
+	id: "effective",
+	size: 90,
+	cell: ({ row }: MatchCellContext<RateRow>) => (
+		<MutedCell>{row.original.effective}</MutedCell>
+	),
+};
 
 /** A draft row shows the cost it would inherit as its placeholder; typing one makes it a rule. */
 const creditsColumn: ColumnDef<RateRow, unknown> = {
@@ -65,6 +76,8 @@ export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
 		values,
 		rows,
 		inheritedCredits,
+		effectiveCredits,
+		hasMultipliers,
 		rateWarnings,
 		setRowMatch,
 		setRowCredits,
@@ -83,9 +96,10 @@ export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
 				match: rate.match,
 				rate,
 				inherited: inheritedCredits(rate.match),
+				effective: effectiveCredits(rate),
 				warning: rateWarnings.get(rate.name),
 			})),
-		[rows, inheritedCredits, rateWarnings],
+		[rows, inheritedCredits, effectiveCredits, rateWarnings],
 	);
 
 	const fields = Object.keys(values);
@@ -93,9 +107,10 @@ export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
 		() => [
 			...matchColumns<RateRow>(fields),
 			creditsColumn,
+			...(hasMultipliers ? [effectiveColumn] : []),
 			removeColumn<RateRow>(),
 		],
-		[JSON.stringify(fields)],
+		[JSON.stringify(fields), hasMultipliers],
 	);
 
 	const meta: RateTableMeta = {
@@ -115,7 +130,7 @@ export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
 	return (
 		<CreditEditableTable
 			title="Rates"
-			hint="Credits per combination. The most specific match wins; a blank cost inherits the one shown."
+			hint="What an event costs, before multipliers. Only one rate applies — the most specific match wins."
 			action={
 				missingCombinationCount > 0 &&
 				missingCombinationCount <= MAX_FILLED_COMBINATIONS && (

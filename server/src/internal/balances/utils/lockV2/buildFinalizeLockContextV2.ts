@@ -1,4 +1,4 @@
-import type { Feature, FullSubject } from "@autumn/shared";
+import type { EventProperties, Feature, FullSubject } from "@autumn/shared";
 import { type FinalizeLockParamsV0, findFeatureById } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { overrideCtxRedisV2 } from "@/external/redis/customerRedisRouting.js";
@@ -25,7 +25,7 @@ export type FinalizeLockContextV2 = {
 	deduction: FeatureDeduction;
 	deductionOptions: {
 		triggerAutoTopUp: boolean;
-		eventProperties?: Record<string, unknown>;
+		eventProperties?: EventProperties;
 	};
 };
 

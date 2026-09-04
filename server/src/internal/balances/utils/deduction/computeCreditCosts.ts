@@ -3,6 +3,7 @@ import {
 	type CreditSchemaItem,
 	creditSystemContainsFeature,
 	ErrCode,
+	type EventProperties,
 	entitlementToCreditSystem,
 	type Feature,
 	FeatureType,
@@ -37,7 +38,7 @@ export const computeCreditCosts = ({
 	cusEnts: FullCusEntWithFullCusProduct[];
 	deduction: FeatureDeduction;
 	catalogFeatures?: Feature[];
-	eventProperties?: Record<string, unknown>;
+	eventProperties?: EventProperties;
 }): CreditCostLookup => {
 	const costMap = new Map<string, ComputedCreditCost>();
 

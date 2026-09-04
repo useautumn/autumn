@@ -1,6 +1,7 @@
 import {
 	type ApiCustomerV5,
 	type ApiEntityV2,
+	type EventProperties,
 	type Feature,
 	type UsageLimitFilter,
 	usageLimitFilterMatchesProperties,
@@ -14,7 +15,7 @@ export const findBlockedFilterOnSubject = ({
 }: {
 	subject: ApiCustomerV5 | ApiEntityV2;
 	feature: Feature;
-	eventProperties?: Record<string, unknown> | null;
+	eventProperties?: EventProperties;
 }): UsageLimitFilter | undefined =>
 	subject.billing_controls?.usage_limits?.find(
 		(usageLimit) =>

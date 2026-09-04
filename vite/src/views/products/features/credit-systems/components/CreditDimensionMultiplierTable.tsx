@@ -120,7 +120,7 @@ export function CreditDimensionMultiplierTable() {
 	return (
 		<CreditEditableTable
 			title="Multipliers"
-			hint="Every matching multiplier applies; their factors multiply together on top of the rate."
+			hint="Scales the rate an event was charged. Unlike rates, every multiplier that matches applies."
 			table={table}
 			columnCount={columns.length}
 			footer={
