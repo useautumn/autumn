@@ -22,6 +22,7 @@ import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitle
 import { lazyResetSubjectUsageWindows } from "../../actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { markReplicaSourced } from "../../cache/fullSubject/subjectProvenance.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
+import { shouldAggregateEntityData } from "../../cusUtils/customerEntityData.js";
 import {
 	type FullSubjectGateLane,
 	isFullSubjectGateRejection,
@@ -90,6 +91,9 @@ const runRoutedHydration = async ({
 							entityId,
 							inStatuses,
 							allowMissingEntity,
+							aggregateEntityData: shouldAggregateEntityData({
+								apiVersion: ctx.apiVersion,
+							}),
 						}),
 					});
 

@@ -8,6 +8,10 @@ import {
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
+import {
+	shouldAggregateEntityData,
+	subjectWithoutEntityData,
+} from "../customerEntityData.js";
 import { getApiCustomerBaseV2 } from "./getApiCustomerBaseV2.js";
 
 /**
@@ -22,16 +26,22 @@ export const getApiCustomerV2 = async ({
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
 }): Promise<ApiCustomerV5> => {
+	const subjectToUse =
+		fullSubject.subjectType === "customer" &&
+		!shouldAggregateEntityData({ apiVersion: ctx.apiVersion })
+			? subjectWithoutEntityData({ fullSubject })
+			: fullSubject;
+
 	const { apiCustomer: baseCustomer, legacyData } = await getApiCustomerBaseV2({
 		ctx,
-		fullSubject,
+		fullSubject: subjectToUse,
 		withAutumnId,
 	});
 
 	const billingControls = mergePlanBillingControlsForResponse({
 		billingControls: baseCustomer.billing_controls,
-		planCustomerProducts: fullSubject.customer_products,
-		fullSubject,
+		planCustomerProducts: subjectToUse.customer_products,
+		fullSubject: subjectToUse,
 		features: ctx.features,
 	});
 
@@ -47,7 +57,7 @@ export const getApiCustomerV2 = async ({
 
 	const apiCustomerExpand = await getApiCustomerExpandV2({
 		ctx,
-		fullSubject,
+		fullSubject: subjectToUse,
 		autoTopupsConfig: billingControls.auto_topups,
 	});
 
