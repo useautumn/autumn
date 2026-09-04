@@ -9,6 +9,7 @@ import {
 	ownedPartitionFailureReasonOf,
 	ownedPartitionHealthOf,
 } from "../health/ownedPartitionHealth.js";
+import { isPartitionBootstrapBlockedCause } from "../runtime/bootstrap/partitionBootstrapFailure.js";
 import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.js";
 import {
 	createKafkaMeteringConsumer,
@@ -62,7 +63,10 @@ type OwnedPartitionEntry = {
 	partition: number;
 	follower: KafkaPartitionOutcomeFollower;
 	runtime: KafkaPartitionRuntimePort;
+	startupSettled: boolean;
 };
+
+const defaultPartitionBootstrapRetryIntervalMs = 30_000;
 
 const assignedPartitionsFrom = ({
 	event,
@@ -87,6 +91,7 @@ export const createKafkaOwnedPartitionGroup = ({
 	stateStore,
 	partitionsConsumedConcurrently,
 	healthRefreshIntervalMs,
+	partitionBootstrapRetryIntervalMs = defaultPartitionBootstrapRetryIntervalMs,
 	createRuntime,
 	onError,
 	onUnhealthyPartition,
@@ -97,6 +102,7 @@ export const createKafkaOwnedPartitionGroup = ({
 	stateStore: SqliteBalanceStateStore;
 	partitionsConsumedConcurrently: number;
 	healthRefreshIntervalMs: number;
+	partitionBootstrapRetryIntervalMs?: number;
 	createRuntime: KafkaPartitionRuntimeFactory;
 	onError: ({ cause }: { cause: unknown }) => void;
 	onUnhealthyPartition: ({
@@ -130,6 +136,14 @@ export const createKafkaOwnedPartitionGroup = ({
 			"healthRefreshIntervalMs must be a positive safe integer",
 		);
 	}
+	if (
+		!Number.isSafeInteger(partitionBootstrapRetryIntervalMs) ||
+		partitionBootstrapRetryIntervalMs <= 0
+	) {
+		throw new RangeError(
+			"partitionBootstrapRetryIntervalMs must be a positive safe integer",
+		);
+	}
 
 	const positionTracker = new KafkaPartitionPositionTracker();
 	const meteringConsumer = createKafkaMeteringConsumer({
@@ -150,6 +164,7 @@ export const createKafkaOwnedPartitionGroup = ({
 	let adminConnected = false;
 	let healthRefreshTimer: ReturnType<typeof setInterval> | null = null;
 	let healthRefreshPromise: Promise<void> | null = null;
+	const partitionRetryTimers = new Map<number, ReturnType<typeof setTimeout>>();
 	const removeEventListeners: Array<() => void> = [];
 
 	const reportError = ({ cause }: { cause: unknown }): void => {
@@ -171,6 +186,75 @@ export const createKafkaOwnedPartitionGroup = ({
 		}
 	};
 
+	const clearPartitionRetry = ({ partition }: { partition: number }): void => {
+		const timer = partitionRetryTimers.get(partition);
+		if (!timer) return;
+		clearTimeout(timer);
+		partitionRetryTimers.delete(partition);
+	};
+
+	const clearPartitionRetries = (): void => {
+		for (const timer of partitionRetryTimers.values()) clearTimeout(timer);
+		partitionRetryTimers.clear();
+	};
+
+	const requestGroupStop = ({
+		assignmentGeneration,
+	}: {
+		assignmentGeneration: number;
+	}): void => {
+		queueMicrotask(() => {
+			if (status !== "running" || generation !== assignmentGeneration) return;
+			void stop().catch((stopCause) => reportError({ cause: stopCause }));
+		});
+	};
+
+	const schedulePartitionRetry = ({
+		partition,
+		entry,
+		assignmentGeneration,
+	}: {
+		partition: number;
+		entry?: OwnedPartitionEntry;
+		assignmentGeneration: number;
+	}): void => {
+		if (partitionRetryTimers.has(partition)) return;
+		const cleanup = entry
+			? entry.runtime.stop().then(
+					() => ({ ok: true }) as const,
+					(cause: unknown) => ({ ok: false, cause }) as const,
+				)
+			: Promise.resolve({ ok: true } as const);
+		const timer = setTimeout(() => {
+			partitionRetryTimers.delete(partition);
+			void (async () => {
+				const cleanupResult = await cleanup;
+				if (!cleanupResult.ok) {
+					reportError({ cause: cleanupResult.cause });
+					requestGroupStop({ assignmentGeneration });
+					return;
+				}
+				if (
+					status !== "running" ||
+					generation !== assignmentGeneration ||
+					(entry !== undefined && entries.get(partition) !== entry)
+				) {
+					return;
+				}
+				entries.delete(partition);
+				await startAssignment({
+					assignmentGeneration,
+					partitions: [partition],
+				});
+			})().catch((cause) => {
+				reportError({ cause });
+				requestGroupStop({ assignmentGeneration });
+			});
+		}, partitionBootstrapRetryIntervalMs);
+		timer.unref?.();
+		partitionRetryTimers.set(partition, timer);
+	};
+
 	const reportUnhealthy = ({
 		partition,
 		cause,
@@ -183,14 +267,14 @@ export const createKafkaOwnedPartitionGroup = ({
 		health: OwnedPartitionHealth;
 		assignmentGeneration: number;
 		entry?: OwnedPartitionEntry;
-	}): void => {
+	}): "group_stopping" | "ignored" | "partition_parked" => {
 		if (
 			status !== "running" ||
 			generation !== assignmentGeneration ||
 			(entry !== undefined && entries.get(partition) !== entry) ||
 			terminalHealthByPartition.has(partition)
 		) {
-			return;
+			return "ignored";
 		}
 		terminalHealthByPartition.set(partition, health);
 		try {
@@ -198,12 +282,12 @@ export const createKafkaOwnedPartitionGroup = ({
 		} catch (callbackCause) {
 			reportError({ cause: callbackCause });
 		}
-		queueMicrotask(() => {
-			if (status !== "running" || generation !== assignmentGeneration) {
-				return;
-			}
-			void stop().catch((stopCause) => reportError({ cause: stopCause }));
-		});
+		if (isPartitionBootstrapBlockedCause({ cause })) {
+			schedulePartitionRetry({ partition, entry, assignmentGeneration });
+			return "partition_parked";
+		}
+		requestGroupStop({ assignmentGeneration });
+		return "group_stopping";
 	};
 
 	const inspectUnhealthyEntries = ({
@@ -211,12 +295,12 @@ export const createKafkaOwnedPartitionGroup = ({
 	}: {
 		assignmentGeneration: number;
 	}): boolean => {
-		let foundUnhealthy = false;
+		let groupStopping = false;
 		for (const entry of entries.values()) {
 			const health = entry.runtime.getHealth();
 			if (health.status !== "recovery_required") continue;
-			foundUnhealthy = true;
-			reportUnhealthy({
+			if (!entry.startupSettled) continue;
+			const disposition = reportUnhealthy({
 				partition: entry.partition,
 				entry,
 				health,
@@ -226,8 +310,9 @@ export const createKafkaOwnedPartitionGroup = ({
 				),
 				assignmentGeneration,
 			});
+			if (disposition === "group_stopping") groupStopping = true;
 		}
-		return foundUnhealthy;
+		return groupStopping;
 	};
 
 	const refreshPartitionHealth = async (): Promise<void> => {
@@ -313,18 +398,19 @@ export const createKafkaOwnedPartitionGroup = ({
 		);
 	};
 
-	const startAssignment = async ({
+	async function startAssignment({
 		assignmentGeneration,
 		partitions,
 	}: {
 		assignmentGeneration: number;
 		partitions: number[];
-	}): Promise<void> => {
+	}): Promise<void> {
 		if (status !== "running" || generation !== assignmentGeneration) return;
 
 		const assignedEntries: OwnedPartitionEntry[] = [];
 		for (const partition of partitions) {
 			try {
+				clearPartitionRetry({ partition });
 				terminalHealthByPartition.delete(partition);
 				retiringEntries.delete(partition);
 				const follower = createKafkaPartitionOutcomeFollower({
@@ -334,7 +420,12 @@ export const createKafkaOwnedPartitionGroup = ({
 					positionTracker,
 				});
 				const runtime = createRuntime({ topic, partition, follower });
-				const entry = { partition, follower, runtime };
+				const entry = {
+					partition,
+					follower,
+					runtime,
+					startupSettled: false,
+				};
 				assignedEntries.push(entry);
 				entries.set(partition, entry);
 			} catch (cause) {
@@ -357,7 +448,13 @@ export const createKafkaOwnedPartitionGroup = ({
 		}
 
 		const startResults = await Promise.allSettled(
-			assignedEntries.map(({ runtime }) => runtime.start()),
+			assignedEntries.map(async (entry) => {
+				try {
+					await entry.runtime.start();
+				} finally {
+					entry.startupSettled = true;
+				}
+			}),
 		);
 		for (const [index, result] of startResults.entries()) {
 			if (result.status !== "rejected") continue;
@@ -372,7 +469,7 @@ export const createKafkaOwnedPartitionGroup = ({
 				assignmentGeneration,
 			});
 		}
-	};
+	}
 
 	const handleGroupJoin = (event: ConsumerGroupJoinEvent): void => {
 		if (status !== "running") return;
@@ -396,6 +493,7 @@ export const createKafkaOwnedPartitionGroup = ({
 				reportError({ cause });
 			}
 		}
+		clearPartitionRetries();
 		generation += 1;
 		const assignmentGeneration = generation;
 		const entriesToStop = detachEntries({
@@ -415,6 +513,7 @@ export const createKafkaOwnedPartitionGroup = ({
 
 	const handleRebalancing = (_event: ConsumerRebalancingEvent): void => {
 		if (status !== "running") return;
+		clearPartitionRetries();
 		generation += 1;
 		const entriesToStop = detachEntries({
 			causeFor: ({ partition }) =>
@@ -425,6 +524,7 @@ export const createKafkaOwnedPartitionGroup = ({
 
 	const handleCrash = (event: ConsumerCrashEvent): void => {
 		if (status !== "running") return;
+		clearPartitionRetries();
 		generation += 1;
 		const entriesToStop = detachEntries({
 			causeFor: () => event.payload.error,
@@ -474,6 +574,7 @@ export const createKafkaOwnedPartitionGroup = ({
 
 		status = "stopping";
 		stopHealthRefresh();
+		clearPartitionRetries();
 		generation += 1;
 		for (const removeListener of removeEventListeners.splice(0)) {
 			removeListener();

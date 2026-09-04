@@ -78,7 +78,11 @@ export const planPartitionBootstrap = ({
 		};
 	}
 
-	if (localNextOffset === null && logRange.logStartOffset === 0n) {
+	if (
+		localNextOffset === null &&
+		checkpoint === null &&
+		logRange.logStartOffset === 0n
+	) {
 		return { kind: "initialize", nextOffset: 0n };
 	}
 	if (

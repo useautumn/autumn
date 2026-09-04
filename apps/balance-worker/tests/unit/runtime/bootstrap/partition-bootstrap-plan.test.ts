@@ -112,6 +112,19 @@ describe("partition bootstrap plan", () => {
 				reason: "checkpoint_ahead_of_log_end",
 			},
 		},
+		{
+			name: "refuses an old checkpoint when a recreated log starts at zero",
+			input: {
+				localNextOffset: null,
+				checkpointNextOffset: 500n,
+				logStartOffset: 0n,
+				logEndOffset: 100n,
+			},
+			expected: {
+				kind: "refuse",
+				reason: "checkpoint_ahead_of_log_end",
+			},
+		},
 	])("$name", ({ input, expected }) => {
 		const result = plan(input);
 		const comparableResult =
