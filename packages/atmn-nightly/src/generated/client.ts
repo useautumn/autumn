@@ -519,6 +519,7 @@ export type PreviewUpdateCatalogResponse = {
 							  }
 						>;
 					};
+					entityFeatureId?: string;
 				};
 			}>;
 			/** Params that would transform the previous plan into the current one, including license upserts/removes. */
@@ -651,6 +652,7 @@ export type PreviewUpdateCatalogResponse = {
 							  }
 						>;
 					};
+					entityFeatureId?: string;
 				}>;
 				/** Filters selecting items to remove from the plan. */
 				removeItems?: Array<{
@@ -841,6 +843,7 @@ export type PreviewUpdateCatalogResponse = {
 							featureOverride?: {
 								creditSchema?: unknown;
 							};
+							entityFeatureId?: string;
 						}>;
 						removeItems?: Array<{
 							/** Match items linked to this feature. */
@@ -980,6 +983,7 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
+						entityFeatureId?: string;
 					}>;
 					removeItems?: Array<{
 						/** Match items linked to this feature. */
@@ -1271,6 +1275,7 @@ export type PreviewUpdateCatalogResponse = {
 							featureOverride?: {
 								creditSchema?: unknown;
 							};
+							entityFeatureId?: string;
 						};
 					}>;
 					/** Params that would transform the previous plan into the current one. Omitted when nothing customizable changed. */
@@ -1339,6 +1344,7 @@ export type PreviewUpdateCatalogResponse = {
 							featureOverride?: {
 								creditSchema?: unknown;
 							};
+							entityFeatureId?: string;
 						}>;
 						/** Filters selecting items to remove from the plan. */
 						removeItems?: Array<{
@@ -1828,6 +1834,7 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
+						entityFeatureId?: string;
 					};
 				}>;
 				/** Params that would transform the previous plan into the current one, including license upserts/removes. */
@@ -1938,6 +1945,7 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
+						entityFeatureId?: string;
 					}>;
 					/** Filters selecting items to remove from the plan. */
 					removeItems?: Array<{
@@ -3662,6 +3670,7 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
+						entityFeatureId?: string;
 					};
 				}>;
 				/** Params that would transform the previous plan into the current one, including license upserts/removes. */
@@ -3772,6 +3781,7 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
+						entityFeatureId?: string;
 					}>;
 					/** Filters selecting items to remove from the plan. */
 					removeItems?: Array<{
@@ -4943,6 +4953,7 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
+						entityFeatureId?: string;
 					};
 				}>;
 				/** Params that would transform the previous plan into the current one, including license upserts/removes. */
@@ -5053,6 +5064,7 @@ export type PreviewUpdateCatalogResponse = {
 							/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 							creditSchema?: Array<unknown | null>;
 						};
+						entityFeatureId?: string;
 					}>;
 					/** Filters selecting items to remove from the plan. */
 					removeItems?: Array<{
@@ -5949,6 +5961,7 @@ export type PreviewUpdateCatalogResponse = {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 						creditSchema?: Array<unknown | null>;
 					};
+					entityFeatureId?: string;
 				}>;
 				removeItems?: Array<{
 					/** Match items linked to this feature. */
@@ -7065,6 +7078,7 @@ export type PreviewUpdateCatalogResponse = {
 								featureOverride?: {
 									creditSchema?: unknown;
 								};
+								entityFeatureId?: string;
 							}>;
 							removeItems?: Array<{
 								/** Match items linked to this feature. */
@@ -8249,6 +8263,7 @@ export type UpdateCatalogResponse = {
 								featureOverride?: {
 									creditSchema?: unknown;
 								};
+								entityFeatureId?: string;
 							}>;
 							removeItems?: Array<{
 								/** Match items linked to this feature. */
@@ -8603,6 +8618,7 @@ export type GetCatalogResponse = {
 					  }
 				>;
 			};
+			entityFeatureId?: string;
 		}>;
 		/** Payment processors this plan is connected to. Omitted when unset. */
 		processors?: {
@@ -8876,6 +8892,7 @@ export type GetCatalogResponse = {
 							  }
 						>;
 					};
+					entityFeatureId?: string;
 				}>;
 				/** Filters selecting items to remove from the plan. */
 				removeItems?: Array<{
@@ -9066,6 +9083,7 @@ export type GetCatalogResponse = {
 							featureOverride?: {
 								creditSchema?: unknown;
 							};
+							entityFeatureId?: string;
 						}>;
 						removeItems?: Array<{
 							/** Match items linked to this feature. */
@@ -9214,6 +9232,7 @@ export type GetCatalogResponse = {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 						creditSchema?: Array<unknown | null>;
 					};
+					entityFeatureId?: string;
 				}>;
 				removeItems?: Array<{
 					/** Match items linked to this feature. */
@@ -9368,6 +9387,7 @@ export type GetCatalogResponse = {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 						creditSchema?: Array<unknown | null>;
 					};
+					entityFeatureId?: string;
 				}>;
 				/** Filters selecting items to remove from the plan. */
 				removeItems?: Array<{
@@ -9716,6 +9736,7 @@ export type GetCatalogResponse = {
 						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 						creditSchema?: Array<unknown | null>;
 					};
+					entityFeatureId?: string;
 				}>;
 				/** Payment processors this plan is connected to. Omitted when unset. */
 				processors?: {
