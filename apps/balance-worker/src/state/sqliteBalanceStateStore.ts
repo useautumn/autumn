@@ -10,6 +10,15 @@ import {
 	stateInitializationFingerprintOf,
 	type TrackOutcome,
 } from "@autumn/balance-engine";
+import type {
+	PartitionCheckpointPartitionResolver,
+	PartitionCheckpointV1,
+} from "../checkpoint/partitionCheckpoint.js";
+import {
+	type PartitionCheckpointRestoreLimits,
+	type PartitionCheckpointRestoreMode,
+	restorePartitionCheckpoint as restoreCheckpoint,
+} from "./checkpoint/restorePartitionCheckpoint.js";
 import {
 	ConflictingMeteringStateInitializationError,
 	ConflictingPartitionInitializationError,
@@ -135,6 +144,26 @@ export class SqliteBalanceStateStore {
 				});
 			})
 			.immediate();
+	}
+
+	restorePartitionCheckpoint({
+		checkpoint,
+		mode,
+		limits,
+		partitionResolver,
+	}: {
+		checkpoint: PartitionCheckpointV1;
+		mode: PartitionCheckpointRestoreMode;
+		limits: PartitionCheckpointRestoreLimits;
+		partitionResolver: PartitionCheckpointPartitionResolver;
+	}): void {
+		restoreCheckpoint({
+			database: this.database,
+			checkpoint,
+			mode,
+			limits,
+			partitionResolver,
+		});
 	}
 
 	restoreState({

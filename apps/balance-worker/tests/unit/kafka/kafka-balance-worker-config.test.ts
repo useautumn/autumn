@@ -5,6 +5,7 @@ import { createWorkerConsumerConfig as balanceWorkerConsumerConfigOf } from "../
 
 const timings = {
 	fetchMaxWaitTimeMs: 250,
+	healthRefreshIntervalMs: 5_000,
 	heartbeatIntervalMs: 3_000,
 	recoveryDrainTimeoutMs: 5_000,
 	rebalanceTimeoutMs: 60_000,
@@ -68,6 +69,15 @@ describe("Kafka balance worker config", () => {
 				},
 			}),
 		).toThrow("recoveryDrainTimeoutMs");
+	});
+
+	test("rejects a disabled idle health refresh", () => {
+		expect(() =>
+			balanceWorkerConsumerConfigOf({
+				groupId: "balance-worker-staging",
+				timings: { ...timings, healthRefreshIntervalMs: 0 },
+			}),
+		).toThrow("healthRefreshIntervalMs");
 	});
 
 	test("rejects a heartbeat that cannot fit inside the session", () => {

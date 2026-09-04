@@ -88,6 +88,17 @@ import type {
 	ConsumerRunConfig,
 } from "kafkajs";
 import {
+	type OwnedPartitionHealth,
+	ownedPartitionHealthOf,
+} from "../../../src/health/ownedPartitionHealth.js";
+import {
+	createKafkaOwnedPartitionGroup,
+	type KafkaOwnedPartitionGroupConsumerPort,
+	KafkaPartitionAssignmentRevokedError,
+	type KafkaPartitionRuntimeFactory,
+} from "../../../src/kafka/kafkaOwnedPartitionGroup.js";
+import type { OwnedPartitionRuntimeStatus } from "../../../src/runtime/ownedPartitionRuntime.js";
+import {
 	closeStoreFixture,
 	createKafkaOwnedPartitionGroup,
 	createStoreFixture,
@@ -112,7 +123,7 @@ const createDeferred = (): Deferred => {
 const waitFor = async (condition: () => boolean): Promise<void> => {
 	for (let attempt = 0; attempt < 100; attempt += 1) {
 		if (condition()) return;
-		await new Promise<void>((resolve) => setTimeout(resolve, 0));
+		await new Promise<void>((resolve) => setTimeout(resolve, 1));
 	}
 	throw new Error("Condition was not reached");
 };
@@ -229,10 +240,14 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 	};
 };
 
-const createPartitionOffsets = () => {
+const createPartitionOffsets = ({ initialHigh = "0" } = {}) => {
 	const lifecycle: string[] = [];
+	let high = initialHigh;
 	return {
 		lifecycle,
+		setHigh: (nextHigh: string) => {
+			high = nextHigh;
+		},
 		connect: async () => {
 			lifecycle.push("admin-connect");
 		},
@@ -242,9 +257,9 @@ const createPartitionOffsets = () => {
 		fetchTopicOffsets: async () =>
 			[0, 1, 2].map((partition) => ({
 				partition,
-				offset: "0",
+				offset: high,
 				low: "0",
-				high: "0",
+				high,
 			})),
 	};
 };
@@ -268,19 +283,65 @@ const createRuntimeFactory =
 		stopped: number[];
 		unavailable: unknown[];
 	}): KafkaPartitionRuntimeFactory =>
-	({ topic: runtimeTopic, partition, follower }) => ({
-		start: async () => {
-			started.push(partition);
-			await follower.startAndCatchUp({
+	({ topic: runtimeTopic, partition, follower }) => {
+		let status: OwnedPartitionRuntimeStatus = "created";
+		const health = (): OwnedPartitionHealth => {
+			const progress = follower.readProgress({
 				topic: runtimeTopic,
 				partition,
-				onUnavailable: ({ cause }) => unavailable.push(cause),
 			});
-		},
-		stop: async () => {
-			stopped.push(partition);
-			await follower.stop();
-		},
+			return ownedPartitionHealthOf({
+				topic: runtimeTopic,
+				partition,
+				status,
+				localNextOffset: 0n,
+				...progress,
+				failureReason:
+					status === "recovery_required" ? "runtime_start_failed" : null,
+			});
+		};
+		return {
+			start: async () => {
+				status = "fencing";
+				started.push(partition);
+				const logRange = await follower.readLogRange({
+					topic: runtimeTopic,
+					partition,
+					signal: new AbortController().signal,
+				});
+				await follower.startAndCatchUp({
+					topic: runtimeTopic,
+					partition,
+					targetNextOffset: logRange.logEndOffset,
+					onUnavailable: ({ cause }) => unavailable.push(cause),
+				});
+				status = "ready";
+			},
+			stop: async () => {
+				status = "draining";
+				stopped.push(partition);
+				await follower.stop();
+				status = "stopped";
+			},
+			getHealth: health,
+		};
+	};
+
+const terminalHealth = ({
+	partition,
+	reason,
+}: {
+	partition: number;
+	reason: string;
+}): OwnedPartitionHealth =>
+	ownedPartitionHealthOf({
+		topic,
+		partition,
+		status: "recovery_required",
+		localNextOffset: 0n,
+		consumedNextOffset: null,
+		highWatermark: 0n,
+		failureReason: reason,
 	});
 
 describe("Kafka owned partition group", () => {
@@ -294,12 +355,14 @@ describe("Kafka owned partition group", () => {
 					topic,
 					stateStore: fixture.store,
 					partitionsConsumedConcurrently: 1,
+					healthRefreshIntervalMs: 5_000,
 					createRuntime: createRuntimeFactory({
 						started: [],
 						stopped: [],
 						unavailable: [],
 					}),
 					onError: () => undefined,
+					onUnhealthyPartition: () => undefined,
 				}),
 			).not.toThrow();
 		} finally {
@@ -321,17 +384,22 @@ describe("Kafka owned partition group", () => {
 				topic,
 				stateStore: fixture.store,
 				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
 					started,
 					stopped: [],
 					unavailable: [],
 				}),
 				onError: ({ cause }) => errors.push(cause),
+				onUnhealthyPartition: () => undefined,
 			});
 
 			await group.start();
 			consumer.emitGroupJoin([1, 0]);
 			await waitFor(() => started.length === 2);
+			await waitFor(() =>
+				group.partitions().every(({ status }) => status === "ready"),
+			);
 
 			expect(started).toEqual([0, 1]);
 			expect(consumer.runConfig).toMatchObject({
@@ -342,6 +410,10 @@ describe("Kafka owned partition group", () => {
 				consumer.lifecycle.filter((step) => step === "consumer-connect"),
 			).toHaveLength(1);
 			expect(errors).toEqual([]);
+			expect(group.partitions()).toEqual([
+				expect.objectContaining({ partition: 0, status: "ready", lag: 0n }),
+				expect.objectContaining({ partition: 1, status: "ready", lag: 0n }),
+			]);
 			expect(partitionOffsets.lifecycle).toEqual(["admin-connect"]);
 			await group.stop();
 			expect(partitionOffsets.lifecycle).toEqual([
@@ -366,12 +438,14 @@ describe("Kafka owned partition group", () => {
 				topic,
 				stateStore: fixture.store,
 				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
 					started,
 					stopped,
 					unavailable,
 				}),
 				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
 			});
 			await group.start();
 			consumer.emitGroupJoin([0]);
@@ -405,12 +479,14 @@ describe("Kafka owned partition group", () => {
 				topic,
 				stateStore: fixture.store,
 				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
 					started,
 					stopped: [],
 					unavailable: [],
 				}),
 				onError: ({ cause }) => errors.push(cause),
+				onUnhealthyPartition: () => undefined,
 			});
 			await group.start();
 			const pauseError = new Error("pause raced the assignment");
@@ -446,6 +522,7 @@ describe("Kafka owned partition group", () => {
 					stop: async () => {
 						if (sequence === 1) await stopGate.promise;
 					},
+					getHealth: () => terminalHealth({ partition, reason: "test" }),
 				};
 			};
 			const group = createKafkaOwnedPartitionGroup({
@@ -454,8 +531,10 @@ describe("Kafka owned partition group", () => {
 				topic,
 				stateStore: fixture.store,
 				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
 				createRuntime,
 				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
 			});
 			await group.start();
 			consumer.emitGroupJoin([0]);
@@ -489,12 +568,14 @@ describe("Kafka owned partition group", () => {
 				topic,
 				stateStore: fixture.store,
 				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
 				createRuntime: createRuntimeFactory({
 					started,
 					stopped,
 					unavailable,
 				}),
 				onError: ({ cause }) => errors.push(cause),
+				onUnhealthyPartition: () => undefined,
 			});
 			await group.start();
 			consumer.emitGroupJoin([0]);
@@ -524,6 +605,7 @@ describe("Kafka owned partition group", () => {
 				topic,
 				stateStore: fixture.store,
 				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
 				createRuntime: () => ({
 					start: async () => {
 						lifecycle.push("runtime-start");
@@ -533,8 +615,10 @@ describe("Kafka owned partition group", () => {
 						await stopGate.promise;
 						lifecycle.push("runtime-stop-end");
 					},
+					getHealth: () => terminalHealth({ partition: 0, reason: "test" }),
 				}),
 				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
 			});
 			await group.start();
 			consumer.emitGroupJoin([0]);
@@ -549,6 +633,235 @@ describe("Kafka owned partition group", () => {
 			expect(lifecycle.indexOf("runtime-stop-end")).toBeLessThan(
 				lifecycle.indexOf("consumer-stop"),
 			);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("keeps draining and stopped partition health observable", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const stopGate = createDeferred();
+			let runtimeStatus: OwnedPartitionRuntimeStatus = "created";
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 1,
+				healthRefreshIntervalMs: 5_000,
+				createRuntime: ({ partition }) => ({
+					start: async () => {
+						runtimeStatus = "ready";
+					},
+					stop: async () => {
+						runtimeStatus = "draining";
+						await stopGate.promise;
+						runtimeStatus = "stopped";
+					},
+					getHealth: () =>
+						ownedPartitionHealthOf({
+							topic,
+							partition,
+							status: runtimeStatus,
+							localNextOffset: 0n,
+							consumedNextOffset: 0n,
+							highWatermark: 0n,
+							failureReason: null,
+						}),
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => group.partitions()[0]?.status === "ready");
+
+			const stopping = group.stop();
+			await waitFor(() => runtimeStatus === "draining");
+			expect(group.partitions()[0]?.status).toBe("draining");
+
+			stopGate.resolve();
+			await stopping;
+			expect(group.partitions()[0]?.status).toBe("stopped");
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("leaves the group and keeps failed partition health visible after startup refusal", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const startupFailure = new Error(
+				"checkpoint cannot rebuild retention gap",
+			);
+			const unhealthy: Array<{
+				topic: string;
+				partition: number;
+				cause: unknown;
+			}> = [];
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 1,
+				healthRefreshIntervalMs: 5_000,
+				createRuntime: ({ partition }) => ({
+					start: async () => {
+						throw startupFailure;
+					},
+					stop: async () => undefined,
+					getHealth: () =>
+						terminalHealth({
+							partition,
+							reason: "checkpoint_required_for_retention_gap",
+						}),
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: (failure) => unhealthy.push(failure),
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => consumer.lifecycle.includes("consumer-stop"));
+			await group.stop();
+
+			expect(unhealthy).toEqual([
+				{ topic, partition: 0, cause: startupFailure },
+			]);
+			expect(group.partitions()).toEqual([
+				expect.objectContaining({
+					partition: 0,
+					status: "recovery_required",
+					failureReason: "checkpoint_required_for_retention_gap",
+				}),
+			]);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("leaves the group when a partition runtime cannot be constructed", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const constructionFailure = new Error("invalid partition configuration");
+			const unhealthy: Array<{ partition: number; cause: unknown }> = [];
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 1,
+				healthRefreshIntervalMs: 5_000,
+				createRuntime: () => {
+					throw constructionFailure;
+				},
+				onError: () => undefined,
+				onUnhealthyPartition: ({ partition, cause }) =>
+					unhealthy.push({ partition, cause }),
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => consumer.lifecycle.includes("consumer-stop"));
+			await group.stop();
+
+			expect(unhealthy).toEqual([{ partition: 0, cause: constructionFailure }]);
+			expect(group.partitions()).toEqual([
+				expect.objectContaining({
+					partition: 0,
+					status: "recovery_required",
+					failureReason: "Error: invalid partition configuration",
+				}),
+			]);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("refreshes idle partition high watermarks", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const partitionOffsets = createPartitionOffsets();
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets,
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 1,
+				healthRefreshIntervalMs: 5,
+				createRuntime: createRuntimeFactory({
+					started: [],
+					stopped: [],
+					unavailable: [],
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => group.partitions()[0]?.status === "ready");
+			partitionOffsets.setHigh("5");
+			await waitFor(() => group.partitions()[0]?.highWatermark === 5n);
+
+			expect(group.partitions()[0]).toMatchObject({ lag: 5n });
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("leaves the group when a ready runtime enters recovery", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			let status: OwnedPartitionRuntimeStatus = "ready";
+			const unhealthy: number[] = [];
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 1,
+				healthRefreshIntervalMs: 5,
+				createRuntime: ({ partition }) => ({
+					start: async () => undefined,
+					stop: async () => undefined,
+					getHealth: () =>
+						ownedPartitionHealthOf({
+							topic,
+							partition,
+							status,
+							localNextOffset: 0n,
+							consumedNextOffset: 0n,
+							highWatermark: 0n,
+							failureReason:
+								status === "recovery_required" ? "producer_fenced" : null,
+						}),
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: ({ partition }) => unhealthy.push(partition),
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => group.partitions()[0]?.status === "ready");
+			status = "recovery_required";
+			await waitFor(() => consumer.lifecycle.includes("consumer-stop"));
+			await group.stop();
+
+			expect(unhealthy).toEqual([0]);
+			expect(group.partitions()[0]).toMatchObject({
+				status: "recovery_required",
+				failureReason: "producer_fenced",
+			});
 		} finally {
 			closeStoreFixture(fixture);
 		}
