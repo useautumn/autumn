@@ -151,7 +151,7 @@ const createStore = ({
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
 	if (initializeCustomer) {
-		store.initializeState({
+		store.restoreState({
 			topic,
 			partition,
 			initializationId: "init_1",
@@ -213,6 +213,7 @@ describe("Kafka transaction boundary", () => {
 				maxPendingCommands: 1_000,
 				maxPendingCommandsPerCustomer: 100,
 			},
+			trackReceiptRetentionMs: 86_400_000,
 			producerLimits: {
 				transactionTimeoutMs: 10_000,
 				retryCount: 2,
@@ -410,6 +411,7 @@ describe("Kafka transaction boundary", () => {
 				maxPendingCommands: 1_000,
 				maxPendingCommandsPerCustomer: 100,
 			},
+			trackReceiptRetentionMs: 86_400_000,
 			producerLimits: {
 				transactionTimeoutMs: 10_000,
 				retryCount: 2,
@@ -497,6 +499,10 @@ describe("Kafka transaction boundary", () => {
 					maxPendingCommands: 1_000,
 					maxPendingCommandsPerCustomer: 100,
 				},
+				trackReceiptPolicy: {
+					retentionMs: 86_400_000,
+					now: Date.now,
+				},
 				recoveryDrainTimeoutMs: timings.recoveryDrainTimeoutMs,
 			});
 		const firstRuntime = runtimeOf({ store: firstStore.store });
@@ -517,7 +523,6 @@ describe("Kafka transaction boundary", () => {
 					overageBehavior: "reject",
 					properties: null,
 					occurredAt: 1_700_000_000_000,
-					deduplicationExpiresAt: 1_700_086_400_000,
 				},
 			});
 

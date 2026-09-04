@@ -25,6 +25,7 @@ export const createKafkaOwnedPartitionRuntimeFactory = ({
 	stateStore,
 	partitionResolver,
 	writerLimits,
+	trackReceiptRetentionMs,
 	producerLimits,
 	timings,
 }: {
@@ -33,10 +34,19 @@ export const createKafkaOwnedPartitionRuntimeFactory = ({
 	stateStore: SqliteBalanceStateStore;
 	partitionResolver: MeteringPartitionResolver;
 	writerLimits: PartitionTrackWriterLimits;
+	trackReceiptRetentionMs: number;
 	producerLimits: KafkaOwnedPartitionProducerLimits;
 	timings: KafkaBalanceWorkerTimings;
 }): KafkaOwnedPartitionRuntimeFactory => {
 	assertKafkaBalanceWorkerTimings({ timings });
+	if (
+		!Number.isSafeInteger(trackReceiptRetentionMs) ||
+		trackReceiptRetentionMs <= 0
+	) {
+		throw new RangeError(
+			"trackReceiptRetentionMs must be a positive safe integer",
+		);
+	}
 	return ({ topic, partition, follower }) =>
 		createOwnedPartitionRuntime({
 			topic,
@@ -52,6 +62,10 @@ export const createKafkaOwnedPartitionRuntimeFactory = ({
 			follower,
 			partitionResolver,
 			writerLimits,
+			trackReceiptPolicy: {
+				retentionMs: trackReceiptRetentionMs,
+				now: Date.now,
+			},
 			recoveryDrainTimeoutMs: timings.recoveryDrainTimeoutMs,
 		});
 };

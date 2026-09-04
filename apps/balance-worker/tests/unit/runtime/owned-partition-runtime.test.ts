@@ -71,7 +71,6 @@ const createTrackCommand = ({
 			overageBehavior: "reject",
 			properties: null,
 			occurredAt: 1_700_000_000_000,
-			deduplicationExpiresAt: 1_700_086_400_000,
 		},
 	});
 
@@ -243,7 +242,7 @@ const createStoreFixture = (): {
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
-	store.initializeState({
+	store.restoreState({
 		topic,
 		partition,
 		initializationId: "init_1",
@@ -273,6 +272,11 @@ const writerLimits = {
 	maxPendingCommandsPerCustomer: 100,
 };
 
+const trackReceiptPolicy = {
+	retentionMs: 86_400_000,
+	now: () => 1_700_000_000_000,
+};
+
 const createRuntime = ({
 	store,
 	producer,
@@ -297,6 +301,7 @@ const createRuntime = ({
 				partitionForIdentity(commandIdentity),
 		},
 		writerLimits,
+		trackReceiptPolicy,
 		recoveryDrainTimeoutMs,
 	});
 

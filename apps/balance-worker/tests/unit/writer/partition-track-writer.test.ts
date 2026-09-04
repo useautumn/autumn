@@ -18,7 +18,7 @@ import {
 	TrackOutcomeBatchNotCommittedError,
 } from "../../../src/writer/committedTrackOutcomeAppender.js";
 import {
-	createPartitionTrackWriter,
+	createPartitionTrackWriter as createPartitionTrackWriterCore,
 	PartitionTrackWriterCapacityError,
 	PartitionTrackWriterRecoveryRequiredError,
 	TrackOutcomeBatchAppendError,
@@ -74,7 +74,6 @@ const createCommand = ({
 			overageBehavior: "reject",
 			properties,
 			occurredAt: 1_700_000_000_000,
-			deduplicationExpiresAt: 1_700_086_400_000,
 		},
 	});
 
@@ -152,7 +151,7 @@ const createFixture = ({
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
 	for (const identity of identities) {
-		store.initializeState({
+		store.restoreState({
 			topic,
 			partition,
 			initializationId: `init_${identity.customerId}`,
@@ -183,7 +182,53 @@ const defaultLimits = {
 	maxPendingCommandsPerCustomer: 100,
 };
 
+const defaultReceiptPolicy = {
+	retentionMs: 86_400_000,
+	now: () => 1_700_000_000_000,
+};
+
+const createPartitionTrackWriter = ({
+	receiptPolicy = defaultReceiptPolicy,
+	...input
+}: Omit<
+	Parameters<typeof createPartitionTrackWriterCore>[0],
+	"receiptPolicy"
+> & {
+	receiptPolicy?: Parameters<
+		typeof createPartitionTrackWriterCore
+	>[0]["receiptPolicy"];
+}) => createPartitionTrackWriterCore({ ...input, receiptPolicy });
+
 describe("partition track writer", () => {
+	test("stamps receipt expiry from worker policy", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+				receiptPolicy: defaultReceiptPolicy,
+			});
+
+			const decision = await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+
+			expect(decision).toMatchObject({
+				kind: "new",
+				outcome: { deduplicationExpiresAt: 1_700_086_400_000 },
+			});
+			expect(appender.batches[0]?.[0]?.deduplicationExpiresAt).toBe(
+				1_700_086_400_000,
+			);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	test("orders simultaneous tracks against projected customer state", async () => {
 		const fixture = createFixture();
 		try {

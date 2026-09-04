@@ -85,6 +85,7 @@ const buildTrackOutcome = ({
 	rejected,
 	appliedValue,
 	mutations,
+	deduplicationExpiresAt,
 }: {
 	state: CustomerMeteringState;
 	command: TrackCommand;
@@ -92,6 +93,7 @@ const buildTrackOutcome = ({
 	rejected: boolean;
 	appliedValue: Decimal;
 	mutations: BalanceMutation[];
+	deduplicationExpiresAt: number;
 }): TrackOutcome => {
 	const balanceBefore = balanceOf({ featureState });
 
@@ -122,7 +124,7 @@ const buildTrackOutcome = ({
 			revisionAfter: state.revision + 1,
 			mutations,
 			occurredAt: command.occurredAt,
-			deduplicationExpiresAt: command.deduplicationExpiresAt,
+			deduplicationExpiresAt,
 		},
 	});
 };
@@ -131,10 +133,12 @@ export const computeTrack = ({
 	state,
 	command,
 	existingReceipt = null,
+	deduplicationExpiresAt,
 }: {
 	state: CustomerMeteringState;
 	command: TrackCommand;
 	existingReceipt?: TrackOutcome | null;
+	deduplicationExpiresAt: number;
 }): TrackDecision => {
 	const classification = classifyTrackCommand({
 		state,
@@ -164,6 +168,7 @@ export const computeTrack = ({
 			rejected,
 			appliedValue: deduction.appliedValue,
 			mutations: deduction.mutations,
+			deduplicationExpiresAt,
 		}),
 	};
 };

@@ -15,6 +15,7 @@ import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.j
 import {
 	createPartitionTrackWriter,
 	type PartitionTrackWriterLimits,
+	type PartitionTrackWriterReceiptPolicy,
 	PartitionTrackWriterRecoveryRequiredError,
 } from "../writer/partitionTrackWriter.js";
 import {
@@ -92,6 +93,7 @@ export const createOwnedPartitionRuntime = ({
 	follower,
 	partitionResolver,
 	writerLimits,
+	trackReceiptPolicy,
 	recoveryDrainTimeoutMs,
 }: {
 	topic: string;
@@ -101,6 +103,7 @@ export const createOwnedPartitionRuntime = ({
 	follower: PartitionOutcomeFollowerPort;
 	partitionResolver: MeteringPartitionResolver;
 	writerLimits: PartitionTrackWriterLimits;
+	trackReceiptPolicy: PartitionTrackWriterReceiptPolicy;
 	recoveryDrainTimeoutMs: number;
 }): {
 	start(): Promise<void>;
@@ -118,6 +121,7 @@ export const createOwnedPartitionRuntime = ({
 		stateStore,
 		appender,
 		limits: writerLimits,
+		receiptPolicy: trackReceiptPolicy,
 	});
 	const requestTracker = new OwnedPartitionRequestTracker();
 	let status: OwnedPartitionRuntimeStatus = "created";
