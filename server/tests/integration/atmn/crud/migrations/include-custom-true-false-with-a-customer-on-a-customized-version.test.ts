@@ -1,5 +1,5 @@
 /**
- * atmn crud/migrations — include_custom [true, false] with a customer on a customized version → migration includes / skips them
+ * atmn crud/migrations — include_custom [true, false] with a customer on a customized version → the draft still targets the version; the run-time filter includes / skips custom rows
  *
  * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
  *
@@ -83,7 +83,29 @@ for (const includeCustom of [true, false] as const) {
 					customWire as any,
 				)) as { migrations?: PreviewMigrations };
 
-				expect(targetsProV1(preview.migrations)).toBe(includeCustom);
+				// include_custom shapes the migration's run-time filter, never which
+				// versions the draft targets: the customized customer's version is
+				// still listed, and custom rows are excluded when the migration runs.
+				expect(targetsProV1(preview.migrations)).toBe(true);
+				type DraftShape = {
+					includeCustom?: boolean;
+					operations?: {
+						customer?: { type?: string; planFilter?: { custom?: boolean } }[];
+					};
+				};
+				const drafts = (preview.migrations ?? []) as unknown as DraftShape[];
+				expect(drafts.length).toBeGreaterThan(0);
+				for (const draft of drafts) {
+					expect(draft.includeCustom ?? false).toBe(includeCustom);
+					const updates = (draft.operations?.customer ?? []).filter(
+						(operation) => operation.type === "update_plan",
+					);
+					for (const update of updates) {
+						expect(update.planFilter?.custom).toBe(
+							includeCustom ? undefined : false,
+						);
+					}
+				}
 			} finally {
 				scenario.cleanup();
 			}
