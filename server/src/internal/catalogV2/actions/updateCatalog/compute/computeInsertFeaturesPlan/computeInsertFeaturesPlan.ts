@@ -12,6 +12,7 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 import { validateFeature } from "@/internal/features/utils/validateFeature.js";
 import { generateId } from "@/utils/genUtils.js";
+import { resolveCurrentFeature } from "../../utils/featureUpdateUtils/resolveCurrentFeature";
 
 /** Credit systems last so schema refs see metered/boolean rows from this batch. */
 const sortFeaturesForInsert = <T extends { type: string }>(
@@ -37,15 +38,15 @@ export const computeInsertFeaturesPlan = ({
 	params: UpdateCatalogParams;
 	projected: ProjectedCatalog;
 }): CatalogComputeStep => {
-	const originalById = new Map(
-		ctx.features.map((feature) => [feature.id, feature]),
-	);
-
+	// An entry no current row answers to is a create; an unknown internal_id
+	// falls back to feature_id and inserts too.
 	const entries = sortFeaturesForInsert(
 		(params.features ?? []).filter(
 			(featureParams) =>
-				featureParams.internal_id === undefined &&
-				!originalById.has(featureParams.feature_id),
+				resolveCurrentFeature({
+					features: ctx.features,
+					entry: featureParams,
+				}) === null,
 		),
 	);
 

@@ -22,6 +22,11 @@ const isCreatePlanRoute = ({
 	);
 };
 
+const isCatalogWriteRoute = ({ path }: { path: string }): boolean => {
+	const pathname = (path.split("?")[0] ?? path).replace(/^\/v1/, "");
+	return pathname.startsWith("/catalogV2.");
+};
+
 /**
  * Rewrites public plan ids in the JSON body and in `:product_id` path params.
  * Dashboard is skipped (it always sends canonical ids). Empty alias maps are a no-op.
@@ -53,6 +58,13 @@ export const planAliasMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	const body = ctx.requestBody;
 	if (!body || typeof body !== "object") {
+		await next();
+		return;
+	}
+
+	// A catalog update states desired ids (a reclaim rename names the alias on
+	// purpose), so its body is never rewritten through the alias map.
+	if (isCatalogWriteRoute({ path: c.req.path })) {
 		await next();
 		return;
 	}

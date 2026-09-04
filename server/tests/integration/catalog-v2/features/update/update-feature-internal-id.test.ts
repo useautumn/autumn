@@ -116,16 +116,16 @@ test.concurrent(
 				features: [{ id: newId, action: "none" }],
 			});
 
-			// I4: an id nothing owns is a caller bug, not a create
-			await expectAutumnError({
-				errMessage: "fe_does_not_exist",
-				func: () =>
-					autumnV2_3.catalogV2.previewUpdate({
-						features: [
-							{ ...consumableFeature(newId), internal_id: "fe_does_not_exist" },
-						],
-					}),
+			// I4: an id nothing owns names a new resource: the entry falls back to
+			// feature_id, which is the row from I2, so there is nothing to do
+			const lenient = await autumnV2_3.catalogV2.previewUpdate({
+				features: [
+					{ ...consumableFeature(newId), internal_id: "fe_does_not_exist" },
+				],
 			});
+			expect(
+				lenient.features.find((row) => row.feature_id === newId)?.action,
+			).toBe("none");
 		} finally {
 			await deleteDbFeatures({ ctx, featureIds });
 		}
