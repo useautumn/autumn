@@ -9,9 +9,12 @@ export const CreditTierSchema = z.object({
 	creditCost: z.number(),
 });
 
+// Matches are compared against event properties as strings, so numbers and
+// booleans are coerced on the way in — keeping them typed would make every
+// later diff report a change against the stored string.
 const CreditMatchSchema = z.record(
 	z.string(),
-	z.union([z.string(), z.number(), z.boolean()]),
+	z.union([z.string(), z.number(), z.boolean()]).transform(String),
 );
 
 const CreditDimensionBaseSchema = z.object({

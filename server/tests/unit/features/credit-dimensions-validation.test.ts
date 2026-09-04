@@ -144,6 +144,20 @@ describe("credit dimension validation", () => {
 		);
 	});
 
+	test("accepts discounts that can never apply to the same event", () => {
+		expect(() =>
+			validate({
+				dimensions: {
+					small: { match: { size: "small" }, credit_amount: 0.5 },
+				},
+				multipliers: {
+					spot: { match: { lifecycle: "spot" }, factor: 0.5 },
+					reserved: { match: { lifecycle: "reserved" }, add: -0.3 },
+				},
+			}),
+		).not.toThrow();
+	});
+
 	test("rejects a multiplier with a non-positive factor or nothing to apply", () => {
 		expectRejected(
 			{ multipliers: { spot: { match: { lifecycle: "spot" }, factor: 0 } } },

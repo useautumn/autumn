@@ -108,6 +108,7 @@ export function FeatureOverrideConfig() {
 				{dimensions.enabled && (
 					<CreditDimensionsSection
 						schema={schema}
+						schemaKeys={schemaKeys}
 						allFeatures={allSchemaCandidateFeatures}
 						onItemChange={setSchemaItem}
 					/>

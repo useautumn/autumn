@@ -3,7 +3,11 @@ import type {
 	CreditMultiplier,
 	CreditSchemaItem,
 } from "@autumn/shared";
-import { isEmptyObject, mapRecordValues } from "@autumn/shared";
+import {
+	CREDIT_DIMENSION_NAME_MAX_LENGTH,
+	isEmptyObject,
+	mapRecordValues,
+} from "@autumn/shared";
 
 /**
  * The dashboard edits dimensions as fields → values → rules: every rate or
@@ -71,13 +75,19 @@ const ruleName = (match: CreditMatch) =>
 		.map(([key, value]) => `${key}_${value}`)
 		.join("_")
 		.replace(/[^a-zA-Z0-9_]+/g, "_")
-		.slice(0, 64) || "rule";
+		.slice(0, CREDIT_DIMENSION_NAME_MAX_LENGTH) || "rule";
 
-/** Duplicate matches collapse to one name, so names are made unique by suffix. */
+/**
+ * Duplicate matches collapse to one name, so names are made unique by suffix —
+ * trimming the stem first, since the whole key must stay within the API limit.
+ */
 const uniqueName = (name: string, taken: Set<string>) => {
 	let candidate = name;
 	let index = 2;
-	while (taken.has(candidate)) candidate = `${name}_${index++}`;
+	while (taken.has(candidate)) {
+		const suffix = `_${index++}`;
+		candidate = `${name.slice(0, CREDIT_DIMENSION_NAME_MAX_LENGTH - suffix.length)}${suffix}`;
+	}
 	taken.add(candidate);
 	return candidate;
 };

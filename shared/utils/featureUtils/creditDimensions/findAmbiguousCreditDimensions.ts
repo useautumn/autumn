@@ -6,7 +6,8 @@ export type AmbiguousCreditDimensions = {
 	example: CreditDimension["match"];
 };
 
-const matchesCanCoexist = (
+/** True when no key disagrees, so one event could satisfy both matches at once. */
+export const matchesCanCoexist = (
 	left: CreditDimension["match"],
 	right: CreditDimension["match"],
 ): boolean =>

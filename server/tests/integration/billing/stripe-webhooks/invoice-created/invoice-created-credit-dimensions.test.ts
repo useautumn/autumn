@@ -116,7 +116,14 @@ test.concurrent(
 			{ description: "Action1 — large, 40 units", amount: 30 },
 		]);
 
-		expect(customer.balances[TestFeature.InvoiceCredits].remaining).toBe(100);
+		// Re-read: the reset lands with the invoice, after the customer above was fetched.
+		const resetCustomer = await autumnV2_3.customers.get<ApiCustomerV5>(
+			customerId,
+			{ skip_cache: "true" },
+		);
+		expect(resetCustomer.balances[TestFeature.InvoiceCredits].remaining).toBe(
+			100,
+		);
 		const resetCustomerEntitlement = await findCustomerEntitlement({
 			ctx,
 			customerId,

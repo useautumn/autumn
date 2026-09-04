@@ -9,6 +9,7 @@ import type { ApiCustomerV3, FeatureConfigOverride } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -107,7 +108,11 @@ test.concurrent(
 		});
 		expect(response).toMatchObject({ allowed: true, required_balance: 160 });
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// The cached view is invalidated asynchronously, so assert the persisted one.
+		await timeout(2_000);
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
+			skip_cache: "true",
+		});
 		expect(customer.features[TestFeature.Credits]).toMatchObject({
 			balance: 1_000 - 160,
 			usage: 160,

@@ -95,6 +95,7 @@ test("collapsed rows summarize the rate without exposing controls", () => {
 test("the dimensions section lists each field's values and a rate table with a select per field", () => {
 	const html = renderToStaticMarkup(
 		<CreditDimensionsSection
+			schemaKeys={["row-1"]}
 			schema={[
 				{
 					metered_feature_id: feature.id,

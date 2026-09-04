@@ -188,3 +188,18 @@ test("dropping the last rate that used a value keeps the value in the merged set
 		lifecycle: ["spot"],
 	});
 });
+
+test("collision suffixes keep names within the API limit", () => {
+	const longValue = "v".repeat(80);
+	const next = withRateRules({
+		item: row,
+		rules: [
+			{ name: "", dimension: { match: { size: longValue }, credit_amount: 1 } },
+			{ name: "", dimension: { match: { size: longValue }, credit_amount: 2 } },
+		],
+	});
+
+	const names = Object.keys(next.dimensions ?? {});
+	expect(names).toHaveLength(2);
+	for (const name of names) expect(name.length).toBeLessThanOrEqual(64);
+});

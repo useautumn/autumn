@@ -12,13 +12,6 @@ type ApiCreditDimension = NonNullable<
 	ApiCreditSchemaItem["dimensions"]
 >[string];
 
-const matchToApi = (
-	match: CreditDimension["match"],
-): ApiCreditDimension["match"] =>
-	Object.fromEntries(
-		Object.entries(match).map(([key, value]) => [key, String(value)]),
-	);
-
 type SdkCreditRate =
 	| {
 			tierBehavior: "graduated";
@@ -49,7 +42,7 @@ function creditRateToApi(rate: SdkCreditRate): ApiCreditRate {
 
 function creditDimensionToApi(dimension: CreditDimension): ApiCreditDimension {
 	return {
-		match: matchToApi(dimension.match),
+		match: dimension.match,
 		...(dimension.priority !== undefined && { priority: dimension.priority }),
 		...creditRateToApi(dimension),
 	};
@@ -58,7 +51,7 @@ function creditDimensionToApi(dimension: CreditDimension): ApiCreditDimension {
 function creditMultiplierToApi(
 	multiplier: CreditMultiplier,
 ): NonNullable<ApiCreditSchemaItem["multipliers"]>[string] {
-	return { ...multiplier, match: matchToApi(multiplier.match) };
+	return { ...multiplier, match: multiplier.match };
 }
 
 function creditDimensionRulesToApi(

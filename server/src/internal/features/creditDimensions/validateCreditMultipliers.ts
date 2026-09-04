@@ -1,4 +1,5 @@
 import type { CreditMultiplier, CreditSchemaItem } from "@autumn/shared";
+import { matchesCanCoexist } from "@autumn/shared";
 import { minimumCreditRateAmount } from "../validateCreditRate.js";
 
 const validateMultiplierShape = ({
@@ -35,24 +36,30 @@ const validateMultipliersKeepRatesNonNegative = ({
 }) => {
 	const multipliers = Object.values(schemaItem.multipliers ?? {});
 	const rates = [schemaItem, ...Object.values(schemaItem.dimensions ?? {})];
-
 	const cheapestRate = Math.min(...rates.map(minimumCreditRateAmount));
-	const discountFactor = multipliers.reduce(
-		(product, multiplier) =>
-			multiplier.factor !== undefined && multiplier.factor < 1
-				? product * multiplier.factor
-				: product,
-		1,
-	);
-	const negativeAdds = multipliers.reduce(
-		(sum, multiplier) =>
-			multiplier.add !== undefined && multiplier.add < 0
-				? sum + multiplier.add
-				: sum,
-		0,
-	);
 
-	if (cheapestRate * discountFactor + negativeAdds < 0) {
+	// Only multipliers that could match one event stack, so the worst case is the
+	// deepest discount over a set whose matches all coexist.
+	const worstCaseDiscount = multipliers.reduce((worst, multiplier) => {
+		const stacked = multipliers.filter((other) =>
+			matchesCanCoexist(multiplier.match, other.match),
+		);
+		const factor = stacked.reduce(
+			(product, other) =>
+				other.factor !== undefined && other.factor < 1
+					? product * other.factor
+					: product,
+			1,
+		);
+		const adds = stacked.reduce(
+			(sum, other) =>
+				other.add !== undefined && other.add < 0 ? sum + other.add : sum,
+			0,
+		);
+		return Math.min(worst, cheapestRate * factor + adds);
+	}, cheapestRate);
+
+	if (worstCaseDiscount < 0) {
 		invalidCreditSystem(
 			`Multipliers on ${schemaItem.metered_feature_id} can take a rate below zero.`,
 		);

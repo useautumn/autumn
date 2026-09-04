@@ -93,6 +93,7 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 			{isAdmin && dimensions.enabled && (
 				<CreditDimensionsSection
 					schema={schema}
+					schemaKeys={schemaKeys}
 					allFeatures={allSchemaCandidateFeatures}
 					onItemChange={setSchemaItem}
 				/>

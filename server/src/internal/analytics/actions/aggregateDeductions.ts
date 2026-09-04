@@ -151,10 +151,15 @@ export const resolveCreditCost = ({
 		errorOnNotFound: false,
 	});
 	if (!sourceFeature) return null;
-	const schemaItem = creditSystem.config?.schema?.find(
+	// A plan item can override the schema with dimensions the catalog does not
+	// have, and this view has no entitlement to check, so any dimensioned rate on
+	// the feature makes every rate for it unreportable rather than wrong.
+	const schema: CreditSchemaItem[] = creditSystem.config?.schema ?? [];
+	if (schema.some(hasCreditDimensionRules)) return null;
+	const schemaItem = schema.find(
 		(item: CreditSchemaItem) => item.metered_feature_id === sourceFeatureId,
 	);
-	if (schemaItem && hasCreditDimensionRules(schemaItem)) return null;
+	if (!schemaItem) return null;
 	const rateCard = getCreditRateCard({ sourceFeature, creditSystem });
 	if (rateCard?.tier_behavior === "graduated") return null;
 
