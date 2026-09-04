@@ -22,6 +22,7 @@ export const fullCustomerToCustomerEntitlements = ({
 	entity,
 	customerEntitlementFilters,
 	isRefund = false,
+	includeExpired = false,
 }: {
 	fullCustomer: FullCustomer;
 	inStatuses?: CusProductStatus[];
@@ -34,6 +35,8 @@ export const fullCustomerToCustomerEntitlements = ({
 	entity?: Entity;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 	isRefund?: boolean;
+	/** Dashboard-only: keep expired loose rows so they stay deletable. */
+	includeExpired?: boolean;
 }) => {
 	const cusProducts = fullCustomer.customer_products;
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
@@ -107,10 +110,11 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
-	// Filter out expired entitlements (applies to loose entitlements with expires_at)
-	// This is necessary because cached fullCustomer may contain entitlements that have since expired
+	// A cached fullCustomer can hold rows that have since expired.
 	const now = Date.now();
-	cusEnts = cusEnts.filter((cusEnt) => !isCusEntExpired({ cusEnt, now }));
+	if (!includeExpired) {
+		cusEnts = cusEnts.filter((cusEnt) => !isCusEntExpired({ cusEnt, now }));
+	}
 
 	sortCusEntsForDeduction({
 		cusEnts,

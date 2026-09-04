@@ -2,7 +2,6 @@ import {
 	cusEntsToUsage,
 	type DeleteBalanceParamsV0,
 	fullCustomerToCustomerEntitlements,
-	isCusEntExpired,
 	isPaidCustomerEntitlement,
 	isPooledBalanceSourceCustomerEntitlement,
 	isSyntheticPooledBalanceCustomerEntitlement,
@@ -51,28 +50,15 @@ export const deleteBalance = async ({
 		includeExpiredLooseEntitlements: includeExpired,
 	});
 
-	// 2. Get balance
-	let customerEntitlements = fullCustomerToCustomerEntitlements({
+	// 2. Get balance. includeExpired keeps expired loose rows in the selection so
+	// the dashboard can delete them — every other filter still applies.
+	const customerEntitlements = fullCustomerToCustomerEntitlements({
 		fullCustomer,
 		featureId: feature_id,
 		entity: fullCustomer.entity,
 		customerEntitlementFilters: buildCustomerEntitlementFilters({ params }),
+		includeExpired,
 	});
-
-	// The selector excludes expired rows; match the target among expired loose
-	// entitlements directly so they stay deletable from the dashboard.
-	if (customerEntitlements.length === 0 && includeExpired) {
-		const filters = buildCustomerEntitlementFilters({ params });
-		customerEntitlements = (fullCustomer.extra_customer_entitlements ?? [])
-			.filter(
-				(cusEnt) =>
-					isCusEntExpired({ cusEnt }) &&
-					(!feature_id || cusEnt.feature_id === feature_id) &&
-					(!filters?.cusEntIds || filters.cusEntIds.includes(cusEnt.id)) &&
-					(!filters?.balanceId || cusEnt.entitlement_id === filters.balanceId),
-			)
-			.map((cusEnt) => ({ ...cusEnt, customer_product: null }));
-	}
 
 	if (customerEntitlements.length === 0) {
 		throw new RecaseError({
