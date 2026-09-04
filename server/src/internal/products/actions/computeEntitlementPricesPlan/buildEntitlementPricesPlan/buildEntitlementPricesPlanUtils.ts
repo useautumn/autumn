@@ -1,7 +1,7 @@
-import {
-	type EntitlementPrice,
-	type EntitlementWithFeature,
-	type Price,
+import type {
+	EntitlementPrice,
+	EntitlementWithFeature,
+	Price,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils";
 import type { EntitlementPricesPlanMode } from "../types/computeEntitlementPricesPlanParams";
@@ -17,7 +17,7 @@ export const leaveBucketForMode = ({
 	mode: EntitlementPricesPlanMode;
 }): keyof Pick<RowBuckets<unknown>, "deleted" | "retired"> | null => {
 	if (mode.type === "version" || mode.type === "custom") return null;
-	return mode.protectReferencedRows ? "retired" : "deleted";
+	return "retired";
 };
 
 /** Push both halves of an EP into the same bucket. */

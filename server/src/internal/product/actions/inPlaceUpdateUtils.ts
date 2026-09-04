@@ -145,12 +145,8 @@ const backfillExistingItemIds = ({
 	});
 };
 
-/**
- * Retire (vs mutate/delete) a catalog ent/price so existing customers that
- * reference it keep their definition. Referenced rows flip to is_custom:true
- * (hidden from the catalog, FK still valid); unreferenced rows are deleted.
- */
-const retireOrDeleteRows = async ({
+/** Leave unused catalog rows in place as is_custom so deferred FKs stay valid. */
+const retireCatalogRows = async ({
 	db,
 	entitlementIds,
 	priceIds,
@@ -159,59 +155,13 @@ const retireOrDeleteRows = async ({
 	entitlementIds: string[];
 	priceIds: string[];
 }) => {
-	const [customerEnts, customerPrices, licenseEnts, licensePrices] =
-		await Promise.all([
-			CusEntService.getReferencedEntitlementIds({ db, entitlementIds }),
-			CusPriceService.getReferencedPriceIds({ db, priceIds }),
-			licenseItemRepo.listReferencedEntitlementIds({ db, entitlementIds }),
-			licenseItemRepo.listReferencedPriceIds({ db, priceIds }),
-		]);
-	const referencedEnts = new Set([...customerEnts, ...licenseEnts]);
-	const referencedPrices = new Set([...customerPrices, ...licensePrices]);
-	const priceRows = await PriceService.getInIds({ db, ids: priceIds });
-	const entitlementsReferencedByRetainedPrices = new Set(
-		priceRows.flatMap((price) =>
-			referencedPrices.has(price.id) && price.entitlement_id
-				? [price.entitlement_id]
-				: [],
-		),
-	);
-
-	for (const priceId of priceIds) {
-		if (referencedPrices.has(priceId)) {
-			await PriceService.update({
-				db,
-				id: priceId,
-				update: { is_custom: true },
-			});
-		} else {
-			await PriceService.deleteInIds({ db, ids: [priceId] });
-		}
-	}
-
-	for (const entitlementId of entitlementIds) {
-		if (
-			referencedEnts.has(entitlementId) ||
-			entitlementsReferencedByRetainedPrices.has(entitlementId)
-		) {
-			await EntitlementService.update({
-				db,
-				id: entitlementId,
-				updates: { is_custom: true },
-			});
-		} else {
-			await EntitlementService.deleteInIds({ db, ids: [entitlementId] });
-		}
-	}
+	await PriceService.retireInIds({ db, ids: priceIds });
+	await EntitlementService.retireInIds({ db, ids: entitlementIds });
 };
 
 /**
- * Resolve an in-place edit (disable_version + customers) against the current
- * catalog. Carries forward unchanged ids, retires the rows behind UPDATE/DELETE
- * (is_custom flip when referenced, else delete) so existing customers are
- * untouched, and returns the items to insert plus the catalog prices/ents with
- * the retired rows removed — handed to `handleNewProductItems` so it does not
- * re-delete them.
+ * Carry unchanged item ids forward and retire replaced catalog rows (is_custom).
+ * Existing customer/license FKs keep pointing at the retired definition.
  */
 export const resolveInPlaceEdit = async ({
 	db,
@@ -253,7 +203,7 @@ export const resolveInPlaceEdit = async ({
 		if (currentItem.price_id) retiredPriceIds.push(currentItem.price_id);
 	}
 
-	await retireOrDeleteRows({
+	await retireCatalogRows({
 		db,
 		entitlementIds: retiredEntitlementIds,
 		priceIds: retiredPriceIds,

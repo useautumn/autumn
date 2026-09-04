@@ -83,6 +83,14 @@ export class PriceService {
 		await db.delete(prices).where(inArray(prices.id, ids));
 	}
 
+	static async retireInIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+		if (ids.length === 0) return;
+		await db
+			.update(prices)
+			.set({ is_custom: true })
+			.where(inArray(prices.id, ids));
+	}
+
 	static async getByStripeId({
 		db,
 		stripePriceId,
