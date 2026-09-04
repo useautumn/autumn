@@ -94,11 +94,16 @@ export default atmn(${catalogConfig({ firstFeatureId, secondFeatureId, planId, k
 			const result = await runPush({ client, cwd: scenario.cwd });
 
 			for (const featureId of [firstFeatureId, secondFeatureId]) {
+				// The generated client hands back preview rows camelCased, like
+				// every fixture-facing response — not the snake_case wire.
 				const featureRow = (result.preview.features ?? []).find(
-					(row) => (row as { feature_id?: string }).feature_id === featureId,
+					(row) => (row as { featureId?: string }).featureId === featureId,
 				);
 				expect(featureRow).toEqual(
-					expect.objectContaining({ action: "remove", will_archive: true }),
+					expect.objectContaining({
+						action: "delete",
+						state: expect.objectContaining({ willArchive: true }),
+					}),
 				);
 
 				const feature = await FeatureService.get({
@@ -116,8 +121,10 @@ export default atmn(${catalogConfig({ firstFeatureId, secondFeatureId, planId, k
 			const customer = await scenario.autumnV2_3.customers.get(
 				scenario.customerId as unknown as string,
 			);
-			expect(customer.features?.[firstFeatureId]).toBeDefined();
-			expect(customer.features?.[secondFeatureId]).toBeDefined();
+			// @ts-expect-error autumnV2_3's declared return type defaults to ApiCustomerV3; this API version actually returns subscriptions/balances
+			expect(customer.balances?.[firstFeatureId]).toBeDefined();
+			// @ts-expect-error autumnV2_3's declared return type defaults to ApiCustomerV3; this API version actually returns subscriptions/balances
+			expect(customer.balances?.[secondFeatureId]).toBeDefined();
 		} finally {
 			scenario.cleanup();
 		}

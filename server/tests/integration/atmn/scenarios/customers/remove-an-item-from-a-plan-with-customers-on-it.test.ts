@@ -89,8 +89,10 @@ export default atmn(${catalogConfig({ firstFeatureId, secondFeatureId, planId, d
 			});
 			const result = await runPush({ client, cwd: scenario.cwd });
 
+			// The generated client hands back preview rows camelCased, like every
+			// fixture-facing response — not the snake_case wire.
 			const planRow = (result.preview.plans ?? []).find(
-				(row) => (row as { plan_id?: string }).plan_id === planId,
+				(row) => (row as { planId?: string }).planId === planId,
 			);
 			expect(planRow).toEqual(expect.objectContaining({ action: "update" }));
 			expect(result.preview.migrations ?? []).not.toHaveLength(0);
@@ -108,7 +110,8 @@ export default atmn(${catalogConfig({ firstFeatureId, secondFeatureId, planId, d
 			const customer = await scenario.autumnV2_3.customers.get(
 				scenario.customerId as unknown as string,
 			);
-			expect(customer.features?.[secondFeatureId]).toBeDefined();
+			// @ts-expect-error autumnV2_3's declared return type defaults to ApiCustomerV3; this API version actually returns subscriptions/balances
+			expect(customer.balances?.[secondFeatureId]).toBeDefined();
 		} finally {
 			scenario.cleanup();
 		}
