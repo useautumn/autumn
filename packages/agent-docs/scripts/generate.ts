@@ -10,6 +10,7 @@ import { toMcpResource } from "../src/translate/formats/mcpResource.js";
 import { toSkill } from "../src/translate/formats/skill.js";
 import type { McpResource, Skill } from "../src/translate/formats/types.js";
 import { docsPageToMarkdown } from "../src/translate/ingest/docsPage.js";
+import { writePublicSkills } from "./publicSkills.js";
 
 // Build-time translation: read canonical docs (+ transitional legacy markdown),
 // emit self-contained TS artifacts so consumers need no runtime fs access, plus
@@ -252,21 +253,35 @@ for (const resource of mcpResources) {
 		contents: resource.text,
 	});
 }
-for (const skill of skills) {
-	writeReadable({
-		relPath: `skills/${skill.name}/SKILL.md`,
-		contents: skill.markdown,
-	});
-	for (const reference of skill.references) {
-		writeReadable({
-			relPath: `skills/${skill.name}/${reference.path}`,
-			contents: reference.contents,
-		});
-	}
-}
+writePublicSkills({
+	outputDirectory: resolve(readableRoot, "skills"),
+	skills,
+});
 for (const id of agentIds) {
 	writeReadable({
 		relPath: `agents/${id}.md`,
 		contents: leafAgentPrompts[id],
 	});
 }
+
+// useautumn.com/SKILL.md — the one URL the dashboard's setup prompt points an
+// agent at. References inline because a single fetch can't follow them.
+const SETUP_SKILL_NAME = "autumn-setup";
+const setupSkill = skills.find((skill) => skill.name === SETUP_SKILL_NAME);
+if (!setupSkill) {
+	throw new Error(
+		`Missing "${SETUP_SKILL_NAME}" skill for the website SKILL.md`,
+	);
+}
+
+const websiteSkillPath = resolve(here, "../../../apps/website/public/SKILL.md");
+writeFileSync(
+	websiteSkillPath,
+	`${[
+		setupSkill.markdown.trim(),
+		...setupSkill.references.map(
+			(reference) => `## ${reference.path}\n\n${reference.contents.trim()}`,
+		),
+	].join("\n\n")}\n`,
+);
+process.stdout.write(`Wrote ${websiteSkillPath}\n`);
