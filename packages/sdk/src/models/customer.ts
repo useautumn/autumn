@@ -222,7 +222,7 @@ export type CustomerAnchor = OpenEnum<typeof CustomerAnchor>;
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type CustomerFilter = {
+export type CustomerUsageLimitFilter = {
   properties: { [k: string]: string };
 };
 
@@ -262,7 +262,7 @@ export type CustomerUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: CustomerFilter | undefined;
+  filter?: CustomerUsageLimitFilter | undefined;
   /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
@@ -286,6 +286,27 @@ export const CustomerThresholdType = {
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type CustomerThresholdType = OpenEnum<typeof CustomerThresholdType>;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const CustomerBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type CustomerBasis = OpenEnum<typeof CustomerBasis>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type CustomerUsageAlertFilter = {
+  properties: { [k: string]: string };
+};
 
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
@@ -316,6 +337,14 @@ export type CustomerUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: CustomerThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: CustomerBasis;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: CustomerUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -778,7 +807,7 @@ export type Vercel = {
 /**
  * RevenueCat processor connection for the customer.
  */
-export type Revenuecat = {
+export type CustomerRevenuecat = {
   /**
    * Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set.
    */
@@ -800,7 +829,7 @@ export type CustomerProcessors = {
   /**
    * RevenueCat processor connection for the customer.
    */
-  revenuecat?: Revenuecat | undefined;
+  revenuecat?: CustomerRevenuecat | undefined;
 };
 
 /**
@@ -1368,20 +1397,20 @@ export const CustomerAnchor$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CustomerAnchor);
 
 /** @internal */
-export const CustomerFilter$inboundSchema: z.ZodMiniType<
-  CustomerFilter,
+export const CustomerUsageLimitFilter$inboundSchema: z.ZodMiniType<
+  CustomerUsageLimitFilter,
   unknown
 > = z.object({
   properties: z.record(z.string(), types.string()),
 });
 
-export function customerFilterFromJSON(
+export function customerUsageLimitFilterFromJSON(
   jsonString: string,
-): SafeParseResult<CustomerFilter, SDKValidationError> {
+): SafeParseResult<CustomerUsageLimitFilter, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CustomerFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerFilter' from JSON`,
+    (x) => CustomerUsageLimitFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerUsageLimitFilter' from JSON`,
   );
 }
 
@@ -1402,7 +1431,9 @@ export const CustomerUsageLimit$inboundSchema: z.ZodMiniType<
     limit: types.number(),
     interval: CustomerUsageLimitInterval$inboundSchema,
     anchor: types.optional(CustomerAnchor$inboundSchema),
-    filter: types.optional(z.lazy(() => CustomerFilter$inboundSchema)),
+    filter: types.optional(
+      z.lazy(() => CustomerUsageLimitFilter$inboundSchema),
+    ),
     usage: types.optional(types.number()),
     source: types.optional(UsageLimitSource$inboundSchema),
   }),
@@ -1430,6 +1461,30 @@ export const CustomerThresholdType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CustomerThresholdType);
 
 /** @internal */
+export const CustomerBasis$inboundSchema: z.ZodMiniType<
+  CustomerBasis,
+  unknown
+> = openEnums.inboundSchema(CustomerBasis);
+
+/** @internal */
+export const CustomerUsageAlertFilter$inboundSchema: z.ZodMiniType<
+  CustomerUsageAlertFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function customerUsageAlertFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerUsageAlertFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerUsageAlertFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerUsageAlertFilter' from JSON`,
+  );
+}
+
+/** @internal */
 export const UsageAlertSource$inboundSchema: z.ZodMiniType<
   UsageAlertSource,
   unknown
@@ -1445,6 +1500,10 @@ export const CustomerUsageAlert$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     threshold: types.number(),
     threshold_type: CustomerThresholdType$inboundSchema,
+    basis: z._default(CustomerBasis$inboundSchema, "balance"),
+    filter: types.optional(
+      z.lazy(() => CustomerUsageAlertFilter$inboundSchema),
+    ),
     name: types.optional(types.string()),
     source: types.optional(UsageAlertSource$inboundSchema),
   }),
@@ -2091,18 +2150,20 @@ export function vercelFromJSON(
 }
 
 /** @internal */
-export const Revenuecat$inboundSchema: z.ZodMiniType<Revenuecat, unknown> = z
-  .object({
-    id: types.nullable(types.string()),
-  });
+export const CustomerRevenuecat$inboundSchema: z.ZodMiniType<
+  CustomerRevenuecat,
+  unknown
+> = z.object({
+  id: types.nullable(types.string()),
+});
 
-export function revenuecatFromJSON(
+export function customerRevenuecatFromJSON(
   jsonString: string,
-): SafeParseResult<Revenuecat, SDKValidationError> {
+): SafeParseResult<CustomerRevenuecat, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Revenuecat$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Revenuecat' from JSON`,
+    (x) => CustomerRevenuecat$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerRevenuecat' from JSON`,
   );
 }
 
@@ -2113,7 +2174,7 @@ export const CustomerProcessors$inboundSchema: z.ZodMiniType<
 > = z.object({
   stripe: types.optional(z.lazy(() => CustomerStripe$inboundSchema)),
   vercel: types.optional(z.lazy(() => Vercel$inboundSchema)),
-  revenuecat: types.optional(z.lazy(() => Revenuecat$inboundSchema)),
+  revenuecat: types.optional(z.lazy(() => CustomerRevenuecat$inboundSchema)),
 });
 
 export function customerProcessorsFromJSON(

@@ -28,7 +28,7 @@ class UpdateEntityGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -124,26 +124,26 @@ UpdateEntityAnchorRequestBody = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-UpdateEntityPropertiesTypedDict = TypeAliasType(
-    "UpdateEntityPropertiesTypedDict", Union[str, float, bool]
+UpdateEntityUsageLimitPropertiesTypedDict = TypeAliasType(
+    "UpdateEntityUsageLimitPropertiesTypedDict", Union[str, float, bool]
 )
 
 
-UpdateEntityProperties = TypeAliasType(
-    "UpdateEntityProperties", Union[str, float, bool]
+UpdateEntityUsageLimitProperties = TypeAliasType(
+    "UpdateEntityUsageLimitProperties", Union[str, float, bool]
 )
 
 
-class UpdateEntityFilterRequestBodyTypedDict(TypedDict):
+class UpdateEntityUsageLimitFilterRequestBodyTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, UpdateEntityPropertiesTypedDict]
+    properties: Dict[str, UpdateEntityUsageLimitPropertiesTypedDict]
 
 
-class UpdateEntityFilterRequestBody(BaseModel):
+class UpdateEntityUsageLimitFilterRequestBody(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, UpdateEntityProperties]
+    properties: Dict[str, UpdateEntityUsageLimitProperties]
 
 
 class UpdateEntityUsageLimitRequestBodyTypedDict(TypedDict):
@@ -157,7 +157,7 @@ class UpdateEntityUsageLimitRequestBodyTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[UpdateEntityAnchorRequestBody]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[UpdateEntityFilterRequestBodyTypedDict]
+    filter_: NotRequired[UpdateEntityUsageLimitFilterRequestBodyTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -178,7 +178,8 @@ class UpdateEntityUsageLimitRequestBody(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[UpdateEntityFilterRequestBody], pydantic.Field(alias="filter")
+        Optional[UpdateEntityUsageLimitFilterRequestBody],
+        pydantic.Field(alias="filter"),
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -208,6 +209,37 @@ UpdateEntityThresholdTypeRequestBody = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+UpdateEntityBasisRequestBody = Literal[
+    "balance",
+    "included",
+    "recurring",
+    "usage_limit",
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+UpdateEntityUsageAlertPropertiesTypedDict = TypeAliasType(
+    "UpdateEntityUsageAlertPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+UpdateEntityUsageAlertProperties = TypeAliasType(
+    "UpdateEntityUsageAlertProperties", Union[str, float, bool]
+)
+
+
+class UpdateEntityUsageAlertFilterRequestBodyTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, UpdateEntityUsageAlertPropertiesTypedDict]
+
+
+class UpdateEntityUsageAlertFilterRequestBody(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, UpdateEntityUsageAlertProperties]
+
+
 class UpdateEntityUsageAlertRequestBodyTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -217,6 +249,10 @@ class UpdateEntityUsageAlertRequestBodyTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[UpdateEntityBasisRequestBody]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[UpdateEntityUsageAlertFilterRequestBodyTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -234,12 +270,21 @@ class UpdateEntityUsageAlertRequestBody(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[UpdateEntityBasisRequestBody] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[UpdateEntityUsageAlertFilterRequestBody],
+        pydantic.Field(alias="filter"),
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -1160,13 +1205,13 @@ UpdateEntityAnchorResponse = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class UpdateEntityFilterResponseTypedDict(TypedDict):
+class UpdateEntityUsageLimitFilterResponseTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class UpdateEntityFilterResponse(BaseModel):
+class UpdateEntityUsageLimitFilterResponse(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -1193,7 +1238,7 @@ class UpdateEntityUsageLimitResponseTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[UpdateEntityAnchorResponse]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[UpdateEntityFilterResponseTypedDict]
+    filter_: NotRequired[UpdateEntityUsageLimitFilterResponseTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
@@ -1218,7 +1263,7 @@ class UpdateEntityUsageLimitResponse(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[UpdateEntityFilterResponse], pydantic.Field(alias="filter")
+        Optional[UpdateEntityUsageLimitFilterResponse], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1257,6 +1302,30 @@ UpdateEntityThresholdTypeResponse = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+UpdateEntityBasisResponse = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class UpdateEntityUsageAlertFilterResponseTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class UpdateEntityUsageAlertFilterResponse(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 UpdateEntityUsageAlertSource = Union[
     Literal[
         "customer",
@@ -1276,6 +1345,10 @@ class UpdateEntityUsageAlertResponseTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[UpdateEntityBasisResponse]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[UpdateEntityUsageAlertFilterResponseTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
     source: NotRequired[UpdateEntityUsageAlertSource]
@@ -1295,6 +1368,14 @@ class UpdateEntityUsageAlertResponse(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[UpdateEntityBasisResponse] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[UpdateEntityUsageAlertFilterResponse], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -1303,7 +1384,9 @@ class UpdateEntityUsageAlertResponse(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name", "source"])
+        optional_fields = set(
+            ["feature_id", "enabled", "basis", "filter", "name", "source"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1584,6 +1667,10 @@ try:
 except NameError:
     pass
 try:
+    UpdateEntityUsageAlertRequestBody.model_rebuild()
+except NameError:
+    pass
+try:
     UpdateEntityCreditSchema3.model_rebuild()
 except NameError:
     pass
@@ -1593,5 +1680,9 @@ except NameError:
     pass
 try:
     UpdateEntityUsageLimitResponse.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdateEntityUsageAlertResponse.model_rebuild()
 except NameError:
     pass

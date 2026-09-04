@@ -320,7 +320,7 @@ export type ListCustomersAnchor = OpenEnum<typeof ListCustomersAnchor>;
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type ListCustomersFilter = {
+export type ListCustomersUsageLimitFilter = {
   properties: { [k: string]: string };
 };
 
@@ -362,7 +362,7 @@ export type ListCustomersUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: ListCustomersFilter | undefined;
+  filter?: ListCustomersUsageLimitFilter | undefined;
   /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
@@ -388,6 +388,27 @@ export const ListCustomersThresholdType = {
 export type ListCustomersThresholdType = OpenEnum<
   typeof ListCustomersThresholdType
 >;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const ListCustomersBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type ListCustomersBasis = OpenEnum<typeof ListCustomersBasis>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type ListCustomersUsageAlertFilter = {
+  properties: { [k: string]: string };
+};
 
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
@@ -420,6 +441,14 @@ export type ListCustomersUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: ListCustomersThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: ListCustomersBasis;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: ListCustomersUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1285,20 +1314,20 @@ export const ListCustomersAnchor$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListCustomersAnchor);
 
 /** @internal */
-export const ListCustomersFilter$inboundSchema: z.ZodMiniType<
-  ListCustomersFilter,
+export const ListCustomersUsageLimitFilter$inboundSchema: z.ZodMiniType<
+  ListCustomersUsageLimitFilter,
   unknown
 > = z.object({
   properties: z.record(z.string(), types.string()),
 });
 
-export function listCustomersFilterFromJSON(
+export function listCustomersUsageLimitFilterFromJSON(
   jsonString: string,
-): SafeParseResult<ListCustomersFilter, SDKValidationError> {
+): SafeParseResult<ListCustomersUsageLimitFilter, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListCustomersFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListCustomersFilter' from JSON`,
+    (x) => ListCustomersUsageLimitFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersUsageLimitFilter' from JSON`,
   );
 }
 
@@ -1319,7 +1348,9 @@ export const ListCustomersUsageLimit$inboundSchema: z.ZodMiniType<
     limit: types.number(),
     interval: ListCustomersUsageLimitInterval$inboundSchema,
     anchor: types.optional(ListCustomersAnchor$inboundSchema),
-    filter: types.optional(z.lazy(() => ListCustomersFilter$inboundSchema)),
+    filter: types.optional(
+      z.lazy(() => ListCustomersUsageLimitFilter$inboundSchema),
+    ),
     usage: types.optional(types.number()),
     source: types.optional(ListCustomersUsageLimitSource$inboundSchema),
   }),
@@ -1347,6 +1378,30 @@ export const ListCustomersThresholdType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListCustomersThresholdType);
 
 /** @internal */
+export const ListCustomersBasis$inboundSchema: z.ZodMiniType<
+  ListCustomersBasis,
+  unknown
+> = openEnums.inboundSchema(ListCustomersBasis);
+
+/** @internal */
+export const ListCustomersUsageAlertFilter$inboundSchema: z.ZodMiniType<
+  ListCustomersUsageAlertFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function listCustomersUsageAlertFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersUsageAlertFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersUsageAlertFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersUsageAlertFilter' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersUsageAlertSource$inboundSchema: z.ZodMiniType<
   ListCustomersUsageAlertSource,
   unknown
@@ -1362,6 +1417,10 @@ export const ListCustomersUsageAlert$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     threshold: types.number(),
     threshold_type: ListCustomersThresholdType$inboundSchema,
+    basis: z._default(ListCustomersBasis$inboundSchema, "balance"),
+    filter: types.optional(
+      z.lazy(() => ListCustomersUsageAlertFilter$inboundSchema),
+    ),
     name: types.optional(types.string()),
     source: types.optional(ListCustomersUsageAlertSource$inboundSchema),
   }),

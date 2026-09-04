@@ -52,7 +52,7 @@ const OPENAPI_DOC_VERSION = LATEST_VERSION;
 
 /**
  * Generates the OpenAPI document with all transformations applied.
- * Internal helper used by both writeOpenApi_2_3_0 and writeOpenApi_2_3_0_Stripped.
+ * Internal helper used by both latest OpenAPI writers.
  */
 async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	// Register internal schemas before generation so they get x-internal: true
@@ -147,7 +147,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
  * Generates and writes the full OpenAPI spec (with TypeScript JSDoc examples).
  * Used for the TypeScript SDK generation.
  */
-export const writeOpenApi_2_3_0 = async ({
+export const writeLatestOpenApi = async ({
 	outputFilePath,
 }: {
 	outputFilePath: string;
@@ -162,7 +162,7 @@ export const writeOpenApi_2_3_0 = async ({
  * Used for non-TypeScript SDK generation (Python, etc.) where TS examples
  * in descriptions would be confusing.
  */
-export const writeOpenApi_2_3_0_Stripped = async ({
+export const writeLatestOpenApiStripped = async ({
 	outputFilePath,
 }: {
 	outputFilePath: string;

@@ -135,12 +135,12 @@ export const CustomerDataAnchor = {
  */
 export type CustomerDataAnchor = ClosedEnum<typeof CustomerDataAnchor>;
 
-export type Properties = string | number | boolean;
+export type UsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type CustomerDataFilter = {
+export type CustomerDataUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -168,7 +168,7 @@ export type CustomerDataUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: CustomerDataFilter | undefined;
+  filter?: CustomerDataUsageLimitFilter | undefined;
 };
 
 /**
@@ -187,6 +187,29 @@ export type CustomerDataThresholdType = ClosedEnum<
   typeof CustomerDataThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const CustomerDataBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type CustomerDataBasis = ClosedEnum<typeof CustomerDataBasis>;
+
+export type UsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type CustomerDataUsageAlertFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type CustomerDataUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -204,6 +227,14 @@ export type CustomerDataUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: CustomerDataThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: CustomerDataBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: CustomerDataUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -447,27 +478,31 @@ export const CustomerDataAnchor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CustomerDataAnchor);
 
 /** @internal */
-export type Properties$Outbound = string | number | boolean;
+export type UsageLimitProperties$Outbound = string | number | boolean;
 
 /** @internal */
-export const Properties$outboundSchema: z.ZodMiniType<
-  Properties$Outbound,
-  Properties
+export const UsageLimitProperties$outboundSchema: z.ZodMiniType<
+  UsageLimitProperties$Outbound,
+  UsageLimitProperties
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function propertiesToJSON(properties: Properties): string {
-  return JSON.stringify(Properties$outboundSchema.parse(properties));
+export function usageLimitPropertiesToJSON(
+  usageLimitProperties: UsageLimitProperties,
+): string {
+  return JSON.stringify(
+    UsageLimitProperties$outboundSchema.parse(usageLimitProperties),
+  );
 }
 
 /** @internal */
-export type CustomerDataFilter$Outbound = {
+export type CustomerDataUsageLimitFilter$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const CustomerDataFilter$outboundSchema: z.ZodMiniType<
-  CustomerDataFilter$Outbound,
-  CustomerDataFilter
+export const CustomerDataUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  CustomerDataUsageLimitFilter$Outbound,
+  CustomerDataUsageLimitFilter
 > = z.object({
   properties: z.record(
     z.string(),
@@ -475,11 +510,13 @@ export const CustomerDataFilter$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function customerDataFilterToJSON(
-  customerDataFilter: CustomerDataFilter,
+export function customerDataUsageLimitFilterToJSON(
+  customerDataUsageLimitFilter: CustomerDataUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    CustomerDataFilter$outboundSchema.parse(customerDataFilter),
+    CustomerDataUsageLimitFilter$outboundSchema.parse(
+      customerDataUsageLimitFilter,
+    ),
   );
 }
 
@@ -490,7 +527,7 @@ export type CustomerDataUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: CustomerDataFilter$Outbound | undefined;
+  filter?: CustomerDataUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -504,7 +541,9 @@ export const CustomerDataUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: CustomerDataUsageLimitInterval$outboundSchema,
     anchor: z.optional(CustomerDataAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => CustomerDataFilter$outboundSchema)),
+    filter: z.optional(
+      z.lazy(() => CustomerDataUsageLimitFilter$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -527,11 +566,61 @@ export const CustomerDataThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CustomerDataThresholdType);
 
 /** @internal */
+export const CustomerDataBasis$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataBasis
+> = z.enum(CustomerDataBasis);
+
+/** @internal */
+export type UsageAlertProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const UsageAlertProperties$outboundSchema: z.ZodMiniType<
+  UsageAlertProperties$Outbound,
+  UsageAlertProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function usageAlertPropertiesToJSON(
+  usageAlertProperties: UsageAlertProperties,
+): string {
+  return JSON.stringify(
+    UsageAlertProperties$outboundSchema.parse(usageAlertProperties),
+  );
+}
+
+/** @internal */
+export type CustomerDataUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const CustomerDataUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  CustomerDataUsageAlertFilter$Outbound,
+  CustomerDataUsageAlertFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function customerDataUsageAlertFilterToJSON(
+  customerDataUsageAlertFilter: CustomerDataUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    CustomerDataUsageAlertFilter$outboundSchema.parse(
+      customerDataUsageAlertFilter,
+    ),
+  );
+}
+
+/** @internal */
 export type CustomerDataUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: CustomerDataUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -545,6 +634,10 @@ export const CustomerDataUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: CustomerDataThresholdType$outboundSchema,
+    basis: z._default(CustomerDataBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => CustomerDataUsageAlertFilter$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {

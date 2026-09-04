@@ -20,3 +20,45 @@ openapi: "api/openapi.yml webhook balances.limit_reached"
 <ParamField body="limit_type" type="'included' | 'max_purchase' | 'spend_limit' | 'usage_limit'" required>
   Which limit was hit: included allowance, max purchase cap, spend limit, or a usage-limit billing control.
 </ParamField>
+
+<ParamField body="filter" type="object">
+  The filter of the usage limit that blocked, when a filtered cap was hit.
+  <Expandable title="properties">
+    <ParamField body="properties.{key}" type="string" required />
+
+  </Expandable>
+</ParamField>
+
+<ParamField body="usage_limit" type="object">
+  The usage limit that blocked, with its live window. Present only when limit_type is usage_limit.
+  <Expandable title="properties">
+    <ParamField body="limit" type="number" required>
+      Maximum units allowed per interval.
+    </ParamField>
+
+    <ParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
+      Interval of the cap.
+    </ParamField>
+
+    <ParamField body="anchor" type="'billing_cycle' | 'utc'" required>
+      Window alignment the cap was configured with.
+    </ParamField>
+
+    <ParamField body="usage" type="number" required>
+      Units consumed in the current window, after this event.
+    </ParamField>
+
+    <ParamField body="remaining" type="number" required>
+      Units left in the current window, never below zero.
+    </ParamField>
+
+    <ParamField body="window_start_at" type="number" required>
+      Start of the current window, in milliseconds since epoch.
+    </ParamField>
+
+    <ParamField body="window_end_at" type="number" required>
+      End of the current window, in milliseconds since epoch.
+    </ParamField>
+
+  </Expandable>
+</ParamField>

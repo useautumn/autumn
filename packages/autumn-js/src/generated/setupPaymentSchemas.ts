@@ -29,13 +29,50 @@ export const setupPaymentItemTierAdditionalCurrencySchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentItemTierSchema = z.object({
+export const setupPaymentItemPriceTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 	additionalCurrencies: z
 		.union([
 			z.array(setupPaymentItemTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const setupPaymentCreditSchemaItem2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentCreditSchemaItem1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentItemFeatureOverrideTierSchema),
+});
+
+export const setupPaymentItemCreditSchemaUnionSchema = z.union([
+	setupPaymentCreditSchemaItem1Schema,
+	setupPaymentCreditSchemaItem2Schema,
+]);
+
+export const setupPaymentItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaItem1Schema,
+					setupPaymentCreditSchemaItem2Schema,
+				]),
+			),
 			z.undefined(),
 		])
 		.optional(),
@@ -54,7 +91,7 @@ export const setupPaymentAddItemTierAdditionalCurrencySchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentAddItemTierSchema = z.object({
+export const setupPaymentAddItemPriceTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
@@ -66,13 +103,63 @@ export const setupPaymentAddItemTierSchema = z.object({
 		.optional(),
 });
 
-export const setupPaymentPropertiesSchema = z.union([
+export const setupPaymentCreditSchemaAddItem2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentAddItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentCreditSchemaAddItem1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentAddItemFeatureOverrideTierSchema),
+});
+
+export const setupPaymentAddItemCreditSchemaUnionSchema = z.union([
+	setupPaymentCreditSchemaAddItem1Schema,
+	setupPaymentCreditSchemaAddItem2Schema,
+]);
+
+export const setupPaymentAddItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaAddItem1Schema,
+					setupPaymentCreditSchemaAddItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const setupPaymentUsageLimitPropertiesSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const setupPaymentFilterSchema = z.object({
+export const setupPaymentUsageLimitFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
+export const setupPaymentUsageAlertPropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentUsageAlertFilterSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -100,6 +187,38 @@ export const setupPaymentUpsertLicenseTierSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
+});
+
+export const setupPaymentCreditSchemaUpsertLicense2Schema = z.object({
+	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
+	billingUnits: z.union([z.any(), z.undefined()]).optional(),
+	creditCost: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const setupPaymentCreditSchemaUpsertLicense1Schema = z.object({
+	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
+	billingUnits: z.union([z.any(), z.undefined()]).optional(),
+	tierBehavior: z.union([z.any(), z.undefined()]).optional(),
+	tiers: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUpsertLicenseCreditSchemaUnionSchema = z.union([
+	setupPaymentCreditSchemaUpsertLicense1Schema,
+	setupPaymentCreditSchemaUpsertLicense2Schema,
+]);
+
+export const setupPaymentUpsertLicenseFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaUpsertLicense1Schema,
+					setupPaymentCreditSchemaUpsertLicense2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const setupPaymentRemoveLicenseSchema = z.object({
@@ -193,7 +312,7 @@ export const setupPaymentItemTierAdditionalCurrencyOutboundSchema = z.object({
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentItemTierOutboundSchema = z.object({
+export const setupPaymentItemPriceTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
@@ -214,7 +333,7 @@ export const setupPaymentItemPriceOutboundSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(setupPaymentItemTierOutboundSchema), z.undefined()])
+		.union([z.array(setupPaymentItemPriceTierOutboundSchema), z.undefined()])
 		.optional(),
 	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.string(),
@@ -236,6 +355,43 @@ export const setupPaymentItemRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const setupPaymentCreditSchemaItem2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentItemFeatureOverrideTierOutboundSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentCreditSchemaItem1OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentItemFeatureOverrideTierOutboundSchema),
+});
+
+export const setupPaymentItemCreditSchemaUnionOutboundSchema = z.union([
+	setupPaymentCreditSchemaItem1OutboundSchema,
+	setupPaymentCreditSchemaItem2OutboundSchema,
+]);
+
+export const setupPaymentItemFeatureOverrideOutboundSchema = z.object({
+	credit_schema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaItem1OutboundSchema,
+					setupPaymentCreditSchemaItem2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const setupPaymentItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -252,6 +408,9 @@ export const setupPaymentItemPlanItemOutboundSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([setupPaymentItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
+	feature_override: z
+		.union([setupPaymentItemFeatureOverrideOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -278,7 +437,7 @@ export const setupPaymentAddItemTierAdditionalCurrencyOutboundSchema = z.object(
 	},
 );
 
-export const setupPaymentAddItemTierOutboundSchema = z.object({
+export const setupPaymentAddItemPriceTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
@@ -299,7 +458,7 @@ export const setupPaymentAddItemPriceOutboundSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(setupPaymentAddItemTierOutboundSchema), z.undefined()])
+		.union([z.array(setupPaymentAddItemPriceTierOutboundSchema), z.undefined()])
 		.optional(),
 	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.string(),
@@ -321,6 +480,43 @@ export const setupPaymentAddItemRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const setupPaymentCreditSchemaAddItem2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentAddItemFeatureOverrideTierOutboundSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentCreditSchemaAddItem1OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentAddItemFeatureOverrideTierOutboundSchema),
+});
+
+export const setupPaymentAddItemCreditSchemaUnionOutboundSchema = z.union([
+	setupPaymentCreditSchemaAddItem1OutboundSchema,
+	setupPaymentCreditSchemaAddItem2OutboundSchema,
+]);
+
+export const setupPaymentAddItemFeatureOverrideOutboundSchema = z.object({
+	credit_schema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaAddItem1OutboundSchema,
+					setupPaymentCreditSchemaAddItem2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const setupPaymentAddItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -337,6 +533,9 @@ export const setupPaymentAddItemPlanItemOutboundSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([setupPaymentAddItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
+	feature_override: z
+		.union([setupPaymentAddItemFeatureOverrideOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -386,13 +585,13 @@ export const setupPaymentSpendLimitOutboundSchema = z.object({
 	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const setupPaymentPropertiesOutboundSchema = z.union([
+export const setupPaymentUsageLimitPropertiesOutboundSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const setupPaymentFilterOutboundSchema = z.object({
+export const setupPaymentUsageLimitFilterOutboundSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -405,7 +604,22 @@ export const setupPaymentUsageLimitOutboundSchema = z.object({
 	limit: z.number(),
 	interval: z.string(),
 	anchor: z.union([z.string(), z.undefined()]).optional(),
-	filter: z.union([setupPaymentFilterOutboundSchema, z.undefined()]).optional(),
+	filter: z
+		.union([setupPaymentUsageLimitFilterOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const setupPaymentUsageAlertPropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentUsageAlertFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const setupPaymentUsageAlertOutboundSchema = z.object({
@@ -413,6 +627,10 @@ export const setupPaymentUsageAlertOutboundSchema = z.object({
 	enabled: z.boolean(),
 	threshold: z.number(),
 	threshold_type: z.string(),
+	basis: z.string(),
+	filter: z
+		.union([setupPaymentUsageAlertFilterOutboundSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
@@ -509,6 +727,40 @@ export const setupPaymentUpsertLicenseRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const setupPaymentCreditSchemaUpsertLicense2OutboundSchema = z.object({
+	metered_feature_id: z.union([z.any(), z.undefined()]).optional(),
+	billing_units: z.union([z.any(), z.undefined()]).optional(),
+	credit_cost: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const setupPaymentCreditSchemaUpsertLicense1OutboundSchema = z.object({
+	metered_feature_id: z.union([z.any(), z.undefined()]).optional(),
+	billing_units: z.union([z.any(), z.undefined()]).optional(),
+	tier_behavior: z.union([z.any(), z.undefined()]).optional(),
+	tiers: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUpsertLicenseCreditSchemaUnionOutboundSchema = z.union(
+	[
+		setupPaymentCreditSchemaUpsertLicense1OutboundSchema,
+		setupPaymentCreditSchemaUpsertLicense2OutboundSchema,
+	],
+);
+
+export const setupPaymentUpsertLicenseFeatureOverrideOutboundSchema = z.object({
+	credit_schema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaUpsertLicense1OutboundSchema,
+					setupPaymentCreditSchemaUpsertLicense2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const setupPaymentUpsertLicensePlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -525,6 +777,12 @@ export const setupPaymentUpsertLicensePlanItemOutboundSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([setupPaymentUpsertLicenseRolloverOutboundSchema, z.undefined()])
+		.optional(),
+	feature_override: z
+		.union([
+			setupPaymentUpsertLicenseFeatureOverrideOutboundSchema,
+			z.undefined(),
+		])
 		.optional(),
 });
 
@@ -562,6 +820,7 @@ export const setupPaymentUpsertLicenseCustomizeOutboundSchema = z.object({
 
 export const setupPaymentUpsertLicenseOutboundSchema = z.object({
 	license_plan_id: z.string(),
+	version_slug: z.union([z.string(), z.undefined()]).optional(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	prepaid_only: z.union([z.boolean(), z.undefined()]).optional(),
 	customize: z
@@ -731,7 +990,7 @@ export const setupPaymentItemPriceSchema = z.object({
 		.union([z.array(setupPaymentItemAdditionalCurrencySchema), z.undefined()])
 		.optional(),
 	tiers: z
-		.union([z.array(setupPaymentItemTierSchema), z.undefined()])
+		.union([z.array(setupPaymentItemPriceTierSchema), z.undefined()])
 		.optional(),
 	tierBehavior: z
 		.union([setupPaymentItemTierBehaviorSchema, z.undefined()])
@@ -772,6 +1031,9 @@ export const setupPaymentItemPlanItemSchema = z.object({
 		.union([setupPaymentItemProrationSchema, z.undefined()])
 		.optional(),
 	rollover: z.union([setupPaymentItemRolloverSchema, z.undefined()]).optional(),
+	featureOverride: z
+		.union([setupPaymentItemFeatureOverrideSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentAddItemResetIntervalSchema = closedEnumSchema;
@@ -796,7 +1058,7 @@ export const setupPaymentAddItemPriceSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(setupPaymentAddItemTierSchema), z.undefined()])
+		.union([z.array(setupPaymentAddItemPriceTierSchema), z.undefined()])
 		.optional(),
 	tierBehavior: z
 		.union([setupPaymentAddItemTierBehaviorSchema, z.undefined()])
@@ -838,6 +1100,9 @@ export const setupPaymentAddItemPlanItemSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([setupPaymentAddItemRolloverSchema, z.undefined()])
+		.optional(),
+	featureOverride: z
+		.union([setupPaymentAddItemFeatureOverrideSchema, z.undefined()])
 		.optional(),
 });
 
@@ -921,16 +1186,24 @@ export const setupPaymentUsageLimitSchema = z.object({
 	limit: z.number(),
 	interval: setupPaymentUsageLimitIntervalSchema,
 	anchor: z.union([setupPaymentAnchorSchema, z.undefined()]).optional(),
-	filter: z.union([setupPaymentFilterSchema, z.undefined()]).optional(),
+	filter: z
+		.union([setupPaymentUsageLimitFilterSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentThresholdTypeSchema = closedEnumSchema;
+
+export const setupPaymentBasisSchema = closedEnumSchema;
 
 export const setupPaymentUsageAlertSchema = z.object({
 	featureId: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	threshold: z.number(),
 	thresholdType: setupPaymentThresholdTypeSchema,
+	basis: z.union([setupPaymentBasisSchema, z.undefined()]).optional(),
+	filter: z
+		.union([setupPaymentUsageAlertFilterSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
@@ -1038,6 +1311,9 @@ export const setupPaymentUpsertLicensePlanItemSchema = z.object({
 	rollover: z
 		.union([setupPaymentUpsertLicenseRolloverSchema, z.undefined()])
 		.optional(),
+	featureOverride: z
+		.union([setupPaymentUpsertLicenseFeatureOverrideSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentUpsertLicenseRemoveItemBillingMethodSchema =
@@ -1091,6 +1367,7 @@ export const setupPaymentUpsertLicenseCustomizeSchema = z.object({
 
 export const setupPaymentUpsertLicenseSchema = z.object({
 	licensePlanId: z.string(),
+	versionSlug: z.union([z.string(), z.undefined()]).optional(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	prepaidOnly: z.union([z.boolean(), z.undefined()]).optional(),
 	customize: z

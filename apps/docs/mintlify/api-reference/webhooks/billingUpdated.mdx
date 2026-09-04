@@ -197,6 +197,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
+                <ParamField body="processors" type="object">
+                  Payment processors this base price is connected to. Omitted when unset.
+                  <Expandable title="properties">
+                    <ParamField body="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <ParamField body="price_id" type="string" required>
+                          Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
               </Expandable>
             </ParamField>
 
@@ -355,6 +370,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                       Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
                     </ParamField>
 
+                    <ParamField body="processors" type="object">
+                      Payment processors this item price is connected to. Omitted when unset.
+                      <Expandable title="properties">
+                        <ParamField body="stripe" type="object | null">
+                          <Expandable title="properties">
+                            <ParamField body="price_id" type="string" required>
+                              Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
                   </Expandable>
                 </ParamField>
 
@@ -389,6 +419,89 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                     <ParamField body="expiry_duration_length" type="number">
                       Number of periods before expiry.
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="feature_override" type="object">
+                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                  <Expandable title="properties">
+                    <ParamField body="credit_schema" type="object | object[]">
+                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                      <Expandable title="properties">
+                        <ParamField body="metered_feature_id" type="string">
+                          ID of the metered feature that draws from this credit system.
+                        </ParamField>
+
+                        <ParamField body="billing_units" type="number">
+                          Number of metered-feature units priced together. Defaults to one when omitted.
+                        </ParamField>
+
+                        <ParamField body="tier_behavior" type="string" />
+
+                        <ParamField body="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <ParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </ParamField>
+
+                            <ParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="credit_cost" type="number">
+                          Credits consumed per billing-unit group.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+              </Expandable>
+            </ParamField>
+
+            <ParamField body="processors" type="object">
+              Payment processors this plan is connected to. Omitted when unset.
+              <Expandable title="properties">
+                <ParamField body="stripe" type="object | null">
+                  <Expandable title="properties">
+                    <ParamField body="product_id" type="string" required>
+                      Stripe product ID this plan is billed under.
+                    </ParamField>
+
+                    <ParamField body="additional_product_ids" type="string[]">
+                      Extra Stripe product IDs aliased to this plan.
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="revenuecat" type="object | null">
+                  <Expandable title="properties">
+                    <ParamField body="products" type="object[]" required>
+                      Every RevenueCat product that maps to this plan. Replaces the current set.
+                      <Expandable title="properties">
+                        <ParamField body="product_id" type="string" required>
+                          RevenueCat product ID that grants this plan when purchased.
+                        </ParamField>
+
+                        <ParamField body="feature_quantities" type="object[]">
+                          Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
+                          <Expandable title="properties">
+                            <ParamField body="feature_id" type="string" required />
+
+                            <ParamField body="quantity" type="number" />
+
+                          </Expandable>
+                        </ParamField>
+
+                      </Expandable>
                     </ParamField>
 
                   </Expandable>
@@ -565,6 +678,18 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                     <ParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
                       Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                    </ParamField>
+
+                    <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                      What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                    </ParamField>
+
+                    <ParamField body="filter" type="object">
+                      Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                      <Expandable title="properties">
+                        <ParamField body="properties.{key}" type="string" required />
+
+                      </Expandable>
                     </ParamField>
 
                     <ParamField body="name" type="string">
@@ -810,6 +935,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
+                        <ParamField body="feature_override" type="object">
+                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                          <Expandable title="properties">
+                            <ParamField body="credit_schema" type="object | object[]">
+                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                              <Expandable title="properties">
+                                <ParamField body="metered_feature_id" type="string">
+                                  ID of the metered feature that draws from this credit system.
+                                </ParamField>
+
+                                <ParamField body="billing_units" type="number">
+                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                </ParamField>
+
+                                <ParamField body="tier_behavior" type="string" />
+
+                                <ParamField body="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <ParamField body="to" type="number" required>
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </ParamField>
+
+                                    <ParamField body="credit_cost" type="number" required>
+                                      Credits consumed per billing-unit group within this tier.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number">
+                                  Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
                       </Expandable>
                     </ParamField>
 
@@ -991,6 +1155,18 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                             </ParamField>
 
+                            <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                              What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                            </ParamField>
+
+                            <ParamField body="filter" type="object">
+                              Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                              <Expandable title="properties">
+                                <ParamField body="properties.{key}" type="string" required />
+
+                              </Expandable>
+                            </ParamField>
+
                             <ParamField body="name" type="string">
                               Optional user-defined label to distinguish multiple alerts on the same feature.
                             </ParamField>
@@ -1019,6 +1195,8 @@ openapi: "api/openapi.yml webhook billing.updated"
                       License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
                       <Expandable title="properties">
                         <ParamField body="license_plan_id" type="string" required />
+
+                        <ParamField body="version_slug" type="string" />
 
                         <ParamField body="included" type="integer" />
 
@@ -1201,6 +1379,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   </Expandable>
                                 </ParamField>
 
+                                <ParamField body="feature_override" type="object">
+                                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                                  <Expandable title="properties">
+                                    <ParamField body="credit_schema" type="object | object[]">
+                                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                      <Expandable title="properties">
+                                        <ParamField body="metered_feature_id" type="string">
+                                          ID of the metered feature that draws from this credit system.
+                                        </ParamField>
+
+                                        <ParamField body="billing_units" type="number">
+                                          Number of metered-feature units priced together. Defaults to one when omitted.
+                                        </ParamField>
+
+                                        <ParamField body="tier_behavior" type="string" />
+
+                                        <ParamField body="tiers" type="object[]">
+                                          <Expandable title="properties">
+                                            <ParamField body="to" type="number" required>
+                                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                            </ParamField>
+
+                                            <ParamField body="credit_cost" type="number" required>
+                                              Credits consumed per billing-unit group within this tier.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number">
+                                          Credits consumed per billing-unit group.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
                               </Expandable>
                             </ParamField>
 
@@ -1297,6 +1514,50 @@ openapi: "api/openapi.yml webhook billing.updated"
 
             <ParamField body="metadata" type="object">
               Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
+            </ParamField>
+
+            <ParamField body="processors" type="object | null">
+              Previous payment processors when they changed. Null when the plan had none.
+              <Expandable title="properties">
+                <ParamField body="stripe" type="object | null">
+                  <Expandable title="properties">
+                    <ParamField body="product_id" type="string" required>
+                      Stripe product ID this plan is billed under.
+                    </ParamField>
+
+                    <ParamField body="additional_product_ids" type="string[]">
+                      Extra Stripe product IDs aliased to this plan.
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="revenuecat" type="object | null">
+                  <Expandable title="properties">
+                    <ParamField body="products" type="object[]" required>
+                      Every RevenueCat product that maps to this plan. Replaces the current set.
+                      <Expandable title="properties">
+                        <ParamField body="product_id" type="string" required>
+                          RevenueCat product ID that grants this plan when purchased.
+                        </ParamField>
+
+                        <ParamField body="feature_quantities" type="object[]">
+                          Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
+                          <Expandable title="properties">
+                            <ParamField body="feature_id" type="string" required />
+
+                            <ParamField body="quantity" type="number" />
+
+                          </Expandable>
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+              </Expandable>
             </ParamField>
 
             <ParamField body="free_trial" type="object | null">
@@ -1447,6 +1708,18 @@ openapi: "api/openapi.yml webhook billing.updated"
                       Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                     </ParamField>
 
+                    <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                      What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                    </ParamField>
+
+                    <ParamField body="filter" type="object">
+                      Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                      <Expandable title="properties">
+                        <ParamField body="properties.{key}" type="string" required />
+
+                      </Expandable>
+                    </ParamField>
+
                     <ParamField body="name" type="string">
                       Optional user-defined label to distinguish multiple alerts on the same feature.
                     </ParamField>
@@ -1520,6 +1793,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
+                <ParamField body="processors" type="object">
+                  Payment processors this base price is connected to. Omitted when unset.
+                  <Expandable title="properties">
+                    <ParamField body="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <ParamField body="price_id" type="string" required>
+                          Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
               </Expandable>
             </ParamField>
 
@@ -1561,6 +1849,21 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                     <ParamField body="secondary_text" type="string">
                       Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="processors" type="object">
+                  Payment processors this base price is connected to. Omitted when unset.
+                  <Expandable title="properties">
+                    <ParamField body="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <ParamField body="price_id" type="string" required>
+                          Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                        </ParamField>
+
+                      </Expandable>
                     </ParamField>
 
                   </Expandable>
@@ -1788,6 +2091,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                       Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
                     </ParamField>
 
+                    <ParamField body="processors" type="object">
+                      Payment processors this item price is connected to. Omitted when unset.
+                      <Expandable title="properties">
+                        <ParamField body="stripe" type="object | null">
+                          <Expandable title="properties">
+                            <ParamField body="price_id" type="string" required>
+                              Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
                   </Expandable>
                 </ParamField>
 
@@ -1822,6 +2140,45 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                     <ParamField body="expiry_duration_length" type="number">
                       Number of periods before expiry.
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="feature_override" type="object">
+                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                  <Expandable title="properties">
+                    <ParamField body="credit_schema" type="object | object[]">
+                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                      <Expandable title="properties">
+                        <ParamField body="metered_feature_id" type="string">
+                          ID of the metered feature that draws from this credit system.
+                        </ParamField>
+
+                        <ParamField body="billing_units" type="number">
+                          Number of metered-feature units priced together. Defaults to one when omitted.
+                        </ParamField>
+
+                        <ParamField body="tier_behavior" type="string" />
+
+                        <ParamField body="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <ParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </ParamField>
+
+                            <ParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="credit_cost" type="number">
+                          Credits consumed per billing-unit group.
+                        </ParamField>
+
+                      </Expandable>
                     </ParamField>
 
                   </Expandable>
@@ -2012,6 +2369,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
+                <ParamField body="feature_override" type="object">
+                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                  <Expandable title="properties">
+                    <ParamField body="credit_schema" type="object | object[]">
+                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                      <Expandable title="properties">
+                        <ParamField body="metered_feature_id" type="string">
+                          ID of the metered feature that draws from this credit system.
+                        </ParamField>
+
+                        <ParamField body="billing_units" type="number">
+                          Number of metered-feature units priced together. Defaults to one when omitted.
+                        </ParamField>
+
+                        <ParamField body="tier_behavior" type="string" />
+
+                        <ParamField body="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <ParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </ParamField>
+
+                            <ParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="credit_cost" type="number">
+                          Credits consumed per billing-unit group.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
               </Expandable>
             </ParamField>
 
@@ -2193,6 +2589,18 @@ openapi: "api/openapi.yml webhook billing.updated"
                       Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                     </ParamField>
 
+                    <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                      What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                    </ParamField>
+
+                    <ParamField body="filter" type="object">
+                      Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                      <Expandable title="properties">
+                        <ParamField body="properties.{key}" type="string" required />
+
+                      </Expandable>
+                    </ParamField>
+
                     <ParamField body="name" type="string">
                       Optional user-defined label to distinguish multiple alerts on the same feature.
                     </ParamField>
@@ -2221,6 +2629,8 @@ openapi: "api/openapi.yml webhook billing.updated"
               planLicenses created or overridden. Same shape as customize.upsert_licenses / licenses[] entries.
               <Expandable title="properties">
                 <ParamField body="license_plan_id" type="string" required />
+
+                <ParamField body="version_slug" type="string" />
 
                 <ParamField body="included" type="integer" />
 
@@ -2403,6 +2813,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
+                        <ParamField body="feature_override" type="object">
+                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                          <Expandable title="properties">
+                            <ParamField body="credit_schema" type="object | object[]">
+                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                              <Expandable title="properties">
+                                <ParamField body="metered_feature_id" type="string">
+                                  ID of the metered feature that draws from this credit system.
+                                </ParamField>
+
+                                <ParamField body="billing_units" type="number">
+                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                </ParamField>
+
+                                <ParamField body="tier_behavior" type="string" />
+
+                                <ParamField body="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <ParamField body="to" type="number" required>
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </ParamField>
+
+                                    <ParamField body="credit_cost" type="number" required>
+                                      Credits consumed per billing-unit group within this tier.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number">
+                                  Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
                       </Expandable>
                     </ParamField>
 
@@ -2459,6 +2908,10 @@ openapi: "api/openapi.yml webhook billing.updated"
 
             <ParamField body="version" type="integer" required>
               The exact license-plan version pinned by this link.
+            </ParamField>
+
+            <ParamField body="version_slug" type="string">
+              Version slug of the license-plan row this link points at.
             </ParamField>
 
             <ParamField body="included" type="number" required>
@@ -2542,6 +2995,21 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                         <ParamField body="secondary_text" type="string">
                           Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="processors" type="object">
+                      Payment processors this base price is connected to. Omitted when unset.
+                      <Expandable title="properties">
+                        <ParamField body="stripe" type="object | null">
+                          <Expandable title="properties">
+                            <ParamField body="price_id" type="string" required>
+                              Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                            </ParamField>
+
+                          </Expandable>
                         </ParamField>
 
                       </Expandable>
@@ -2705,6 +3173,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                           Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
                         </ParamField>
 
+                        <ParamField body="processors" type="object">
+                          Payment processors this item price is connected to. Omitted when unset.
+                          <Expandable title="properties">
+                            <ParamField body="stripe" type="object | null">
+                              <Expandable title="properties">
+                                <ParamField body="price_id" type="string" required>
+                                  Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
                       </Expandable>
                     </ParamField>
 
@@ -2739,6 +3222,89 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                         <ParamField body="expiry_duration_length" type="number">
                           Number of periods before expiry.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="feature_override" type="object">
+                      Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                      <Expandable title="properties">
+                        <ParamField body="credit_schema" type="object | object[]">
+                          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                          <Expandable title="properties">
+                            <ParamField body="metered_feature_id" type="string">
+                              ID of the metered feature that draws from this credit system.
+                            </ParamField>
+
+                            <ParamField body="billing_units" type="number">
+                              Number of metered-feature units priced together. Defaults to one when omitted.
+                            </ParamField>
+
+                            <ParamField body="tier_behavior" type="string" />
+
+                            <ParamField body="tiers" type="object[]">
+                              <Expandable title="properties">
+                                <ParamField body="to" type="number" required>
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number" required>
+                                  Credits consumed per billing-unit group within this tier.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="credit_cost" type="number">
+                              Credits consumed per billing-unit group.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="processors" type="object">
+                  Payment processors this plan is connected to. Omitted when unset.
+                  <Expandable title="properties">
+                    <ParamField body="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <ParamField body="product_id" type="string" required>
+                          Stripe product ID this plan is billed under.
+                        </ParamField>
+
+                        <ParamField body="additional_product_ids" type="string[]">
+                          Extra Stripe product IDs aliased to this plan.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="revenuecat" type="object | null">
+                      <Expandable title="properties">
+                        <ParamField body="products" type="object[]" required>
+                          Every RevenueCat product that maps to this plan. Replaces the current set.
+                          <Expandable title="properties">
+                            <ParamField body="product_id" type="string" required>
+                              RevenueCat product ID that grants this plan when purchased.
+                            </ParamField>
+
+                            <ParamField body="feature_quantities" type="object[]">
+                              Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
+                              <Expandable title="properties">
+                                <ParamField body="feature_id" type="string" required />
+
+                                <ParamField body="quantity" type="number" />
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
                         </ParamField>
 
                       </Expandable>
@@ -2915,6 +3481,18 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                         <ParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
                           Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                        </ParamField>
+
+                        <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                          What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                        </ParamField>
+
+                        <ParamField body="filter" type="object">
+                          Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                          <Expandable title="properties">
+                            <ParamField body="properties.{key}" type="string" required />
+
+                          </Expandable>
                         </ParamField>
 
                         <ParamField body="name" type="string">
@@ -3160,6 +3738,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                               </Expandable>
                             </ParamField>
 
+                            <ParamField body="feature_override" type="object">
+                              Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                              <Expandable title="properties">
+                                <ParamField body="credit_schema" type="object | object[]">
+                                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="metered_feature_id" type="string">
+                                      ID of the metered feature that draws from this credit system.
+                                    </ParamField>
+
+                                    <ParamField body="billing_units" type="number">
+                                      Number of metered-feature units priced together. Defaults to one when omitted.
+                                    </ParamField>
+
+                                    <ParamField body="tier_behavior" type="string" />
+
+                                    <ParamField body="tiers" type="object[]">
+                                      <Expandable title="properties">
+                                        <ParamField body="to" type="number" required>
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number" required>
+                                          Credits consumed per billing-unit group within this tier.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                    <ParamField body="credit_cost" type="number">
+                                      Credits consumed per billing-unit group.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
                           </Expandable>
                         </ParamField>
 
@@ -3341,6 +3958,18 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                                 </ParamField>
 
+                                <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                                  What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                                </ParamField>
+
+                                <ParamField body="filter" type="object">
+                                  Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                                  <Expandable title="properties">
+                                    <ParamField body="properties.{key}" type="string" required />
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="name" type="string">
                                   Optional user-defined label to distinguish multiple alerts on the same feature.
                                 </ParamField>
@@ -3369,6 +3998,8 @@ openapi: "api/openapi.yml webhook billing.updated"
                           License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
                           <Expandable title="properties">
                             <ParamField body="license_plan_id" type="string" required />
+
+                            <ParamField body="version_slug" type="string" />
 
                             <ParamField body="included" type="integer" />
 
@@ -3551,6 +4182,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                                       </Expandable>
                                     </ParamField>
 
+                                    <ParamField body="feature_override" type="object">
+                                      Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                                      <Expandable title="properties">
+                                        <ParamField body="credit_schema" type="object | object[]">
+                                          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                          <Expandable title="properties">
+                                            <ParamField body="metered_feature_id" type="string">
+                                              ID of the metered feature that draws from this credit system.
+                                            </ParamField>
+
+                                            <ParamField body="billing_units" type="number">
+                                              Number of metered-feature units priced together. Defaults to one when omitted.
+                                            </ParamField>
+
+                                            <ParamField body="tier_behavior" type="string" />
+
+                                            <ParamField body="tiers" type="object[]">
+                                              <Expandable title="properties">
+                                                <ParamField body="to" type="number" required>
+                                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                </ParamField>
+
+                                                <ParamField body="credit_cost" type="number" required>
+                                                  Credits consumed per billing-unit group within this tier.
+                                                </ParamField>
+
+                                              </Expandable>
+                                            </ParamField>
+
+                                            <ParamField body="credit_cost" type="number">
+                                              Credits consumed per billing-unit group.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
                                   </Expandable>
                                 </ParamField>
 
@@ -3613,6 +4283,10 @@ openapi: "api/openapi.yml webhook billing.updated"
               <Expandable title="properties">
                 <ParamField body="version" type="integer">
                   The exact license-plan version pinned by this link.
+                </ParamField>
+
+                <ParamField body="version_slug" type="string">
+                  Version slug of the license-plan row this link points at.
                 </ParamField>
 
                 <ParamField body="included" type="number">
@@ -3702,6 +4376,21 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                             <ParamField body="secondary_text" type="string">
                               Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="processors" type="object">
+                          Payment processors this base price is connected to. Omitted when unset.
+                          <Expandable title="properties">
+                            <ParamField body="stripe" type="object | null">
+                              <Expandable title="properties">
+                                <ParamField body="price_id" type="string" required>
+                                  Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                                </ParamField>
+
+                              </Expandable>
                             </ParamField>
 
                           </Expandable>
@@ -3865,6 +4554,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
                             </ParamField>
 
+                            <ParamField body="processors" type="object">
+                              Payment processors this item price is connected to. Omitted when unset.
+                              <Expandable title="properties">
+                                <ParamField body="stripe" type="object | null">
+                                  <Expandable title="properties">
+                                    <ParamField body="price_id" type="string" required>
+                                      Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
                           </Expandable>
                         </ParamField>
 
@@ -3899,6 +4603,89 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                             <ParamField body="expiry_duration_length" type="number">
                               Number of periods before expiry.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="feature_override" type="object">
+                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                          <Expandable title="properties">
+                            <ParamField body="credit_schema" type="object | object[]">
+                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                              <Expandable title="properties">
+                                <ParamField body="metered_feature_id" type="string">
+                                  ID of the metered feature that draws from this credit system.
+                                </ParamField>
+
+                                <ParamField body="billing_units" type="number">
+                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                </ParamField>
+
+                                <ParamField body="tier_behavior" type="string" />
+
+                                <ParamField body="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <ParamField body="to" type="number" required>
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </ParamField>
+
+                                    <ParamField body="credit_cost" type="number" required>
+                                      Credits consumed per billing-unit group within this tier.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number">
+                                  Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="processors" type="object">
+                      Payment processors this plan is connected to. Omitted when unset.
+                      <Expandable title="properties">
+                        <ParamField body="stripe" type="object | null">
+                          <Expandable title="properties">
+                            <ParamField body="product_id" type="string" required>
+                              Stripe product ID this plan is billed under.
+                            </ParamField>
+
+                            <ParamField body="additional_product_ids" type="string[]">
+                              Extra Stripe product IDs aliased to this plan.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="revenuecat" type="object | null">
+                          <Expandable title="properties">
+                            <ParamField body="products" type="object[]" required>
+                              Every RevenueCat product that maps to this plan. Replaces the current set.
+                              <Expandable title="properties">
+                                <ParamField body="product_id" type="string" required>
+                                  RevenueCat product ID that grants this plan when purchased.
+                                </ParamField>
+
+                                <ParamField body="feature_quantities" type="object[]">
+                                  Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
+                                  <Expandable title="properties">
+                                    <ParamField body="feature_id" type="string" required />
+
+                                    <ParamField body="quantity" type="number" />
+
+                                  </Expandable>
+                                </ParamField>
+
+                              </Expandable>
                             </ParamField>
 
                           </Expandable>
@@ -4075,6 +4862,18 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                             <ParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
                               Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                            </ParamField>
+
+                            <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                              What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                            </ParamField>
+
+                            <ParamField body="filter" type="object">
+                              Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                              <Expandable title="properties">
+                                <ParamField body="properties.{key}" type="string" required />
+
+                              </Expandable>
                             </ParamField>
 
                             <ParamField body="name" type="string">
@@ -4320,6 +5119,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   </Expandable>
                                 </ParamField>
 
+                                <ParamField body="feature_override" type="object">
+                                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                                  <Expandable title="properties">
+                                    <ParamField body="credit_schema" type="object | object[]">
+                                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                      <Expandable title="properties">
+                                        <ParamField body="metered_feature_id" type="string">
+                                          ID of the metered feature that draws from this credit system.
+                                        </ParamField>
+
+                                        <ParamField body="billing_units" type="number">
+                                          Number of metered-feature units priced together. Defaults to one when omitted.
+                                        </ParamField>
+
+                                        <ParamField body="tier_behavior" type="string" />
+
+                                        <ParamField body="tiers" type="object[]">
+                                          <Expandable title="properties">
+                                            <ParamField body="to" type="number" required>
+                                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                            </ParamField>
+
+                                            <ParamField body="credit_cost" type="number" required>
+                                              Credits consumed per billing-unit group within this tier.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number">
+                                          Credits consumed per billing-unit group.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
                               </Expandable>
                             </ParamField>
 
@@ -4501,6 +5339,18 @@ openapi: "api/openapi.yml webhook billing.updated"
                                       Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                                     </ParamField>
 
+                                    <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                                      What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                                    </ParamField>
+
+                                    <ParamField body="filter" type="object">
+                                      Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                                      <Expandable title="properties">
+                                        <ParamField body="properties.{key}" type="string" required />
+
+                                      </Expandable>
+                                    </ParamField>
+
                                     <ParamField body="name" type="string">
                                       Optional user-defined label to distinguish multiple alerts on the same feature.
                                     </ParamField>
@@ -4529,6 +5379,8 @@ openapi: "api/openapi.yml webhook billing.updated"
                               License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
                               <Expandable title="properties">
                                 <ParamField body="license_plan_id" type="string" required />
+
+                                <ParamField body="version_slug" type="string" />
 
                                 <ParamField body="included" type="integer" />
 
@@ -4711,6 +5563,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                                           </Expandable>
                                         </ParamField>
 
+                                        <ParamField body="feature_override" type="object">
+                                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                                          <Expandable title="properties">
+                                            <ParamField body="credit_schema" type="object | object[]">
+                                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                              <Expandable title="properties">
+                                                <ParamField body="metered_feature_id" type="string">
+                                                  ID of the metered feature that draws from this credit system.
+                                                </ParamField>
+
+                                                <ParamField body="billing_units" type="number">
+                                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                                </ParamField>
+
+                                                <ParamField body="tier_behavior" type="string" />
+
+                                                <ParamField body="tiers" type="object[]">
+                                                  <Expandable title="properties">
+                                                    <ParamField body="to" type="number" required>
+                                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                    </ParamField>
+
+                                                    <ParamField body="credit_cost" type="number" required>
+                                                      Credits consumed per billing-unit group within this tier.
+                                                    </ParamField>
+
+                                                  </Expandable>
+                                                </ParamField>
+
+                                                <ParamField body="credit_cost" type="number">
+                                                  Credits consumed per billing-unit group.
+                                                </ParamField>
+
+                                              </Expandable>
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
                                       </Expandable>
                                     </ParamField>
 
@@ -4807,6 +5698,50 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                     <ParamField body="metadata" type="object">
                       Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
+                    </ParamField>
+
+                    <ParamField body="processors" type="object | null">
+                      Previous payment processors when they changed. Null when the plan had none.
+                      <Expandable title="properties">
+                        <ParamField body="stripe" type="object | null">
+                          <Expandable title="properties">
+                            <ParamField body="product_id" type="string" required>
+                              Stripe product ID this plan is billed under.
+                            </ParamField>
+
+                            <ParamField body="additional_product_ids" type="string[]">
+                              Extra Stripe product IDs aliased to this plan.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="revenuecat" type="object | null">
+                          <Expandable title="properties">
+                            <ParamField body="products" type="object[]" required>
+                              Every RevenueCat product that maps to this plan. Replaces the current set.
+                              <Expandable title="properties">
+                                <ParamField body="product_id" type="string" required>
+                                  RevenueCat product ID that grants this plan when purchased.
+                                </ParamField>
+
+                                <ParamField body="feature_quantities" type="object[]">
+                                  Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
+                                  <Expandable title="properties">
+                                    <ParamField body="feature_id" type="string" required />
+
+                                    <ParamField body="quantity" type="number" />
+
+                                  </Expandable>
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                      </Expandable>
                     </ParamField>
 
                     <ParamField body="free_trial" type="object | null">
@@ -4957,6 +5892,18 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                             </ParamField>
 
+                            <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                              What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                            </ParamField>
+
+                            <ParamField body="filter" type="object">
+                              Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                              <Expandable title="properties">
+                                <ParamField body="properties.{key}" type="string" required />
+
+                              </Expandable>
+                            </ParamField>
+
                             <ParamField body="name" type="string">
                               Optional user-defined label to distinguish multiple alerts on the same feature.
                             </ParamField>
@@ -5030,6 +5977,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
+                        <ParamField body="processors" type="object">
+                          Payment processors this base price is connected to. Omitted when unset.
+                          <Expandable title="properties">
+                            <ParamField body="stripe" type="object | null">
+                              <Expandable title="properties">
+                                <ParamField body="price_id" type="string" required>
+                                  Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
                       </Expandable>
                     </ParamField>
 
@@ -5071,6 +6033,21 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                             <ParamField body="secondary_text" type="string">
                               Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="processors" type="object">
+                          Payment processors this base price is connected to. Omitted when unset.
+                          <Expandable title="properties">
+                            <ParamField body="stripe" type="object | null">
+                              <Expandable title="properties">
+                                <ParamField body="price_id" type="string" required>
+                                  Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                                </ParamField>
+
+                              </Expandable>
                             </ParamField>
 
                           </Expandable>
@@ -5298,6 +6275,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
                             </ParamField>
 
+                            <ParamField body="processors" type="object">
+                              Payment processors this item price is connected to. Omitted when unset.
+                              <Expandable title="properties">
+                                <ParamField body="stripe" type="object | null">
+                                  <Expandable title="properties">
+                                    <ParamField body="price_id" type="string" required>
+                                      Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
                           </Expandable>
                         </ParamField>
 
@@ -5332,6 +6324,45 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                             <ParamField body="expiry_duration_length" type="number">
                               Number of periods before expiry.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="feature_override" type="object">
+                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                          <Expandable title="properties">
+                            <ParamField body="credit_schema" type="object | object[]">
+                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                              <Expandable title="properties">
+                                <ParamField body="metered_feature_id" type="string">
+                                  ID of the metered feature that draws from this credit system.
+                                </ParamField>
+
+                                <ParamField body="billing_units" type="number">
+                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                </ParamField>
+
+                                <ParamField body="tier_behavior" type="string" />
+
+                                <ParamField body="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <ParamField body="to" type="number" required>
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </ParamField>
+
+                                    <ParamField body="credit_cost" type="number" required>
+                                      Credits consumed per billing-unit group within this tier.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number">
+                                  Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
                             </ParamField>
 
                           </Expandable>
@@ -5522,6 +6553,45 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
+                        <ParamField body="feature_override" type="object">
+                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                          <Expandable title="properties">
+                            <ParamField body="credit_schema" type="object | object[]">
+                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                              <Expandable title="properties">
+                                <ParamField body="metered_feature_id" type="string">
+                                  ID of the metered feature that draws from this credit system.
+                                </ParamField>
+
+                                <ParamField body="billing_units" type="number">
+                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                </ParamField>
+
+                                <ParamField body="tier_behavior" type="string" />
+
+                                <ParamField body="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <ParamField body="to" type="number" required>
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </ParamField>
+
+                                    <ParamField body="credit_cost" type="number" required>
+                                      Credits consumed per billing-unit group within this tier.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number">
+                                  Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
                       </Expandable>
                     </ParamField>
 
@@ -5701,6 +6771,18 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                             <ParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
                               Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                            </ParamField>
+
+                            <ParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'" required>
+                              What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                            </ParamField>
+
+                            <ParamField body="filter" type="object">
+                              Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                              <Expandable title="properties">
+                                <ParamField body="properties.{key}" type="string" required />
+
+                              </Expandable>
                             </ParamField>
 
                             <ParamField body="name" type="string">
@@ -5905,6 +6987,21 @@ openapi: "api/openapi.yml webhook billing.updated"
                   Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
                 </ParamField>
 
+                <ParamField body="processors" type="object">
+                  Payment processors this item price is connected to. Omitted when unset.
+                  <Expandable title="properties">
+                    <ParamField body="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <ParamField body="price_id" type="string" required>
+                          Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
               </Expandable>
             </ParamField>
 
@@ -5939,6 +7036,45 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                 <ParamField body="expiry_duration_length" type="number">
                   Number of periods before expiry.
+                </ParamField>
+
+              </Expandable>
+            </ParamField>
+
+            <ParamField body="feature_override" type="object">
+              Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+              <Expandable title="properties">
+                <ParamField body="credit_schema" type="object | object[]">
+                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                  <Expandable title="properties">
+                    <ParamField body="metered_feature_id" type="string">
+                      ID of the metered feature that draws from this credit system.
+                    </ParamField>
+
+                    <ParamField body="billing_units" type="number">
+                      Number of metered-feature units priced together. Defaults to one when omitted.
+                    </ParamField>
+
+                    <ParamField body="tier_behavior" type="string" />
+
+                    <ParamField body="tiers" type="object[]">
+                      <Expandable title="properties">
+                        <ParamField body="to" type="number" required>
+                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                        </ParamField>
+
+                        <ParamField body="credit_cost" type="number" required>
+                          Credits consumed per billing-unit group within this tier.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="credit_cost" type="number">
+                      Credits consumed per billing-unit group.
+                    </ParamField>
+
+                  </Expandable>
                 </ParamField>
 
               </Expandable>

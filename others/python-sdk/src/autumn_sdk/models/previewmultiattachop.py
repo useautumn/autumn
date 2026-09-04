@@ -28,7 +28,7 @@ class PreviewMultiAttachGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -466,6 +466,127 @@ class PreviewMultiAttachRollover(BaseModel):
         return m
 
 
+class PreviewMultiAttachCreditSchema2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class PreviewMultiAttachCreditSchema2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewMultiAttachCreditSchema1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[Any]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class PreviewMultiAttachCreditSchema1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[Any]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewMultiAttachCreditSchemaUnionTypedDict = TypeAliasType(
+    "PreviewMultiAttachCreditSchemaUnionTypedDict",
+    Union[
+        PreviewMultiAttachCreditSchema2TypedDict,
+        PreviewMultiAttachCreditSchema1TypedDict,
+    ],
+)
+
+
+PreviewMultiAttachCreditSchemaUnion = TypeAliasType(
+    "PreviewMultiAttachCreditSchemaUnion",
+    Union[PreviewMultiAttachCreditSchema2, PreviewMultiAttachCreditSchema1],
+)
+
+
+class PreviewMultiAttachFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[PreviewMultiAttachCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class PreviewMultiAttachFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[PreviewMultiAttachCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PreviewMultiAttachPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -485,6 +606,8 @@ class PreviewMultiAttachPlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[PreviewMultiAttachRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[PreviewMultiAttachFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class PreviewMultiAttachPlanItem(BaseModel):
@@ -514,6 +637,9 @@ class PreviewMultiAttachPlanItem(BaseModel):
     rollover: Optional[PreviewMultiAttachRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[PreviewMultiAttachFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -525,6 +651,7 @@ class PreviewMultiAttachPlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -939,26 +1066,26 @@ PreviewMultiAttachAnchor = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-PreviewMultiAttachPropertiesTypedDict = TypeAliasType(
-    "PreviewMultiAttachPropertiesTypedDict", Union[str, float, bool]
+PreviewMultiAttachUsageLimitPropertiesTypedDict = TypeAliasType(
+    "PreviewMultiAttachUsageLimitPropertiesTypedDict", Union[str, float, bool]
 )
 
 
-PreviewMultiAttachProperties = TypeAliasType(
-    "PreviewMultiAttachProperties", Union[str, float, bool]
+PreviewMultiAttachUsageLimitProperties = TypeAliasType(
+    "PreviewMultiAttachUsageLimitProperties", Union[str, float, bool]
 )
 
 
-class PreviewMultiAttachFilterTypedDict(TypedDict):
+class PreviewMultiAttachUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, PreviewMultiAttachPropertiesTypedDict]
+    properties: Dict[str, PreviewMultiAttachUsageLimitPropertiesTypedDict]
 
 
-class PreviewMultiAttachFilter(BaseModel):
+class PreviewMultiAttachUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, PreviewMultiAttachProperties]
+    properties: Dict[str, PreviewMultiAttachUsageLimitProperties]
 
 
 class PreviewMultiAttachUsageLimitTypedDict(TypedDict):
@@ -972,7 +1099,7 @@ class PreviewMultiAttachUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[PreviewMultiAttachAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[PreviewMultiAttachFilterTypedDict]
+    filter_: NotRequired[PreviewMultiAttachUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -993,7 +1120,7 @@ class PreviewMultiAttachUsageLimit(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[PreviewMultiAttachFilter], pydantic.Field(alias="filter")
+        Optional[PreviewMultiAttachUsageLimitFilter], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1023,6 +1150,37 @@ PreviewMultiAttachThresholdType = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+PreviewMultiAttachBasis = Literal[
+    "balance",
+    "included",
+    "recurring",
+    "usage_limit",
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+PreviewMultiAttachUsageAlertPropertiesTypedDict = TypeAliasType(
+    "PreviewMultiAttachUsageAlertPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+PreviewMultiAttachUsageAlertProperties = TypeAliasType(
+    "PreviewMultiAttachUsageAlertProperties", Union[str, float, bool]
+)
+
+
+class PreviewMultiAttachUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, PreviewMultiAttachUsageAlertPropertiesTypedDict]
+
+
+class PreviewMultiAttachUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, PreviewMultiAttachUsageAlertProperties]
+
+
 class PreviewMultiAttachUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -1032,6 +1190,10 @@ class PreviewMultiAttachUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[PreviewMultiAttachBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[PreviewMultiAttachUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -1049,12 +1211,20 @@ class PreviewMultiAttachUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[PreviewMultiAttachBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[PreviewMultiAttachUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -1997,7 +2167,15 @@ class PreviewMultiAttachResponse(BaseModel):
 
 
 try:
+    PreviewMultiAttachCreditSchema1.model_rebuild()
+except NameError:
+    pass
+try:
     PreviewMultiAttachUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    PreviewMultiAttachUsageAlert.model_rebuild()
 except NameError:
     pass
 try:

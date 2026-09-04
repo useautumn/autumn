@@ -32,6 +32,38 @@ export const multiAttachTierSchema = z.object({
 		.optional(),
 });
 
+export const multiAttachCreditSchema2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const multiAttachCreditSchema1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(z.any()),
+});
+
+export const multiAttachCreditSchemaUnionSchema = z.union([
+	multiAttachCreditSchema1Schema,
+	multiAttachCreditSchema2Schema,
+]);
+
+export const multiAttachFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					multiAttachCreditSchema1Schema,
+					multiAttachCreditSchema2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const multiAttachFeatureQuantitySchema = z.object({
 	featureId: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
@@ -51,13 +83,26 @@ export const multiAttachAttachDiscountSchema = z.object({
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const multiAttachPropertiesSchema = z.union([
+export const multiAttachUsageLimitPropertiesSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const multiAttachFilterSchema = z.object({
+export const multiAttachUsageLimitFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
+export const multiAttachUsageAlertPropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachUsageAlertFilterSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -155,6 +200,38 @@ export const multiAttachRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const multiAttachCreditSchema2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const multiAttachCreditSchema1OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(z.any()),
+});
+
+export const multiAttachCreditSchemaUnionOutboundSchema = z.union([
+	multiAttachCreditSchema1OutboundSchema,
+	multiAttachCreditSchema2OutboundSchema,
+]);
+
+export const multiAttachFeatureOverrideOutboundSchema = z.object({
+	credit_schema: z
+		.union([
+			z.array(
+				z.union([
+					multiAttachCreditSchema1OutboundSchema,
+					multiAttachCreditSchema2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const multiAttachPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -167,6 +244,9 @@ export const multiAttachPlanItemOutboundSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([multiAttachRolloverOutboundSchema, z.undefined()])
+		.optional(),
+	feature_override: z
+		.union([multiAttachFeatureOverrideOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -227,13 +307,13 @@ export const multiAttachSpendLimitOutboundSchema = z.object({
 	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const multiAttachPropertiesOutboundSchema = z.union([
+export const multiAttachUsageLimitPropertiesOutboundSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const multiAttachFilterOutboundSchema = z.object({
+export const multiAttachUsageLimitFilterOutboundSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -246,7 +326,22 @@ export const multiAttachUsageLimitOutboundSchema = z.object({
 	limit: z.number(),
 	interval: z.string(),
 	anchor: z.union([z.string(), z.undefined()]).optional(),
-	filter: z.union([multiAttachFilterOutboundSchema, z.undefined()]).optional(),
+	filter: z
+		.union([multiAttachUsageLimitFilterOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const multiAttachUsageAlertPropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachUsageAlertFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const multiAttachUsageAlertOutboundSchema = z.object({
@@ -254,6 +349,10 @@ export const multiAttachUsageAlertOutboundSchema = z.object({
 	enabled: z.boolean(),
 	threshold: z.number(),
 	threshold_type: z.string(),
+	basis: z.string(),
+	filter: z
+		.union([multiAttachUsageAlertFilterOutboundSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
@@ -360,6 +459,9 @@ export const multiAttachPlanItemSchema = z.object({
 	price: z.union([multiAttachPriceSchema, z.undefined()]).optional(),
 	proration: z.union([multiAttachProrationSchema, z.undefined()]).optional(),
 	rollover: z.union([multiAttachRolloverSchema, z.undefined()]).optional(),
+	featureOverride: z
+		.union([multiAttachFeatureOverrideSchema, z.undefined()])
+		.optional(),
 });
 
 export const multiAttachCustomizeSchema = z.object({
@@ -420,16 +522,24 @@ export const multiAttachUsageLimitSchema = z.object({
 	limit: z.number(),
 	interval: multiAttachEntityDataIntervalSchema,
 	anchor: z.union([multiAttachAnchorSchema, z.undefined()]).optional(),
-	filter: z.union([multiAttachFilterSchema, z.undefined()]).optional(),
+	filter: z
+		.union([multiAttachUsageLimitFilterSchema, z.undefined()])
+		.optional(),
 });
 
 export const multiAttachThresholdTypeSchema = closedEnumSchema;
+
+export const multiAttachBasisSchema = closedEnumSchema;
 
 export const multiAttachUsageAlertSchema = z.object({
 	featureId: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	threshold: z.number(),
 	thresholdType: multiAttachThresholdTypeSchema,
+	basis: z.union([multiAttachBasisSchema, z.undefined()]).optional(),
+	filter: z
+		.union([multiAttachUsageAlertFilterSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 

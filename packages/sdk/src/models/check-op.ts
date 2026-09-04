@@ -278,14 +278,14 @@ export type Flag2 = {
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export const CheckScenario2 = {
+export const Scenario2 = {
   UsageLimit: "usage_limit",
   FeatureFlag: "feature_flag",
 } as const;
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export type CheckScenario2 = OpenEnum<typeof CheckScenario2>;
+export type Scenario2 = OpenEnum<typeof Scenario2>;
 
 /**
  * The environment of the product
@@ -628,7 +628,7 @@ export type CheckAnchor2 = OpenEnum<typeof CheckAnchor2>;
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type CheckFilter2 = {
+export type CheckUsageLimitFilter2 = {
   properties: { [k: string]: string };
 };
 
@@ -656,7 +656,7 @@ export type CheckUsageLimit2 = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: CheckFilter2 | undefined;
+  filter?: CheckUsageLimitFilter2 | undefined;
 };
 
 /**
@@ -672,6 +672,27 @@ export const CheckThresholdType2 = {
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type CheckThresholdType2 = OpenEnum<typeof CheckThresholdType2>;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const CheckBasis2 = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type CheckBasis2 = OpenEnum<typeof CheckBasis2>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type CheckUsageAlertFilter2 = {
+  properties: { [k: string]: string };
+};
 
 export type CheckUsageAlert2 = {
   /**
@@ -690,6 +711,14 @@ export type CheckUsageAlert2 = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: CheckThresholdType2;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: CheckBasis2;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: CheckUsageAlertFilter2 | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -843,7 +872,7 @@ export type Preview2 = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
-  scenario: CheckScenario2;
+  scenario: Scenario2;
   /**
    * A title suitable for displaying in a paywall or upgrade modal.
    */
@@ -1112,14 +1141,14 @@ export type Flag1 = {
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export const CheckScenario1 = {
+export const Scenario1 = {
   UsageLimit: "usage_limit",
   FeatureFlag: "feature_flag",
 } as const;
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export type CheckScenario1 = OpenEnum<typeof CheckScenario1>;
+export type Scenario1 = OpenEnum<typeof Scenario1>;
 
 /**
  * The environment of the product
@@ -1462,7 +1491,7 @@ export type CheckAnchor1 = OpenEnum<typeof CheckAnchor1>;
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type CheckFilter1 = {
+export type CheckUsageLimitFilter1 = {
   properties: { [k: string]: string };
 };
 
@@ -1490,7 +1519,7 @@ export type CheckUsageLimit1 = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: CheckFilter1 | undefined;
+  filter?: CheckUsageLimitFilter1 | undefined;
 };
 
 /**
@@ -1506,6 +1535,27 @@ export const CheckThresholdType1 = {
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type CheckThresholdType1 = OpenEnum<typeof CheckThresholdType1>;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const CheckBasis1 = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type CheckBasis1 = OpenEnum<typeof CheckBasis1>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type CheckUsageAlertFilter1 = {
+  properties: { [k: string]: string };
+};
 
 export type CheckUsageAlert1 = {
   /**
@@ -1524,6 +1574,14 @@ export type CheckUsageAlert1 = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: CheckThresholdType1;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: CheckBasis1;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: CheckUsageAlertFilter1 | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1677,7 +1735,7 @@ export type Preview1 = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
-  scenario: CheckScenario1;
+  scenario: Scenario1;
   /**
    * A title suitable for displaying in a paywall or upgrade modal.
    */
@@ -2161,10 +2219,8 @@ export function flag2FromJSON(
 }
 
 /** @internal */
-export const CheckScenario2$inboundSchema: z.ZodMiniType<
-  CheckScenario2,
-  unknown
-> = openEnums.inboundSchema(CheckScenario2);
+export const Scenario2$inboundSchema: z.ZodMiniType<Scenario2, unknown> =
+  openEnums.inboundSchema(Scenario2);
 
 /** @internal */
 export const CheckEnv2$inboundSchema: z.ZodMiniType<CheckEnv2, unknown> =
@@ -2524,18 +2580,20 @@ export const CheckAnchor2$inboundSchema: z.ZodMiniType<CheckAnchor2, unknown> =
   openEnums.inboundSchema(CheckAnchor2);
 
 /** @internal */
-export const CheckFilter2$inboundSchema: z.ZodMiniType<CheckFilter2, unknown> =
-  z.object({
-    properties: z.record(z.string(), types.string()),
-  });
+export const CheckUsageLimitFilter2$inboundSchema: z.ZodMiniType<
+  CheckUsageLimitFilter2,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
 
-export function checkFilter2FromJSON(
+export function checkUsageLimitFilter2FromJSON(
   jsonString: string,
-): SafeParseResult<CheckFilter2, SDKValidationError> {
+): SafeParseResult<CheckUsageLimitFilter2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckFilter2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckFilter2' from JSON`,
+    (x) => CheckUsageLimitFilter2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckUsageLimitFilter2' from JSON`,
   );
 }
 
@@ -2550,7 +2608,7 @@ export const CheckUsageLimit2$inboundSchema: z.ZodMiniType<
     limit: types.number(),
     interval: CheckUsageLimitInterval2$inboundSchema,
     anchor: types.optional(CheckAnchor2$inboundSchema),
-    filter: types.optional(z.lazy(() => CheckFilter2$inboundSchema)),
+    filter: types.optional(z.lazy(() => CheckUsageLimitFilter2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2576,6 +2634,28 @@ export const CheckThresholdType2$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CheckThresholdType2);
 
 /** @internal */
+export const CheckBasis2$inboundSchema: z.ZodMiniType<CheckBasis2, unknown> =
+  openEnums.inboundSchema(CheckBasis2);
+
+/** @internal */
+export const CheckUsageAlertFilter2$inboundSchema: z.ZodMiniType<
+  CheckUsageAlertFilter2,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function checkUsageAlertFilter2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckUsageAlertFilter2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckUsageAlertFilter2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckUsageAlertFilter2' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckUsageAlert2$inboundSchema: z.ZodMiniType<
   CheckUsageAlert2,
   unknown
@@ -2585,6 +2665,8 @@ export const CheckUsageAlert2$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     threshold: types.number(),
     threshold_type: CheckThresholdType2$inboundSchema,
+    basis: z._default(CheckBasis2$inboundSchema, "balance"),
+    filter: types.optional(z.lazy(() => CheckUsageAlertFilter2$inboundSchema)),
     name: types.optional(types.string()),
   }),
   z.transform((v) => {
@@ -2761,7 +2843,7 @@ export function checkProduct2FromJSON(
 /** @internal */
 export const Preview2$inboundSchema: z.ZodMiniType<Preview2, unknown> = z.pipe(
   z.object({
-    scenario: CheckScenario2$inboundSchema,
+    scenario: Scenario2$inboundSchema,
     title: types.string(),
     message: types.string(),
     feature_id: types.string(),
@@ -3171,10 +3253,8 @@ export function flag1FromJSON(
 }
 
 /** @internal */
-export const CheckScenario1$inboundSchema: z.ZodMiniType<
-  CheckScenario1,
-  unknown
-> = openEnums.inboundSchema(CheckScenario1);
+export const Scenario1$inboundSchema: z.ZodMiniType<Scenario1, unknown> =
+  openEnums.inboundSchema(Scenario1);
 
 /** @internal */
 export const CheckEnv1$inboundSchema: z.ZodMiniType<CheckEnv1, unknown> =
@@ -3534,18 +3614,20 @@ export const CheckAnchor1$inboundSchema: z.ZodMiniType<CheckAnchor1, unknown> =
   openEnums.inboundSchema(CheckAnchor1);
 
 /** @internal */
-export const CheckFilter1$inboundSchema: z.ZodMiniType<CheckFilter1, unknown> =
-  z.object({
-    properties: z.record(z.string(), types.string()),
-  });
+export const CheckUsageLimitFilter1$inboundSchema: z.ZodMiniType<
+  CheckUsageLimitFilter1,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
 
-export function checkFilter1FromJSON(
+export function checkUsageLimitFilter1FromJSON(
   jsonString: string,
-): SafeParseResult<CheckFilter1, SDKValidationError> {
+): SafeParseResult<CheckUsageLimitFilter1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckFilter1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckFilter1' from JSON`,
+    (x) => CheckUsageLimitFilter1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckUsageLimitFilter1' from JSON`,
   );
 }
 
@@ -3560,7 +3642,7 @@ export const CheckUsageLimit1$inboundSchema: z.ZodMiniType<
     limit: types.number(),
     interval: CheckUsageLimitInterval1$inboundSchema,
     anchor: types.optional(CheckAnchor1$inboundSchema),
-    filter: types.optional(z.lazy(() => CheckFilter1$inboundSchema)),
+    filter: types.optional(z.lazy(() => CheckUsageLimitFilter1$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3586,6 +3668,28 @@ export const CheckThresholdType1$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CheckThresholdType1);
 
 /** @internal */
+export const CheckBasis1$inboundSchema: z.ZodMiniType<CheckBasis1, unknown> =
+  openEnums.inboundSchema(CheckBasis1);
+
+/** @internal */
+export const CheckUsageAlertFilter1$inboundSchema: z.ZodMiniType<
+  CheckUsageAlertFilter1,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function checkUsageAlertFilter1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckUsageAlertFilter1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckUsageAlertFilter1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckUsageAlertFilter1' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckUsageAlert1$inboundSchema: z.ZodMiniType<
   CheckUsageAlert1,
   unknown
@@ -3595,6 +3699,8 @@ export const CheckUsageAlert1$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     threshold: types.number(),
     threshold_type: CheckThresholdType1$inboundSchema,
+    basis: z._default(CheckBasis1$inboundSchema, "balance"),
+    filter: types.optional(z.lazy(() => CheckUsageAlertFilter1$inboundSchema)),
     name: types.optional(types.string()),
   }),
   z.transform((v) => {
@@ -3771,7 +3877,7 @@ export function checkProduct1FromJSON(
 /** @internal */
 export const Preview1$inboundSchema: z.ZodMiniType<Preview1, unknown> = z.pipe(
   z.object({
-    scenario: CheckScenario1$inboundSchema,
+    scenario: Scenario1$inboundSchema,
     title: types.string(),
     message: types.string(),
     feature_id: types.string(),

@@ -9,9 +9,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -25,7 +26,7 @@ class CreatePlanGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -183,13 +184,13 @@ class CreatePlanItemAdditionalCurrencyRequestBody(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-CreatePlanItemToRequestBodyTypedDict = TypeAliasType(
-    "CreatePlanItemToRequestBodyTypedDict", Union[float, str]
+CreatePlanItemPriceToRequestBodyTypedDict = TypeAliasType(
+    "CreatePlanItemPriceToRequestBodyTypedDict", Union[float, str]
 )
 
 
-CreatePlanItemToRequestBody = TypeAliasType(
-    "CreatePlanItemToRequestBody", Union[float, str]
+CreatePlanItemPriceToRequestBody = TypeAliasType(
+    "CreatePlanItemPriceToRequestBody", Union[float, str]
 )
 
 
@@ -229,8 +230,8 @@ class CreatePlanItemTierAdditionalCurrencyRequestBody(BaseModel):
         return m
 
 
-class CreatePlanItemTierRequestBodyTypedDict(TypedDict):
-    to: CreatePlanItemToRequestBodyTypedDict
+class CreatePlanItemPriceTierRequestBodyTypedDict(TypedDict):
+    to: CreatePlanItemPriceToRequestBodyTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
@@ -239,8 +240,8 @@ class CreatePlanItemTierRequestBodyTypedDict(TypedDict):
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class CreatePlanItemTierRequestBody(BaseModel):
-    to: CreatePlanItemToRequestBody
+class CreatePlanItemPriceTierRequestBody(BaseModel):
+    to: CreatePlanItemPriceToRequestBody
 
     amount: Optional[float] = None
 
@@ -305,7 +306,7 @@ class CreatePlanItemPriceRequestBodyTypedDict(TypedDict):
         List[CreatePlanItemAdditionalCurrencyRequestBodyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[CreatePlanItemTierRequestBodyTypedDict]]
+    tiers: NotRequired[List[CreatePlanItemPriceTierRequestBodyTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[CreatePlanItemTierBehaviorRequestBody]
     interval_count: NotRequired[float]
@@ -333,7 +334,7 @@ class CreatePlanItemPriceRequestBody(BaseModel):
     ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[CreatePlanItemTierRequestBody]] = None
+    tiers: Optional[List[CreatePlanItemPriceTierRequestBody]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[CreatePlanItemTierBehaviorRequestBody] = None
@@ -473,6 +474,163 @@ class CreatePlanItemRolloverRequestBody(BaseModel):
         return m
 
 
+class CreatePlanCreditSchemaItemRequestBody2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class CreatePlanCreditSchemaItemRequestBody2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreatePlanToRequestBodyEnum = Literal["inf",]
+
+
+CreatePlanFeatureOverrideToRequestBodyUnionTypedDict = TypeAliasType(
+    "CreatePlanFeatureOverrideToRequestBodyUnionTypedDict",
+    Union[float, CreatePlanToRequestBodyEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreatePlanFeatureOverrideToRequestBodyUnion = TypeAliasType(
+    "CreatePlanFeatureOverrideToRequestBodyUnion",
+    Union[float, CreatePlanToRequestBodyEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreatePlanFeatureOverrideTierRequestBodyTypedDict(TypedDict):
+    to: CreatePlanFeatureOverrideToRequestBodyUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreatePlanFeatureOverrideTierRequestBody(BaseModel):
+    to: CreatePlanFeatureOverrideToRequestBodyUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreatePlanCreditSchemaItemRequestBody1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[CreatePlanFeatureOverrideTierRequestBodyTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreatePlanCreditSchemaItemRequestBody1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[CreatePlanFeatureOverrideTierRequestBody]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreatePlanItemCreditSchemaRequestBodyUnionTypedDict = TypeAliasType(
+    "CreatePlanItemCreditSchemaRequestBodyUnionTypedDict",
+    Union[
+        CreatePlanCreditSchemaItemRequestBody2TypedDict,
+        CreatePlanCreditSchemaItemRequestBody1TypedDict,
+    ],
+)
+
+
+CreatePlanItemCreditSchemaRequestBodyUnion = TypeAliasType(
+    "CreatePlanItemCreditSchemaRequestBodyUnion",
+    Union[
+        CreatePlanCreditSchemaItemRequestBody2, CreatePlanCreditSchemaItemRequestBody1
+    ],
+)
+
+
+class CreatePlanItemFeatureOverrideRequestBodyTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[
+        List[CreatePlanItemCreditSchemaRequestBodyUnionTypedDict]
+    ]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class CreatePlanItemFeatureOverrideRequestBody(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[CreatePlanItemCreditSchemaRequestBodyUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreatePlanItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -492,6 +650,8 @@ class CreatePlanItemPlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[CreatePlanItemRolloverRequestBodyTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[CreatePlanItemFeatureOverrideRequestBodyTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class CreatePlanItemPlanItem(BaseModel):
@@ -521,6 +681,9 @@ class CreatePlanItemPlanItem(BaseModel):
     rollover: Optional[CreatePlanItemRolloverRequestBody] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[CreatePlanItemFeatureOverrideRequestBody] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -532,6 +695,7 @@ class CreatePlanItemPlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -967,6 +1131,126 @@ class CreatePlanLicenseRollover(BaseModel):
         return m
 
 
+class CreatePlanCreditSchemaLicense2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class CreatePlanCreditSchemaLicense2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreatePlanCreditSchemaLicense1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[Any]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreatePlanCreditSchemaLicense1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[Any]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreatePlanLicenseCreditSchemaUnionTypedDict = TypeAliasType(
+    "CreatePlanLicenseCreditSchemaUnionTypedDict",
+    Union[
+        CreatePlanCreditSchemaLicense2TypedDict, CreatePlanCreditSchemaLicense1TypedDict
+    ],
+)
+
+
+CreatePlanLicenseCreditSchemaUnion = TypeAliasType(
+    "CreatePlanLicenseCreditSchemaUnion",
+    Union[CreatePlanCreditSchemaLicense2, CreatePlanCreditSchemaLicense1],
+)
+
+
+class CreatePlanLicenseFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[CreatePlanLicenseCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class CreatePlanLicenseFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[CreatePlanLicenseCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreatePlanLicensePlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -986,6 +1270,8 @@ class CreatePlanLicensePlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[CreatePlanLicenseRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[CreatePlanLicenseFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class CreatePlanLicensePlanItem(BaseModel):
@@ -1015,6 +1301,9 @@ class CreatePlanLicensePlanItem(BaseModel):
     rollover: Optional[CreatePlanLicenseRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[CreatePlanLicenseFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1026,6 +1315,7 @@ class CreatePlanLicensePlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -1185,6 +1475,7 @@ class CreatePlanLicenseCustomize(BaseModel):
 
 class CreatePlanLicenseTypedDict(TypedDict):
     license_plan_id: str
+    version_slug: NotRequired[str]
     included: NotRequired[int]
     prepaid_only: NotRequired[bool]
     customize: NotRequired[Nullable[CreatePlanLicenseCustomizeTypedDict]]
@@ -1193,6 +1484,8 @@ class CreatePlanLicenseTypedDict(TypedDict):
 
 class CreatePlanLicense(BaseModel):
     license_plan_id: str
+
+    version_slug: Optional[str] = None
 
     included: Optional[int] = None
 
@@ -1204,7 +1497,9 @@ class CreatePlanLicense(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["included", "prepaid_only", "customize", "metadata"])
+        optional_fields = set(
+            ["version_slug", "included", "prepaid_only", "customize", "metadata"]
+        )
         nullable_fields = set(["customize"])
         serialized = handler(self)
         m = {}
@@ -1500,24 +1795,26 @@ CreatePlanAnchorRequestBody = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-CreatePlanPropertiesTypedDict = TypeAliasType(
-    "CreatePlanPropertiesTypedDict", Union[str, float, bool]
+CreatePlanUsageLimitPropertiesTypedDict = TypeAliasType(
+    "CreatePlanUsageLimitPropertiesTypedDict", Union[str, float, bool]
 )
 
 
-CreatePlanProperties = TypeAliasType("CreatePlanProperties", Union[str, float, bool])
+CreatePlanUsageLimitProperties = TypeAliasType(
+    "CreatePlanUsageLimitProperties", Union[str, float, bool]
+)
 
 
-class CreatePlanFilterRequestBodyTypedDict(TypedDict):
+class CreatePlanUsageLimitFilterRequestBodyTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, CreatePlanPropertiesTypedDict]
+    properties: Dict[str, CreatePlanUsageLimitPropertiesTypedDict]
 
 
-class CreatePlanFilterRequestBody(BaseModel):
+class CreatePlanUsageLimitFilterRequestBody(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, CreatePlanProperties]
+    properties: Dict[str, CreatePlanUsageLimitProperties]
 
 
 class CreatePlanUsageLimitRequestBodyTypedDict(TypedDict):
@@ -1531,7 +1828,7 @@ class CreatePlanUsageLimitRequestBodyTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[CreatePlanAnchorRequestBody]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[CreatePlanFilterRequestBodyTypedDict]
+    filter_: NotRequired[CreatePlanUsageLimitFilterRequestBodyTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -1552,7 +1849,7 @@ class CreatePlanUsageLimitRequestBody(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[CreatePlanFilterRequestBody], pydantic.Field(alias="filter")
+        Optional[CreatePlanUsageLimitFilterRequestBody], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1582,6 +1879,37 @@ CreatePlanThresholdTypeRequestBody = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+CreatePlanBasisRequestBody = Literal[
+    "balance",
+    "included",
+    "recurring",
+    "usage_limit",
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+CreatePlanUsageAlertPropertiesTypedDict = TypeAliasType(
+    "CreatePlanUsageAlertPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+CreatePlanUsageAlertProperties = TypeAliasType(
+    "CreatePlanUsageAlertProperties", Union[str, float, bool]
+)
+
+
+class CreatePlanUsageAlertFilterRequestBodyTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, CreatePlanUsageAlertPropertiesTypedDict]
+
+
+class CreatePlanUsageAlertFilterRequestBody(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, CreatePlanUsageAlertProperties]
+
+
 class CreatePlanUsageAlertRequestBodyTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -1591,6 +1919,10 @@ class CreatePlanUsageAlertRequestBodyTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[CreatePlanBasisRequestBody]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[CreatePlanUsageAlertFilterRequestBodyTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -1608,12 +1940,20 @@ class CreatePlanUsageAlertRequestBody(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[CreatePlanBasisRequestBody] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[CreatePlanUsageAlertFilterRequestBody], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -1894,6 +2234,53 @@ class CreatePlanPriceDisplay(BaseModel):
         return m
 
 
+class CreatePlanPriceStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class CreatePlanPriceStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class CreatePlanPriceProcessorsTypedDict(TypedDict):
+    r"""Payment processors this base price is connected to. Omitted when unset."""
+
+    stripe: NotRequired[Nullable[CreatePlanPriceStripeTypedDict]]
+
+
+class CreatePlanPriceProcessors(BaseModel):
+    r"""Payment processors this base price is connected to. Omitted when unset."""
+
+    stripe: OptionalNullable[CreatePlanPriceStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class CreatePlanPriceResponseTypedDict(TypedDict):
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
@@ -1907,6 +2294,8 @@ class CreatePlanPriceResponseTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
     display: NotRequired[CreatePlanPriceDisplayTypedDict]
     r"""Display text for showing this price in pricing pages."""
+    processors: NotRequired[CreatePlanPriceProcessorsTypedDict]
+    r"""Payment processors this base price is connected to. Omitted when unset."""
 
 
 class CreatePlanPriceResponse(BaseModel):
@@ -1925,9 +2314,14 @@ class CreatePlanPriceResponse(BaseModel):
     display: Optional[CreatePlanPriceDisplay] = None
     r"""Display text for showing this price in pricing pages."""
 
+    processors: Optional[CreatePlanPriceProcessors] = None
+    r"""Payment processors this base price is connected to. Omitted when unset."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["additional_currencies", "interval_count", "display"])
+        optional_fields = set(
+            ["additional_currencies", "interval_count", "display", "processors"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1971,14 +2365,14 @@ class CreatePlanFeatureDisplay(BaseModel):
     r"""The plural display name for the feature."""
 
 
-class CreatePlanCreditSchemaTypedDict(TypedDict):
+class CreatePlanFeatureCreditSchemaTypedDict(TypedDict):
     metered_feature_id: str
     r"""The ID of the metered feature (should be a single_use feature)."""
     credit_cost: float
     r"""The credit cost of the metered feature."""
 
 
-class CreatePlanCreditSchema(BaseModel):
+class CreatePlanFeatureCreditSchema(BaseModel):
     metered_feature_id: str
     r"""The ID of the metered feature (should be a single_use feature)."""
 
@@ -1997,7 +2391,7 @@ class CreatePlanFeatureTypedDict(TypedDict):
     r"""The name of the feature."""
     display: NotRequired[Nullable[CreatePlanFeatureDisplayTypedDict]]
     r"""Singular and plural display names for the feature."""
-    credit_schema: NotRequired[Nullable[List[CreatePlanCreditSchemaTypedDict]]]
+    credit_schema: NotRequired[Nullable[List[CreatePlanFeatureCreditSchemaTypedDict]]]
     r"""Credit cost schema for credit system features."""
     archived: NotRequired[Nullable[bool]]
     r"""Whether or not the feature is archived."""
@@ -2018,7 +2412,7 @@ class CreatePlanFeature(BaseModel):
     display: OptionalNullable[CreatePlanFeatureDisplay] = UNSET
     r"""Singular and plural display names for the feature."""
 
-    credit_schema: OptionalNullable[List[CreatePlanCreditSchema]] = UNSET
+    credit_schema: OptionalNullable[List[CreatePlanFeatureCreditSchema]] = UNSET
     r"""Credit cost schema for credit system features."""
 
     archived: OptionalNullable[bool] = UNSET
@@ -2113,12 +2507,14 @@ class CreatePlanItemAdditionalCurrencyResponse(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-CreatePlanItemToResponseTypedDict = TypeAliasType(
-    "CreatePlanItemToResponseTypedDict", Union[float, str]
+CreatePlanPriceItemToResponseTypedDict = TypeAliasType(
+    "CreatePlanPriceItemToResponseTypedDict", Union[float, str]
 )
 
 
-CreatePlanItemToResponse = TypeAliasType("CreatePlanItemToResponse", Union[float, str])
+CreatePlanPriceItemToResponse = TypeAliasType(
+    "CreatePlanPriceItemToResponse", Union[float, str]
+)
 
 
 class CreatePlanItemTierAdditionalCurrencyResponseTypedDict(TypedDict):
@@ -2157,8 +2553,8 @@ class CreatePlanItemTierAdditionalCurrencyResponse(BaseModel):
         return m
 
 
-class CreatePlanItemTierResponseTypedDict(TypedDict):
-    to: CreatePlanItemToResponseTypedDict
+class CreatePlanPriceItemTierResponseTypedDict(TypedDict):
+    to: CreatePlanPriceItemToResponseTypedDict
     amount: float
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
@@ -2166,8 +2562,8 @@ class CreatePlanItemTierResponseTypedDict(TypedDict):
     ]
 
 
-class CreatePlanItemTierResponse(BaseModel):
-    to: CreatePlanItemToResponse
+class CreatePlanPriceItemTierResponse(BaseModel):
+    to: CreatePlanPriceItemToResponse
 
     amount: float
 
@@ -2227,6 +2623,53 @@ CreatePlanItemBillingMethodResponse = Union[
 r"""'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage."""
 
 
+class CreatePlanItemStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class CreatePlanItemStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class CreatePlanItemProcessorsTypedDict(TypedDict):
+    r"""Payment processors this item price is connected to. Omitted when unset."""
+
+    stripe: NotRequired[Nullable[CreatePlanItemStripeTypedDict]]
+
+
+class CreatePlanItemProcessors(BaseModel):
+    r"""Payment processors this item price is connected to. Omitted when unset."""
+
+    stripe: OptionalNullable[CreatePlanItemStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class CreatePlanItemPriceResponseTypedDict(TypedDict):
     interval: CreatePlanPriceItemIntervalResponse
     r"""Billing interval for this price. For consumable features, should match reset.interval."""
@@ -2242,11 +2685,13 @@ class CreatePlanItemPriceResponseTypedDict(TypedDict):
         List[CreatePlanItemAdditionalCurrencyResponseTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier)."""
-    tiers: NotRequired[List[CreatePlanItemTierResponseTypedDict]]
+    tiers: NotRequired[List[CreatePlanPriceItemTierResponseTypedDict]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
     tier_behavior: NotRequired[CreatePlanItemTierBehaviorResponse]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
+    processors: NotRequired[CreatePlanItemProcessorsTypedDict]
+    r"""Payment processors this item price is connected to. Omitted when unset."""
 
 
 class CreatePlanItemPriceResponse(BaseModel):
@@ -2270,13 +2715,16 @@ class CreatePlanItemPriceResponse(BaseModel):
     )
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier)."""
 
-    tiers: Optional[List[CreatePlanItemTierResponse]] = None
+    tiers: Optional[List[CreatePlanPriceItemTierResponse]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
     tier_behavior: Optional[CreatePlanItemTierBehaviorResponse] = None
 
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    processors: Optional[CreatePlanItemProcessors] = None
+    r"""Payment processors this item price is connected to. Omitted when unset."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -2287,6 +2735,7 @@ class CreatePlanItemPriceResponse(BaseModel):
                 "tiers",
                 "tier_behavior",
                 "interval_count",
+                "processors",
             ]
         )
         nullable_fields = set(["max_purchase"])
@@ -2411,6 +2860,161 @@ class CreatePlanItemRolloverResponse(BaseModel):
         return m
 
 
+class CreatePlanCreditSchemaItemFeatureOverrideResponse2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class CreatePlanCreditSchemaItemFeatureOverrideResponse2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreatePlanToResponseEnum = Literal["inf",]
+
+
+CreatePlanFeatureOverrideToResponseUnionTypedDict = TypeAliasType(
+    "CreatePlanFeatureOverrideToResponseUnionTypedDict",
+    Union[float, CreatePlanToResponseEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreatePlanFeatureOverrideToResponseUnion = TypeAliasType(
+    "CreatePlanFeatureOverrideToResponseUnion", Union[float, CreatePlanToResponseEnum]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreatePlanItemFeatureOverrideTierResponseTypedDict(TypedDict):
+    to: CreatePlanFeatureOverrideToResponseUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreatePlanItemFeatureOverrideTierResponse(BaseModel):
+    to: CreatePlanFeatureOverrideToResponseUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreatePlanCreditSchemaItemFeatureOverrideResponse1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[CreatePlanItemFeatureOverrideTierResponseTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreatePlanCreditSchemaItemFeatureOverrideResponse1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[CreatePlanItemFeatureOverrideTierResponse]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreatePlanItemCreditSchemaResponseUnionTypedDict = TypeAliasType(
+    "CreatePlanItemCreditSchemaResponseUnionTypedDict",
+    Union[
+        CreatePlanCreditSchemaItemFeatureOverrideResponse2TypedDict,
+        CreatePlanCreditSchemaItemFeatureOverrideResponse1TypedDict,
+    ],
+)
+
+
+CreatePlanItemCreditSchemaResponseUnion = TypeAliasType(
+    "CreatePlanItemCreditSchemaResponseUnion",
+    Union[
+        CreatePlanCreditSchemaItemFeatureOverrideResponse2,
+        CreatePlanCreditSchemaItemFeatureOverrideResponse1,
+    ],
+)
+
+
+class CreatePlanItemFeatureOverrideResponseTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[CreatePlanItemCreditSchemaResponseUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class CreatePlanItemFeatureOverrideResponse(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[CreatePlanItemCreditSchemaResponseUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreatePlanItemTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature this item configures."""
@@ -2430,6 +3034,8 @@ class CreatePlanItemTypedDict(TypedDict):
     r"""Display text for showing this item in pricing pages."""
     rollover: NotRequired[CreatePlanItemRolloverResponseTypedDict]
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
+    feature_override: NotRequired[CreatePlanItemFeatureOverrideResponseTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class CreatePlanItem(BaseModel):
@@ -2460,10 +3066,154 @@ class CreatePlanItem(BaseModel):
     rollover: Optional[CreatePlanItemRolloverResponse] = None
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
+    feature_override: Optional[CreatePlanItemFeatureOverrideResponse] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature", "pooled", "display", "rollover"])
+        optional_fields = set(
+            ["feature", "pooled", "display", "rollover", "feature_override"]
+        )
         nullable_fields = set(["reset", "price"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CreatePlanStripeTypedDict(TypedDict):
+    product_id: str
+    r"""Stripe product ID this plan is billed under."""
+    additional_product_ids: NotRequired[List[str]]
+    r"""Extra Stripe product IDs aliased to this plan."""
+
+
+class CreatePlanStripe(BaseModel):
+    product_id: str
+    r"""Stripe product ID this plan is billed under."""
+
+    additional_product_ids: Optional[List[str]] = None
+    r"""Extra Stripe product IDs aliased to this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["additional_product_ids"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreatePlanFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    quantity: NotRequired[float]
+
+
+class CreatePlanFeatureQuantity(BaseModel):
+    feature_id: str
+
+    quantity: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["quantity"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreatePlanProductTypedDict(TypedDict):
+    product_id: str
+    r"""RevenueCat product ID that grants this plan when purchased."""
+    feature_quantities: NotRequired[List[CreatePlanFeatureQuantityTypedDict]]
+    r"""Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units."""
+
+
+class CreatePlanProduct(BaseModel):
+    product_id: str
+    r"""RevenueCat product ID that grants this plan when purchased."""
+
+    feature_quantities: Optional[List[CreatePlanFeatureQuantity]] = None
+    r"""Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_quantities"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreatePlanRevenuecatTypedDict(TypedDict):
+    products: List[CreatePlanProductTypedDict]
+    r"""Every RevenueCat product that maps to this plan. Replaces the current set."""
+
+
+class CreatePlanRevenuecat(BaseModel):
+    products: List[CreatePlanProduct]
+    r"""Every RevenueCat product that maps to this plan. Replaces the current set."""
+
+
+class CreatePlanProcessorsTypedDict(TypedDict):
+    r"""Payment processors this plan is connected to. Omitted when unset."""
+
+    stripe: NotRequired[Nullable[CreatePlanStripeTypedDict]]
+    revenuecat: NotRequired[Nullable[CreatePlanRevenuecatTypedDict]]
+
+
+class CreatePlanProcessors(BaseModel):
+    r"""Payment processors this plan is connected to. Omitted when unset."""
+
+    stripe: OptionalNullable[CreatePlanStripe] = UNSET
+
+    revenuecat: OptionalNullable[CreatePlanRevenuecat] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe", "revenuecat"])
+        nullable_fields = set(["stripe", "revenuecat"])
         serialized = handler(self)
         m = {}
 
@@ -2789,13 +3539,13 @@ CreatePlanAnchorResponse = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class CreatePlanFilterResponseTypedDict(TypedDict):
+class CreatePlanUsageLimitFilterResponseTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class CreatePlanFilterResponse(BaseModel):
+class CreatePlanUsageLimitFilterResponse(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -2812,7 +3562,7 @@ class CreatePlanUsageLimitResponseTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[CreatePlanAnchorResponse]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[CreatePlanFilterResponseTypedDict]
+    filter_: NotRequired[CreatePlanUsageLimitFilterResponseTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -2833,7 +3583,7 @@ class CreatePlanUsageLimitResponse(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[CreatePlanFilterResponse], pydantic.Field(alias="filter")
+        Optional[CreatePlanUsageLimitFilterResponse], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -2866,6 +3616,30 @@ CreatePlanThresholdTypeResponse = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+CreatePlanBasisResponse = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class CreatePlanUsageAlertFilterResponseTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class CreatePlanUsageAlertFilterResponse(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 class CreatePlanUsageAlertResponseTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -2875,6 +3649,10 @@ class CreatePlanUsageAlertResponseTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[CreatePlanBasisResponse]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[CreatePlanUsageAlertFilterResponseTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -2892,12 +3670,20 @@ class CreatePlanUsageAlertResponse(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[CreatePlanBasisResponse] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[CreatePlanUsageAlertFilterResponse], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -3261,7 +4047,7 @@ class CreatePlanVariantDetailsTierAdditionalCurrency(BaseModel):
         return m
 
 
-class CreatePlanVariantDetailsTierTypedDict(TypedDict):
+class CreatePlanVariantDetailsPriceTierTypedDict(TypedDict):
     to: CreatePlanVariantDetailsToTypedDict
     amount: float
     flat_amount: NotRequired[float]
@@ -3270,7 +4056,7 @@ class CreatePlanVariantDetailsTierTypedDict(TypedDict):
     ]
 
 
-class CreatePlanVariantDetailsTier(BaseModel):
+class CreatePlanVariantDetailsPriceTier(BaseModel):
     to: CreatePlanVariantDetailsTo
 
     amount: float
@@ -3307,1833 +4093,24 @@ CreatePlanVariantDetailsTierBehavior = Union[
 ]
 
 
-CreatePlanAddItemPriceIntervalResponse = Union[
-    Literal[
-        "one_off",
-        "week",
-        "month",
-        "quarter",
-        "semi_annual",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-r"""Billing interval. For consumable features, should match reset.interval."""
-
-
-CreatePlanAddItemBillingMethodResponse = Union[
-    Literal[
-        "prepaid",
-        "usage_based",
-    ],
-    UnrecognizedStr,
-]
-r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
-
-
-class CreatePlanVariantDetailsPriceTypedDict(TypedDict):
-    r"""Pricing for usage beyond included units. Omit for free features."""
-
-    interval: CreatePlanAddItemPriceIntervalResponse
-    r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: CreatePlanAddItemBillingMethodResponse
-    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
-    amount: NotRequired[float]
-    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[CreatePlanAddItemAdditionalCurrencyResponseTypedDict]
-    ]
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[CreatePlanVariantDetailsTierTypedDict]]
-    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[CreatePlanVariantDetailsTierBehavior]
-    interval_count: NotRequired[float]
-    r"""Number of intervals per billing cycle. Defaults to 1."""
-    billing_units: NotRequired[float]
-    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-    max_purchase: NotRequired[Nullable[float]]
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
-
-
-class CreatePlanVariantDetailsPrice(BaseModel):
-    r"""Pricing for usage beyond included units. Omit for free features."""
-
-    interval: CreatePlanAddItemPriceIntervalResponse
-    r"""Billing interval. For consumable features, should match reset.interval."""
-
-    billing_method: CreatePlanAddItemBillingMethodResponse
-    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
-
-    amount: Optional[float] = None
-    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-
-    additional_currencies: Optional[
-        List[CreatePlanAddItemAdditionalCurrencyResponse]
-    ] = None
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-
-    tiers: Optional[List[CreatePlanVariantDetailsTier]] = None
-    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-
-    tier_behavior: Optional[CreatePlanVariantDetailsTierBehavior] = None
-
-    interval_count: Optional[float] = 1
-    r"""Number of intervals per billing cycle. Defaults to 1."""
-
-    billing_units: Optional[float] = 1
-    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-
-    max_purchase: OptionalNullable[float] = UNSET
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "amount",
-                "additional_currencies",
-                "tiers",
-                "tier_behavior",
-                "interval_count",
-                "billing_units",
-                "max_purchase",
-            ]
-        )
-        nullable_fields = set(["max_purchase"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-CreatePlanOnIncreaseResponse = Union[
-    Literal[
-        "bill_immediately",
-        "prorate_immediately",
-        "prorate_next_cycle",
-        "bill_next_cycle",
-    ],
-    UnrecognizedStr,
-]
-r"""Billing behavior when quantity increases mid-cycle."""
-
-
-CreatePlanOnDecreaseResponse = Union[
-    Literal[
-        "prorate",
-        "prorate_immediately",
-        "prorate_next_cycle",
-        "none",
-        "no_prorations",
-    ],
-    UnrecognizedStr,
-]
-r"""Credit behavior when quantity decreases mid-cycle."""
-
-
-class CreatePlanProrationResponseTypedDict(TypedDict):
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-
-    on_increase: CreatePlanOnIncreaseResponse
-    r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: CreatePlanOnDecreaseResponse
-    r"""Credit behavior when quantity decreases mid-cycle."""
-
-
-class CreatePlanProrationResponse(BaseModel):
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-
-    on_increase: CreatePlanOnIncreaseResponse
-    r"""Billing behavior when quantity increases mid-cycle."""
-
-    on_decrease: CreatePlanOnDecreaseResponse
-    r"""Credit behavior when quantity decreases mid-cycle."""
-
-
-CreatePlanVariantDetailsExpiryDurationType = Union[
-    Literal[
-        "month",
-        "forever",
-    ],
-    UnrecognizedStr,
-]
-r"""When rolled over units expire."""
-
-
-class CreatePlanVariantDetailsRolloverTypedDict(TypedDict):
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-    expiry_duration_type: CreatePlanVariantDetailsExpiryDurationType
-    r"""When rolled over units expire."""
-    max: NotRequired[float]
-    r"""Max rollover units. Omit for unlimited rollover."""
-    max_percentage: NotRequired[float]
-    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
-    expiry_duration_length: NotRequired[float]
-    r"""Number of periods before expiry."""
-
-
-class CreatePlanVariantDetailsRollover(BaseModel):
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-    expiry_duration_type: CreatePlanVariantDetailsExpiryDurationType
-    r"""When rolled over units expire."""
-
-    max: Optional[float] = None
-    r"""Max rollover units. Omit for unlimited rollover."""
-
-    max_percentage: Optional[float] = None
-    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
-
-    expiry_duration_length: Optional[float] = None
-    r"""Number of periods before expiry."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanPlanItemResponseTypedDict(TypedDict):
-    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
-
-    feature_id: str
-    r"""The ID of the feature to configure."""
-    included: NotRequired[float]
-    r"""Number of free units included. Balance resets to this each interval for consumable features."""
-    unlimited: NotRequired[bool]
-    r"""If true, customer has unlimited access to this feature."""
-    pooled: NotRequired[bool]
-    r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[CreatePlanVariantDetailsResetTypedDict]
-    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[CreatePlanVariantDetailsPriceTypedDict]
-    r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[CreatePlanProrationResponseTypedDict]
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[CreatePlanVariantDetailsRolloverTypedDict]
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-
-class CreatePlanPlanItemResponse(BaseModel):
-    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
-
-    feature_id: str
-    r"""The ID of the feature to configure."""
-
-    included: Optional[float] = None
-    r"""Number of free units included. Balance resets to this each interval for consumable features."""
-
-    unlimited: Optional[bool] = None
-    r"""If true, customer has unlimited access to this feature."""
-
-    pooled: Optional[bool] = False
-    r"""Whether entity-level grants contribute to a shared customer balance."""
-
-    reset: Optional[CreatePlanVariantDetailsReset] = None
-    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-
-    price: Optional[CreatePlanVariantDetailsPrice] = None
-    r"""Pricing for usage beyond included units. Omit for free features."""
-
-    proration: Optional[CreatePlanProrationResponse] = None
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-
-    rollover: Optional[CreatePlanVariantDetailsRollover] = None
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "included",
-                "unlimited",
-                "pooled",
-                "reset",
-                "price",
-                "proration",
-                "rollover",
-            ]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanRemoveItemBillingMethodResponse = Union[
-    Literal[
-        "prepaid",
-        "usage_based",
-    ],
-    UnrecognizedStr,
-]
-r"""Match items with this billing method (prepaid or usage_based)."""
-
-
-CreatePlanIntervalRemoveItemResponseEnum2 = Union[
-    Literal[
-        "one_off",
-        "minute",
-        "hour",
-        "day",
-        "week",
-        "month",
-        "quarter",
-        "semi_annual",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-
-
-CreatePlanIntervalRemoveItemResponseEnum1 = Union[
-    Literal[
-        "one_off",
-        "week",
-        "month",
-        "quarter",
-        "semi_annual",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-
-
-CreatePlanIntervalResponseUnionTypedDict = TypeAliasType(
-    "CreatePlanIntervalResponseUnionTypedDict",
-    Union[
-        CreatePlanIntervalRemoveItemResponseEnum1,
-        CreatePlanIntervalRemoveItemResponseEnum2,
-    ],
-)
-r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-
-CreatePlanIntervalResponseUnion = TypeAliasType(
-    "CreatePlanIntervalResponseUnion",
-    Union[
-        CreatePlanIntervalRemoveItemResponseEnum1,
-        CreatePlanIntervalRemoveItemResponseEnum2,
-    ],
-)
-r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-
-class CreatePlanPlanItemFilterResponseTypedDict(TypedDict):
-    r"""Filter for matching plan items. All provided fields must match (AND)."""
-
-    feature_id: NotRequired[str]
-    r"""Match items linked to this feature."""
-    billing_method: NotRequired[CreatePlanRemoveItemBillingMethodResponse]
-    r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[CreatePlanIntervalResponseUnionTypedDict]
-    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-    interval_count: NotRequired[int]
-    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
-    included: NotRequired[float]
-    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
-
-
-class CreatePlanPlanItemFilterResponse(BaseModel):
-    r"""Filter for matching plan items. All provided fields must match (AND)."""
-
-    feature_id: Optional[str] = None
-    r"""Match items linked to this feature."""
-
-    billing_method: Optional[CreatePlanRemoveItemBillingMethodResponse] = None
-    r"""Match items with this billing method (prepaid or usage_based)."""
-
-    interval: Optional[CreatePlanIntervalResponseUnion] = None
-    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-    interval_count: Optional[int] = None
-    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
-
-    included: Optional[float] = None
-    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count", "included"]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanVariantDetailsDurationType = Union[
-    Literal[
-        "day",
-        "month",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-r"""Unit of time for the trial ('day', 'month', 'year')."""
-
-
-CreatePlanVariantDetailsOnEnd = Union[
-    Literal[
-        "bill",
-        "revert",
-    ],
-    UnrecognizedStr,
-]
-r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
-
-
-class CreatePlanFreeTrialParamsTypedDict(TypedDict):
-    r"""Free trial configuration for a plan."""
-
-    duration_length: float
-    r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[CreatePlanVariantDetailsDurationType]
-    r"""Unit of time for the trial ('day', 'month', 'year')."""
-    card_required: NotRequired[bool]
-    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
-    on_end: NotRequired[CreatePlanVariantDetailsOnEnd]
-    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
-
-
-class CreatePlanFreeTrialParams(BaseModel):
-    r"""Free trial configuration for a plan."""
-
-    duration_length: float
-    r"""Number of duration_type periods the trial lasts."""
-
-    duration_type: Optional[CreatePlanVariantDetailsDurationType] = "month"
-    r"""Unit of time for the trial ('day', 'month', 'year')."""
-
-    card_required: Optional[bool] = False
-    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
-
-    on_end: Optional[CreatePlanVariantDetailsOnEnd] = None
-    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["duration_type", "card_required", "on_end"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanVariantDetailsPurchaseLimitInterval = Union[
-    Literal[
-        "hour",
-        "day",
-        "week",
-        "month",
-    ],
-    UnrecognizedStr,
-]
-r"""The time interval for the purchase limit window."""
-
-
-class CreatePlanVariantDetailsPurchaseLimitTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
-
-    interval: CreatePlanVariantDetailsPurchaseLimitInterval
-    r"""The time interval for the purchase limit window."""
-    limit: float
-    r"""Maximum number of auto top-ups allowed within the interval."""
-    interval_count: NotRequired[float]
-    r"""Number of intervals in the purchase limit window."""
-    count: NotRequired[float]
-    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
-
-
-class CreatePlanVariantDetailsPurchaseLimit(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
-
-    interval: CreatePlanVariantDetailsPurchaseLimitInterval
-    r"""The time interval for the purchase limit window."""
-
-    limit: float
-    r"""Maximum number of auto top-ups allowed within the interval."""
-
-    interval_count: Optional[float] = 1
-    r"""Number of intervals in the purchase limit window."""
-
-    count: Optional[float] = None
-    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["interval_count", "count"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanVariantDetailsAutoTopupTypedDict(TypedDict):
-    feature_id: str
-    r"""The ID of the feature (credit balance) to auto top-up."""
-    threshold: float
-    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
-    quantity: float
-    r"""Amount of credits to add per auto top-up."""
-    enabled: NotRequired[bool]
-    r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[CreatePlanVariantDetailsPurchaseLimitTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
-    invoice_mode: NotRequired[bool]
-    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
-
-
-class CreatePlanVariantDetailsAutoTopup(BaseModel):
-    feature_id: str
-    r"""The ID of the feature (credit balance) to auto top-up."""
-
-    threshold: float
-    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
-
-    quantity: float
-    r"""Amount of credits to add per auto top-up."""
-
-    enabled: Optional[bool] = False
-    r"""Whether auto top-up is enabled."""
-
-    purchase_limit: Optional[CreatePlanVariantDetailsPurchaseLimit] = None
-    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
-
-    invoice_mode: Optional[bool] = None
-    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanVariantDetailsLimitType = Union[
-    Literal[
-        "absolute",
-        "usage_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
-class CreatePlanVariantDetailsSpendLimitTypedDict(TypedDict):
-    feature_id: NotRequired[str]
-    r"""Optional feature ID this spend limit applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[CreatePlanVariantDetailsLimitType]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-    overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
-    skip_overage_billing: NotRequired[bool]
-    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
-
-
-class CreatePlanVariantDetailsSpendLimit(BaseModel):
-    feature_id: Optional[str] = None
-    r"""Optional feature ID this spend limit applies to."""
-
-    enabled: Optional[bool] = False
-    r"""Whether the overage spend limit is enabled."""
-
-    limit_type: Optional[CreatePlanVariantDetailsLimitType] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-    overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
-
-    skip_overage_billing: Optional[bool] = None
-    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "feature_id",
-                "enabled",
-                "limit_type",
-                "overage_limit",
-                "skip_overage_billing",
-            ]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanVariantDetailsUsageLimitInterval = Union[
-    Literal[
-        "day",
-        "week",
-        "month",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-
-CreatePlanVariantDetailsAnchor = Union[
-    Literal[
-        "billing_cycle",
-        "utc",
-    ],
-    UnrecognizedStr,
-]
-r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-
-
-class CreatePlanVariantDetailsFilterTypedDict(TypedDict):
-    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
-
-    properties: Dict[str, str]
-
-
-class CreatePlanVariantDetailsFilter(BaseModel):
-    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
-
-    properties: Dict[str, str]
-
-
-class CreatePlanVariantDetailsUsageLimitTypedDict(TypedDict):
-    feature_id: str
-    r"""The feature this usage limit applies to."""
-    limit: float
-    r"""Maximum units allowed per interval."""
-    interval: CreatePlanVariantDetailsUsageLimitInterval
-    r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
-    anchor: NotRequired[CreatePlanVariantDetailsAnchor]
-    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[CreatePlanVariantDetailsFilterTypedDict]
-    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
-
-
-class CreatePlanVariantDetailsUsageLimit(BaseModel):
-    feature_id: str
-    r"""The feature this usage limit applies to."""
-
-    limit: float
-    r"""Maximum units allowed per interval."""
-
-    interval: CreatePlanVariantDetailsUsageLimitInterval
-    r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
-    anchor: Optional[CreatePlanVariantDetailsAnchor] = None
-    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-
-    filter_: Annotated[
-        Optional[CreatePlanVariantDetailsFilter], pydantic.Field(alias="filter")
-    ] = None
-    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled", "anchor", "filter"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanVariantDetailsThresholdType = Union[
-    Literal[
-        "usage",
-        "usage_percentage",
-        "remaining",
-        "remaining_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-
-
-class CreatePlanVariantDetailsUsageAlertTypedDict(TypedDict):
-    threshold: float
-    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-    threshold_type: CreatePlanVariantDetailsThresholdType
-    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-    feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage alert is enabled."""
-    name: NotRequired[str]
-    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-
-
-class CreatePlanVariantDetailsUsageAlert(BaseModel):
-    threshold: float
-    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-
-    threshold_type: CreatePlanVariantDetailsThresholdType
-    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-
-    feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage alert is enabled."""
-
-    name: Optional[str] = None
-    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanVariantDetailsOverageAllowedTypedDict(TypedDict):
-    feature_id: str
-    r"""The feature ID this overage allowed control applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether overage is allowed for this feature."""
-
-
-class CreatePlanVariantDetailsOverageAllowed(BaseModel):
-    feature_id: str
-    r"""The feature ID this overage allowed control applies to."""
-
-    enabled: Optional[bool] = False
-    r"""Whether overage is allowed for this feature."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanVariantDetailsBillingControlsTypedDict(TypedDict):
-    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
-
-    auto_topups: NotRequired[List[CreatePlanVariantDetailsAutoTopupTypedDict]]
-    r"""List of auto top-up configurations per feature."""
-    spend_limits: NotRequired[List[CreatePlanVariantDetailsSpendLimitTypedDict]]
-    r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[CreatePlanVariantDetailsUsageLimitTypedDict]]
-    r"""List of hard usage caps per feature (max units per interval)."""
-    usage_alerts: NotRequired[List[CreatePlanVariantDetailsUsageAlertTypedDict]]
-    r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[CreatePlanVariantDetailsOverageAllowedTypedDict]]
-    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
-
-
-class CreatePlanVariantDetailsBillingControls(BaseModel):
-    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
-
-    auto_topups: Optional[List[CreatePlanVariantDetailsAutoTopup]] = None
-    r"""List of auto top-up configurations per feature."""
-
-    spend_limits: Optional[List[CreatePlanVariantDetailsSpendLimit]] = None
-    r"""List of overage spend limits per feature (caps overage spend)."""
-
-    usage_limits: Optional[List[CreatePlanVariantDetailsUsageLimit]] = None
-    r"""List of hard usage caps per feature (max units per interval)."""
-
-    usage_alerts: Optional[List[CreatePlanVariantDetailsUsageAlert]] = None
-    r"""List of usage alert configurations per feature."""
-
-    overage_allowed: Optional[List[CreatePlanVariantDetailsOverageAllowed]] = None
-    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "auto_topups",
-                "spend_limits",
-                "usage_limits",
-                "usage_alerts",
-                "overage_allowed",
-            ]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanPriceUpsertLicenseInterval = Union[
-    Literal[
-        "one_off",
-        "week",
-        "month",
-        "quarter",
-        "semi_annual",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-r"""Billing interval (e.g. 'month', 'year')."""
-
-
-class CreatePlanUpsertLicenseAdditionalCurrencyTypedDict(TypedDict):
-    currency: str
-    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
-class CreatePlanUpsertLicenseAdditionalCurrency(BaseModel):
-    currency: str
-    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
-
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
-class CreatePlanUpsertLicenseBasePriceTypedDict(TypedDict):
-    r"""Base price configuration for a plan."""
-
-    amount: float
-    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
-    interval: CreatePlanPriceUpsertLicenseInterval
-    r"""Billing interval (e.g. 'month', 'year')."""
-    interval_count: NotRequired[float]
-    r"""Number of intervals per billing cycle. Defaults to 1."""
-    additional_currencies: NotRequired[
-        List[CreatePlanUpsertLicenseAdditionalCurrencyTypedDict]
-    ]
-    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
-
-
-class CreatePlanUpsertLicenseBasePrice(BaseModel):
-    r"""Base price configuration for a plan."""
-
-    amount: float
-    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
-
-    interval: CreatePlanPriceUpsertLicenseInterval
-    r"""Billing interval (e.g. 'month', 'year')."""
-
-    interval_count: Optional[float] = None
-    r"""Number of intervals per billing cycle. Defaults to 1."""
-
-    additional_currencies: Optional[List[CreatePlanUpsertLicenseAdditionalCurrency]] = (
-        None
-    )
-    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["interval_count", "additional_currencies"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanUpsertLicenseResetInterval = Union[
-    Literal[
-        "one_off",
-        "minute",
-        "hour",
-        "day",
-        "week",
-        "month",
-        "quarter",
-        "semi_annual",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
-
-
-class CreatePlanUpsertLicenseResetTypedDict(TypedDict):
-    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-
-    interval: CreatePlanUpsertLicenseResetInterval
-    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
-    interval_count: NotRequired[float]
-    r"""Number of intervals between resets. Defaults to 1."""
-
-
-class CreatePlanUpsertLicenseReset(BaseModel):
-    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-
-    interval: CreatePlanUpsertLicenseResetInterval
-    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
-
-    interval_count: Optional[float] = None
-    r"""Number of intervals between resets. Defaults to 1."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanUpsertLicenseAddItemAdditionalCurrencyTypedDict(TypedDict):
-    currency: NotRequired[Any]
-    amount: NotRequired[Any]
-
-
-class CreatePlanUpsertLicenseAddItemAdditionalCurrency(BaseModel):
-    currency: Optional[Any] = None
-
-    amount: Optional[Any] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["currency", "amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanUpsertLicenseTierTypedDict(TypedDict):
-    to: NotRequired[Any]
-    amount: NotRequired[Any]
-    flat_amount: NotRequired[Any]
-    additional_currencies: NotRequired[Any]
-
-
-class CreatePlanUpsertLicenseTier(BaseModel):
-    to: Optional[Any] = None
-
-    amount: Optional[Any] = None
-
-    flat_amount: Optional[Any] = None
-
-    additional_currencies: Optional[Any] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["to", "amount", "flat_amount", "additional_currencies"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanUpsertLicenseTierBehavior = Union[
-    Literal[
-        "graduated",
-        "volume",
-    ],
-    UnrecognizedStr,
-]
-
-
-CreatePlanUpsertLicenseAddItemPriceInterval = Union[
-    Literal[
-        "one_off",
-        "week",
-        "month",
-        "quarter",
-        "semi_annual",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-r"""Billing interval. For consumable features, should match reset.interval."""
-
-
-CreatePlanUpsertLicenseAddItemBillingMethod = Union[
-    Literal[
-        "prepaid",
-        "usage_based",
-    ],
-    UnrecognizedStr,
-]
-r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
-
-
-class CreatePlanUpsertLicensePriceTypedDict(TypedDict):
-    r"""Pricing for usage beyond included units. Omit for free features."""
-
-    interval: CreatePlanUpsertLicenseAddItemPriceInterval
-    r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: CreatePlanUpsertLicenseAddItemBillingMethod
-    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
-    amount: NotRequired[float]
-    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[CreatePlanUpsertLicenseAddItemAdditionalCurrencyTypedDict]
-    ]
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[CreatePlanUpsertLicenseTierTypedDict]]
-    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[CreatePlanUpsertLicenseTierBehavior]
-    interval_count: NotRequired[float]
-    r"""Number of intervals per billing cycle. Defaults to 1."""
-    billing_units: NotRequired[float]
-    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-    max_purchase: NotRequired[Nullable[float]]
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
-
-
-class CreatePlanUpsertLicensePrice(BaseModel):
-    r"""Pricing for usage beyond included units. Omit for free features."""
-
-    interval: CreatePlanUpsertLicenseAddItemPriceInterval
-    r"""Billing interval. For consumable features, should match reset.interval."""
-
-    billing_method: CreatePlanUpsertLicenseAddItemBillingMethod
-    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
-
-    amount: Optional[float] = None
-    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-
-    additional_currencies: Optional[
-        List[CreatePlanUpsertLicenseAddItemAdditionalCurrency]
-    ] = None
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-
-    tiers: Optional[List[CreatePlanUpsertLicenseTier]] = None
-    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-
-    tier_behavior: Optional[CreatePlanUpsertLicenseTierBehavior] = None
-
-    interval_count: Optional[float] = 1
-    r"""Number of intervals per billing cycle. Defaults to 1."""
-
-    billing_units: Optional[float] = 1
-    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-
-    max_purchase: OptionalNullable[float] = UNSET
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "amount",
-                "additional_currencies",
-                "tiers",
-                "tier_behavior",
-                "interval_count",
-                "billing_units",
-                "max_purchase",
-            ]
-        )
-        nullable_fields = set(["max_purchase"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-CreatePlanUpsertLicenseOnIncrease = Union[
-    Literal[
-        "bill_immediately",
-        "prorate_immediately",
-        "prorate_next_cycle",
-        "bill_next_cycle",
-    ],
-    UnrecognizedStr,
-]
-r"""Billing behavior when quantity increases mid-cycle."""
-
-
-CreatePlanUpsertLicenseOnDecrease = Union[
-    Literal[
-        "prorate",
-        "prorate_immediately",
-        "prorate_next_cycle",
-        "none",
-        "no_prorations",
-    ],
-    UnrecognizedStr,
-]
-r"""Credit behavior when quantity decreases mid-cycle."""
-
-
-class CreatePlanUpsertLicenseProrationTypedDict(TypedDict):
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-
-    on_increase: CreatePlanUpsertLicenseOnIncrease
-    r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: CreatePlanUpsertLicenseOnDecrease
-    r"""Credit behavior when quantity decreases mid-cycle."""
-
-
-class CreatePlanUpsertLicenseProration(BaseModel):
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-
-    on_increase: CreatePlanUpsertLicenseOnIncrease
-    r"""Billing behavior when quantity increases mid-cycle."""
-
-    on_decrease: CreatePlanUpsertLicenseOnDecrease
-    r"""Credit behavior when quantity decreases mid-cycle."""
-
-
-CreatePlanUpsertLicenseExpiryDurationType = Union[
-    Literal[
-        "month",
-        "forever",
-    ],
-    UnrecognizedStr,
-]
-r"""When rolled over units expire."""
-
-
-class CreatePlanUpsertLicenseRolloverTypedDict(TypedDict):
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-    expiry_duration_type: CreatePlanUpsertLicenseExpiryDurationType
-    r"""When rolled over units expire."""
-    max: NotRequired[float]
-    r"""Max rollover units. Omit for unlimited rollover."""
-    max_percentage: NotRequired[float]
-    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
-    expiry_duration_length: NotRequired[float]
-    r"""Number of periods before expiry."""
-
-
-class CreatePlanUpsertLicenseRollover(BaseModel):
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-    expiry_duration_type: CreatePlanUpsertLicenseExpiryDurationType
-    r"""When rolled over units expire."""
-
-    max: Optional[float] = None
-    r"""Max rollover units. Omit for unlimited rollover."""
-
-    max_percentage: Optional[float] = None
-    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
-
-    expiry_duration_length: Optional[float] = None
-    r"""Number of periods before expiry."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanUpsertLicensePlanItemTypedDict(TypedDict):
-    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
-
-    feature_id: str
-    r"""The ID of the feature to configure."""
-    included: NotRequired[float]
-    r"""Number of free units included. Balance resets to this each interval for consumable features."""
-    unlimited: NotRequired[bool]
-    r"""If true, customer has unlimited access to this feature."""
-    pooled: NotRequired[bool]
-    r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[CreatePlanUpsertLicenseResetTypedDict]
-    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[CreatePlanUpsertLicensePriceTypedDict]
-    r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[CreatePlanUpsertLicenseProrationTypedDict]
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[CreatePlanUpsertLicenseRolloverTypedDict]
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-
-class CreatePlanUpsertLicensePlanItem(BaseModel):
-    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
-
-    feature_id: str
-    r"""The ID of the feature to configure."""
-
-    included: Optional[float] = None
-    r"""Number of free units included. Balance resets to this each interval for consumable features."""
-
-    unlimited: Optional[bool] = None
-    r"""If true, customer has unlimited access to this feature."""
-
-    pooled: Optional[bool] = False
-    r"""Whether entity-level grants contribute to a shared customer balance."""
-
-    reset: Optional[CreatePlanUpsertLicenseReset] = None
-    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-
-    price: Optional[CreatePlanUpsertLicensePrice] = None
-    r"""Pricing for usage beyond included units. Omit for free features."""
-
-    proration: Optional[CreatePlanUpsertLicenseProration] = None
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-
-    rollover: Optional[CreatePlanUpsertLicenseRollover] = None
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "included",
-                "unlimited",
-                "pooled",
-                "reset",
-                "price",
-                "proration",
-                "rollover",
-            ]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CreatePlanUpsertLicenseRemoveItemBillingMethod = Union[
-    Literal[
-        "prepaid",
-        "usage_based",
-    ],
-    UnrecognizedStr,
-]
-r"""Match items with this billing method (prepaid or usage_based)."""
-
-
-CreatePlanIntervalUpsertLicenseRemoveItemEnum2 = Union[
-    Literal[
-        "one_off",
-        "minute",
-        "hour",
-        "day",
-        "week",
-        "month",
-        "quarter",
-        "semi_annual",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-
-
-CreatePlanIntervalUpsertLicenseRemoveItemEnum1 = Union[
-    Literal[
-        "one_off",
-        "week",
-        "month",
-        "quarter",
-        "semi_annual",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-
-
-CreatePlanUpsertLicenseIntervalUnionTypedDict = TypeAliasType(
-    "CreatePlanUpsertLicenseIntervalUnionTypedDict",
-    Union[
-        CreatePlanIntervalUpsertLicenseRemoveItemEnum1,
-        CreatePlanIntervalUpsertLicenseRemoveItemEnum2,
-    ],
-)
-r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-
-CreatePlanUpsertLicenseIntervalUnion = TypeAliasType(
-    "CreatePlanUpsertLicenseIntervalUnion",
-    Union[
-        CreatePlanIntervalUpsertLicenseRemoveItemEnum1,
-        CreatePlanIntervalUpsertLicenseRemoveItemEnum2,
-    ],
-)
-r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-
-class CreatePlanUpsertLicensePlanItemFilterTypedDict(TypedDict):
-    r"""Filter for matching plan items. All provided fields must match (AND)."""
-
-    feature_id: NotRequired[str]
-    r"""Match items linked to this feature."""
-    billing_method: NotRequired[CreatePlanUpsertLicenseRemoveItemBillingMethod]
-    r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[CreatePlanUpsertLicenseIntervalUnionTypedDict]
-    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-    interval_count: NotRequired[int]
-    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
-    included: NotRequired[float]
-    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
-
-
-class CreatePlanUpsertLicensePlanItemFilter(BaseModel):
-    r"""Filter for matching plan items. All provided fields must match (AND)."""
-
-    feature_id: Optional[str] = None
-    r"""Match items linked to this feature."""
-
-    billing_method: Optional[CreatePlanUpsertLicenseRemoveItemBillingMethod] = None
-    r"""Match items with this billing method (prepaid or usage_based)."""
-
-    interval: Optional[CreatePlanUpsertLicenseIntervalUnion] = None
-    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-    interval_count: Optional[int] = None
-    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
-
-    included: Optional[float] = None
-    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count", "included"]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanUpsertLicenseCustomizeTypedDict(TypedDict):
-    price: NotRequired[Nullable[CreatePlanUpsertLicenseBasePriceTypedDict]]
-    add_items: NotRequired[List[CreatePlanUpsertLicensePlanItemTypedDict]]
-    remove_items: NotRequired[List[CreatePlanUpsertLicensePlanItemFilterTypedDict]]
-
-
-class CreatePlanUpsertLicenseCustomize(BaseModel):
-    price: OptionalNullable[CreatePlanUpsertLicenseBasePrice] = UNSET
-
-    add_items: Optional[List[CreatePlanUpsertLicensePlanItem]] = None
-
-    remove_items: Optional[List[CreatePlanUpsertLicensePlanItemFilter]] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["price", "add_items", "remove_items"])
-        nullable_fields = set(["price"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanUpsertLicenseTypedDict(TypedDict):
-    license_plan_id: str
-    included: NotRequired[int]
-    prepaid_only: NotRequired[bool]
-    customize: NotRequired[Nullable[CreatePlanUpsertLicenseCustomizeTypedDict]]
-    metadata: NotRequired[Dict[str, Any]]
-
-
-class CreatePlanUpsertLicense(BaseModel):
-    license_plan_id: str
-
-    included: Optional[int] = None
-
-    prepaid_only: Optional[bool] = None
-
-    customize: OptionalNullable[CreatePlanUpsertLicenseCustomize] = UNSET
-
-    metadata: Optional[Dict[str, Any]] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["included", "prepaid_only", "customize", "metadata"])
-        nullable_fields = set(["customize"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanRemoveLicenseTypedDict(TypedDict):
-    license_plan_id: str
-
-
-class CreatePlanRemoveLicense(BaseModel):
-    license_plan_id: str
-
-
-class CreatePlanCustomizeResponseTypedDict(TypedDict):
-    r"""The customization that transforms the base plan into this variant."""
-
-    price: NotRequired[Nullable[CreatePlanBasePriceResponseTypedDict]]
-    r"""Override the base price of the plan. Pass null to remove the base price."""
-    add_items: NotRequired[List[CreatePlanPlanItemResponseTypedDict]]
-    r"""Items to add to the plan."""
-    remove_items: NotRequired[List[CreatePlanPlanItemFilterResponseTypedDict]]
-    r"""Filters selecting items to remove from the plan."""
-    free_trial: NotRequired[Nullable[CreatePlanFreeTrialParamsTypedDict]]
-    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
-    billing_controls: NotRequired[CreatePlanVariantDetailsBillingControlsTypedDict]
-    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
-    upsert_licenses: NotRequired[List[CreatePlanUpsertLicenseTypedDict]]
-    r"""License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance."""
-    remove_licenses: NotRequired[List[CreatePlanRemoveLicenseTypedDict]]
-    r"""License links to drop, keyed by license_plan_id. Parallel to remove_items."""
-
-
-class CreatePlanCustomizeResponse(BaseModel):
-    r"""The customization that transforms the base plan into this variant."""
-
-    price: OptionalNullable[CreatePlanBasePriceResponse] = UNSET
-    r"""Override the base price of the plan. Pass null to remove the base price."""
-
-    add_items: Optional[List[CreatePlanPlanItemResponse]] = None
-    r"""Items to add to the plan."""
-
-    remove_items: Optional[List[CreatePlanPlanItemFilterResponse]] = None
-    r"""Filters selecting items to remove from the plan."""
-
-    free_trial: OptionalNullable[CreatePlanFreeTrialParams] = UNSET
-    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
-
-    billing_controls: Optional[CreatePlanVariantDetailsBillingControls] = None
-    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
-
-    upsert_licenses: Optional[List[CreatePlanUpsertLicense]] = None
-    r"""License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance."""
-
-    remove_licenses: Optional[List[CreatePlanRemoveLicense]] = None
-    r"""License links to drop, keyed by license_plan_id. Parallel to remove_items."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "price",
-                "add_items",
-                "remove_items",
-                "free_trial",
-                "billing_controls",
-                "upsert_licenses",
-                "remove_licenses",
-            ]
-        )
-        nullable_fields = set(["price", "free_trial"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanVariantDetailsTypedDict(TypedDict):
-    r"""Details about how this variant relates to its latest base plan."""
-
-    base_plan_id: str
-    r"""The ID of the base plan this variant was derived from."""
-    customize: NotRequired[CreatePlanCustomizeResponseTypedDict]
-    r"""The customization that transforms the base plan into this variant."""
-
-
-class CreatePlanVariantDetails(BaseModel):
-    r"""Details about how this variant relates to its latest base plan."""
-
-    base_plan_id: str
-    r"""The ID of the base plan this variant was derived from."""
-
-    customize: Optional[CreatePlanCustomizeResponse] = None
-    r"""The customization that transforms the base plan into this variant."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["customize"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CreatePlanResponseTypedDict(TypedDict):
-    r"""A plan defines a set of features, pricing, and entitlements that can be attached to customers."""
-
-    id: str
-    r"""Unique identifier for the plan."""
-    name: str
-    r"""Display name of the plan."""
-    description: Nullable[str]
-    r"""Optional description of the plan."""
-    group: Nullable[str]
-    r"""Group identifier for organizing related plans. Plans in the same group are mutually exclusive."""
-    version: float
-    r"""Version number of the plan. Incremented when plan configuration changes."""
-    add_on: bool
-    r"""Whether this is an add-on plan that can be attached alongside a main plan."""
-    auto_enable: bool
-    r"""If true, this plan is automatically attached when a customer is created. Used for free plans."""
-    price: Nullable[CreatePlanPriceResponseTypedDict]
-    r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
-    items: List[CreatePlanItemTypedDict]
-    r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
-    created_at: float
-    r"""Unix timestamp (ms) when the plan was created."""
-    env: CreatePlanEnv
-    r"""Environment this plan belongs to ('sandbox' or 'live')."""
-    archived: bool
-    r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
-    config: CreatePlanConfigResponseTypedDict
-    r"""Miscellaneous plan-level configuration flags."""
-    metadata: Dict[str, Any]
-    r"""Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan."""
-    base_variant_id: Nullable[str]
-    r"""Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from."""
-    version_slug: NotRequired[Nullable[str]]
-    r"""User-facing version identity. Defaults to v{n} when the version is minted."""
-    active: NotRequired[bool]
-    r"""Whether this is the active version of the plan. At most one version is active."""
-    free_trial: NotRequired[CreatePlanFreeTrialResponseTypedDict]
-    r"""Free trial configuration. If set, new customers can try this plan before being charged."""
-    billing_controls: NotRequired[CreatePlanBillingControlsResponseTypedDict]
-    r"""Plan-level billing controls used as customer defaults."""
-    customer_eligibility: NotRequired[CreatePlanCustomerEligibilityTypedDict]
-    variant_details: NotRequired[CreatePlanVariantDetailsTypedDict]
-    r"""Details about how this variant relates to its latest base plan."""
-
-
-class CreatePlanResponse(BaseModel):
-    r"""A plan defines a set of features, pricing, and entitlements that can be attached to customers."""
-
-    id: str
-    r"""Unique identifier for the plan."""
-
-    name: str
-    r"""Display name of the plan."""
-
-    description: Nullable[str]
-    r"""Optional description of the plan."""
-
-    group: Nullable[str]
-    r"""Group identifier for organizing related plans. Plans in the same group are mutually exclusive."""
-
-    version: float
-    r"""Version number of the plan. Incremented when plan configuration changes."""
-
-    add_on: bool
-    r"""Whether this is an add-on plan that can be attached alongside a main plan."""
-
-    auto_enable: bool
-    r"""If true, this plan is automatically attached when a customer is created. Used for free plans."""
-
-    price: Nullable[CreatePlanPriceResponse]
-    r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
-
-    items: List[CreatePlanItem]
-    r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
-
-    created_at: float
-    r"""Unix timestamp (ms) when the plan was created."""
-
-    env: CreatePlanEnv
-    r"""Environment this plan belongs to ('sandbox' or 'live')."""
-
-    archived: bool
-    r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
-
-    config: CreatePlanConfigResponse
-    r"""Miscellaneous plan-level configuration flags."""
-
-    metadata: Dict[str, Any]
-    r"""Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan."""
-
-    base_variant_id: Nullable[str]
-    r"""Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from."""
-
-    version_slug: OptionalNullable[str] = UNSET
-    r"""User-facing version identity. Defaults to v{n} when the version is minted."""
-
-    active: Optional[bool] = None
-    r"""Whether this is the active version of the plan. At most one version is active."""
-
-    free_trial: Optional[CreatePlanFreeTrialResponse] = None
-    r"""Free trial configuration. If set, new customers can try this plan before being charged."""
-
-    billing_controls: Optional[CreatePlanBillingControlsResponse] = None
-    r"""Plan-level billing controls used as customer defaults."""
-
-    customer_eligibility: Optional[CreatePlanCustomerEligibility] = None
-
-    variant_details: Optional[CreatePlanVariantDetails] = None
-    r"""Details about how this variant relates to its latest base plan."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "version_slug",
-                "active",
-                "free_trial",
-                "billing_controls",
-                "customer_eligibility",
-                "variant_details",
-            ]
-        )
-        nullable_fields = set(
-            ["description", "group", "version_slug", "price", "base_variant_id"]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
+try:
+    CreatePlanCreditSchemaItemRequestBody1.model_rebuild()
+except NameError:
+    pass
+try:
+    CreatePlanCreditSchemaLicense1.model_rebuild()
+except NameError:
+    pass
 try:
     CreatePlanUsageLimitRequestBody.model_rebuild()
+except NameError:
+    pass
+try:
+    CreatePlanUsageAlertRequestBody.model_rebuild()
+except NameError:
+    pass
+try:
+    CreatePlanCreditSchemaItemFeatureOverrideResponse1.model_rebuild()
 except NameError:
     pass
 try:
@@ -5141,6 +4118,6 @@ try:
 except NameError:
     pass
 try:
-    CreatePlanVariantDetailsUsageLimit.model_rebuild()
+    CreatePlanUsageAlertResponse.model_rebuild()
 except NameError:
     pass

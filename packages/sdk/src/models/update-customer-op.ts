@@ -150,12 +150,12 @@ export type UpdateCustomerAnchorRequestBody = ClosedEnum<
   typeof UpdateCustomerAnchorRequestBody
 >;
 
-export type UpdateCustomerProperties = string | number | boolean;
+export type UpdateCustomerUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type UpdateCustomerFilterRequestBody = {
+export type UpdateCustomerUsageLimitFilterRequestBody = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -183,7 +183,7 @@ export type UpdateCustomerUsageLimitRequestBody = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: UpdateCustomerFilterRequestBody | undefined;
+  filter?: UpdateCustomerUsageLimitFilterRequestBody | undefined;
 };
 
 /**
@@ -202,6 +202,31 @@ export type UpdateCustomerThresholdTypeRequestBody = ClosedEnum<
   typeof UpdateCustomerThresholdTypeRequestBody
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const UpdateCustomerBasisRequestBody = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type UpdateCustomerBasisRequestBody = ClosedEnum<
+  typeof UpdateCustomerBasisRequestBody
+>;
+
+export type UpdateCustomerUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type UpdateCustomerUsageAlertFilterRequestBody = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type UpdateCustomerUsageAlertRequestBody = {
   /**
    * The feature ID this alert applies to.
@@ -219,6 +244,14 @@ export type UpdateCustomerUsageAlertRequestBody = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: UpdateCustomerThresholdTypeRequestBody;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: UpdateCustomerBasisRequestBody | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: UpdateCustomerUsageAlertFilterRequestBody | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -542,7 +575,7 @@ export type UpdateCustomerAnchorResponse = OpenEnum<
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type UpdateCustomerFilterResponse = {
+export type UpdateCustomerUsageLimitFilterResponse = {
   properties: { [k: string]: string };
 };
 
@@ -584,7 +617,7 @@ export type UpdateCustomerUsageLimitResponse = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: UpdateCustomerFilterResponse | undefined;
+  filter?: UpdateCustomerUsageLimitFilterResponse | undefined;
   /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
@@ -610,6 +643,29 @@ export const UpdateCustomerThresholdTypeResponse = {
 export type UpdateCustomerThresholdTypeResponse = OpenEnum<
   typeof UpdateCustomerThresholdTypeResponse
 >;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const UpdateCustomerBasisResponse = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type UpdateCustomerBasisResponse = OpenEnum<
+  typeof UpdateCustomerBasisResponse
+>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type UpdateCustomerUsageAlertFilterResponse = {
+  properties: { [k: string]: string };
+};
 
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
@@ -642,6 +698,14 @@ export type UpdateCustomerUsageAlertResponse = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: UpdateCustomerThresholdTypeResponse;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: UpdateCustomerBasisResponse;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: UpdateCustomerUsageAlertFilterResponse | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1360,44 +1424,51 @@ export const UpdateCustomerAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdateCustomerAnchorRequestBody);
 
 /** @internal */
-export type UpdateCustomerProperties$Outbound = string | number | boolean;
+export type UpdateCustomerUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
 
 /** @internal */
-export const UpdateCustomerProperties$outboundSchema: z.ZodMiniType<
-  UpdateCustomerProperties$Outbound,
-  UpdateCustomerProperties
+export const UpdateCustomerUsageLimitProperties$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageLimitProperties$Outbound,
+  UpdateCustomerUsageLimitProperties
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function updateCustomerPropertiesToJSON(
-  updateCustomerProperties: UpdateCustomerProperties,
+export function updateCustomerUsageLimitPropertiesToJSON(
+  updateCustomerUsageLimitProperties: UpdateCustomerUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    UpdateCustomerProperties$outboundSchema.parse(updateCustomerProperties),
+    UpdateCustomerUsageLimitProperties$outboundSchema.parse(
+      updateCustomerUsageLimitProperties,
+    ),
   );
 }
 
 /** @internal */
-export type UpdateCustomerFilterRequestBody$Outbound = {
+export type UpdateCustomerUsageLimitFilterRequestBody$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const UpdateCustomerFilterRequestBody$outboundSchema: z.ZodMiniType<
-  UpdateCustomerFilterRequestBody$Outbound,
-  UpdateCustomerFilterRequestBody
-> = z.object({
-  properties: z.record(
-    z.string(),
-    smartUnion([z.string(), z.number(), z.boolean()]),
-  ),
-});
+export const UpdateCustomerUsageLimitFilterRequestBody$outboundSchema:
+  z.ZodMiniType<
+    UpdateCustomerUsageLimitFilterRequestBody$Outbound,
+    UpdateCustomerUsageLimitFilterRequestBody
+  > = z.object({
+    properties: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+  });
 
-export function updateCustomerFilterRequestBodyToJSON(
-  updateCustomerFilterRequestBody: UpdateCustomerFilterRequestBody,
+export function updateCustomerUsageLimitFilterRequestBodyToJSON(
+  updateCustomerUsageLimitFilterRequestBody:
+    UpdateCustomerUsageLimitFilterRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerFilterRequestBody$outboundSchema.parse(
-      updateCustomerFilterRequestBody,
+    UpdateCustomerUsageLimitFilterRequestBody$outboundSchema.parse(
+      updateCustomerUsageLimitFilterRequestBody,
     ),
   );
 }
@@ -1409,7 +1480,7 @@ export type UpdateCustomerUsageLimitRequestBody$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: UpdateCustomerFilterRequestBody$Outbound | undefined;
+  filter?: UpdateCustomerUsageLimitFilterRequestBody$Outbound | undefined;
 };
 
 /** @internal */
@@ -1424,7 +1495,7 @@ export const UpdateCustomerUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
     interval: UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema,
     anchor: z.optional(UpdateCustomerAnchorRequestBody$outboundSchema),
     filter: z.optional(
-      z.lazy(() => UpdateCustomerFilterRequestBody$outboundSchema),
+      z.lazy(() => UpdateCustomerUsageLimitFilterRequestBody$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -1451,11 +1522,68 @@ export const UpdateCustomerThresholdTypeRequestBody$outboundSchema:
   );
 
 /** @internal */
+export const UpdateCustomerBasisRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerBasisRequestBody
+> = z.enum(UpdateCustomerBasisRequestBody);
+
+/** @internal */
+export type UpdateCustomerUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const UpdateCustomerUsageAlertProperties$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageAlertProperties$Outbound,
+  UpdateCustomerUsageAlertProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function updateCustomerUsageAlertPropertiesToJSON(
+  updateCustomerUsageAlertProperties: UpdateCustomerUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    UpdateCustomerUsageAlertProperties$outboundSchema.parse(
+      updateCustomerUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerUsageAlertFilterRequestBody$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const UpdateCustomerUsageAlertFilterRequestBody$outboundSchema:
+  z.ZodMiniType<
+    UpdateCustomerUsageAlertFilterRequestBody$Outbound,
+    UpdateCustomerUsageAlertFilterRequestBody
+  > = z.object({
+    properties: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+  });
+
+export function updateCustomerUsageAlertFilterRequestBodyToJSON(
+  updateCustomerUsageAlertFilterRequestBody:
+    UpdateCustomerUsageAlertFilterRequestBody,
+): string {
+  return JSON.stringify(
+    UpdateCustomerUsageAlertFilterRequestBody$outboundSchema.parse(
+      updateCustomerUsageAlertFilterRequestBody,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerUsageAlertRequestBody$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: UpdateCustomerUsageAlertFilterRequestBody$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -1469,6 +1597,10 @@ export const UpdateCustomerUsageAlertRequestBody$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: UpdateCustomerThresholdTypeRequestBody$outboundSchema,
+    basis: z._default(UpdateCustomerBasisRequestBody$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => UpdateCustomerUsageAlertFilterRequestBody$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -1881,20 +2013,19 @@ export const UpdateCustomerAnchorResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateCustomerAnchorResponse);
 
 /** @internal */
-export const UpdateCustomerFilterResponse$inboundSchema: z.ZodMiniType<
-  UpdateCustomerFilterResponse,
-  unknown
-> = z.object({
-  properties: z.record(z.string(), types.string()),
-});
+export const UpdateCustomerUsageLimitFilterResponse$inboundSchema:
+  z.ZodMiniType<UpdateCustomerUsageLimitFilterResponse, unknown> = z.object({
+    properties: z.record(z.string(), types.string()),
+  });
 
-export function updateCustomerFilterResponseFromJSON(
+export function updateCustomerUsageLimitFilterResponseFromJSON(
   jsonString: string,
-): SafeParseResult<UpdateCustomerFilterResponse, SDKValidationError> {
+): SafeParseResult<UpdateCustomerUsageLimitFilterResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdateCustomerFilterResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateCustomerFilterResponse' from JSON`,
+    (x) =>
+      UpdateCustomerUsageLimitFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerUsageLimitFilterResponse' from JSON`,
   );
 }
 
@@ -1916,7 +2047,7 @@ export const UpdateCustomerUsageLimitResponse$inboundSchema: z.ZodMiniType<
     interval: UpdateCustomerUsageLimitIntervalResponse$inboundSchema,
     anchor: types.optional(UpdateCustomerAnchorResponse$inboundSchema),
     filter: types.optional(
-      z.lazy(() => UpdateCustomerFilterResponse$inboundSchema),
+      z.lazy(() => UpdateCustomerUsageLimitFilterResponse$inboundSchema),
     ),
     usage: types.optional(types.number()),
     source: types.optional(UpdateCustomerUsageLimitSource$inboundSchema),
@@ -1945,6 +2076,29 @@ export const UpdateCustomerThresholdTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateCustomerThresholdTypeResponse);
 
 /** @internal */
+export const UpdateCustomerBasisResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerBasisResponse,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerBasisResponse);
+
+/** @internal */
+export const UpdateCustomerUsageAlertFilterResponse$inboundSchema:
+  z.ZodMiniType<UpdateCustomerUsageAlertFilterResponse, unknown> = z.object({
+    properties: z.record(z.string(), types.string()),
+  });
+
+export function updateCustomerUsageAlertFilterResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerUsageAlertFilterResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateCustomerUsageAlertFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerUsageAlertFilterResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerUsageAlertSource$inboundSchema: z.ZodMiniType<
   UpdateCustomerUsageAlertSource,
   unknown
@@ -1960,6 +2114,10 @@ export const UpdateCustomerUsageAlertResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     threshold: types.number(),
     threshold_type: UpdateCustomerThresholdTypeResponse$inboundSchema,
+    basis: z._default(UpdateCustomerBasisResponse$inboundSchema, "balance"),
+    filter: types.optional(
+      z.lazy(() => UpdateCustomerUsageAlertFilterResponse$inboundSchema),
+    ),
     name: types.optional(types.string()),
     source: types.optional(UpdateCustomerUsageAlertSource$inboundSchema),
   }),

@@ -28,7 +28,7 @@ class ListEntitiesGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -943,13 +943,13 @@ ListEntitiesAnchor = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class ListEntitiesFilterTypedDict(TypedDict):
+class ListEntitiesUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class ListEntitiesFilter(BaseModel):
+class ListEntitiesUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -976,7 +976,7 @@ class ListEntitiesUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[ListEntitiesAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[ListEntitiesFilterTypedDict]
+    filter_: NotRequired[ListEntitiesUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
@@ -1000,9 +1000,9 @@ class ListEntitiesUsageLimit(BaseModel):
     anchor: Optional[ListEntitiesAnchor] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
-    filter_: Annotated[Optional[ListEntitiesFilter], pydantic.Field(alias="filter")] = (
-        None
-    )
+    filter_: Annotated[
+        Optional[ListEntitiesUsageLimitFilter], pydantic.Field(alias="filter")
+    ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     usage: Optional[float] = None
@@ -1040,6 +1040,30 @@ ListEntitiesThresholdType = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+ListEntitiesBasis = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class ListEntitiesUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class ListEntitiesUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 ListEntitiesUsageAlertSource = Union[
     Literal[
         "customer",
@@ -1059,6 +1083,10 @@ class ListEntitiesUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[ListEntitiesBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[ListEntitiesUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
     source: NotRequired[ListEntitiesUsageAlertSource]
@@ -1078,6 +1106,14 @@ class ListEntitiesUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[ListEntitiesBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[ListEntitiesUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -1086,7 +1122,9 @@ class ListEntitiesUsageAlert(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name", "source"])
+        optional_fields = set(
+            ["feature_id", "enabled", "basis", "filter", "name", "source"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1401,5 +1439,9 @@ except NameError:
     pass
 try:
     ListEntitiesUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    ListEntitiesUsageAlert.model_rebuild()
 except NameError:
     pass

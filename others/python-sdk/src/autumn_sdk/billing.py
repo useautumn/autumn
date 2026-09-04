@@ -1143,8 +1143,8 @@ class Billing(BaseSDK):
         entity_id: Optional[str] = None,
         feature_quantities: Optional[
             Union[
-                List[models.PreviewAttachFeatureQuantityRequest],
-                List[models.PreviewAttachFeatureQuantityRequestTypedDict],
+                List[models.PreviewAttachFeatureQuantityRequestBody],
+                List[models.PreviewAttachFeatureQuantityRequestBodyTypedDict],
             ]
         ] = None,
         version: Optional[float] = None,
@@ -1277,7 +1277,7 @@ class Billing(BaseSDK):
             plan_id=plan_id,
             feature_quantities=utils.get_pydantic_model(
                 feature_quantities,
-                Optional[List[models.PreviewAttachFeatureQuantityRequest]],
+                Optional[List[models.PreviewAttachFeatureQuantityRequestBody]],
             ),
             version=version,
             free_trial=utils.get_pydantic_model(
@@ -1391,8 +1391,8 @@ class Billing(BaseSDK):
         entity_id: Optional[str] = None,
         feature_quantities: Optional[
             Union[
-                List[models.PreviewAttachFeatureQuantityRequest],
-                List[models.PreviewAttachFeatureQuantityRequestTypedDict],
+                List[models.PreviewAttachFeatureQuantityRequestBody],
+                List[models.PreviewAttachFeatureQuantityRequestBodyTypedDict],
             ]
         ] = None,
         version: Optional[float] = None,
@@ -1525,7 +1525,7 @@ class Billing(BaseSDK):
             plan_id=plan_id,
             feature_quantities=utils.get_pydantic_model(
                 feature_quantities,
-                Optional[List[models.PreviewAttachFeatureQuantityRequest]],
+                Optional[List[models.PreviewAttachFeatureQuantityRequestBody]],
             ),
             version=version,
             free_trial=utils.get_pydantic_model(
@@ -2397,8 +2397,8 @@ class Billing(BaseSDK):
         plan_id: Optional[str] = None,
         feature_quantities: Optional[
             Union[
-                List[models.PreviewUpdateFeatureQuantityRequest],
-                List[models.PreviewUpdateFeatureQuantityRequestTypedDict],
+                List[models.PreviewUpdateFeatureQuantityRequestBody],
+                List[models.PreviewUpdateFeatureQuantityRequestBodyTypedDict],
             ]
         ] = None,
         version: Optional[float] = None,
@@ -2504,7 +2504,7 @@ class Billing(BaseSDK):
             plan_id=plan_id,
             feature_quantities=utils.get_pydantic_model(
                 feature_quantities,
-                Optional[List[models.PreviewUpdateFeatureQuantityRequest]],
+                Optional[List[models.PreviewUpdateFeatureQuantityRequestBody]],
             ),
             version=version,
             free_trial=utils.get_pydantic_model(
@@ -2605,8 +2605,8 @@ class Billing(BaseSDK):
         plan_id: Optional[str] = None,
         feature_quantities: Optional[
             Union[
-                List[models.PreviewUpdateFeatureQuantityRequest],
-                List[models.PreviewUpdateFeatureQuantityRequestTypedDict],
+                List[models.PreviewUpdateFeatureQuantityRequestBody],
+                List[models.PreviewUpdateFeatureQuantityRequestBodyTypedDict],
             ]
         ] = None,
         version: Optional[float] = None,
@@ -2712,7 +2712,7 @@ class Billing(BaseSDK):
             plan_id=plan_id,
             feature_quantities=utils.get_pydantic_model(
                 feature_quantities,
-                Optional[List[models.PreviewUpdateFeatureQuantityRequest]],
+                Optional[List[models.PreviewUpdateFeatureQuantityRequestBody]],
             ),
             version=version,
             free_trial=utils.get_pydantic_model(

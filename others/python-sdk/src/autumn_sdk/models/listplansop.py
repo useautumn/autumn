@@ -9,9 +9,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -25,7 +26,7 @@ class ListPlansGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -151,6 +152,53 @@ class ListPlansPriceDisplay(BaseModel):
         return m
 
 
+class ListPlansPriceStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ListPlansPriceStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ListPlansPriceProcessorsTypedDict(TypedDict):
+    r"""Payment processors this base price is connected to. Omitted when unset."""
+
+    stripe: NotRequired[Nullable[ListPlansPriceStripeTypedDict]]
+
+
+class ListPlansPriceProcessors(BaseModel):
+    r"""Payment processors this base price is connected to. Omitted when unset."""
+
+    stripe: OptionalNullable[ListPlansPriceStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class ListPlansPriceTypedDict(TypedDict):
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
@@ -162,6 +210,8 @@ class ListPlansPriceTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
     display: NotRequired[ListPlansPriceDisplayTypedDict]
     r"""Display text for showing this price in pricing pages."""
+    processors: NotRequired[ListPlansPriceProcessorsTypedDict]
+    r"""Payment processors this base price is connected to. Omitted when unset."""
 
 
 class ListPlansPrice(BaseModel):
@@ -180,9 +230,14 @@ class ListPlansPrice(BaseModel):
     display: Optional[ListPlansPriceDisplay] = None
     r"""Display text for showing this price in pricing pages."""
 
+    processors: Optional[ListPlansPriceProcessors] = None
+    r"""Payment processors this base price is connected to. Omitted when unset."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["additional_currencies", "interval_count", "display"])
+        optional_fields = set(
+            ["additional_currencies", "interval_count", "display", "processors"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -226,14 +281,14 @@ class ListPlansFeatureDisplay(BaseModel):
     r"""The plural display name for the feature."""
 
 
-class ListPlansCreditSchemaTypedDict(TypedDict):
+class ListPlansFeatureCreditSchemaTypedDict(TypedDict):
     metered_feature_id: str
     r"""The ID of the metered feature (should be a single_use feature)."""
     credit_cost: float
     r"""The credit cost of the metered feature."""
 
 
-class ListPlansCreditSchema(BaseModel):
+class ListPlansFeatureCreditSchema(BaseModel):
     metered_feature_id: str
     r"""The ID of the metered feature (should be a single_use feature)."""
 
@@ -252,7 +307,7 @@ class ListPlansFeatureTypedDict(TypedDict):
     r"""The name of the feature."""
     display: NotRequired[Nullable[ListPlansFeatureDisplayTypedDict]]
     r"""Singular and plural display names for the feature."""
-    credit_schema: NotRequired[Nullable[List[ListPlansCreditSchemaTypedDict]]]
+    credit_schema: NotRequired[Nullable[List[ListPlansFeatureCreditSchemaTypedDict]]]
     r"""Credit cost schema for credit system features."""
     archived: NotRequired[Nullable[bool]]
     r"""Whether or not the feature is archived."""
@@ -273,7 +328,7 @@ class ListPlansFeature(BaseModel):
     display: OptionalNullable[ListPlansFeatureDisplay] = UNSET
     r"""Singular and plural display names for the feature."""
 
-    credit_schema: OptionalNullable[List[ListPlansCreditSchema]] = UNSET
+    credit_schema: OptionalNullable[List[ListPlansFeatureCreditSchema]] = UNSET
     r"""Credit cost schema for credit system features."""
 
     archived: OptionalNullable[bool] = UNSET
@@ -410,14 +465,14 @@ class ListPlansTierAdditionalCurrency(BaseModel):
         return m
 
 
-class ListPlansItemTierTypedDict(TypedDict):
+class ListPlansPriceItemTierTypedDict(TypedDict):
     to: ListPlansToTypedDict
     amount: float
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[List[ListPlansTierAdditionalCurrencyTypedDict]]
 
 
-class ListPlansItemTier(BaseModel):
+class ListPlansPriceItemTier(BaseModel):
     to: ListPlansTo
 
     amount: float
@@ -476,6 +531,53 @@ ListPlansItemBillingMethod = Union[
 r"""'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage."""
 
 
+class ListPlansItemStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ListPlansItemStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ListPlansItemProcessorsTypedDict(TypedDict):
+    r"""Payment processors this item price is connected to. Omitted when unset."""
+
+    stripe: NotRequired[Nullable[ListPlansItemStripeTypedDict]]
+
+
+class ListPlansItemProcessors(BaseModel):
+    r"""Payment processors this item price is connected to. Omitted when unset."""
+
+    stripe: OptionalNullable[ListPlansItemStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 class ListPlansItemPriceTypedDict(TypedDict):
     interval: ListPlansPriceItemInterval
     r"""Billing interval for this price. For consumable features, should match reset.interval."""
@@ -489,11 +591,13 @@ class ListPlansItemPriceTypedDict(TypedDict):
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
     additional_currencies: NotRequired[List[ListPlansItemAdditionalCurrencyTypedDict]]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier)."""
-    tiers: NotRequired[List[ListPlansItemTierTypedDict]]
+    tiers: NotRequired[List[ListPlansPriceItemTierTypedDict]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
     tier_behavior: NotRequired[ListPlansItemTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
+    processors: NotRequired[ListPlansItemProcessorsTypedDict]
+    r"""Payment processors this item price is connected to. Omitted when unset."""
 
 
 class ListPlansItemPrice(BaseModel):
@@ -515,13 +619,16 @@ class ListPlansItemPrice(BaseModel):
     additional_currencies: Optional[List[ListPlansItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier)."""
 
-    tiers: Optional[List[ListPlansItemTier]] = None
+    tiers: Optional[List[ListPlansPriceItemTier]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
     tier_behavior: Optional[ListPlansItemTierBehavior] = None
 
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    processors: Optional[ListPlansItemProcessors] = None
+    r"""Payment processors this item price is connected to. Omitted when unset."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -532,6 +639,7 @@ class ListPlansItemPrice(BaseModel):
                 "tiers",
                 "tier_behavior",
                 "interval_count",
+                "processors",
             ]
         )
         nullable_fields = set(["max_purchase"])
@@ -656,6 +764,157 @@ class ListPlansItemRollover(BaseModel):
         return m
 
 
+class ListPlansCreditSchemaItemFeatureOverride2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class ListPlansCreditSchemaItemFeatureOverride2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ListPlansFeatureOverrideTierTypedDict(TypedDict):
+    to: NotRequired[Any]
+    credit_cost: NotRequired[Any]
+
+
+class ListPlansFeatureOverrideTier(BaseModel):
+    to: Optional[Any] = None
+
+    credit_cost: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["to", "credit_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ListPlansCreditSchemaItemFeatureOverride1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[ListPlansFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class ListPlansCreditSchemaItemFeatureOverride1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[ListPlansFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ListPlansItemCreditSchemaUnionTypedDict = TypeAliasType(
+    "ListPlansItemCreditSchemaUnionTypedDict",
+    Union[
+        ListPlansCreditSchemaItemFeatureOverride2TypedDict,
+        ListPlansCreditSchemaItemFeatureOverride1TypedDict,
+    ],
+)
+
+
+ListPlansItemCreditSchemaUnion = TypeAliasType(
+    "ListPlansItemCreditSchemaUnion",
+    Union[
+        ListPlansCreditSchemaItemFeatureOverride2,
+        ListPlansCreditSchemaItemFeatureOverride1,
+    ],
+)
+
+
+class ListPlansItemFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[ListPlansItemCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class ListPlansItemFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[ListPlansItemCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class ListPlansItemTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature this item configures."""
@@ -675,6 +934,8 @@ class ListPlansItemTypedDict(TypedDict):
     r"""Display text for showing this item in pricing pages."""
     rollover: NotRequired[ListPlansItemRolloverTypedDict]
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
+    feature_override: NotRequired[ListPlansItemFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class ListPlansItem(BaseModel):
@@ -705,10 +966,154 @@ class ListPlansItem(BaseModel):
     rollover: Optional[ListPlansItemRollover] = None
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
+    feature_override: Optional[ListPlansItemFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature", "pooled", "display", "rollover"])
+        optional_fields = set(
+            ["feature", "pooled", "display", "rollover", "feature_override"]
+        )
         nullable_fields = set(["reset", "price"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class ListPlansStripeTypedDict(TypedDict):
+    product_id: str
+    r"""Stripe product ID this plan is billed under."""
+    additional_product_ids: NotRequired[List[str]]
+    r"""Extra Stripe product IDs aliased to this plan."""
+
+
+class ListPlansStripe(BaseModel):
+    product_id: str
+    r"""Stripe product ID this plan is billed under."""
+
+    additional_product_ids: Optional[List[str]] = None
+    r"""Extra Stripe product IDs aliased to this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["additional_product_ids"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ListPlansFeatureQuantityTypedDict(TypedDict):
+    feature_id: str
+    quantity: NotRequired[float]
+
+
+class ListPlansFeatureQuantity(BaseModel):
+    feature_id: str
+
+    quantity: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["quantity"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ListPlansProductTypedDict(TypedDict):
+    product_id: str
+    r"""RevenueCat product ID that grants this plan when purchased."""
+    feature_quantities: NotRequired[List[ListPlansFeatureQuantityTypedDict]]
+    r"""Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units."""
+
+
+class ListPlansProduct(BaseModel):
+    product_id: str
+    r"""RevenueCat product ID that grants this plan when purchased."""
+
+    feature_quantities: Optional[List[ListPlansFeatureQuantity]] = None
+    r"""Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_quantities"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ListPlansRevenuecatTypedDict(TypedDict):
+    products: List[ListPlansProductTypedDict]
+    r"""Every RevenueCat product that maps to this plan. Replaces the current set."""
+
+
+class ListPlansRevenuecat(BaseModel):
+    products: List[ListPlansProduct]
+    r"""Every RevenueCat product that maps to this plan. Replaces the current set."""
+
+
+class ListPlansProcessorsTypedDict(TypedDict):
+    r"""Payment processors this plan is connected to. Omitted when unset."""
+
+    stripe: NotRequired[Nullable[ListPlansStripeTypedDict]]
+    revenuecat: NotRequired[Nullable[ListPlansRevenuecatTypedDict]]
+
+
+class ListPlansProcessors(BaseModel):
+    r"""Payment processors this plan is connected to. Omitted when unset."""
+
+    stripe: OptionalNullable[ListPlansStripe] = UNSET
+
+    revenuecat: OptionalNullable[ListPlansRevenuecat] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe", "revenuecat"])
+        nullable_fields = set(["stripe", "revenuecat"])
         serialized = handler(self)
         m = {}
 
@@ -1034,13 +1439,13 @@ ListPlansAnchor = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class ListPlansFilterTypedDict(TypedDict):
+class ListPlansUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class ListPlansFilter(BaseModel):
+class ListPlansUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -1057,7 +1462,7 @@ class ListPlansUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[ListPlansAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[ListPlansFilterTypedDict]
+    filter_: NotRequired[ListPlansUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -1077,7 +1482,9 @@ class ListPlansUsageLimit(BaseModel):
     anchor: Optional[ListPlansAnchor] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
-    filter_: Annotated[Optional[ListPlansFilter], pydantic.Field(alias="filter")] = None
+    filter_: Annotated[
+        Optional[ListPlansUsageLimitFilter], pydantic.Field(alias="filter")
+    ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
@@ -1109,6 +1516,30 @@ ListPlansThresholdType = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+ListPlansBasis = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class ListPlansUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class ListPlansUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 class ListPlansUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -1118,6 +1549,10 @@ class ListPlansUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[ListPlansBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[ListPlansUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -1135,12 +1570,20 @@ class ListPlansUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[ListPlansBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[ListPlansUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -1712,6 +2155,116 @@ class ListPlansVariantDetailsRollover(BaseModel):
         return m
 
 
+class ListPlansCreditSchemaVariantDetails2TypedDict(TypedDict):
+    metered_feature_id: NotRequired[Any]
+    billing_units: NotRequired[Any]
+    credit_cost: NotRequired[Any]
+
+
+class ListPlansCreditSchemaVariantDetails2(BaseModel):
+    metered_feature_id: Optional[Any] = None
+
+    billing_units: Optional[Any] = None
+
+    credit_cost: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["metered_feature_id", "billing_units", "credit_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ListPlansCreditSchemaVariantDetails1TypedDict(TypedDict):
+    metered_feature_id: NotRequired[Any]
+    billing_units: NotRequired[Any]
+    tier_behavior: NotRequired[Any]
+    tiers: NotRequired[Any]
+
+
+class ListPlansCreditSchemaVariantDetails1(BaseModel):
+    metered_feature_id: Optional[Any] = None
+
+    billing_units: Optional[Any] = None
+
+    tier_behavior: Optional[Any] = None
+
+    tiers: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["metered_feature_id", "billing_units", "tier_behavior", "tiers"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ListPlansVariantDetailsCreditSchemaUnionTypedDict = TypeAliasType(
+    "ListPlansVariantDetailsCreditSchemaUnionTypedDict",
+    Union[
+        ListPlansCreditSchemaVariantDetails2TypedDict,
+        ListPlansCreditSchemaVariantDetails1TypedDict,
+    ],
+)
+
+
+ListPlansVariantDetailsCreditSchemaUnion = TypeAliasType(
+    "ListPlansVariantDetailsCreditSchemaUnion",
+    Union[ListPlansCreditSchemaVariantDetails2, ListPlansCreditSchemaVariantDetails1],
+)
+
+
+class ListPlansVariantDetailsFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[ListPlansVariantDetailsCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class ListPlansVariantDetailsFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[ListPlansVariantDetailsCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class ListPlansPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -1731,6 +2284,8 @@ class ListPlansPlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[ListPlansVariantDetailsRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[ListPlansVariantDetailsFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class ListPlansPlanItem(BaseModel):
@@ -1760,6 +2315,9 @@ class ListPlansPlanItem(BaseModel):
     rollover: Optional[ListPlansVariantDetailsRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[ListPlansVariantDetailsFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1771,6 +2329,7 @@ class ListPlansPlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -2152,13 +2711,13 @@ ListPlansVariantDetailsAnchor = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class ListPlansVariantDetailsFilterTypedDict(TypedDict):
+class ListPlansVariantDetailsUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class ListPlansVariantDetailsFilter(BaseModel):
+class ListPlansVariantDetailsUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -2175,7 +2734,7 @@ class ListPlansVariantDetailsUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[ListPlansVariantDetailsAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[ListPlansVariantDetailsFilterTypedDict]
+    filter_: NotRequired[ListPlansVariantDetailsUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -2196,7 +2755,8 @@ class ListPlansVariantDetailsUsageLimit(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[ListPlansVariantDetailsFilter], pydantic.Field(alias="filter")
+        Optional[ListPlansVariantDetailsUsageLimitFilter],
+        pydantic.Field(alias="filter"),
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -2229,6 +2789,30 @@ ListPlansVariantDetailsThresholdType = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+ListPlansVariantDetailsBasis = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class ListPlansVariantDetailsUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class ListPlansVariantDetailsUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 class ListPlansVariantDetailsUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -2238,6 +2822,10 @@ class ListPlansVariantDetailsUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[ListPlansVariantDetailsBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[ListPlansVariantDetailsUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -2255,12 +2843,21 @@ class ListPlansVariantDetailsUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[ListPlansVariantDetailsBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[ListPlansVariantDetailsUsageAlertFilter],
+        pydantic.Field(alias="filter"),
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -2623,6 +3220,34 @@ class ListPlansUpsertLicenseRollover(BaseModel):
         return m
 
 
+class ListPlansUpsertLicenseFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[Any]
+
+
+class ListPlansUpsertLicenseFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class ListPlansUpsertLicensePlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -2642,6 +3267,8 @@ class ListPlansUpsertLicensePlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[ListPlansUpsertLicenseRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[ListPlansUpsertLicenseFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class ListPlansUpsertLicensePlanItem(BaseModel):
@@ -2671,6 +3298,9 @@ class ListPlansUpsertLicensePlanItem(BaseModel):
     rollover: Optional[ListPlansUpsertLicenseRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[ListPlansUpsertLicenseFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -2682,6 +3312,7 @@ class ListPlansUpsertLicensePlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -2801,6 +3432,7 @@ class ListPlansUpsertLicenseCustomize(BaseModel):
 
 class ListPlansUpsertLicenseTypedDict(TypedDict):
     license_plan_id: str
+    version_slug: NotRequired[str]
     included: NotRequired[int]
     prepaid_only: NotRequired[bool]
     customize: NotRequired[Nullable[ListPlansUpsertLicenseCustomizeTypedDict]]
@@ -2809,6 +3441,8 @@ class ListPlansUpsertLicenseTypedDict(TypedDict):
 
 class ListPlansUpsertLicense(BaseModel):
     license_plan_id: str
+
+    version_slug: Optional[str] = None
 
     included: Optional[int] = None
 
@@ -2820,7 +3454,9 @@ class ListPlansUpsertLicense(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["included", "prepaid_only", "customize", "metadata"])
+        optional_fields = set(
+            ["version_slug", "included", "prepaid_only", "customize", "metadata"]
+        )
         nullable_fields = set(["customize"])
         serialized = handler(self)
         m = {}
@@ -3003,6 +3639,8 @@ class ListPlansListTypedDict(TypedDict):
     r"""User-facing version identity. Defaults to v{n} when the version is minted."""
     active: NotRequired[bool]
     r"""Whether this is the active version of the plan. At most one version is active."""
+    processors: NotRequired[ListPlansProcessorsTypedDict]
+    r"""Payment processors this plan is connected to. Omitted when unset."""
     free_trial: NotRequired[ListPlansFreeTrialTypedDict]
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
     billing_controls: NotRequired[ListPlansBillingControlsTypedDict]
@@ -3066,6 +3704,9 @@ class ListPlansList(BaseModel):
     active: Optional[bool] = None
     r"""Whether this is the active version of the plan. At most one version is active."""
 
+    processors: Optional[ListPlansProcessors] = None
+    r"""Payment processors this plan is connected to. Omitted when unset."""
+
     free_trial: Optional[ListPlansFreeTrial] = None
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
@@ -3083,6 +3724,7 @@ class ListPlansList(BaseModel):
             [
                 "version_slug",
                 "active",
+                "processors",
                 "free_trial",
                 "billing_controls",
                 "customer_eligibility",
@@ -3127,10 +3769,22 @@ class ListPlansResponse(BaseModel):
 
 
 try:
+    ListPlansCreditSchemaItemFeatureOverride1.model_rebuild()
+except NameError:
+    pass
+try:
     ListPlansUsageLimit.model_rebuild()
 except NameError:
     pass
 try:
+    ListPlansUsageAlert.model_rebuild()
+except NameError:
+    pass
+try:
     ListPlansVariantDetailsUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    ListPlansVariantDetailsUsageAlert.model_rebuild()
 except NameError:
     pass

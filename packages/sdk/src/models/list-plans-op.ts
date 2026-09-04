@@ -76,6 +76,20 @@ export type ListPlansPriceDisplay = {
   secondaryText?: string | undefined;
 };
 
+export type ListPlansPriceStripe = {
+  /**
+   * Stripe price ID. For prepaid with included > 0 this is the V2 price.
+   */
+  priceId: string;
+};
+
+/**
+ * Payment processors this base price is connected to. Omitted when unset.
+ */
+export type ListPlansPriceProcessors = {
+  stripe?: ListPlansPriceStripe | null | undefined;
+};
+
 export type ListPlansPrice = {
   /**
    * Base price amount for the plan, in major currency units (e.g. dollars).
@@ -97,6 +111,10 @@ export type ListPlansPrice = {
    * Display text for showing this price in pricing pages.
    */
   display?: ListPlansPriceDisplay | undefined;
+  /**
+   * Payment processors this base price is connected to. Omitted when unset.
+   */
+  processors?: ListPlansPriceProcessors | undefined;
 };
 
 /**
@@ -126,7 +144,7 @@ export type ListPlansFeatureDisplay = {
   plural: string;
 };
 
-export type ListPlansCreditSchema = {
+export type ListPlansFeatureCreditSchema = {
   /**
    * The ID of the metered feature (should be a single_use feature).
    */
@@ -160,7 +178,7 @@ export type ListPlansFeature = {
   /**
    * Credit cost schema for credit system features.
    */
-  creditSchema?: Array<ListPlansCreditSchema> | null | undefined;
+  creditSchema?: Array<ListPlansFeatureCreditSchema> | null | undefined;
   /**
    * Whether or not the feature is archived.
    */
@@ -227,7 +245,7 @@ export type ListPlansTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type ListPlansItemTier = {
+export type ListPlansPriceItemTier = {
   to: number | string;
   amount: number;
   flatAmount?: number | undefined;
@@ -274,6 +292,20 @@ export type ListPlansItemBillingMethod = OpenEnum<
   typeof ListPlansItemBillingMethod
 >;
 
+export type ListPlansItemStripe = {
+  /**
+   * Stripe price ID. For prepaid with included > 0 this is the V2 price.
+   */
+  priceId: string;
+};
+
+/**
+ * Payment processors this item price is connected to. Omitted when unset.
+ */
+export type ListPlansItemProcessors = {
+  stripe?: ListPlansItemStripe | null | undefined;
+};
+
 export type ListPlansItemPrice = {
   /**
    * Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
@@ -286,7 +318,7 @@ export type ListPlansItemPrice = {
   /**
    * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
-  tiers?: Array<ListPlansItemTier> | undefined;
+  tiers?: Array<ListPlansPriceItemTier> | undefined;
   tierBehavior?: ListPlansItemTierBehavior | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
@@ -308,6 +340,10 @@ export type ListPlansItemPrice = {
    * Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
    */
   maxPurchase: number | null;
+  /**
+   * Payment processors this item price is connected to. Omitted when unset.
+   */
+  processors?: ListPlansItemProcessors | undefined;
 };
 
 /**
@@ -360,6 +396,58 @@ export type ListPlansItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type ListPlansCreditSchemaItemFeatureOverride2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type ListPlansFeatureOverrideTier = {
+  to?: any | undefined;
+  creditCost?: any | undefined;
+};
+
+export type ListPlansCreditSchemaItemFeatureOverride1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<ListPlansFeatureOverrideTier>;
+};
+
+export type ListPlansItemCreditSchemaUnion =
+  | ListPlansCreditSchemaItemFeatureOverride1
+  | ListPlansCreditSchemaItemFeatureOverride2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type ListPlansItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<
+      | ListPlansCreditSchemaItemFeatureOverride1
+      | ListPlansCreditSchemaItemFeatureOverride2
+    >
+    | undefined;
+};
+
 export type ListPlansItem = {
   /**
    * The ID of the feature this item configures.
@@ -397,6 +485,52 @@ export type ListPlansItem = {
    * Rollover configuration for unused units. If set, unused included units roll over to the next period.
    */
   rollover?: ListPlansItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: ListPlansItemFeatureOverride | undefined;
+};
+
+export type ListPlansStripe = {
+  /**
+   * Stripe product ID this plan is billed under.
+   */
+  productId: string;
+  /**
+   * Extra Stripe product IDs aliased to this plan.
+   */
+  additionalProductIds?: Array<string> | undefined;
+};
+
+export type ListPlansFeatureQuantity = {
+  featureId: string;
+  quantity?: number | undefined;
+};
+
+export type ListPlansProduct = {
+  /**
+   * RevenueCat product ID that grants this plan when purchased.
+   */
+  productId: string;
+  /**
+   * Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
+   */
+  featureQuantities?: Array<ListPlansFeatureQuantity> | undefined;
+};
+
+export type ListPlansRevenuecat = {
+  /**
+   * Every RevenueCat product that maps to this plan. Replaces the current set.
+   */
+  products: Array<ListPlansProduct>;
+};
+
+/**
+ * Payment processors this plan is connected to. Omitted when unset.
+ */
+export type ListPlansProcessors = {
+  stripe?: ListPlansStripe | null | undefined;
+  revenuecat?: ListPlansRevenuecat | null | undefined;
 };
 
 /**
@@ -589,7 +723,7 @@ export type ListPlansAnchor = OpenEnum<typeof ListPlansAnchor>;
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type ListPlansFilter = {
+export type ListPlansUsageLimitFilter = {
   properties: { [k: string]: string };
 };
 
@@ -617,7 +751,7 @@ export type ListPlansUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: ListPlansFilter | undefined;
+  filter?: ListPlansUsageLimitFilter | undefined;
 };
 
 /**
@@ -633,6 +767,27 @@ export const ListPlansThresholdType = {
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type ListPlansThresholdType = OpenEnum<typeof ListPlansThresholdType>;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const ListPlansBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type ListPlansBasis = OpenEnum<typeof ListPlansBasis>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type ListPlansUsageAlertFilter = {
+  properties: { [k: string]: string };
+};
 
 export type ListPlansUsageAlert = {
   /**
@@ -651,6 +806,14 @@ export type ListPlansUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: ListPlansThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: ListPlansBasis;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: ListPlansUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1008,6 +1171,38 @@ export type ListPlansVariantDetailsRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type ListPlansCreditSchemaVariantDetails2 = {
+  meteredFeatureId?: any | undefined;
+  billingUnits?: any | undefined;
+  creditCost?: any | undefined;
+};
+
+export type ListPlansCreditSchemaVariantDetails1 = {
+  meteredFeatureId?: any | undefined;
+  billingUnits?: any | undefined;
+  tierBehavior?: any | undefined;
+  tiers?: any | undefined;
+};
+
+export type ListPlansVariantDetailsCreditSchemaUnion =
+  | ListPlansCreditSchemaVariantDetails1
+  | ListPlansCreditSchemaVariantDetails2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type ListPlansVariantDetailsFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<
+      | ListPlansCreditSchemaVariantDetails1
+      | ListPlansCreditSchemaVariantDetails2
+    >
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -1044,6 +1239,10 @@ export type ListPlansPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: ListPlansVariantDetailsRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: ListPlansVariantDetailsFeatureOverride | undefined;
 };
 
 /**
@@ -1309,7 +1508,7 @@ export type ListPlansVariantDetailsAnchor = OpenEnum<
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type ListPlansVariantDetailsFilter = {
+export type ListPlansVariantDetailsUsageLimitFilter = {
   properties: { [k: string]: string };
 };
 
@@ -1337,7 +1536,7 @@ export type ListPlansVariantDetailsUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: ListPlansVariantDetailsFilter | undefined;
+  filter?: ListPlansVariantDetailsUsageLimitFilter | undefined;
 };
 
 /**
@@ -1356,6 +1555,29 @@ export type ListPlansVariantDetailsThresholdType = OpenEnum<
   typeof ListPlansVariantDetailsThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const ListPlansVariantDetailsBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type ListPlansVariantDetailsBasis = OpenEnum<
+  typeof ListPlansVariantDetailsBasis
+>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type ListPlansVariantDetailsUsageAlertFilter = {
+  properties: { [k: string]: string };
+};
+
 export type ListPlansVariantDetailsUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -1373,6 +1595,14 @@ export type ListPlansVariantDetailsUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: ListPlansVariantDetailsThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: ListPlansVariantDetailsBasis;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: ListPlansVariantDetailsUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1506,6 +1736,13 @@ export type ListPlansUpsertLicenseRollover = {
 };
 
 /**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type ListPlansUpsertLicenseFeatureOverride = {
+  creditSchema?: any | undefined;
+};
+
+/**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type ListPlansUpsertLicensePlanItem = {
@@ -1541,6 +1778,10 @@ export type ListPlansUpsertLicensePlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: ListPlansUpsertLicenseRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: ListPlansUpsertLicenseFeatureOverride | undefined;
 };
 
 /**
@@ -1591,6 +1832,7 @@ export type ListPlansUpsertLicenseCustomize = {
 
 export type ListPlansUpsertLicense = {
   licensePlanId: string;
+  versionSlug?: string | undefined;
   included?: number | undefined;
   prepaidOnly?: boolean | undefined;
   customize?: ListPlansUpsertLicenseCustomize | null | undefined;
@@ -1697,6 +1939,10 @@ export type ListPlansList = {
    * Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
    */
   items: Array<ListPlansItem>;
+  /**
+   * Payment processors this plan is connected to. Omitted when unset.
+   */
+  processors?: ListPlansProcessors | undefined;
   /**
    * Free trial configuration. If set, new customers can try this plan before being charged.
    */
@@ -1831,6 +2077,51 @@ export function listPlansPriceDisplayFromJSON(
 }
 
 /** @internal */
+export const ListPlansPriceStripe$inboundSchema: z.ZodMiniType<
+  ListPlansPriceStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    price_id: types.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "price_id": "priceId",
+    });
+  }),
+);
+
+export function listPlansPriceStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansPriceStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansPriceStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansPriceStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansPriceProcessors$inboundSchema: z.ZodMiniType<
+  ListPlansPriceProcessors,
+  unknown
+> = z.object({
+  stripe: z.optional(
+    z.nullable(z.lazy(() => ListPlansPriceStripe$inboundSchema)),
+  ),
+});
+
+export function listPlansPriceProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansPriceProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansPriceProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansPriceProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansPrice$inboundSchema: z.ZodMiniType<
   ListPlansPrice,
   unknown
@@ -1843,6 +2134,9 @@ export const ListPlansPrice$inboundSchema: z.ZodMiniType<
     interval: ListPlansPriceInterval$inboundSchema,
     interval_count: types.optional(types.number()),
     display: types.optional(z.lazy(() => ListPlansPriceDisplay$inboundSchema)),
+    processors: types.optional(
+      z.lazy(() => ListPlansPriceProcessors$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1888,8 +2182,8 @@ export function listPlansFeatureDisplayFromJSON(
 }
 
 /** @internal */
-export const ListPlansCreditSchema$inboundSchema: z.ZodMiniType<
-  ListPlansCreditSchema,
+export const ListPlansFeatureCreditSchema$inboundSchema: z.ZodMiniType<
+  ListPlansFeatureCreditSchema,
   unknown
 > = z.pipe(
   z.object({
@@ -1904,13 +2198,13 @@ export const ListPlansCreditSchema$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listPlansCreditSchemaFromJSON(
+export function listPlansFeatureCreditSchemaFromJSON(
   jsonString: string,
-): SafeParseResult<ListPlansCreditSchema, SDKValidationError> {
+): SafeParseResult<ListPlansFeatureCreditSchema, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListPlansCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansCreditSchema' from JSON`,
+    (x) => ListPlansFeatureCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansFeatureCreditSchema' from JSON`,
   );
 }
 
@@ -1926,9 +2220,9 @@ export const ListPlansFeature$inboundSchema: z.ZodMiniType<
     display: z.optional(
       z.nullable(z.lazy(() => ListPlansFeatureDisplay$inboundSchema)),
     ),
-    credit_schema: z.optional(
-      z.nullable(z.array(z.lazy(() => ListPlansCreditSchema$inboundSchema))),
-    ),
+    credit_schema: z.optional(z.nullable(z.array(z.lazy(() =>
+      ListPlansFeatureCreditSchema$inboundSchema
+    )))),
     archived: z.optional(z.nullable(types.boolean())),
   }),
   z.transform((v) => {
@@ -2041,8 +2335,8 @@ export function listPlansTierAdditionalCurrencyFromJSON(
 }
 
 /** @internal */
-export const ListPlansItemTier$inboundSchema: z.ZodMiniType<
-  ListPlansItemTier,
+export const ListPlansPriceItemTier$inboundSchema: z.ZodMiniType<
+  ListPlansPriceItemTier,
   unknown
 > = z.pipe(
   z.object({
@@ -2061,13 +2355,13 @@ export const ListPlansItemTier$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listPlansItemTierFromJSON(
+export function listPlansPriceItemTierFromJSON(
   jsonString: string,
-): SafeParseResult<ListPlansItemTier, SDKValidationError> {
+): SafeParseResult<ListPlansPriceItemTier, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListPlansItemTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansItemTier' from JSON`,
+    (x) => ListPlansPriceItemTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansPriceItemTier' from JSON`,
   );
 }
 
@@ -2090,6 +2384,51 @@ export const ListPlansItemBillingMethod$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListPlansItemBillingMethod);
 
 /** @internal */
+export const ListPlansItemStripe$inboundSchema: z.ZodMiniType<
+  ListPlansItemStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    price_id: types.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "price_id": "priceId",
+    });
+  }),
+);
+
+export function listPlansItemStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansItemStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansItemStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansItemStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansItemProcessors$inboundSchema: z.ZodMiniType<
+  ListPlansItemProcessors,
+  unknown
+> = z.object({
+  stripe: z.optional(
+    z.nullable(z.lazy(() => ListPlansItemStripe$inboundSchema)),
+  ),
+});
+
+export function listPlansItemProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansItemProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansItemProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansItemProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansItemPrice$inboundSchema: z.ZodMiniType<
   ListPlansItemPrice,
   unknown
@@ -2100,7 +2439,7 @@ export const ListPlansItemPrice$inboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => ListPlansItemAdditionalCurrency$inboundSchema)),
     ),
     tiers: types.optional(
-      z.array(z.lazy(() => ListPlansItemTier$inboundSchema)),
+      z.array(z.lazy(() => ListPlansPriceItemTier$inboundSchema)),
     ),
     tier_behavior: types.optional(ListPlansItemTierBehavior$inboundSchema),
     interval: ListPlansPriceItemInterval$inboundSchema,
@@ -2108,6 +2447,9 @@ export const ListPlansItemPrice$inboundSchema: z.ZodMiniType<
     billing_units: types.number(),
     billing_method: ListPlansItemBillingMethod$inboundSchema,
     max_purchase: types.nullable(types.number()),
+    processors: types.optional(
+      z.lazy(() => ListPlansItemProcessors$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2195,6 +2537,148 @@ export function listPlansItemRolloverFromJSON(
 }
 
 /** @internal */
+export const ListPlansCreditSchemaItemFeatureOverride2$inboundSchema:
+  z.ZodMiniType<ListPlansCreditSchemaItemFeatureOverride2, unknown> = z.pipe(
+    z.object({
+      metered_feature_id: types.string(),
+      billing_units: types.optional(types.number()),
+      credit_cost: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "metered_feature_id": "meteredFeatureId",
+        "billing_units": "billingUnits",
+        "credit_cost": "creditCost",
+      });
+    }),
+  );
+
+export function listPlansCreditSchemaItemFeatureOverride2FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansCreditSchemaItemFeatureOverride2,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansCreditSchemaItemFeatureOverride2$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansCreditSchemaItemFeatureOverride2' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansFeatureOverrideTier$inboundSchema: z.ZodMiniType<
+  ListPlansFeatureOverrideTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: types.optional(z.any()),
+    credit_cost: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function listPlansFeatureOverrideTierFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansFeatureOverrideTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansFeatureOverrideTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansFeatureOverrideTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansCreditSchemaItemFeatureOverride1$inboundSchema:
+  z.ZodMiniType<ListPlansCreditSchemaItemFeatureOverride1, unknown> = z.pipe(
+    z.object({
+      metered_feature_id: types.string(),
+      billing_units: types.optional(types.number()),
+      tier_behavior: types.literal("graduated"),
+      tiers: z.array(z.lazy(() => ListPlansFeatureOverrideTier$inboundSchema)),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "metered_feature_id": "meteredFeatureId",
+        "billing_units": "billingUnits",
+        "tier_behavior": "tierBehavior",
+      });
+    }),
+  );
+
+export function listPlansCreditSchemaItemFeatureOverride1FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansCreditSchemaItemFeatureOverride1,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansCreditSchemaItemFeatureOverride1$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansCreditSchemaItemFeatureOverride1' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansItemCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  ListPlansItemCreditSchemaUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => ListPlansCreditSchemaItemFeatureOverride1$inboundSchema),
+  z.lazy(() => ListPlansCreditSchemaItemFeatureOverride2$inboundSchema),
+]);
+
+export function listPlansItemCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansItemCreditSchemaUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansItemCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansItemCreditSchemaUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansItemFeatureOverride$inboundSchema: z.ZodMiniType<
+  ListPlansItemFeatureOverride,
+  unknown
+> = z.pipe(
+  z.object({
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => ListPlansCreditSchemaItemFeatureOverride1$inboundSchema),
+      z.lazy(() =>
+        ListPlansCreditSchemaItemFeatureOverride2$inboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function listPlansItemFeatureOverrideFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansItemFeatureOverride, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansItemFeatureOverride$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansItemFeatureOverride' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansItem$inboundSchema: z.ZodMiniType<
   ListPlansItem,
   unknown
@@ -2209,10 +2693,14 @@ export const ListPlansItem$inboundSchema: z.ZodMiniType<
     price: types.nullable(z.lazy(() => ListPlansItemPrice$inboundSchema)),
     display: types.optional(z.lazy(() => ListPlansItemDisplay$inboundSchema)),
     rollover: types.optional(z.lazy(() => ListPlansItemRollover$inboundSchema)),
+    feature_override: types.optional(
+      z.lazy(() => ListPlansItemFeatureOverride$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
+      "feature_override": "featureOverride",
     });
   }),
 );
@@ -2224,6 +2712,127 @@ export function listPlansItemFromJSON(
     jsonString,
     (x) => ListPlansItem$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'ListPlansItem' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansStripe$inboundSchema: z.ZodMiniType<
+  ListPlansStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    product_id: types.string(),
+    additional_product_ids: types.optional(z.array(types.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "product_id": "productId",
+      "additional_product_ids": "additionalProductIds",
+    });
+  }),
+);
+
+export function listPlansStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansFeatureQuantity$inboundSchema: z.ZodMiniType<
+  ListPlansFeatureQuantity,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    quantity: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function listPlansFeatureQuantityFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansFeatureQuantity, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansFeatureQuantity$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansFeatureQuantity' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansProduct$inboundSchema: z.ZodMiniType<
+  ListPlansProduct,
+  unknown
+> = z.pipe(
+  z.object({
+    product_id: types.string(),
+    feature_quantities: types.optional(
+      z.array(z.lazy(() => ListPlansFeatureQuantity$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "product_id": "productId",
+      "feature_quantities": "featureQuantities",
+    });
+  }),
+);
+
+export function listPlansProductFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansProduct, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansProduct$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansProduct' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansRevenuecat$inboundSchema: z.ZodMiniType<
+  ListPlansRevenuecat,
+  unknown
+> = z.object({
+  products: z.array(z.lazy(() => ListPlansProduct$inboundSchema)),
+});
+
+export function listPlansRevenuecatFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansRevenuecat, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansRevenuecat$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansRevenuecat' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansProcessors$inboundSchema: z.ZodMiniType<
+  ListPlansProcessors,
+  unknown
+> = z.object({
+  stripe: z.optional(z.nullable(z.lazy(() => ListPlansStripe$inboundSchema))),
+  revenuecat: z.optional(
+    z.nullable(z.lazy(() => ListPlansRevenuecat$inboundSchema)),
+  ),
+});
+
+export function listPlansProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansProcessors' from JSON`,
   );
 }
 
@@ -2417,20 +3026,20 @@ export const ListPlansAnchor$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListPlansAnchor);
 
 /** @internal */
-export const ListPlansFilter$inboundSchema: z.ZodMiniType<
-  ListPlansFilter,
+export const ListPlansUsageLimitFilter$inboundSchema: z.ZodMiniType<
+  ListPlansUsageLimitFilter,
   unknown
 > = z.object({
   properties: z.record(z.string(), types.string()),
 });
 
-export function listPlansFilterFromJSON(
+export function listPlansUsageLimitFilterFromJSON(
   jsonString: string,
-): SafeParseResult<ListPlansFilter, SDKValidationError> {
+): SafeParseResult<ListPlansUsageLimitFilter, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListPlansFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansFilter' from JSON`,
+    (x) => ListPlansUsageLimitFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUsageLimitFilter' from JSON`,
   );
 }
 
@@ -2445,7 +3054,9 @@ export const ListPlansUsageLimit$inboundSchema: z.ZodMiniType<
     limit: types.number(),
     interval: ListPlansUsageLimitInterval$inboundSchema,
     anchor: types.optional(ListPlansAnchor$inboundSchema),
-    filter: types.optional(z.lazy(() => ListPlansFilter$inboundSchema)),
+    filter: types.optional(
+      z.lazy(() => ListPlansUsageLimitFilter$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2471,6 +3082,30 @@ export const ListPlansThresholdType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListPlansThresholdType);
 
 /** @internal */
+export const ListPlansBasis$inboundSchema: z.ZodMiniType<
+  ListPlansBasis,
+  unknown
+> = openEnums.inboundSchema(ListPlansBasis);
+
+/** @internal */
+export const ListPlansUsageAlertFilter$inboundSchema: z.ZodMiniType<
+  ListPlansUsageAlertFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function listPlansUsageAlertFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUsageAlertFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUsageAlertFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUsageAlertFilter' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansUsageAlert$inboundSchema: z.ZodMiniType<
   ListPlansUsageAlert,
   unknown
@@ -2480,6 +3115,10 @@ export const ListPlansUsageAlert$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     threshold: types.number(),
     threshold_type: ListPlansThresholdType$inboundSchema,
+    basis: z._default(ListPlansBasis$inboundSchema, "balance"),
+    filter: types.optional(
+      z.lazy(() => ListPlansUsageAlertFilter$inboundSchema),
+    ),
     name: types.optional(types.string()),
   }),
   z.transform((v) => {
@@ -2890,6 +3529,121 @@ export function listPlansVariantDetailsRolloverFromJSON(
 }
 
 /** @internal */
+export const ListPlansCreditSchemaVariantDetails2$inboundSchema: z.ZodMiniType<
+  ListPlansCreditSchemaVariantDetails2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.optional(z.any()),
+    billing_units: types.optional(z.any()),
+    credit_cost: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function listPlansCreditSchemaVariantDetails2FromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansCreditSchemaVariantDetails2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansCreditSchemaVariantDetails2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansCreditSchemaVariantDetails2' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansCreditSchemaVariantDetails1$inboundSchema: z.ZodMiniType<
+  ListPlansCreditSchemaVariantDetails1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.optional(z.any()),
+    billing_units: types.optional(z.any()),
+    tier_behavior: types.optional(z.any()),
+    tiers: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function listPlansCreditSchemaVariantDetails1FromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansCreditSchemaVariantDetails1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansCreditSchemaVariantDetails1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansCreditSchemaVariantDetails1' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansVariantDetailsCreditSchemaUnion$inboundSchema:
+  z.ZodMiniType<ListPlansVariantDetailsCreditSchemaUnion, unknown> = smartUnion(
+    [
+      z.lazy(() => ListPlansCreditSchemaVariantDetails1$inboundSchema),
+      z.lazy(() => ListPlansCreditSchemaVariantDetails2$inboundSchema),
+    ],
+  );
+
+export function listPlansVariantDetailsCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansVariantDetailsCreditSchemaUnion,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansVariantDetailsCreditSchemaUnion$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansVariantDetailsCreditSchemaUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansVariantDetailsFeatureOverride$inboundSchema:
+  z.ZodMiniType<ListPlansVariantDetailsFeatureOverride, unknown> = z.pipe(
+    z.object({
+      credit_schema: types.optional(z.array(smartUnion([
+        z.lazy(() => ListPlansCreditSchemaVariantDetails1$inboundSchema),
+        z.lazy(() =>
+          ListPlansCreditSchemaVariantDetails2$inboundSchema
+        ),
+      ]))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "credit_schema": "creditSchema",
+      });
+    }),
+  );
+
+export function listPlansVariantDetailsFeatureOverrideFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansVariantDetailsFeatureOverride, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansVariantDetailsFeatureOverride$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansVariantDetailsFeatureOverride' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansPlanItem$inboundSchema: z.ZodMiniType<
   ListPlansPlanItem,
   unknown
@@ -2909,10 +3663,14 @@ export const ListPlansPlanItem$inboundSchema: z.ZodMiniType<
     rollover: types.optional(
       z.lazy(() => ListPlansVariantDetailsRollover$inboundSchema),
     ),
+    feature_override: types.optional(
+      z.lazy(() => ListPlansVariantDetailsFeatureOverride$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
+      "feature_override": "featureOverride",
     });
   }),
 );
@@ -3166,20 +3924,24 @@ export const ListPlansVariantDetailsAnchor$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListPlansVariantDetailsAnchor);
 
 /** @internal */
-export const ListPlansVariantDetailsFilter$inboundSchema: z.ZodMiniType<
-  ListPlansVariantDetailsFilter,
-  unknown
-> = z.object({
-  properties: z.record(z.string(), types.string()),
-});
+export const ListPlansVariantDetailsUsageLimitFilter$inboundSchema:
+  z.ZodMiniType<ListPlansVariantDetailsUsageLimitFilter, unknown> = z.object({
+    properties: z.record(z.string(), types.string()),
+  });
 
-export function listPlansVariantDetailsFilterFromJSON(
+export function listPlansVariantDetailsUsageLimitFilterFromJSON(
   jsonString: string,
-): SafeParseResult<ListPlansVariantDetailsFilter, SDKValidationError> {
+): SafeParseResult<
+  ListPlansVariantDetailsUsageLimitFilter,
+  SDKValidationError
+> {
   return safeParse(
     jsonString,
-    (x) => ListPlansVariantDetailsFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantDetailsFilter' from JSON`,
+    (x) =>
+      ListPlansVariantDetailsUsageLimitFilter$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansVariantDetailsUsageLimitFilter' from JSON`,
   );
 }
 
@@ -3195,7 +3957,7 @@ export const ListPlansVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     interval: ListPlansVariantDetailsUsageLimitInterval$inboundSchema,
     anchor: types.optional(ListPlansVariantDetailsAnchor$inboundSchema),
     filter: types.optional(
-      z.lazy(() => ListPlansVariantDetailsFilter$inboundSchema),
+      z.lazy(() => ListPlansVariantDetailsUsageLimitFilter$inboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -3222,6 +3984,34 @@ export const ListPlansVariantDetailsThresholdType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListPlansVariantDetailsThresholdType);
 
 /** @internal */
+export const ListPlansVariantDetailsBasis$inboundSchema: z.ZodMiniType<
+  ListPlansVariantDetailsBasis,
+  unknown
+> = openEnums.inboundSchema(ListPlansVariantDetailsBasis);
+
+/** @internal */
+export const ListPlansVariantDetailsUsageAlertFilter$inboundSchema:
+  z.ZodMiniType<ListPlansVariantDetailsUsageAlertFilter, unknown> = z.object({
+    properties: z.record(z.string(), types.string()),
+  });
+
+export function listPlansVariantDetailsUsageAlertFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansVariantDetailsUsageAlertFilter,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansVariantDetailsUsageAlertFilter$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansVariantDetailsUsageAlertFilter' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansVariantDetailsUsageAlert$inboundSchema: z.ZodMiniType<
   ListPlansVariantDetailsUsageAlert,
   unknown
@@ -3231,6 +4021,10 @@ export const ListPlansVariantDetailsUsageAlert$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     threshold: types.number(),
     threshold_type: ListPlansVariantDetailsThresholdType$inboundSchema,
+    basis: z._default(ListPlansVariantDetailsBasis$inboundSchema, "balance"),
+    filter: types.optional(
+      z.lazy(() => ListPlansVariantDetailsUsageAlertFilter$inboundSchema),
+    ),
     name: types.optional(types.string()),
   }),
   z.transform((v) => {
@@ -3504,6 +4298,32 @@ export function listPlansUpsertLicenseRolloverFromJSON(
 }
 
 /** @internal */
+export const ListPlansUpsertLicenseFeatureOverride$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicenseFeatureOverride,
+  unknown
+> = z.pipe(
+  z.object({
+    credit_schema: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function listPlansUpsertLicenseFeatureOverrideFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicenseFeatureOverride, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansUpsertLicenseFeatureOverride$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicenseFeatureOverride' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
   ListPlansUpsertLicensePlanItem,
   unknown
@@ -3525,10 +4345,14 @@ export const ListPlansUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
     rollover: types.optional(
       z.lazy(() => ListPlansUpsertLicenseRollover$inboundSchema),
     ),
+    feature_override: types.optional(
+      z.lazy(() => ListPlansUpsertLicenseFeatureOverride$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
+      "feature_override": "featureOverride",
     });
   }),
 );
@@ -3624,6 +4448,7 @@ export const ListPlansUpsertLicense$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     license_plan_id: types.string(),
+    version_slug: types.optional(types.string()),
     included: types.optional(types.number()),
     prepaid_only: types.optional(types.boolean()),
     customize: z.optional(
@@ -3634,6 +4459,7 @@ export const ListPlansUpsertLicense$inboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       "license_plan_id": "licensePlanId",
+      "version_slug": "versionSlug",
       "prepaid_only": "prepaidOnly",
     });
   }),
@@ -3767,6 +4593,7 @@ export const ListPlansList$inboundSchema: z.ZodMiniType<
     auto_enable: types.boolean(),
     price: types.nullable(z.lazy(() => ListPlansPrice$inboundSchema)),
     items: z.array(z.lazy(() => ListPlansItem$inboundSchema)),
+    processors: types.optional(z.lazy(() => ListPlansProcessors$inboundSchema)),
     free_trial: types.optional(z.lazy(() => ListPlansFreeTrial$inboundSchema)),
     created_at: types.number(),
     env: ListPlansEnv$inboundSchema,

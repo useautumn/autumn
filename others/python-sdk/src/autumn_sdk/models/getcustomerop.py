@@ -29,7 +29,7 @@ class GetCustomerGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -374,13 +374,13 @@ GetCustomerAnchor = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class GetCustomerFilterTypedDict(TypedDict):
+class GetCustomerUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class GetCustomerFilter(BaseModel):
+class GetCustomerUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -407,7 +407,7 @@ class GetCustomerUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[GetCustomerAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[GetCustomerFilterTypedDict]
+    filter_: NotRequired[GetCustomerUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
@@ -431,9 +431,9 @@ class GetCustomerUsageLimit(BaseModel):
     anchor: Optional[GetCustomerAnchor] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
-    filter_: Annotated[Optional[GetCustomerFilter], pydantic.Field(alias="filter")] = (
-        None
-    )
+    filter_: Annotated[
+        Optional[GetCustomerUsageLimitFilter], pydantic.Field(alias="filter")
+    ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     usage: Optional[float] = None
@@ -471,6 +471,30 @@ GetCustomerThresholdType = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+GetCustomerBasis = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class GetCustomerUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class GetCustomerUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 GetCustomerUsageAlertSource = Union[
     Literal[
         "customer",
@@ -490,6 +514,10 @@ class GetCustomerUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[GetCustomerBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[GetCustomerUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
     source: NotRequired[GetCustomerUsageAlertSource]
@@ -509,6 +537,14 @@ class GetCustomerUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[GetCustomerBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[GetCustomerUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -517,7 +553,9 @@ class GetCustomerUsageAlert(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name", "source"])
+        optional_fields = set(
+            ["feature_id", "enabled", "basis", "filter", "name", "source"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -2212,6 +2250,10 @@ class GetCustomerResponse(BaseModel):
 
 try:
     GetCustomerUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    GetCustomerUsageAlert.model_rebuild()
 except NameError:
     pass
 try:

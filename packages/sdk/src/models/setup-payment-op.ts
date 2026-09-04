@@ -196,7 +196,7 @@ export type SetupPaymentItemTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type SetupPaymentItemTier = {
+export type SetupPaymentItemPriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -263,7 +263,7 @@ export type SetupPaymentItemPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<SetupPaymentItemTier> | undefined;
+  tiers?: Array<SetupPaymentItemPriceTier> | undefined;
   tierBehavior?: SetupPaymentItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -370,6 +370,61 @@ export type SetupPaymentItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type SetupPaymentCreditSchemaItem2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentItemFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to?: any | undefined;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentCreditSchemaItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentItemFeatureOverrideTier>;
+};
+
+export type SetupPaymentItemCreditSchemaUnion =
+  | SetupPaymentCreditSchemaItem1
+  | SetupPaymentCreditSchemaItem2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type SetupPaymentItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<SetupPaymentCreditSchemaItem1 | SetupPaymentCreditSchemaItem2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -406,6 +461,10 @@ export type SetupPaymentItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: SetupPaymentItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: SetupPaymentItemFeatureOverride | undefined;
 };
 
 /**
@@ -471,7 +530,7 @@ export type SetupPaymentAddItemTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type SetupPaymentAddItemTier = {
+export type SetupPaymentAddItemPriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -540,7 +599,7 @@ export type SetupPaymentAddItemPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<SetupPaymentAddItemTier> | undefined;
+  tiers?: Array<SetupPaymentAddItemPriceTier> | undefined;
   tierBehavior?: SetupPaymentAddItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -647,6 +706,61 @@ export type SetupPaymentAddItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type SetupPaymentCreditSchemaAddItem2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentAddItemFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to?: any | undefined;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentCreditSchemaAddItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentAddItemFeatureOverrideTier>;
+};
+
+export type SetupPaymentAddItemCreditSchemaUnion =
+  | SetupPaymentCreditSchemaAddItem1
+  | SetupPaymentCreditSchemaAddItem2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type SetupPaymentAddItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<SetupPaymentCreditSchemaAddItem1 | SetupPaymentCreditSchemaAddItem2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -683,6 +797,10 @@ export type SetupPaymentAddItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: SetupPaymentAddItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: SetupPaymentAddItemFeatureOverride | undefined;
 };
 
 /**
@@ -941,12 +1059,12 @@ export const SetupPaymentAnchor = {
  */
 export type SetupPaymentAnchor = ClosedEnum<typeof SetupPaymentAnchor>;
 
-export type SetupPaymentProperties = string | number | boolean;
+export type SetupPaymentUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type SetupPaymentFilter = {
+export type SetupPaymentUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -974,7 +1092,7 @@ export type SetupPaymentUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: SetupPaymentFilter | undefined;
+  filter?: SetupPaymentUsageLimitFilter | undefined;
 };
 
 /**
@@ -993,6 +1111,29 @@ export type SetupPaymentThresholdType = ClosedEnum<
   typeof SetupPaymentThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const SetupPaymentBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type SetupPaymentBasis = ClosedEnum<typeof SetupPaymentBasis>;
+
+export type SetupPaymentUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type SetupPaymentUsageAlertFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type SetupPaymentUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -1010,6 +1151,14 @@ export type SetupPaymentUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: SetupPaymentThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: SetupPaymentBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: SetupPaymentUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1326,6 +1475,38 @@ export type SetupPaymentUpsertLicenseRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type SetupPaymentCreditSchemaUpsertLicense2 = {
+  meteredFeatureId?: any | undefined;
+  billingUnits?: any | undefined;
+  creditCost?: any | undefined;
+};
+
+export type SetupPaymentCreditSchemaUpsertLicense1 = {
+  meteredFeatureId?: any | undefined;
+  billingUnits?: any | undefined;
+  tierBehavior?: any | undefined;
+  tiers?: any | undefined;
+};
+
+export type SetupPaymentUpsertLicenseCreditSchemaUnion =
+  | SetupPaymentCreditSchemaUpsertLicense1
+  | SetupPaymentCreditSchemaUpsertLicense2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type SetupPaymentUpsertLicenseFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<
+      | SetupPaymentCreditSchemaUpsertLicense1
+      | SetupPaymentCreditSchemaUpsertLicense2
+    >
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -1362,6 +1543,10 @@ export type SetupPaymentUpsertLicensePlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: SetupPaymentUpsertLicenseRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: SetupPaymentUpsertLicenseFeatureOverride | undefined;
 };
 
 /**
@@ -1449,6 +1634,7 @@ export type SetupPaymentUpsertLicenseCustomize = {
 
 export type SetupPaymentUpsertLicense = {
   licensePlanId: string;
+  versionSlug?: string | undefined;
   included?: number | undefined;
   prepaidOnly?: boolean | undefined;
   customize?: SetupPaymentUpsertLicenseCustomize | null | undefined;
@@ -1971,7 +2157,7 @@ export function setupPaymentItemTierAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type SetupPaymentItemTier$Outbound = {
+export type SetupPaymentItemPriceTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
@@ -1981,9 +2167,9 @@ export type SetupPaymentItemTier$Outbound = {
 };
 
 /** @internal */
-export const SetupPaymentItemTier$outboundSchema: z.ZodMiniType<
-  SetupPaymentItemTier$Outbound,
-  SetupPaymentItemTier
+export const SetupPaymentItemPriceTier$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemPriceTier$Outbound,
+  SetupPaymentItemPriceTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -2001,11 +2187,11 @@ export const SetupPaymentItemTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentItemTierToJSON(
-  setupPaymentItemTier: SetupPaymentItemTier,
+export function setupPaymentItemPriceTierToJSON(
+  setupPaymentItemPriceTier: SetupPaymentItemPriceTier,
 ): string {
   return JSON.stringify(
-    SetupPaymentItemTier$outboundSchema.parse(setupPaymentItemTier),
+    SetupPaymentItemPriceTier$outboundSchema.parse(setupPaymentItemPriceTier),
   );
 }
 
@@ -2030,7 +2216,7 @@ export type SetupPaymentItemPrice$Outbound = {
   additional_currencies?:
     | Array<SetupPaymentItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<SetupPaymentItemTier$Outbound> | undefined;
+  tiers?: Array<SetupPaymentItemPriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -2050,7 +2236,7 @@ export const SetupPaymentItemPrice$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => SetupPaymentItemAdditionalCurrency$outboundSchema)),
     ),
     tiers: z.optional(
-      z.array(z.lazy(() => SetupPaymentItemTier$outboundSchema)),
+      z.array(z.lazy(() => SetupPaymentItemPriceTier$outboundSchema)),
     ),
     tierBehavior: z.optional(SetupPaymentItemTierBehavior$outboundSchema),
     interval: SetupPaymentItemPriceInterval$outboundSchema,
@@ -2162,6 +2348,178 @@ export function setupPaymentItemRolloverToJSON(
 }
 
 /** @internal */
+export type SetupPaymentCreditSchemaItem2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentCreditSchemaItem2$outboundSchema: z.ZodMiniType<
+  SetupPaymentCreditSchemaItem2$Outbound,
+  SetupPaymentCreditSchemaItem2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentCreditSchemaItem2ToJSON(
+  setupPaymentCreditSchemaItem2: SetupPaymentCreditSchemaItem2,
+): string {
+  return JSON.stringify(
+    SetupPaymentCreditSchemaItem2$outboundSchema.parse(
+      setupPaymentCreditSchemaItem2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemFeatureOverrideTier$Outbound = {
+  to?: any | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemFeatureOverrideTier$Outbound,
+  SetupPaymentItemFeatureOverrideTier
+> = z.pipe(
+  z.object({
+    to: z.optional(z.any()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentItemFeatureOverrideTierToJSON(
+  setupPaymentItemFeatureOverrideTier: SetupPaymentItemFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemFeatureOverrideTier$outboundSchema.parse(
+      setupPaymentItemFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentCreditSchemaItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentItemFeatureOverrideTier$Outbound>;
+};
+
+/** @internal */
+export const SetupPaymentCreditSchemaItem1$outboundSchema: z.ZodMiniType<
+  SetupPaymentCreditSchemaItem1$Outbound,
+  SetupPaymentCreditSchemaItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => SetupPaymentItemFeatureOverrideTier$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function setupPaymentCreditSchemaItem1ToJSON(
+  setupPaymentCreditSchemaItem1: SetupPaymentCreditSchemaItem1,
+): string {
+  return JSON.stringify(
+    SetupPaymentCreditSchemaItem1$outboundSchema.parse(
+      setupPaymentCreditSchemaItem1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemCreditSchemaUnion$Outbound =
+  | SetupPaymentCreditSchemaItem1$Outbound
+  | SetupPaymentCreditSchemaItem2$Outbound;
+
+/** @internal */
+export const SetupPaymentItemCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemCreditSchemaUnion$Outbound,
+  SetupPaymentItemCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => SetupPaymentCreditSchemaItem1$outboundSchema),
+  z.lazy(() => SetupPaymentCreditSchemaItem2$outboundSchema),
+]);
+
+export function setupPaymentItemCreditSchemaUnionToJSON(
+  setupPaymentItemCreditSchemaUnion: SetupPaymentItemCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemCreditSchemaUnion$outboundSchema.parse(
+      setupPaymentItemCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | SetupPaymentCreditSchemaItem1$Outbound
+      | SetupPaymentCreditSchemaItem2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemFeatureOverride$Outbound,
+  SetupPaymentItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => SetupPaymentCreditSchemaItem1$outboundSchema),
+      z.lazy(() =>
+        SetupPaymentCreditSchemaItem2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function setupPaymentItemFeatureOverrideToJSON(
+  setupPaymentItemFeatureOverride: SetupPaymentItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemFeatureOverride$outboundSchema.parse(
+      setupPaymentItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -2171,6 +2529,7 @@ export type SetupPaymentItemPlanItem$Outbound = {
   price?: SetupPaymentItemPrice$Outbound | undefined;
   proration?: SetupPaymentItemProration$Outbound | undefined;
   rollover?: SetupPaymentItemRollover$Outbound | undefined;
+  feature_override?: SetupPaymentItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -2189,10 +2548,14 @@ export const SetupPaymentItemPlanItem$outboundSchema: z.ZodMiniType<
       z.lazy(() => SetupPaymentItemProration$outboundSchema),
     ),
     rollover: z.optional(z.lazy(() => SetupPaymentItemRollover$outboundSchema)),
+    featureOverride: z.optional(
+      z.lazy(() => SetupPaymentItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -2320,7 +2683,7 @@ export function setupPaymentAddItemTierAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type SetupPaymentAddItemTier$Outbound = {
+export type SetupPaymentAddItemPriceTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
@@ -2330,9 +2693,9 @@ export type SetupPaymentAddItemTier$Outbound = {
 };
 
 /** @internal */
-export const SetupPaymentAddItemTier$outboundSchema: z.ZodMiniType<
-  SetupPaymentAddItemTier$Outbound,
-  SetupPaymentAddItemTier
+export const SetupPaymentAddItemPriceTier$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemPriceTier$Outbound,
+  SetupPaymentAddItemPriceTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -2350,11 +2713,13 @@ export const SetupPaymentAddItemTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentAddItemTierToJSON(
-  setupPaymentAddItemTier: SetupPaymentAddItemTier,
+export function setupPaymentAddItemPriceTierToJSON(
+  setupPaymentAddItemPriceTier: SetupPaymentAddItemPriceTier,
 ): string {
   return JSON.stringify(
-    SetupPaymentAddItemTier$outboundSchema.parse(setupPaymentAddItemTier),
+    SetupPaymentAddItemPriceTier$outboundSchema.parse(
+      setupPaymentAddItemPriceTier,
+    ),
   );
 }
 
@@ -2379,7 +2744,7 @@ export type SetupPaymentAddItemPrice$Outbound = {
   additional_currencies?:
     | Array<SetupPaymentAddItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<SetupPaymentAddItemTier$Outbound> | undefined;
+  tiers?: Array<SetupPaymentAddItemPriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -2401,7 +2766,7 @@ export const SetupPaymentAddItemPrice$outboundSchema: z.ZodMiniType<
       ),
     ),
     tiers: z.optional(
-      z.array(z.lazy(() => SetupPaymentAddItemTier$outboundSchema)),
+      z.array(z.lazy(() => SetupPaymentAddItemPriceTier$outboundSchema)),
     ),
     tierBehavior: z.optional(SetupPaymentAddItemTierBehavior$outboundSchema),
     interval: SetupPaymentAddItemPriceInterval$outboundSchema,
@@ -2518,6 +2883,180 @@ export function setupPaymentAddItemRolloverToJSON(
 }
 
 /** @internal */
+export type SetupPaymentCreditSchemaAddItem2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
+  SetupPaymentCreditSchemaAddItem2$Outbound,
+  SetupPaymentCreditSchemaAddItem2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentCreditSchemaAddItem2ToJSON(
+  setupPaymentCreditSchemaAddItem2: SetupPaymentCreditSchemaAddItem2,
+): string {
+  return JSON.stringify(
+    SetupPaymentCreditSchemaAddItem2$outboundSchema.parse(
+      setupPaymentCreditSchemaAddItem2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemFeatureOverrideTier$Outbound = {
+  to?: any | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentAddItemFeatureOverrideTier$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentAddItemFeatureOverrideTier$Outbound,
+    SetupPaymentAddItemFeatureOverrideTier
+  > = z.pipe(
+    z.object({
+      to: z.optional(z.any()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function setupPaymentAddItemFeatureOverrideTierToJSON(
+  setupPaymentAddItemFeatureOverrideTier:
+    SetupPaymentAddItemFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemFeatureOverrideTier$outboundSchema.parse(
+      setupPaymentAddItemFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentCreditSchemaAddItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentAddItemFeatureOverrideTier$Outbound>;
+};
+
+/** @internal */
+export const SetupPaymentCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
+  SetupPaymentCreditSchemaAddItem1$Outbound,
+  SetupPaymentCreditSchemaAddItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => SetupPaymentAddItemFeatureOverrideTier$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function setupPaymentCreditSchemaAddItem1ToJSON(
+  setupPaymentCreditSchemaAddItem1: SetupPaymentCreditSchemaAddItem1,
+): string {
+  return JSON.stringify(
+    SetupPaymentCreditSchemaAddItem1$outboundSchema.parse(
+      setupPaymentCreditSchemaAddItem1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemCreditSchemaUnion$Outbound =
+  | SetupPaymentCreditSchemaAddItem1$Outbound
+  | SetupPaymentCreditSchemaAddItem2$Outbound;
+
+/** @internal */
+export const SetupPaymentAddItemCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemCreditSchemaUnion$Outbound,
+  SetupPaymentAddItemCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => SetupPaymentCreditSchemaAddItem1$outboundSchema),
+  z.lazy(() => SetupPaymentCreditSchemaAddItem2$outboundSchema),
+]);
+
+export function setupPaymentAddItemCreditSchemaUnionToJSON(
+  setupPaymentAddItemCreditSchemaUnion: SetupPaymentAddItemCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemCreditSchemaUnion$outboundSchema.parse(
+      setupPaymentAddItemCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | SetupPaymentCreditSchemaAddItem1$Outbound
+      | SetupPaymentCreditSchemaAddItem2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemFeatureOverride$Outbound,
+  SetupPaymentAddItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => SetupPaymentCreditSchemaAddItem1$outboundSchema),
+      z.lazy(() =>
+        SetupPaymentCreditSchemaAddItem2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function setupPaymentAddItemFeatureOverrideToJSON(
+  setupPaymentAddItemFeatureOverride: SetupPaymentAddItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemFeatureOverride$outboundSchema.parse(
+      setupPaymentAddItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentAddItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -2527,6 +3066,7 @@ export type SetupPaymentAddItemPlanItem$Outbound = {
   price?: SetupPaymentAddItemPrice$Outbound | undefined;
   proration?: SetupPaymentAddItemProration$Outbound | undefined;
   rollover?: SetupPaymentAddItemRollover$Outbound | undefined;
+  feature_override?: SetupPaymentAddItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -2547,10 +3087,14 @@ export const SetupPaymentAddItemPlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => SetupPaymentAddItemRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => SetupPaymentAddItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -2833,31 +3377,36 @@ export const SetupPaymentAnchor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SetupPaymentAnchor);
 
 /** @internal */
-export type SetupPaymentProperties$Outbound = string | number | boolean;
+export type SetupPaymentUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
 
 /** @internal */
-export const SetupPaymentProperties$outboundSchema: z.ZodMiniType<
-  SetupPaymentProperties$Outbound,
-  SetupPaymentProperties
+export const SetupPaymentUsageLimitProperties$outboundSchema: z.ZodMiniType<
+  SetupPaymentUsageLimitProperties$Outbound,
+  SetupPaymentUsageLimitProperties
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function setupPaymentPropertiesToJSON(
-  setupPaymentProperties: SetupPaymentProperties,
+export function setupPaymentUsageLimitPropertiesToJSON(
+  setupPaymentUsageLimitProperties: SetupPaymentUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    SetupPaymentProperties$outboundSchema.parse(setupPaymentProperties),
+    SetupPaymentUsageLimitProperties$outboundSchema.parse(
+      setupPaymentUsageLimitProperties,
+    ),
   );
 }
 
 /** @internal */
-export type SetupPaymentFilter$Outbound = {
+export type SetupPaymentUsageLimitFilter$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const SetupPaymentFilter$outboundSchema: z.ZodMiniType<
-  SetupPaymentFilter$Outbound,
-  SetupPaymentFilter
+export const SetupPaymentUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  SetupPaymentUsageLimitFilter$Outbound,
+  SetupPaymentUsageLimitFilter
 > = z.object({
   properties: z.record(
     z.string(),
@@ -2865,11 +3414,13 @@ export const SetupPaymentFilter$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function setupPaymentFilterToJSON(
-  setupPaymentFilter: SetupPaymentFilter,
+export function setupPaymentUsageLimitFilterToJSON(
+  setupPaymentUsageLimitFilter: SetupPaymentUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    SetupPaymentFilter$outboundSchema.parse(setupPaymentFilter),
+    SetupPaymentUsageLimitFilter$outboundSchema.parse(
+      setupPaymentUsageLimitFilter,
+    ),
   );
 }
 
@@ -2880,7 +3431,7 @@ export type SetupPaymentUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: SetupPaymentFilter$Outbound | undefined;
+  filter?: SetupPaymentUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -2894,7 +3445,9 @@ export const SetupPaymentUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: SetupPaymentUsageLimitInterval$outboundSchema,
     anchor: z.optional(SetupPaymentAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => SetupPaymentFilter$outboundSchema)),
+    filter: z.optional(
+      z.lazy(() => SetupPaymentUsageLimitFilter$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2917,11 +3470,66 @@ export const SetupPaymentThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SetupPaymentThresholdType);
 
 /** @internal */
+export const SetupPaymentBasis$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentBasis
+> = z.enum(SetupPaymentBasis);
+
+/** @internal */
+export type SetupPaymentUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentUsageAlertProperties$outboundSchema: z.ZodMiniType<
+  SetupPaymentUsageAlertProperties$Outbound,
+  SetupPaymentUsageAlertProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentUsageAlertPropertiesToJSON(
+  setupPaymentUsageAlertProperties: SetupPaymentUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    SetupPaymentUsageAlertProperties$outboundSchema.parse(
+      setupPaymentUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const SetupPaymentUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  SetupPaymentUsageAlertFilter$Outbound,
+  SetupPaymentUsageAlertFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function setupPaymentUsageAlertFilterToJSON(
+  setupPaymentUsageAlertFilter: SetupPaymentUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    SetupPaymentUsageAlertFilter$outboundSchema.parse(
+      setupPaymentUsageAlertFilter,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: SetupPaymentUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -2935,6 +3543,10 @@ export const SetupPaymentUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: SetupPaymentThresholdType$outboundSchema,
+    basis: z._default(SetupPaymentBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => SetupPaymentUsageAlertFilter$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -3377,6 +3989,152 @@ export function setupPaymentUpsertLicenseRolloverToJSON(
 }
 
 /** @internal */
+export type SetupPaymentCreditSchemaUpsertLicense2$Outbound = {
+  metered_feature_id?: any | undefined;
+  billing_units?: any | undefined;
+  credit_cost?: any | undefined;
+};
+
+/** @internal */
+export const SetupPaymentCreditSchemaUpsertLicense2$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentCreditSchemaUpsertLicense2$Outbound,
+    SetupPaymentCreditSchemaUpsertLicense2
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.optional(z.any()),
+      billingUnits: z.optional(z.any()),
+      creditCost: z.optional(z.any()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function setupPaymentCreditSchemaUpsertLicense2ToJSON(
+  setupPaymentCreditSchemaUpsertLicense2:
+    SetupPaymentCreditSchemaUpsertLicense2,
+): string {
+  return JSON.stringify(
+    SetupPaymentCreditSchemaUpsertLicense2$outboundSchema.parse(
+      setupPaymentCreditSchemaUpsertLicense2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentCreditSchemaUpsertLicense1$Outbound = {
+  metered_feature_id?: any | undefined;
+  billing_units?: any | undefined;
+  tier_behavior?: any | undefined;
+  tiers?: any | undefined;
+};
+
+/** @internal */
+export const SetupPaymentCreditSchemaUpsertLicense1$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentCreditSchemaUpsertLicense1$Outbound,
+    SetupPaymentCreditSchemaUpsertLicense1
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.optional(z.any()),
+      billingUnits: z.optional(z.any()),
+      tierBehavior: z.optional(z.any()),
+      tiers: z.optional(z.any()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        tierBehavior: "tier_behavior",
+      });
+    }),
+  );
+
+export function setupPaymentCreditSchemaUpsertLicense1ToJSON(
+  setupPaymentCreditSchemaUpsertLicense1:
+    SetupPaymentCreditSchemaUpsertLicense1,
+): string {
+  return JSON.stringify(
+    SetupPaymentCreditSchemaUpsertLicense1$outboundSchema.parse(
+      setupPaymentCreditSchemaUpsertLicense1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseCreditSchemaUnion$Outbound =
+  | SetupPaymentCreditSchemaUpsertLicense1$Outbound
+  | SetupPaymentCreditSchemaUpsertLicense2$Outbound;
+
+/** @internal */
+export const SetupPaymentUpsertLicenseCreditSchemaUnion$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseCreditSchemaUnion$Outbound,
+    SetupPaymentUpsertLicenseCreditSchemaUnion
+  > = smartUnion([
+    z.lazy(() => SetupPaymentCreditSchemaUpsertLicense1$outboundSchema),
+    z.lazy(() => SetupPaymentCreditSchemaUpsertLicense2$outboundSchema),
+  ]);
+
+export function setupPaymentUpsertLicenseCreditSchemaUnionToJSON(
+  setupPaymentUpsertLicenseCreditSchemaUnion:
+    SetupPaymentUpsertLicenseCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseCreditSchemaUnion$outboundSchema.parse(
+      setupPaymentUpsertLicenseCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | SetupPaymentCreditSchemaUpsertLicense1$Outbound
+      | SetupPaymentCreditSchemaUpsertLicense2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseFeatureOverride$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseFeatureOverride$Outbound,
+    SetupPaymentUpsertLicenseFeatureOverride
+  > = z.pipe(
+    z.object({
+      creditSchema: z.optional(z.array(smartUnion([
+        z.lazy(() => SetupPaymentCreditSchemaUpsertLicense1$outboundSchema),
+        z.lazy(() =>
+          SetupPaymentCreditSchemaUpsertLicense2$outboundSchema
+        ),
+      ]))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditSchema: "credit_schema",
+      });
+    }),
+  );
+
+export function setupPaymentUpsertLicenseFeatureOverrideToJSON(
+  setupPaymentUpsertLicenseFeatureOverride:
+    SetupPaymentUpsertLicenseFeatureOverride,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseFeatureOverride$outboundSchema.parse(
+      setupPaymentUpsertLicenseFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentUpsertLicensePlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -3386,6 +4144,9 @@ export type SetupPaymentUpsertLicensePlanItem$Outbound = {
   price?: SetupPaymentUpsertLicensePrice$Outbound | undefined;
   proration?: SetupPaymentUpsertLicenseProration$Outbound | undefined;
   rollover?: SetupPaymentUpsertLicenseRollover$Outbound | undefined;
+  feature_override?:
+    | SetupPaymentUpsertLicenseFeatureOverride$Outbound
+    | undefined;
 };
 
 /** @internal */
@@ -3410,10 +4171,14 @@ export const SetupPaymentUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => SetupPaymentUpsertLicenseRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => SetupPaymentUpsertLicenseFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -3566,6 +4331,7 @@ export function setupPaymentUpsertLicenseCustomizeToJSON(
 /** @internal */
 export type SetupPaymentUpsertLicense$Outbound = {
   license_plan_id: string;
+  version_slug?: string | undefined;
   included?: number | undefined;
   prepaid_only?: boolean | undefined;
   customize?: SetupPaymentUpsertLicenseCustomize$Outbound | null | undefined;
@@ -3579,6 +4345,7 @@ export const SetupPaymentUpsertLicense$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     licensePlanId: z.string(),
+    versionSlug: z.optional(z.string()),
     included: z.optional(z.int()),
     prepaidOnly: z.optional(z.boolean()),
     customize: z.optional(
@@ -3591,6 +4358,7 @@ export const SetupPaymentUpsertLicense$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       licensePlanId: "license_plan_id",
+      versionSlug: "version_slug",
       prepaidOnly: "prepaid_only",
     });
   }),

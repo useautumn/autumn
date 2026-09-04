@@ -10,9 +10,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -26,7 +27,7 @@ class PreviewAttachGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -45,7 +46,7 @@ class PreviewAttachGlobals(BaseModel):
         return m
 
 
-class PreviewAttachFeatureQuantityRequestTypedDict(TypedDict):
+class PreviewAttachFeatureQuantityRequestBodyTypedDict(TypedDict):
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -56,7 +57,7 @@ class PreviewAttachFeatureQuantityRequestTypedDict(TypedDict):
     r"""Whether the customer can adjust the quantity."""
 
 
-class PreviewAttachFeatureQuantityRequest(BaseModel):
+class PreviewAttachFeatureQuantityRequestBody(BaseModel):
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -324,7 +325,7 @@ class PreviewAttachItemTierAdditionalCurrency(BaseModel):
         return m
 
 
-class PreviewAttachItemTierTypedDict(TypedDict):
+class PreviewAttachItemPriceTierTypedDict(TypedDict):
     to: PreviewAttachItemToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
@@ -334,7 +335,7 @@ class PreviewAttachItemTierTypedDict(TypedDict):
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class PreviewAttachItemTier(BaseModel):
+class PreviewAttachItemPriceTier(BaseModel):
     to: PreviewAttachItemTo
 
     amount: Optional[float] = None
@@ -400,7 +401,7 @@ class PreviewAttachItemPriceTypedDict(TypedDict):
         List[PreviewAttachItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[PreviewAttachItemTierTypedDict]]
+    tiers: NotRequired[List[PreviewAttachItemPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[PreviewAttachItemTierBehavior]
     interval_count: NotRequired[float]
@@ -426,7 +427,7 @@ class PreviewAttachItemPrice(BaseModel):
     additional_currencies: Optional[List[PreviewAttachItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[PreviewAttachItemTier]] = None
+    tiers: Optional[List[PreviewAttachItemPriceTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[PreviewAttachItemTierBehavior] = None
@@ -566,6 +567,157 @@ class PreviewAttachItemRollover(BaseModel):
         return m
 
 
+class PreviewAttachCreditSchemaItem2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class PreviewAttachCreditSchemaItem2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewAttachItemFeatureOverrideTierTypedDict(TypedDict):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+    to: NotRequired[Any]
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class PreviewAttachItemFeatureOverrideTier(BaseModel):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+    to: Optional[Any] = None
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["to"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewAttachCreditSchemaItem1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[PreviewAttachItemFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class PreviewAttachCreditSchemaItem1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[PreviewAttachItemFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachItemCreditSchemaUnionTypedDict = TypeAliasType(
+    "PreviewAttachItemCreditSchemaUnionTypedDict",
+    Union[
+        PreviewAttachCreditSchemaItem2TypedDict, PreviewAttachCreditSchemaItem1TypedDict
+    ],
+)
+
+
+PreviewAttachItemCreditSchemaUnion = TypeAliasType(
+    "PreviewAttachItemCreditSchemaUnion",
+    Union[PreviewAttachCreditSchemaItem2, PreviewAttachCreditSchemaItem1],
+)
+
+
+class PreviewAttachItemFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[PreviewAttachItemCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class PreviewAttachItemFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[PreviewAttachItemCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PreviewAttachItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -585,6 +737,8 @@ class PreviewAttachItemPlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[PreviewAttachItemRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[PreviewAttachItemFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class PreviewAttachItemPlanItem(BaseModel):
@@ -614,6 +768,9 @@ class PreviewAttachItemPlanItem(BaseModel):
     rollover: Optional[PreviewAttachItemRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[PreviewAttachItemFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -625,6 +782,7 @@ class PreviewAttachItemPlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -749,7 +907,7 @@ class PreviewAttachAddItemTierAdditionalCurrency(BaseModel):
         return m
 
 
-class PreviewAttachAddItemTierTypedDict(TypedDict):
+class PreviewAttachAddItemPriceTierTypedDict(TypedDict):
     to: PreviewAttachAddItemToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
@@ -759,7 +917,7 @@ class PreviewAttachAddItemTierTypedDict(TypedDict):
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class PreviewAttachAddItemTier(BaseModel):
+class PreviewAttachAddItemPriceTier(BaseModel):
     to: PreviewAttachAddItemTo
 
     amount: Optional[float] = None
@@ -825,7 +983,7 @@ class PreviewAttachAddItemPriceTypedDict(TypedDict):
         List[PreviewAttachAddItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[PreviewAttachAddItemTierTypedDict]]
+    tiers: NotRequired[List[PreviewAttachAddItemPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[PreviewAttachAddItemTierBehavior]
     interval_count: NotRequired[float]
@@ -851,7 +1009,7 @@ class PreviewAttachAddItemPrice(BaseModel):
     additional_currencies: Optional[List[PreviewAttachAddItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[PreviewAttachAddItemTier]] = None
+    tiers: Optional[List[PreviewAttachAddItemPriceTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[PreviewAttachAddItemTierBehavior] = None
@@ -991,6 +1149,158 @@ class PreviewAttachAddItemRollover(BaseModel):
         return m
 
 
+class PreviewAttachCreditSchemaAddItem2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class PreviewAttachCreditSchemaAddItem2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewAttachAddItemFeatureOverrideTierTypedDict(TypedDict):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+    to: NotRequired[Any]
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class PreviewAttachAddItemFeatureOverrideTier(BaseModel):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+    to: Optional[Any] = None
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["to"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewAttachCreditSchemaAddItem1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[PreviewAttachAddItemFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class PreviewAttachCreditSchemaAddItem1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[PreviewAttachAddItemFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachAddItemCreditSchemaUnionTypedDict = TypeAliasType(
+    "PreviewAttachAddItemCreditSchemaUnionTypedDict",
+    Union[
+        PreviewAttachCreditSchemaAddItem2TypedDict,
+        PreviewAttachCreditSchemaAddItem1TypedDict,
+    ],
+)
+
+
+PreviewAttachAddItemCreditSchemaUnion = TypeAliasType(
+    "PreviewAttachAddItemCreditSchemaUnion",
+    Union[PreviewAttachCreditSchemaAddItem2, PreviewAttachCreditSchemaAddItem1],
+)
+
+
+class PreviewAttachAddItemFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[List[PreviewAttachAddItemCreditSchemaUnionTypedDict]]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class PreviewAttachAddItemFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[PreviewAttachAddItemCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PreviewAttachAddItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -1010,6 +1320,8 @@ class PreviewAttachAddItemPlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[PreviewAttachAddItemRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[PreviewAttachAddItemFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class PreviewAttachAddItemPlanItem(BaseModel):
@@ -1039,6 +1351,9 @@ class PreviewAttachAddItemPlanItem(BaseModel):
     rollover: Optional[PreviewAttachAddItemRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[PreviewAttachAddItemFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1050,6 +1365,7 @@ class PreviewAttachAddItemPlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -1404,26 +1720,26 @@ PreviewAttachAnchor = Literal[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-PreviewAttachPropertiesTypedDict = TypeAliasType(
-    "PreviewAttachPropertiesTypedDict", Union[str, float, bool]
+PreviewAttachUsageLimitPropertiesTypedDict = TypeAliasType(
+    "PreviewAttachUsageLimitPropertiesTypedDict", Union[str, float, bool]
 )
 
 
-PreviewAttachProperties = TypeAliasType(
-    "PreviewAttachProperties", Union[str, float, bool]
+PreviewAttachUsageLimitProperties = TypeAliasType(
+    "PreviewAttachUsageLimitProperties", Union[str, float, bool]
 )
 
 
-class PreviewAttachFilterTypedDict(TypedDict):
+class PreviewAttachUsageLimitFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, PreviewAttachPropertiesTypedDict]
+    properties: Dict[str, PreviewAttachUsageLimitPropertiesTypedDict]
 
 
-class PreviewAttachFilter(BaseModel):
+class PreviewAttachUsageLimitFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, PreviewAttachProperties]
+    properties: Dict[str, PreviewAttachUsageLimitProperties]
 
 
 class PreviewAttachUsageLimitTypedDict(TypedDict):
@@ -1437,7 +1753,7 @@ class PreviewAttachUsageLimitTypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[PreviewAttachAnchor]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[PreviewAttachFilterTypedDict]
+    filter_: NotRequired[PreviewAttachUsageLimitFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -1458,7 +1774,7 @@ class PreviewAttachUsageLimit(BaseModel):
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[PreviewAttachFilter], pydantic.Field(alias="filter")
+        Optional[PreviewAttachUsageLimitFilter], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1488,6 +1804,37 @@ PreviewAttachThresholdType = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+PreviewAttachBasis = Literal[
+    "balance",
+    "included",
+    "recurring",
+    "usage_limit",
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+PreviewAttachUsageAlertPropertiesTypedDict = TypeAliasType(
+    "PreviewAttachUsageAlertPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+PreviewAttachUsageAlertProperties = TypeAliasType(
+    "PreviewAttachUsageAlertProperties", Union[str, float, bool]
+)
+
+
+class PreviewAttachUsageAlertFilterTypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, PreviewAttachUsageAlertPropertiesTypedDict]
+
+
+class PreviewAttachUsageAlertFilter(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, PreviewAttachUsageAlertProperties]
+
+
 class PreviewAttachUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -1497,6 +1844,10 @@ class PreviewAttachUsageAlertTypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[PreviewAttachBasis]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[PreviewAttachUsageAlertFilterTypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -1514,12 +1865,20 @@ class PreviewAttachUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[PreviewAttachBasis] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[PreviewAttachUsageAlertFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -2002,6 +2361,120 @@ class PreviewAttachUpsertLicenseRollover(BaseModel):
         return m
 
 
+class PreviewAttachCreditSchemaUpsertLicense2TypedDict(TypedDict):
+    metered_feature_id: NotRequired[Any]
+    billing_units: NotRequired[Any]
+    credit_cost: NotRequired[Any]
+
+
+class PreviewAttachCreditSchemaUpsertLicense2(BaseModel):
+    metered_feature_id: Optional[Any] = None
+
+    billing_units: Optional[Any] = None
+
+    credit_cost: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["metered_feature_id", "billing_units", "credit_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewAttachCreditSchemaUpsertLicense1TypedDict(TypedDict):
+    metered_feature_id: NotRequired[Any]
+    billing_units: NotRequired[Any]
+    tier_behavior: NotRequired[Any]
+    tiers: NotRequired[Any]
+
+
+class PreviewAttachCreditSchemaUpsertLicense1(BaseModel):
+    metered_feature_id: Optional[Any] = None
+
+    billing_units: Optional[Any] = None
+
+    tier_behavior: Optional[Any] = None
+
+    tiers: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["metered_feature_id", "billing_units", "tier_behavior", "tiers"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachUpsertLicenseCreditSchemaUnionTypedDict = TypeAliasType(
+    "PreviewAttachUpsertLicenseCreditSchemaUnionTypedDict",
+    Union[
+        PreviewAttachCreditSchemaUpsertLicense2TypedDict,
+        PreviewAttachCreditSchemaUpsertLicense1TypedDict,
+    ],
+)
+
+
+PreviewAttachUpsertLicenseCreditSchemaUnion = TypeAliasType(
+    "PreviewAttachUpsertLicenseCreditSchemaUnion",
+    Union[
+        PreviewAttachCreditSchemaUpsertLicense2, PreviewAttachCreditSchemaUpsertLicense1
+    ],
+)
+
+
+class PreviewAttachUpsertLicenseFeatureOverrideTypedDict(TypedDict):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: NotRequired[
+        List[PreviewAttachUpsertLicenseCreditSchemaUnionTypedDict]
+    ]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class PreviewAttachUpsertLicenseFeatureOverride(BaseModel):
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
+    credit_schema: Optional[List[PreviewAttachUpsertLicenseCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PreviewAttachUpsertLicensePlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
@@ -2021,6 +2494,8 @@ class PreviewAttachUpsertLicensePlanItemTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
     rollover: NotRequired[PreviewAttachUpsertLicenseRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
+    feature_override: NotRequired[PreviewAttachUpsertLicenseFeatureOverrideTypedDict]
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
 class PreviewAttachUpsertLicensePlanItem(BaseModel):
@@ -2050,6 +2525,9 @@ class PreviewAttachUpsertLicensePlanItem(BaseModel):
     rollover: Optional[PreviewAttachUpsertLicenseRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
+    feature_override: Optional[PreviewAttachUpsertLicenseFeatureOverride] = None
+    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -2061,6 +2539,7 @@ class PreviewAttachUpsertLicensePlanItem(BaseModel):
                 "price",
                 "proration",
                 "rollover",
+                "feature_override",
             ]
         )
         serialized = handler(self)
@@ -2220,6 +2699,7 @@ class PreviewAttachUpsertLicenseCustomize(BaseModel):
 
 class PreviewAttachUpsertLicenseTypedDict(TypedDict):
     license_plan_id: str
+    version_slug: NotRequired[str]
     included: NotRequired[int]
     prepaid_only: NotRequired[bool]
     customize: NotRequired[Nullable[PreviewAttachUpsertLicenseCustomizeTypedDict]]
@@ -2228,6 +2708,8 @@ class PreviewAttachUpsertLicenseTypedDict(TypedDict):
 
 class PreviewAttachUpsertLicense(BaseModel):
     license_plan_id: str
+
+    version_slug: Optional[str] = None
 
     included: Optional[int] = None
 
@@ -2239,7 +2721,9 @@ class PreviewAttachUpsertLicense(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["included", "prepaid_only", "customize", "metadata"])
+        optional_fields = set(
+            ["version_slug", "included", "prepaid_only", "customize", "metadata"]
+        )
         nullable_fields = set(["customize"])
         serialized = handler(self)
         m = {}
@@ -2589,7 +3073,9 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""The ID of the plan."""
     entity_id: NotRequired[str]
     r"""The ID of the entity to attach the plan to."""
-    feature_quantities: NotRequired[List[PreviewAttachFeatureQuantityRequestTypedDict]]
+    feature_quantities: NotRequired[
+        List[PreviewAttachFeatureQuantityRequestBodyTypedDict]
+    ]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
@@ -2657,7 +3143,7 @@ class PreviewAttachParams(BaseModel):
     entity_id: Optional[str] = None
     r"""The ID of the entity to attach the plan to."""
 
-    feature_quantities: Optional[List[PreviewAttachFeatureQuantityRequest]] = None
+    feature_quantities: Optional[List[PreviewAttachFeatureQuantityRequestBody]] = None
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
 
     version: Optional[float] = None
@@ -3479,6 +3965,18 @@ class PreviewAttachResponse(BaseModel):
 
 
 try:
+    PreviewAttachCreditSchemaItem1.model_rebuild()
+except NameError:
+    pass
+try:
+    PreviewAttachCreditSchemaAddItem1.model_rebuild()
+except NameError:
+    pass
+try:
     PreviewAttachUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    PreviewAttachUsageAlert.model_rebuild()
 except NameError:
     pass

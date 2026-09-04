@@ -198,6 +198,34 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               </Expandable>
             </DynamicParamField>
 
+            <DynamicParamField body="feature_override" type="object">
+              Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+              <Expandable title="properties">
+                <DynamicParamField body="credit_schema" type="object | object[]">
+                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="metered_feature_id" type="string">
+                      ID of the metered feature that draws from this credit system.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_units" type="number">
+                      Number of metered-feature units priced together. Defaults to one when omitted.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="any" />
+
+                    <DynamicParamField body="tiers" type="any[]" />
+
+                    <DynamicParamField body="credit_cost" type="number">
+                      Credits consumed per billing-unit group.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
           </Expandable>
         </DynamicParamField>
 
@@ -504,6 +532,18 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
             </DynamicParamField>
 
+            <DynamicParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+              What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+            </DynamicParamField>
+
+            <DynamicParamField body="filter" type="object">
+              Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+              <Expandable title="properties">
+                <DynamicParamField body="properties.{key}" type="string" required />
+
+              </Expandable>
+            </DynamicParamField>
+
             <DynamicParamField body="name" type="string">
               Optional user-defined label to distinguish multiple alerts on the same feature.
             </DynamicParamField>
@@ -635,6 +675,18 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
               Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+            </DynamicParamField>
+
+            <DynamicParamField body="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+              What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+            </DynamicParamField>
+
+            <DynamicParamField body="filter" type="object">
+              Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+              <Expandable title="properties">
+                <DynamicParamField body="properties.{key}" type="string" required />
+
+              </Expandable>
             </DynamicParamField>
 
             <DynamicParamField body="name" type="string">

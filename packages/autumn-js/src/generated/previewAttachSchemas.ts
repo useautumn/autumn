@@ -5,7 +5,7 @@ export const previewAttachGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const previewAttachFeatureQuantityRequestSchema = z.object({
+export const previewAttachFeatureQuantityRequestBodySchema = z.object({
 	featureId: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
@@ -29,13 +29,50 @@ export const previewAttachItemTierAdditionalCurrencySchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewAttachItemTierSchema = z.object({
+export const previewAttachItemPriceTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 	additionalCurrencies: z
 		.union([
 			z.array(previewAttachItemTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const previewAttachCreditSchemaItem2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const previewAttachItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const previewAttachCreditSchemaItem1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(previewAttachItemFeatureOverrideTierSchema),
+});
+
+export const previewAttachItemCreditSchemaUnionSchema = z.union([
+	previewAttachCreditSchemaItem1Schema,
+	previewAttachCreditSchemaItem2Schema,
+]);
+
+export const previewAttachItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					previewAttachCreditSchemaItem1Schema,
+					previewAttachCreditSchemaItem2Schema,
+				]),
+			),
 			z.undefined(),
 		])
 		.optional(),
@@ -54,7 +91,7 @@ export const previewAttachAddItemTierAdditionalCurrencySchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewAttachAddItemTierSchema = z.object({
+export const previewAttachAddItemPriceTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
@@ -66,13 +103,63 @@ export const previewAttachAddItemTierSchema = z.object({
 		.optional(),
 });
 
-export const previewAttachPropertiesSchema = z.union([
+export const previewAttachCreditSchemaAddItem2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const previewAttachAddItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const previewAttachCreditSchemaAddItem1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(previewAttachAddItemFeatureOverrideTierSchema),
+});
+
+export const previewAttachAddItemCreditSchemaUnionSchema = z.union([
+	previewAttachCreditSchemaAddItem1Schema,
+	previewAttachCreditSchemaAddItem2Schema,
+]);
+
+export const previewAttachAddItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					previewAttachCreditSchemaAddItem1Schema,
+					previewAttachCreditSchemaAddItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const previewAttachUsageLimitPropertiesSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const previewAttachFilterSchema = z.object({
+export const previewAttachUsageLimitFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
+export const previewAttachUsageAlertPropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const previewAttachUsageAlertFilterSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -100,6 +187,38 @@ export const previewAttachUpsertLicenseTierSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
+});
+
+export const previewAttachCreditSchemaUpsertLicense2Schema = z.object({
+	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
+	billingUnits: z.union([z.any(), z.undefined()]).optional(),
+	creditCost: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const previewAttachCreditSchemaUpsertLicense1Schema = z.object({
+	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
+	billingUnits: z.union([z.any(), z.undefined()]).optional(),
+	tierBehavior: z.union([z.any(), z.undefined()]).optional(),
+	tiers: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const previewAttachUpsertLicenseCreditSchemaUnionSchema = z.union([
+	previewAttachCreditSchemaUpsertLicense1Schema,
+	previewAttachCreditSchemaUpsertLicense2Schema,
+]);
+
+export const previewAttachUpsertLicenseFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					previewAttachCreditSchemaUpsertLicense1Schema,
+					previewAttachCreditSchemaUpsertLicense2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewAttachRemoveLicenseSchema = z.object({
@@ -237,7 +356,7 @@ export const previewAttachInvoiceCreditsSchema = z.object({
 	currency: z.string(),
 });
 
-export const previewAttachFeatureQuantityRequestOutboundSchema = z.object({
+export const previewAttachFeatureQuantityRequestBodyOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
@@ -288,7 +407,7 @@ export const previewAttachItemTierAdditionalCurrencyOutboundSchema = z.object({
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewAttachItemTierOutboundSchema = z.object({
+export const previewAttachItemPriceTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
@@ -309,7 +428,7 @@ export const previewAttachItemPriceOutboundSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(previewAttachItemTierOutboundSchema), z.undefined()])
+		.union([z.array(previewAttachItemPriceTierOutboundSchema), z.undefined()])
 		.optional(),
 	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.string(),
@@ -331,6 +450,43 @@ export const previewAttachItemRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachCreditSchemaItem2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const previewAttachItemFeatureOverrideTierOutboundSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const previewAttachCreditSchemaItem1OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(previewAttachItemFeatureOverrideTierOutboundSchema),
+});
+
+export const previewAttachItemCreditSchemaUnionOutboundSchema = z.union([
+	previewAttachCreditSchemaItem1OutboundSchema,
+	previewAttachCreditSchemaItem2OutboundSchema,
+]);
+
+export const previewAttachItemFeatureOverrideOutboundSchema = z.object({
+	credit_schema: z
+		.union([
+			z.array(
+				z.union([
+					previewAttachCreditSchemaItem1OutboundSchema,
+					previewAttachCreditSchemaItem2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const previewAttachItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -347,6 +503,9 @@ export const previewAttachItemPlanItemOutboundSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([previewAttachItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
+	feature_override: z
+		.union([previewAttachItemFeatureOverrideOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -372,7 +531,7 @@ export const previewAttachAddItemTierAdditionalCurrencyOutboundSchema =
 		flat_amount: z.union([z.number(), z.undefined()]).optional(),
 	});
 
-export const previewAttachAddItemTierOutboundSchema = z.object({
+export const previewAttachAddItemPriceTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
@@ -393,7 +552,10 @@ export const previewAttachAddItemPriceOutboundSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(previewAttachAddItemTierOutboundSchema), z.undefined()])
+		.union([
+			z.array(previewAttachAddItemPriceTierOutboundSchema),
+			z.undefined(),
+		])
 		.optional(),
 	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.string(),
@@ -415,6 +577,43 @@ export const previewAttachAddItemRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachCreditSchemaAddItem2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const previewAttachAddItemFeatureOverrideTierOutboundSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const previewAttachCreditSchemaAddItem1OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(previewAttachAddItemFeatureOverrideTierOutboundSchema),
+});
+
+export const previewAttachAddItemCreditSchemaUnionOutboundSchema = z.union([
+	previewAttachCreditSchemaAddItem1OutboundSchema,
+	previewAttachCreditSchemaAddItem2OutboundSchema,
+]);
+
+export const previewAttachAddItemFeatureOverrideOutboundSchema = z.object({
+	credit_schema: z
+		.union([
+			z.array(
+				z.union([
+					previewAttachCreditSchemaAddItem1OutboundSchema,
+					previewAttachCreditSchemaAddItem2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const previewAttachAddItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -431,6 +630,9 @@ export const previewAttachAddItemPlanItemOutboundSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([previewAttachAddItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
+	feature_override: z
+		.union([previewAttachAddItemFeatureOverrideOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -480,13 +682,13 @@ export const previewAttachSpendLimitOutboundSchema = z.object({
 	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const previewAttachPropertiesOutboundSchema = z.union([
+export const previewAttachUsageLimitPropertiesOutboundSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const previewAttachFilterOutboundSchema = z.object({
+export const previewAttachUsageLimitFilterOutboundSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -500,8 +702,21 @@ export const previewAttachUsageLimitOutboundSchema = z.object({
 	interval: z.string(),
 	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z
-		.union([previewAttachFilterOutboundSchema, z.undefined()])
+		.union([previewAttachUsageLimitFilterOutboundSchema, z.undefined()])
 		.optional(),
+});
+
+export const previewAttachUsageAlertPropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const previewAttachUsageAlertFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const previewAttachUsageAlertOutboundSchema = z.object({
@@ -509,6 +724,10 @@ export const previewAttachUsageAlertOutboundSchema = z.object({
 	enabled: z.boolean(),
 	threshold: z.number(),
 	threshold_type: z.string(),
+	basis: z.string(),
+	filter: z
+		.union([previewAttachUsageAlertFilterOutboundSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
@@ -607,6 +826,41 @@ export const previewAttachUpsertLicenseRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachCreditSchemaUpsertLicense2OutboundSchema = z.object({
+	metered_feature_id: z.union([z.any(), z.undefined()]).optional(),
+	billing_units: z.union([z.any(), z.undefined()]).optional(),
+	credit_cost: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const previewAttachCreditSchemaUpsertLicense1OutboundSchema = z.object({
+	metered_feature_id: z.union([z.any(), z.undefined()]).optional(),
+	billing_units: z.union([z.any(), z.undefined()]).optional(),
+	tier_behavior: z.union([z.any(), z.undefined()]).optional(),
+	tiers: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const previewAttachUpsertLicenseCreditSchemaUnionOutboundSchema =
+	z.union([
+		previewAttachCreditSchemaUpsertLicense1OutboundSchema,
+		previewAttachCreditSchemaUpsertLicense2OutboundSchema,
+	]);
+
+export const previewAttachUpsertLicenseFeatureOverrideOutboundSchema = z.object(
+	{
+		credit_schema: z
+			.union([
+				z.array(
+					z.union([
+						previewAttachCreditSchemaUpsertLicense1OutboundSchema,
+						previewAttachCreditSchemaUpsertLicense2OutboundSchema,
+					]),
+				),
+				z.undefined(),
+			])
+			.optional(),
+	},
+);
+
 export const previewAttachUpsertLicensePlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -623,6 +877,12 @@ export const previewAttachUpsertLicensePlanItemOutboundSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([previewAttachUpsertLicenseRolloverOutboundSchema, z.undefined()])
+		.optional(),
+	feature_override: z
+		.union([
+			previewAttachUpsertLicenseFeatureOverrideOutboundSchema,
+			z.undefined(),
+		])
 		.optional(),
 });
 
@@ -660,6 +920,7 @@ export const previewAttachUpsertLicenseCustomizeOutboundSchema = z.object({
 
 export const previewAttachUpsertLicenseOutboundSchema = z.object({
 	license_plan_id: z.string(),
+	version_slug: z.union([z.string(), z.undefined()]).optional(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	prepaid_only: z.union([z.boolean(), z.undefined()]).optional(),
 	customize: z
@@ -746,7 +1007,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	plan_id: z.string(),
 	feature_quantities: z
 		.union([
-			z.array(previewAttachFeatureQuantityRequestOutboundSchema),
+			z.array(previewAttachFeatureQuantityRequestBodyOutboundSchema),
 			z.undefined(),
 		])
 		.optional(),
@@ -851,7 +1112,7 @@ export const previewAttachItemPriceSchema = z.object({
 		.union([z.array(previewAttachItemAdditionalCurrencySchema), z.undefined()])
 		.optional(),
 	tiers: z
-		.union([z.array(previewAttachItemTierSchema), z.undefined()])
+		.union([z.array(previewAttachItemPriceTierSchema), z.undefined()])
 		.optional(),
 	tierBehavior: z
 		.union([previewAttachItemTierBehaviorSchema, z.undefined()])
@@ -894,6 +1155,9 @@ export const previewAttachItemPlanItemSchema = z.object({
 	rollover: z
 		.union([previewAttachItemRolloverSchema, z.undefined()])
 		.optional(),
+	featureOverride: z
+		.union([previewAttachItemFeatureOverrideSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewAttachAddItemResetIntervalSchema = closedEnumSchema;
@@ -918,7 +1182,7 @@ export const previewAttachAddItemPriceSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(previewAttachAddItemTierSchema), z.undefined()])
+		.union([z.array(previewAttachAddItemPriceTierSchema), z.undefined()])
 		.optional(),
 	tierBehavior: z
 		.union([previewAttachAddItemTierBehaviorSchema, z.undefined()])
@@ -960,6 +1224,9 @@ export const previewAttachAddItemPlanItemSchema = z.object({
 		.optional(),
 	rollover: z
 		.union([previewAttachAddItemRolloverSchema, z.undefined()])
+		.optional(),
+	featureOverride: z
+		.union([previewAttachAddItemFeatureOverrideSchema, z.undefined()])
 		.optional(),
 });
 
@@ -1043,16 +1310,24 @@ export const previewAttachUsageLimitSchema = z.object({
 	limit: z.number(),
 	interval: previewAttachUsageLimitIntervalSchema,
 	anchor: z.union([previewAttachAnchorSchema, z.undefined()]).optional(),
-	filter: z.union([previewAttachFilterSchema, z.undefined()]).optional(),
+	filter: z
+		.union([previewAttachUsageLimitFilterSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewAttachThresholdTypeSchema = closedEnumSchema;
+
+export const previewAttachBasisSchema = closedEnumSchema;
 
 export const previewAttachUsageAlertSchema = z.object({
 	featureId: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	threshold: z.number(),
 	thresholdType: previewAttachThresholdTypeSchema,
+	basis: z.union([previewAttachBasisSchema, z.undefined()]).optional(),
+	filter: z
+		.union([previewAttachUsageAlertFilterSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
@@ -1160,6 +1435,9 @@ export const previewAttachUpsertLicensePlanItemSchema = z.object({
 	rollover: z
 		.union([previewAttachUpsertLicenseRolloverSchema, z.undefined()])
 		.optional(),
+	featureOverride: z
+		.union([previewAttachUpsertLicenseFeatureOverrideSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewAttachUpsertLicenseRemoveItemBillingMethodSchema =
@@ -1213,6 +1491,7 @@ export const previewAttachUpsertLicenseCustomizeSchema = z.object({
 
 export const previewAttachUpsertLicenseSchema = z.object({
 	licensePlanId: z.string(),
+	versionSlug: z.union([z.string(), z.undefined()]).optional(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	prepaidOnly: z.union([z.boolean(), z.undefined()]).optional(),
 	customize: z
@@ -1262,7 +1541,10 @@ export const previewAttachParamsSchema = z.object({
 	entityId: z.union([z.string(), z.undefined()]).optional(),
 	planId: z.string(),
 	featureQuantities: z
-		.union([z.array(previewAttachFeatureQuantityRequestSchema), z.undefined()])
+		.union([
+			z.array(previewAttachFeatureQuantityRequestBodySchema),
+			z.undefined(),
+		])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
 	freeTrial: z
