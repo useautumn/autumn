@@ -44,8 +44,18 @@ import { registerInternalSchemas } from "../utils/registerInternalSchemas.js";
 import { v2_3ContractRouter } from "./contracts/index.js";
 import { injectWebhooks } from "./webhooks/injectWebhooks.js";
 
+const OPENAPI_MAX_STRUCTURE_DEPTH = 20;
+
 const generator = new OpenAPIGenerator({
-	schemaConverters: [new ZodToJsonSchemaConverter()],
+	// oRPC emits `{}` (any) for nodes deeper than maxStructureDepth (default 10).
+	// Customer responses nest plan → item → feature_override → credit_schema →
+	// dimensions → tiers past that, which degraded SDK types and tripped a
+	// Speakeasy Python ordering bug, so the limit is raised.
+	schemaConverters: [
+		new ZodToJsonSchemaConverter({
+			maxStructureDepth: OPENAPI_MAX_STRUCTURE_DEPTH,
+		}),
+	],
 });
 
 const OPENAPI_DOC_VERSION = LATEST_VERSION;

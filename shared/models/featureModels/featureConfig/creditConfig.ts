@@ -21,7 +21,12 @@ const graduatedCreditRateShape = {
 // Event property values are compared as strings at track time.
 export const CreditMatchSchema = z.record(
 	z.string(),
-	z.union([z.string(), z.number(), z.boolean()]).transform(String),
+	// `.pipe(z.string())` gives the OpenAPI exporter a plain output schema; a bare
+	// transform is rejected when this record appears in response bodies.
+	z
+		.union([z.string(), z.number(), z.boolean()])
+		.transform(String)
+		.pipe(z.string()),
 );
 
 const CreditDimensionBaseSchema = z.object({

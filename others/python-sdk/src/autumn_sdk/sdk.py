@@ -131,11 +131,11 @@ class Autumn(BaseSDK):
             if url_params is not None:
                 server_url = utils.template_url(server_url, url_params)
 
+        _x_api_version = utils.get_global_from_env(x_api_version, "X_API_VERSION", str)
+        _fail_open = utils.get_global_from_env(fail_open, "FAIL_OPEN", bool)
+        _resolved_globals = {"x_api_version": _x_api_version, "fail_open": _fail_open}
         _globals = internal.Globals(
-            x_api_version=utils.get_global_from_env(
-                x_api_version, "X_API_VERSION", str
-            ),
-            fail_open=utils.get_global_from_env(fail_open, "FAIL_OPEN", bool),
+            **{key: value for key, value in _resolved_globals.items() if value is not None}
         )
 
         BaseSDK.__init__(

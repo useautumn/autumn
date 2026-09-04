@@ -16,11 +16,11 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
-class SetupPaymentGlobalsTypedDict(TypedDict):
+class UpdatePlanGlobalsTypedDict(TypedDict):
     x_api_version: NotRequired[str]
 
 
-class SetupPaymentGlobals(BaseModel):
+class UpdatePlanGlobals(BaseModel):
     x_api_version: Annotated[
         Optional[str],
         pydantic.Field(alias="x-api-version"),
@@ -44,107 +44,7 @@ class SetupPaymentGlobals(BaseModel):
         return m
 
 
-class SetupPaymentFeatureQuantityTypedDict(TypedDict):
-    r"""Quantity configuration for a prepaid feature."""
-
-    feature_id: str
-    r"""The ID of the feature to set quantity for."""
-    quantity: NotRequired[float]
-    r"""The quantity of the feature."""
-    adjustable: NotRequired[bool]
-    r"""Whether the customer can adjust the quantity."""
-
-
-class SetupPaymentFeatureQuantity(BaseModel):
-    r"""Quantity configuration for a prepaid feature."""
-
-    feature_id: str
-    r"""The ID of the feature to set quantity for."""
-
-    quantity: Optional[float] = None
-    r"""The quantity of the feature."""
-
-    adjustable: Optional[bool] = None
-    r"""Whether the customer can adjust the quantity."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["quantity", "adjustable"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentDurationType = Literal[
-    "day",
-    "month",
-    "year",
-]
-r"""Unit of time for the trial ('day', 'month', 'year')."""
-
-
-SetupPaymentOnEnd = Literal[
-    "bill",
-    "revert",
-]
-r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
-
-
-class SetupPaymentFreeTrialParamsTypedDict(TypedDict):
-    r"""Free trial configuration for a plan."""
-
-    duration_length: float
-    r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[SetupPaymentDurationType]
-    r"""Unit of time for the trial ('day', 'month', 'year')."""
-    card_required: NotRequired[bool]
-    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
-    on_end: NotRequired[SetupPaymentOnEnd]
-    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
-
-
-class SetupPaymentFreeTrialParams(BaseModel):
-    r"""Free trial configuration for a plan."""
-
-    duration_length: float
-    r"""Number of duration_type periods the trial lasts."""
-
-    duration_type: Optional[SetupPaymentDurationType] = "month"
-    r"""Unit of time for the trial ('day', 'month', 'year')."""
-
-    card_required: Optional[bool] = False
-    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
-
-    on_end: Optional[SetupPaymentOnEnd] = None
-    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["duration_type", "card_required", "on_end"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentPriceInterval = Literal[
+UpdatePlanPriceIntervalRequestBody = Literal[
     "one_off",
     "week",
     "month",
@@ -155,14 +55,14 @@ SetupPaymentPriceInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class SetupPaymentAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanAdditionalCurrencyRequestBodyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class SetupPaymentAdditionalCurrency(BaseModel):
+class UpdatePlanAdditionalCurrencyRequestBody(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -170,32 +70,36 @@ class SetupPaymentAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class SetupPaymentBasePriceTypedDict(TypedDict):
+class UpdatePlanBasePriceRequestBodyTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
-    interval: SetupPaymentPriceInterval
+    interval: UpdatePlanPriceIntervalRequestBody
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    additional_currencies: NotRequired[List[SetupPaymentAdditionalCurrencyTypedDict]]
+    additional_currencies: NotRequired[
+        List[UpdatePlanAdditionalCurrencyRequestBodyTypedDict]
+    ]
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class SetupPaymentBasePrice(BaseModel):
+class UpdatePlanBasePriceRequestBody(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
-    interval: SetupPaymentPriceInterval
+    interval: UpdatePlanPriceIntervalRequestBody
     r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[List[SetupPaymentAdditionalCurrency]] = None
+    additional_currencies: Optional[List[UpdatePlanAdditionalCurrencyRequestBody]] = (
+        None
+    )
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
     @model_serializer(mode="wrap")
@@ -215,7 +119,7 @@ class SetupPaymentBasePrice(BaseModel):
         return m
 
 
-SetupPaymentItemResetInterval = Literal[
+UpdatePlanItemResetIntervalRequestBody = Literal[
     "one_off",
     "minute",
     "hour",
@@ -229,19 +133,19 @@ SetupPaymentItemResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class SetupPaymentItemResetTypedDict(TypedDict):
+class UpdatePlanItemResetRequestBodyTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: SetupPaymentItemResetInterval
+    interval: UpdatePlanItemResetIntervalRequestBody
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class SetupPaymentItemReset(BaseModel):
+class UpdatePlanItemResetRequestBody(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: SetupPaymentItemResetInterval
+    interval: UpdatePlanItemResetIntervalRequestBody
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -264,14 +168,14 @@ class SetupPaymentItemReset(BaseModel):
         return m
 
 
-class SetupPaymentItemAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanItemAdditionalCurrencyRequestBodyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class SetupPaymentItemAdditionalCurrency(BaseModel):
+class UpdatePlanItemAdditionalCurrencyRequestBody(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -279,15 +183,17 @@ class SetupPaymentItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-SetupPaymentItemPriceToTypedDict = TypeAliasType(
-    "SetupPaymentItemPriceToTypedDict", Union[float, str]
+UpdatePlanItemPriceToRequestBodyTypedDict = TypeAliasType(
+    "UpdatePlanItemPriceToRequestBodyTypedDict", Union[float, str]
 )
 
 
-SetupPaymentItemPriceTo = TypeAliasType("SetupPaymentItemPriceTo", Union[float, str])
+UpdatePlanItemPriceToRequestBody = TypeAliasType(
+    "UpdatePlanItemPriceToRequestBody", Union[float, str]
+)
 
 
-class SetupPaymentItemTierAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanItemTierAdditionalCurrencyRequestBodyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: NotRequired[float]
@@ -296,7 +202,7 @@ class SetupPaymentItemTierAdditionalCurrencyTypedDict(TypedDict):
     r"""Flat amount for this tier in this currency, if the tier uses one."""
 
 
-class SetupPaymentItemTierAdditionalCurrency(BaseModel):
+class UpdatePlanItemTierAdditionalCurrencyRequestBody(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -323,24 +229,26 @@ class SetupPaymentItemTierAdditionalCurrency(BaseModel):
         return m
 
 
-class SetupPaymentItemPriceTierTypedDict(TypedDict):
-    to: SetupPaymentItemPriceToTypedDict
+class UpdatePlanItemPriceTierRequestBodyTypedDict(TypedDict):
+    to: UpdatePlanItemPriceToRequestBodyTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
-        List[SetupPaymentItemTierAdditionalCurrencyTypedDict]
+        List[UpdatePlanItemTierAdditionalCurrencyRequestBodyTypedDict]
     ]
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class SetupPaymentItemPriceTier(BaseModel):
-    to: SetupPaymentItemPriceTo
+class UpdatePlanItemPriceTierRequestBody(BaseModel):
+    to: UpdatePlanItemPriceToRequestBody
 
     amount: Optional[float] = None
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[List[SetupPaymentItemTierAdditionalCurrency]] = None
+    additional_currencies: Optional[
+        List[UpdatePlanItemTierAdditionalCurrencyRequestBody]
+    ] = None
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
     @model_serializer(mode="wrap")
@@ -360,13 +268,13 @@ class SetupPaymentItemPriceTier(BaseModel):
         return m
 
 
-SetupPaymentItemTierBehavior = Literal[
+UpdatePlanItemTierBehaviorRequestBody = Literal[
     "graduated",
     "volume",
 ]
 
 
-SetupPaymentItemPriceInterval = Literal[
+UpdatePlanItemPriceIntervalRequestBody = Literal[
     "one_off",
     "week",
     "month",
@@ -377,29 +285,29 @@ SetupPaymentItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-SetupPaymentItemBillingMethod = Literal[
+UpdatePlanItemBillingMethodRequestBody = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class SetupPaymentItemPriceTypedDict(TypedDict):
+class UpdatePlanItemPriceRequestBodyTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: SetupPaymentItemPriceInterval
+    interval: UpdatePlanItemPriceIntervalRequestBody
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: SetupPaymentItemBillingMethod
+    billing_method: UpdatePlanItemBillingMethodRequestBody
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     additional_currencies: NotRequired[
-        List[SetupPaymentItemAdditionalCurrencyTypedDict]
+        List[UpdatePlanItemAdditionalCurrencyRequestBodyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[SetupPaymentItemPriceTierTypedDict]]
+    tiers: NotRequired[List[UpdatePlanItemPriceTierRequestBodyTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[SetupPaymentItemTierBehavior]
+    tier_behavior: NotRequired[UpdatePlanItemTierBehaviorRequestBody]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -408,25 +316,27 @@ class SetupPaymentItemPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class SetupPaymentItemPrice(BaseModel):
+class UpdatePlanItemPriceRequestBody(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: SetupPaymentItemPriceInterval
+    interval: UpdatePlanItemPriceIntervalRequestBody
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: SetupPaymentItemBillingMethod
+    billing_method: UpdatePlanItemBillingMethodRequestBody
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[SetupPaymentItemAdditionalCurrency]] = None
+    additional_currencies: Optional[
+        List[UpdatePlanItemAdditionalCurrencyRequestBody]
+    ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[SetupPaymentItemPriceTier]] = None
+    tiers: Optional[List[UpdatePlanItemPriceTierRequestBody]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[SetupPaymentItemTierBehavior] = None
+    tier_behavior: Optional[UpdatePlanItemTierBehaviorRequestBody] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -473,7 +383,7 @@ class SetupPaymentItemPrice(BaseModel):
         return m
 
 
-SetupPaymentItemOnIncrease = Literal[
+UpdatePlanItemOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -482,7 +392,7 @@ SetupPaymentItemOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-SetupPaymentItemOnDecrease = Literal[
+UpdatePlanItemOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -492,36 +402,36 @@ SetupPaymentItemOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class SetupPaymentItemProrationTypedDict(TypedDict):
+class UpdatePlanItemProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: SetupPaymentItemOnIncrease
+    on_increase: UpdatePlanItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: SetupPaymentItemOnDecrease
+    on_decrease: UpdatePlanItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class SetupPaymentItemProration(BaseModel):
+class UpdatePlanItemProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: SetupPaymentItemOnIncrease
+    on_increase: UpdatePlanItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: SetupPaymentItemOnDecrease
+    on_decrease: UpdatePlanItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-SetupPaymentItemExpiryDurationType = Literal[
+UpdatePlanItemExpiryDurationTypeRequestBody = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class SetupPaymentItemRolloverTypedDict(TypedDict):
+class UpdatePlanItemRolloverRequestBodyTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: SetupPaymentItemExpiryDurationType
+    expiry_duration_type: UpdatePlanItemExpiryDurationTypeRequestBody
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -531,10 +441,10 @@ class SetupPaymentItemRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class SetupPaymentItemRollover(BaseModel):
+class UpdatePlanItemRolloverRequestBody(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: SetupPaymentItemExpiryDurationType
+    expiry_duration_type: UpdatePlanItemExpiryDurationTypeRequestBody
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -563,18 +473,18 @@ class SetupPaymentItemRollover(BaseModel):
         return m
 
 
-SetupPaymentDimensionsItemMatch4TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsItemMatch4TypedDict", Union[str, float, bool]
+UpdatePlanDimensionsItemMatch4TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsItemMatch4TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsItemMatch4 = TypeAliasType(
-    "SetupPaymentDimensionsItemMatch4", Union[str, float, bool]
+UpdatePlanDimensionsItemMatch4 = TypeAliasType(
+    "UpdatePlanDimensionsItemMatch4", Union[str, float, bool]
 )
 
 
-class SetupPaymentDimensionsItem4TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsItemMatch4TypedDict]
+class UpdatePlanDimensionsItemRequestBody4TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanDimensionsItemMatch4TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
     r"""Credits consumed per billing-unit group when this dimension matches."""
@@ -582,8 +492,8 @@ class SetupPaymentDimensionsItem4TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class SetupPaymentDimensionsItem4(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsItemMatch4]
+class UpdatePlanDimensionsItemRequestBody4(BaseModel):
+    match: Dict[str, UpdatePlanDimensionsItemMatch4]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
@@ -609,62 +519,62 @@ class SetupPaymentDimensionsItem4(BaseModel):
         return m
 
 
-SetupPaymentDimensionsItemMatch3TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsItemMatch3TypedDict", Union[str, float, bool]
+UpdatePlanDimensionsItemMatch3TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsItemMatch3TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsItemMatch3 = TypeAliasType(
-    "SetupPaymentDimensionsItemMatch3", Union[str, float, bool]
+UpdatePlanDimensionsItemMatch3 = TypeAliasType(
+    "UpdatePlanDimensionsItemMatch3", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsToItemEnum2 = Literal["inf",]
+UpdatePlanDimensionsToItemRequestBodyEnum2 = Literal["inf",]
 
 
-SetupPaymentDimensionsItemToUnion2TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsItemToUnion2TypedDict",
-    Union[float, SetupPaymentDimensionsToItemEnum2],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-SetupPaymentDimensionsItemToUnion2 = TypeAliasType(
-    "SetupPaymentDimensionsItemToUnion2",
-    Union[float, SetupPaymentDimensionsToItemEnum2],
+UpdatePlanDimensionsItemToRequestBodyUnion2TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsItemToRequestBodyUnion2TypedDict",
+    Union[float, UpdatePlanDimensionsToItemRequestBodyEnum2],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class SetupPaymentDimensionsItemTier2TypedDict(TypedDict):
-    to: SetupPaymentDimensionsItemToUnion2TypedDict
+UpdatePlanDimensionsItemToRequestBodyUnion2 = TypeAliasType(
+    "UpdatePlanDimensionsItemToRequestBodyUnion2",
+    Union[float, UpdatePlanDimensionsToItemRequestBodyEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class UpdatePlanDimensionsItemTierRequestBody2TypedDict(TypedDict):
+    to: UpdatePlanDimensionsItemToRequestBodyUnion2TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentDimensionsItemTier2(BaseModel):
-    to: SetupPaymentDimensionsItemToUnion2
+class UpdatePlanDimensionsItemTierRequestBody2(BaseModel):
+    to: UpdatePlanDimensionsItemToRequestBodyUnion2
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentDimensionsItem3TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsItemMatch3TypedDict]
+class UpdatePlanDimensionsItemRequestBody3TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanDimensionsItemMatch3TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[SetupPaymentDimensionsItemTier2TypedDict]
+    tiers: List[UpdatePlanDimensionsItemTierRequestBody2TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class SetupPaymentDimensionsItem3(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsItemMatch3]
+class UpdatePlanDimensionsItemRequestBody3(BaseModel):
+    match: Dict[str, UpdatePlanDimensionsItemMatch3]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[SetupPaymentDimensionsItemTier2]
+    tiers: List[UpdatePlanDimensionsItemTierRequestBody2]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -691,402 +601,418 @@ class SetupPaymentDimensionsItem3(BaseModel):
         return m
 
 
-SetupPaymentItemDimensionsUnion2TypedDict = TypeAliasType(
-    "SetupPaymentItemDimensionsUnion2TypedDict",
-    Union[SetupPaymentDimensionsItem4TypedDict, SetupPaymentDimensionsItem3TypedDict],
-)
-
-
-SetupPaymentItemDimensionsUnion2 = TypeAliasType(
-    "SetupPaymentItemDimensionsUnion2",
-    Union[SetupPaymentDimensionsItem4, SetupPaymentDimensionsItem3],
-)
-
-
-SetupPaymentItemMultipliersMatch2TypedDict = TypeAliasType(
-    "SetupPaymentItemMultipliersMatch2TypedDict", Union[str, float, bool]
-)
-
-
-SetupPaymentItemMultipliersMatch2 = TypeAliasType(
-    "SetupPaymentItemMultipliersMatch2", Union[str, float, bool]
-)
-
-
-class SetupPaymentItemMultipliers2TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentItemMultipliersMatch2TypedDict]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    factor: NotRequired[float]
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-    add: NotRequired[float]
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-
-class SetupPaymentItemMultipliers2(BaseModel):
-    match: Dict[str, SetupPaymentItemMultipliersMatch2]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    factor: Optional[float] = None
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-
-    add: Optional[float] = None
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["factor", "add"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentCreditSchemaItem2TypedDict(TypedDict):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group."""
-    billing_units: NotRequired[float]
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, SetupPaymentItemDimensionsUnion2TypedDict]]
-    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, SetupPaymentItemMultipliers2TypedDict]]
-    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
-
-
-class SetupPaymentCreditSchemaItem2(BaseModel):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group."""
-
-    billing_units: Optional[float] = None
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-
-    dimensions: Optional[Dict[str, SetupPaymentItemDimensionsUnion2]] = None
-    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-
-    multipliers: Optional[Dict[str, SetupPaymentItemMultipliers2]] = None
-    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["billing_units", "dimensions", "multipliers"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentDimensionsItemMatch2TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsItemMatch2TypedDict", Union[str, float, bool]
-)
-
-
-SetupPaymentDimensionsItemMatch2 = TypeAliasType(
-    "SetupPaymentDimensionsItemMatch2", Union[str, float, bool]
-)
-
-
-class SetupPaymentDimensionsItem2TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsItemMatch2TypedDict]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group when this dimension matches."""
-    priority: NotRequired[int]
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-
-
-class SetupPaymentDimensionsItem2(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsItemMatch2]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group when this dimension matches."""
-
-    priority: Optional[int] = None
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["priority"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentDimensionsItemMatch1TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsItemMatch1TypedDict", Union[str, float, bool]
-)
-
-
-SetupPaymentDimensionsItemMatch1 = TypeAliasType(
-    "SetupPaymentDimensionsItemMatch1", Union[str, float, bool]
-)
-
-
-SetupPaymentDimensionsToItemEnum1 = Literal["inf",]
-
-
-SetupPaymentDimensionsItemToUnion1TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsItemToUnion1TypedDict",
-    Union[float, SetupPaymentDimensionsToItemEnum1],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-SetupPaymentDimensionsItemToUnion1 = TypeAliasType(
-    "SetupPaymentDimensionsItemToUnion1",
-    Union[float, SetupPaymentDimensionsToItemEnum1],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-class SetupPaymentDimensionsItemTier1TypedDict(TypedDict):
-    to: SetupPaymentDimensionsItemToUnion1TypedDict
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class SetupPaymentDimensionsItemTier1(BaseModel):
-    to: SetupPaymentDimensionsItemToUnion1
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class SetupPaymentDimensionsItem1TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsItemMatch1TypedDict]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[SetupPaymentDimensionsItemTier1TypedDict]
-    priority: NotRequired[int]
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-    tier_behavior: Literal["graduated"]
-
-
-class SetupPaymentDimensionsItem1(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsItemMatch1]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    tiers: List[SetupPaymentDimensionsItemTier1]
-
-    priority: Optional[int] = None
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-
-    tier_behavior: Annotated[
-        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
-        pydantic.Field(alias="tier_behavior"),
-    ] = "graduated"
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["priority"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentItemDimensionsUnion1TypedDict = TypeAliasType(
-    "SetupPaymentItemDimensionsUnion1TypedDict",
-    Union[SetupPaymentDimensionsItem2TypedDict, SetupPaymentDimensionsItem1TypedDict],
-)
-
-
-SetupPaymentItemDimensionsUnion1 = TypeAliasType(
-    "SetupPaymentItemDimensionsUnion1",
-    Union[SetupPaymentDimensionsItem2, SetupPaymentDimensionsItem1],
-)
-
-
-SetupPaymentItemMultipliersMatch1TypedDict = TypeAliasType(
-    "SetupPaymentItemMultipliersMatch1TypedDict", Union[str, float, bool]
-)
-
-
-SetupPaymentItemMultipliersMatch1 = TypeAliasType(
-    "SetupPaymentItemMultipliersMatch1", Union[str, float, bool]
-)
-
-
-class SetupPaymentItemMultipliers1TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentItemMultipliersMatch1TypedDict]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    factor: NotRequired[float]
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-    add: NotRequired[float]
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-
-class SetupPaymentItemMultipliers1(BaseModel):
-    match: Dict[str, SetupPaymentItemMultipliersMatch1]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    factor: Optional[float] = None
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-
-    add: Optional[float] = None
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["factor", "add"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentToItemEnum = Literal["inf",]
-
-
-SetupPaymentItemFeatureOverrideToUnionTypedDict = TypeAliasType(
-    "SetupPaymentItemFeatureOverrideToUnionTypedDict",
-    Union[float, SetupPaymentToItemEnum],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-SetupPaymentItemFeatureOverrideToUnion = TypeAliasType(
-    "SetupPaymentItemFeatureOverrideToUnion", Union[float, SetupPaymentToItemEnum]
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-class SetupPaymentItemFeatureOverrideTierTypedDict(TypedDict):
-    to: SetupPaymentItemFeatureOverrideToUnionTypedDict
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class SetupPaymentItemFeatureOverrideTier(BaseModel):
-    to: SetupPaymentItemFeatureOverrideToUnion
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class SetupPaymentCreditSchemaItem1TypedDict(TypedDict):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-    tiers: List[SetupPaymentItemFeatureOverrideTierTypedDict]
-    billing_units: NotRequired[float]
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, SetupPaymentItemDimensionsUnion1TypedDict]]
-    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, SetupPaymentItemMultipliers1TypedDict]]
-    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
-    tier_behavior: Literal["graduated"]
-
-
-class SetupPaymentCreditSchemaItem1(BaseModel):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-
-    tiers: List[SetupPaymentItemFeatureOverrideTier]
-
-    billing_units: Optional[float] = None
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-
-    dimensions: Optional[Dict[str, SetupPaymentItemDimensionsUnion1]] = None
-    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-
-    multipliers: Optional[Dict[str, SetupPaymentItemMultipliers1]] = None
-    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
-
-    tier_behavior: Annotated[
-        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
-        pydantic.Field(alias="tier_behavior"),
-    ] = "graduated"
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["billing_units", "dimensions", "multipliers"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentItemCreditSchemaUnionTypedDict = TypeAliasType(
-    "SetupPaymentItemCreditSchemaUnionTypedDict",
+UpdatePlanItemDimensionsRequestBodyUnion2TypedDict = TypeAliasType(
+    "UpdatePlanItemDimensionsRequestBodyUnion2TypedDict",
     Union[
-        SetupPaymentCreditSchemaItem2TypedDict, SetupPaymentCreditSchemaItem1TypedDict
+        UpdatePlanDimensionsItemRequestBody4TypedDict,
+        UpdatePlanDimensionsItemRequestBody3TypedDict,
     ],
 )
 
 
-SetupPaymentItemCreditSchemaUnion = TypeAliasType(
-    "SetupPaymentItemCreditSchemaUnion",
-    Union[SetupPaymentCreditSchemaItem2, SetupPaymentCreditSchemaItem1],
+UpdatePlanItemDimensionsRequestBodyUnion2 = TypeAliasType(
+    "UpdatePlanItemDimensionsRequestBodyUnion2",
+    Union[UpdatePlanDimensionsItemRequestBody4, UpdatePlanDimensionsItemRequestBody3],
 )
 
 
-class SetupPaymentItemFeatureOverrideTypedDict(TypedDict):
+UpdatePlanItemMultipliersMatch2TypedDict = TypeAliasType(
+    "UpdatePlanItemMultipliersMatch2TypedDict", Union[str, float, bool]
+)
+
+
+UpdatePlanItemMultipliersMatch2 = TypeAliasType(
+    "UpdatePlanItemMultipliersMatch2", Union[str, float, bool]
+)
+
+
+class UpdatePlanItemMultipliersRequestBody2TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanItemMultipliersMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class UpdatePlanItemMultipliersRequestBody2(BaseModel):
+    match: Dict[str, UpdatePlanItemMultipliersMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanCreditSchemaItemRequestBody2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[
+        Dict[str, UpdatePlanItemDimensionsRequestBodyUnion2TypedDict]
+    ]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, UpdatePlanItemMultipliersRequestBody2TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+
+class UpdatePlanCreditSchemaItemRequestBody2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, UpdatePlanItemDimensionsRequestBodyUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, UpdatePlanItemMultipliersRequestBody2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanDimensionsItemMatch2TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsItemMatch2TypedDict", Union[str, float, bool]
+)
+
+
+UpdatePlanDimensionsItemMatch2 = TypeAliasType(
+    "UpdatePlanDimensionsItemMatch2", Union[str, float, bool]
+)
+
+
+class UpdatePlanDimensionsItemRequestBody2TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanDimensionsItemMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class UpdatePlanDimensionsItemRequestBody2(BaseModel):
+    match: Dict[str, UpdatePlanDimensionsItemMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanDimensionsItemMatch1TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsItemMatch1TypedDict", Union[str, float, bool]
+)
+
+
+UpdatePlanDimensionsItemMatch1 = TypeAliasType(
+    "UpdatePlanDimensionsItemMatch1", Union[str, float, bool]
+)
+
+
+UpdatePlanDimensionsToItemRequestBodyEnum1 = Literal["inf",]
+
+
+UpdatePlanDimensionsItemToRequestBodyUnion1TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsItemToRequestBodyUnion1TypedDict",
+    Union[float, UpdatePlanDimensionsToItemRequestBodyEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+UpdatePlanDimensionsItemToRequestBodyUnion1 = TypeAliasType(
+    "UpdatePlanDimensionsItemToRequestBodyUnion1",
+    Union[float, UpdatePlanDimensionsToItemRequestBodyEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class UpdatePlanDimensionsItemTierRequestBody1TypedDict(TypedDict):
+    to: UpdatePlanDimensionsItemToRequestBodyUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class UpdatePlanDimensionsItemTierRequestBody1(BaseModel):
+    to: UpdatePlanDimensionsItemToRequestBodyUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class UpdatePlanDimensionsItemRequestBody1TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanDimensionsItemMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[UpdatePlanDimensionsItemTierRequestBody1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class UpdatePlanDimensionsItemRequestBody1(BaseModel):
+    match: Dict[str, UpdatePlanDimensionsItemMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[UpdatePlanDimensionsItemTierRequestBody1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanItemDimensionsRequestBodyUnion1TypedDict = TypeAliasType(
+    "UpdatePlanItemDimensionsRequestBodyUnion1TypedDict",
+    Union[
+        UpdatePlanDimensionsItemRequestBody2TypedDict,
+        UpdatePlanDimensionsItemRequestBody1TypedDict,
+    ],
+)
+
+
+UpdatePlanItemDimensionsRequestBodyUnion1 = TypeAliasType(
+    "UpdatePlanItemDimensionsRequestBodyUnion1",
+    Union[UpdatePlanDimensionsItemRequestBody2, UpdatePlanDimensionsItemRequestBody1],
+)
+
+
+UpdatePlanItemMultipliersMatch1TypedDict = TypeAliasType(
+    "UpdatePlanItemMultipliersMatch1TypedDict", Union[str, float, bool]
+)
+
+
+UpdatePlanItemMultipliersMatch1 = TypeAliasType(
+    "UpdatePlanItemMultipliersMatch1", Union[str, float, bool]
+)
+
+
+class UpdatePlanItemMultipliersRequestBody1TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanItemMultipliersMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class UpdatePlanItemMultipliersRequestBody1(BaseModel):
+    match: Dict[str, UpdatePlanItemMultipliersMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanToItemRequestBodyEnum = Literal["inf",]
+
+
+UpdatePlanItemFeatureOverrideToRequestBodyUnionTypedDict = TypeAliasType(
+    "UpdatePlanItemFeatureOverrideToRequestBodyUnionTypedDict",
+    Union[float, UpdatePlanToItemRequestBodyEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+UpdatePlanItemFeatureOverrideToRequestBodyUnion = TypeAliasType(
+    "UpdatePlanItemFeatureOverrideToRequestBodyUnion",
+    Union[float, UpdatePlanToItemRequestBodyEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class UpdatePlanItemFeatureOverrideTierRequestBodyTypedDict(TypedDict):
+    to: UpdatePlanItemFeatureOverrideToRequestBodyUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class UpdatePlanItemFeatureOverrideTierRequestBody(BaseModel):
+    to: UpdatePlanItemFeatureOverrideToRequestBodyUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class UpdatePlanCreditSchemaItemRequestBody1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[UpdatePlanItemFeatureOverrideTierRequestBodyTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[
+        Dict[str, UpdatePlanItemDimensionsRequestBodyUnion1TypedDict]
+    ]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, UpdatePlanItemMultipliersRequestBody1TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+    tier_behavior: Literal["graduated"]
+
+
+class UpdatePlanCreditSchemaItemRequestBody1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[UpdatePlanItemFeatureOverrideTierRequestBody]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, UpdatePlanItemDimensionsRequestBodyUnion1]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, UpdatePlanItemMultipliersRequestBody1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanItemCreditSchemaRequestBodyUnionTypedDict = TypeAliasType(
+    "UpdatePlanItemCreditSchemaRequestBodyUnionTypedDict",
+    Union[
+        UpdatePlanCreditSchemaItemRequestBody2TypedDict,
+        UpdatePlanCreditSchemaItemRequestBody1TypedDict,
+    ],
+)
+
+
+UpdatePlanItemCreditSchemaRequestBodyUnion = TypeAliasType(
+    "UpdatePlanItemCreditSchemaRequestBodyUnion",
+    Union[
+        UpdatePlanCreditSchemaItemRequestBody2, UpdatePlanCreditSchemaItemRequestBody1
+    ],
+)
+
+
+class UpdatePlanItemFeatureOverrideRequestBodyTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: NotRequired[List[SetupPaymentItemCreditSchemaUnionTypedDict]]
+    credit_schema: NotRequired[
+        List[UpdatePlanItemCreditSchemaRequestBodyUnionTypedDict]
+    ]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
 
-class SetupPaymentItemFeatureOverride(BaseModel):
+class UpdatePlanItemFeatureOverrideRequestBody(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: Optional[List[SetupPaymentItemCreditSchemaUnion]] = None
+    credit_schema: Optional[List[UpdatePlanItemCreditSchemaRequestBodyUnion]] = None
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
     @model_serializer(mode="wrap")
@@ -1106,7 +1032,7 @@ class SetupPaymentItemFeatureOverride(BaseModel):
         return m
 
 
-class SetupPaymentItemPlanItemTypedDict(TypedDict):
+class UpdatePlanItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -1117,19 +1043,19 @@ class SetupPaymentItemPlanItemTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[SetupPaymentItemResetTypedDict]
+    reset: NotRequired[UpdatePlanItemResetRequestBodyTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[SetupPaymentItemPriceTypedDict]
+    price: NotRequired[UpdatePlanItemPriceRequestBodyTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[SetupPaymentItemProrationTypedDict]
+    proration: NotRequired[UpdatePlanItemProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[SetupPaymentItemRolloverTypedDict]
+    rollover: NotRequired[UpdatePlanItemRolloverRequestBodyTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
-    feature_override: NotRequired[SetupPaymentItemFeatureOverrideTypedDict]
+    feature_override: NotRequired[UpdatePlanItemFeatureOverrideRequestBodyTypedDict]
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class SetupPaymentItemPlanItem(BaseModel):
+class UpdatePlanItemPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -1144,19 +1070,19 @@ class SetupPaymentItemPlanItem(BaseModel):
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    reset: Optional[SetupPaymentItemReset] = None
+    reset: Optional[UpdatePlanItemResetRequestBody] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[SetupPaymentItemPrice] = None
+    price: Optional[UpdatePlanItemPriceRequestBody] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[SetupPaymentItemProration] = None
+    proration: Optional[UpdatePlanItemProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[SetupPaymentItemRollover] = None
+    rollover: Optional[UpdatePlanItemRolloverRequestBody] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    feature_override: Optional[SetupPaymentItemFeatureOverride] = None
+    feature_override: Optional[UpdatePlanItemFeatureOverrideRequestBody] = None
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     @model_serializer(mode="wrap")
@@ -1187,7 +1113,80 @@ class SetupPaymentItemPlanItem(BaseModel):
         return m
 
 
-SetupPaymentAddItemResetInterval = Literal[
+UpdatePlanPriceLicenseInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval (e.g. 'month', 'year')."""
+
+
+class UpdatePlanLicenseAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanLicenseAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanLicenseBasePriceTypedDict(TypedDict):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
+    interval: UpdatePlanPriceLicenseInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanLicenseAdditionalCurrencyTypedDict]
+    ]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
+
+class UpdatePlanLicenseBasePrice(BaseModel):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
+
+    interval: UpdatePlanPriceLicenseInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    additional_currencies: Optional[List[UpdatePlanLicenseAdditionalCurrency]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanLicenseResetInterval = Literal[
     "one_off",
     "minute",
     "hour",
@@ -1201,19 +1200,19 @@ SetupPaymentAddItemResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class SetupPaymentAddItemResetTypedDict(TypedDict):
+class UpdatePlanLicenseResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: SetupPaymentAddItemResetInterval
+    interval: UpdatePlanLicenseResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class SetupPaymentAddItemReset(BaseModel):
+class UpdatePlanLicenseReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: SetupPaymentAddItemResetInterval
+    interval: UpdatePlanLicenseResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -1236,14 +1235,14 @@ class SetupPaymentAddItemReset(BaseModel):
         return m
 
 
-class SetupPaymentAddItemAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanLicenseAddItemAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class SetupPaymentAddItemAdditionalCurrency(BaseModel):
+class UpdatePlanLicenseAddItemAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1251,17 +1250,15 @@ class SetupPaymentAddItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-SetupPaymentAddItemPriceToTypedDict = TypeAliasType(
-    "SetupPaymentAddItemPriceToTypedDict", Union[float, str]
+UpdatePlanLicensePriceToTypedDict = TypeAliasType(
+    "UpdatePlanLicensePriceToTypedDict", Union[float, str]
 )
 
 
-SetupPaymentAddItemPriceTo = TypeAliasType(
-    "SetupPaymentAddItemPriceTo", Union[float, str]
-)
+UpdatePlanLicensePriceTo = TypeAliasType("UpdatePlanLicensePriceTo", Union[float, str])
 
 
-class SetupPaymentAddItemTierAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanLicenseTierAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: NotRequired[float]
@@ -1270,7 +1267,7 @@ class SetupPaymentAddItemTierAdditionalCurrencyTypedDict(TypedDict):
     r"""Flat amount for this tier in this currency, if the tier uses one."""
 
 
-class SetupPaymentAddItemTierAdditionalCurrency(BaseModel):
+class UpdatePlanLicenseTierAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1297,24 +1294,24 @@ class SetupPaymentAddItemTierAdditionalCurrency(BaseModel):
         return m
 
 
-class SetupPaymentAddItemPriceTierTypedDict(TypedDict):
-    to: SetupPaymentAddItemPriceToTypedDict
+class UpdatePlanLicensePriceTierTypedDict(TypedDict):
+    to: UpdatePlanLicensePriceToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
-        List[SetupPaymentAddItemTierAdditionalCurrencyTypedDict]
+        List[UpdatePlanLicenseTierAdditionalCurrencyTypedDict]
     ]
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class SetupPaymentAddItemPriceTier(BaseModel):
-    to: SetupPaymentAddItemPriceTo
+class UpdatePlanLicensePriceTier(BaseModel):
+    to: UpdatePlanLicensePriceTo
 
     amount: Optional[float] = None
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[List[SetupPaymentAddItemTierAdditionalCurrency]] = (
+    additional_currencies: Optional[List[UpdatePlanLicenseTierAdditionalCurrency]] = (
         None
     )
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
@@ -1336,13 +1333,13 @@ class SetupPaymentAddItemPriceTier(BaseModel):
         return m
 
 
-SetupPaymentAddItemTierBehavior = Literal[
+UpdatePlanLicenseTierBehavior = Literal[
     "graduated",
     "volume",
 ]
 
 
-SetupPaymentAddItemPriceInterval = Literal[
+UpdatePlanLicenseAddItemPriceInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -1353,29 +1350,29 @@ SetupPaymentAddItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-SetupPaymentAddItemBillingMethod = Literal[
+UpdatePlanLicenseAddItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class SetupPaymentAddItemPriceTypedDict(TypedDict):
+class UpdatePlanLicensePriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: SetupPaymentAddItemPriceInterval
+    interval: UpdatePlanLicenseAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: SetupPaymentAddItemBillingMethod
+    billing_method: UpdatePlanLicenseAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     additional_currencies: NotRequired[
-        List[SetupPaymentAddItemAdditionalCurrencyTypedDict]
+        List[UpdatePlanLicenseAddItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[SetupPaymentAddItemPriceTierTypedDict]]
+    tiers: NotRequired[List[UpdatePlanLicensePriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[SetupPaymentAddItemTierBehavior]
+    tier_behavior: NotRequired[UpdatePlanLicenseTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -1384,25 +1381,27 @@ class SetupPaymentAddItemPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class SetupPaymentAddItemPrice(BaseModel):
+class UpdatePlanLicensePrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: SetupPaymentAddItemPriceInterval
+    interval: UpdatePlanLicenseAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: SetupPaymentAddItemBillingMethod
+    billing_method: UpdatePlanLicenseAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[SetupPaymentAddItemAdditionalCurrency]] = None
+    additional_currencies: Optional[
+        List[UpdatePlanLicenseAddItemAdditionalCurrency]
+    ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[SetupPaymentAddItemPriceTier]] = None
+    tiers: Optional[List[UpdatePlanLicensePriceTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[SetupPaymentAddItemTierBehavior] = None
+    tier_behavior: Optional[UpdatePlanLicenseTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -1449,7 +1448,7 @@ class SetupPaymentAddItemPrice(BaseModel):
         return m
 
 
-SetupPaymentAddItemOnIncrease = Literal[
+UpdatePlanLicenseOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -1458,7 +1457,7 @@ SetupPaymentAddItemOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-SetupPaymentAddItemOnDecrease = Literal[
+UpdatePlanLicenseOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -1468,36 +1467,36 @@ SetupPaymentAddItemOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class SetupPaymentAddItemProrationTypedDict(TypedDict):
+class UpdatePlanLicenseProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: SetupPaymentAddItemOnIncrease
+    on_increase: UpdatePlanLicenseOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: SetupPaymentAddItemOnDecrease
+    on_decrease: UpdatePlanLicenseOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class SetupPaymentAddItemProration(BaseModel):
+class UpdatePlanLicenseProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: SetupPaymentAddItemOnIncrease
+    on_increase: UpdatePlanLicenseOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: SetupPaymentAddItemOnDecrease
+    on_decrease: UpdatePlanLicenseOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-SetupPaymentAddItemExpiryDurationType = Literal[
+UpdatePlanLicenseExpiryDurationType = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class SetupPaymentAddItemRolloverTypedDict(TypedDict):
+class UpdatePlanLicenseRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: SetupPaymentAddItemExpiryDurationType
+    expiry_duration_type: UpdatePlanLicenseExpiryDurationType
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -1507,10 +1506,10 @@ class SetupPaymentAddItemRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class SetupPaymentAddItemRollover(BaseModel):
+class UpdatePlanLicenseRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: SetupPaymentAddItemExpiryDurationType
+    expiry_duration_type: UpdatePlanLicenseExpiryDurationType
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -1539,18 +1538,18 @@ class SetupPaymentAddItemRollover(BaseModel):
         return m
 
 
-SetupPaymentDimensionsAddItemMatch4TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsAddItemMatch4TypedDict", Union[str, float, bool]
+UpdatePlanDimensionsLicenseMatch4TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsLicenseMatch4TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsAddItemMatch4 = TypeAliasType(
-    "SetupPaymentDimensionsAddItemMatch4", Union[str, float, bool]
+UpdatePlanDimensionsLicenseMatch4 = TypeAliasType(
+    "UpdatePlanDimensionsLicenseMatch4", Union[str, float, bool]
 )
 
 
-class SetupPaymentDimensionsAddItem4TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsAddItemMatch4TypedDict]
+class UpdatePlanDimensionsLicense4TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanDimensionsLicenseMatch4TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
     r"""Credits consumed per billing-unit group when this dimension matches."""
@@ -1558,8 +1557,8 @@ class SetupPaymentDimensionsAddItem4TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class SetupPaymentDimensionsAddItem4(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsAddItemMatch4]
+class UpdatePlanDimensionsLicense4(BaseModel):
+    match: Dict[str, UpdatePlanDimensionsLicenseMatch4]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
@@ -1585,62 +1584,62 @@ class SetupPaymentDimensionsAddItem4(BaseModel):
         return m
 
 
-SetupPaymentDimensionsAddItemMatch3TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsAddItemMatch3TypedDict", Union[str, float, bool]
+UpdatePlanDimensionsLicenseMatch3TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsLicenseMatch3TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsAddItemMatch3 = TypeAliasType(
-    "SetupPaymentDimensionsAddItemMatch3", Union[str, float, bool]
+UpdatePlanDimensionsLicenseMatch3 = TypeAliasType(
+    "UpdatePlanDimensionsLicenseMatch3", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsToAddItemEnum2 = Literal["inf",]
+UpdatePlanDimensionsToLicenseEnum2 = Literal["inf",]
 
 
-SetupPaymentDimensionsAddItemToUnion2TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsAddItemToUnion2TypedDict",
-    Union[float, SetupPaymentDimensionsToAddItemEnum2],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-SetupPaymentDimensionsAddItemToUnion2 = TypeAliasType(
-    "SetupPaymentDimensionsAddItemToUnion2",
-    Union[float, SetupPaymentDimensionsToAddItemEnum2],
+UpdatePlanDimensionsLicenseToUnion2TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsLicenseToUnion2TypedDict",
+    Union[float, UpdatePlanDimensionsToLicenseEnum2],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class SetupPaymentDimensionsAddItemTier2TypedDict(TypedDict):
-    to: SetupPaymentDimensionsAddItemToUnion2TypedDict
+UpdatePlanDimensionsLicenseToUnion2 = TypeAliasType(
+    "UpdatePlanDimensionsLicenseToUnion2",
+    Union[float, UpdatePlanDimensionsToLicenseEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class UpdatePlanDimensionsLicenseTier2TypedDict(TypedDict):
+    to: UpdatePlanDimensionsLicenseToUnion2TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentDimensionsAddItemTier2(BaseModel):
-    to: SetupPaymentDimensionsAddItemToUnion2
+class UpdatePlanDimensionsLicenseTier2(BaseModel):
+    to: UpdatePlanDimensionsLicenseToUnion2
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentDimensionsAddItem3TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsAddItemMatch3TypedDict]
+class UpdatePlanDimensionsLicense3TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanDimensionsLicenseMatch3TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[SetupPaymentDimensionsAddItemTier2TypedDict]
+    tiers: List[UpdatePlanDimensionsLicenseTier2TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class SetupPaymentDimensionsAddItem3(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsAddItemMatch3]
+class UpdatePlanDimensionsLicense3(BaseModel):
+    match: Dict[str, UpdatePlanDimensionsLicenseMatch3]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[SetupPaymentDimensionsAddItemTier2]
+    tiers: List[UpdatePlanDimensionsLicenseTier2]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -1667,32 +1666,30 @@ class SetupPaymentDimensionsAddItem3(BaseModel):
         return m
 
 
-SetupPaymentAddItemDimensionsUnion2TypedDict = TypeAliasType(
-    "SetupPaymentAddItemDimensionsUnion2TypedDict",
-    Union[
-        SetupPaymentDimensionsAddItem4TypedDict, SetupPaymentDimensionsAddItem3TypedDict
-    ],
+UpdatePlanLicenseDimensionsUnion2TypedDict = TypeAliasType(
+    "UpdatePlanLicenseDimensionsUnion2TypedDict",
+    Union[UpdatePlanDimensionsLicense4TypedDict, UpdatePlanDimensionsLicense3TypedDict],
 )
 
 
-SetupPaymentAddItemDimensionsUnion2 = TypeAliasType(
-    "SetupPaymentAddItemDimensionsUnion2",
-    Union[SetupPaymentDimensionsAddItem4, SetupPaymentDimensionsAddItem3],
+UpdatePlanLicenseDimensionsUnion2 = TypeAliasType(
+    "UpdatePlanLicenseDimensionsUnion2",
+    Union[UpdatePlanDimensionsLicense4, UpdatePlanDimensionsLicense3],
 )
 
 
-SetupPaymentAddItemMultipliersMatch2TypedDict = TypeAliasType(
-    "SetupPaymentAddItemMultipliersMatch2TypedDict", Union[str, float, bool]
+UpdatePlanLicenseMultipliersMatch2TypedDict = TypeAliasType(
+    "UpdatePlanLicenseMultipliersMatch2TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentAddItemMultipliersMatch2 = TypeAliasType(
-    "SetupPaymentAddItemMultipliersMatch2", Union[str, float, bool]
+UpdatePlanLicenseMultipliersMatch2 = TypeAliasType(
+    "UpdatePlanLicenseMultipliersMatch2", Union[str, float, bool]
 )
 
 
-class SetupPaymentAddItemMultipliers2TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentAddItemMultipliersMatch2TypedDict]
+class UpdatePlanLicenseMultipliers2TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanLicenseMultipliersMatch2TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     factor: NotRequired[float]
     r"""Multiplies the matched rate. All matching multipliers stack."""
@@ -1700,8 +1697,8 @@ class SetupPaymentAddItemMultipliers2TypedDict(TypedDict):
     r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
 
 
-class SetupPaymentAddItemMultipliers2(BaseModel):
-    match: Dict[str, SetupPaymentAddItemMultipliersMatch2]
+class UpdatePlanLicenseMultipliers2(BaseModel):
+    match: Dict[str, UpdatePlanLicenseMultipliersMatch2]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     factor: Optional[float] = None
@@ -1727,20 +1724,20 @@ class SetupPaymentAddItemMultipliers2(BaseModel):
         return m
 
 
-class SetupPaymentCreditSchemaAddItem2TypedDict(TypedDict):
+class UpdatePlanCreditSchemaLicense2TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
     credit_cost: float
     r"""Credits consumed per billing-unit group."""
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, SetupPaymentAddItemDimensionsUnion2TypedDict]]
+    dimensions: NotRequired[Dict[str, UpdatePlanLicenseDimensionsUnion2TypedDict]]
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, SetupPaymentAddItemMultipliers2TypedDict]]
+    multipliers: NotRequired[Dict[str, UpdatePlanLicenseMultipliers2TypedDict]]
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
 
-class SetupPaymentCreditSchemaAddItem2(BaseModel):
+class UpdatePlanCreditSchemaLicense2(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
@@ -1750,10 +1747,10 @@ class SetupPaymentCreditSchemaAddItem2(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
-    dimensions: Optional[Dict[str, SetupPaymentAddItemDimensionsUnion2]] = None
+    dimensions: Optional[Dict[str, UpdatePlanLicenseDimensionsUnion2]] = None
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
 
-    multipliers: Optional[Dict[str, SetupPaymentAddItemMultipliers2]] = None
+    multipliers: Optional[Dict[str, UpdatePlanLicenseMultipliers2]] = None
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
     @model_serializer(mode="wrap")
@@ -1773,18 +1770,18 @@ class SetupPaymentCreditSchemaAddItem2(BaseModel):
         return m
 
 
-SetupPaymentDimensionsAddItemMatch2TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsAddItemMatch2TypedDict", Union[str, float, bool]
+UpdatePlanDimensionsLicenseMatch2TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsLicenseMatch2TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsAddItemMatch2 = TypeAliasType(
-    "SetupPaymentDimensionsAddItemMatch2", Union[str, float, bool]
+UpdatePlanDimensionsLicenseMatch2 = TypeAliasType(
+    "UpdatePlanDimensionsLicenseMatch2", Union[str, float, bool]
 )
 
 
-class SetupPaymentDimensionsAddItem2TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsAddItemMatch2TypedDict]
+class UpdatePlanDimensionsLicense2TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanDimensionsLicenseMatch2TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
     r"""Credits consumed per billing-unit group when this dimension matches."""
@@ -1792,8 +1789,8 @@ class SetupPaymentDimensionsAddItem2TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class SetupPaymentDimensionsAddItem2(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsAddItemMatch2]
+class UpdatePlanDimensionsLicense2(BaseModel):
+    match: Dict[str, UpdatePlanDimensionsLicenseMatch2]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
@@ -1819,62 +1816,62 @@ class SetupPaymentDimensionsAddItem2(BaseModel):
         return m
 
 
-SetupPaymentDimensionsAddItemMatch1TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsAddItemMatch1TypedDict", Union[str, float, bool]
+UpdatePlanDimensionsLicenseMatch1TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsLicenseMatch1TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsAddItemMatch1 = TypeAliasType(
-    "SetupPaymentDimensionsAddItemMatch1", Union[str, float, bool]
+UpdatePlanDimensionsLicenseMatch1 = TypeAliasType(
+    "UpdatePlanDimensionsLicenseMatch1", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsToAddItemEnum1 = Literal["inf",]
+UpdatePlanDimensionsToLicenseEnum1 = Literal["inf",]
 
 
-SetupPaymentDimensionsAddItemToUnion1TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsAddItemToUnion1TypedDict",
-    Union[float, SetupPaymentDimensionsToAddItemEnum1],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-SetupPaymentDimensionsAddItemToUnion1 = TypeAliasType(
-    "SetupPaymentDimensionsAddItemToUnion1",
-    Union[float, SetupPaymentDimensionsToAddItemEnum1],
+UpdatePlanDimensionsLicenseToUnion1TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsLicenseToUnion1TypedDict",
+    Union[float, UpdatePlanDimensionsToLicenseEnum1],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class SetupPaymentDimensionsAddItemTier1TypedDict(TypedDict):
-    to: SetupPaymentDimensionsAddItemToUnion1TypedDict
+UpdatePlanDimensionsLicenseToUnion1 = TypeAliasType(
+    "UpdatePlanDimensionsLicenseToUnion1",
+    Union[float, UpdatePlanDimensionsToLicenseEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class UpdatePlanDimensionsLicenseTier1TypedDict(TypedDict):
+    to: UpdatePlanDimensionsLicenseToUnion1TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentDimensionsAddItemTier1(BaseModel):
-    to: SetupPaymentDimensionsAddItemToUnion1
+class UpdatePlanDimensionsLicenseTier1(BaseModel):
+    to: UpdatePlanDimensionsLicenseToUnion1
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentDimensionsAddItem1TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsAddItemMatch1TypedDict]
+class UpdatePlanDimensionsLicense1TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanDimensionsLicenseMatch1TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[SetupPaymentDimensionsAddItemTier1TypedDict]
+    tiers: List[UpdatePlanDimensionsLicenseTier1TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class SetupPaymentDimensionsAddItem1(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsAddItemMatch1]
+class UpdatePlanDimensionsLicense1(BaseModel):
+    match: Dict[str, UpdatePlanDimensionsLicenseMatch1]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[SetupPaymentDimensionsAddItemTier1]
+    tiers: List[UpdatePlanDimensionsLicenseTier1]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -1901,32 +1898,30 @@ class SetupPaymentDimensionsAddItem1(BaseModel):
         return m
 
 
-SetupPaymentAddItemDimensionsUnion1TypedDict = TypeAliasType(
-    "SetupPaymentAddItemDimensionsUnion1TypedDict",
-    Union[
-        SetupPaymentDimensionsAddItem2TypedDict, SetupPaymentDimensionsAddItem1TypedDict
-    ],
+UpdatePlanLicenseDimensionsUnion1TypedDict = TypeAliasType(
+    "UpdatePlanLicenseDimensionsUnion1TypedDict",
+    Union[UpdatePlanDimensionsLicense2TypedDict, UpdatePlanDimensionsLicense1TypedDict],
 )
 
 
-SetupPaymentAddItemDimensionsUnion1 = TypeAliasType(
-    "SetupPaymentAddItemDimensionsUnion1",
-    Union[SetupPaymentDimensionsAddItem2, SetupPaymentDimensionsAddItem1],
+UpdatePlanLicenseDimensionsUnion1 = TypeAliasType(
+    "UpdatePlanLicenseDimensionsUnion1",
+    Union[UpdatePlanDimensionsLicense2, UpdatePlanDimensionsLicense1],
 )
 
 
-SetupPaymentAddItemMultipliersMatch1TypedDict = TypeAliasType(
-    "SetupPaymentAddItemMultipliersMatch1TypedDict", Union[str, float, bool]
+UpdatePlanLicenseMultipliersMatch1TypedDict = TypeAliasType(
+    "UpdatePlanLicenseMultipliersMatch1TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentAddItemMultipliersMatch1 = TypeAliasType(
-    "SetupPaymentAddItemMultipliersMatch1", Union[str, float, bool]
+UpdatePlanLicenseMultipliersMatch1 = TypeAliasType(
+    "UpdatePlanLicenseMultipliersMatch1", Union[str, float, bool]
 )
 
 
-class SetupPaymentAddItemMultipliers1TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentAddItemMultipliersMatch1TypedDict]
+class UpdatePlanLicenseMultipliers1TypedDict(TypedDict):
+    match: Dict[str, UpdatePlanLicenseMultipliersMatch1TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     factor: NotRequired[float]
     r"""Multiplies the matched rate. All matching multipliers stack."""
@@ -1934,8 +1929,8 @@ class SetupPaymentAddItemMultipliers1TypedDict(TypedDict):
     r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
 
 
-class SetupPaymentAddItemMultipliers1(BaseModel):
-    match: Dict[str, SetupPaymentAddItemMultipliersMatch1]
+class UpdatePlanLicenseMultipliers1(BaseModel):
+    match: Dict[str, UpdatePlanLicenseMultipliersMatch1]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     factor: Optional[float] = None
@@ -1961,63 +1956,63 @@ class SetupPaymentAddItemMultipliers1(BaseModel):
         return m
 
 
-SetupPaymentToAddItemEnum = Literal["inf",]
+UpdatePlanToLicenseEnum = Literal["inf",]
 
 
-SetupPaymentAddItemFeatureOverrideToUnionTypedDict = TypeAliasType(
-    "SetupPaymentAddItemFeatureOverrideToUnionTypedDict",
-    Union[float, SetupPaymentToAddItemEnum],
+UpdatePlanLicenseFeatureOverrideToUnionTypedDict = TypeAliasType(
+    "UpdatePlanLicenseFeatureOverrideToUnionTypedDict",
+    Union[float, UpdatePlanToLicenseEnum],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-SetupPaymentAddItemFeatureOverrideToUnion = TypeAliasType(
-    "SetupPaymentAddItemFeatureOverrideToUnion", Union[float, SetupPaymentToAddItemEnum]
+UpdatePlanLicenseFeatureOverrideToUnion = TypeAliasType(
+    "UpdatePlanLicenseFeatureOverrideToUnion", Union[float, UpdatePlanToLicenseEnum]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class SetupPaymentAddItemFeatureOverrideTierTypedDict(TypedDict):
-    to: SetupPaymentAddItemFeatureOverrideToUnionTypedDict
+class UpdatePlanLicenseFeatureOverrideTierTypedDict(TypedDict):
+    to: UpdatePlanLicenseFeatureOverrideToUnionTypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentAddItemFeatureOverrideTier(BaseModel):
-    to: SetupPaymentAddItemFeatureOverrideToUnion
+class UpdatePlanLicenseFeatureOverrideTier(BaseModel):
+    to: UpdatePlanLicenseFeatureOverrideToUnion
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentCreditSchemaAddItem1TypedDict(TypedDict):
+class UpdatePlanCreditSchemaLicense1TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
-    tiers: List[SetupPaymentAddItemFeatureOverrideTierTypedDict]
+    tiers: List[UpdatePlanLicenseFeatureOverrideTierTypedDict]
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, SetupPaymentAddItemDimensionsUnion1TypedDict]]
+    dimensions: NotRequired[Dict[str, UpdatePlanLicenseDimensionsUnion1TypedDict]]
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, SetupPaymentAddItemMultipliers1TypedDict]]
+    multipliers: NotRequired[Dict[str, UpdatePlanLicenseMultipliers1TypedDict]]
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
     tier_behavior: Literal["graduated"]
 
 
-class SetupPaymentCreditSchemaAddItem1(BaseModel):
+class UpdatePlanCreditSchemaLicense1(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
-    tiers: List[SetupPaymentAddItemFeatureOverrideTier]
+    tiers: List[UpdatePlanLicenseFeatureOverrideTier]
 
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
-    dimensions: Optional[Dict[str, SetupPaymentAddItemDimensionsUnion1]] = None
+    dimensions: Optional[Dict[str, UpdatePlanLicenseDimensionsUnion1]] = None
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
 
-    multipliers: Optional[Dict[str, SetupPaymentAddItemMultipliers1]] = None
+    multipliers: Optional[Dict[str, UpdatePlanLicenseMultipliers1]] = None
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
     tier_behavior: Annotated[
@@ -2042,32 +2037,31 @@ class SetupPaymentCreditSchemaAddItem1(BaseModel):
         return m
 
 
-SetupPaymentAddItemCreditSchemaUnionTypedDict = TypeAliasType(
-    "SetupPaymentAddItemCreditSchemaUnionTypedDict",
+UpdatePlanLicenseCreditSchemaUnionTypedDict = TypeAliasType(
+    "UpdatePlanLicenseCreditSchemaUnionTypedDict",
     Union[
-        SetupPaymentCreditSchemaAddItem2TypedDict,
-        SetupPaymentCreditSchemaAddItem1TypedDict,
+        UpdatePlanCreditSchemaLicense2TypedDict, UpdatePlanCreditSchemaLicense1TypedDict
     ],
 )
 
 
-SetupPaymentAddItemCreditSchemaUnion = TypeAliasType(
-    "SetupPaymentAddItemCreditSchemaUnion",
-    Union[SetupPaymentCreditSchemaAddItem2, SetupPaymentCreditSchemaAddItem1],
+UpdatePlanLicenseCreditSchemaUnion = TypeAliasType(
+    "UpdatePlanLicenseCreditSchemaUnion",
+    Union[UpdatePlanCreditSchemaLicense2, UpdatePlanCreditSchemaLicense1],
 )
 
 
-class SetupPaymentAddItemFeatureOverrideTypedDict(TypedDict):
+class UpdatePlanLicenseFeatureOverrideTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: NotRequired[List[SetupPaymentAddItemCreditSchemaUnionTypedDict]]
+    credit_schema: NotRequired[List[UpdatePlanLicenseCreditSchemaUnionTypedDict]]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
 
-class SetupPaymentAddItemFeatureOverride(BaseModel):
+class UpdatePlanLicenseFeatureOverride(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: Optional[List[SetupPaymentAddItemCreditSchemaUnion]] = None
+    credit_schema: Optional[List[UpdatePlanLicenseCreditSchemaUnion]] = None
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
     @model_serializer(mode="wrap")
@@ -2087,7 +2081,7 @@ class SetupPaymentAddItemFeatureOverride(BaseModel):
         return m
 
 
-class SetupPaymentAddItemPlanItemTypedDict(TypedDict):
+class UpdatePlanLicensePlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2098,19 +2092,19 @@ class SetupPaymentAddItemPlanItemTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[SetupPaymentAddItemResetTypedDict]
+    reset: NotRequired[UpdatePlanLicenseResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[SetupPaymentAddItemPriceTypedDict]
+    price: NotRequired[UpdatePlanLicensePriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[SetupPaymentAddItemProrationTypedDict]
+    proration: NotRequired[UpdatePlanLicenseProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[SetupPaymentAddItemRolloverTypedDict]
+    rollover: NotRequired[UpdatePlanLicenseRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
-    feature_override: NotRequired[SetupPaymentAddItemFeatureOverrideTypedDict]
+    feature_override: NotRequired[UpdatePlanLicenseFeatureOverrideTypedDict]
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class SetupPaymentAddItemPlanItem(BaseModel):
+class UpdatePlanLicensePlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -2125,19 +2119,19 @@ class SetupPaymentAddItemPlanItem(BaseModel):
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    reset: Optional[SetupPaymentAddItemReset] = None
+    reset: Optional[UpdatePlanLicenseReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[SetupPaymentAddItemPrice] = None
+    price: Optional[UpdatePlanLicensePrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[SetupPaymentAddItemProration] = None
+    proration: Optional[UpdatePlanLicenseProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[SetupPaymentAddItemRollover] = None
+    rollover: Optional[UpdatePlanLicenseRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    feature_override: Optional[SetupPaymentAddItemFeatureOverride] = None
+    feature_override: Optional[UpdatePlanLicenseFeatureOverride] = None
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     @model_serializer(mode="wrap")
@@ -2168,14 +2162,14 @@ class SetupPaymentAddItemPlanItem(BaseModel):
         return m
 
 
-SetupPaymentRemoveItemBillingMethod = Literal[
+UpdatePlanLicenseRemoveItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""Match items with this billing method (prepaid or usage_based)."""
 
 
-SetupPaymentIntervalRemoveItemEnum2 = Literal[
+UpdatePlanIntervalLicenseRemoveItemEnum2 = Literal[
     "one_off",
     "minute",
     "hour",
@@ -2188,7 +2182,7 @@ SetupPaymentIntervalRemoveItemEnum2 = Literal[
 ]
 
 
-SetupPaymentIntervalRemoveItemEnum1 = Literal[
+UpdatePlanIntervalLicenseRemoveItemEnum1 = Literal[
     "one_off",
     "week",
     "month",
@@ -2198,28 +2192,34 @@ SetupPaymentIntervalRemoveItemEnum1 = Literal[
 ]
 
 
-SetupPaymentIntervalUnionTypedDict = TypeAliasType(
-    "SetupPaymentIntervalUnionTypedDict",
-    Union[SetupPaymentIntervalRemoveItemEnum1, SetupPaymentIntervalRemoveItemEnum2],
+UpdatePlanLicenseIntervalUnionTypedDict = TypeAliasType(
+    "UpdatePlanLicenseIntervalUnionTypedDict",
+    Union[
+        UpdatePlanIntervalLicenseRemoveItemEnum1,
+        UpdatePlanIntervalLicenseRemoveItemEnum2,
+    ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-SetupPaymentIntervalUnion = TypeAliasType(
-    "SetupPaymentIntervalUnion",
-    Union[SetupPaymentIntervalRemoveItemEnum1, SetupPaymentIntervalRemoveItemEnum2],
+UpdatePlanLicenseIntervalUnion = TypeAliasType(
+    "UpdatePlanLicenseIntervalUnion",
+    Union[
+        UpdatePlanIntervalLicenseRemoveItemEnum1,
+        UpdatePlanIntervalLicenseRemoveItemEnum2,
+    ],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-class SetupPaymentPlanItemFilterTypedDict(TypedDict):
+class UpdatePlanLicensePlanItemFilterTypedDict(TypedDict):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: NotRequired[str]
     r"""Match items linked to this feature."""
-    billing_method: NotRequired[SetupPaymentRemoveItemBillingMethod]
+    billing_method: NotRequired[UpdatePlanLicenseRemoveItemBillingMethod]
     r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[SetupPaymentIntervalUnionTypedDict]
+    interval: NotRequired[UpdatePlanLicenseIntervalUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
@@ -2227,16 +2227,16 @@ class SetupPaymentPlanItemFilterTypedDict(TypedDict):
     r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
-class SetupPaymentPlanItemFilter(BaseModel):
+class UpdatePlanLicensePlanItemFilter(BaseModel):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: Optional[str] = None
     r"""Match items linked to this feature."""
 
-    billing_method: Optional[SetupPaymentRemoveItemBillingMethod] = None
+    billing_method: Optional[UpdatePlanLicenseRemoveItemBillingMethod] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
-    interval: Optional[SetupPaymentIntervalUnion] = None
+    interval: Optional[UpdatePlanLicenseIntervalUnion] = None
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
     interval_count: Optional[int] = None
@@ -2264,7 +2264,96 @@ class SetupPaymentPlanItemFilter(BaseModel):
         return m
 
 
-SetupPaymentCustomizeDurationType = Literal[
+class UpdatePlanLicenseCustomizeTypedDict(TypedDict):
+    price: NotRequired[Nullable[UpdatePlanLicenseBasePriceTypedDict]]
+    add_items: NotRequired[List[UpdatePlanLicensePlanItemTypedDict]]
+    remove_items: NotRequired[List[UpdatePlanLicensePlanItemFilterTypedDict]]
+
+
+class UpdatePlanLicenseCustomize(BaseModel):
+    price: OptionalNullable[UpdatePlanLicenseBasePrice] = UNSET
+
+    add_items: Optional[List[UpdatePlanLicensePlanItem]] = None
+
+    remove_items: Optional[List[UpdatePlanLicensePlanItemFilter]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "add_items", "remove_items"])
+        nullable_fields = set(["price"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanLicenseTypedDict(TypedDict):
+    license_plan_id: str
+    version_slug: NotRequired[str]
+    included: NotRequired[int]
+    prepaid_only: NotRequired[bool]
+    customize: NotRequired[Nullable[UpdatePlanLicenseCustomizeTypedDict]]
+    metadata: NotRequired[Dict[str, Any]]
+
+
+class UpdatePlanLicense(BaseModel):
+    license_plan_id: str
+
+    version_slug: Optional[str] = None
+
+    included: Optional[int] = None
+
+    prepaid_only: Optional[bool] = None
+
+    customize: OptionalNullable[UpdatePlanLicenseCustomize] = UNSET
+
+    metadata: Optional[Dict[str, Any]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["version_slug", "included", "prepaid_only", "customize", "metadata"]
+        )
+        nullable_fields = set(["customize"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanDurationTypeRequestBody = Literal[
     "day",
     "month",
     "year",
@@ -2272,39 +2361,39 @@ SetupPaymentCustomizeDurationType = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
-SetupPaymentCustomizeOnEnd = Literal[
+UpdatePlanOnEndRequestBody = Literal[
     "bill",
     "revert",
 ]
 r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class SetupPaymentCustomizeFreeTrialParamsTypedDict(TypedDict):
+class UpdatePlanFreeTrialParamsRequestBodyTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[SetupPaymentCustomizeDurationType]
+    duration_type: NotRequired[UpdatePlanDurationTypeRequestBody]
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
     r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
-    on_end: NotRequired[SetupPaymentCustomizeOnEnd]
+    on_end: NotRequired[UpdatePlanOnEndRequestBody]
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class SetupPaymentCustomizeFreeTrialParams(BaseModel):
+class UpdatePlanFreeTrialParamsRequestBody(BaseModel):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
-    duration_type: Optional[SetupPaymentCustomizeDurationType] = "month"
+    duration_type: Optional[UpdatePlanDurationTypeRequestBody] = "month"
     r"""Unit of time for the trial ('day', 'month', 'year')."""
 
     card_required: Optional[bool] = False
     r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
 
-    on_end: Optional[SetupPaymentCustomizeOnEnd] = None
+    on_end: Optional[UpdatePlanOnEndRequestBody] = None
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
     @model_serializer(mode="wrap")
@@ -2324,7 +2413,37 @@ class SetupPaymentCustomizeFreeTrialParams(BaseModel):
         return m
 
 
-SetupPaymentPurchaseLimitInterval = Literal[
+class UpdatePlanConfigRequestBodyTypedDict(TypedDict):
+    r"""Miscellaneous plan-level configuration flags."""
+
+    ignore_past_due: NotRequired[bool]
+    r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+
+
+class UpdatePlanConfigRequestBody(BaseModel):
+    r"""Miscellaneous plan-level configuration flags."""
+
+    ignore_past_due: Optional[bool] = False
+    r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["ignore_past_due"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanPurchaseLimitIntervalRequestBody = Literal[
     "hour",
     "day",
     "week",
@@ -2333,10 +2452,10 @@ SetupPaymentPurchaseLimitInterval = Literal[
 r"""The time interval for the purchase limit window."""
 
 
-class SetupPaymentPurchaseLimitTypedDict(TypedDict):
+class UpdatePlanPurchaseLimitRequestBodyTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: SetupPaymentPurchaseLimitInterval
+    interval: UpdatePlanPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -2346,10 +2465,10 @@ class SetupPaymentPurchaseLimitTypedDict(TypedDict):
     r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
-class SetupPaymentPurchaseLimit(BaseModel):
+class UpdatePlanPurchaseLimitRequestBody(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: SetupPaymentPurchaseLimitInterval
+    interval: UpdatePlanPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -2378,7 +2497,7 @@ class SetupPaymentPurchaseLimit(BaseModel):
         return m
 
 
-class SetupPaymentAutoTopupTypedDict(TypedDict):
+class UpdatePlanAutoTopupRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
     threshold: float
@@ -2387,13 +2506,13 @@ class SetupPaymentAutoTopupTypedDict(TypedDict):
     r"""Amount of credits to add per auto top-up."""
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[SetupPaymentPurchaseLimitTypedDict]
+    purchase_limit: NotRequired[UpdatePlanPurchaseLimitRequestBodyTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
-class SetupPaymentAutoTopup(BaseModel):
+class UpdatePlanAutoTopupRequestBody(BaseModel):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
 
@@ -2406,7 +2525,7 @@ class SetupPaymentAutoTopup(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether auto top-up is enabled."""
 
-    purchase_limit: Optional[SetupPaymentPurchaseLimit] = None
+    purchase_limit: Optional[UpdatePlanPurchaseLimitRequestBody] = None
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
@@ -2429,19 +2548,19 @@ class SetupPaymentAutoTopup(BaseModel):
         return m
 
 
-SetupPaymentLimitType = Literal[
+UpdatePlanLimitTypeRequestBody = Literal[
     "absolute",
     "usage_percentage",
 ]
 r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
 
-class SetupPaymentSpendLimitTypedDict(TypedDict):
+class UpdatePlanSpendLimitRequestBodyTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[SetupPaymentLimitType]
+    limit_type: NotRequired[UpdatePlanLimitTypeRequestBody]
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
@@ -2449,14 +2568,14 @@ class SetupPaymentSpendLimitTypedDict(TypedDict):
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
-class SetupPaymentSpendLimit(BaseModel):
+class UpdatePlanSpendLimitRequestBody(BaseModel):
     feature_id: Optional[str] = None
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[SetupPaymentLimitType] = None
+    limit_type: Optional[UpdatePlanLimitTypeRequestBody] = None
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
     overage_limit: Optional[float] = None
@@ -2490,7 +2609,7 @@ class SetupPaymentSpendLimit(BaseModel):
         return m
 
 
-SetupPaymentUsageLimitInterval = Literal[
+UpdatePlanUsageLimitIntervalRequestBody = Literal[
     "day",
     "week",
     "month",
@@ -2499,68 +2618,68 @@ SetupPaymentUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
-SetupPaymentAnchor = Literal[
+UpdatePlanAnchorRequestBody = Literal[
     "billing_cycle",
     "utc",
 ]
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-SetupPaymentUsageLimitPropertiesTypedDict = TypeAliasType(
-    "SetupPaymentUsageLimitPropertiesTypedDict", Union[str, float, bool]
+UpdatePlanUsageLimitPropertiesTypedDict = TypeAliasType(
+    "UpdatePlanUsageLimitPropertiesTypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentUsageLimitProperties = TypeAliasType(
-    "SetupPaymentUsageLimitProperties", Union[str, float, bool]
+UpdatePlanUsageLimitProperties = TypeAliasType(
+    "UpdatePlanUsageLimitProperties", Union[str, float, bool]
 )
 
 
-class SetupPaymentUsageLimitFilterTypedDict(TypedDict):
+class UpdatePlanUsageLimitFilterRequestBodyTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, SetupPaymentUsageLimitPropertiesTypedDict]
+    properties: Dict[str, UpdatePlanUsageLimitPropertiesTypedDict]
 
 
-class SetupPaymentUsageLimitFilter(BaseModel):
+class UpdatePlanUsageLimitFilterRequestBody(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, SetupPaymentUsageLimitProperties]
+    properties: Dict[str, UpdatePlanUsageLimitProperties]
 
 
-class SetupPaymentUsageLimitTypedDict(TypedDict):
+class UpdatePlanUsageLimitRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
     limit: float
     r"""Maximum units allowed per interval."""
-    interval: SetupPaymentUsageLimitInterval
+    interval: UpdatePlanUsageLimitIntervalRequestBody
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
-    anchor: NotRequired[SetupPaymentAnchor]
+    anchor: NotRequired[UpdatePlanAnchorRequestBody]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[SetupPaymentUsageLimitFilterTypedDict]
+    filter_: NotRequired[UpdatePlanUsageLimitFilterRequestBodyTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
-class SetupPaymentUsageLimit(BaseModel):
+class UpdatePlanUsageLimitRequestBody(BaseModel):
     feature_id: str
     r"""The feature this usage limit applies to."""
 
     limit: float
     r"""Maximum units allowed per interval."""
 
-    interval: SetupPaymentUsageLimitInterval
+    interval: UpdatePlanUsageLimitIntervalRequestBody
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
-    anchor: Optional[SetupPaymentAnchor] = None
+    anchor: Optional[UpdatePlanAnchorRequestBody] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
     filter_: Annotated[
-        Optional[SetupPaymentUsageLimitFilter], pydantic.Field(alias="filter")
+        Optional[UpdatePlanUsageLimitFilterRequestBody], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -2581,7 +2700,7 @@ class SetupPaymentUsageLimit(BaseModel):
         return m
 
 
-SetupPaymentThresholdType = Literal[
+UpdatePlanThresholdTypeRequestBody = Literal[
     "usage",
     "usage_percentage",
     "remaining",
@@ -2590,7 +2709,7 @@ SetupPaymentThresholdType = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
-SetupPaymentBasis = Literal[
+UpdatePlanBasisRequestBody = Literal[
     "balance",
     "included",
     "recurring",
@@ -2599,50 +2718,50 @@ SetupPaymentBasis = Literal[
 r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
 
 
-SetupPaymentUsageAlertPropertiesTypedDict = TypeAliasType(
-    "SetupPaymentUsageAlertPropertiesTypedDict", Union[str, float, bool]
+UpdatePlanUsageAlertPropertiesTypedDict = TypeAliasType(
+    "UpdatePlanUsageAlertPropertiesTypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentUsageAlertProperties = TypeAliasType(
-    "SetupPaymentUsageAlertProperties", Union[str, float, bool]
+UpdatePlanUsageAlertProperties = TypeAliasType(
+    "UpdatePlanUsageAlertProperties", Union[str, float, bool]
 )
 
 
-class SetupPaymentUsageAlertFilterTypedDict(TypedDict):
+class UpdatePlanUsageAlertFilterRequestBodyTypedDict(TypedDict):
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
 
-    properties: Dict[str, SetupPaymentUsageAlertPropertiesTypedDict]
+    properties: Dict[str, UpdatePlanUsageAlertPropertiesTypedDict]
 
 
-class SetupPaymentUsageAlertFilter(BaseModel):
+class UpdatePlanUsageAlertFilterRequestBody(BaseModel):
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
 
-    properties: Dict[str, SetupPaymentUsageAlertProperties]
+    properties: Dict[str, UpdatePlanUsageAlertProperties]
 
 
-class SetupPaymentUsageAlertTypedDict(TypedDict):
+class UpdatePlanUsageAlertRequestBodyTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-    threshold_type: SetupPaymentThresholdType
+    threshold_type: UpdatePlanThresholdTypeRequestBody
     r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
-    basis: NotRequired[SetupPaymentBasis]
+    basis: NotRequired[UpdatePlanBasisRequestBody]
     r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
-    filter_: NotRequired[SetupPaymentUsageAlertFilterTypedDict]
+    filter_: NotRequired[UpdatePlanUsageAlertFilterRequestBodyTypedDict]
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
 
-class SetupPaymentUsageAlert(BaseModel):
+class UpdatePlanUsageAlertRequestBody(BaseModel):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
-    threshold_type: SetupPaymentThresholdType
+    threshold_type: UpdatePlanThresholdTypeRequestBody
     r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
@@ -2651,11 +2770,11 @@ class SetupPaymentUsageAlert(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
-    basis: Optional[SetupPaymentBasis] = "balance"
+    basis: Optional[UpdatePlanBasisRequestBody] = "balance"
     r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
 
     filter_: Annotated[
-        Optional[SetupPaymentUsageAlertFilter], pydantic.Field(alias="filter")
+        Optional[UpdatePlanUsageAlertFilterRequestBody], pydantic.Field(alias="filter")
     ] = None
     r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
 
@@ -2679,14 +2798,14 @@ class SetupPaymentUsageAlert(BaseModel):
         return m
 
 
-class SetupPaymentOverageAllowedTypedDict(TypedDict):
+class UpdatePlanOverageAllowedRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
 
 
-class SetupPaymentOverageAllowed(BaseModel):
+class UpdatePlanOverageAllowedRequestBody(BaseModel):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
 
@@ -2710,37 +2829,37 @@ class SetupPaymentOverageAllowed(BaseModel):
         return m
 
 
-class SetupPaymentBillingControlsTypedDict(TypedDict):
-    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+class UpdatePlanBillingControlsRequestBodyTypedDict(TypedDict):
+    r"""Plan-level billing controls used as customer defaults."""
 
-    auto_topups: NotRequired[List[SetupPaymentAutoTopupTypedDict]]
+    auto_topups: NotRequired[List[UpdatePlanAutoTopupRequestBodyTypedDict]]
     r"""List of auto top-up configurations per feature."""
-    spend_limits: NotRequired[List[SetupPaymentSpendLimitTypedDict]]
+    spend_limits: NotRequired[List[UpdatePlanSpendLimitRequestBodyTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[SetupPaymentUsageLimitTypedDict]]
+    usage_limits: NotRequired[List[UpdatePlanUsageLimitRequestBodyTypedDict]]
     r"""List of hard usage caps per feature (max units per interval)."""
-    usage_alerts: NotRequired[List[SetupPaymentUsageAlertTypedDict]]
+    usage_alerts: NotRequired[List[UpdatePlanUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[SetupPaymentOverageAllowedTypedDict]]
+    overage_allowed: NotRequired[List[UpdatePlanOverageAllowedRequestBodyTypedDict]]
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
-class SetupPaymentBillingControls(BaseModel):
-    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+class UpdatePlanBillingControlsRequestBody(BaseModel):
+    r"""Plan-level billing controls used as customer defaults."""
 
-    auto_topups: Optional[List[SetupPaymentAutoTopup]] = None
+    auto_topups: Optional[List[UpdatePlanAutoTopupRequestBody]] = None
     r"""List of auto top-up configurations per feature."""
 
-    spend_limits: Optional[List[SetupPaymentSpendLimit]] = None
+    spend_limits: Optional[List[UpdatePlanSpendLimitRequestBody]] = None
     r"""List of overage spend limits per feature (caps overage spend)."""
 
-    usage_limits: Optional[List[SetupPaymentUsageLimit]] = None
+    usage_limits: Optional[List[UpdatePlanUsageLimitRequestBody]] = None
     r"""List of hard usage caps per feature (max units per interval)."""
 
-    usage_alerts: Optional[List[SetupPaymentUsageAlert]] = None
+    usage_alerts: Optional[List[UpdatePlanUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
 
-    overage_allowed: Optional[List[SetupPaymentOverageAllowed]] = None
+    overage_allowed: Optional[List[UpdatePlanOverageAllowedRequestBody]] = None
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
     @model_serializer(mode="wrap")
@@ -2768,7 +2887,53 @@ class SetupPaymentBillingControls(BaseModel):
         return m
 
 
-SetupPaymentPriceUpsertLicenseInterval = Literal[
+class MigrationTypedDict(TypedDict):
+    draft: NotRequired[bool]
+    include_custom: NotRequired[bool]
+
+
+class Migration(BaseModel):
+    draft: Optional[bool] = False
+
+    include_custom: Optional[bool] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["draft", "include_custom"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdateLicenseParentTypedDict(TypedDict):
+    plan_id: str
+    version: int
+
+
+class UpdateLicenseParent(BaseModel):
+    plan_id: str
+
+    version: int
+
+
+class UpdatePlanCustomizeVariant2TypedDict(TypedDict):
+    pass
+
+
+class UpdatePlanCustomizeVariant2(BaseModel):
+    pass
+
+
+UpdatePlanPriceVariantInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -2779,14 +2944,14 @@ SetupPaymentPriceUpsertLicenseInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class SetupPaymentUpsertLicenseAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanVariantAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class SetupPaymentUpsertLicenseAdditionalCurrency(BaseModel):
+class UpdatePlanVariantAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -2794,36 +2959,34 @@ class SetupPaymentUpsertLicenseAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class SetupPaymentUpsertLicenseBasePriceTypedDict(TypedDict):
+class UpdatePlanVariantBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
-    interval: SetupPaymentPriceUpsertLicenseInterval
+    interval: UpdatePlanPriceVariantInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     additional_currencies: NotRequired[
-        List[SetupPaymentUpsertLicenseAdditionalCurrencyTypedDict]
+        List[UpdatePlanVariantAdditionalCurrencyTypedDict]
     ]
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class SetupPaymentUpsertLicenseBasePrice(BaseModel):
+class UpdatePlanVariantBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
-    interval: SetupPaymentPriceUpsertLicenseInterval
+    interval: UpdatePlanPriceVariantInterval
     r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[
-        List[SetupPaymentUpsertLicenseAdditionalCurrency]
-    ] = None
+    additional_currencies: Optional[List[UpdatePlanVariantAdditionalCurrency]] = None
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
     @model_serializer(mode="wrap")
@@ -2843,7 +3006,7 @@ class SetupPaymentUpsertLicenseBasePrice(BaseModel):
         return m
 
 
-SetupPaymentUpsertLicenseResetInterval = Literal[
+UpdatePlanVariantResetInterval = Literal[
     "one_off",
     "minute",
     "hour",
@@ -2857,19 +3020,19 @@ SetupPaymentUpsertLicenseResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class SetupPaymentUpsertLicenseResetTypedDict(TypedDict):
+class UpdatePlanVariantResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: SetupPaymentUpsertLicenseResetInterval
+    interval: UpdatePlanVariantResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class SetupPaymentUpsertLicenseReset(BaseModel):
+class UpdatePlanVariantReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: SetupPaymentUpsertLicenseResetInterval
+    interval: UpdatePlanVariantResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -2892,14 +3055,14 @@ class SetupPaymentUpsertLicenseReset(BaseModel):
         return m
 
 
-class SetupPaymentUpsertLicenseAddItemAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanVariantAddItemAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class SetupPaymentUpsertLicenseAddItemAdditionalCurrency(BaseModel):
+class UpdatePlanVariantAddItemAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -2907,17 +3070,15 @@ class SetupPaymentUpsertLicenseAddItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-SetupPaymentUpsertLicensePriceToTypedDict = TypeAliasType(
-    "SetupPaymentUpsertLicensePriceToTypedDict", Union[float, str]
+UpdatePlanVariantPriceToTypedDict = TypeAliasType(
+    "UpdatePlanVariantPriceToTypedDict", Union[float, str]
 )
 
 
-SetupPaymentUpsertLicensePriceTo = TypeAliasType(
-    "SetupPaymentUpsertLicensePriceTo", Union[float, str]
-)
+UpdatePlanVariantPriceTo = TypeAliasType("UpdatePlanVariantPriceTo", Union[float, str])
 
 
-class SetupPaymentUpsertLicenseTierAdditionalCurrencyTypedDict(TypedDict):
+class UpdatePlanVariantTierAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: NotRequired[float]
@@ -2926,7 +3087,7 @@ class SetupPaymentUpsertLicenseTierAdditionalCurrencyTypedDict(TypedDict):
     r"""Flat amount for this tier in this currency, if the tier uses one."""
 
 
-class SetupPaymentUpsertLicenseTierAdditionalCurrency(BaseModel):
+class UpdatePlanVariantTierAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -2953,26 +3114,26 @@ class SetupPaymentUpsertLicenseTierAdditionalCurrency(BaseModel):
         return m
 
 
-class SetupPaymentUpsertLicensePriceTierTypedDict(TypedDict):
-    to: SetupPaymentUpsertLicensePriceToTypedDict
+class UpdatePlanVariantPriceTierTypedDict(TypedDict):
+    to: UpdatePlanVariantPriceToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
-        List[SetupPaymentUpsertLicenseTierAdditionalCurrencyTypedDict]
+        List[UpdatePlanVariantTierAdditionalCurrencyTypedDict]
     ]
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class SetupPaymentUpsertLicensePriceTier(BaseModel):
-    to: SetupPaymentUpsertLicensePriceTo
+class UpdatePlanVariantPriceTier(BaseModel):
+    to: UpdatePlanVariantPriceTo
 
     amount: Optional[float] = None
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[
-        List[SetupPaymentUpsertLicenseTierAdditionalCurrency]
-    ] = None
+    additional_currencies: Optional[List[UpdatePlanVariantTierAdditionalCurrency]] = (
+        None
+    )
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
     @model_serializer(mode="wrap")
@@ -2992,13 +3153,13 @@ class SetupPaymentUpsertLicensePriceTier(BaseModel):
         return m
 
 
-SetupPaymentUpsertLicenseTierBehavior = Literal[
+UpdatePlanVariantTierBehavior = Literal[
     "graduated",
     "volume",
 ]
 
 
-SetupPaymentUpsertLicenseAddItemPriceInterval = Literal[
+UpdatePlanVariantAddItemPriceInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -3009,29 +3170,29 @@ SetupPaymentUpsertLicenseAddItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-SetupPaymentUpsertLicenseAddItemBillingMethod = Literal[
+UpdatePlanVariantAddItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class SetupPaymentUpsertLicensePriceTypedDict(TypedDict):
+class UpdatePlanVariantPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: SetupPaymentUpsertLicenseAddItemPriceInterval
+    interval: UpdatePlanVariantAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: SetupPaymentUpsertLicenseAddItemBillingMethod
+    billing_method: UpdatePlanVariantAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     additional_currencies: NotRequired[
-        List[SetupPaymentUpsertLicenseAddItemAdditionalCurrencyTypedDict]
+        List[UpdatePlanVariantAddItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[SetupPaymentUpsertLicensePriceTierTypedDict]]
+    tiers: NotRequired[List[UpdatePlanVariantPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[SetupPaymentUpsertLicenseTierBehavior]
+    tier_behavior: NotRequired[UpdatePlanVariantTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -3040,27 +3201,27 @@ class SetupPaymentUpsertLicensePriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class SetupPaymentUpsertLicensePrice(BaseModel):
+class UpdatePlanVariantPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: SetupPaymentUpsertLicenseAddItemPriceInterval
+    interval: UpdatePlanVariantAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: SetupPaymentUpsertLicenseAddItemBillingMethod
+    billing_method: UpdatePlanVariantAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
     additional_currencies: Optional[
-        List[SetupPaymentUpsertLicenseAddItemAdditionalCurrency]
+        List[UpdatePlanVariantAddItemAdditionalCurrency]
     ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[SetupPaymentUpsertLicensePriceTier]] = None
+    tiers: Optional[List[UpdatePlanVariantPriceTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[SetupPaymentUpsertLicenseTierBehavior] = None
+    tier_behavior: Optional[UpdatePlanVariantTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -3107,7 +3268,7 @@ class SetupPaymentUpsertLicensePrice(BaseModel):
         return m
 
 
-SetupPaymentUpsertLicenseOnIncrease = Literal[
+UpdatePlanVariantOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -3116,7 +3277,7 @@ SetupPaymentUpsertLicenseOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-SetupPaymentUpsertLicenseOnDecrease = Literal[
+UpdatePlanVariantOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -3126,36 +3287,36 @@ SetupPaymentUpsertLicenseOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class SetupPaymentUpsertLicenseProrationTypedDict(TypedDict):
+class UpdatePlanVariantProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: SetupPaymentUpsertLicenseOnIncrease
+    on_increase: UpdatePlanVariantOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: SetupPaymentUpsertLicenseOnDecrease
+    on_decrease: UpdatePlanVariantOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class SetupPaymentUpsertLicenseProration(BaseModel):
+class UpdatePlanVariantProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: SetupPaymentUpsertLicenseOnIncrease
+    on_increase: UpdatePlanVariantOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: SetupPaymentUpsertLicenseOnDecrease
+    on_decrease: UpdatePlanVariantOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-SetupPaymentUpsertLicenseExpiryDurationType = Literal[
+UpdatePlanVariantExpiryDurationType = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class SetupPaymentUpsertLicenseRolloverTypedDict(TypedDict):
+class UpdatePlanVariantRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: SetupPaymentUpsertLicenseExpiryDurationType
+    expiry_duration_type: UpdatePlanVariantExpiryDurationType
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -3165,10 +3326,10 @@ class SetupPaymentUpsertLicenseRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class SetupPaymentUpsertLicenseRollover(BaseModel):
+class UpdatePlanVariantRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: SetupPaymentUpsertLicenseExpiryDurationType
+    expiry_duration_type: UpdatePlanVariantExpiryDurationType
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -3197,18 +3358,18 @@ class SetupPaymentUpsertLicenseRollover(BaseModel):
         return m
 
 
-SetupPaymentDimensionsUpsertLicenseMatch4TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseMatch4TypedDict", Union[str, float, bool]
+DimensionsVariantMatch4TypedDict = TypeAliasType(
+    "DimensionsVariantMatch4TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsUpsertLicenseMatch4 = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseMatch4", Union[str, float, bool]
+DimensionsVariantMatch4 = TypeAliasType(
+    "DimensionsVariantMatch4", Union[str, float, bool]
 )
 
 
-class SetupPaymentDimensionsUpsertLicense4TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsUpsertLicenseMatch4TypedDict]
+class UpdatePlanDimensionsVariant4TypedDict(TypedDict):
+    match: Dict[str, DimensionsVariantMatch4TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
     r"""Credits consumed per billing-unit group when this dimension matches."""
@@ -3216,8 +3377,8 @@ class SetupPaymentDimensionsUpsertLicense4TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class SetupPaymentDimensionsUpsertLicense4(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsUpsertLicenseMatch4]
+class UpdatePlanDimensionsVariant4(BaseModel):
+    match: Dict[str, DimensionsVariantMatch4]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
@@ -3243,62 +3404,62 @@ class SetupPaymentDimensionsUpsertLicense4(BaseModel):
         return m
 
 
-SetupPaymentDimensionsUpsertLicenseMatch3TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseMatch3TypedDict", Union[str, float, bool]
+DimensionsVariantMatch3TypedDict = TypeAliasType(
+    "DimensionsVariantMatch3TypedDict", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsUpsertLicenseMatch3 = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseMatch3", Union[str, float, bool]
+DimensionsVariantMatch3 = TypeAliasType(
+    "DimensionsVariantMatch3", Union[str, float, bool]
 )
 
 
-SetupPaymentDimensionsToUpsertLicenseEnum2 = Literal["inf",]
+UpdatePlanDimensionsToVariantEnum2 = Literal["inf",]
 
 
-SetupPaymentDimensionsUpsertLicenseToUnion2TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseToUnion2TypedDict",
-    Union[float, SetupPaymentDimensionsToUpsertLicenseEnum2],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-SetupPaymentDimensionsUpsertLicenseToUnion2 = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseToUnion2",
-    Union[float, SetupPaymentDimensionsToUpsertLicenseEnum2],
+UpdatePlanDimensionsVariantToUnion2TypedDict = TypeAliasType(
+    "UpdatePlanDimensionsVariantToUnion2TypedDict",
+    Union[float, UpdatePlanDimensionsToVariantEnum2],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class SetupPaymentDimensionsUpsertLicenseTier2TypedDict(TypedDict):
-    to: SetupPaymentDimensionsUpsertLicenseToUnion2TypedDict
+UpdatePlanDimensionsVariantToUnion2 = TypeAliasType(
+    "UpdatePlanDimensionsVariantToUnion2",
+    Union[float, UpdatePlanDimensionsToVariantEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class UpdatePlanDimensionsVariantTier2TypedDict(TypedDict):
+    to: UpdatePlanDimensionsVariantToUnion2TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentDimensionsUpsertLicenseTier2(BaseModel):
-    to: SetupPaymentDimensionsUpsertLicenseToUnion2
+class UpdatePlanDimensionsVariantTier2(BaseModel):
+    to: UpdatePlanDimensionsVariantToUnion2
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class SetupPaymentDimensionsUpsertLicense3TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsUpsertLicenseMatch3TypedDict]
+class UpdatePlanDimensionsVariant3TypedDict(TypedDict):
+    match: Dict[str, DimensionsVariantMatch3TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[SetupPaymentDimensionsUpsertLicenseTier2TypedDict]
+    tiers: List[UpdatePlanDimensionsVariantTier2TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class SetupPaymentDimensionsUpsertLicense3(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsUpsertLicenseMatch3]
+class UpdatePlanDimensionsVariant3(BaseModel):
+    match: Dict[str, DimensionsVariantMatch3]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[SetupPaymentDimensionsUpsertLicenseTier2]
+    tiers: List[UpdatePlanDimensionsVariantTier2]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -3325,1225 +3486,51 @@ class SetupPaymentDimensionsUpsertLicense3(BaseModel):
         return m
 
 
-SetupPaymentUpsertLicenseDimensionsUnion2TypedDict = TypeAliasType(
-    "SetupPaymentUpsertLicenseDimensionsUnion2TypedDict",
-    Union[
-        SetupPaymentDimensionsUpsertLicense4TypedDict,
-        SetupPaymentDimensionsUpsertLicense3TypedDict,
-    ],
+UpdatePlanVariantDimensionsUnion2TypedDict = TypeAliasType(
+    "UpdatePlanVariantDimensionsUnion2TypedDict",
+    Union[UpdatePlanDimensionsVariant4TypedDict, UpdatePlanDimensionsVariant3TypedDict],
 )
 
 
-SetupPaymentUpsertLicenseDimensionsUnion2 = TypeAliasType(
-    "SetupPaymentUpsertLicenseDimensionsUnion2",
-    Union[SetupPaymentDimensionsUpsertLicense4, SetupPaymentDimensionsUpsertLicense3],
+UpdatePlanVariantDimensionsUnion2 = TypeAliasType(
+    "UpdatePlanVariantDimensionsUnion2",
+    Union[UpdatePlanDimensionsVariant4, UpdatePlanDimensionsVariant3],
 )
-
-
-SetupPaymentUpsertLicenseMultipliersMatch2TypedDict = TypeAliasType(
-    "SetupPaymentUpsertLicenseMultipliersMatch2TypedDict", Union[str, float, bool]
-)
-
-
-SetupPaymentUpsertLicenseMultipliersMatch2 = TypeAliasType(
-    "SetupPaymentUpsertLicenseMultipliersMatch2", Union[str, float, bool]
-)
-
-
-class SetupPaymentUpsertLicenseMultipliers2TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentUpsertLicenseMultipliersMatch2TypedDict]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    factor: NotRequired[float]
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-    add: NotRequired[float]
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-
-class SetupPaymentUpsertLicenseMultipliers2(BaseModel):
-    match: Dict[str, SetupPaymentUpsertLicenseMultipliersMatch2]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    factor: Optional[float] = None
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-
-    add: Optional[float] = None
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["factor", "add"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentCreditSchemaUpsertLicense2TypedDict(TypedDict):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group."""
-    billing_units: NotRequired[float]
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[
-        Dict[str, SetupPaymentUpsertLicenseDimensionsUnion2TypedDict]
-    ]
-    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, SetupPaymentUpsertLicenseMultipliers2TypedDict]]
-    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
-
-
-class SetupPaymentCreditSchemaUpsertLicense2(BaseModel):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group."""
-
-    billing_units: Optional[float] = None
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-
-    dimensions: Optional[Dict[str, SetupPaymentUpsertLicenseDimensionsUnion2]] = None
-    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-
-    multipliers: Optional[Dict[str, SetupPaymentUpsertLicenseMultipliers2]] = None
-    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["billing_units", "dimensions", "multipliers"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentDimensionsUpsertLicenseMatch2TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseMatch2TypedDict", Union[str, float, bool]
-)
-
-
-SetupPaymentDimensionsUpsertLicenseMatch2 = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseMatch2", Union[str, float, bool]
-)
-
-
-class SetupPaymentDimensionsUpsertLicense2TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsUpsertLicenseMatch2TypedDict]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group when this dimension matches."""
-    priority: NotRequired[int]
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-
-
-class SetupPaymentDimensionsUpsertLicense2(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsUpsertLicenseMatch2]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group when this dimension matches."""
-
-    priority: Optional[int] = None
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["priority"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentDimensionsUpsertLicenseMatch1TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseMatch1TypedDict", Union[str, float, bool]
-)
-
-
-SetupPaymentDimensionsUpsertLicenseMatch1 = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseMatch1", Union[str, float, bool]
-)
-
-
-SetupPaymentDimensionsToUpsertLicenseEnum1 = Literal["inf",]
-
-
-SetupPaymentDimensionsUpsertLicenseToUnion1TypedDict = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseToUnion1TypedDict",
-    Union[float, SetupPaymentDimensionsToUpsertLicenseEnum1],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-SetupPaymentDimensionsUpsertLicenseToUnion1 = TypeAliasType(
-    "SetupPaymentDimensionsUpsertLicenseToUnion1",
-    Union[float, SetupPaymentDimensionsToUpsertLicenseEnum1],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-class SetupPaymentDimensionsUpsertLicenseTier1TypedDict(TypedDict):
-    to: SetupPaymentDimensionsUpsertLicenseToUnion1TypedDict
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class SetupPaymentDimensionsUpsertLicenseTier1(BaseModel):
-    to: SetupPaymentDimensionsUpsertLicenseToUnion1
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class SetupPaymentDimensionsUpsertLicense1TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentDimensionsUpsertLicenseMatch1TypedDict]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[SetupPaymentDimensionsUpsertLicenseTier1TypedDict]
-    priority: NotRequired[int]
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-    tier_behavior: Literal["graduated"]
-
-
-class SetupPaymentDimensionsUpsertLicense1(BaseModel):
-    match: Dict[str, SetupPaymentDimensionsUpsertLicenseMatch1]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    tiers: List[SetupPaymentDimensionsUpsertLicenseTier1]
-
-    priority: Optional[int] = None
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-
-    tier_behavior: Annotated[
-        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
-        pydantic.Field(alias="tier_behavior"),
-    ] = "graduated"
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["priority"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentUpsertLicenseDimensionsUnion1TypedDict = TypeAliasType(
-    "SetupPaymentUpsertLicenseDimensionsUnion1TypedDict",
-    Union[
-        SetupPaymentDimensionsUpsertLicense2TypedDict,
-        SetupPaymentDimensionsUpsertLicense1TypedDict,
-    ],
-)
-
-
-SetupPaymentUpsertLicenseDimensionsUnion1 = TypeAliasType(
-    "SetupPaymentUpsertLicenseDimensionsUnion1",
-    Union[SetupPaymentDimensionsUpsertLicense2, SetupPaymentDimensionsUpsertLicense1],
-)
-
-
-SetupPaymentUpsertLicenseMultipliersMatch1TypedDict = TypeAliasType(
-    "SetupPaymentUpsertLicenseMultipliersMatch1TypedDict", Union[str, float, bool]
-)
-
-
-SetupPaymentUpsertLicenseMultipliersMatch1 = TypeAliasType(
-    "SetupPaymentUpsertLicenseMultipliersMatch1", Union[str, float, bool]
-)
-
-
-class SetupPaymentUpsertLicenseMultipliers1TypedDict(TypedDict):
-    match: Dict[str, SetupPaymentUpsertLicenseMultipliersMatch1TypedDict]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    factor: NotRequired[float]
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-    add: NotRequired[float]
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-
-class SetupPaymentUpsertLicenseMultipliers1(BaseModel):
-    match: Dict[str, SetupPaymentUpsertLicenseMultipliersMatch1]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    factor: Optional[float] = None
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-
-    add: Optional[float] = None
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["factor", "add"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentToUpsertLicenseEnum = Literal["inf",]
-
-
-SetupPaymentUpsertLicenseFeatureOverrideToUnionTypedDict = TypeAliasType(
-    "SetupPaymentUpsertLicenseFeatureOverrideToUnionTypedDict",
-    Union[float, SetupPaymentToUpsertLicenseEnum],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-SetupPaymentUpsertLicenseFeatureOverrideToUnion = TypeAliasType(
-    "SetupPaymentUpsertLicenseFeatureOverrideToUnion",
-    Union[float, SetupPaymentToUpsertLicenseEnum],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-class SetupPaymentUpsertLicenseFeatureOverrideTierTypedDict(TypedDict):
-    to: SetupPaymentUpsertLicenseFeatureOverrideToUnionTypedDict
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class SetupPaymentUpsertLicenseFeatureOverrideTier(BaseModel):
-    to: SetupPaymentUpsertLicenseFeatureOverrideToUnion
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class SetupPaymentCreditSchemaUpsertLicense1TypedDict(TypedDict):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-    tiers: List[SetupPaymentUpsertLicenseFeatureOverrideTierTypedDict]
-    billing_units: NotRequired[float]
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[
-        Dict[str, SetupPaymentUpsertLicenseDimensionsUnion1TypedDict]
-    ]
-    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, SetupPaymentUpsertLicenseMultipliers1TypedDict]]
-    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
-    tier_behavior: Literal["graduated"]
-
-
-class SetupPaymentCreditSchemaUpsertLicense1(BaseModel):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-
-    tiers: List[SetupPaymentUpsertLicenseFeatureOverrideTier]
-
-    billing_units: Optional[float] = None
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-
-    dimensions: Optional[Dict[str, SetupPaymentUpsertLicenseDimensionsUnion1]] = None
-    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-
-    multipliers: Optional[Dict[str, SetupPaymentUpsertLicenseMultipliers1]] = None
-    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
-
-    tier_behavior: Annotated[
-        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
-        pydantic.Field(alias="tier_behavior"),
-    ] = "graduated"
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["billing_units", "dimensions", "multipliers"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentUpsertLicenseCreditSchemaUnionTypedDict = TypeAliasType(
-    "SetupPaymentUpsertLicenseCreditSchemaUnionTypedDict",
-    Union[
-        SetupPaymentCreditSchemaUpsertLicense2TypedDict,
-        SetupPaymentCreditSchemaUpsertLicense1TypedDict,
-    ],
-)
-
-
-SetupPaymentUpsertLicenseCreditSchemaUnion = TypeAliasType(
-    "SetupPaymentUpsertLicenseCreditSchemaUnion",
-    Union[
-        SetupPaymentCreditSchemaUpsertLicense2, SetupPaymentCreditSchemaUpsertLicense1
-    ],
-)
-
-
-class SetupPaymentUpsertLicenseFeatureOverrideTypedDict(TypedDict):
-    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
-
-    credit_schema: NotRequired[
-        List[SetupPaymentUpsertLicenseCreditSchemaUnionTypedDict]
-    ]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
-
-
-class SetupPaymentUpsertLicenseFeatureOverride(BaseModel):
-    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
-
-    credit_schema: Optional[List[SetupPaymentUpsertLicenseCreditSchemaUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["credit_schema"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentUpsertLicensePlanItemTypedDict(TypedDict):
-    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
-
-    feature_id: str
-    r"""The ID of the feature to configure."""
-    included: NotRequired[float]
-    r"""Number of free units included. Balance resets to this each interval for consumable features."""
-    unlimited: NotRequired[bool]
-    r"""If true, customer has unlimited access to this feature."""
-    pooled: NotRequired[bool]
-    r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[SetupPaymentUpsertLicenseResetTypedDict]
-    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[SetupPaymentUpsertLicensePriceTypedDict]
-    r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[SetupPaymentUpsertLicenseProrationTypedDict]
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[SetupPaymentUpsertLicenseRolloverTypedDict]
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-    feature_override: NotRequired[SetupPaymentUpsertLicenseFeatureOverrideTypedDict]
-    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
-
-
-class SetupPaymentUpsertLicensePlanItem(BaseModel):
-    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
-
-    feature_id: str
-    r"""The ID of the feature to configure."""
-
-    included: Optional[float] = None
-    r"""Number of free units included. Balance resets to this each interval for consumable features."""
-
-    unlimited: Optional[bool] = None
-    r"""If true, customer has unlimited access to this feature."""
-
-    pooled: Optional[bool] = False
-    r"""Whether entity-level grants contribute to a shared customer balance."""
-
-    reset: Optional[SetupPaymentUpsertLicenseReset] = None
-    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-
-    price: Optional[SetupPaymentUpsertLicensePrice] = None
-    r"""Pricing for usage beyond included units. Omit for free features."""
-
-    proration: Optional[SetupPaymentUpsertLicenseProration] = None
-    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-
-    rollover: Optional[SetupPaymentUpsertLicenseRollover] = None
-    r"""Rollover config for unused units. If set, unused included units carry over."""
-
-    feature_override: Optional[SetupPaymentUpsertLicenseFeatureOverride] = None
-    r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "included",
-                "unlimited",
-                "pooled",
-                "reset",
-                "price",
-                "proration",
-                "rollover",
-                "feature_override",
-            ]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentUpsertLicenseRemoveItemBillingMethod = Literal[
-    "prepaid",
-    "usage_based",
-]
-r"""Match items with this billing method (prepaid or usage_based)."""
-
-
-SetupPaymentIntervalUpsertLicenseRemoveItemEnum2 = Literal[
-    "one_off",
-    "minute",
-    "hour",
-    "day",
-    "week",
-    "month",
-    "quarter",
-    "semi_annual",
-    "year",
-]
-
-
-SetupPaymentIntervalUpsertLicenseRemoveItemEnum1 = Literal[
-    "one_off",
-    "week",
-    "month",
-    "quarter",
-    "semi_annual",
-    "year",
-]
-
-
-SetupPaymentUpsertLicenseIntervalUnionTypedDict = TypeAliasType(
-    "SetupPaymentUpsertLicenseIntervalUnionTypedDict",
-    Union[
-        SetupPaymentIntervalUpsertLicenseRemoveItemEnum1,
-        SetupPaymentIntervalUpsertLicenseRemoveItemEnum2,
-    ],
-)
-r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-
-SetupPaymentUpsertLicenseIntervalUnion = TypeAliasType(
-    "SetupPaymentUpsertLicenseIntervalUnion",
-    Union[
-        SetupPaymentIntervalUpsertLicenseRemoveItemEnum1,
-        SetupPaymentIntervalUpsertLicenseRemoveItemEnum2,
-    ],
-)
-r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-
-class SetupPaymentUpsertLicensePlanItemFilterTypedDict(TypedDict):
-    r"""Filter for matching plan items. All provided fields must match (AND)."""
-
-    feature_id: NotRequired[str]
-    r"""Match items linked to this feature."""
-    billing_method: NotRequired[SetupPaymentUpsertLicenseRemoveItemBillingMethod]
-    r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[SetupPaymentUpsertLicenseIntervalUnionTypedDict]
-    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-    interval_count: NotRequired[int]
-    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
-    included: NotRequired[float]
-    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
-
-
-class SetupPaymentUpsertLicensePlanItemFilter(BaseModel):
-    r"""Filter for matching plan items. All provided fields must match (AND)."""
-
-    feature_id: Optional[str] = None
-    r"""Match items linked to this feature."""
-
-    billing_method: Optional[SetupPaymentUpsertLicenseRemoveItemBillingMethod] = None
-    r"""Match items with this billing method (prepaid or usage_based)."""
-
-    interval: Optional[SetupPaymentUpsertLicenseIntervalUnion] = None
-    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
-
-    interval_count: Optional[int] = None
-    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
-
-    included: Optional[float] = None
-    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count", "included"]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentUpsertLicenseCustomizeTypedDict(TypedDict):
-    price: NotRequired[Nullable[SetupPaymentUpsertLicenseBasePriceTypedDict]]
-    add_items: NotRequired[List[SetupPaymentUpsertLicensePlanItemTypedDict]]
-    remove_items: NotRequired[List[SetupPaymentUpsertLicensePlanItemFilterTypedDict]]
-
-
-class SetupPaymentUpsertLicenseCustomize(BaseModel):
-    price: OptionalNullable[SetupPaymentUpsertLicenseBasePrice] = UNSET
-
-    add_items: Optional[List[SetupPaymentUpsertLicensePlanItem]] = None
-
-    remove_items: Optional[List[SetupPaymentUpsertLicensePlanItemFilter]] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["price", "add_items", "remove_items"])
-        nullable_fields = set(["price"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentUpsertLicenseTypedDict(TypedDict):
-    license_plan_id: str
-    version_slug: NotRequired[str]
-    included: NotRequired[int]
-    prepaid_only: NotRequired[bool]
-    customize: NotRequired[Nullable[SetupPaymentUpsertLicenseCustomizeTypedDict]]
-    metadata: NotRequired[Dict[str, Any]]
-
-
-class SetupPaymentUpsertLicense(BaseModel):
-    license_plan_id: str
-
-    version_slug: Optional[str] = None
-
-    included: Optional[int] = None
-
-    prepaid_only: Optional[bool] = None
-
-    customize: OptionalNullable[SetupPaymentUpsertLicenseCustomize] = UNSET
-
-    metadata: Optional[Dict[str, Any]] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            ["version_slug", "included", "prepaid_only", "customize", "metadata"]
-        )
-        nullable_fields = set(["customize"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentRemoveLicenseTypedDict(TypedDict):
-    license_plan_id: str
-
-
-class SetupPaymentRemoveLicense(BaseModel):
-    license_plan_id: str
-
-
-class SetupPaymentCustomizeTypedDict(TypedDict):
-    r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
-
-    price: NotRequired[Nullable[SetupPaymentBasePriceTypedDict]]
-    r"""Override the base price of the plan. Pass null to remove the base price."""
-    items: NotRequired[List[SetupPaymentItemPlanItemTypedDict]]
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items."""
-    add_items: NotRequired[List[SetupPaymentAddItemPlanItemTypedDict]]
-    r"""Items to add to the plan."""
-    remove_items: NotRequired[List[SetupPaymentPlanItemFilterTypedDict]]
-    r"""Filters selecting items to remove from the plan."""
-    free_trial: NotRequired[Nullable[SetupPaymentCustomizeFreeTrialParamsTypedDict]]
-    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
-    billing_controls: NotRequired[SetupPaymentBillingControlsTypedDict]
-    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
-    upsert_licenses: NotRequired[List[SetupPaymentUpsertLicenseTypedDict]]
-    r"""License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance."""
-    remove_licenses: NotRequired[List[SetupPaymentRemoveLicenseTypedDict]]
-    r"""License links to drop, keyed by license_plan_id. Parallel to remove_items."""
-
-
-class SetupPaymentCustomize(BaseModel):
-    r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
-
-    price: OptionalNullable[SetupPaymentBasePrice] = UNSET
-    r"""Override the base price of the plan. Pass null to remove the base price."""
-
-    items: Optional[List[SetupPaymentItemPlanItem]] = None
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items."""
-
-    add_items: Optional[List[SetupPaymentAddItemPlanItem]] = None
-    r"""Items to add to the plan."""
-
-    remove_items: Optional[List[SetupPaymentPlanItemFilter]] = None
-    r"""Filters selecting items to remove from the plan."""
-
-    free_trial: OptionalNullable[SetupPaymentCustomizeFreeTrialParams] = UNSET
-    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
-
-    billing_controls: Optional[SetupPaymentBillingControls] = None
-    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
-
-    upsert_licenses: Optional[List[SetupPaymentUpsertLicense]] = None
-    r"""License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance."""
-
-    remove_licenses: Optional[List[SetupPaymentRemoveLicense]] = None
-    r"""License links to drop, keyed by license_plan_id. Parallel to remove_items."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "price",
-                "items",
-                "add_items",
-                "remove_items",
-                "free_trial",
-                "billing_controls",
-                "upsert_licenses",
-                "remove_licenses",
-            ]
-        )
-        nullable_fields = set(["price", "free_trial"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentProrationBehavior = Literal[
-    "prorate_immediately",
-    "none",
-]
-r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
-
-
-class SetupPaymentAttachDiscountTypedDict(TypedDict):
-    r"""A discount to apply. Can be either a reward ID or a promotion code."""
-
-    reward_id: NotRequired[str]
-    r"""The ID of the reward to apply as a discount."""
-    promotion_code: NotRequired[str]
-    r"""The promotion code to apply as a discount."""
-
-
-class SetupPaymentAttachDiscount(BaseModel):
-    r"""A discount to apply. Can be either a reward ID or a promotion code."""
-
-    reward_id: Optional[str] = None
-    r"""The ID of the reward to apply as a discount."""
-
-    promotion_code: Optional[str] = None
-    r"""The promotion code to apply as a discount."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["reward_id", "promotion_code"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-SetupPaymentBillingCycleAnchorTypedDict = TypeAliasType(
-    "SetupPaymentBillingCycleAnchorTypedDict", Union[str, int]
-)
-r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
-
-
-SetupPaymentBillingCycleAnchor = TypeAliasType(
-    "SetupPaymentBillingCycleAnchor", Union[str, int]
-)
-r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
-
-
-class SetupPaymentCustomLineItemTypedDict(TypedDict):
-    amount: float
-    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
-    description: str
-    r"""Description for the line item."""
-
-
-class SetupPaymentCustomLineItem(BaseModel):
-    amount: float
-    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
-
-    description: str
-    r"""Description for the line item."""
-
-
-class SetupPaymentCarryOverBalancesTypedDict(TypedDict):
-    r"""Whether to carry over balances from the previous plan."""
-
-    enabled: bool
-    r"""Whether to carry over balances from the previous plan."""
-    feature_ids: NotRequired[List[str]]
-    r"""The IDs of the features to carry over balances from. If left undefined, all features will be carried over."""
-
-
-class SetupPaymentCarryOverBalances(BaseModel):
-    r"""Whether to carry over balances from the previous plan."""
-
-    enabled: bool
-    r"""Whether to carry over balances from the previous plan."""
-
-    feature_ids: Optional[List[str]] = None
-    r"""The IDs of the features to carry over balances from. If left undefined, all features will be carried over."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["feature_ids"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentCarryOverUsagesTypedDict(TypedDict):
-    r"""Whether to carry over usages from the previous plan."""
-
-    enabled: bool
-    r"""Whether to carry over usages from the previous plan."""
-    feature_ids: NotRequired[List[str]]
-    r"""The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over."""
-
-
-class SetupPaymentCarryOverUsages(BaseModel):
-    r"""Whether to carry over usages from the previous plan."""
-
-    enabled: bool
-    r"""Whether to carry over usages from the previous plan."""
-
-    feature_ids: Optional[List[str]] = None
-    r"""The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["feature_ids"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentLicenseQuantityTypedDict(TypedDict):
-    license_plan_id: str
-    r"""The license plan to set seat quantity for."""
-    quantity: int
-    r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
-
-
-class SetupPaymentLicenseQuantity(BaseModel):
-    license_plan_id: str
-    r"""The license plan to set seat quantity for."""
-
-    quantity: int
-    r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
-
-
-class SetupPaymentParamsTypedDict(TypedDict):
-    customer_id: str
-    r"""The ID of the customer to attach the plan to."""
-    entity_id: NotRequired[str]
-    r"""The ID of the entity to attach the plan to."""
-    plan_id: NotRequired[str]
-    r"""If specified, the plan will be attached to the customer after setup."""
-    feature_quantities: NotRequired[List[SetupPaymentFeatureQuantityTypedDict]]
-    r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
-    version: NotRequired[float]
-    r"""The version of the plan to attach."""
-    free_trial: NotRequired[Nullable[SetupPaymentFreeTrialParamsTypedDict]]
-    r"""Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given."""
-    customize: NotRequired[SetupPaymentCustomizeTypedDict]
-    r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
-    proration_behavior: NotRequired[SetupPaymentProrationBehavior]
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
-    subscription_id: NotRequired[str]
-    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
-    discounts: NotRequired[List[SetupPaymentAttachDiscountTypedDict]]
-    r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
-    success_url: NotRequired[str]
-    r"""URL to redirect to after successful checkout."""
-    billing_cycle_anchor: NotRequired[SetupPaymentBillingCycleAnchorTypedDict]
-    r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
-    starts_at: NotRequired[int]
-    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
-    ends_at: NotRequired[int]
-    r"""Unix timestamp in milliseconds for when the attached plan should end."""
-    checkout_session_params: NotRequired[Dict[str, Any]]
-    r"""Additional parameters to pass into the creation of the Stripe checkout session."""
-    custom_line_items: NotRequired[List[SetupPaymentCustomLineItemTypedDict]]
-    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
-    processor_subscription_id: NotRequired[str]
-    r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
-    carry_over_balances: NotRequired[SetupPaymentCarryOverBalancesTypedDict]
-    r"""Whether to carry over balances from the previous plan."""
-    carry_over_usages: NotRequired[SetupPaymentCarryOverUsagesTypedDict]
-    r"""Whether to carry over usages from the previous plan."""
-    license_quantities: NotRequired[List[SetupPaymentLicenseQuantityTypedDict]]
-    r"""Seat quantities for the plan's licenses, keyed by license plan."""
-    metadata: NotRequired[Dict[str, str]]
-    r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
-    no_billing_changes: NotRequired[bool]
-    r"""If true, skips any billing changes for the attach operation."""
-    enable_plan_immediately: NotRequired[bool]
-    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case."""
-    tax_rate_id: NotRequired[str]
-    r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
-    currency: NotRequired[str]
-    r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
-    remove_plan_ids: NotRequired[List[str]]
-    r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
-
-
-class SetupPaymentParams(BaseModel):
-    customer_id: str
-    r"""The ID of the customer to attach the plan to."""
-
-    entity_id: Optional[str] = None
-    r"""The ID of the entity to attach the plan to."""
-
-    plan_id: Optional[str] = None
-    r"""If specified, the plan will be attached to the customer after setup."""
-
-    feature_quantities: Optional[List[SetupPaymentFeatureQuantity]] = None
-    r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
-
-    version: Optional[float] = None
-    r"""The version of the plan to attach."""
-
-    free_trial: OptionalNullable[SetupPaymentFreeTrialParams] = UNSET
-    r"""Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given."""
-
-    customize: Optional[SetupPaymentCustomize] = None
-    r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
-
-    proration_behavior: Optional[SetupPaymentProrationBehavior] = None
-    r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
-
-    subscription_id: Optional[str] = None
-    r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
-
-    discounts: Optional[List[SetupPaymentAttachDiscount]] = None
-    r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
-
-    success_url: Optional[str] = None
-    r"""URL to redirect to after successful checkout."""
-
-    billing_cycle_anchor: Optional[SetupPaymentBillingCycleAnchor] = None
-    r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
-
-    starts_at: Optional[int] = None
-    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
-
-    ends_at: Optional[int] = None
-    r"""Unix timestamp in milliseconds for when the attached plan should end."""
-
-    checkout_session_params: Optional[Dict[str, Any]] = None
-    r"""Additional parameters to pass into the creation of the Stripe checkout session."""
-
-    custom_line_items: Optional[List[SetupPaymentCustomLineItem]] = None
-    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
-
-    processor_subscription_id: Optional[str] = None
-    r"""The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one."""
-
-    carry_over_balances: Optional[SetupPaymentCarryOverBalances] = None
-    r"""Whether to carry over balances from the previous plan."""
-
-    carry_over_usages: Optional[SetupPaymentCarryOverUsages] = None
-    r"""Whether to carry over usages from the previous plan."""
-
-    license_quantities: Optional[List[SetupPaymentLicenseQuantity]] = None
-    r"""Seat quantities for the plan's licenses, keyed by license plan."""
-
-    metadata: Optional[Dict[str, str]] = None
-    r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
-
-    no_billing_changes: Optional[bool] = None
-    r"""If true, skips any billing changes for the attach operation."""
-
-    enable_plan_immediately: Optional[bool] = None
-    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case."""
-
-    tax_rate_id: Optional[str] = None
-    r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
-
-    currency: Optional[str] = None
-    r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
-
-    remove_plan_ids: Optional[List[str]] = None
-    r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "entity_id",
-                "plan_id",
-                "feature_quantities",
-                "version",
-                "free_trial",
-                "customize",
-                "proration_behavior",
-                "subscription_id",
-                "discounts",
-                "success_url",
-                "billing_cycle_anchor",
-                "starts_at",
-                "ends_at",
-                "checkout_session_params",
-                "custom_line_items",
-                "processor_subscription_id",
-                "carry_over_balances",
-                "carry_over_usages",
-                "license_quantities",
-                "metadata",
-                "no_billing_changes",
-                "enable_plan_immediately",
-                "tax_rate_id",
-                "currency",
-                "remove_plan_ids",
-            ]
-        )
-        nullable_fields = set(["free_trial"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
-
-
-class SetupPaymentResponseTypedDict(TypedDict):
-    r"""OK"""
-
-    customer_id: str
-    r"""The ID of the customer"""
-    url: str
-    r"""URL to redirect the customer to setup their payment."""
-    entity_id: NotRequired[str]
-    r"""The ID of the entity the plan (if specified) will be attached to after setup."""
-
-
-class SetupPaymentResponse(BaseModel):
-    r"""OK"""
-
-    customer_id: str
-    r"""The ID of the customer"""
-
-    url: str
-    r"""URL to redirect the customer to setup their payment."""
-
-    entity_id: Optional[str] = None
-    r"""The ID of the entity the plan (if specified) will be attached to after setup."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["entity_id"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
 
 
 try:
-    SetupPaymentDimensionsItem3.model_rebuild()
+    UpdatePlanDimensionsItemRequestBody3.model_rebuild()
 except NameError:
     pass
 try:
-    SetupPaymentDimensionsItem1.model_rebuild()
+    UpdatePlanDimensionsItemRequestBody1.model_rebuild()
 except NameError:
     pass
 try:
-    SetupPaymentCreditSchemaItem1.model_rebuild()
+    UpdatePlanCreditSchemaItemRequestBody1.model_rebuild()
 except NameError:
     pass
 try:
-    SetupPaymentDimensionsAddItem3.model_rebuild()
+    UpdatePlanDimensionsLicense3.model_rebuild()
 except NameError:
     pass
 try:
-    SetupPaymentDimensionsAddItem1.model_rebuild()
+    UpdatePlanDimensionsLicense1.model_rebuild()
 except NameError:
     pass
 try:
-    SetupPaymentCreditSchemaAddItem1.model_rebuild()
+    UpdatePlanCreditSchemaLicense1.model_rebuild()
 except NameError:
     pass
 try:
-    SetupPaymentUsageLimit.model_rebuild()
+    UpdatePlanUsageLimitRequestBody.model_rebuild()
 except NameError:
     pass
 try:
-    SetupPaymentUsageAlert.model_rebuild()
+    UpdatePlanUsageAlertRequestBody.model_rebuild()
 except NameError:
     pass
 try:
-    SetupPaymentDimensionsUpsertLicense3.model_rebuild()
-except NameError:
-    pass
-try:
-    SetupPaymentDimensionsUpsertLicense1.model_rebuild()
-except NameError:
-    pass
-try:
-    SetupPaymentCreditSchemaUpsertLicense1.model_rebuild()
+    UpdatePlanDimensionsVariant3.model_rebuild()
 except NameError:
     pass

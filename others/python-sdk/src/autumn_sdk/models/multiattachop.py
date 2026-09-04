@@ -181,28 +181,36 @@ class MultiAttachItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-MultiAttachToTypedDict = TypeAliasType("MultiAttachToTypedDict", Union[float, str])
+MultiAttachPriceToTypedDict = TypeAliasType(
+    "MultiAttachPriceToTypedDict", Union[float, str]
+)
 
 
-MultiAttachTo = TypeAliasType("MultiAttachTo", Union[float, str])
+MultiAttachPriceTo = TypeAliasType("MultiAttachPriceTo", Union[float, str])
 
 
 class MultiAttachTierAdditionalCurrencyTypedDict(TypedDict):
-    currency: NotRequired[Any]
-    amount: NotRequired[Any]
-    flat_amount: NotRequired[Any]
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
 
 
 class MultiAttachTierAdditionalCurrency(BaseModel):
-    currency: Optional[Any] = None
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
-    amount: Optional[Any] = None
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
 
-    flat_amount: Optional[Any] = None
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["currency", "amount", "flat_amount"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
@@ -217,16 +225,16 @@ class MultiAttachTierAdditionalCurrency(BaseModel):
         return m
 
 
-class MultiAttachTierTypedDict(TypedDict):
-    to: MultiAttachToTypedDict
+class MultiAttachPriceTierTypedDict(TypedDict):
+    to: MultiAttachPriceToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[List[MultiAttachTierAdditionalCurrencyTypedDict]]
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class MultiAttachTier(BaseModel):
-    to: MultiAttachTo
+class MultiAttachPriceTier(BaseModel):
+    to: MultiAttachPriceTo
 
     amount: Optional[float] = None
 
@@ -287,7 +295,7 @@ class MultiAttachPriceTypedDict(TypedDict):
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     additional_currencies: NotRequired[List[MultiAttachItemAdditionalCurrencyTypedDict]]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[MultiAttachTierTypedDict]]
+    tiers: NotRequired[List[MultiAttachPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[MultiAttachTierBehavior]
     interval_count: NotRequired[float]
@@ -313,7 +321,7 @@ class MultiAttachPrice(BaseModel):
     additional_currencies: Optional[List[MultiAttachItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[MultiAttachTier]] = None
+    tiers: Optional[List[MultiAttachPriceTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[MultiAttachTierBehavior] = None
@@ -453,28 +461,38 @@ class MultiAttachRollover(BaseModel):
         return m
 
 
-class MultiAttachCreditSchema2TypedDict(TypedDict):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
+MultiAttachDimensionsMatch4TypedDict = TypeAliasType(
+    "MultiAttachDimensionsMatch4TypedDict", Union[str, float, bool]
+)
+
+
+MultiAttachDimensionsMatch4 = TypeAliasType(
+    "MultiAttachDimensionsMatch4", Union[str, float, bool]
+)
+
+
+class MultiAttachDimensions4TypedDict(TypedDict):
+    match: Dict[str, MultiAttachDimensionsMatch4TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
-    r"""Credits consumed per billing-unit group."""
-    billing_units: NotRequired[float]
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class MultiAttachCreditSchema2(BaseModel):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
+class MultiAttachDimensions4(BaseModel):
+    match: Dict[str, MultiAttachDimensionsMatch4]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
-    r"""Credits consumed per billing-unit group."""
+    r"""Credits consumed per billing-unit group when this dimension matches."""
 
-    billing_units: Optional[float] = None
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["priority"])
         serialized = handler(self)
         m = {}
 
@@ -489,23 +507,63 @@ class MultiAttachCreditSchema2(BaseModel):
         return m
 
 
-class MultiAttachCreditSchema1TypedDict(TypedDict):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
-    tiers: List[Any]
-    billing_units: NotRequired[float]
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+MultiAttachDimensionsMatch3TypedDict = TypeAliasType(
+    "MultiAttachDimensionsMatch3TypedDict", Union[str, float, bool]
+)
+
+
+MultiAttachDimensionsMatch3 = TypeAliasType(
+    "MultiAttachDimensionsMatch3", Union[str, float, bool]
+)
+
+
+MultiAttachDimensionsToEnum2 = Literal["inf",]
+
+
+MultiAttachDimensionsToUnion2TypedDict = TypeAliasType(
+    "MultiAttachDimensionsToUnion2TypedDict", Union[float, MultiAttachDimensionsToEnum2]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+MultiAttachDimensionsToUnion2 = TypeAliasType(
+    "MultiAttachDimensionsToUnion2", Union[float, MultiAttachDimensionsToEnum2]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class MultiAttachDimensionsTier2TypedDict(TypedDict):
+    to: MultiAttachDimensionsToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class MultiAttachDimensionsTier2(BaseModel):
+    to: MultiAttachDimensionsToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class MultiAttachDimensions3TypedDict(TypedDict):
+    match: Dict[str, MultiAttachDimensionsMatch3TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[MultiAttachDimensionsTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class MultiAttachCreditSchema1(BaseModel):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
+class MultiAttachDimensions3(BaseModel):
+    match: Dict[str, MultiAttachDimensionsMatch3]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[Any]
+    tiers: List[MultiAttachDimensionsTier2]
 
-    billing_units: Optional[float] = None
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
     tier_behavior: Annotated[
         Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
@@ -514,7 +572,373 @@ class MultiAttachCreditSchema1(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+MultiAttachDimensionsUnion2TypedDict = TypeAliasType(
+    "MultiAttachDimensionsUnion2TypedDict",
+    Union[MultiAttachDimensions4TypedDict, MultiAttachDimensions3TypedDict],
+)
+
+
+MultiAttachDimensionsUnion2 = TypeAliasType(
+    "MultiAttachDimensionsUnion2", Union[MultiAttachDimensions4, MultiAttachDimensions3]
+)
+
+
+MultiAttachMultipliersMatch2TypedDict = TypeAliasType(
+    "MultiAttachMultipliersMatch2TypedDict", Union[str, float, bool]
+)
+
+
+MultiAttachMultipliersMatch2 = TypeAliasType(
+    "MultiAttachMultipliersMatch2", Union[str, float, bool]
+)
+
+
+class MultiAttachMultipliers2TypedDict(TypedDict):
+    match: Dict[str, MultiAttachMultipliersMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class MultiAttachMultipliers2(BaseModel):
+    match: Dict[str, MultiAttachMultipliersMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class MultiAttachCreditSchema2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, MultiAttachDimensionsUnion2TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, MultiAttachMultipliers2TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+
+class MultiAttachCreditSchema2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, MultiAttachDimensionsUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, MultiAttachMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+MultiAttachDimensionsMatch2TypedDict = TypeAliasType(
+    "MultiAttachDimensionsMatch2TypedDict", Union[str, float, bool]
+)
+
+
+MultiAttachDimensionsMatch2 = TypeAliasType(
+    "MultiAttachDimensionsMatch2", Union[str, float, bool]
+)
+
+
+class MultiAttachDimensions2TypedDict(TypedDict):
+    match: Dict[str, MultiAttachDimensionsMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class MultiAttachDimensions2(BaseModel):
+    match: Dict[str, MultiAttachDimensionsMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+MultiAttachDimensionsMatch1TypedDict = TypeAliasType(
+    "MultiAttachDimensionsMatch1TypedDict", Union[str, float, bool]
+)
+
+
+MultiAttachDimensionsMatch1 = TypeAliasType(
+    "MultiAttachDimensionsMatch1", Union[str, float, bool]
+)
+
+
+MultiAttachDimensionsToEnum1 = Literal["inf",]
+
+
+MultiAttachDimensionsToUnion1TypedDict = TypeAliasType(
+    "MultiAttachDimensionsToUnion1TypedDict", Union[float, MultiAttachDimensionsToEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+MultiAttachDimensionsToUnion1 = TypeAliasType(
+    "MultiAttachDimensionsToUnion1", Union[float, MultiAttachDimensionsToEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class MultiAttachDimensionsTier1TypedDict(TypedDict):
+    to: MultiAttachDimensionsToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class MultiAttachDimensionsTier1(BaseModel):
+    to: MultiAttachDimensionsToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class MultiAttachDimensions1TypedDict(TypedDict):
+    match: Dict[str, MultiAttachDimensionsMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[MultiAttachDimensionsTier1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class MultiAttachDimensions1(BaseModel):
+    match: Dict[str, MultiAttachDimensionsMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[MultiAttachDimensionsTier1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+MultiAttachDimensionsUnion1TypedDict = TypeAliasType(
+    "MultiAttachDimensionsUnion1TypedDict",
+    Union[MultiAttachDimensions2TypedDict, MultiAttachDimensions1TypedDict],
+)
+
+
+MultiAttachDimensionsUnion1 = TypeAliasType(
+    "MultiAttachDimensionsUnion1", Union[MultiAttachDimensions2, MultiAttachDimensions1]
+)
+
+
+MultiAttachMultipliersMatch1TypedDict = TypeAliasType(
+    "MultiAttachMultipliersMatch1TypedDict", Union[str, float, bool]
+)
+
+
+MultiAttachMultipliersMatch1 = TypeAliasType(
+    "MultiAttachMultipliersMatch1", Union[str, float, bool]
+)
+
+
+class MultiAttachMultipliers1TypedDict(TypedDict):
+    match: Dict[str, MultiAttachMultipliersMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class MultiAttachMultipliers1(BaseModel):
+    match: Dict[str, MultiAttachMultipliersMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+MultiAttachToEnum = Literal["inf",]
+
+
+MultiAttachFeatureOverrideToUnionTypedDict = TypeAliasType(
+    "MultiAttachFeatureOverrideToUnionTypedDict", Union[float, MultiAttachToEnum]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+MultiAttachFeatureOverrideToUnion = TypeAliasType(
+    "MultiAttachFeatureOverrideToUnion", Union[float, MultiAttachToEnum]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class MultiAttachFeatureOverrideTierTypedDict(TypedDict):
+    to: MultiAttachFeatureOverrideToUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class MultiAttachFeatureOverrideTier(BaseModel):
+    to: MultiAttachFeatureOverrideToUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class MultiAttachCreditSchema1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[MultiAttachFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, MultiAttachDimensionsUnion1TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, MultiAttachMultipliers1TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+    tier_behavior: Literal["graduated"]
+
+
+class MultiAttachCreditSchema1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[MultiAttachFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, MultiAttachDimensionsUnion1]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, MultiAttachMultipliers1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
         serialized = handler(self)
         m = {}
 
@@ -1607,6 +2031,14 @@ class MultiAttachResponse(BaseModel):
         return m
 
 
+try:
+    MultiAttachDimensions3.model_rebuild()
+except NameError:
+    pass
+try:
+    MultiAttachDimensions1.model_rebuild()
+except NameError:
+    pass
 try:
     MultiAttachCreditSchema1.model_rebuild()
 except NameError:
