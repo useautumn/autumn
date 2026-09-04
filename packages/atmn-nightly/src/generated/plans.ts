@@ -4,12 +4,10 @@
 export type Plan = {
 	/** The ID of the plan to create or update. */
 	planId: string;
-	/** Rename the plan to this id. Blocked when any customer or reward program references it. */
-	newPlanId?: string;
 	/** Address an existing row by its stable id. Omit when creating — the server generates one. A differing plan_id alongside it is a rename. */
 	internalId?: string;
 	/** Display name of the plan. Required when creating. */
-	name?: string;
+	name: string;
 	/** Optional description of the plan. */
 	description?: string | null;
 	/** Group identifier for mutually exclusive plans. */
@@ -197,6 +195,7 @@ export type Plan = {
 				  }
 			>;
 		};
+		/** @deprecated Per-entity items are deprecated but existing catalogs carry them, so a config must keep round-tripping the field. */
 		entityFeatureId?: string;
 	}>;
 	/** Free trial. Omit to leave unchanged; null removes it. */
@@ -300,8 +299,6 @@ export type Plan = {
 	metadata?: Record<string, unknown>;
 	/** Target this version row by slug. At most one of `version` / `version_slug`; omit both to target the active row. */
 	versionSlug?: string;
-	/** Set or rename this row's version slug. On `new_version`, stamps the minted row (default `v{n}`). */
-	newVersionSlug?: string;
 	/** When false, skip Stripe product/price creation on create. */
 	createInStripe?: boolean;
 	/** Declared overlays on variants of this plan. Omit to leave them unchanged. Follow is `propagate.variants`, not presence here. */
@@ -316,8 +313,6 @@ export type Plan = {
 		versionSlug?: string;
 		/** Display name when creating the variant if it does not exist. */
 		name?: string;
-		/** Rename this variant to this id. Same execute path as a top-level new_plan_id. */
-		newPlanId?: string;
 		/** Archive or unarchive this variant. Omit to leave archived state unchanged. */
 		archived?: boolean;
 		/** Slug for the row this variant mints. Omit to inherit the base's `new_version_slug`, then `v{n}`. Ignored when this entry resolves to an existing row. */

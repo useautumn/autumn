@@ -1,5 +1,5 @@
 import { schemaPaths } from "../fuzz/schemaPaths";
-import type { Overlay } from "../overlay/overlay";
+import { deprecatedFieldsOf, type Overlay } from "../overlay/overlay";
 import {
 	catalogUpdateSchema,
 	collectionItemSchema,
@@ -65,6 +65,9 @@ export const emitEmitModule = ({
 		if (meta.historyKey !== undefined)
 			lines.push(`\t\thistoryKey: ${JSON.stringify(meta.historyKey)},`);
 		lines.push(`\t\tpull: ${meta.pull},`);
+		lines.push(
+			`\t\tdeprecated: ${JSON.stringify(deprecatedFieldsOf({ overlay, collection: name }))},`,
+		);
 		lines.push("\t},");
 	}
 	lines.push("};");

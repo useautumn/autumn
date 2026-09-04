@@ -20,6 +20,9 @@ export type FieldOverlay = {
 	rename?: string;
 	/** Required in the config even though the API accepts it as optional. */
 	required?: true;
+	/** Kept for existing catalogs only: struck through in editors, and push
+	 * warns when a config still states it. */
+	deprecated?: true;
 	/** Why — this is documentation, and it is not optional. */
 	reason: string;
 };
@@ -45,6 +48,31 @@ export const OVERLAY: Overlay = {
 				hidden: true,
 				reason:
 					"A link always follows the child's active version (wire/07_licenses); pinning it from config is a change the server reports forever.",
+			},
+			name: {
+				required: true,
+				reason:
+					"A fixture states the whole row (PUT), so a plan always has its name.",
+			},
+			new_plan_id: {
+				hidden: true,
+				reason:
+					"A push-time input. A changed planId beside internalId is the rename.",
+			},
+			new_version_slug: {
+				hidden: true,
+				reason:
+					"A push-time input. A changed versionSlug beside internalId is the rename.",
+			},
+			"variants.new_plan_id": {
+				hidden: true,
+				reason:
+					"A push-time input. A changed variantPlanId beside internalId is the rename.",
+			},
+			"items.entity_feature_id": {
+				deprecated: true,
+				reason:
+					"Per-entity items are deprecated but existing catalogs carry them, so a config must keep round-tripping the field.",
 			},
 			versioning: {
 				hidden: true,
@@ -77,10 +105,15 @@ export const OVERLAY: Overlay = {
 				reason:
 					"Admin-only for now: invoice credits are money, and a config must not mint them.",
 			},
-			event_names: {
-				hidden: true,
+			name: {
+				required: true,
 				reason:
-					"Deprecated on the server (plans/atmn-v3/03_prereqs). The CLI must not teach it to anyone new.",
+					"A fixture states the whole row (PUT), so a feature always has its name.",
+			},
+			event_names: {
+				deprecated: true,
+				reason:
+					"Deprecated on the server, but existing catalogs carry it, so a config must keep round-tripping the field.",
 			},
 		},
 	},
@@ -118,6 +151,29 @@ export const fixtureNameFor = ({
 	path: FieldPath;
 	recased: string;
 }): string => fieldOverlay({ overlay, collection, path })?.rename ?? recased;
+
+export const isDeprecatedByOverlay = ({
+	overlay,
+	collection,
+	path,
+}: {
+	overlay: Overlay;
+	collection: string;
+	path: FieldPath;
+}): boolean => fieldOverlay({ overlay, collection, path })?.deprecated === true;
+
+/** Every deprecated field of a collection, wire-named and item-rooted, with its reason. */
+export const deprecatedFieldsOf = ({
+	overlay,
+	collection,
+}: {
+	overlay: Overlay;
+	collection: string;
+}): { path: FieldPath; reason: string }[] =>
+	Object.entries(overlay.collections[collection] ?? {}).flatMap(
+		([path, field]) =>
+			field.deprecated === true ? [{ path, reason: field.reason }] : [],
+	);
 
 export const isRequiredByOverlay = ({
 	overlay,

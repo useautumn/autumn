@@ -12,6 +12,10 @@ import {
 	backfillInternalIds,
 	identityRowsFromApplied,
 } from "./push/backfillInternalIds";
+import {
+	deprecatedUsesIn,
+	renderDeprecatedUses,
+} from "./push/deprecatedFields";
 
 export type PushResult = {
 	configPath: string;
@@ -52,6 +56,12 @@ export const runPush = async ({
 	loadEnvFiles({ dirs });
 
 	const { path: configPath, wire } = await loadConfig({ dirs });
+
+	const deprecated = deprecatedUsesIn({
+		wire: wire as Record<string, unknown>,
+	});
+	if (deprecated.length > 0)
+		write(`${renderDeprecatedUses({ uses: deprecated })}\n\n`);
 
 	const preview = (await client.previewUpdate(
 		wire as Record<string, unknown>,

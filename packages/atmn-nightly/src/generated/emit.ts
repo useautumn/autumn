@@ -17,6 +17,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"modelMarkups",
 			"defaultMarkup",
 			"providerMarkups",
+			"eventNames",
 			"featureId",
 			"internalId",
 			"archived",
@@ -37,6 +38,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"display",
 			"display.plural",
 			"display.singular",
+			"eventNames",
 			"featureId",
 			"internalId",
 			"modelMarkups",
@@ -53,6 +55,13 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"type",
 		],
 		pull: true,
+		deprecated: [
+			{
+				path: "event_names",
+				reason:
+					"Deprecated on the server, but existing catalogs carry it, so a config must keep round-tripping the field.",
+			},
+		],
 	},
 	plans: {
 		builder: "plan",
@@ -60,7 +69,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		responseIdField: "id",
 		keys: [
 			"planId",
-			"newPlanId",
 			"internalId",
 			"name",
 			"description",
@@ -78,7 +86,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"billingControls",
 			"metadata",
 			"versionSlug",
-			"newVersionSlug",
 			"createInStripe",
 			"variants",
 			"licenses",
@@ -241,8 +248,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"licenses.prepaidOnly",
 			"metadata",
 			"name",
-			"newPlanId",
-			"newVersionSlug",
 			"planId",
 			"price",
 			"price.additionalCurrencies",
@@ -426,7 +431,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.upsertLicenses.versionSlug",
 			"variants.internalId",
 			"variants.name",
-			"variants.newPlanId",
 			"variants.newVersionSlug",
 			"variants.processors",
 			"variants.processors.revenuecat",
@@ -445,5 +449,12 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		],
 		historyKey: "planVersions",
 		pull: true,
+		deprecated: [
+			{
+				path: "items.entity_feature_id",
+				reason:
+					"Per-entity items are deprecated but existing catalogs carry them, so a config must keep round-tripping the field.",
+			},
+		],
 	},
 };
