@@ -72,7 +72,7 @@ export type PreviewUpdateCatalogResponse = {
 	plans: Array<{
 		planId: string;
 		/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-		internalId: string | null;
+		internalId?: string | null;
 		/** Present only when this row's public plan id changes. */
 		newPlanId?: string;
 		version: number;
@@ -145,27 +145,18 @@ export type PreviewUpdateCatalogResponse = {
 			plan?: unknown;
 			/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 			previousAttributes: {
-				/** Unique identifier for the plan. */
-				id?: string;
-				/** Display name of the plan. */
-				name?: string;
-				/** Optional description of the plan. */
-				description?: string | null;
-				/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-				group?: string | null;
-				/** Whether this is an add-on plan that can be attached alongside a main plan. */
-				addOn?: boolean;
-				/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-				autoEnable?: boolean;
-				/** Miscellaneous plan-level configuration flags. */
+				id?: string | null;
+				name?: string | null;
+				description?: string | null | null;
+				group?: string | null | null;
+				addOn?: boolean | null;
+				autoEnable?: boolean | null;
 				config?: {
 					/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 					ignorePastDue?: boolean;
-				};
-				/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-				archived?: boolean;
-				/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-				metadata?: Record<string, unknown>;
+				} | null;
+				archived?: boolean | null;
+				metadata?: Record<string, unknown> | null;
 				/** Previous payment processors when they changed. Null when the plan had none. */
 				processors?: {
 					stripe?: {
@@ -315,7 +306,7 @@ export type PreviewUpdateCatalogResponse = {
 							priceId: string;
 						} | null;
 					};
-				} | null;
+				} | null | null;
 				/** The plan's price after the change. */
 				current: {
 					/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -1013,6 +1004,8 @@ export type PreviewUpdateCatalogResponse = {
 						included?: number;
 					}>;
 				};
+				/** Arbitrary key-value metadata defined by you on this link. */
+				metadata?: Record<string, unknown>;
 				/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 				plan?: unknown;
 				/** created = new planLicense; updated = row or effective content changed; removed = dropped. */
@@ -1034,27 +1027,18 @@ export type PreviewUpdateCatalogResponse = {
 					plan?: unknown;
 					/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 					previousAttributes: {
-						/** Unique identifier for the plan. */
-						id?: string;
-						/** Display name of the plan. */
-						name?: string;
-						/** Optional description of the plan. */
-						description?: string | null;
-						/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-						group?: string | null;
-						/** Whether this is an add-on plan that can be attached alongside a main plan. */
-						addOn?: boolean;
-						/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-						autoEnable?: boolean;
-						/** Miscellaneous plan-level configuration flags. */
+						id?: string | null;
+						name?: string | null;
+						description?: string | null | null;
+						group?: string | null | null;
+						addOn?: boolean | null;
+						autoEnable?: boolean | null;
 						config?: {
 							/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 							ignorePastDue?: boolean;
-						};
-						/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-						archived?: boolean;
-						/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-						metadata?: Record<string, unknown>;
+						} | null;
+						archived?: boolean | null;
+						metadata?: Record<string, unknown> | null;
 						/** Previous payment processors when they changed. Null when the plan had none. */
 						processors?: {
 							stripe?: {
@@ -1156,7 +1140,7 @@ export type PreviewUpdateCatalogResponse = {
 									priceId?: unknown;
 								} | null;
 							};
-						} | null;
+						} | null | null;
 						/** The plan's price after the change. */
 						current: {
 							/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -1432,7 +1416,7 @@ export type PreviewUpdateCatalogResponse = {
 		siblingVersions?: Array<{
 			planId: string;
 			/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-			internalId: string | null;
+			internalId?: string | null;
 			/** Present only when this row's public plan id changes. */
 			newPlanId?: string;
 			version: number;
@@ -1500,27 +1484,18 @@ export type PreviewUpdateCatalogResponse = {
 				plan?: unknown;
 				/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 				previousAttributes: {
-					/** Unique identifier for the plan. */
-					id?: string;
-					/** Display name of the plan. */
-					name?: string;
-					/** Optional description of the plan. */
-					description?: string | null;
-					/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-					group?: string | null;
-					/** Whether this is an add-on plan that can be attached alongside a main plan. */
-					addOn?: boolean;
-					/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-					autoEnable?: boolean;
-					/** Miscellaneous plan-level configuration flags. */
+					id?: string | null;
+					name?: string | null;
+					description?: string | null | null;
+					group?: string | null | null;
+					addOn?: boolean | null;
+					autoEnable?: boolean | null;
 					config?: {
 						/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 						ignorePastDue?: boolean;
-					};
-					/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-					archived?: boolean;
-					/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-					metadata?: Record<string, unknown>;
+					} | null;
+					archived?: boolean | null;
+					metadata?: Record<string, unknown> | null;
 					/** Previous payment processors when they changed. Null when the plan had none. */
 					processors?: {
 						stripe?: {
@@ -1662,7 +1637,7 @@ export type PreviewUpdateCatalogResponse = {
 								priceId: string;
 							} | null;
 						};
-					} | null;
+					} | null | null;
 					/** The plan's price after the change. */
 					current: {
 						/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -2142,6 +2117,8 @@ export type PreviewUpdateCatalogResponse = {
 							included?: unknown;
 						}>;
 					};
+					/** Arbitrary key-value metadata defined by you on this link. */
+					metadata?: Record<string, unknown>;
 					/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 					plan?: unknown;
 					/** created = new planLicense; updated = row or effective content changed; removed = dropped. */
@@ -2163,26 +2140,17 @@ export type PreviewUpdateCatalogResponse = {
 						plan?: unknown;
 						/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 						previousAttributes: {
-							/** Unique identifier for the plan. */
-							id?: string;
-							/** Display name of the plan. */
-							name?: string;
-							/** Optional description of the plan. */
-							description?: string | null;
-							/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-							group?: string | null;
-							/** Whether this is an add-on plan that can be attached alongside a main plan. */
-							addOn?: boolean;
-							/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-							autoEnable?: boolean;
-							/** Miscellaneous plan-level configuration flags. */
+							id?: string | null;
+							name?: string | null;
+							description?: string | null | null;
+							group?: string | null | null;
+							addOn?: boolean | null;
+							autoEnable?: boolean | null;
 							config?: {
 								ignorePastDue?: unknown;
-							};
-							/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-							archived?: boolean;
-							/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-							metadata?: Record<string, unknown>;
+							} | null;
+							archived?: boolean | null;
+							metadata?: Record<string, unknown> | null;
 							/** Previous payment processors when they changed. Null when the plan had none. */
 							processors?: {
 								stripe?: unknown;
@@ -2216,7 +2184,7 @@ export type PreviewUpdateCatalogResponse = {
 								priceId?: unknown;
 								display?: unknown;
 								processors?: unknown;
-							} | null;
+							} | null | null;
 							/** The plan's price after the change. */
 							current: {
 								amount?: unknown;
@@ -2332,7 +2300,7 @@ export type PreviewUpdateCatalogResponse = {
 			licenseParents?: Array<{
 				planId: string;
 				/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-				internalId: string | null;
+				internalId?: string | null;
 				/** Present only when this row's public plan id changes. */
 				newPlanId?: string;
 				version: number;
@@ -2388,27 +2356,18 @@ export type PreviewUpdateCatalogResponse = {
 					plan?: unknown;
 					/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 					previousAttributes: {
-						/** Unique identifier for the plan. */
-						id?: string;
-						/** Display name of the plan. */
-						name?: string;
-						/** Optional description of the plan. */
-						description?: string | null;
-						/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-						group?: string | null;
-						/** Whether this is an add-on plan that can be attached alongside a main plan. */
-						addOn?: boolean;
-						/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-						autoEnable?: boolean;
-						/** Miscellaneous plan-level configuration flags. */
+						id?: string | null;
+						name?: string | null;
+						description?: string | null | null;
+						group?: string | null | null;
+						addOn?: boolean | null;
+						autoEnable?: boolean | null;
 						config?: {
 							/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 							ignorePastDue?: boolean;
-						};
-						/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-						archived?: boolean;
-						/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-						metadata?: Record<string, unknown>;
+						} | null;
+						archived?: boolean | null;
+						metadata?: Record<string, unknown> | null;
 						/** Previous payment processors when they changed. Null when the plan had none. */
 						processors?: {
 							stripe?: {
@@ -2471,7 +2430,7 @@ export type PreviewUpdateCatalogResponse = {
 							processors?: {
 								stripe?: unknown;
 							};
-						} | null;
+						} | null | null;
 						/** The plan's price after the change. */
 						current: {
 							/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -2646,6 +2605,8 @@ export type PreviewUpdateCatalogResponse = {
 							addItems?: unknown;
 							removeItems?: unknown;
 						};
+						/** Arbitrary key-value metadata defined by you on this link. */
+						metadata?: Record<string, unknown>;
 						/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 						plan?: unknown;
 						/** created = new planLicense; updated = row or effective content changed; removed = dropped. */
@@ -2711,7 +2672,7 @@ export type PreviewUpdateCatalogResponse = {
 				siblingVersions?: Array<{
 					planId: string;
 					/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-					internalId: string | null;
+					internalId?: string | null;
 					/** Present only when this row's public plan id changes. */
 					newPlanId?: string;
 					version: number;
@@ -2797,7 +2758,7 @@ export type PreviewUpdateCatalogResponse = {
 			variants?: Array<{
 				planId: string;
 				/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-				internalId: string | null;
+				internalId?: string | null;
 				/** Present only when this row's public plan id changes. */
 				newPlanId?: string;
 				version: number;
@@ -2853,27 +2814,18 @@ export type PreviewUpdateCatalogResponse = {
 					plan?: unknown;
 					/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 					previousAttributes: {
-						/** Unique identifier for the plan. */
-						id?: string;
-						/** Display name of the plan. */
-						name?: string;
-						/** Optional description of the plan. */
-						description?: string | null;
-						/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-						group?: string | null;
-						/** Whether this is an add-on plan that can be attached alongside a main plan. */
-						addOn?: boolean;
-						/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-						autoEnable?: boolean;
-						/** Miscellaneous plan-level configuration flags. */
+						id?: string | null;
+						name?: string | null;
+						description?: string | null | null;
+						group?: string | null | null;
+						addOn?: boolean | null;
+						autoEnable?: boolean | null;
 						config?: {
 							/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 							ignorePastDue?: boolean;
-						};
-						/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-						archived?: boolean;
-						/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-						metadata?: Record<string, unknown>;
+						} | null;
+						archived?: boolean | null;
+						metadata?: Record<string, unknown> | null;
 						/** Previous payment processors when they changed. Null when the plan had none. */
 						processors?: {
 							stripe?: {
@@ -2936,7 +2888,7 @@ export type PreviewUpdateCatalogResponse = {
 							processors?: {
 								stripe?: unknown;
 							};
-						} | null;
+						} | null | null;
 						/** The plan's price after the change. */
 						current: {
 							/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -3111,6 +3063,8 @@ export type PreviewUpdateCatalogResponse = {
 							addItems?: unknown;
 							removeItems?: unknown;
 						};
+						/** Arbitrary key-value metadata defined by you on this link. */
+						metadata?: Record<string, unknown>;
 						/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 						plan?: unknown;
 						/** created = new planLicense; updated = row or effective content changed; removed = dropped. */
@@ -3174,7 +3128,7 @@ export type PreviewUpdateCatalogResponse = {
 				siblingVersions?: Array<{
 					planId: string;
 					/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-					internalId: string | null;
+					internalId?: string | null;
 					/** Present only when this row's public plan id changes. */
 					newPlanId?: string;
 					version: number;
@@ -3268,7 +3222,7 @@ export type PreviewUpdateCatalogResponse = {
 		licenseParents?: Array<{
 			planId: string;
 			/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-			internalId: string | null;
+			internalId?: string | null;
 			/** Present only when this row's public plan id changes. */
 			newPlanId?: string;
 			version: number;
@@ -3336,27 +3290,18 @@ export type PreviewUpdateCatalogResponse = {
 				plan?: unknown;
 				/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 				previousAttributes: {
-					/** Unique identifier for the plan. */
-					id?: string;
-					/** Display name of the plan. */
-					name?: string;
-					/** Optional description of the plan. */
-					description?: string | null;
-					/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-					group?: string | null;
-					/** Whether this is an add-on plan that can be attached alongside a main plan. */
-					addOn?: boolean;
-					/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-					autoEnable?: boolean;
-					/** Miscellaneous plan-level configuration flags. */
+					id?: string | null;
+					name?: string | null;
+					description?: string | null | null;
+					group?: string | null | null;
+					addOn?: boolean | null;
+					autoEnable?: boolean | null;
 					config?: {
 						/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 						ignorePastDue?: boolean;
-					};
-					/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-					archived?: boolean;
-					/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-					metadata?: Record<string, unknown>;
+					} | null;
+					archived?: boolean | null;
+					metadata?: Record<string, unknown> | null;
 					/** Previous payment processors when they changed. Null when the plan had none. */
 					processors?: {
 						stripe?: {
@@ -3498,7 +3443,7 @@ export type PreviewUpdateCatalogResponse = {
 								priceId: string;
 							} | null;
 						};
-					} | null;
+					} | null | null;
 					/** The plan's price after the change. */
 					current: {
 						/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -3978,6 +3923,8 @@ export type PreviewUpdateCatalogResponse = {
 							included?: unknown;
 						}>;
 					};
+					/** Arbitrary key-value metadata defined by you on this link. */
+					metadata?: Record<string, unknown>;
 					/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 					plan?: unknown;
 					/** created = new planLicense; updated = row or effective content changed; removed = dropped. */
@@ -3999,26 +3946,17 @@ export type PreviewUpdateCatalogResponse = {
 						plan?: unknown;
 						/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 						previousAttributes: {
-							/** Unique identifier for the plan. */
-							id?: string;
-							/** Display name of the plan. */
-							name?: string;
-							/** Optional description of the plan. */
-							description?: string | null;
-							/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-							group?: string | null;
-							/** Whether this is an add-on plan that can be attached alongside a main plan. */
-							addOn?: boolean;
-							/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-							autoEnable?: boolean;
-							/** Miscellaneous plan-level configuration flags. */
+							id?: string | null;
+							name?: string | null;
+							description?: string | null | null;
+							group?: string | null | null;
+							addOn?: boolean | null;
+							autoEnable?: boolean | null;
 							config?: {
 								ignorePastDue?: unknown;
-							};
-							/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-							archived?: boolean;
-							/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-							metadata?: Record<string, unknown>;
+							} | null;
+							archived?: boolean | null;
+							metadata?: Record<string, unknown> | null;
 							/** Previous payment processors when they changed. Null when the plan had none. */
 							processors?: {
 								stripe?: unknown;
@@ -4052,7 +3990,7 @@ export type PreviewUpdateCatalogResponse = {
 								priceId?: unknown;
 								display?: unknown;
 								processors?: unknown;
-							} | null;
+							} | null | null;
 							/** The plan's price after the change. */
 							current: {
 								amount?: unknown;
@@ -4182,7 +4120,7 @@ export type PreviewUpdateCatalogResponse = {
 			siblingVersions?: Array<{
 				planId: string;
 				/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-				internalId: string | null;
+				internalId?: string | null;
 				/** Present only when this row's public plan id changes. */
 				newPlanId?: string;
 				version: number;
@@ -4238,27 +4176,18 @@ export type PreviewUpdateCatalogResponse = {
 					plan?: unknown;
 					/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 					previousAttributes: {
-						/** Unique identifier for the plan. */
-						id?: string;
-						/** Display name of the plan. */
-						name?: string;
-						/** Optional description of the plan. */
-						description?: string | null;
-						/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-						group?: string | null;
-						/** Whether this is an add-on plan that can be attached alongside a main plan. */
-						addOn?: boolean;
-						/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-						autoEnable?: boolean;
-						/** Miscellaneous plan-level configuration flags. */
+						id?: string | null;
+						name?: string | null;
+						description?: string | null | null;
+						group?: string | null | null;
+						addOn?: boolean | null;
+						autoEnable?: boolean | null;
 						config?: {
 							/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 							ignorePastDue?: boolean;
-						};
-						/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-						archived?: boolean;
-						/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-						metadata?: Record<string, unknown>;
+						} | null;
+						archived?: boolean | null;
+						metadata?: Record<string, unknown> | null;
 						/** Previous payment processors when they changed. Null when the plan had none. */
 						processors?: {
 							stripe?: {
@@ -4321,7 +4250,7 @@ export type PreviewUpdateCatalogResponse = {
 							processors?: {
 								stripe?: unknown;
 							};
-						} | null;
+						} | null | null;
 						/** The plan's price after the change. */
 						current: {
 							/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -4496,6 +4425,8 @@ export type PreviewUpdateCatalogResponse = {
 							addItems?: unknown;
 							removeItems?: unknown;
 						};
+						/** Arbitrary key-value metadata defined by you on this link. */
+						metadata?: Record<string, unknown>;
 						/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 						plan?: unknown;
 						/** created = new planLicense; updated = row or effective content changed; removed = dropped. */
@@ -4551,7 +4482,7 @@ export type PreviewUpdateCatalogResponse = {
 		variants?: Array<{
 			planId: string;
 			/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-			internalId: string | null;
+			internalId?: string | null;
 			/** Present only when this row's public plan id changes. */
 			newPlanId?: string;
 			version: number;
@@ -4619,27 +4550,18 @@ export type PreviewUpdateCatalogResponse = {
 				plan?: unknown;
 				/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 				previousAttributes: {
-					/** Unique identifier for the plan. */
-					id?: string;
-					/** Display name of the plan. */
-					name?: string;
-					/** Optional description of the plan. */
-					description?: string | null;
-					/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-					group?: string | null;
-					/** Whether this is an add-on plan that can be attached alongside a main plan. */
-					addOn?: boolean;
-					/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-					autoEnable?: boolean;
-					/** Miscellaneous plan-level configuration flags. */
+					id?: string | null;
+					name?: string | null;
+					description?: string | null | null;
+					group?: string | null | null;
+					addOn?: boolean | null;
+					autoEnable?: boolean | null;
 					config?: {
 						/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 						ignorePastDue?: boolean;
-					};
-					/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-					archived?: boolean;
-					/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-					metadata?: Record<string, unknown>;
+					} | null;
+					archived?: boolean | null;
+					metadata?: Record<string, unknown> | null;
 					/** Previous payment processors when they changed. Null when the plan had none. */
 					processors?: {
 						stripe?: {
@@ -4781,7 +4703,7 @@ export type PreviewUpdateCatalogResponse = {
 								priceId: string;
 							} | null;
 						};
-					} | null;
+					} | null | null;
 					/** The plan's price after the change. */
 					current: {
 						/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -5261,6 +5183,8 @@ export type PreviewUpdateCatalogResponse = {
 							included?: unknown;
 						}>;
 					};
+					/** Arbitrary key-value metadata defined by you on this link. */
+					metadata?: Record<string, unknown>;
 					/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 					plan?: unknown;
 					/** created = new planLicense; updated = row or effective content changed; removed = dropped. */
@@ -5282,26 +5206,17 @@ export type PreviewUpdateCatalogResponse = {
 						plan?: unknown;
 						/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 						previousAttributes: {
-							/** Unique identifier for the plan. */
-							id?: string;
-							/** Display name of the plan. */
-							name?: string;
-							/** Optional description of the plan. */
-							description?: string | null;
-							/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-							group?: string | null;
-							/** Whether this is an add-on plan that can be attached alongside a main plan. */
-							addOn?: boolean;
-							/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-							autoEnable?: boolean;
-							/** Miscellaneous plan-level configuration flags. */
+							id?: string | null;
+							name?: string | null;
+							description?: string | null | null;
+							group?: string | null | null;
+							addOn?: boolean | null;
+							autoEnable?: boolean | null;
 							config?: {
 								ignorePastDue?: unknown;
-							};
-							/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-							archived?: boolean;
-							/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-							metadata?: Record<string, unknown>;
+							} | null;
+							archived?: boolean | null;
+							metadata?: Record<string, unknown> | null;
 							/** Previous payment processors when they changed. Null when the plan had none. */
 							processors?: {
 								stripe?: unknown;
@@ -5335,7 +5250,7 @@ export type PreviewUpdateCatalogResponse = {
 								priceId?: unknown;
 								display?: unknown;
 								processors?: unknown;
-							} | null;
+							} | null | null;
 							/** The plan's price after the change. */
 							current: {
 								amount?: unknown;
@@ -5463,7 +5378,7 @@ export type PreviewUpdateCatalogResponse = {
 			siblingVersions?: Array<{
 				planId: string;
 				/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
-				internalId: string | null;
+				internalId?: string | null;
 				/** Present only when this row's public plan id changes. */
 				newPlanId?: string;
 				version: number;
@@ -5519,27 +5434,18 @@ export type PreviewUpdateCatalogResponse = {
 					plan?: unknown;
 					/** Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new. */
 					previousAttributes: {
-						/** Unique identifier for the plan. */
-						id?: string;
-						/** Display name of the plan. */
-						name?: string;
-						/** Optional description of the plan. */
-						description?: string | null;
-						/** Group identifier for organizing related plans. Plans in the same group are mutually exclusive. */
-						group?: string | null;
-						/** Whether this is an add-on plan that can be attached alongside a main plan. */
-						addOn?: boolean;
-						/** If true, this plan is automatically attached when a customer is created. Used for free plans. */
-						autoEnable?: boolean;
-						/** Miscellaneous plan-level configuration flags. */
+						id?: string | null;
+						name?: string | null;
+						description?: string | null | null;
+						group?: string | null | null;
+						addOn?: boolean | null;
+						autoEnable?: boolean | null;
 						config?: {
 							/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 							ignorePastDue?: boolean;
-						};
-						/** Whether the plan is archived. Archived plans cannot be attached to new customers. */
-						archived?: boolean;
-						/** Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan. */
-						metadata?: Record<string, unknown>;
+						} | null;
+						archived?: boolean | null;
+						metadata?: Record<string, unknown> | null;
 						/** Previous payment processors when they changed. Null when the plan had none. */
 						processors?: {
 							stripe?: {
@@ -5602,7 +5508,7 @@ export type PreviewUpdateCatalogResponse = {
 							processors?: {
 								stripe?: unknown;
 							};
-						} | null;
+						} | null | null;
 						/** The plan's price after the change. */
 						current: {
 							/** Base price amount for the plan, in major currency units (e.g. dollars). */
@@ -5777,6 +5683,8 @@ export type PreviewUpdateCatalogResponse = {
 							addItems?: unknown;
 							removeItems?: unknown;
 						};
+						/** Arbitrary key-value metadata defined by you on this link. */
+						metadata?: Record<string, unknown>;
 						/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 						plan?: unknown;
 						/** created = new planLicense; updated = row or effective content changed; removed = dropped. */
@@ -5991,6 +5899,8 @@ export type PreviewUpdateCatalogResponse = {
 					included?: number;
 				}>;
 			};
+			/** Arbitrary key-value metadata defined by you on this link. */
+			metadata?: Record<string, unknown>;
 			/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 			plan?: unknown;
 		}>;
@@ -9262,6 +9172,8 @@ export type GetCatalogResponse = {
 					included?: number;
 				}>;
 			};
+			/** Arbitrary key-value metadata defined by you on this link. */
+			metadata?: Record<string, unknown>;
 			/** The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded. */
 			plan?: unknown;
 		}>;
@@ -9937,6 +9849,7 @@ const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
 		"features.previousAttributes",
 		"migrations.operations.customer.customize.upsertLicenses.metadata",
 		"plans.licenseParents.planChange.customize.upsertLicenses.metadata",
+		"plans.licenseParents.planChange.licenseChanges.metadata",
 		"plans.licenseParents.planChange.licenseChanges.plan.metadata",
 		"plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.licenseParents.planChange.licenseChanges.planChange.plan.metadata",
@@ -9945,14 +9858,17 @@ const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
 		"plans.licenseParents.planChange.plan.metadata",
 		"plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.licenseParents.planChange.previousAttributes.metadata",
+		"plans.licenseParents.siblingVersions.planChange.licenseChanges.metadata",
 		"plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.metadata",
 		"plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.licenseParents.siblingVersions.planChange.plan.metadata",
 		"plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.licenseParents.siblingVersions.planChange.previousAttributes.metadata",
+		"plans.licenses.metadata",
 		"plans.licenses.plan.metadata",
 		"plans.licenses.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.planChange.customize.upsertLicenses.metadata",
+		"plans.planChange.licenseChanges.metadata",
 		"plans.planChange.licenseChanges.plan.metadata",
 		"plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.planChange.licenseChanges.planChange.plan.metadata",
@@ -9961,6 +9877,7 @@ const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
 		"plans.planChange.plan.metadata",
 		"plans.planChange.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.planChange.previousAttributes.metadata",
+		"plans.siblingVersions.licenseParents.planChange.licenseChanges.metadata",
 		"plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.metadata",
 		"plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.siblingVersions.licenseParents.planChange.plan.metadata",
@@ -9969,6 +9886,7 @@ const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
 		"plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.metadata",
 		"plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.siblingVersions.planChange.customize.upsertLicenses.metadata",
+		"plans.siblingVersions.planChange.licenseChanges.metadata",
 		"plans.siblingVersions.planChange.licenseChanges.plan.metadata",
 		"plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.siblingVersions.planChange.licenseChanges.planChange.plan.metadata",
@@ -9977,6 +9895,7 @@ const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
 		"plans.siblingVersions.planChange.plan.metadata",
 		"plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.siblingVersions.planChange.previousAttributes.metadata",
+		"plans.siblingVersions.variants.planChange.licenseChanges.metadata",
 		"plans.siblingVersions.variants.planChange.licenseChanges.plan.metadata",
 		"plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.siblingVersions.variants.planChange.plan.metadata",
@@ -9985,6 +9904,7 @@ const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
 		"plans.siblingVersions.variants.siblingVersions.planChange.plan.metadata",
 		"plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.variants.planChange.customize.upsertLicenses.metadata",
+		"plans.variants.planChange.licenseChanges.metadata",
 		"plans.variants.planChange.licenseChanges.plan.metadata",
 		"plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.variants.planChange.licenseChanges.planChange.plan.metadata",
@@ -9993,6 +9913,7 @@ const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
 		"plans.variants.planChange.plan.metadata",
 		"plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.variants.planChange.previousAttributes.metadata",
+		"plans.variants.siblingVersions.planChange.licenseChanges.metadata",
 		"plans.variants.siblingVersions.planChange.licenseChanges.plan.metadata",
 		"plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.variants.siblingVersions.planChange.plan.metadata",
@@ -10023,6 +9944,7 @@ const GET_RESPONSE_HINTS = hintsOf({
 		"plans.variantDetails.customize.billingControls.usageLimits.filter.properties",
 	],
 	frozenPaths: [
+		"plans.licenses.metadata",
 		"plans.licenses.plan.metadata",
 		"plans.licenses.plan.variantDetails.customize.upsertLicenses.metadata",
 		"plans.metadata",

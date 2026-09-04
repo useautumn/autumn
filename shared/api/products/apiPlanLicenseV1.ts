@@ -10,8 +10,7 @@ export const ApiPlanLicenseV1Schema = z.object({
 		description: "The exact license-plan version pinned by this link.",
 	}),
 	version_slug: z.string().optional().meta({
-		description:
-			"Version slug of the license-plan row this link points at.",
+		description: "Version slug of the license-plan row this link points at.",
 	}),
 	included: z.number().meta({
 		description:
@@ -26,10 +25,16 @@ export const ApiPlanLicenseV1Schema = z.object({
 		internal: true,
 		description: "The item and price diff applied to this parent-plan link.",
 	}),
-	plan: z.lazy(() => ApiPlanV1Schema).optional().meta({
-		description:
-			"The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded.",
+	metadata: z.record(z.string(), z.unknown()).optional().meta({
+		description: "Arbitrary key-value metadata defined by you on this link.",
 	}),
+	plan: z
+		.lazy(() => ApiPlanV1Schema)
+		.optional()
+		.meta({
+			description:
+				"The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded.",
+		}),
 });
 
 export type ApiPlanLicenseV1 = z.infer<typeof ApiPlanLicenseV1Schema>;
