@@ -2,7 +2,11 @@ import { USAGE_LIMIT_FILTER_MAX_KEYS } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { PlusIcon, XIcon } from "lucide-react";
 import { SuggestionInput } from "./SuggestionInput";
-import type { CustomerPropertySuggestions } from "./useCustomerPropertyKeys";
+
+export type CustomerPropertySuggestions = {
+	propertyKeys: string[];
+	valuesByKey: Record<string, string[]>;
+};
 
 export type UsageLimitCondition = {
 	key: string;
