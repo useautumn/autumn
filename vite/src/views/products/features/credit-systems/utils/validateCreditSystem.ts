@@ -41,7 +41,7 @@ const validateDimensionMatches = (item: CreditSchemaItem): string | null => {
 
 const validateSchemaItem = (item: CreditSchemaItem): string | null => {
 	if (!item.metered_feature_id) {
-		return "Select a feature for each row";
+		return "Select a feature on every rate card row";
 	}
 
 	const dimensionError = validateDimensionMatches(item);
@@ -98,16 +98,22 @@ const validateSchemaItem = (item: CreditSchemaItem): string | null => {
 export const validateCreditSystem = (
 	creditSystem: CreateFeature,
 ): string | null => {
-	if (!creditSystem.id || !creditSystem.name) {
-		return "Please fill in all fields";
-	}
+	// Identity is checked last: it lives at the top of the sheet, so reporting it
+	// first hides a rate card problem the user is actually looking at.
+	const missingIdentity = !creditSystem.name?.trim()
+		? "Give this credit system a name"
+		: !creditSystem.id?.trim()
+			? "Give this credit system an ID"
+			: null;
 
 	if (isAiCreditSystem(creditSystem.type)) {
 		// No per-model rows is valid: such systems bill at the base cost,
 		// adjusted by any provider-level or global default markup.
-		for (const [modelId, entry] of Object.entries(
-			creditSystem.model_markups ?? {},
-		)) {
+		const modelMarkups: Record<
+			string,
+			{ input_cost?: number | null; output_cost?: number | null }
+		> = creditSystem.model_markups ?? {};
+		for (const [modelId, entry] of Object.entries(modelMarkups)) {
 			if (!modelId) return "Select a model for each row";
 			if (isCustomModel(modelId)) {
 				const { modelKey } = splitModelId(modelId);
@@ -116,17 +122,19 @@ export const validateCreditSystem = (
 					return "Custom models require input and output costs";
 			}
 		}
-		return null;
+		return missingIdentity;
 	}
 
 	if (!creditSystem.config?.schema || creditSystem.config.schema.length === 0) {
-		return "Need at least one item in the schema";
+		return "Add at least one feature to the rate card";
 	}
 
 	for (const item of creditSystem.config.schema) {
 		const error = validateSchemaItem(item);
 		if (error) return error;
 	}
+
+	if (missingIdentity) return missingIdentity;
 
 	return null;
 };

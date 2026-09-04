@@ -189,3 +189,27 @@ test("two rates that can match the same event block the save", () => {
 		"Two rates both match size=large, region=eu. Add a value to one of them",
 	);
 });
+
+test("a missing name names the field it wants", () => {
+	expect(
+		validateCreditSystem({
+			id: "credits",
+			name: "",
+			type: FeatureType.CreditSystem,
+			config: {
+				schema: [{ metered_feature_id: "tokens", credit_amount: 1 }],
+			},
+		} as CreateFeature),
+	).toBe("Give this credit system a name");
+});
+
+test("a rate card problem is reported before the off-screen name", () => {
+	expect(
+		validateCreditSystem({
+			id: "",
+			name: "",
+			type: FeatureType.CreditSystem,
+			config: { schema: [{ metered_feature_id: "", credit_amount: 1 }] },
+		} as CreateFeature),
+	).toBe("Select a feature on every rate card row");
+});
