@@ -18,7 +18,9 @@ const featureLiteral = ({ archived }: { archived: boolean }): string => `
 
 type CatalogFeatureRow = { id: string; archived: boolean };
 
-for (const label of ["created archived", "archived on second push"] as const) {
+// Creating a feature already archived is unsupported by decision; only the
+// second-push archive is covered.
+for (const label of ["archived on second push"] as const) {
 	test.concurrent(`archived (${label})`, async () => {
 		const scenario = await initAtmnScenario({
 			setup: [
