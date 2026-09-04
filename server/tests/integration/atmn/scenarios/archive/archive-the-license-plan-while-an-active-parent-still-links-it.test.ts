@@ -8,16 +8,39 @@
 
 import { expect, test } from "bun:test";
 import {
-	configBody,
 	enterpriseWithSeats,
 	everyFeatureType,
-	freePlan,
-	paidMonthly,
 	seatPlan,
-	versionedPro,
 } from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import {
+	atmnConfigSource,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
 
-test.todo("archive the license plan while an active parent still links it \u2192 server refuses, error surfaced", () => {});
+test.concurrent(
+	`${chalk.yellowBright("atmn scenarios/archive: archiving the license plan alone while the active parent still links it is refused")}`,
+	async () => {
+		const scenario = await initAtmnScenario({
+			setup: [s.platform.create({ userEmail: "atmn@autumn.test" })],
+			config: `{ features: [${everyFeatureType}], plans: [${seatPlan}${enterpriseWithSeats({})}] }`,
+		});
+
+		try {
+			await scenario.push();
+
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: `{ plans: [plan({ planId: "seat", archived: true })] }`,
+				}),
+			);
+
+			await expect(scenario.push()).rejects.toThrow(
+				/seat.*enterprise.*links|Cannot archive or remove seat/i,
+			);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

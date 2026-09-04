@@ -7,17 +7,81 @@
  */
 
 import { expect, test } from "bun:test";
+import type { ApiPlanV1 } from "@autumn/shared";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+	atmnConfigSource,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
+import { ProductService } from "@/internal/products/ProductService.js";
 
-test.todo("renamed license plan \u2192 the parent's link follows (by internal id), attach with license quantities still resolves", () => {});
+test.concurrent(
+	`${chalk.yellowBright("renamed license plan → the parent's link follows (by internal id), attach with license quantities still resolves")}`,
+	async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({
+					userEmail: "atmn_rename_license_plan@autumn.test",
+				}),
+				s.otherCustomers([
+					{ id: "cus_on_enterprise", paymentMethod: "success" },
+				]),
+			],
+			config: `{
+	plans: [
+		plan({ planId: "seat", name: "Seat", price: { amount: 15, interval: "month" } }),
+		plan({
+			planId: "enterprise",
+			name: "Enterprise",
+			price: { amount: 999, interval: "month" },
+			licenses: [{ licensePlanId: "seat", included: 25 }],
+		}),
+	],
+}`,
+		});
+
+		try {
+			await scenario.push();
+			const seat = await ProductService.getFull({
+				db: scenario.ctx.db,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+				idOrInternalId: "seat",
+			});
+
+			// The license plan is renamed by its internalId; `enterprise` is not
+			// mentioned in this push at all.
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: `{
+	plans: [
+		plan({ planId: "seatNew", internalId: "${seat.internal_id}", name: "Seat" }),
+	],
+}`,
+				}),
+			);
+			await scenario.push();
+
+			const enterprise =
+				await scenario.autumnV2_3.products.get<ApiPlanV1>("enterprise");
+			// @ts-expect-error licenses is not on the generated plan response type yet
+			expect(enterprise.licenses).toEqual([
+				expect.objectContaining({ license_plan_id: "seatNew", included: 25 }),
+			]);
+
+			await scenario.attachCustomer({
+				planId: "enterprise",
+				customerId: "cus_on_enterprise",
+			});
+			await expectCustomerProducts({
+				customerId: "cus_on_enterprise",
+				autumn: scenario.autumnV2_3,
+				active: ["enterprise"],
+			});
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

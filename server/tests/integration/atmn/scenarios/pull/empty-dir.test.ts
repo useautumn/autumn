@@ -5,17 +5,69 @@
  */
 
 import { expect, test } from "bun:test";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	configBody,
-	enterpriseWithSeats,
 	everyFeatureType,
 	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
 } from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import {
+	initAtmnScenario,
+	TMP_ROOT,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import { runPull } from "../../../../../../packages/atmn-nightly/src/actions/pull";
 
-test.todo("empty dir \u2192 scaffold root + `planVersions/.gitkeep`; second pull is a no-op", () => {});
+test.concurrent(
+	"empty dir → scaffold root + `planVersions/.gitkeep`; second pull is a no-op",
+	async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
+			config: configBody({ features: everyFeatureType, plans: freePlan }),
+		});
+
+		const emptyDir = join(TMP_ROOT, uniqueTestId("atmn_empty_dir"));
+		mkdirSync(emptyDir, { recursive: true });
+
+		try {
+			await scenario.push();
+
+			let firstOutput = "";
+			const first = await runPull({
+				client: scenario.client,
+				cwd: emptyDir,
+				write: (text) => {
+					firstOutput += text;
+				},
+			});
+			expect(firstOutput).toContain("Scaffolded");
+			expect(existsSync(join(emptyDir, "planVersions", ".gitkeep"))).toBe(true);
+			expect(first.appended).toContain("free");
+			expect(
+				readFileSync(join(emptyDir, "autumn.config.ts"), "utf8"),
+			).toContain('planId: "free"');
+
+			let secondOutput = "";
+			const second = await runPull({
+				client: scenario.client,
+				cwd: emptyDir,
+				write: (text) => {
+					secondOutput += text;
+				},
+			});
+			expect(secondOutput).toBe("Nothing to pull.\n");
+			expect(second).toEqual({
+				configPath: first.configPath,
+				appended: [],
+				replaced: [],
+				deleted: [],
+			});
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

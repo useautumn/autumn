@@ -1,21 +1,45 @@
 /**
  * atmn scenarios/push — push twice → second preview is all `none`
  *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
+ * One line of plans/atmn-v3/07_tests.md.
  */
 
 import { expect, test } from "bun:test";
 import {
 	configBody,
-	enterpriseWithSeats,
 	everyFeatureType,
 	freePlan,
 	paidMonthly,
-	seatPlan,
-	versionedPro,
 } from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import { expectPreviewNone } from "@tests/utils/atmnUtils/expectRoundTrip.js";
+import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-test.todo("push twice \u2192 second preview is all `none`", () => {});
+test("push twice → second preview is all `none`", async () => {
+	const scenario = await initAtmnScenario({
+		setup: [
+			s.platform.create({ userEmail: "atmn-push-twice@autumn.test" }),
+		],
+		config: configBody({
+			features: everyFeatureType,
+			plans: `${freePlan}${paidMonthly()}`,
+		}),
+	});
+
+	try {
+		const first = await scenario.push();
+		expect(first.output).not.toContain("No changes.");
+
+		const second = await scenario.push();
+		expect(second.output).toContain("No changes.");
+		expect(second.migrationIds).toEqual([]);
+
+		// Not just the CLI's own render: the server's preview itself says none.
+		await expectPreviewNone({
+			client: scenario.client,
+			wire: await scenario.wireFromConfig(),
+		});
+	} finally {
+		scenario.cleanup();
+	}
+});

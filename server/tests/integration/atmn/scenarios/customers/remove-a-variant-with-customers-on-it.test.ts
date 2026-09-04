@@ -7,17 +7,92 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+	atmnImports,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
+import { ProductService } from "@/internal/products/ProductService.js";
 
-test.todo("remove a variant with customers on it \u2192 assert what the server does", () => {});
+/** A base plan with one nested variant; `archiveVariant` flips the variant's
+ * own `archived` overlay, the config-side way to remove one. */
+const catalogConfig = ({
+	basePlanId,
+	variantPlanId,
+	archiveVariant,
+}: {
+	basePlanId: string;
+	variantPlanId: string;
+	archiveVariant: boolean;
+}): string => `{
+	plans: [
+		{
+			planId: "${basePlanId}",
+			name: "Pro",
+			price: { amount: 20, interval: "month" },
+			createInStripe: false,
+			variants: [
+				{
+					variantPlanId: "${variantPlanId}",
+					name: "Pro Variant",${archiveVariant ? "\n\t\t\t\t\tarchived: true," : ""}
+					customize: { price: { amount: 15, interval: "month" } },
+				},
+			],
+		},
+	],
+}`;
+
+test.concurrent(
+	`${chalk.yellowBright("atmn scenarios/customers: archiving a variant with customers on it archives the row, customers kept")}`,
+	async () => {
+		const basePlanId = uniqueTestId("atmn_cus_variant_base");
+		const variantPlanId = uniqueTestId("atmn_cus_variant_child");
+
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+				s.customer({ paymentMethod: "success" }),
+			],
+			config: catalogConfig({
+				basePlanId,
+				variantPlanId,
+				archiveVariant: false,
+			}),
+		});
+
+		try {
+			await scenario.push();
+			await scenario.attachCustomer({ planId: variantPlanId });
+
+			scenario.writeConfig(
+				`${atmnImports()}
+export default atmn(${catalogConfig({ basePlanId, variantPlanId, archiveVariant: true })});
+`,
+			);
+
+			// Decision pending: archiving the variant overlay archives that row
+			// like any other plan, rather than being refused — asserting that.
+			await scenario.push();
+
+			const [variant] = await ProductService.listFull({
+				db: scenario.ctx.db,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+				inIds: [variantPlanId],
+				returnAll: true,
+			});
+			expect(variant?.archived).toBe(true);
+
+			const customer = await scenario.autumnV2_3.customers.get(
+				scenario.customerId as unknown as string,
+			);
+			expect(
+				customer.products?.some((product) => product.id === variantPlanId),
+			).toBe(true);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

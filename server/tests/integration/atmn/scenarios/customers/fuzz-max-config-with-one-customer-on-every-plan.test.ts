@@ -7,6 +7,8 @@
  */
 
 import { expect, test } from "bun:test";
+import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	configBody,
 	enterpriseWithSeats,
@@ -14,10 +16,77 @@ import {
 	freePlan,
 	paidMonthly,
 	seatPlan,
-	versionedPro,
 } from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import {
+	atmnImports,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
+import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
+import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
 
-test.todo("fuzz-max config with one customer on every plan \u2192 push succeeds, migrations drafted only for in-place edits", () => {});
+const proItems = `
+					{ featureId: "messages", included: 100, reset: { interval: "month" } },`;
+
+/** free, paid pro, a seat license, and an enterprise plan that licenses it —
+ * one customer lands on each; only `pro`'s price changes between pushes. */
+const plansBlock = ({ proAmount }: { proAmount: number }): string =>
+	`${freePlan}${paidMonthly({ amount: proAmount, items: proItems })}${seatPlan}${enterpriseWithSeats({ included: 25 })}`;
+
+test.concurrent(
+	`${chalk.yellowBright("atmn scenarios/customers: a fuzz-max config with a customer on every plan pushes cleanly, drafting migrations only for the plan edited in place")}`,
+	async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+				s.customer({ paymentMethod: "success" }),
+			],
+			config: configBody({
+				features: everyFeatureType,
+				plans: plansBlock({ proAmount: 49 }),
+			}),
+		});
+
+		try {
+			await scenario.push();
+
+			// One real attach through billing (the paid plan customers use), one
+			// seeded customer per remaining plan (cheap, no Stripe needed).
+			await scenario.attachCustomer({ planId: "pro" });
+			await seedVersionableCustomer({
+				ctx: scenario.ctx,
+				planId: "free",
+				version: 1,
+			});
+			await seedVersionableCustomer({
+				ctx: scenario.ctx,
+				planId: "seat",
+				version: 1,
+			});
+			await seedVersionableCustomer({
+				ctx: scenario.ctx,
+				planId: "enterprise",
+				version: 1,
+			});
+
+			scenario.writeConfig(
+				`${atmnImports()}
+export default atmn(${configBody({ features: everyFeatureType, plans: plansBlock({ proAmount: 59 }) })});
+`,
+			);
+
+			const client = createClient({
+				secretKey: scenario.ctx.orgSecretKey,
+				baseUrl: scenario.baseUrl,
+			});
+			const result = await runPush({ client, cwd: scenario.cwd });
+
+			// Push succeeded (no thrown 4xx) and only the customered, in-place-edited
+			// plan — `pro` — drafted a migration; free/seat/enterprise are unchanged.
+			expect(result.migrationIds).toHaveLength(1);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

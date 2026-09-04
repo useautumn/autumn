@@ -5,17 +5,53 @@
  */
 
 import { expect, test } from "bun:test";
+import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
+import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
 import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+	atmnConfigSource,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-test.todo("archived [created archived, archived on second push]", () => {});
+const featureLiteral = ({ archived }: { archived: boolean }): string => `
+		feature({ featureId: "sso", name: "SSO", type: "boolean"${archived ? ", archived: true" : ""} }),`;
+
+type CatalogFeatureRow = { id: string; archived: boolean };
+
+for (const label of ["created archived", "archived on second push"] as const) {
+	test.concurrent(`archived (${label})`, async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({
+					userEmail: `atmn_archived_${label.replace(/\s+/g, "_")}@autumn.test`,
+				}),
+			],
+			config: configBody({
+				features: featureLiteral({ archived: label === "created archived" }),
+			}),
+		});
+
+		try {
+			if (label === "archived on second push") {
+				// First push lands the feature live, so the second push is the one
+				// that actually archives it.
+				await scenario.push();
+				scenario.writeConfig(
+					atmnConfigSource({
+						body: configBody({ features: featureLiteral({ archived: true }) }),
+					}),
+				);
+			}
+
+			await expectRoundTrip({ scenario });
+
+			const catalog = (await scenario.client.get({
+				include_archived: true,
+			})) as unknown as { features: CatalogFeatureRow[] };
+			const sso = catalog.features.find((row) => row.id === "sso");
+			expect(sso?.archived).toBe(true);
+		} finally {
+			scenario.cleanup();
+		}
+	});
+}
