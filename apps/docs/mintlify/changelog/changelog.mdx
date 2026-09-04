@@ -4,6 +4,60 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="September 4th 2026">
+  ## Usage alerts can measure what you choose
+
+  Usage alerts gain a `basis` field that defines what 100% means: the full `balance` (the default, unchanged), the plan's `included` grants, `recurring` grants, or a `usage_limit` window, plus an optional filter that targets a specific usage limit. The [`balances.usage_alert_triggered`](/api-reference/webhooks/balancesUsageAlertTriggered) webhook now carries the alert's basis and the measured window, and [`balances.limit_reached`](/api-reference/webhooks/balancesLimitReached) includes a `usage_limit` block describing the blocking cap with its live window bounds. The dashboard adds a **Measured against** dropdown on plan, customer, and entity alert forms. Existing alerts keep the `balance` behavior with no migration required.
+
+  ## Map plans to existing Stripe and RevenueCat products
+
+  Catalog plans now accept a `processors` object so Autumn can reuse your existing Stripe catalog instead of minting new objects. Set `processors.stripe` once on a plan and the product mapping fans out to every version and variant, supply a `price_id` to adopt an existing Stripe price (unknown IDs return a 400 instead of silently minting a replacement), or pass `null` to unlink a mapping. RevenueCat product mappings move into the same envelope via `processors.revenuecat`. The dashboard plan page gains a plan-level Stripe product mapping and per-version Stripe price pickers under Advanced.
+
+  ## Full-state catalog pushes and stable row IDs
+
+  Catalog rows now carry a stable `internal_id`, so configs that rename a `plan_id` or `version_slug` keep addressing the same row (the old plan ID survives as an alias). One update request can state multiple versions of the same plan at once, and unknown version slugs mint a new version instead of returning a 400. Setting `skip_deletions: false` treats the payload as the complete desired catalog: omitted plans and features are removed, restating an archived plan revives it, and `skip_plan_ids` / `skip_feature_ids` exempt entries from removal.
+
+  ## Plans show as pending before payment
+
+  Plans attached via Stripe Checkout or invoice mode with `enable_plan_immediately: false` now appear on the customer immediately with a new `Pending` status, instead of being invisible until payment lands. A pending plan grants nothing; it promotes to active when the invoice is paid or the checkout session completes, and expires if the invoice is voided or the session expires.
+
+  ## Custom rate cards per plan
+
+  Plan items on [credit systems](/documentation/modelling-pricing/credit-systems) accept a new `feature_override`, letting a plan reprice or re-member a credit schema without forking the feature. Overrides are honored across track and check rates, membership, subscription updates, and invoice credits. The plan editor gains a **Custom rate card** section, and customer balances show a read-only view of the override.
+
+  ## Pooled balances for license plans
+
+  License plans now support pooled balances: each license link mints a pool, and all seats under it contribute to one shared balance that check, track, resets, and rollovers read like any other. Seat adds, removals, and amount changes flow through, and reducing seat quantity shrinks the pool by expiring unused seats first. The `atmn` CLI also round-trips `pooled` and `entityFeatureId` on plan items through push and pull.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - The attach sheet now defaults trial-end behavior to **Revert to previous plan** instead of billing, with an explanatory **On trial end** select replacing the old checkbox; plans setting `on_end: "bill"` are still respected — [#3190](https://github.com/useautumn/autumn/pull/3190)
+      - The Add Reward modal can now find coupons by pasting a Stripe promotion code, discount amounts are formatted as currency, and the applied-coupon chip gains a details tooltip — [#3237](https://github.com/useautumn/autumn/pull/3237)
+      - The credit-system rate card editor is redesigned into accordion rows with compact summaries ("1 credit per 100 messages") that expand into a full editor — [#3204](https://github.com/useautumn/autumn/pull/3204)
+      - Catalog license links now stay anchored to the exact child version they were created against, pinnable via `version_slug`; variant propagation is pin-only (the `propagate.*.versioning` strategies are removed in favor of explicit version pins), and the plan page adds per-version variant propagation plus a persistent all-variants view — [#3166](https://github.com/useautumn/autumn/pull/3166), [#3167](https://github.com/useautumn/autumn/pull/3167), [#3168](https://github.com/useautumn/autumn/pull/3168)
+      - The balance edit sheet explains that manual edits are one-off adjustments that reset on the next cycle, with a tooltip pointing to lasting alternatives — [#3140](https://github.com/useautumn/autumn/pull/3140)
+      - `rewards:read` and `rewards:write` join the default OAuth resource scopes, so MCP and OAuth clients can list and create rewards; a Rewards row appears in the scope selector — [#3143](https://github.com/useautumn/autumn/pull/3143)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Usage tracked just before a Stripe invoice, subscription, or checkout webhook no longer appears to revert: pending balance deductions are flushed to Postgres before the cached customer view is refreshed — [#3230](https://github.com/useautumn/autumn/pull/3230), [#3232](https://github.com/useautumn/autumn/pull/3232)
+      - Expired Stripe Checkout sessions now invalidate the cached customer, so plans attached with `enable_product_immediately` no longer linger as phantom active plans — [#3241](https://github.com/useautumn/autumn/pull/3241)
+      - Cancelling a plan pending on a checkout session clears the checkout reservation, so re-attaching opens a fresh session instead of returning an expired payment link — [#3238](https://github.com/useautumn/autumn/pull/3238)
+      - Custom-price checkouts no longer crash on completion, and `customer.products.updated` / `billing.updated` webhooks again include the activated paid plan after checkout — [#3225](https://github.com/useautumn/autumn/pull/3225), [#3214](https://github.com/useautumn/autumn/pull/3214)
+      - A RevenueCat renewal of a past-due cancelled product now clears the stale cancellation fields instead of reporting the live subscription as cancelled — [#3171](https://github.com/useautumn/autumn/pull/3171)
+      - Cancelling a RevenueCat-managed subscription from the dashboard with **No Billing Changes** no longer returns a 409; Autumn-only cancels bypass the external-provider guard — [#3208](https://github.com/useautumn/autumn/pull/3208)
+      - Current-billing-cycle analytics now use the exact stored cycle boundaries instead of treating the cycle as a rolling window — [#3179](https://github.com/useautumn/autumn/pull/3179)
+      - Concurrent lazy usage-window resets no longer stampede the same rows and time out check requests; each customer's roll is guarded by a lock — [#3187](https://github.com/useautumn/autumn/pull/3187)
+      - License plan transitions reset entitlement usage to the incoming grant unless carry-over is enabled, editing a linked license plan's items no longer fails with a foreign-key error, and [`plans.list`](/api-reference/plans/listPlans) includes license prices when classifying upgrades vs downgrades — [#3255](https://github.com/useautumn/autumn/pull/3255), [#3233](https://github.com/useautumn/autumn/pull/3233), [#3236](https://github.com/useautumn/autumn/pull/3236)
+      - Sequential seat quantity updates no longer double-count historical refunds when reconstructing prorated invoice credits — [#3256](https://github.com/useautumn/autumn/pull/3256)
+      - Editing one phase of a generated billing schedule no longer replaces or loses other phases, custom prices, or a requested first-phase start date — [#3203](https://github.com/useautumn/autumn/pull/3203), [#3211](https://github.com/useautumn/autumn/pull/3211)
+      - The attach review sheet no longer claims to be "pausing" the outgoing plan on plain upgrades with no trial configured — [#3206](https://github.com/useautumn/autumn/pull/3206)
+      - The customer page's Plans table grows with the selected page size instead of adding an inner scrollbar — [#3198](https://github.com/useautumn/autumn/pull/3198)
+      - Prepaid prices no longer incorrectly inherit a Stripe usage meter from a reused product-only price match — [#3146](https://github.com/useautumn/autumn/pull/3146)
+      - The customer page no longer shows the RevenueCat badge when a customer only has expired RevenueCat-backed products — [#3018](https://github.com/useautumn/autumn/pull/3018)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="August 28th 2026">
   ## Plan versions in the dashboard
 
