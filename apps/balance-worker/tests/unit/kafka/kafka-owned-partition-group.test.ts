@@ -97,7 +97,11 @@ import {
 	KafkaPartitionAssignmentRevokedError,
 	type KafkaPartitionRuntimeFactory,
 } from "../../../src/kafka/kafkaOwnedPartitionGroup.js";
-import type { OwnedPartitionRuntimeStatus } from "../../../src/runtime/ownedPartitionRuntime.js";
+import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrap.js";
+import {
+	OwnedPartitionRecoveryRequiredError,
+	type OwnedPartitionRuntimeStatus,
+} from "../../../src/runtime/ownedPartitionRuntime.js";
 import {
 	closeStoreFixture,
 	createKafkaOwnedPartitionGroup,
@@ -691,13 +695,22 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
-	test("leaves the group and keeps failed partition health visible after startup refusal", async () => {
+	test("parks and retries a bootstrap refusal without stopping healthy partitions", async () => {
 		const fixture = createStoreFixture();
 		try {
 			const consumer = createFakeGroupConsumer();
-			const startupFailure = new Error(
-				"checkpoint cannot rebuild retention gap",
-			);
+			const bootstrapRefusal = new PartitionBootstrapRefusedError({
+				topic,
+				partition: 1,
+				reason: "checkpoint_required_for_retention_gap",
+			});
+			const startupFailure = new OwnedPartitionRecoveryRequiredError({
+				topic,
+				partition: 1,
+				cause: bootstrapRefusal,
+			});
+			const startAttempts = new Map<number, number>();
+			const stopped: number[] = [];
 			const unhealthy: Array<{
 				topic: string;
 				partition: number;
@@ -708,38 +721,126 @@ describe("Kafka owned partition group", () => {
 				partitionOffsets: createPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
-				partitionsConsumedConcurrently: 1,
-				healthRefreshIntervalMs: 5_000,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5,
+				partitionBootstrapRetryIntervalMs: 5,
 				createRuntime: ({ partition }) => ({
 					start: async () => {
-						throw startupFailure;
+						const attempt = (startAttempts.get(partition) ?? 0) + 1;
+						startAttempts.set(partition, attempt);
+						if (partition === 1 && attempt === 1) throw startupFailure;
 					},
-					stop: async () => undefined,
+					stop: async () => {
+						stopped.push(partition);
+					},
 					getHealth: () =>
-						terminalHealth({
-							partition,
-							reason: "checkpoint_required_for_retention_gap",
-						}),
+						startAttempts.get(partition) === 1 && partition === 1
+							? terminalHealth({
+									partition,
+									reason: "checkpoint_required_for_retention_gap",
+								})
+							: ownedPartitionHealthOf({
+									topic,
+									partition,
+									status: "ready",
+									localNextOffset: 0n,
+									consumedNextOffset: 0n,
+									highWatermark: 0n,
+									failureReason: null,
+								}),
 				}),
 				onError: () => undefined,
 				onUnhealthyPartition: (failure) => unhealthy.push(failure),
 			});
 
 			await group.start();
-			consumer.emitGroupJoin([0]);
-			await waitFor(() => consumer.lifecycle.includes("consumer-stop"));
-			await group.stop();
+			consumer.emitGroupJoin([0, 1]);
+			await waitFor(() => unhealthy.length === 1);
+			await waitFor(() => startAttempts.get(1) === 2);
 
 			expect(unhealthy).toEqual([
-				{ topic, partition: 0, cause: startupFailure },
+				{ topic, partition: 1, cause: startupFailure },
 			]);
+			expect(consumer.lifecycle).not.toContain("consumer-stop");
+			expect(stopped).toEqual([1]);
 			expect(group.partitions()).toEqual([
-				expect.objectContaining({
-					partition: 0,
-					status: "recovery_required",
-					failureReason: "checkpoint_required_for_retention_gap",
-				}),
+				expect.objectContaining({ partition: 0, status: "ready" }),
+				expect.objectContaining({ partition: 1, status: "ready" }),
 			]);
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("classifies recovery from the startup rejection instead of an early health sample", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const startGate = createDeferred();
+			const basePartitionOffsets = createPartitionOffsets();
+			let healthRefreshes = 0;
+			let runtimeStatus: OwnedPartitionRuntimeStatus = "fencing";
+			const unhealthy: unknown[] = [];
+			const bootstrapRefusal = new PartitionBootstrapRefusedError({
+				topic,
+				partition: 0,
+				reason: "checkpoint_required_for_retention_gap",
+			});
+			const startupFailure = new OwnedPartitionRecoveryRequiredError({
+				topic,
+				partition: 0,
+				cause: bootstrapRefusal,
+			});
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: {
+					...basePartitionOffsets,
+					fetchTopicOffsets: async () => {
+						healthRefreshes += 1;
+						return basePartitionOffsets.fetchTopicOffsets();
+					},
+				},
+				topic,
+				stateStore: fixture.store,
+				partitionsConsumedConcurrently: 1,
+				healthRefreshIntervalMs: 1,
+				createRuntime: ({ partition }) => ({
+					start: async () => {
+						runtimeStatus = "recovery_required";
+						await startGate.promise;
+						throw startupFailure;
+					},
+					stop: async () => undefined,
+					getHealth: () =>
+						ownedPartitionHealthOf({
+							topic,
+							partition,
+							status: runtimeStatus,
+							localNextOffset: 0n,
+							consumedNextOffset: 0n,
+							highWatermark: 0n,
+							failureReason:
+								runtimeStatus === "recovery_required"
+									? "checkpoint_required_for_retention_gap"
+									: null,
+						}),
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: ({ cause }) => unhealthy.push(cause),
+			});
+
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => healthRefreshes > 0);
+			expect(unhealthy).toEqual([]);
+			expect(consumer.lifecycle).not.toContain("consumer-stop");
+
+			startGate.resolve();
+			await waitFor(() => unhealthy.length === 1);
+			expect(unhealthy).toEqual([startupFailure]);
+			expect(consumer.lifecycle).not.toContain("consumer-stop");
+			await group.stop();
 		} finally {
 			closeStoreFixture(fixture);
 		}

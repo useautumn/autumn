@@ -88,7 +88,15 @@ export class KafkaPartitionPositionTracker
 		highWatermark,
 	}: KafkaPartitionPosition & { highWatermark: bigint }): void {
 		validatePosition({ topic, partition, nextOffset: highWatermark });
-		this.highWatermarks.set(positionKeyOf({ topic, partition }), highWatermark);
+		const key = positionKeyOf({ topic, partition });
+		const currentHighWatermark = this.highWatermarks.get(key);
+		if (
+			currentHighWatermark !== undefined &&
+			currentHighWatermark >= highWatermark
+		) {
+			return;
+		}
+		this.highWatermarks.set(key, highWatermark);
 	}
 
 	readProgress({
