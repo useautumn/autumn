@@ -5,6 +5,7 @@ import { copyRuntime } from "./emit/copyRuntime";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
 import { emitCollectionModule } from "./emit/emitCollection";
 import { emitEmitModule } from "./emit/emitEmitModule";
+import { emitLabelsModule } from "./emit/emitLabelsModule";
 import { emitWireModule } from "./emit/emitWire";
 import { wirePathHints } from "./emit/freeFormPaths";
 import { emitLintRulesModule } from "./lint/emitLintRules";
@@ -127,6 +128,10 @@ export const generate = async (): Promise<string[]> => {
 			}),
 			registry: LINT_REGISTRY,
 		}),
+	});
+	write({
+		name: "labels.ts",
+		source: emitLabelsModule(),
 	});
 
 	write({
