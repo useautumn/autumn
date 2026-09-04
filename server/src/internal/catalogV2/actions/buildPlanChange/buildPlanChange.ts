@@ -19,6 +19,11 @@ const emptyPlanBefore = (to: ApiPlanV1): ApiPlanV1 =>
 		created_at: to.created_at,
 		env: to.env,
 		archived: false,
+		// The defaults, so a create only reports what it set.
+		add_on: false,
+		auto_enable: false,
+		config: to.config,
+		metadata: {},
 		items: [],
 	}) as unknown as ApiPlanV1;
 
