@@ -12,9 +12,11 @@ import type { BatchTransitionContext } from "../types/types";
 export const setupBatchTransitionContext = async ({
 	ctx,
 	customerLicense,
+	billingCycleAnchorMs,
 }: {
 	ctx: AutumnContext;
 	customerLicense: FullCustomerLicense;
+	billingCycleAnchorMs?: number;
 }): Promise<BatchTransitionContext> => {
 	const fullProduct = customerLicense.planLicense?.product;
 	if (!fullProduct) {
@@ -44,14 +46,16 @@ export const setupBatchTransitionContext = async ({
 			createStripeCustomerIfMissing: false,
 		});
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
-	const billingCycleAnchorMs = setupBillingCycleAnchor({
-		stripeSubscription,
-		customerProduct: parentCustomerProduct,
-		newFullProduct: fullProduct,
-		currentEpochMs,
-	});
+	const resolvedBillingCycleAnchorMs =
+		billingCycleAnchorMs ??
+		setupBillingCycleAnchor({
+			stripeSubscription,
+			customerProduct: parentCustomerProduct,
+			newFullProduct: fullProduct,
+			currentEpochMs,
+		});
 	const resetCycleAnchorMs = setupResetCycleAnchor({
-		billingCycleAnchorMs,
+		billingCycleAnchorMs: resolvedBillingCycleAnchorMs,
 		newFullProduct: fullProduct,
 	});
 

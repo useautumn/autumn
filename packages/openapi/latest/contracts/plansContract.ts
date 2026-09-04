@@ -1,6 +1,7 @@
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
 	API_PLAN_V1_EXAMPLE,
+	ApiPlanExpandedV1Schema,
 	ApiPlanV1WithMeta,
 } from "@api/products/apiPlanV1.js";
 import {
@@ -40,10 +41,28 @@ export const listPlansContract = oc
 		}),
 	)
 	.output(
-		getListResponseSchema({ schema: ApiPlanV1WithMeta }).meta({
+		getListResponseSchema({
+			schema: ApiPlanExpandedV1Schema.meta({
+				id: "ExpandedPlan",
+				description:
+					"A plan defines features, pricing, entitlements, assignable licenses, and derived variants.",
+			}),
+		}).meta({
 			examples: [
 				{
-					list: [API_PLAN_V1_EXAMPLE],
+					list: [
+						{
+							...API_PLAN_V1_EXAMPLE,
+							licenses: [
+								{
+									license_plan_id: "seat",
+									version: 1,
+									version_slug: "v1",
+									included: 3,
+								},
+							],
+						},
+					],
 				},
 			],
 		}),

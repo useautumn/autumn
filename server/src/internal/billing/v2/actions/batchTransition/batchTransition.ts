@@ -77,6 +77,7 @@ export const batchTransition = async ({
 		const batchTransitionContext = await setupBatchTransitionContext({
 			ctx,
 			customerLicense: transition.incomingCustomerLicense,
+			billingCycleAnchorMs: transition.billingCycleAnchorMs,
 		});
 		logBatchTransitionContext({ ctx, batchTransitionContext });
 

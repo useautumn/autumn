@@ -191,6 +191,7 @@ export const handleListEntitiesV2 = createRoute({
 				orgId: ctx.org.id,
 				orgSlug: ctx.org.slug,
 				type: PaginationType.ListEntities,
+				apiVersion: ctx.apiVersion,
 			});
 			if (body.limit > maxLimit) {
 				throw new RecaseError({

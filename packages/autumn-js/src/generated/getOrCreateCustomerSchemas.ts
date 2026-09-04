@@ -5,13 +5,26 @@ export const getOrCreateCustomerGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const getOrCreateCustomerPropertiesSchema = z.union([
+export const getOrCreateCustomerUsageLimitPropertiesSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const getOrCreateCustomerFilterSchema = z.object({
+export const getOrCreateCustomerUsageLimitFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
+export const getOrCreateCustomerUsageAlertPropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const getOrCreateCustomerUsageAlertFilterSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -54,13 +67,13 @@ export const getOrCreateCustomerSpendLimitOutboundSchema = z.object({
 	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const getOrCreateCustomerPropertiesOutboundSchema = z.union([
+export const getOrCreateCustomerUsageLimitPropertiesOutboundSchema = z.union([
 	z.string(),
 	z.number(),
 	z.boolean(),
 ]);
 
-export const getOrCreateCustomerFilterOutboundSchema = z.object({
+export const getOrCreateCustomerUsageLimitFilterOutboundSchema = z.object({
 	properties: z.record(
 		z.string(),
 		z.union([z.string(), z.number(), z.boolean()]),
@@ -74,8 +87,21 @@ export const getOrCreateCustomerUsageLimitOutboundSchema = z.object({
 	interval: z.string(),
 	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z
-		.union([getOrCreateCustomerFilterOutboundSchema, z.undefined()])
+		.union([getOrCreateCustomerUsageLimitFilterOutboundSchema, z.undefined()])
 		.optional(),
+});
+
+export const getOrCreateCustomerUsageAlertPropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const getOrCreateCustomerUsageAlertFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const getOrCreateCustomerUsageAlertOutboundSchema = z.object({
@@ -83,6 +109,10 @@ export const getOrCreateCustomerUsageAlertOutboundSchema = z.object({
 	enabled: z.boolean(),
 	threshold: z.number(),
 	threshold_type: z.string(),
+	basis: z.string(),
+	filter: z
+		.union([getOrCreateCustomerUsageAlertFilterOutboundSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
@@ -195,16 +225,24 @@ export const getOrCreateCustomerUsageLimitSchema = z.object({
 	limit: z.number(),
 	interval: getOrCreateCustomerUsageLimitIntervalSchema,
 	anchor: z.union([getOrCreateCustomerAnchorSchema, z.undefined()]).optional(),
-	filter: z.union([getOrCreateCustomerFilterSchema, z.undefined()]).optional(),
+	filter: z
+		.union([getOrCreateCustomerUsageLimitFilterSchema, z.undefined()])
+		.optional(),
 });
 
 export const getOrCreateCustomerThresholdTypeSchema = closedEnumSchema;
+
+export const getOrCreateCustomerBasisSchema = closedEnumSchema;
 
 export const getOrCreateCustomerUsageAlertSchema = z.object({
 	featureId: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	threshold: z.number(),
 	thresholdType: getOrCreateCustomerThresholdTypeSchema,
+	basis: z.union([getOrCreateCustomerBasisSchema, z.undefined()]).optional(),
+	filter: z
+		.union([getOrCreateCustomerUsageAlertFilterSchema, z.undefined()])
+		.optional(),
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 

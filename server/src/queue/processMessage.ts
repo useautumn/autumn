@@ -11,6 +11,7 @@ import {
 	runStripeWebhookReplay,
 	StripeWebhookReplayInFlightError,
 } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
+import { stripeWebhookErrorWouldRedeliver } from "@/external/stripe/webhookReplay/stripeWebhookErrorWouldRedeliver.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
@@ -104,8 +105,7 @@ export const shouldRetrySqsJobError = ({
 		case JobName.StripeWebhookReplay:
 			return (
 				error instanceof StripeWebhookReplayInFlightError ||
-				isTransientDbError({ error }) ||
-				isTransientRedisError({ error })
+				stripeWebhookErrorWouldRedeliver({ error })
 			);
 		default:
 			return false;
@@ -236,6 +236,7 @@ export const processMessage = async ({
 			await runStripeWebhookReplay({
 				ctx,
 				payload: job.data,
+				receiveCount: Number.isFinite(receiveCount) ? receiveCount : 1,
 			});
 			return;
 		}

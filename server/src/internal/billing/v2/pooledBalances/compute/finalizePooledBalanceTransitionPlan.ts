@@ -54,6 +54,11 @@ const collectExpiryCandidates = ({
 			(inserted) => inserted.id === pooledCustomerEntitlement.id,
 		);
 		if (isNewlyInserted) continue;
+		if (
+			pooledCustomerEntitlement.pooled_balance.customer_license_link_id != null
+		) {
+			continue;
+		}
 
 		addToExpirePoolBalanceCandidates({
 			pooledBalancePlan: finalizedPlan,

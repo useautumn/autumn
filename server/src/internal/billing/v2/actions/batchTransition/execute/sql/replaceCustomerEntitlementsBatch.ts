@@ -46,6 +46,10 @@ const pooledAggregateCtes = (
 		patch.type === "increment"
 			? sql`COALESCE(synthetic.balance, 0) + pool_deltas.amount`
 			: sql`updated_pools.granted`;
+	const licenseSyntheticBalanceAssignment =
+		patch.type === "increment"
+			? sql`synthetic.balance`
+			: sql`updated_pools.granted`;
 	return sql`,
 		contribution_rows AS MATERIALIZED (
 			SELECT
@@ -81,16 +85,23 @@ const pooledAggregateCtes = (
 		updated_pools AS (
 			UPDATE pooled_balances AS pool
 			SET
-				granted = pool.granted + pool_deltas.amount,
+				granted = CASE
+					WHEN pool.customer_license_link_id IS NOT NULL THEN pool.granted
+					ELSE pool.granted + pool_deltas.amount
+				END,
 				updated_at = ${now}
 			FROM pool_deltas
 			WHERE pool.id = pool_deltas.pooled_balance_id
-			RETURNING pool.id, pool.granted
+			RETURNING pool.id, pool.granted, pool.customer_license_link_id, pool_deltas.amount
 		),
 		updated_synthetic AS (
 			UPDATE customer_entitlements AS synthetic
 			SET
-				balance = ${syntheticBalanceAssignment},
+				balance = CASE
+					WHEN updated_pools.customer_license_link_id IS NOT NULL
+						THEN ${licenseSyntheticBalanceAssignment}
+					ELSE ${syntheticBalanceAssignment}
+				END,
 				cache_version = COALESCE(synthetic.cache_version, 0) + 1
 			FROM pool_deltas
 			INNER JOIN updated_pools

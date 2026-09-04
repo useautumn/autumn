@@ -19,9 +19,9 @@
  *   Side effects:
  *     - is_custom plan_license row + pool.plan_license_id repoint (DB)
  *
- * Pre-impl red: seat-price and full-invoice-delta assertions fail — the seat
- * half of the repoint (bulk customer_prices repoint + charge-side
- * re-projection) has no executor yet. Everything else is green.
+ * Pre-impl red: restating parent items plus a license grant change threw
+ * "identical to the current subscription" because productsAreSame ignores
+ * licenses. Green: preview succeeds.
  */
 import { expect, test } from "bun:test";
 import type {
@@ -459,5 +459,43 @@ test.concurrent(
 			expect(row.entitlementId).toBe(customMessagesEntitlement?.id ?? "");
 			expect(row.balance).toBe(CUSTOM_SEAT_MESSAGES);
 		}
+	},
+);
+
+const CUSTOM_LICENSE_MESSAGES = 200;
+
+test.concurrent(
+	`${chalk.yellowBright("license-update-patch: restated parent items plus license grant change is not a no-op")}`,
+	async () => {
+		const customerId = "license-update-patch-restated-items";
+		const { scenario } = await setupAssignedScenario({
+			customerId,
+			idPrefix: "lic-patch-restated",
+		});
+
+		const preview =
+			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				{
+					customer_id: customerId,
+					plan_id: scenario.parent.id,
+					customize: {
+						items: [itemsV2.dashboard()],
+						upsert_licenses: [
+							{
+								license_plan_id: scenario.devSeat.id,
+								customize: {
+									remove_items: [{ feature_id: TestFeature.Messages }],
+									add_items: [
+										itemsV2.monthlyMessages({
+											included: CUSTOM_LICENSE_MESSAGES,
+										}),
+									],
+								},
+							},
+						],
+					},
+				},
+			);
+		expect(preview).toBeDefined();
 	},
 );

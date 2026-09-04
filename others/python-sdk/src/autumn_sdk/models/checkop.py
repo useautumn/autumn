@@ -27,7 +27,7 @@ class CheckGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.4.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -634,7 +634,7 @@ class Flag2(BaseModel):
         return m
 
 
-CheckScenario2 = Union[
+Scenario2 = Union[
     Literal[
         "usage_limit",
         "feature_flag",
@@ -1291,13 +1291,13 @@ CheckAnchor2 = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class CheckFilter2TypedDict(TypedDict):
+class CheckUsageLimitFilter2TypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class CheckFilter2(BaseModel):
+class CheckUsageLimitFilter2(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -1314,7 +1314,7 @@ class CheckUsageLimit2TypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[CheckAnchor2]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[CheckFilter2TypedDict]
+    filter_: NotRequired[CheckUsageLimitFilter2TypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -1334,7 +1334,9 @@ class CheckUsageLimit2(BaseModel):
     anchor: Optional[CheckAnchor2] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
-    filter_: Annotated[Optional[CheckFilter2], pydantic.Field(alias="filter")] = None
+    filter_: Annotated[
+        Optional[CheckUsageLimitFilter2], pydantic.Field(alias="filter")
+    ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
@@ -1366,6 +1368,30 @@ CheckThresholdType2 = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+CheckBasis2 = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class CheckUsageAlertFilter2TypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class CheckUsageAlertFilter2(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 class CheckUsageAlert2TypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -1375,6 +1401,10 @@ class CheckUsageAlert2TypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[CheckBasis2]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[CheckUsageAlertFilter2TypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -1392,12 +1422,20 @@ class CheckUsageAlert2(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[CheckBasis2] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[CheckUsageAlertFilter2], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -1680,7 +1718,7 @@ class CheckProduct2(BaseModel):
 class Preview2TypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: CheckScenario2
+    scenario: Scenario2
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
     title: str
     r"""A title suitable for displaying in a paywall or upgrade modal."""
@@ -1697,7 +1735,7 @@ class Preview2TypedDict(TypedDict):
 class Preview2(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: CheckScenario2
+    scenario: Scenario2
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
 
     title: str
@@ -2265,7 +2303,7 @@ class Flag1(BaseModel):
         return m
 
 
-CheckScenario1 = Union[
+Scenario1 = Union[
     Literal[
         "usage_limit",
         "feature_flag",
@@ -2922,13 +2960,13 @@ CheckAnchor1 = Union[
 r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
 
-class CheckFilter1TypedDict(TypedDict):
+class CheckUsageLimitFilter1TypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
 
 
-class CheckFilter1(BaseModel):
+class CheckUsageLimitFilter1(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, str]
@@ -2945,7 +2983,7 @@ class CheckUsageLimit1TypedDict(TypedDict):
     r"""Whether this usage limit is enabled."""
     anchor: NotRequired[CheckAnchor1]
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
-    filter_: NotRequired[CheckFilter1TypedDict]
+    filter_: NotRequired[CheckUsageLimitFilter1TypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
@@ -2965,7 +3003,9 @@ class CheckUsageLimit1(BaseModel):
     anchor: Optional[CheckAnchor1] = None
     r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
 
-    filter_: Annotated[Optional[CheckFilter1], pydantic.Field(alias="filter")] = None
+    filter_: Annotated[
+        Optional[CheckUsageLimitFilter1], pydantic.Field(alias="filter")
+    ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
@@ -2997,6 +3037,30 @@ CheckThresholdType1 = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+CheckBasis1 = Union[
+    Literal[
+        "balance",
+        "included",
+        "recurring",
+        "usage_limit",
+    ],
+    UnrecognizedStr,
+]
+r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+
+class CheckUsageAlertFilter1TypedDict(TypedDict):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
+class CheckUsageAlertFilter1(BaseModel):
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
+    properties: Dict[str, str]
+
+
 class CheckUsageAlert1TypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -3006,6 +3070,10 @@ class CheckUsageAlert1TypedDict(TypedDict):
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
+    basis: NotRequired[CheckBasis1]
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+    filter_: NotRequired[CheckUsageAlertFilter1TypedDict]
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
@@ -3023,12 +3091,20 @@ class CheckUsageAlert1(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
 
+    basis: Optional[CheckBasis1] = "balance"
+    r"""What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter."""
+
+    filter_: Annotated[
+        Optional[CheckUsageAlertFilter1], pydantic.Field(alias="filter")
+    ] = None
+    r"""Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter."""
+
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "basis", "filter", "name"])
         serialized = handler(self)
         m = {}
 
@@ -3311,7 +3387,7 @@ class CheckProduct1(BaseModel):
 class Preview1TypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: CheckScenario1
+    scenario: Scenario1
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
     title: str
     r"""A title suitable for displaying in a paywall or upgrade modal."""
@@ -3328,7 +3404,7 @@ class Preview1TypedDict(TypedDict):
 class Preview1(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: CheckScenario1
+    scenario: Scenario1
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
 
     title: str
@@ -3449,6 +3525,10 @@ try:
 except NameError:
     pass
 try:
+    CheckUsageAlert2.model_rebuild()
+except NameError:
+    pass
+try:
     CheckCreditSchema3.model_rebuild()
 except NameError:
     pass
@@ -3458,5 +3538,9 @@ except NameError:
     pass
 try:
     CheckUsageLimit1.model_rebuild()
+except NameError:
+    pass
+try:
+    CheckUsageAlert1.model_rebuild()
 except NameError:
     pass

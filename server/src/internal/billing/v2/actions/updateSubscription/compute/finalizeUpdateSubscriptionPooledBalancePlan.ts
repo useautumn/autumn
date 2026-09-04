@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
+import { applyCustomerLicensePlanOps } from "@/internal/billing/v2/utils/billingPlan/applyCustomerLicensePlanOps";
 import {
 	applyCustomerProductPatch,
 	getPatchCustomerProducts,
@@ -20,7 +21,10 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
 }): AutumnBillingPlan => {
+	const isLicenseQuantityUpdate =
+		billingContext.intent === UpdateSubscriptionIntent.UpdateLicenseQuantity;
 	const transitionsImmediately =
+		isLicenseQuantityUpdate ||
 		billingContext.cancelAction === "cancel_immediately" ||
 		(billingContext.intent === UpdateSubscriptionIntent.UpdatePlan &&
 			billingContext.customerProduct.status !== CusProductStatus.Scheduled);
@@ -28,18 +32,31 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 
 	const updatesExistingCustomerProduct =
 		billingContext.patchContext?.mode === "existing";
-	const incomingCustomerProductSnapshots = updatesExistingCustomerProduct
-		? getPatchCustomerProducts({ autumnBillingPlan: plan }).map((patch) =>
-				applyCustomerProductPatch({
-					customerProduct: patch.customerProduct,
-					patch,
-				}),
-			)
-		: plan.insertCustomerProducts;
+	const incomingCustomerProductSnapshots = isLicenseQuantityUpdate
+		? applyCustomerLicensePlanOps({
+				customerProducts: [billingContext.customerProduct],
+				autumnBillingPlan: plan,
+			})
+		: updatesExistingCustomerProduct
+			? applyCustomerLicensePlanOps({
+					customerProducts: getPatchCustomerProducts({
+						autumnBillingPlan: plan,
+					}).map((patch) =>
+						applyCustomerProductPatch({
+							customerProduct: patch.customerProduct,
+							patch,
+						}),
+					),
+					autumnBillingPlan: plan,
+				})
+			: plan.insertCustomerProducts;
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
-		outgoingCustomerProducts: [billingContext.customerProduct],
+		// Quantity update keeps the same parent CP; only license counters change.
+		outgoingCustomerProducts: isLicenseQuantityUpdate
+			? []
+			: [billingContext.customerProduct],
 		incomingCustomerProducts: incomingCustomerProductSnapshots,
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
 		now: billingContext.currentEpochMs,

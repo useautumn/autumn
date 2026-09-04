@@ -26,6 +26,7 @@ import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceC
 
 import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange";
 import { V2_2_PlanInheritedBillingControls } from "@api/customers/changes/V2.2_PlanInheritedBillingControls";
+import { V2_3_CustomerEntityData } from "@api/customers/changes/V2.3_CustomerEntityData";
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges";
 import { V2_0_PlanChanges } from "@api/products/changes/V2.0_PlanChanges";
 import { V2_1_PlanChanges } from "@api/products/changes/V2.1_PlanChanges";
@@ -45,6 +46,10 @@ import { V2_0_AggregateEventsChange } from "../../events/aggregate/changes/V2.0_
 import { ApiVersion } from "../ApiVersion";
 import type { VersionChangeConstructor } from "./VersionChange";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
+
+export const V2_4_CHANGES: VersionChangeConstructor[] = [
+	V2_3_CustomerEntityData, // Side effect: <= V2.3 aggregates entity-level data onto the Customer
+];
 
 export const V2_3_CHANGES: VersionChangeConstructor[] = [
 	V2_2_PlanInheritedBillingControls, // Strips plan-inherited billing controls + source tags for <= V2.2
@@ -106,6 +111,10 @@ export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
 export function registerAllVersionChanges() {
 	VersionChangeRegistryClass.register({
+		version: ApiVersion.V2_4,
+		changes: V2_4_CHANGES,
+	});
+	VersionChangeRegistryClass.register({
 		version: ApiVersion.V2_3,
 		changes: V2_3_CHANGES,
 	});
@@ -147,4 +156,8 @@ export function registerAllVersionChanges() {
 // Auto-register on import
 registerAllVersionChanges();
 
-export { V0_2_InvoicesAlwaysExpanded, V1_2_CheckQueryChange };
+export {
+	V0_2_InvoicesAlwaysExpanded,
+	V1_2_CheckQueryChange,
+	V2_3_CustomerEntityData,
+};

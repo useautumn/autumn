@@ -799,7 +799,9 @@ class Plans(BaseSDK):
             ]
         ] = None,
         variants: Optional[
-            Union[List[models.Variant], List[models.VariantTypedDict]]
+            Union[
+                List[models.UpdatePlanVariant], List[models.UpdatePlanVariantTypedDict]
+            ]
         ] = None,
         is_default: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -894,7 +896,9 @@ class Plans(BaseSDK):
             update_license_parents=utils.get_pydantic_model(
                 update_license_parents, Optional[List[models.UpdateLicenseParent]]
             ),
-            variants=utils.get_pydantic_model(variants, Optional[List[models.Variant]]),
+            variants=utils.get_pydantic_model(
+                variants, Optional[List[models.UpdatePlanVariant]]
+            ),
             is_default=is_default,
         )
 
@@ -1019,7 +1023,9 @@ class Plans(BaseSDK):
             ]
         ] = None,
         variants: Optional[
-            Union[List[models.Variant], List[models.VariantTypedDict]]
+            Union[
+                List[models.UpdatePlanVariant], List[models.UpdatePlanVariantTypedDict]
+            ]
         ] = None,
         is_default: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -1114,7 +1120,9 @@ class Plans(BaseSDK):
             update_license_parents=utils.get_pydantic_model(
                 update_license_parents, Optional[List[models.UpdateLicenseParent]]
             ),
-            variants=utils.get_pydantic_model(variants, Optional[List[models.Variant]]),
+            variants=utils.get_pydantic_model(
+                variants, Optional[List[models.UpdatePlanVariant]]
+            ),
             is_default=is_default,
         )
 

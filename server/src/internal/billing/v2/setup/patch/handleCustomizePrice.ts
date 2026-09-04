@@ -5,6 +5,7 @@ import type {
 	Price,
 	SharedContext,
 } from "@autumn/shared";
+import { pricesAreSame } from "@autumn/shared";
 import { basePriceToProductItem } from "@shared/api/products/components/basePrice/basePriceToProductItem";
 import { customerProductToBasePrice } from "@shared/utils/cusProductUtils/convertCusProduct/customerProductToPrice";
 import { itemToPriceAndEnt } from "@shared/utils/productV2Utils/productItemUtils/mappers/itemToPriceAndEnt";
@@ -60,9 +61,8 @@ export const handleCustomizePrice = ({
 		return { customerPrices: [], prices: [] };
 	}
 
-	const customerPrices = removeCurrentBasePrice({ targetCustomerProduct });
-
 	if (customize.price === null) {
+		const customerPrices = removeCurrentBasePrice({ targetCustomerProduct });
 		return { customerPrices, prices: [] };
 	}
 
@@ -84,6 +84,15 @@ export const handleCustomizePrice = ({
 		});
 		price = newPrice ?? updatedPrice ?? undefined;
 	}
+	const currentPrice = customerProductToBasePrice({
+		customerProduct: targetCustomerProduct,
+		errorOnNotFound: false,
+	});
+	if (price && currentPrice && pricesAreSame(currentPrice, price)) {
+		return { customerPrices: [], prices: [] };
+	}
+
+	const customerPrices = removeCurrentBasePrice({ targetCustomerProduct });
 	const prices = price ? [price] : [];
 
 	return { customerPrices, prices };

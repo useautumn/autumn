@@ -356,6 +356,21 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   </Expandable>
                 </DynamicResponseField>
 
+                <DynamicResponseField name="processors" type="object">
+                  Payment processors this base price is connected to. Omitted when unset.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <DynamicResponseField name="price_id" type="string">
+                          Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
               </Expandable>
             </DynamicResponseField>
 
@@ -514,6 +529,21 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
                     </DynamicResponseField>
 
+                    <DynamicResponseField name="processors" type="object">
+                      Payment processors this item price is connected to. Omitted when unset.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="stripe" type="object | null">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="price_id" type="string">
+                              Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
                   </Expandable>
                 </DynamicResponseField>
 
@@ -548,6 +578,89 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="expiry_duration_length" type="number">
                       Number of periods before expiry.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="feature_override" type="object">
+                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                  <Expandable title="properties">
+                    <DynamicResponseField name="credit_schema" type="object | object[]">
+                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="metered_feature_id" type="string">
+                          ID of the metered feature that draws from this credit system.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="billing_units" type="number">
+                          Number of metered-feature units priced together. Defaults to one when omitted.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="tier_behavior" type="any" />
+
+                        <DynamicResponseField name="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="to" type="number">
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="credit_cost" type="number">
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="credit_cost" type="number">
+                          Credits consumed per billing-unit group.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="processors" type="object">
+              Payment processors this plan is connected to. Omitted when unset.
+              <Expandable title="properties">
+                <DynamicResponseField name="stripe" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="product_id" type="string">
+                      Stripe product ID this plan is billed under.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="additional_product_ids" type="string[]">
+                      Extra Stripe product IDs aliased to this plan.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="revenuecat" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="products" type="object[]">
+                      Every RevenueCat product that maps to this plan. Replaces the current set.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="product_id" type="string">
+                          RevenueCat product ID that grants this plan when purchased.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="feature_quantities" type="object[]">
+                          Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
+                          <Expandable title="properties">
+                            <DynamicResponseField name="feature_id" type="string" />
+
+                            <DynamicResponseField name="quantity" type="number" />
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                      </Expandable>
                     </DynamicResponseField>
 
                   </Expandable>
@@ -724,6 +837,18 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
                       Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+                      What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="filter" type="object">
+                      Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="properties.{key}" type="string" />
+
+                      </Expandable>
                     </DynamicResponseField>
 
                     <DynamicResponseField name="name" type="string">
@@ -969,6 +1094,41 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           </Expandable>
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="feature_override" type="object">
+                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                          <Expandable title="properties">
+                            <DynamicResponseField name="credit_schema" type="object | object[]">
+                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="metered_feature_id" type="string">
+                                  ID of the metered feature that draws from this credit system.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="billing_units" type="number">
+                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="tier_behavior" type="any" />
+
+                                <DynamicResponseField name="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="to" type="any" />
+
+                                    <DynamicResponseField name="credit_cost" type="any" />
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="credit_cost" type="number">
+                                  Credits consumed per billing-unit group.
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
                       </Expandable>
                     </DynamicResponseField>
 
@@ -1150,6 +1310,18 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                               Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                             </DynamicResponseField>
 
+                            <DynamicResponseField name="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+                              What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="filter" type="object">
+                              Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="properties.{key}" type="string" />
+
+                              </Expandable>
+                            </DynamicResponseField>
+
                             <DynamicResponseField name="name" type="string">
                               Optional user-defined label to distinguish multiple alerts on the same feature.
                             </DynamicResponseField>
@@ -1178,6 +1350,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
                       <Expandable title="properties">
                         <DynamicResponseField name="license_plan_id" type="string" />
+
+                        <DynamicResponseField name="version_slug" type="string" />
 
                         <DynamicResponseField name="included" type="integer" />
 
@@ -1336,6 +1510,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                                     <DynamicResponseField name="expiry_duration_length" type="number">
                                       Number of periods before expiry.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="feature_override" type="object">
+                                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="credit_schema" type="any | any[]">
+                                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
                                     </DynamicResponseField>
 
                                   </Expandable>
@@ -1512,6 +1696,21 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   </Expandable>
                 </DynamicResponseField>
 
+                <DynamicResponseField name="processors" type="object">
+                  Payment processors this base price is connected to. Omitted when unset.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="stripe" type="object | null">
+                      <Expandable title="properties">
+                        <DynamicResponseField name="price_id" type="string">
+                          Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
               </Expandable>
             </DynamicResponseField>
 
@@ -1670,6 +1869,21 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
                     </DynamicResponseField>
 
+                    <DynamicResponseField name="processors" type="object">
+                      Payment processors this item price is connected to. Omitted when unset.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="stripe" type="object | null">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="price_id" type="string">
+                              Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
                   </Expandable>
                 </DynamicResponseField>
 
@@ -1704,6 +1918,89 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="expiry_duration_length" type="number">
                       Number of periods before expiry.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="feature_override" type="object">
+                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                  <Expandable title="properties">
+                    <DynamicResponseField name="credit_schema" type="object | object[]">
+                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="metered_feature_id" type="string">
+                          ID of the metered feature that draws from this credit system.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="billing_units" type="number">
+                          Number of metered-feature units priced together. Defaults to one when omitted.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="tier_behavior" type="any" />
+
+                        <DynamicResponseField name="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="to" type="number">
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="credit_cost" type="number">
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="credit_cost" type="number">
+                          Credits consumed per billing-unit group.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="processors" type="object">
+              Payment processors this plan is connected to. Omitted when unset.
+              <Expandable title="properties">
+                <DynamicResponseField name="stripe" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="product_id" type="string">
+                      Stripe product ID this plan is billed under.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="additional_product_ids" type="string[]">
+                      Extra Stripe product IDs aliased to this plan.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="revenuecat" type="object | null">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="products" type="object[]">
+                      Every RevenueCat product that maps to this plan. Replaces the current set.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="product_id" type="string">
+                          RevenueCat product ID that grants this plan when purchased.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="feature_quantities" type="object[]">
+                          Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
+                          <Expandable title="properties">
+                            <DynamicResponseField name="feature_id" type="string" />
+
+                            <DynamicResponseField name="quantity" type="number" />
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                      </Expandable>
                     </DynamicResponseField>
 
                   </Expandable>
@@ -1880,6 +2177,18 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
                       Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+                      What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="filter" type="object">
+                      Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="properties.{key}" type="string" />
+
+                      </Expandable>
                     </DynamicResponseField>
 
                     <DynamicResponseField name="name" type="string">
@@ -2125,6 +2434,41 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           </Expandable>
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="feature_override" type="object">
+                          Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                          <Expandable title="properties">
+                            <DynamicResponseField name="credit_schema" type="object | object[]">
+                              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="metered_feature_id" type="string">
+                                  ID of the metered feature that draws from this credit system.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="billing_units" type="number">
+                                  Number of metered-feature units priced together. Defaults to one when omitted.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="tier_behavior" type="any" />
+
+                                <DynamicResponseField name="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="to" type="any" />
+
+                                    <DynamicResponseField name="credit_cost" type="any" />
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="credit_cost" type="number">
+                                  Credits consumed per billing-unit group.
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
                       </Expandable>
                     </DynamicResponseField>
 
@@ -2306,6 +2650,18 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                               Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                             </DynamicResponseField>
 
+                            <DynamicResponseField name="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+                              What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="filter" type="object">
+                              Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="properties.{key}" type="string" />
+
+                              </Expandable>
+                            </DynamicResponseField>
+
                             <DynamicResponseField name="name" type="string">
                               Optional user-defined label to distinguish multiple alerts on the same feature.
                             </DynamicResponseField>
@@ -2334,6 +2690,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
                       <Expandable title="properties">
                         <DynamicResponseField name="license_plan_id" type="string" />
+
+                        <DynamicResponseField name="version_slug" type="string" />
 
                         <DynamicResponseField name="included" type="integer" />
 
@@ -2492,6 +2850,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                                     <DynamicResponseField name="expiry_duration_length" type="number">
                                       Number of periods before expiry.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="feature_override" type="object">
+                                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="credit_schema" type="any | any[]">
+                                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
                                     </DynamicResponseField>
 
                                   </Expandable>

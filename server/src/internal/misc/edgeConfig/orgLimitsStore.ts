@@ -1,8 +1,12 @@
 import {
+	ApiVersion,
+	type ApiVersionClass,
 	ErrCode,
 	PAGINATION_CONFIGS,
 	type PaginationType,
 	RecaseError,
+	V2_4_CAPPED_PAGINATION_TYPES,
+	V2_4_MAX_PAGINATION_LIMIT,
 } from "@autumn/shared";
 import { ADMIN_ORG_LIMITS_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
@@ -52,20 +56,35 @@ export const getOrgEntitiesLimit = ({
 	return orgConfig?.maxEntities ?? DEFAULT_ENTITIES_LIMIT;
 };
 
+const defaultMaxLimit = ({
+	type,
+	apiVersion,
+}: {
+	type: PaginationType;
+	apiVersion?: ApiVersionClass;
+}): number =>
+	apiVersion?.gte(ApiVersion.V2_4) &&
+	V2_4_CAPPED_PAGINATION_TYPES.includes(type)
+		? V2_4_MAX_PAGINATION_LIMIT
+		: PAGINATION_CONFIGS[type].maxLimit;
+
 export const getOrgPaginationMaxLimit = ({
 	orgId,
 	orgSlug,
 	type,
+	apiVersion,
 }: {
 	orgId?: string;
 	orgSlug?: string;
 	type: PaginationType;
+	/** Omit for internal callers that are not tied to a request's API version. */
+	apiVersion?: ApiVersionClass;
 }): number => {
 	const orgs = store.get().orgs;
 	const orgConfig =
 		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined);
 	const override = orgConfig?.pagination?.[type]?.maxLimit;
-	return override ?? PAGINATION_CONFIGS[type].maxLimit;
+	return override ?? defaultMaxLimit({ type, apiVersion });
 };
 
 export const assertWithinOrgPaginationLimit = ({

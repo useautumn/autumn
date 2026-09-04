@@ -57,6 +57,8 @@ export type CursorPaginatedFullCusQueryArgs = {
 	 * preview cap, so displayed balances sum every live row. */
 	balanceFeatureInternalIds?: string[];
 	sortOrder?: SortOrder;
+	/** V2_4+ customer-level reads exclude entity-scoped rows entirely. */
+	aggregateEntityData?: boolean;
 };
 
 /**
@@ -108,8 +110,14 @@ export const getCursorPaginatedFullCusQuery = ({
 	withProductsPage = false,
 	balanceFeatureInternalIds,
 	sortOrder = "desc",
+	aggregateEntityData = true,
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = cpStatusInClause(inStatuses);
+
+	const customerLevelOnly = (alias: string) =>
+		aggregateEntityData
+			? sql``
+			: sql`AND ${sql.raw(alias)}.internal_entity_id IS NULL`;
 
 	const holdsBalanceFeatureExpr = balanceFeatureInternalIds?.length
 		? sql`EXISTS (
@@ -267,7 +275,7 @@ export const getCursorPaginatedFullCusQuery = ({
 			FROM cr
 			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
 			JOIN products prod ON prod.internal_id = cp.internal_product_id
-			WHERE cp.customer_license_link_id IS NULL ${cpStatusFilter}
+			WHERE cp.customer_license_link_id IS NULL ${cpStatusFilter} ${customerLevelOnly("cp")}
 		),
 		cps_ranked AS MATERIALIZED (
 			SELECT
@@ -323,6 +331,7 @@ export const getCursorPaginatedFullCusQuery = ({
 					AND ce.pooled_contribution_id IS NULL
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 					AND ${looseEntitlementIsLiveSql()}
+					${customerLevelOnly("ce")}
 				ORDER BY ce.id DESC
 				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
 			) ce ON true

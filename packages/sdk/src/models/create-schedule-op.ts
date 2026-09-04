@@ -433,6 +433,50 @@ export type UnscheduledPlanItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type CreateScheduleCreditSchemaItem2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type CreateScheduleCreditSchemaItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<any>;
+};
+
+export type CreateScheduleItemCreditSchemaUnion =
+  | CreateScheduleCreditSchemaItem1
+  | CreateScheduleCreditSchemaItem2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type UnscheduledPlanItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<CreateScheduleCreditSchemaItem1 | CreateScheduleCreditSchemaItem2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -469,6 +513,10 @@ export type UnscheduledPlanItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: UnscheduledPlanItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: UnscheduledPlanItemFeatureOverride | undefined;
 };
 
 /**
@@ -701,6 +749,52 @@ export type UnscheduledPlanAddItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type CreateScheduleCreditSchemaAddItem2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type CreateScheduleCreditSchemaAddItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<any>;
+};
+
+export type CreateScheduleAddItemCreditSchemaUnion =
+  | CreateScheduleCreditSchemaAddItem1
+  | CreateScheduleCreditSchemaAddItem2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type UnscheduledPlanAddItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<
+      CreateScheduleCreditSchemaAddItem1 | CreateScheduleCreditSchemaAddItem2
+    >
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -737,6 +831,10 @@ export type UnscheduledPlanAddItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: UnscheduledPlanAddItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: UnscheduledPlanAddItemFeatureOverride | undefined;
 };
 
 /**
@@ -946,12 +1044,12 @@ export const UnscheduledPlanAnchor = {
  */
 export type UnscheduledPlanAnchor = ClosedEnum<typeof UnscheduledPlanAnchor>;
 
-export type CreateScheduleProperties = string | number | boolean;
+export type CreateScheduleUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type UnscheduledPlanFilter = {
+export type UnscheduledPlanUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -979,7 +1077,7 @@ export type UnscheduledPlanUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: UnscheduledPlanFilter | undefined;
+  filter?: UnscheduledPlanUsageLimitFilter | undefined;
 };
 
 /**
@@ -998,6 +1096,29 @@ export type UnscheduledPlanThresholdType = ClosedEnum<
   typeof UnscheduledPlanThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const UnscheduledPlanBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type UnscheduledPlanBasis = ClosedEnum<typeof UnscheduledPlanBasis>;
+
+export type CreateScheduleUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type UnscheduledPlanUsageAlertFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type UnscheduledPlanUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -1015,6 +1136,14 @@ export type UnscheduledPlanUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: UnscheduledPlanThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: UnscheduledPlanBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: UnscheduledPlanUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1421,6 +1550,16 @@ export type PhaseStartItemRollover = {
 };
 
 /**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type PhaseStartItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?: Array<any> | undefined;
+};
+
+/**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type PhaseStartItemPlanItem = {
@@ -1456,6 +1595,10 @@ export type PhaseStartItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: PhaseStartItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: PhaseStartItemFeatureOverride | undefined;
 };
 
 /**
@@ -1668,6 +1811,16 @@ export type PhaseStartAddItemRollover = {
 };
 
 /**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type PhaseStartAddItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?: Array<any> | undefined;
+};
+
+/**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type PhaseStartAddItemPlanItem = {
@@ -1703,6 +1856,10 @@ export type PhaseStartAddItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: PhaseStartAddItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: PhaseStartAddItemFeatureOverride | undefined;
 };
 
 /**
@@ -1913,7 +2070,7 @@ export type PhaseStartAnchor = ClosedEnum<typeof PhaseStartAnchor>;
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type PhaseStartFilter = {
+export type PhaseStartUsageLimitFilter = {
   properties: { [k: string]: any };
 };
 
@@ -1941,7 +2098,7 @@ export type PhaseStartUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: PhaseStartFilter | undefined;
+  filter?: PhaseStartUsageLimitFilter | undefined;
 };
 
 /**
@@ -1960,6 +2117,27 @@ export type PhaseStartThresholdType = ClosedEnum<
   typeof PhaseStartThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const PhaseStartBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type PhaseStartBasis = ClosedEnum<typeof PhaseStartBasis>;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type PhaseStartUsageAlertFilter = {
+  properties: { [k: string]: any };
+};
+
 export type PhaseStartUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -1977,6 +2155,14 @@ export type PhaseStartUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: PhaseStartThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: PhaseStartBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: PhaseStartUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -2836,6 +3022,144 @@ export function unscheduledPlanItemRolloverToJSON(
 }
 
 /** @internal */
+export type CreateScheduleCreditSchemaItem2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateScheduleCreditSchemaItem2$outboundSchema: z.ZodMiniType<
+  CreateScheduleCreditSchemaItem2$Outbound,
+  CreateScheduleCreditSchemaItem2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function createScheduleCreditSchemaItem2ToJSON(
+  createScheduleCreditSchemaItem2: CreateScheduleCreditSchemaItem2,
+): string {
+  return JSON.stringify(
+    CreateScheduleCreditSchemaItem2$outboundSchema.parse(
+      createScheduleCreditSchemaItem2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateScheduleCreditSchemaItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<any>;
+};
+
+/** @internal */
+export const CreateScheduleCreditSchemaItem1$outboundSchema: z.ZodMiniType<
+  CreateScheduleCreditSchemaItem1$Outbound,
+  CreateScheduleCreditSchemaItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function createScheduleCreditSchemaItem1ToJSON(
+  createScheduleCreditSchemaItem1: CreateScheduleCreditSchemaItem1,
+): string {
+  return JSON.stringify(
+    CreateScheduleCreditSchemaItem1$outboundSchema.parse(
+      createScheduleCreditSchemaItem1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateScheduleItemCreditSchemaUnion$Outbound =
+  | CreateScheduleCreditSchemaItem1$Outbound
+  | CreateScheduleCreditSchemaItem2$Outbound;
+
+/** @internal */
+export const CreateScheduleItemCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  CreateScheduleItemCreditSchemaUnion$Outbound,
+  CreateScheduleItemCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => CreateScheduleCreditSchemaItem1$outboundSchema),
+  z.lazy(() => CreateScheduleCreditSchemaItem2$outboundSchema),
+]);
+
+export function createScheduleItemCreditSchemaUnionToJSON(
+  createScheduleItemCreditSchemaUnion: CreateScheduleItemCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    CreateScheduleItemCreditSchemaUnion$outboundSchema.parse(
+      createScheduleItemCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type UnscheduledPlanItemFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | CreateScheduleCreditSchemaItem1$Outbound
+      | CreateScheduleCreditSchemaItem2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const UnscheduledPlanItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  UnscheduledPlanItemFeatureOverride$Outbound,
+  UnscheduledPlanItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => CreateScheduleCreditSchemaItem1$outboundSchema),
+      z.lazy(() =>
+        CreateScheduleCreditSchemaItem2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function unscheduledPlanItemFeatureOverrideToJSON(
+  unscheduledPlanItemFeatureOverride: UnscheduledPlanItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    UnscheduledPlanItemFeatureOverride$outboundSchema.parse(
+      unscheduledPlanItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type UnscheduledPlanItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -2845,6 +3169,7 @@ export type UnscheduledPlanItemPlanItem$Outbound = {
   price?: UnscheduledPlanItemPrice$Outbound | undefined;
   proration?: UnscheduledPlanItemProration$Outbound | undefined;
   rollover?: UnscheduledPlanItemRollover$Outbound | undefined;
+  feature_override?: UnscheduledPlanItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -2865,10 +3190,14 @@ export const UnscheduledPlanItemPlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => UnscheduledPlanItemRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => UnscheduledPlanItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -3199,6 +3528,147 @@ export function unscheduledPlanAddItemRolloverToJSON(
 }
 
 /** @internal */
+export type CreateScheduleCreditSchemaAddItem2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateScheduleCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
+  CreateScheduleCreditSchemaAddItem2$Outbound,
+  CreateScheduleCreditSchemaAddItem2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function createScheduleCreditSchemaAddItem2ToJSON(
+  createScheduleCreditSchemaAddItem2: CreateScheduleCreditSchemaAddItem2,
+): string {
+  return JSON.stringify(
+    CreateScheduleCreditSchemaAddItem2$outboundSchema.parse(
+      createScheduleCreditSchemaAddItem2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateScheduleCreditSchemaAddItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<any>;
+};
+
+/** @internal */
+export const CreateScheduleCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
+  CreateScheduleCreditSchemaAddItem1$Outbound,
+  CreateScheduleCreditSchemaAddItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function createScheduleCreditSchemaAddItem1ToJSON(
+  createScheduleCreditSchemaAddItem1: CreateScheduleCreditSchemaAddItem1,
+): string {
+  return JSON.stringify(
+    CreateScheduleCreditSchemaAddItem1$outboundSchema.parse(
+      createScheduleCreditSchemaAddItem1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateScheduleAddItemCreditSchemaUnion$Outbound =
+  | CreateScheduleCreditSchemaAddItem1$Outbound
+  | CreateScheduleCreditSchemaAddItem2$Outbound;
+
+/** @internal */
+export const CreateScheduleAddItemCreditSchemaUnion$outboundSchema:
+  z.ZodMiniType<
+    CreateScheduleAddItemCreditSchemaUnion$Outbound,
+    CreateScheduleAddItemCreditSchemaUnion
+  > = smartUnion([
+    z.lazy(() => CreateScheduleCreditSchemaAddItem1$outboundSchema),
+    z.lazy(() => CreateScheduleCreditSchemaAddItem2$outboundSchema),
+  ]);
+
+export function createScheduleAddItemCreditSchemaUnionToJSON(
+  createScheduleAddItemCreditSchemaUnion:
+    CreateScheduleAddItemCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    CreateScheduleAddItemCreditSchemaUnion$outboundSchema.parse(
+      createScheduleAddItemCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type UnscheduledPlanAddItemFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | CreateScheduleCreditSchemaAddItem1$Outbound
+      | CreateScheduleCreditSchemaAddItem2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const UnscheduledPlanAddItemFeatureOverride$outboundSchema:
+  z.ZodMiniType<
+    UnscheduledPlanAddItemFeatureOverride$Outbound,
+    UnscheduledPlanAddItemFeatureOverride
+  > = z.pipe(
+    z.object({
+      creditSchema: z.optional(z.array(smartUnion([
+        z.lazy(() => CreateScheduleCreditSchemaAddItem1$outboundSchema),
+        z.lazy(() =>
+          CreateScheduleCreditSchemaAddItem2$outboundSchema
+        ),
+      ]))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditSchema: "credit_schema",
+      });
+    }),
+  );
+
+export function unscheduledPlanAddItemFeatureOverrideToJSON(
+  unscheduledPlanAddItemFeatureOverride: UnscheduledPlanAddItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    UnscheduledPlanAddItemFeatureOverride$outboundSchema.parse(
+      unscheduledPlanAddItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type UnscheduledPlanAddItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -3208,6 +3678,7 @@ export type UnscheduledPlanAddItemPlanItem$Outbound = {
   price?: UnscheduledPlanAddItemPrice$Outbound | undefined;
   proration?: UnscheduledPlanAddItemProration$Outbound | undefined;
   rollover?: UnscheduledPlanAddItemRollover$Outbound | undefined;
+  feature_override?: UnscheduledPlanAddItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -3228,10 +3699,14 @@ export const UnscheduledPlanAddItemPlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => UnscheduledPlanAddItemRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => UnscheduledPlanAddItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -3471,31 +3946,36 @@ export const UnscheduledPlanAnchor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UnscheduledPlanAnchor);
 
 /** @internal */
-export type CreateScheduleProperties$Outbound = string | number | boolean;
+export type CreateScheduleUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
 
 /** @internal */
-export const CreateScheduleProperties$outboundSchema: z.ZodMiniType<
-  CreateScheduleProperties$Outbound,
-  CreateScheduleProperties
+export const CreateScheduleUsageLimitProperties$outboundSchema: z.ZodMiniType<
+  CreateScheduleUsageLimitProperties$Outbound,
+  CreateScheduleUsageLimitProperties
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function createSchedulePropertiesToJSON(
-  createScheduleProperties: CreateScheduleProperties,
+export function createScheduleUsageLimitPropertiesToJSON(
+  createScheduleUsageLimitProperties: CreateScheduleUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    CreateScheduleProperties$outboundSchema.parse(createScheduleProperties),
+    CreateScheduleUsageLimitProperties$outboundSchema.parse(
+      createScheduleUsageLimitProperties,
+    ),
   );
 }
 
 /** @internal */
-export type UnscheduledPlanFilter$Outbound = {
+export type UnscheduledPlanUsageLimitFilter$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const UnscheduledPlanFilter$outboundSchema: z.ZodMiniType<
-  UnscheduledPlanFilter$Outbound,
-  UnscheduledPlanFilter
+export const UnscheduledPlanUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  UnscheduledPlanUsageLimitFilter$Outbound,
+  UnscheduledPlanUsageLimitFilter
 > = z.object({
   properties: z.record(
     z.string(),
@@ -3503,11 +3983,13 @@ export const UnscheduledPlanFilter$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function unscheduledPlanFilterToJSON(
-  unscheduledPlanFilter: UnscheduledPlanFilter,
+export function unscheduledPlanUsageLimitFilterToJSON(
+  unscheduledPlanUsageLimitFilter: UnscheduledPlanUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    UnscheduledPlanFilter$outboundSchema.parse(unscheduledPlanFilter),
+    UnscheduledPlanUsageLimitFilter$outboundSchema.parse(
+      unscheduledPlanUsageLimitFilter,
+    ),
   );
 }
 
@@ -3518,7 +4000,7 @@ export type UnscheduledPlanUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: UnscheduledPlanFilter$Outbound | undefined;
+  filter?: UnscheduledPlanUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -3532,7 +4014,9 @@ export const UnscheduledPlanUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: UnscheduledPlanUsageLimitInterval$outboundSchema,
     anchor: z.optional(UnscheduledPlanAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => UnscheduledPlanFilter$outboundSchema)),
+    filter: z.optional(
+      z.lazy(() => UnscheduledPlanUsageLimitFilter$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3555,11 +4039,66 @@ export const UnscheduledPlanThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UnscheduledPlanThresholdType);
 
 /** @internal */
+export const UnscheduledPlanBasis$outboundSchema: z.ZodMiniEnum<
+  typeof UnscheduledPlanBasis
+> = z.enum(UnscheduledPlanBasis);
+
+/** @internal */
+export type CreateScheduleUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const CreateScheduleUsageAlertProperties$outboundSchema: z.ZodMiniType<
+  CreateScheduleUsageAlertProperties$Outbound,
+  CreateScheduleUsageAlertProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createScheduleUsageAlertPropertiesToJSON(
+  createScheduleUsageAlertProperties: CreateScheduleUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    CreateScheduleUsageAlertProperties$outboundSchema.parse(
+      createScheduleUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type UnscheduledPlanUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const UnscheduledPlanUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  UnscheduledPlanUsageAlertFilter$Outbound,
+  UnscheduledPlanUsageAlertFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function unscheduledPlanUsageAlertFilterToJSON(
+  unscheduledPlanUsageAlertFilter: UnscheduledPlanUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    UnscheduledPlanUsageAlertFilter$outboundSchema.parse(
+      unscheduledPlanUsageAlertFilter,
+    ),
+  );
+}
+
+/** @internal */
 export type UnscheduledPlanUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: UnscheduledPlanUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -3573,6 +4112,10 @@ export const UnscheduledPlanUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: UnscheduledPlanThresholdType$outboundSchema,
+    basis: z._default(UnscheduledPlanBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => UnscheduledPlanUsageAlertFilter$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -4160,6 +4703,36 @@ export function phaseStartItemRolloverToJSON(
 }
 
 /** @internal */
+export type PhaseStartItemFeatureOverride$Outbound = {
+  credit_schema?: Array<any> | undefined;
+};
+
+/** @internal */
+export const PhaseStartItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  PhaseStartItemFeatureOverride$Outbound,
+  PhaseStartItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(z.any())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function phaseStartItemFeatureOverrideToJSON(
+  phaseStartItemFeatureOverride: PhaseStartItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    PhaseStartItemFeatureOverride$outboundSchema.parse(
+      phaseStartItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type PhaseStartItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -4169,6 +4742,7 @@ export type PhaseStartItemPlanItem$Outbound = {
   price?: PhaseStartItemPrice$Outbound | undefined;
   proration?: PhaseStartItemProration$Outbound | undefined;
   rollover?: PhaseStartItemRollover$Outbound | undefined;
+  feature_override?: PhaseStartItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -4185,10 +4759,14 @@ export const PhaseStartItemPlanItem$outboundSchema: z.ZodMiniType<
     price: z.optional(z.lazy(() => PhaseStartItemPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => PhaseStartItemProration$outboundSchema)),
     rollover: z.optional(z.lazy(() => PhaseStartItemRollover$outboundSchema)),
+    featureOverride: z.optional(
+      z.lazy(() => PhaseStartItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -4449,6 +5027,36 @@ export function phaseStartAddItemRolloverToJSON(
 }
 
 /** @internal */
+export type PhaseStartAddItemFeatureOverride$Outbound = {
+  credit_schema?: Array<any> | undefined;
+};
+
+/** @internal */
+export const PhaseStartAddItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  PhaseStartAddItemFeatureOverride$Outbound,
+  PhaseStartAddItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(z.any())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function phaseStartAddItemFeatureOverrideToJSON(
+  phaseStartAddItemFeatureOverride: PhaseStartAddItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    PhaseStartAddItemFeatureOverride$outboundSchema.parse(
+      phaseStartAddItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type PhaseStartAddItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -4458,6 +5066,7 @@ export type PhaseStartAddItemPlanItem$Outbound = {
   price?: PhaseStartAddItemPrice$Outbound | undefined;
   proration?: PhaseStartAddItemProration$Outbound | undefined;
   rollover?: PhaseStartAddItemRollover$Outbound | undefined;
+  feature_override?: PhaseStartAddItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -4478,10 +5087,14 @@ export const PhaseStartAddItemPlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => PhaseStartAddItemRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => PhaseStartAddItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -4708,23 +5321,23 @@ export const PhaseStartAnchor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PhaseStartAnchor);
 
 /** @internal */
-export type PhaseStartFilter$Outbound = {
+export type PhaseStartUsageLimitFilter$Outbound = {
   properties: { [k: string]: any };
 };
 
 /** @internal */
-export const PhaseStartFilter$outboundSchema: z.ZodMiniType<
-  PhaseStartFilter$Outbound,
-  PhaseStartFilter
+export const PhaseStartUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  PhaseStartUsageLimitFilter$Outbound,
+  PhaseStartUsageLimitFilter
 > = z.object({
   properties: z.record(z.string(), z.any()),
 });
 
-export function phaseStartFilterToJSON(
-  phaseStartFilter: PhaseStartFilter,
+export function phaseStartUsageLimitFilterToJSON(
+  phaseStartUsageLimitFilter: PhaseStartUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    PhaseStartFilter$outboundSchema.parse(phaseStartFilter),
+    PhaseStartUsageLimitFilter$outboundSchema.parse(phaseStartUsageLimitFilter),
   );
 }
 
@@ -4735,7 +5348,7 @@ export type PhaseStartUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: PhaseStartFilter$Outbound | undefined;
+  filter?: PhaseStartUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -4749,7 +5362,7 @@ export const PhaseStartUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: PhaseStartUsageLimitInterval$outboundSchema,
     anchor: z.optional(PhaseStartAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => PhaseStartFilter$outboundSchema)),
+    filter: z.optional(z.lazy(() => PhaseStartUsageLimitFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4772,11 +5385,39 @@ export const PhaseStartThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PhaseStartThresholdType);
 
 /** @internal */
+export const PhaseStartBasis$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartBasis
+> = z.enum(PhaseStartBasis);
+
+/** @internal */
+export type PhaseStartUsageAlertFilter$Outbound = {
+  properties: { [k: string]: any };
+};
+
+/** @internal */
+export const PhaseStartUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  PhaseStartUsageAlertFilter$Outbound,
+  PhaseStartUsageAlertFilter
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function phaseStartUsageAlertFilterToJSON(
+  phaseStartUsageAlertFilter: PhaseStartUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    PhaseStartUsageAlertFilter$outboundSchema.parse(phaseStartUsageAlertFilter),
+  );
+}
+
+/** @internal */
 export type PhaseStartUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: PhaseStartUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -4790,6 +5431,8 @@ export const PhaseStartUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: PhaseStartThresholdType$outboundSchema,
+    basis: z._default(PhaseStartBasis$outboundSchema, "balance"),
+    filter: z.optional(z.lazy(() => PhaseStartUsageAlertFilter$outboundSchema)),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {

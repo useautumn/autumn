@@ -197,7 +197,7 @@ export type BillingUpdateItemTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type BillingUpdateItemTier = {
+export type BillingUpdateItemPriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -264,7 +264,7 @@ export type BillingUpdateItemPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<BillingUpdateItemTier> | undefined;
+  tiers?: Array<BillingUpdateItemPriceTier> | undefined;
   tierBehavior?: BillingUpdateItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -371,6 +371,61 @@ export type BillingUpdateItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type BillingUpdateCreditSchemaItem2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type BillingUpdateItemFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to?: any | undefined;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type BillingUpdateCreditSchemaItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<BillingUpdateItemFeatureOverrideTier>;
+};
+
+export type BillingUpdateItemCreditSchemaUnion =
+  | BillingUpdateCreditSchemaItem1
+  | BillingUpdateCreditSchemaItem2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type BillingUpdateItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<BillingUpdateCreditSchemaItem1 | BillingUpdateCreditSchemaItem2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -407,6 +462,10 @@ export type BillingUpdateItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: BillingUpdateItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: BillingUpdateItemFeatureOverride | undefined;
 };
 
 /**
@@ -472,7 +531,7 @@ export type BillingUpdateAddItemTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type BillingUpdateAddItemTier = {
+export type BillingUpdateAddItemPriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -541,7 +600,7 @@ export type BillingUpdateAddItemPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<BillingUpdateAddItemTier> | undefined;
+  tiers?: Array<BillingUpdateAddItemPriceTier> | undefined;
   tierBehavior?: BillingUpdateAddItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -648,6 +707,63 @@ export type BillingUpdateAddItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type BillingUpdateCreditSchemaAddItem2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type BillingUpdateAddItemFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to?: any | undefined;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type BillingUpdateCreditSchemaAddItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<BillingUpdateAddItemFeatureOverrideTier>;
+};
+
+export type BillingUpdateAddItemCreditSchemaUnion =
+  | BillingUpdateCreditSchemaAddItem1
+  | BillingUpdateCreditSchemaAddItem2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type BillingUpdateAddItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<
+      BillingUpdateCreditSchemaAddItem1 | BillingUpdateCreditSchemaAddItem2
+    >
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -684,6 +800,10 @@ export type BillingUpdateAddItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: BillingUpdateAddItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: BillingUpdateAddItemFeatureOverride | undefined;
 };
 
 /**
@@ -942,12 +1062,12 @@ export const BillingUpdateAnchor = {
  */
 export type BillingUpdateAnchor = ClosedEnum<typeof BillingUpdateAnchor>;
 
-export type BillingUpdateProperties = string | number | boolean;
+export type BillingUpdateUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type BillingUpdateFilter = {
+export type BillingUpdateUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -975,7 +1095,7 @@ export type BillingUpdateUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: BillingUpdateFilter | undefined;
+  filter?: BillingUpdateUsageLimitFilter | undefined;
 };
 
 /**
@@ -994,6 +1114,29 @@ export type BillingUpdateThresholdType = ClosedEnum<
   typeof BillingUpdateThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const BillingUpdateBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type BillingUpdateBasis = ClosedEnum<typeof BillingUpdateBasis>;
+
+export type BillingUpdateUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type BillingUpdateUsageAlertFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type BillingUpdateUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -1011,6 +1154,14 @@ export type BillingUpdateUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: BillingUpdateThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: BillingUpdateBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: BillingUpdateUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1327,6 +1478,38 @@ export type BillingUpdateUpsertLicenseRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type BillingUpdateCreditSchemaUpsertLicense2 = {
+  meteredFeatureId?: any | undefined;
+  billingUnits?: any | undefined;
+  creditCost?: any | undefined;
+};
+
+export type BillingUpdateCreditSchemaUpsertLicense1 = {
+  meteredFeatureId?: any | undefined;
+  billingUnits?: any | undefined;
+  tierBehavior?: any | undefined;
+  tiers?: any | undefined;
+};
+
+export type BillingUpdateUpsertLicenseCreditSchemaUnion =
+  | BillingUpdateCreditSchemaUpsertLicense1
+  | BillingUpdateCreditSchemaUpsertLicense2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type BillingUpdateUpsertLicenseFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<
+      | BillingUpdateCreditSchemaUpsertLicense1
+      | BillingUpdateCreditSchemaUpsertLicense2
+    >
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -1363,6 +1546,10 @@ export type BillingUpdateUpsertLicensePlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: BillingUpdateUpsertLicenseRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: BillingUpdateUpsertLicenseFeatureOverride | undefined;
 };
 
 /**
@@ -1450,6 +1637,7 @@ export type BillingUpdateUpsertLicenseCustomize = {
 
 export type BillingUpdateUpsertLicense = {
   licensePlanId: string;
+  versionSlug?: string | undefined;
   included?: number | undefined;
   prepaidOnly?: boolean | undefined;
   customize?: BillingUpdateUpsertLicenseCustomize | null | undefined;
@@ -2065,7 +2253,7 @@ export function billingUpdateItemTierAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type BillingUpdateItemTier$Outbound = {
+export type BillingUpdateItemPriceTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
@@ -2075,9 +2263,9 @@ export type BillingUpdateItemTier$Outbound = {
 };
 
 /** @internal */
-export const BillingUpdateItemTier$outboundSchema: z.ZodMiniType<
-  BillingUpdateItemTier$Outbound,
-  BillingUpdateItemTier
+export const BillingUpdateItemPriceTier$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemPriceTier$Outbound,
+  BillingUpdateItemPriceTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -2095,11 +2283,11 @@ export const BillingUpdateItemTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdateItemTierToJSON(
-  billingUpdateItemTier: BillingUpdateItemTier,
+export function billingUpdateItemPriceTierToJSON(
+  billingUpdateItemPriceTier: BillingUpdateItemPriceTier,
 ): string {
   return JSON.stringify(
-    BillingUpdateItemTier$outboundSchema.parse(billingUpdateItemTier),
+    BillingUpdateItemPriceTier$outboundSchema.parse(billingUpdateItemPriceTier),
   );
 }
 
@@ -2124,7 +2312,7 @@ export type BillingUpdateItemPrice$Outbound = {
   additional_currencies?:
     | Array<BillingUpdateItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<BillingUpdateItemTier$Outbound> | undefined;
+  tiers?: Array<BillingUpdateItemPriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -2144,7 +2332,7 @@ export const BillingUpdateItemPrice$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => BillingUpdateItemAdditionalCurrency$outboundSchema)),
     ),
     tiers: z.optional(
-      z.array(z.lazy(() => BillingUpdateItemTier$outboundSchema)),
+      z.array(z.lazy(() => BillingUpdateItemPriceTier$outboundSchema)),
     ),
     tierBehavior: z.optional(BillingUpdateItemTierBehavior$outboundSchema),
     interval: BillingUpdateItemPriceInterval$outboundSchema,
@@ -2256,6 +2444,178 @@ export function billingUpdateItemRolloverToJSON(
 }
 
 /** @internal */
+export type BillingUpdateCreditSchemaItem2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const BillingUpdateCreditSchemaItem2$outboundSchema: z.ZodMiniType<
+  BillingUpdateCreditSchemaItem2$Outbound,
+  BillingUpdateCreditSchemaItem2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function billingUpdateCreditSchemaItem2ToJSON(
+  billingUpdateCreditSchemaItem2: BillingUpdateCreditSchemaItem2,
+): string {
+  return JSON.stringify(
+    BillingUpdateCreditSchemaItem2$outboundSchema.parse(
+      billingUpdateCreditSchemaItem2,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateItemFeatureOverrideTier$Outbound = {
+  to?: any | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const BillingUpdateItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemFeatureOverrideTier$Outbound,
+  BillingUpdateItemFeatureOverrideTier
+> = z.pipe(
+  z.object({
+    to: z.optional(z.any()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function billingUpdateItemFeatureOverrideTierToJSON(
+  billingUpdateItemFeatureOverrideTier: BillingUpdateItemFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    BillingUpdateItemFeatureOverrideTier$outboundSchema.parse(
+      billingUpdateItemFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateCreditSchemaItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<BillingUpdateItemFeatureOverrideTier$Outbound>;
+};
+
+/** @internal */
+export const BillingUpdateCreditSchemaItem1$outboundSchema: z.ZodMiniType<
+  BillingUpdateCreditSchemaItem1$Outbound,
+  BillingUpdateCreditSchemaItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => BillingUpdateItemFeatureOverrideTier$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function billingUpdateCreditSchemaItem1ToJSON(
+  billingUpdateCreditSchemaItem1: BillingUpdateCreditSchemaItem1,
+): string {
+  return JSON.stringify(
+    BillingUpdateCreditSchemaItem1$outboundSchema.parse(
+      billingUpdateCreditSchemaItem1,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateItemCreditSchemaUnion$Outbound =
+  | BillingUpdateCreditSchemaItem1$Outbound
+  | BillingUpdateCreditSchemaItem2$Outbound;
+
+/** @internal */
+export const BillingUpdateItemCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemCreditSchemaUnion$Outbound,
+  BillingUpdateItemCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => BillingUpdateCreditSchemaItem1$outboundSchema),
+  z.lazy(() => BillingUpdateCreditSchemaItem2$outboundSchema),
+]);
+
+export function billingUpdateItemCreditSchemaUnionToJSON(
+  billingUpdateItemCreditSchemaUnion: BillingUpdateItemCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    BillingUpdateItemCreditSchemaUnion$outboundSchema.parse(
+      billingUpdateItemCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateItemFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | BillingUpdateCreditSchemaItem1$Outbound
+      | BillingUpdateCreditSchemaItem2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const BillingUpdateItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemFeatureOverride$Outbound,
+  BillingUpdateItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => BillingUpdateCreditSchemaItem1$outboundSchema),
+      z.lazy(() =>
+        BillingUpdateCreditSchemaItem2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function billingUpdateItemFeatureOverrideToJSON(
+  billingUpdateItemFeatureOverride: BillingUpdateItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    BillingUpdateItemFeatureOverride$outboundSchema.parse(
+      billingUpdateItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -2265,6 +2625,7 @@ export type BillingUpdateItemPlanItem$Outbound = {
   price?: BillingUpdateItemPrice$Outbound | undefined;
   proration?: BillingUpdateItemProration$Outbound | undefined;
   rollover?: BillingUpdateItemRollover$Outbound | undefined;
+  feature_override?: BillingUpdateItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -2285,10 +2646,14 @@ export const BillingUpdateItemPlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => BillingUpdateItemRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => BillingUpdateItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -2417,7 +2782,7 @@ export function billingUpdateAddItemTierAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type BillingUpdateAddItemTier$Outbound = {
+export type BillingUpdateAddItemPriceTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
@@ -2427,9 +2792,9 @@ export type BillingUpdateAddItemTier$Outbound = {
 };
 
 /** @internal */
-export const BillingUpdateAddItemTier$outboundSchema: z.ZodMiniType<
-  BillingUpdateAddItemTier$Outbound,
-  BillingUpdateAddItemTier
+export const BillingUpdateAddItemPriceTier$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemPriceTier$Outbound,
+  BillingUpdateAddItemPriceTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -2447,11 +2812,13 @@ export const BillingUpdateAddItemTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdateAddItemTierToJSON(
-  billingUpdateAddItemTier: BillingUpdateAddItemTier,
+export function billingUpdateAddItemPriceTierToJSON(
+  billingUpdateAddItemPriceTier: BillingUpdateAddItemPriceTier,
 ): string {
   return JSON.stringify(
-    BillingUpdateAddItemTier$outboundSchema.parse(billingUpdateAddItemTier),
+    BillingUpdateAddItemPriceTier$outboundSchema.parse(
+      billingUpdateAddItemPriceTier,
+    ),
   );
 }
 
@@ -2476,7 +2843,7 @@ export type BillingUpdateAddItemPrice$Outbound = {
   additional_currencies?:
     | Array<BillingUpdateAddItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<BillingUpdateAddItemTier$Outbound> | undefined;
+  tiers?: Array<BillingUpdateAddItemPriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -2496,7 +2863,7 @@ export const BillingUpdateAddItemPrice$outboundSchema: z.ZodMiniType<
       BillingUpdateAddItemAdditionalCurrency$outboundSchema
     ))),
     tiers: z.optional(z.array(z.lazy(() =>
-      BillingUpdateAddItemTier$outboundSchema
+      BillingUpdateAddItemPriceTier$outboundSchema
     ))),
     tierBehavior: z.optional(BillingUpdateAddItemTierBehavior$outboundSchema),
     interval: BillingUpdateAddItemPriceInterval$outboundSchema,
@@ -2613,6 +2980,181 @@ export function billingUpdateAddItemRolloverToJSON(
 }
 
 /** @internal */
+export type BillingUpdateCreditSchemaAddItem2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const BillingUpdateCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
+  BillingUpdateCreditSchemaAddItem2$Outbound,
+  BillingUpdateCreditSchemaAddItem2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function billingUpdateCreditSchemaAddItem2ToJSON(
+  billingUpdateCreditSchemaAddItem2: BillingUpdateCreditSchemaAddItem2,
+): string {
+  return JSON.stringify(
+    BillingUpdateCreditSchemaAddItem2$outboundSchema.parse(
+      billingUpdateCreditSchemaAddItem2,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateAddItemFeatureOverrideTier$Outbound = {
+  to?: any | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const BillingUpdateAddItemFeatureOverrideTier$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateAddItemFeatureOverrideTier$Outbound,
+    BillingUpdateAddItemFeatureOverrideTier
+  > = z.pipe(
+    z.object({
+      to: z.optional(z.any()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function billingUpdateAddItemFeatureOverrideTierToJSON(
+  billingUpdateAddItemFeatureOverrideTier:
+    BillingUpdateAddItemFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemFeatureOverrideTier$outboundSchema.parse(
+      billingUpdateAddItemFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateCreditSchemaAddItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<BillingUpdateAddItemFeatureOverrideTier$Outbound>;
+};
+
+/** @internal */
+export const BillingUpdateCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
+  BillingUpdateCreditSchemaAddItem1$Outbound,
+  BillingUpdateCreditSchemaAddItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => BillingUpdateAddItemFeatureOverrideTier$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function billingUpdateCreditSchemaAddItem1ToJSON(
+  billingUpdateCreditSchemaAddItem1: BillingUpdateCreditSchemaAddItem1,
+): string {
+  return JSON.stringify(
+    BillingUpdateCreditSchemaAddItem1$outboundSchema.parse(
+      billingUpdateCreditSchemaAddItem1,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateAddItemCreditSchemaUnion$Outbound =
+  | BillingUpdateCreditSchemaAddItem1$Outbound
+  | BillingUpdateCreditSchemaAddItem2$Outbound;
+
+/** @internal */
+export const BillingUpdateAddItemCreditSchemaUnion$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateAddItemCreditSchemaUnion$Outbound,
+    BillingUpdateAddItemCreditSchemaUnion
+  > = smartUnion([
+    z.lazy(() => BillingUpdateCreditSchemaAddItem1$outboundSchema),
+    z.lazy(() => BillingUpdateCreditSchemaAddItem2$outboundSchema),
+  ]);
+
+export function billingUpdateAddItemCreditSchemaUnionToJSON(
+  billingUpdateAddItemCreditSchemaUnion: BillingUpdateAddItemCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemCreditSchemaUnion$outboundSchema.parse(
+      billingUpdateAddItemCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateAddItemFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | BillingUpdateCreditSchemaAddItem1$Outbound
+      | BillingUpdateCreditSchemaAddItem2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAddItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemFeatureOverride$Outbound,
+  BillingUpdateAddItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => BillingUpdateCreditSchemaAddItem1$outboundSchema),
+      z.lazy(() =>
+        BillingUpdateCreditSchemaAddItem2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function billingUpdateAddItemFeatureOverrideToJSON(
+  billingUpdateAddItemFeatureOverride: BillingUpdateAddItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemFeatureOverride$outboundSchema.parse(
+      billingUpdateAddItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateAddItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -2622,6 +3164,7 @@ export type BillingUpdateAddItemPlanItem$Outbound = {
   price?: BillingUpdateAddItemPrice$Outbound | undefined;
   proration?: BillingUpdateAddItemProration$Outbound | undefined;
   rollover?: BillingUpdateAddItemRollover$Outbound | undefined;
+  feature_override?: BillingUpdateAddItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -2642,10 +3185,14 @@ export const BillingUpdateAddItemPlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => BillingUpdateAddItemRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => BillingUpdateAddItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -2931,31 +3478,36 @@ export const BillingUpdateAnchor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateAnchor);
 
 /** @internal */
-export type BillingUpdateProperties$Outbound = string | number | boolean;
+export type BillingUpdateUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
 
 /** @internal */
-export const BillingUpdateProperties$outboundSchema: z.ZodMiniType<
-  BillingUpdateProperties$Outbound,
-  BillingUpdateProperties
+export const BillingUpdateUsageLimitProperties$outboundSchema: z.ZodMiniType<
+  BillingUpdateUsageLimitProperties$Outbound,
+  BillingUpdateUsageLimitProperties
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function billingUpdatePropertiesToJSON(
-  billingUpdateProperties: BillingUpdateProperties,
+export function billingUpdateUsageLimitPropertiesToJSON(
+  billingUpdateUsageLimitProperties: BillingUpdateUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    BillingUpdateProperties$outboundSchema.parse(billingUpdateProperties),
+    BillingUpdateUsageLimitProperties$outboundSchema.parse(
+      billingUpdateUsageLimitProperties,
+    ),
   );
 }
 
 /** @internal */
-export type BillingUpdateFilter$Outbound = {
+export type BillingUpdateUsageLimitFilter$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const BillingUpdateFilter$outboundSchema: z.ZodMiniType<
-  BillingUpdateFilter$Outbound,
-  BillingUpdateFilter
+export const BillingUpdateUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  BillingUpdateUsageLimitFilter$Outbound,
+  BillingUpdateUsageLimitFilter
 > = z.object({
   properties: z.record(
     z.string(),
@@ -2963,11 +3515,13 @@ export const BillingUpdateFilter$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function billingUpdateFilterToJSON(
-  billingUpdateFilter: BillingUpdateFilter,
+export function billingUpdateUsageLimitFilterToJSON(
+  billingUpdateUsageLimitFilter: BillingUpdateUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    BillingUpdateFilter$outboundSchema.parse(billingUpdateFilter),
+    BillingUpdateUsageLimitFilter$outboundSchema.parse(
+      billingUpdateUsageLimitFilter,
+    ),
   );
 }
 
@@ -2978,7 +3532,7 @@ export type BillingUpdateUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: BillingUpdateFilter$Outbound | undefined;
+  filter?: BillingUpdateUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -2992,7 +3546,9 @@ export const BillingUpdateUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: BillingUpdateUsageLimitInterval$outboundSchema,
     anchor: z.optional(BillingUpdateAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => BillingUpdateFilter$outboundSchema)),
+    filter: z.optional(
+      z.lazy(() => BillingUpdateUsageLimitFilter$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3015,11 +3571,66 @@ export const BillingUpdateThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateThresholdType);
 
 /** @internal */
+export const BillingUpdateBasis$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateBasis
+> = z.enum(BillingUpdateBasis);
+
+/** @internal */
+export type BillingUpdateUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const BillingUpdateUsageAlertProperties$outboundSchema: z.ZodMiniType<
+  BillingUpdateUsageAlertProperties$Outbound,
+  BillingUpdateUsageAlertProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function billingUpdateUsageAlertPropertiesToJSON(
+  billingUpdateUsageAlertProperties: BillingUpdateUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    BillingUpdateUsageAlertProperties$outboundSchema.parse(
+      billingUpdateUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const BillingUpdateUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  BillingUpdateUsageAlertFilter$Outbound,
+  BillingUpdateUsageAlertFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function billingUpdateUsageAlertFilterToJSON(
+  billingUpdateUsageAlertFilter: BillingUpdateUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    BillingUpdateUsageAlertFilter$outboundSchema.parse(
+      billingUpdateUsageAlertFilter,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: BillingUpdateUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -3033,6 +3644,10 @@ export const BillingUpdateUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: BillingUpdateThresholdType$outboundSchema,
+    basis: z._default(BillingUpdateBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => BillingUpdateUsageAlertFilter$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -3478,6 +4093,152 @@ export function billingUpdateUpsertLicenseRolloverToJSON(
 }
 
 /** @internal */
+export type BillingUpdateCreditSchemaUpsertLicense2$Outbound = {
+  metered_feature_id?: any | undefined;
+  billing_units?: any | undefined;
+  credit_cost?: any | undefined;
+};
+
+/** @internal */
+export const BillingUpdateCreditSchemaUpsertLicense2$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateCreditSchemaUpsertLicense2$Outbound,
+    BillingUpdateCreditSchemaUpsertLicense2
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.optional(z.any()),
+      billingUnits: z.optional(z.any()),
+      creditCost: z.optional(z.any()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function billingUpdateCreditSchemaUpsertLicense2ToJSON(
+  billingUpdateCreditSchemaUpsertLicense2:
+    BillingUpdateCreditSchemaUpsertLicense2,
+): string {
+  return JSON.stringify(
+    BillingUpdateCreditSchemaUpsertLicense2$outboundSchema.parse(
+      billingUpdateCreditSchemaUpsertLicense2,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateCreditSchemaUpsertLicense1$Outbound = {
+  metered_feature_id?: any | undefined;
+  billing_units?: any | undefined;
+  tier_behavior?: any | undefined;
+  tiers?: any | undefined;
+};
+
+/** @internal */
+export const BillingUpdateCreditSchemaUpsertLicense1$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateCreditSchemaUpsertLicense1$Outbound,
+    BillingUpdateCreditSchemaUpsertLicense1
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.optional(z.any()),
+      billingUnits: z.optional(z.any()),
+      tierBehavior: z.optional(z.any()),
+      tiers: z.optional(z.any()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        tierBehavior: "tier_behavior",
+      });
+    }),
+  );
+
+export function billingUpdateCreditSchemaUpsertLicense1ToJSON(
+  billingUpdateCreditSchemaUpsertLicense1:
+    BillingUpdateCreditSchemaUpsertLicense1,
+): string {
+  return JSON.stringify(
+    BillingUpdateCreditSchemaUpsertLicense1$outboundSchema.parse(
+      billingUpdateCreditSchemaUpsertLicense1,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateUpsertLicenseCreditSchemaUnion$Outbound =
+  | BillingUpdateCreditSchemaUpsertLicense1$Outbound
+  | BillingUpdateCreditSchemaUpsertLicense2$Outbound;
+
+/** @internal */
+export const BillingUpdateUpsertLicenseCreditSchemaUnion$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateUpsertLicenseCreditSchemaUnion$Outbound,
+    BillingUpdateUpsertLicenseCreditSchemaUnion
+  > = smartUnion([
+    z.lazy(() => BillingUpdateCreditSchemaUpsertLicense1$outboundSchema),
+    z.lazy(() => BillingUpdateCreditSchemaUpsertLicense2$outboundSchema),
+  ]);
+
+export function billingUpdateUpsertLicenseCreditSchemaUnionToJSON(
+  billingUpdateUpsertLicenseCreditSchemaUnion:
+    BillingUpdateUpsertLicenseCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    BillingUpdateUpsertLicenseCreditSchemaUnion$outboundSchema.parse(
+      billingUpdateUpsertLicenseCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateUpsertLicenseFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | BillingUpdateCreditSchemaUpsertLicense1$Outbound
+      | BillingUpdateCreditSchemaUpsertLicense2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const BillingUpdateUpsertLicenseFeatureOverride$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateUpsertLicenseFeatureOverride$Outbound,
+    BillingUpdateUpsertLicenseFeatureOverride
+  > = z.pipe(
+    z.object({
+      creditSchema: z.optional(z.array(smartUnion([
+        z.lazy(() => BillingUpdateCreditSchemaUpsertLicense1$outboundSchema),
+        z.lazy(() =>
+          BillingUpdateCreditSchemaUpsertLicense2$outboundSchema
+        ),
+      ]))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditSchema: "credit_schema",
+      });
+    }),
+  );
+
+export function billingUpdateUpsertLicenseFeatureOverrideToJSON(
+  billingUpdateUpsertLicenseFeatureOverride:
+    BillingUpdateUpsertLicenseFeatureOverride,
+): string {
+  return JSON.stringify(
+    BillingUpdateUpsertLicenseFeatureOverride$outboundSchema.parse(
+      billingUpdateUpsertLicenseFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateUpsertLicensePlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -3487,6 +4248,9 @@ export type BillingUpdateUpsertLicensePlanItem$Outbound = {
   price?: BillingUpdateUpsertLicensePrice$Outbound | undefined;
   proration?: BillingUpdateUpsertLicenseProration$Outbound | undefined;
   rollover?: BillingUpdateUpsertLicenseRollover$Outbound | undefined;
+  feature_override?:
+    | BillingUpdateUpsertLicenseFeatureOverride$Outbound
+    | undefined;
 };
 
 /** @internal */
@@ -3511,10 +4275,14 @@ export const BillingUpdateUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => BillingUpdateUpsertLicenseRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => BillingUpdateUpsertLicenseFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -3663,6 +4431,7 @@ export function billingUpdateUpsertLicenseCustomizeToJSON(
 /** @internal */
 export type BillingUpdateUpsertLicense$Outbound = {
   license_plan_id: string;
+  version_slug?: string | undefined;
   included?: number | undefined;
   prepaid_only?: boolean | undefined;
   customize?: BillingUpdateUpsertLicenseCustomize$Outbound | null | undefined;
@@ -3676,6 +4445,7 @@ export const BillingUpdateUpsertLicense$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     licensePlanId: z.string(),
+    versionSlug: z.optional(z.string()),
     included: z.optional(z.int()),
     prepaidOnly: z.optional(z.boolean()),
     customize: z.optional(z.nullable(z.lazy(() =>
@@ -3686,6 +4456,7 @@ export const BillingUpdateUpsertLicense$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       licensePlanId: "license_plan_id",
+      versionSlug: "version_slug",
       prepaidOnly: "prepaid_only",
     });
   }),

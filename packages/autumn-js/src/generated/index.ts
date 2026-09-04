@@ -8,6 +8,7 @@ export * from "./createReferralProgramSchemas";
 export * from "./createRewardSchemas";
 export * from "./getOrCreateCustomerSchemas";
 export * from "./listEventsSchemas";
+export * from "./listPlansParamsSchemas";
 export * from "./listPlansSchemas";
 export * from "./multiAttachSchemas";
 export * from "./openCustomerPortalSchemas";

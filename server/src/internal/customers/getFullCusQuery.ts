@@ -720,6 +720,7 @@ export const getPaginatedFullCusQuery = ({
 	processors,
 	search,
 	cusProductLimit,
+	aggregateEntityData = true,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -737,7 +738,14 @@ export const getPaginatedFullCusQuery = ({
 	processors?: ListCustomersV2Params["processors"];
 	search?: string;
 	cusProductLimit: number;
+	/** V2_4+ customer-level reads exclude entity-scoped rows entirely. */
+	aggregateEntityData?: boolean;
 }) => {
+	const customerLevelOnly = (alias: string) =>
+		aggregateEntityData
+			? sql``
+			: sql`AND ${sql.raw(alias)}.internal_entity_id IS NULL`;
+
 	const withStatusFilter = () => {
 		return inStatuses?.length
 			? sql`AND cp.status = ANY(ARRAY[${sql.join(
@@ -780,6 +788,7 @@ export const getPaginatedFullCusQuery = ({
 		AND ce.pooled_contribution_id IS NULL
         AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
         AND ${looseEntitlementIsLiveSql()}
+        ${customerLevelOnly("ce")}
       ORDER BY ce.id DESC
 	  LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
     ) ce ON true
@@ -839,6 +848,7 @@ export const getPaginatedFullCusQuery = ({
         FROM customer_products cp
         WHERE cp.internal_customer_id = cr.internal_id
         AND cp.customer_license_link_id IS NULL
+        ${customerLevelOnly("cp")}
         ${withStatusFilter()}
         ORDER BY (SELECT p.is_add_on FROM products p WHERE p.internal_id = cp.internal_product_id) ASC, cp.created_at DESC
         LIMIT ${cusProductLimit}

@@ -35,6 +35,7 @@ import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEn
 import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { shouldAggregateEntityData } from "./cusUtils/customerEntityData.js";
 import {
 	getPaginatedFullCusQuery,
 	parseDashboardIntervalFilter,
@@ -145,6 +146,9 @@ export class CusBatchService {
 			plans,
 			processors,
 			cusProductLimit,
+			aggregateEntityData: shouldAggregateEntityData({
+				apiVersion: ctx.apiVersion,
+			}),
 		});
 		const tSqlStart = performance.now();
 		const results = await ctx.db.execute(sqlQuery);
@@ -245,6 +249,9 @@ export class CusBatchService {
 			createdAtRangeFilter: created_at_range,
 			cusProductLimit,
 			sortOrder: query.sort_order,
+			aggregateEntityData: shouldAggregateEntityData({
+				apiVersion: ctx.apiVersion,
+			}),
 		});
 
 		const tSqlStart = performance.now();

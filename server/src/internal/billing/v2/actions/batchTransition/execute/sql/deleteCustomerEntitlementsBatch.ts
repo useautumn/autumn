@@ -3,41 +3,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RemoveEntitlementPriceOperation } from "../../types/entitlementPriceOperationTypes";
 import type { BatchMutationResult } from "../../types/types";
 import { activeStatusesSql, sqlList } from "./batchTransitionSqlUtils";
-import { pooledRemoveBatchCtes } from "./pooledRemoveBatchCtes";
-
-const pooledRemoveCtes = ({
-	operation,
-	now,
-}: {
-	operation: RemoveEntitlementPriceOperation;
-	now: number;
-}): SQL =>
-	operation.entitlementPrice.entitlement.pooled === true
-		? pooledRemoveBatchCtes({ now })
-		: sql``;
-
-const deletedCte = ({
-	operation,
-}: {
-	operation: RemoveEntitlementPriceOperation;
-}): SQL =>
-	operation.entitlementPrice.entitlement.pooled === true
-		? sql`
-		deleted AS (
-			DELETE FROM customer_entitlements AS customer_entitlement
-			USING target_rows
-			WHERE customer_entitlement.id = target_rows.target_id
-				AND (SELECT COALESCE(COUNT(*), 0) FROM updated_synthetic) >= 0
-			RETURNING 1
-		)`
-		: sql`
-		deleted AS (
-			DELETE FROM customer_entitlements AS customer_entitlement
-			USING target_rows
-			WHERE customer_entitlement.ctid = target_rows.target_ctid
-			RETURNING 1
-		)`;
-
 export const buildDeleteCustomerEntitlementsBatchQuery = ({
 	customerLicenseLinkId,
 	operation,
@@ -52,10 +17,13 @@ export const buildDeleteCustomerEntitlementsBatchQuery = ({
 		WITH candidate_rows AS MATERIALIZED (
 			SELECT
 				customer_entitlement.ctid AS target_ctid,
-				customer_entitlement.id AS target_id
+				customer_entitlement.id AS target_id,
+				contribution.pooled_balance_id
 			FROM customer_products AS seat
 			INNER JOIN customer_entitlements AS customer_entitlement
 				ON customer_entitlement.customer_product_id = seat.id
+			LEFT JOIN pooled_balance_contributions AS contribution
+				ON contribution.id = customer_entitlement.pooled_contribution_id
 			WHERE seat.customer_license_link_id = ${customerLicenseLinkId}
 				AND seat.status IN (${activeStatusesSql})
 				AND customer_entitlement.entitlement_id IN (${sqlList({ values: operation.fromEntitlementIds })})
@@ -64,15 +32,55 @@ export const buildDeleteCustomerEntitlementsBatchQuery = ({
 			LIMIT ${batchSize + 1}
 		),
 		target_rows AS MATERIALIZED (
-			SELECT target_ctid, target_id
+			SELECT target_ctid, target_id, pooled_balance_id
 			FROM candidate_rows
 			LIMIT ${batchSize}
+		),
+		deleted AS (
+			DELETE FROM customer_entitlements AS customer_entitlement
+			USING target_rows
+			WHERE customer_entitlement.ctid = target_rows.target_ctid
+			RETURNING 1
+		),
+		expired_pools AS (
+			UPDATE pooled_balances AS pool
+			SET expires_at = ${now}, updated_at = ${now}
+			FROM (
+				SELECT DISTINCT pooled_balance_id
+				FROM target_rows
+				WHERE pooled_balance_id IS NOT NULL
+			) AS target_pool
+			WHERE pool.id = target_pool.pooled_balance_id
+				AND pool.customer_license_link_id IS NULL
+				AND (SELECT COUNT(*) <= ${batchSize} FROM candidate_rows)
+				AND (SELECT COUNT(*) FROM deleted) > 0
+				AND NOT EXISTS (
+					SELECT 1
+					FROM pooled_balance_contributions AS remaining_contribution
+					WHERE remaining_contribution.pooled_balance_id = pool.id
+						AND NOT EXISTS (
+							SELECT 1
+							FROM target_rows
+							WHERE target_rows.target_id =
+								remaining_contribution.source_customer_entitlement_id
+						)
+				)
+			RETURNING pool.id
+		),
+		expired_synthetic AS (
+			UPDATE customer_entitlements AS synthetic
+			SET
+				expires_at = ${now},
+				cache_version = COALESCE(synthetic.cache_version, 0) + 1
+			FROM expired_pools
+			WHERE synthetic.pooled_balance_id = expired_pools.id
+				AND synthetic.customer_product_id IS NULL
+			RETURNING 1
 		)
-		${pooledRemoveCtes({ operation, now })}
-		, ${deletedCte({ operation })}
 		SELECT
 			(SELECT COUNT(*)::int FROM deleted) AS affected,
-			(SELECT COUNT(*) > ${batchSize} FROM candidate_rows) AS "hasMore"
+			(SELECT COUNT(*) > ${batchSize} FROM candidate_rows) AS "hasMore",
+			(SELECT COUNT(*) FROM expired_synthetic) AS expired
 	`;
 
 export const deleteCustomerEntitlementsBatch = async ({

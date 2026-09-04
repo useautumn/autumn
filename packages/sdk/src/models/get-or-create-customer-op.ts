@@ -147,12 +147,12 @@ export type GetOrCreateCustomerAnchor = ClosedEnum<
   typeof GetOrCreateCustomerAnchor
 >;
 
-export type GetOrCreateCustomerProperties = string | number | boolean;
+export type GetOrCreateCustomerUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type GetOrCreateCustomerFilter = {
+export type GetOrCreateCustomerUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -180,7 +180,7 @@ export type GetOrCreateCustomerUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: GetOrCreateCustomerFilter | undefined;
+  filter?: GetOrCreateCustomerUsageLimitFilter | undefined;
 };
 
 /**
@@ -199,6 +199,31 @@ export type GetOrCreateCustomerThresholdType = ClosedEnum<
   typeof GetOrCreateCustomerThresholdType
 >;
 
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const GetOrCreateCustomerBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type GetOrCreateCustomerBasis = ClosedEnum<
+  typeof GetOrCreateCustomerBasis
+>;
+
+export type GetOrCreateCustomerUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type GetOrCreateCustomerUsageAlertFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type GetOrCreateCustomerUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -216,6 +241,14 @@ export type GetOrCreateCustomerUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: GetOrCreateCustomerThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: GetOrCreateCustomerBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: GetOrCreateCustomerUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -469,33 +502,38 @@ export const GetOrCreateCustomerAnchor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(GetOrCreateCustomerAnchor);
 
 /** @internal */
-export type GetOrCreateCustomerProperties$Outbound = string | number | boolean;
+export type GetOrCreateCustomerUsageLimitProperties$Outbound =
+  | string
+  | number
+  | boolean;
 
 /** @internal */
-export const GetOrCreateCustomerProperties$outboundSchema: z.ZodMiniType<
-  GetOrCreateCustomerProperties$Outbound,
-  GetOrCreateCustomerProperties
-> = smartUnion([z.string(), z.number(), z.boolean()]);
+export const GetOrCreateCustomerUsageLimitProperties$outboundSchema:
+  z.ZodMiniType<
+    GetOrCreateCustomerUsageLimitProperties$Outbound,
+    GetOrCreateCustomerUsageLimitProperties
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function getOrCreateCustomerPropertiesToJSON(
-  getOrCreateCustomerProperties: GetOrCreateCustomerProperties,
+export function getOrCreateCustomerUsageLimitPropertiesToJSON(
+  getOrCreateCustomerUsageLimitProperties:
+    GetOrCreateCustomerUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    GetOrCreateCustomerProperties$outboundSchema.parse(
-      getOrCreateCustomerProperties,
+    GetOrCreateCustomerUsageLimitProperties$outboundSchema.parse(
+      getOrCreateCustomerUsageLimitProperties,
     ),
   );
 }
 
 /** @internal */
-export type GetOrCreateCustomerFilter$Outbound = {
+export type GetOrCreateCustomerUsageLimitFilter$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const GetOrCreateCustomerFilter$outboundSchema: z.ZodMiniType<
-  GetOrCreateCustomerFilter$Outbound,
-  GetOrCreateCustomerFilter
+export const GetOrCreateCustomerUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerUsageLimitFilter$Outbound,
+  GetOrCreateCustomerUsageLimitFilter
 > = z.object({
   properties: z.record(
     z.string(),
@@ -503,11 +541,13 @@ export const GetOrCreateCustomerFilter$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function getOrCreateCustomerFilterToJSON(
-  getOrCreateCustomerFilter: GetOrCreateCustomerFilter,
+export function getOrCreateCustomerUsageLimitFilterToJSON(
+  getOrCreateCustomerUsageLimitFilter: GetOrCreateCustomerUsageLimitFilter,
 ): string {
   return JSON.stringify(
-    GetOrCreateCustomerFilter$outboundSchema.parse(getOrCreateCustomerFilter),
+    GetOrCreateCustomerUsageLimitFilter$outboundSchema.parse(
+      getOrCreateCustomerUsageLimitFilter,
+    ),
   );
 }
 
@@ -518,7 +558,7 @@ export type GetOrCreateCustomerUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: GetOrCreateCustomerFilter$Outbound | undefined;
+  filter?: GetOrCreateCustomerUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -532,7 +572,9 @@ export const GetOrCreateCustomerUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: GetOrCreateCustomerUsageLimitInterval$outboundSchema,
     anchor: z.optional(GetOrCreateCustomerAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => GetOrCreateCustomerFilter$outboundSchema)),
+    filter: z.optional(
+      z.lazy(() => GetOrCreateCustomerUsageLimitFilter$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -557,11 +599,68 @@ export const GetOrCreateCustomerThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(GetOrCreateCustomerThresholdType);
 
 /** @internal */
+export const GetOrCreateCustomerBasis$outboundSchema: z.ZodMiniEnum<
+  typeof GetOrCreateCustomerBasis
+> = z.enum(GetOrCreateCustomerBasis);
+
+/** @internal */
+export type GetOrCreateCustomerUsageAlertProperties$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const GetOrCreateCustomerUsageAlertProperties$outboundSchema:
+  z.ZodMiniType<
+    GetOrCreateCustomerUsageAlertProperties$Outbound,
+    GetOrCreateCustomerUsageAlertProperties
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function getOrCreateCustomerUsageAlertPropertiesToJSON(
+  getOrCreateCustomerUsageAlertProperties:
+    GetOrCreateCustomerUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerUsageAlertProperties$outboundSchema.parse(
+      getOrCreateCustomerUsageAlertProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const GetOrCreateCustomerUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerUsageAlertFilter$Outbound,
+  GetOrCreateCustomerUsageAlertFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function getOrCreateCustomerUsageAlertFilterToJSON(
+  getOrCreateCustomerUsageAlertFilter: GetOrCreateCustomerUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerUsageAlertFilter$outboundSchema.parse(
+      getOrCreateCustomerUsageAlertFilter,
+    ),
+  );
+}
+
+/** @internal */
 export type GetOrCreateCustomerUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: GetOrCreateCustomerUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -575,6 +674,10 @@ export const GetOrCreateCustomerUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: GetOrCreateCustomerThresholdType$outboundSchema,
+    basis: z._default(GetOrCreateCustomerBasis$outboundSchema, "balance"),
+    filter: z.optional(
+      z.lazy(() => GetOrCreateCustomerUsageAlertFilter$outboundSchema),
+    ),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {

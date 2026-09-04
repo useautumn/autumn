@@ -42,6 +42,8 @@ export const CustomerLicenseTransitionSchema = z.object({
 	// carried on the transition so the async batch task sees the same choice.
 	// Absent means reset: seat usage clears to the incoming grant.
 	carryOverUsages: CarryOverUsagesSchema,
+	// Parent subscription anchor used to align assigned entitlement cycles.
+	billingCycleAnchorMs: z.number().optional(),
 });
 export type CustomerLicenseTransition = z.infer<
 	typeof CustomerLicenseTransitionSchema

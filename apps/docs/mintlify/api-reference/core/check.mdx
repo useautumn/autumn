@@ -1121,6 +1121,18 @@ const { allowed } = await autumn.check({
                   Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="basis" type="'balance' | 'included' | 'recurring' | 'usage_limit'">
+                  What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="filter" type="object">
+                  Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="properties.{key}" type="string" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
                 <DynamicResponseField name="name" type="string">
                   Optional user-defined label to distinguish multiple alerts on the same feature.
                 </DynamicResponseField>

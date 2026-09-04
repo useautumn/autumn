@@ -8,7 +8,7 @@ image: "/images/blog/how-firecrawl-runs-pricing-experiments-every-week.png"
 featured: true
 ---
 
-[Firecrawl](https://firecrawl.dev) is one of our favorite products at Autumn. It is the context API for searching, scraping, and interacting with the web at scale. It's open source with over 175K GitHub stars, used heavily inside coding agents through their MCP server and CLI, and it bills billions of credits per month.
+[Firecrawl](https://firecrawl.dev) is one of our favorite products at Autumn. It is the context API for searching, scraping, and interacting with the web at scale. It's open source with over 175K GitHub stars, used heavily inside coding agents through their MCP server and CLI, and it bills [billions of credits](/blog/ai-billing-infrastructure) per month.
 
 They're scaling incredibly quickly as agents have taken off. At peak they send Autumn more than 5,000 requests every second.
 
@@ -29,13 +29,13 @@ Micah was a few weeks into a big billing rework because their existing engine wa
 	role="Head of Support Engineering, Firecrawl"
 >
 
-Our in-house billing system had been around for a while and hadn't received enough attention. Its logic was scattered across the codebase, so complexity built up over time. The SQL function handling balances, expirations, and rollovers alone had grown to more than 800 lines.
+Our in-house billing system had been around for a while and hadn't received enough attention. Its logic was [scattered across the codebase](/blog/stop-rebuilding-billing), so complexity built up over time. The SQL function handling balances, expirations, and rollovers alone had grown to more than 800 lines.
 
 </TestimonialQuote>
 
 Since billing problems usually ended up in a support ticket, most of the work fell on him and his team. When we first met, he was fairly blunt that he didn't think we were a fit. His view was that Autumn suited new companies that hadn't built a complicated billing system yet, and that migrating would cost more than finishing the refactor he'd already started.
 
-However, after we chatted it was clear that billing was going to be an ongoing problem as they continued to scale. Pricing changes, new products, multi-team structures and spend control for enterprises were things we could provide out of the box, freeing up time for product work. Autumn forward-deployed an engineer to work with them for the migration, and after just a few weeks, they went live on April 1st.
+However, after we chatted it was clear that billing was going to be an ongoing problem as they continued to scale. Pricing changes, new products, [multi-team structures](/blog/how-mintlify-is-scaling-sales-led-gtm) and spend control for enterprises were things we could provide out of the box, freeing up time for product work. Autumn forward-deployed an engineer to work with them for the migration, and after just a few weeks, they went live on April 1st.
 
 ### Updating pricing every week
 
@@ -61,7 +61,7 @@ The lift to run an experiment is reduced 10x. Through this process, the Firecraw
 
 ### Smart upgrades vs. auto top-ups
 
-Most credit products handle "I ran out" with a one time top up. The economics of it aren't ideal, because top ups are priced at a premium per credit, so the heaviest users end up paying the most per unit. For the company it's lumpy revenue that rarely converts into expanding subscription revenue.
+Most credit products handle "I ran out" with a [one time top up](/blog/usage-billing-bad). The economics of it aren't ideal, because top ups are priced at a premium per credit, so the heaviest users end up paying the most per unit. For the company it's lumpy revenue that rarely converts into expanding subscription revenue.
 
 Someone on Micah's team suggested doing it differently, and they built what they call "smart upgrades." When a user hits their ceiling, instead of selling them another pack, Firecrawl moves them to the next subscription tier and charges the prorated difference. Autumn sends the alert when credits run out, the upgrade is attempted, overage credits are allowed while the payment processes, and the new credits are granted once it clears.
 

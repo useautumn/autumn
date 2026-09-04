@@ -10,3 +10,5 @@ npm install autumn-js
 
 ## Docs
 To learn how to use `autumn-js`, visit our documentation [here](https://docs.useautumn.com)
+
+`plans.list` responses include each plan's assignable licenses and derived variants.

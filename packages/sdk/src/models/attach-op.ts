@@ -193,7 +193,7 @@ export type AttachItemTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type AttachItemTier = {
+export type AttachItemPriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -256,7 +256,7 @@ export type AttachItemPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<AttachItemTier> | undefined;
+  tiers?: Array<AttachItemPriceTier> | undefined;
   tierBehavior?: AttachItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -359,6 +359,61 @@ export type AttachItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type AttachCreditSchemaItem2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type AttachItemFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to?: any | undefined;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type AttachCreditSchemaItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<AttachItemFeatureOverrideTier>;
+};
+
+export type AttachItemCreditSchemaUnion =
+  | AttachCreditSchemaItem1
+  | AttachCreditSchemaItem2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type AttachItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<AttachCreditSchemaItem1 | AttachCreditSchemaItem2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -395,6 +450,10 @@ export type AttachItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: AttachItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: AttachItemFeatureOverride | undefined;
 };
 
 /**
@@ -460,7 +519,7 @@ export type AttachAddItemTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type AttachAddItemTier = {
+export type AttachAddItemPriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -525,7 +584,7 @@ export type AttachAddItemPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<AttachAddItemTier> | undefined;
+  tiers?: Array<AttachAddItemPriceTier> | undefined;
   tierBehavior?: AttachAddItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -632,6 +691,61 @@ export type AttachAddItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type AttachCreditSchemaAddItem2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type AttachAddItemFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to?: any | undefined;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type AttachCreditSchemaAddItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<AttachAddItemFeatureOverrideTier>;
+};
+
+export type AttachAddItemCreditSchemaUnion =
+  | AttachCreditSchemaAddItem1
+  | AttachCreditSchemaAddItem2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type AttachAddItemFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<AttachCreditSchemaAddItem1 | AttachCreditSchemaAddItem2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -668,6 +782,10 @@ export type AttachAddItemPlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: AttachAddItemRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: AttachAddItemFeatureOverride | undefined;
 };
 
 /**
@@ -924,12 +1042,12 @@ export const AttachAnchor = {
  */
 export type AttachAnchor = ClosedEnum<typeof AttachAnchor>;
 
-export type AttachProperties = string | number | boolean;
+export type AttachUsageLimitProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type AttachFilter = {
+export type AttachUsageLimitFilter = {
   properties: { [k: string]: string | number | boolean };
 };
 
@@ -957,7 +1075,7 @@ export type AttachUsageLimit = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: AttachFilter | undefined;
+  filter?: AttachUsageLimitFilter | undefined;
 };
 
 /**
@@ -973,6 +1091,29 @@ export const AttachThresholdType = {
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type AttachThresholdType = ClosedEnum<typeof AttachThresholdType>;
+
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export const AttachBasis = {
+  Balance: "balance",
+  Included: "included",
+  Recurring: "recurring",
+  UsageLimit: "usage_limit",
+} as const;
+/**
+ * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+ */
+export type AttachBasis = ClosedEnum<typeof AttachBasis>;
+
+export type AttachUsageAlertProperties = string | number | boolean;
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type AttachUsageAlertFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
 
 export type AttachUsageAlert = {
   /**
@@ -991,6 +1132,14 @@ export type AttachUsageAlert = {
    * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: AttachThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis?: AttachBasis | undefined;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: AttachUsageAlertFilter | undefined;
   /**
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
@@ -1307,6 +1456,35 @@ export type AttachUpsertLicenseRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type AttachCreditSchemaUpsertLicense2 = {
+  meteredFeatureId?: any | undefined;
+  billingUnits?: any | undefined;
+  creditCost?: any | undefined;
+};
+
+export type AttachCreditSchemaUpsertLicense1 = {
+  meteredFeatureId?: any | undefined;
+  billingUnits?: any | undefined;
+  tierBehavior?: any | undefined;
+  tiers?: any | undefined;
+};
+
+export type AttachUpsertLicenseCreditSchemaUnion =
+  | AttachCreditSchemaUpsertLicense1
+  | AttachCreditSchemaUpsertLicense2;
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type AttachUpsertLicenseFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<AttachCreditSchemaUpsertLicense1 | AttachCreditSchemaUpsertLicense2>
+    | undefined;
+};
+
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
@@ -1343,6 +1521,10 @@ export type AttachUpsertLicensePlanItem = {
    * Rollover config for unused units. If set, unused included units carry over.
    */
   rollover?: AttachUpsertLicenseRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: AttachUpsertLicenseFeatureOverride | undefined;
 };
 
 /**
@@ -1430,6 +1612,7 @@ export type AttachUpsertLicenseCustomize = {
 
 export type AttachUpsertLicense = {
   licensePlanId: string;
+  versionSlug?: string | undefined;
   included?: number | undefined;
   prepaidOnly?: boolean | undefined;
   customize?: AttachUpsertLicenseCustomize | null | undefined;
@@ -2066,7 +2249,7 @@ export function attachItemTierAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type AttachItemTier$Outbound = {
+export type AttachItemPriceTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
@@ -2076,9 +2259,9 @@ export type AttachItemTier$Outbound = {
 };
 
 /** @internal */
-export const AttachItemTier$outboundSchema: z.ZodMiniType<
-  AttachItemTier$Outbound,
-  AttachItemTier
+export const AttachItemPriceTier$outboundSchema: z.ZodMiniType<
+  AttachItemPriceTier$Outbound,
+  AttachItemPriceTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -2096,8 +2279,12 @@ export const AttachItemTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function attachItemTierToJSON(attachItemTier: AttachItemTier): string {
-  return JSON.stringify(AttachItemTier$outboundSchema.parse(attachItemTier));
+export function attachItemPriceTierToJSON(
+  attachItemPriceTier: AttachItemPriceTier,
+): string {
+  return JSON.stringify(
+    AttachItemPriceTier$outboundSchema.parse(attachItemPriceTier),
+  );
 }
 
 /** @internal */
@@ -2121,7 +2308,7 @@ export type AttachItemPrice$Outbound = {
   additional_currencies?:
     | Array<AttachItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<AttachItemTier$Outbound> | undefined;
+  tiers?: Array<AttachItemPriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -2140,7 +2327,9 @@ export const AttachItemPrice$outboundSchema: z.ZodMiniType<
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => AttachItemAdditionalCurrency$outboundSchema)),
     ),
-    tiers: z.optional(z.array(z.lazy(() => AttachItemTier$outboundSchema))),
+    tiers: z.optional(
+      z.array(z.lazy(() => AttachItemPriceTier$outboundSchema)),
+    ),
     tierBehavior: z.optional(AttachItemTierBehavior$outboundSchema),
     interval: AttachItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -2249,6 +2438,167 @@ export function attachItemRolloverToJSON(
 }
 
 /** @internal */
+export type AttachCreditSchemaItem2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const AttachCreditSchemaItem2$outboundSchema: z.ZodMiniType<
+  AttachCreditSchemaItem2$Outbound,
+  AttachCreditSchemaItem2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function attachCreditSchemaItem2ToJSON(
+  attachCreditSchemaItem2: AttachCreditSchemaItem2,
+): string {
+  return JSON.stringify(
+    AttachCreditSchemaItem2$outboundSchema.parse(attachCreditSchemaItem2),
+  );
+}
+
+/** @internal */
+export type AttachItemFeatureOverrideTier$Outbound = {
+  to?: any | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const AttachItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
+  AttachItemFeatureOverrideTier$Outbound,
+  AttachItemFeatureOverrideTier
+> = z.pipe(
+  z.object({
+    to: z.optional(z.any()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function attachItemFeatureOverrideTierToJSON(
+  attachItemFeatureOverrideTier: AttachItemFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    AttachItemFeatureOverrideTier$outboundSchema.parse(
+      attachItemFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachCreditSchemaItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<AttachItemFeatureOverrideTier$Outbound>;
+};
+
+/** @internal */
+export const AttachCreditSchemaItem1$outboundSchema: z.ZodMiniType<
+  AttachCreditSchemaItem1$Outbound,
+  AttachCreditSchemaItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(z.lazy(() => AttachItemFeatureOverrideTier$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function attachCreditSchemaItem1ToJSON(
+  attachCreditSchemaItem1: AttachCreditSchemaItem1,
+): string {
+  return JSON.stringify(
+    AttachCreditSchemaItem1$outboundSchema.parse(attachCreditSchemaItem1),
+  );
+}
+
+/** @internal */
+export type AttachItemCreditSchemaUnion$Outbound =
+  | AttachCreditSchemaItem1$Outbound
+  | AttachCreditSchemaItem2$Outbound;
+
+/** @internal */
+export const AttachItemCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  AttachItemCreditSchemaUnion$Outbound,
+  AttachItemCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => AttachCreditSchemaItem1$outboundSchema),
+  z.lazy(() => AttachCreditSchemaItem2$outboundSchema),
+]);
+
+export function attachItemCreditSchemaUnionToJSON(
+  attachItemCreditSchemaUnion: AttachItemCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    AttachItemCreditSchemaUnion$outboundSchema.parse(
+      attachItemCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachItemFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<AttachCreditSchemaItem1$Outbound | AttachCreditSchemaItem2$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const AttachItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  AttachItemFeatureOverride$Outbound,
+  AttachItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => AttachCreditSchemaItem1$outboundSchema),
+      z.lazy(() =>
+        AttachCreditSchemaItem2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function attachItemFeatureOverrideToJSON(
+  attachItemFeatureOverride: AttachItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    AttachItemFeatureOverride$outboundSchema.parse(attachItemFeatureOverride),
+  );
+}
+
+/** @internal */
 export type AttachItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -2258,6 +2608,7 @@ export type AttachItemPlanItem$Outbound = {
   price?: AttachItemPrice$Outbound | undefined;
   proration?: AttachItemProration$Outbound | undefined;
   rollover?: AttachItemRollover$Outbound | undefined;
+  feature_override?: AttachItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -2274,10 +2625,14 @@ export const AttachItemPlanItem$outboundSchema: z.ZodMiniType<
     price: z.optional(z.lazy(() => AttachItemPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => AttachItemProration$outboundSchema)),
     rollover: z.optional(z.lazy(() => AttachItemRollover$outboundSchema)),
+    featureOverride: z.optional(
+      z.lazy(() => AttachItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -2400,7 +2755,7 @@ export function attachAddItemTierAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type AttachAddItemTier$Outbound = {
+export type AttachAddItemPriceTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
@@ -2410,9 +2765,9 @@ export type AttachAddItemTier$Outbound = {
 };
 
 /** @internal */
-export const AttachAddItemTier$outboundSchema: z.ZodMiniType<
-  AttachAddItemTier$Outbound,
-  AttachAddItemTier
+export const AttachAddItemPriceTier$outboundSchema: z.ZodMiniType<
+  AttachAddItemPriceTier$Outbound,
+  AttachAddItemPriceTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -2430,11 +2785,11 @@ export const AttachAddItemTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function attachAddItemTierToJSON(
-  attachAddItemTier: AttachAddItemTier,
+export function attachAddItemPriceTierToJSON(
+  attachAddItemPriceTier: AttachAddItemPriceTier,
 ): string {
   return JSON.stringify(
-    AttachAddItemTier$outboundSchema.parse(attachAddItemTier),
+    AttachAddItemPriceTier$outboundSchema.parse(attachAddItemPriceTier),
   );
 }
 
@@ -2459,7 +2814,7 @@ export type AttachAddItemPrice$Outbound = {
   additional_currencies?:
     | Array<AttachAddItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<AttachAddItemTier$Outbound> | undefined;
+  tiers?: Array<AttachAddItemPriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -2478,7 +2833,9 @@ export const AttachAddItemPrice$outboundSchema: z.ZodMiniType<
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => AttachAddItemAdditionalCurrency$outboundSchema)),
     ),
-    tiers: z.optional(z.array(z.lazy(() => AttachAddItemTier$outboundSchema))),
+    tiers: z.optional(
+      z.array(z.lazy(() => AttachAddItemPriceTier$outboundSchema)),
+    ),
     tierBehavior: z.optional(AttachAddItemTierBehavior$outboundSchema),
     interval: AttachAddItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -2589,6 +2946,173 @@ export function attachAddItemRolloverToJSON(
 }
 
 /** @internal */
+export type AttachCreditSchemaAddItem2$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const AttachCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
+  AttachCreditSchemaAddItem2$Outbound,
+  AttachCreditSchemaAddItem2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function attachCreditSchemaAddItem2ToJSON(
+  attachCreditSchemaAddItem2: AttachCreditSchemaAddItem2,
+): string {
+  return JSON.stringify(
+    AttachCreditSchemaAddItem2$outboundSchema.parse(attachCreditSchemaAddItem2),
+  );
+}
+
+/** @internal */
+export type AttachAddItemFeatureOverrideTier$Outbound = {
+  to?: any | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const AttachAddItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
+  AttachAddItemFeatureOverrideTier$Outbound,
+  AttachAddItemFeatureOverrideTier
+> = z.pipe(
+  z.object({
+    to: z.optional(z.any()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function attachAddItemFeatureOverrideTierToJSON(
+  attachAddItemFeatureOverrideTier: AttachAddItemFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    AttachAddItemFeatureOverrideTier$outboundSchema.parse(
+      attachAddItemFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachCreditSchemaAddItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<AttachAddItemFeatureOverrideTier$Outbound>;
+};
+
+/** @internal */
+export const AttachCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
+  AttachCreditSchemaAddItem1$Outbound,
+  AttachCreditSchemaAddItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => AttachAddItemFeatureOverrideTier$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function attachCreditSchemaAddItem1ToJSON(
+  attachCreditSchemaAddItem1: AttachCreditSchemaAddItem1,
+): string {
+  return JSON.stringify(
+    AttachCreditSchemaAddItem1$outboundSchema.parse(attachCreditSchemaAddItem1),
+  );
+}
+
+/** @internal */
+export type AttachAddItemCreditSchemaUnion$Outbound =
+  | AttachCreditSchemaAddItem1$Outbound
+  | AttachCreditSchemaAddItem2$Outbound;
+
+/** @internal */
+export const AttachAddItemCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  AttachAddItemCreditSchemaUnion$Outbound,
+  AttachAddItemCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => AttachCreditSchemaAddItem1$outboundSchema),
+  z.lazy(() => AttachCreditSchemaAddItem2$outboundSchema),
+]);
+
+export function attachAddItemCreditSchemaUnionToJSON(
+  attachAddItemCreditSchemaUnion: AttachAddItemCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    AttachAddItemCreditSchemaUnion$outboundSchema.parse(
+      attachAddItemCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachAddItemFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      AttachCreditSchemaAddItem1$Outbound | AttachCreditSchemaAddItem2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const AttachAddItemFeatureOverride$outboundSchema: z.ZodMiniType<
+  AttachAddItemFeatureOverride$Outbound,
+  AttachAddItemFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => AttachCreditSchemaAddItem1$outboundSchema),
+      z.lazy(() =>
+        AttachCreditSchemaAddItem2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function attachAddItemFeatureOverrideToJSON(
+  attachAddItemFeatureOverride: AttachAddItemFeatureOverride,
+): string {
+  return JSON.stringify(
+    AttachAddItemFeatureOverride$outboundSchema.parse(
+      attachAddItemFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type AttachAddItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -2598,6 +3122,7 @@ export type AttachAddItemPlanItem$Outbound = {
   price?: AttachAddItemPrice$Outbound | undefined;
   proration?: AttachAddItemProration$Outbound | undefined;
   rollover?: AttachAddItemRollover$Outbound | undefined;
+  feature_override?: AttachAddItemFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -2614,10 +3139,14 @@ export const AttachAddItemPlanItem$outboundSchema: z.ZodMiniType<
     price: z.optional(z.lazy(() => AttachAddItemPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => AttachAddItemProration$outboundSchema)),
     rollover: z.optional(z.lazy(() => AttachAddItemRollover$outboundSchema)),
+    featureOverride: z.optional(
+      z.lazy(() => AttachAddItemFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -2891,31 +3420,31 @@ export const AttachAnchor$outboundSchema: z.ZodMiniEnum<typeof AttachAnchor> = z
   .enum(AttachAnchor);
 
 /** @internal */
-export type AttachProperties$Outbound = string | number | boolean;
+export type AttachUsageLimitProperties$Outbound = string | number | boolean;
 
 /** @internal */
-export const AttachProperties$outboundSchema: z.ZodMiniType<
-  AttachProperties$Outbound,
-  AttachProperties
+export const AttachUsageLimitProperties$outboundSchema: z.ZodMiniType<
+  AttachUsageLimitProperties$Outbound,
+  AttachUsageLimitProperties
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function attachPropertiesToJSON(
-  attachProperties: AttachProperties,
+export function attachUsageLimitPropertiesToJSON(
+  attachUsageLimitProperties: AttachUsageLimitProperties,
 ): string {
   return JSON.stringify(
-    AttachProperties$outboundSchema.parse(attachProperties),
+    AttachUsageLimitProperties$outboundSchema.parse(attachUsageLimitProperties),
   );
 }
 
 /** @internal */
-export type AttachFilter$Outbound = {
+export type AttachUsageLimitFilter$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const AttachFilter$outboundSchema: z.ZodMiniType<
-  AttachFilter$Outbound,
-  AttachFilter
+export const AttachUsageLimitFilter$outboundSchema: z.ZodMiniType<
+  AttachUsageLimitFilter$Outbound,
+  AttachUsageLimitFilter
 > = z.object({
   properties: z.record(
     z.string(),
@@ -2923,8 +3452,12 @@ export const AttachFilter$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function attachFilterToJSON(attachFilter: AttachFilter): string {
-  return JSON.stringify(AttachFilter$outboundSchema.parse(attachFilter));
+export function attachUsageLimitFilterToJSON(
+  attachUsageLimitFilter: AttachUsageLimitFilter,
+): string {
+  return JSON.stringify(
+    AttachUsageLimitFilter$outboundSchema.parse(attachUsageLimitFilter),
+  );
 }
 
 /** @internal */
@@ -2934,7 +3467,7 @@ export type AttachUsageLimit$Outbound = {
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: AttachFilter$Outbound | undefined;
+  filter?: AttachUsageLimitFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -2948,7 +3481,7 @@ export const AttachUsageLimit$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: AttachUsageLimitInterval$outboundSchema,
     anchor: z.optional(AttachAnchor$outboundSchema),
-    filter: z.optional(z.lazy(() => AttachFilter$outboundSchema)),
+    filter: z.optional(z.lazy(() => AttachUsageLimitFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2971,11 +3504,58 @@ export const AttachThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachThresholdType);
 
 /** @internal */
+export const AttachBasis$outboundSchema: z.ZodMiniEnum<typeof AttachBasis> = z
+  .enum(AttachBasis);
+
+/** @internal */
+export type AttachUsageAlertProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const AttachUsageAlertProperties$outboundSchema: z.ZodMiniType<
+  AttachUsageAlertProperties$Outbound,
+  AttachUsageAlertProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function attachUsageAlertPropertiesToJSON(
+  attachUsageAlertProperties: AttachUsageAlertProperties,
+): string {
+  return JSON.stringify(
+    AttachUsageAlertProperties$outboundSchema.parse(attachUsageAlertProperties),
+  );
+}
+
+/** @internal */
+export type AttachUsageAlertFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const AttachUsageAlertFilter$outboundSchema: z.ZodMiniType<
+  AttachUsageAlertFilter$Outbound,
+  AttachUsageAlertFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function attachUsageAlertFilterToJSON(
+  attachUsageAlertFilter: AttachUsageAlertFilter,
+): string {
+  return JSON.stringify(
+    AttachUsageAlertFilter$outboundSchema.parse(attachUsageAlertFilter),
+  );
+}
+
+/** @internal */
 export type AttachUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
+  basis: string;
+  filter?: AttachUsageAlertFilter$Outbound | undefined;
   name?: string | undefined;
 };
 
@@ -2989,6 +3569,8 @@ export const AttachUsageAlert$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     threshold: z.number(),
     thresholdType: AttachThresholdType$outboundSchema,
+    basis: z._default(AttachBasis$outboundSchema, "balance"),
+    filter: z.optional(z.lazy(() => AttachUsageAlertFilter$outboundSchema)),
     name: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -3418,6 +4000,144 @@ export function attachUpsertLicenseRolloverToJSON(
 }
 
 /** @internal */
+export type AttachCreditSchemaUpsertLicense2$Outbound = {
+  metered_feature_id?: any | undefined;
+  billing_units?: any | undefined;
+  credit_cost?: any | undefined;
+};
+
+/** @internal */
+export const AttachCreditSchemaUpsertLicense2$outboundSchema: z.ZodMiniType<
+  AttachCreditSchemaUpsertLicense2$Outbound,
+  AttachCreditSchemaUpsertLicense2
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.optional(z.any()),
+    billingUnits: z.optional(z.any()),
+    creditCost: z.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function attachCreditSchemaUpsertLicense2ToJSON(
+  attachCreditSchemaUpsertLicense2: AttachCreditSchemaUpsertLicense2,
+): string {
+  return JSON.stringify(
+    AttachCreditSchemaUpsertLicense2$outboundSchema.parse(
+      attachCreditSchemaUpsertLicense2,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachCreditSchemaUpsertLicense1$Outbound = {
+  metered_feature_id?: any | undefined;
+  billing_units?: any | undefined;
+  tier_behavior?: any | undefined;
+  tiers?: any | undefined;
+};
+
+/** @internal */
+export const AttachCreditSchemaUpsertLicense1$outboundSchema: z.ZodMiniType<
+  AttachCreditSchemaUpsertLicense1$Outbound,
+  AttachCreditSchemaUpsertLicense1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.optional(z.any()),
+    billingUnits: z.optional(z.any()),
+    tierBehavior: z.optional(z.any()),
+    tiers: z.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function attachCreditSchemaUpsertLicense1ToJSON(
+  attachCreditSchemaUpsertLicense1: AttachCreditSchemaUpsertLicense1,
+): string {
+  return JSON.stringify(
+    AttachCreditSchemaUpsertLicense1$outboundSchema.parse(
+      attachCreditSchemaUpsertLicense1,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachUpsertLicenseCreditSchemaUnion$Outbound =
+  | AttachCreditSchemaUpsertLicense1$Outbound
+  | AttachCreditSchemaUpsertLicense2$Outbound;
+
+/** @internal */
+export const AttachUpsertLicenseCreditSchemaUnion$outboundSchema: z.ZodMiniType<
+  AttachUpsertLicenseCreditSchemaUnion$Outbound,
+  AttachUpsertLicenseCreditSchemaUnion
+> = smartUnion([
+  z.lazy(() => AttachCreditSchemaUpsertLicense1$outboundSchema),
+  z.lazy(() => AttachCreditSchemaUpsertLicense2$outboundSchema),
+]);
+
+export function attachUpsertLicenseCreditSchemaUnionToJSON(
+  attachUpsertLicenseCreditSchemaUnion: AttachUpsertLicenseCreditSchemaUnion,
+): string {
+  return JSON.stringify(
+    AttachUpsertLicenseCreditSchemaUnion$outboundSchema.parse(
+      attachUpsertLicenseCreditSchemaUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type AttachUpsertLicenseFeatureOverride$Outbound = {
+  credit_schema?:
+    | Array<
+      | AttachCreditSchemaUpsertLicense1$Outbound
+      | AttachCreditSchemaUpsertLicense2$Outbound
+    >
+    | undefined;
+};
+
+/** @internal */
+export const AttachUpsertLicenseFeatureOverride$outboundSchema: z.ZodMiniType<
+  AttachUpsertLicenseFeatureOverride$Outbound,
+  AttachUpsertLicenseFeatureOverride
+> = z.pipe(
+  z.object({
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => AttachCreditSchemaUpsertLicense1$outboundSchema),
+      z.lazy(() =>
+        AttachCreditSchemaUpsertLicense2$outboundSchema
+      ),
+    ]))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditSchema: "credit_schema",
+    });
+  }),
+);
+
+export function attachUpsertLicenseFeatureOverrideToJSON(
+  attachUpsertLicenseFeatureOverride: AttachUpsertLicenseFeatureOverride,
+): string {
+  return JSON.stringify(
+    AttachUpsertLicenseFeatureOverride$outboundSchema.parse(
+      attachUpsertLicenseFeatureOverride,
+    ),
+  );
+}
+
+/** @internal */
 export type AttachUpsertLicensePlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
@@ -3427,6 +4147,7 @@ export type AttachUpsertLicensePlanItem$Outbound = {
   price?: AttachUpsertLicensePrice$Outbound | undefined;
   proration?: AttachUpsertLicenseProration$Outbound | undefined;
   rollover?: AttachUpsertLicenseRollover$Outbound | undefined;
+  feature_override?: AttachUpsertLicenseFeatureOverride$Outbound | undefined;
 };
 
 /** @internal */
@@ -3447,10 +4168,14 @@ export const AttachUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     rollover: z.optional(
       z.lazy(() => AttachUpsertLicenseRollover$outboundSchema),
     ),
+    featureOverride: z.optional(
+      z.lazy(() => AttachUpsertLicenseFeatureOverride$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      featureOverride: "feature_override",
     });
   }),
 );
@@ -3596,6 +4321,7 @@ export function attachUpsertLicenseCustomizeToJSON(
 /** @internal */
 export type AttachUpsertLicense$Outbound = {
   license_plan_id: string;
+  version_slug?: string | undefined;
   included?: number | undefined;
   prepaid_only?: boolean | undefined;
   customize?: AttachUpsertLicenseCustomize$Outbound | null | undefined;
@@ -3609,6 +4335,7 @@ export const AttachUpsertLicense$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     licensePlanId: z.string(),
+    versionSlug: z.optional(z.string()),
     included: z.optional(z.int()),
     prepaidOnly: z.optional(z.boolean()),
     customize: z.optional(
@@ -3619,6 +4346,7 @@ export const AttachUpsertLicense$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       licensePlanId: "license_plan_id",
+      versionSlug: "version_slug",
       prepaidOnly: "prepaid_only",
     });
   }),
