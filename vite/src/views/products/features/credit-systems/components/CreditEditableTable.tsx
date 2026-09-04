@@ -2,7 +2,6 @@ import { InfoTooltip } from "@autumn/ui";
 import type { Table as TableInstance } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { Table } from "@/components/general/table";
-import { cn } from "@/lib/utils";
 
 interface CreditEditableTableProps<T> {
 	title: string;
@@ -13,8 +12,8 @@ interface CreditEditableTableProps<T> {
 	footer: ReactNode;
 }
 
-/** A titled, bordered table the credit tables share, with an action strip beneath.
- * With no rows only the strip shows, so an empty table is just its "add" line. */
+/** A titled, bordered table the credit tables share, with its add control beneath.
+ * With no rows only that control shows, so an empty table is just its "add" line. */
 export function CreditEditableTable<T>({
 	title,
 	hint,
@@ -34,8 +33,8 @@ export function CreditEditableTable<T>({
 				</span>
 				{action}
 			</div>
-			<div className="rounded-lg border shadow-card overflow-hidden">
-				{hasRows && (
+			{hasRows && (
+				<div className="rounded-lg border shadow-card overflow-hidden">
 					<Table.Provider
 						config={{
 							table,
@@ -53,16 +52,9 @@ export function CreditEditableTable<T>({
 							</Table.Content>
 						</Table.Container>
 					</Table.Provider>
-				)}
-				<div
-					className={cn(
-						"flex items-center gap-1 w-full px-4 py-1.5 text-xs text-muted-foreground bg-interactive-secondary",
-						hasRows && "border-t border-border",
-					)}
-				>
-					{footer}
 				</div>
-			</div>
+			)}
+			{footer}
 		</div>
 	);
 }

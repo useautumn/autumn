@@ -1,3 +1,4 @@
+import { IconButton } from "@autumn/ui";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PlusIcon } from "lucide-react";
 import { useMemo } from "react";
@@ -124,14 +125,16 @@ export function CreditDimensionMultiplierTable() {
 			table={table}
 			columnCount={columns.length}
 			footer={
-				<button
+				<IconButton
 					type="button"
+					variant="muted"
+					size="sm"
+					className="w-full text-tertiary-foreground text-xs"
+					icon={<PlusIcon className="h-3 w-3" />}
 					onClick={addMultiplier}
-					className="flex items-center gap-1 flex-1 hover:text-foreground transition-colors"
 				>
-					<PlusIcon className="h-3 w-3" />
 					New multiplier
-				</button>
+				</IconButton>
 			}
 		/>
 	);

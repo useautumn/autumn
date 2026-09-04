@@ -151,20 +151,22 @@ export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
 			table={table}
 			columnCount={columns.length}
 			footer={
-				<>
-					<button
+				<div className="flex items-center gap-2">
+					<IconButton
 						type="button"
+						variant="muted"
+						size="sm"
+						className="w-full text-tertiary-foreground text-xs"
+						icon={<PlusIcon className="h-3 w-3" />}
 						onClick={addRow}
-						className="flex items-center gap-1 flex-1 hover:text-foreground transition-colors"
 					>
-						<PlusIcon className="h-3 w-3" />
 						New rate
-					</button>
-					<span className="flex shrink-0 items-center gap-1 text-tertiary-foreground">
+					</IconButton>
+					<span className="flex shrink-0 items-center gap-1 text-xs text-tertiary-foreground">
 						<ArrowElbowDownRightIcon size={12} />
 						Empty values default to {baseRate}
 					</span>
-				</>
+				</div>
 			}
 		/>
 	);

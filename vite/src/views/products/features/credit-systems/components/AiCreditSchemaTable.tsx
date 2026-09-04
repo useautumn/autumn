@@ -304,34 +304,36 @@ export function AiCreditSchemaTable({
 						</Table.Content>
 					</Table.Container>
 				</Table.Provider>
-
-				{!allModelsUsed && (
-					<button
-						type="button"
-						onClick={() =>
-							form.setFieldValue("model_markups", (prev) => {
-								if (isCustom) {
-									return addCustomModelMarkup(prev);
-								}
-								const usedKeys = new Set(
-									Object.keys(prev)
-										.filter((k) => splitModelId(k).provider === providerKey)
-										.map((k) => splitModelId(k).modelKey),
-								);
-								const nextKey = Object.keys(provider.models).find(
-									(k) => !usedKeys.has(k),
-								);
-								if (!nextKey) return prev;
-								return { ...prev, [joinModelId(providerKey, nextKey)]: {} };
-							})
-						}
-						className="flex items-center gap-1 w-full px-4 py-1.5 text-xs text-muted-foreground hover:text-foreground bg-interactive-secondary border-t border-border transition-colors"
-					>
-						<PlusIcon className="h-3 w-3" />
-						New
-					</button>
-				)}
 			</div>
+
+			{!allModelsUsed && (
+				<IconButton
+					type="button"
+					variant="muted"
+					size="sm"
+					className="w-full text-tertiary-foreground text-xs"
+					icon={<PlusIcon className="h-3 w-3" />}
+					onClick={() =>
+						form.setFieldValue("model_markups", (prev) => {
+							if (isCustom) {
+								return addCustomModelMarkup(prev);
+							}
+							const usedKeys = new Set(
+								Object.keys(prev)
+									.filter((k) => splitModelId(k).provider === providerKey)
+									.map((k) => splitModelId(k).modelKey),
+							);
+							const nextKey = Object.keys(provider.models).find(
+								(k) => !usedKeys.has(k),
+							);
+							if (!nextKey) return prev;
+							return { ...prev, [joinModelId(providerKey, nextKey)]: {} };
+						})
+					}
+				>
+					New
+				</IconButton>
+			)}
 		</div>
 	);
 }
