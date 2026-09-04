@@ -31,6 +31,12 @@ import type {
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
+import { TestFeature } from "@tests/setup/v2Features";
+import {
+	expectLicensePooledGrant,
+	pooledMonthlyMessages,
+	seatLinkId,
+} from "@tests/integration/licenses/pooled-balances/utils/licensePooledBalanceTestUtils";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import {
 	expectLicenseUpdatePreviewCorrect,
@@ -141,6 +147,264 @@ test.concurrent(
 			oldRecurringTotal: 7 * DEV_SEAT_PRICE,
 			newRecurringTotal: 9 * DEV_SEAT_PRICE,
 			expectQuantityLineItemPair: { oldQuantity: 7, newQuantity: 9 },
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license-update-quantity: pooled grant follows purchased seats with nobody assigned")}`,
+	async () => {
+		const customerId = "license-update-quantity-pooled";
+		const { autumnV2_3, ctx, parent, devSeat } =
+			await setupLicenseUpdateScenario({
+				customerId,
+				idPrefix: "lic-qty-pooled",
+				seatPrice: DEV_SEAT_PRICE,
+				seatItems: [pooledMonthlyMessages({ includedUsage: 100 })],
+				includedSeats: 0,
+				attachedSeats: 3,
+			});
+
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: devSeat.id,
+		});
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 3,
+			contributionCount: 0,
+		});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			license_quantities: [{ license_plan_id: devSeat.id, quantity: 5 }],
+		});
+
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 5,
+			contributionCount: 0,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license-update-quantity: pooled grant shrinks with nobody assigned")}`,
+	async () => {
+		const customerId = "license-update-quantity-pooled-dec";
+		const { autumnV2_3, ctx, parent, devSeat } =
+			await setupLicenseUpdateScenario({
+				customerId,
+				idPrefix: "lic-qty-pooled-dec",
+				seatPrice: DEV_SEAT_PRICE,
+				seatItems: [pooledMonthlyMessages({ includedUsage: 100 })],
+				includedSeats: 0,
+				attachedSeats: 5,
+			});
+
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: devSeat.id,
+		});
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 5,
+			contributionCount: 0,
+		});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			license_quantities: [{ license_plan_id: devSeat.id, quantity: 3 }],
+		});
+
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 3,
+			contributionCount: 0,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license-update-quantity: pooled grant grows while two seats are assigned")}`,
+	async () => {
+		const customerId = "license-update-quantity-pooled-assigned";
+		const { autumnV2_3, ctx, parent, devSeat, assignSeats } =
+			await setupLicenseUpdateScenario({
+				customerId,
+				idPrefix: "lic-qty-pooled-assigned",
+				seatPrice: DEV_SEAT_PRICE,
+				seatItems: [pooledMonthlyMessages({ includedUsage: 100 })],
+				includedSeats: 0,
+				attachedSeats: 3,
+			});
+
+		await assignSeats({ count: 2 });
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: devSeat.id,
+		});
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 3,
+			contributionCount: 2,
+		});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			license_quantities: [{ license_plan_id: devSeat.id, quantity: 5 }],
+		});
+
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 5,
+			contributionCount: 2,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license-update-quantity: pooled grow 3 → 5 keeps usage")}`,
+	async () => {
+		const customerId = "license-update-quantity-pooled-grow-usage";
+		const { autumnV2_3, ctx, parent, devSeat, assignSeats } =
+			await setupLicenseUpdateScenario({
+				customerId,
+				idPrefix: "lic-qty-pooled-grow-usage",
+				seatPrice: DEV_SEAT_PRICE,
+				seatItems: [pooledMonthlyMessages({ includedUsage: 100 })],
+				includedSeats: 0,
+				attachedSeats: 3,
+			});
+
+		await assignSeats({ count: 1 });
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: devSeat.id,
+		});
+		await autumnV2_3.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 50,
+			},
+			{ timeout: 2000 },
+		);
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 3,
+			contributionCount: 1,
+			usage: 50,
+		});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			license_quantities: [{ license_plan_id: devSeat.id, quantity: 5 }],
+		});
+
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 5,
+			contributionCount: 1,
+			usage: 50,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license-update-quantity: pooled shrink with usage keeps remaining usage")}`,
+	async () => {
+		const customerId = "license-update-quantity-pooled-usage";
+		const { autumnV2_3, ctx, parent, devSeat, assignSeats } =
+			await setupLicenseUpdateScenario({
+				customerId,
+				idPrefix: "lic-qty-pooled-usage",
+				seatPrice: DEV_SEAT_PRICE,
+				seatItems: [pooledMonthlyMessages({ includedUsage: 100 })],
+				includedSeats: 0,
+				attachedSeats: 5,
+			});
+
+		await assignSeats({ count: 1 });
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: devSeat.id,
+		});
+		await autumnV2_3.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 50,
+			},
+			{ timeout: 2000 },
+		);
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 5,
+			contributionCount: 1,
+			usage: 50,
+		});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			license_quantities: [{ license_plan_id: devSeat.id, quantity: 3 }],
+		});
+
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: 100,
+			seatCount: 3,
+			contributionCount: 1,
+			usage: 50,
 		});
 	},
 );

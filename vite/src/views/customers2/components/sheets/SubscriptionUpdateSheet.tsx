@@ -21,13 +21,18 @@ import {
 	UpdateSubscriptionPreviewSection,
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
-import { getSupportedFormOverridesFromProductCustomization } from "@/components/forms/update-subscription-v2/utils/subscriptionCustomization";
+import {
+	customerLicensesToCustomizePlanLicenses,
+	getSupportedFormOverridesFromProductCustomization,
+} from "@/components/forms/update-subscription-v2/utils/subscriptionCustomization";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import {
 	LayoutGroup,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -174,6 +179,9 @@ export function SubscriptionUpdateSheet() {
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });
+	const { features, isLoading: featuresLoading } = useFeaturesQuery();
+	const { licenseProducts, isLoading: licenseProductsLoading } =
+		useLicenseProductsQuery({ allVersions: true });
 
 	const { data: productData } = useProductVersionQuery({
 		productId: productV2?.id,
@@ -195,6 +203,11 @@ export function SubscriptionUpdateSheet() {
 				baseProduct: productV2 as FrontendProduct,
 				currentVersion,
 			}),
+			addLicenses: customerLicensesToCustomizePlanLicenses({
+				customerLicenses: cusProduct?.customer_licenses,
+				licenseProducts,
+				features,
+			}),
 			...(approvalSeed?.defaultOverrides as
 				| Partial<UpdateSubscriptionForm>
 				| undefined),
@@ -202,6 +215,9 @@ export function SubscriptionUpdateSheet() {
 	}, [
 		approvalSeed?.defaultOverrides,
 		customizedProduct,
+		cusProduct?.customer_licenses,
+		features,
+		licenseProducts,
 		productV2,
 		currentVersion,
 	]);
@@ -251,6 +267,18 @@ export function SubscriptionUpdateSheet() {
 				<div className="p-4 text-sm text-tertiary-foreground">
 					Loading product data...
 				</div>
+			</div>
+		);
+	}
+
+	if (featuresLoading || licenseProductsLoading) {
+		return (
+			<div className="flex flex-col h-full">
+				<SheetHeader
+					title="Update Subscription"
+					description="Loading plan configuration..."
+				/>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
 			</div>
 		);
 	}

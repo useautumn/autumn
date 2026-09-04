@@ -63,25 +63,31 @@ const addPooledContributionsCtes = ({
 		updated_pools AS (
 			UPDATE pooled_balances AS pool
 			SET
-				granted = pool.granted + (${contributionAmount} * pool_deltas.contribution_count),
+				granted = CASE
+					WHEN pool.customer_license_link_id IS NOT NULL THEN pool.granted
+					ELSE pool.granted + (${contributionAmount} * pool_deltas.contribution_count)
+				END,
 				updated_at = ${now}
 			FROM pool_deltas
 			WHERE pool.id = ${pooledBalanceId}
-			RETURNING 1
+			RETURNING pool.customer_license_link_id, pool_deltas.contribution_count
 		),
 		updated_synthetic AS (
 			UPDATE customer_entitlements AS synthetic
 			SET
-				balance = COALESCE(synthetic.balance, 0) + (${contributionAmount} * pool_deltas.contribution_count),
+				balance = CASE
+					WHEN updated_pools.customer_license_link_id IS NOT NULL
+						THEN synthetic.balance
+					ELSE COALESCE(synthetic.balance, 0) + (${contributionAmount} * updated_pools.contribution_count)
+				END,
 				cache_version = COALESCE(synthetic.cache_version, 0) + 1
-			FROM pool_deltas, updated_pools
+			FROM updated_pools
 			WHERE synthetic.pooled_balance_id = ${pooledBalanceId}
 				AND synthetic.customer_product_id IS NULL
 			RETURNING 1
 		)`;
 
-export const addCustomerEntitlementsBatch = async ({
-	db,
+export const buildAddCustomerEntitlementsBatchQuery = ({
 	customerLicenseLinkId,
 	assignmentCutoffMs,
 	customerEntitlementIds,
@@ -90,7 +96,6 @@ export const addCustomerEntitlementsBatch = async ({
 	pooledBalanceId,
 	contributionIds,
 }: {
-	db: DrizzleCli;
 	customerLicenseLinkId: string;
 	assignmentCutoffMs: number;
 	customerEntitlementIds: string[];
@@ -98,7 +103,7 @@ export const addCustomerEntitlementsBatch = async ({
 	batchSize: number;
 	pooledBalanceId?: string;
 	contributionIds?: string[];
-}): Promise<BatchMutationResult> => {
+}): SQL => {
 	if (operation.existingEntitlementIds.length === 0) {
 		throw new Error("Customer entitlement addition requires candidate IDs");
 	}
@@ -123,7 +128,7 @@ export const addCustomerEntitlementsBatch = async ({
 					contributionAmount: operation.pooledAdd.contributionAmount,
 				}
 			: undefined;
-	const [result] = await db.execute<BatchMutationResult>(sql`
+	return sql`
 		WITH candidate_rows AS MATERIALIZED (
 			SELECT seat.id, seat.created_at
 			FROM customer_products AS seat
@@ -229,7 +234,24 @@ export const addCustomerEntitlementsBatch = async ({
 				OR
 				(SELECT COUNT(*) FROM inserted) < (SELECT COUNT(*) FROM target_rows)
 			) AS "hasMore"
-	`);
+	`;
+};
+
+export const addCustomerEntitlementsBatch = async ({
+	db,
+	...params
+}: {
+	db: DrizzleCli;
+	customerLicenseLinkId: string;
+	assignmentCutoffMs: number;
+	customerEntitlementIds: string[];
+	operation: AddEntitlementPriceOperation;
+	batchSize: number;
+	pooledBalanceId?: string;
+	contributionIds?: string[];
+}): Promise<BatchMutationResult> => {
+	const query = buildAddCustomerEntitlementsBatchQuery(params);
+	const [result] = await db.execute<BatchMutationResult>(query);
 
 	return result ?? { affected: 0, hasMore: false };
 };

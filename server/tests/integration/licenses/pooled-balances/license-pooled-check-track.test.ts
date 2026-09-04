@@ -9,9 +9,9 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import {
-	LICENSE_POOLED_LOW_GRANT,
 	expectLicensePooledCheck,
 	expectLicensePooledGrant,
+	LICENSE_POOLED_LOW_GRANT,
 	parentPlan,
 	pooledMonthlyMessages,
 	pooledSeatPlan,
@@ -158,6 +158,63 @@ test.concurrent(
 			customerId,
 			allowed: false,
 			remaining: 0,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license pooled check: attach with nobody assigned sees purchased × grant")}`,
+	async () => {
+		const customerId = "lic-pool-check-unassigned";
+		const parent = parentPlan({ id: "lic-pool-check-unassigned-parent" });
+		const seat = pooledSeatPlan({
+			id: "lic-pool-check-unassigned-seat",
+			item: pooledMonthlyMessages({ includedUsage: LICENSE_POOLED_LOW_GRANT }),
+		});
+		const { autumnV2_3, ctx, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [parent, seat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: seat.id,
+					included: SEAT_COUNT,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
+		});
+		const remaining = LICENSE_POOLED_LOW_GRANT * SEAT_COUNT;
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: seat.id,
+		});
+
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: LICENSE_POOLED_LOW_GRANT,
+			seatCount: SEAT_COUNT,
+			contributionCount: 0,
+		});
+		await expectLicensePooledCheck({
+			autumn: autumnV2_3,
+			customerId,
+			allowed: true,
+			remaining,
+		});
+		await expectLicensePooledCheck({
+			autumn: autumnV2_3,
+			customerId,
+			entityId: entities[0].id,
+			allowed: true,
+			remaining,
 		});
 	},
 );

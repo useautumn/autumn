@@ -39,17 +39,23 @@ export const applyOutgoingPooledBalanceSources = ({
 			});
 		}
 
+		const isLicenseKeyed =
+			pooledCustomerEntitlement.pooled_balance.customer_license_link_id != null;
 		addToUpdatePoolBalances({
 			pooledBalancePlan: computeContext.plan,
 			pooledCustomerEntitlement,
-			balance: subtractSafe({
-				left: pooledCustomerEntitlement.balance,
-				right: contribution.current_contribution,
-			}),
-			granted: subtractSafe({
-				left: pooledCustomerEntitlement.pooled_balance.granted,
-				right: contribution.current_contribution,
-			}),
+			balance: isLicenseKeyed
+				? (pooledCustomerEntitlement.balance ?? 0)
+				: subtractSafe({
+						left: pooledCustomerEntitlement.balance,
+						right: contribution.current_contribution,
+					}),
+			granted: isLicenseKeyed
+				? pooledCustomerEntitlement.pooled_balance.granted
+				: subtractSafe({
+						left: pooledCustomerEntitlement.pooled_balance.granted,
+						right: contribution.current_contribution,
+					}),
 		});
 
 		computeContext.pooledBalanceIdsWithRemovedContributions.add(
