@@ -2,6 +2,7 @@ import {
 	type Entity,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
+	isCusEntDisplayExpired,
 	isSyntheticPooledBalanceCustomerEntitlement,
 } from "@autumn/shared";
 import { CaretRightIcon } from "@phosphor-icons/react";
@@ -42,7 +43,12 @@ export function CustomerBalanceFeatureCell({
 	});
 
 	return (
-		<div className="flex items-center gap-2 min-w-0">
+		<div
+			className={cn(
+				"flex items-center gap-2 min-w-0",
+				isCusEntDisplayExpired({ cusEnt: balance }) && "opacity-50",
+			)}
+		>
 			{canExpand && (
 				<span
 					className={cn(

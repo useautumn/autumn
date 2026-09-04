@@ -8,6 +8,7 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
+import { parseAsArrayOf, parseAsStringEnum, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
@@ -16,6 +17,10 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { throwBackendError } from "@/utils/genUtils";
+import {
+	type CustomerProductsStatusOption,
+	DEFAULT_PRODUCT_STATUSES,
+} from "@/views/customers2/hooks/useCustomerProductsTableState";
 import { useCachedCustomer } from "./useCachedCustomer";
 
 type UseCusQueryOptions = {
@@ -63,9 +68,21 @@ export const useCusQuery = ({
 
 	const effectiveEntityId = entityAlreadyLoaded ? null : entityId;
 
+	// Same nuqs key as the Plans filter.
+	const [productStatuses] = useQueryState(
+		"customerProductsStatuses",
+		parseAsArrayOf(
+			parseAsStringEnum<CustomerProductsStatusOption>(["active", "expired"]),
+		).withDefault(DEFAULT_PRODUCT_STATUSES),
+	);
+	const includeExpiredLoose = productStatuses.includes("expired");
+
 	const fetcher = async () => {
 		try {
 			const searchParams = new URLSearchParams();
+			if (includeExpiredLoose) {
+				searchParams.set("include_expired_loose", "true");
+			}
 			if (effectiveEntityId) searchParams.set("entity_id", effectiveEntityId);
 			const query = searchParams.toString();
 			const { data } = await axiosInstance.get(
@@ -85,7 +102,12 @@ export const useCusQuery = ({
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: buildKey(["customer", customer_id, effectiveEntityId]),
+		queryKey: buildKey([
+			"customer",
+			customer_id,
+			effectiveEntityId,
+			includeExpiredLoose,
+		]),
 		queryFn: fetcher,
 		enabled: enabled && !!customer_id,
 		retry: false,

@@ -1,4 +1,7 @@
-import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import {
+	type FullCusEntWithFullCusProduct,
+	isCusEntDisplayExpired,
+} from "@autumn/shared";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -116,9 +119,12 @@ export function CustomerBalanceTable({
 			return;
 		}
 
-		// Single balance or sub-row: open edit sheet directly
+		if (isCusEntDisplayExpired({ cusEnt: ent })) return;
+
 		const featureId = ent.entitlement.feature.id;
-		const ents = aggregatedMap.get(featureId) || [ent];
+		const ents = (aggregatedMap.get(featureId) || [ent]).filter(
+			(aggregatedEnt) => !isCusEntDisplayExpired({ cusEnt: aggregatedEnt }),
+		);
 
 		setBalanceSheet({
 			type: "edit-balance",
@@ -154,6 +160,12 @@ export function CustomerBalanceTable({
 					mobileCards: true,
 					selectedItemId: getSelectedRowId(),
 					rowClassName: "h-10 py-0",
+					// No click target, so it must not inherit the table's pointer.
+					getRowClassName: (balance: CustomerBalanceRowData) =>
+						isCusEntDisplayExpired({ cusEnt: balance }) &&
+						(balance.subRows?.length ?? 0) === 0
+							? "cursor-default!"
+							: undefined,
 				}}
 			>
 				<Table.Container>

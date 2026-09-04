@@ -1,4 +1,5 @@
 import {
+	AuthType,
 	DeleteBalanceParamsV0Schema,
 	RouteGroup,
 	Scopes,
@@ -17,6 +18,7 @@ export const handleDeleteBalance = createRoute({
 		await deleteBalance({
 			ctx,
 			params,
+			includeExpired: ctx.authType === AuthType.Dashboard,
 		});
 
 		return c.json({ success: true });

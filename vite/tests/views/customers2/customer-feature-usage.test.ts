@@ -47,7 +47,7 @@ describe("customer feature usage pooled balances", () => {
 
 		const filtered = filterCustomerFeatureUsage({
 			entitlements: [ordinary, contributionSource, syntheticPool],
-			showExpired: false,
+			statuses: ["active"],
 		});
 
 		expect(filtered.map(({ id }) => id)).toEqual(["ordinary", "pool"]);
