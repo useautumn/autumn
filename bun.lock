@@ -404,6 +404,21 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/cache": {
+      "name": "@autumn/cache",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/logging": "workspace:*",
+        "@aws-sdk/client-s3": "^3.1017.0",
+        "ioredis": "^5.5.0",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "@types/node": "^24.9.1",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/ducklake": {
       "name": "@autumn/ducklake",
       "version": "0.0.1",
@@ -639,6 +654,7 @@
         "@anthropic-ai/sdk": "^0.32.1",
         "@autumn/agent-docs": "workspace:*",
         "@autumn/auth": "workspace:*",
+        "@autumn/cache": "workspace:*",
         "@autumn/ducklake": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/ksuid": "workspace:*",
@@ -1013,6 +1029,9 @@
     "@autumn/balance-engine": ["@autumn/balance-engine@workspace:packages/balance-engine"],
 
     "@autumn/balance-worker": ["@autumn/balance-worker@workspace:apps/balance-worker"],
+
+
+    "@autumn/cache": ["@autumn/cache@workspace:packages/cache"],
 
     "@autumn/docs": ["@autumn/docs@workspace:apps/docs"],
 

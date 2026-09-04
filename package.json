@@ -23,6 +23,7 @@
 			"packages/env",
 			"packages/logging",
 			"packages/balance-engine",
+			"packages/cache",
 			"packages/mcp",
 			"packages/sdk",
 			"packages/autumn-js",

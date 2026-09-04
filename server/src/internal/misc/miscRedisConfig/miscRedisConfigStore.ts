@@ -1,30 +1,44 @@
-import { ErrCode, ms, RecaseError } from "@autumn/shared";
-import { ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
+import {
+	configureMiscRedisConfigStore,
+	createMiscRedisConfigStore,
+	getActiveMiscRedisInstanceName,
+	getConfiguredMiscRedisConfigStore,
+	getMiscRedisConfig,
+	getMiscRedisConfigStatus,
+	_setMiscRedisConfigForTesting as setSharedMiscRedisConfigForTesting,
+} from "@autumn/cache";
+import type { AutumnLogger } from "@autumn/logging";
+import { ErrCode, RecaseError } from "@autumn/shared";
+import { getAdminS3Config } from "@/external/aws/s3/adminS3Config.js";
+import {
+	createBunS3EdgeConfigClient,
+	type EdgeConfigS3Client,
+} from "@/external/aws/s3/bunS3EdgeConfigClient.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
-import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
+import { writeEdgeConfigTimestamp } from "@/internal/misc/edgeConfig/edgeConfigTimestamp.js";
 import {
 	type MiscRedisConfig,
-	MiscRedisConfigSchema,
 	type MiscRedisInstanceName,
 	otherMiscRedisInstance,
 } from "./miscRedisConfigSchemas.js";
 
-// S3 key predates the misc rename; renaming it is config-breaking, so it stays.
-const store = createEdgeConfigStore<MiscRedisConfig>({
-	s3Key: ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY,
-	schema: MiscRedisConfigSchema,
-	defaultValue: () => ({ activeInstance: "main", ramp: null, backup: null }),
-	pollIntervalMs: ms.seconds(10),
+const store = createMiscRedisConfigStore({
+	getLocation: getAdminS3Config,
+	createS3Client: ({ region }) =>
+		createBunS3EdgeConfigClient({ region }) as EdgeConfigS3Client,
+	logger: logger as AutumnLogger,
+	afterWrite: writeEdgeConfigTimestamp,
 });
 
+configureMiscRedisConfigStore({ store });
 registerEdgeConfig({ store });
 
-export const getMiscRedisConfig = (): MiscRedisConfig => store.get();
-
-export const getMiscRedisConfigStatus = () => store.getStatus();
-
-export const getActiveMiscRedisInstanceName = (): MiscRedisInstanceName =>
-	store.get().activeInstance;
+export {
+	getActiveMiscRedisInstanceName,
+	getMiscRedisConfig,
+	getMiscRedisConfigStatus,
+};
 
 /**
  * Point the misc cache at an instance. Always clears the ramp: flipping IS the
@@ -35,7 +49,7 @@ export const setActiveMiscRedisInstance = async ({
 }: {
 	activeInstance: MiscRedisInstanceName;
 }) => {
-	const current = await store.readFromSource();
+	const current = await getConfiguredMiscRedisConfigStore().readFromSource();
 	if (activeInstance === "backup" && !current.backup) {
 		throw new RecaseError({
 			message: "No backup connection is configured.",
@@ -43,7 +57,7 @@ export const setActiveMiscRedisInstance = async ({
 			statusCode: 400,
 		});
 	}
-	await store.writeToSource({
+	await getConfiguredMiscRedisConfigStore().writeToSource({
 		config: { ...current, activeInstance, ramp: null },
 	});
 };
@@ -58,7 +72,7 @@ export const startMiscRedisRamp = async ({
 }: {
 	percent?: number;
 } = {}) => {
-	const current = await store.readFromSource();
+	const current = await getConfiguredMiscRedisConfigStore().readFromSource();
 	if (current.ramp) {
 		throw new RecaseError({
 			message: "A ramp is already active. Update its percent instead.",
@@ -76,7 +90,7 @@ export const startMiscRedisRamp = async ({
 			statusCode: 400,
 		});
 	}
-	await store.writeToSource({
+	await getConfiguredMiscRedisConfigStore().writeToSource({
 		config: {
 			...current,
 			ramp: { percent, previousPercent: 0, changedAt: Date.now() },
@@ -89,7 +103,7 @@ export const updateMiscRedisRampPercent = async ({
 }: {
 	percent: number;
 }) => {
-	const current = await store.readFromSource();
+	const current = await getConfiguredMiscRedisConfigStore().readFromSource();
 	if (!current.ramp) {
 		throw new RecaseError({
 			message: "No misc Redis ramp is configured.",
@@ -97,7 +111,7 @@ export const updateMiscRedisRampPercent = async ({
 			statusCode: 400,
 		});
 	}
-	await store.writeToSource({
+	await getConfiguredMiscRedisConfigStore().writeToSource({
 		config: {
 			...current,
 			ramp: {
@@ -111,8 +125,10 @@ export const updateMiscRedisRampPercent = async ({
 
 /** Instant rollback: all ramped traffic returns to the active instance. */
 export const clearMiscRedisRamp = async () => {
-	const current = await store.readFromSource();
-	await store.writeToSource({ config: { ...current, ramp: null } });
+	const current = await getConfiguredMiscRedisConfigStore().readFromSource();
+	await getConfiguredMiscRedisConfigStore().writeToSource({
+		config: { ...current, ramp: null },
+	});
 };
 
 /** True whenever any traffic can be routed at the backup. */
@@ -131,7 +147,7 @@ export const upsertMiscRedisBackupConnection = async ({
 	privateConnectionString?: string | null;
 	url: string;
 }) => {
-	const current = await store.readFromSource();
+	const current = await getConfiguredMiscRedisConfigStore().readFromSource();
 	if (backupIsLive(current)) {
 		throw new RecaseError({
 			message:
@@ -140,7 +156,7 @@ export const upsertMiscRedisBackupConnection = async ({
 			statusCode: 400,
 		});
 	}
-	await store.writeToSource({
+	await getConfiguredMiscRedisConfigStore().writeToSource({
 		config: {
 			...current,
 			backup: { publicConnectionString, privateConnectionString, url },
@@ -149,7 +165,7 @@ export const upsertMiscRedisBackupConnection = async ({
 };
 
 export const removeMiscRedisBackupConfig = async () => {
-	const current = await store.readFromSource();
+	const current = await getConfiguredMiscRedisConfigStore().readFromSource();
 	if (backupIsLive(current)) {
 		throw new RecaseError({
 			message:
@@ -158,17 +174,14 @@ export const removeMiscRedisBackupConfig = async () => {
 			statusCode: 400,
 		});
 	}
-	await store.writeToSource({ config: { ...current, backup: null } });
+	await getConfiguredMiscRedisConfigStore().writeToSource({
+		config: { ...current, backup: null },
+	});
 };
 
 /** Test-only: override the in-memory config without writing to S3. */
 export const _setMiscRedisConfigForTesting = (
 	config: Partial<MiscRedisConfig>,
 ) => {
-	store._setRuntimeConfigForTesting({
-		activeInstance: "main",
-		ramp: null,
-		backup: null,
-		...config,
-	});
+	setSharedMiscRedisConfigForTesting(config);
 };

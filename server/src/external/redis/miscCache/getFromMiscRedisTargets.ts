@@ -1,5 +1,6 @@
+import "./miscRedisInstances.js";
+import { getMiscRedisTargets } from "@autumn/cache";
 import { tryRedisOp } from "../utils/runRedisOp.js";
-import { getMiscRedisTargets } from "./resolveMiscRedis.js";
 
 /** Read a cross-request key from the active instance first, then any other
  *  live target — a flip mid-handoff can leave the value on either side. */

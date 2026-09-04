@@ -1,7 +1,10 @@
 import type { Redis } from "ioredis";
-import { getActiveMiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+import "./miscRedisInstances.js";
+import {
+	getActiveMiscRedisInstanceName,
+	getMiscRedisTargets,
+} from "@autumn/cache";
 import { tryRedisOp } from "../utils/runRedisOp.js";
-import { getMiscRedisTargets } from "./resolveMiscRedis.js";
 
 const setOnTarget = ({
 	redis,
