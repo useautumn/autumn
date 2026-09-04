@@ -10,7 +10,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
-import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan.js";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
@@ -76,14 +75,6 @@ export const activateScheduledCustomerProduct = async ({
 			})
 		: [];
 
-	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
-		ctx,
-		fullCustomer,
-		outgoingCustomerProducts: transitionSource ? [transitionSource] : [],
-		incomingCustomerProducts: [customerProduct],
-		now: activatedAt,
-	});
-
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
@@ -96,7 +87,6 @@ export const activateScheduledCustomerProduct = async ({
 				},
 			],
 			customerLicenseTransitions,
-			pooledBalancePlan,
 		},
 	});
 

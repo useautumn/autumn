@@ -72,7 +72,14 @@ export const computeCustomerLicenseTransitions = ({
 			const transition = customerLicensePairToTransition(customerLicensePair);
 			if (isNoopTransition(transition)) continue;
 
-			customerLicenseTransitions.push({ ...transition, carryOverUsages });
+			customerLicenseTransitions.push({
+				...transition,
+				carryOverUsages,
+				billingCycleAnchorMs:
+					incomingCustomerProduct.billing_cycle_anchor ??
+					outgoingCustomerProduct.billing_cycle_anchor ??
+					undefined,
+			});
 		}
 	}
 

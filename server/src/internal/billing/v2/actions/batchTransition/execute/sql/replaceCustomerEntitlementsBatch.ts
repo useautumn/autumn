@@ -46,6 +46,10 @@ const pooledAggregateCtes = (
 		patch.type === "increment"
 			? sql`COALESCE(synthetic.balance, 0) + pool_deltas.amount`
 			: sql`updated_pools.granted`;
+	const licenseSyntheticBalanceAssignment =
+		patch.type === "increment"
+			? sql`synthetic.balance`
+			: sql`updated_pools.granted`;
 	return sql`,
 		contribution_rows AS MATERIALIZED (
 			SELECT
@@ -95,7 +99,7 @@ const pooledAggregateCtes = (
 			SET
 				balance = CASE
 					WHEN updated_pools.customer_license_link_id IS NOT NULL
-						THEN synthetic.balance
+						THEN ${licenseSyntheticBalanceAssignment}
 					ELSE ${syntheticBalanceAssignment}
 				END,
 				cache_version = COALESCE(synthetic.cache_version, 0) + 1

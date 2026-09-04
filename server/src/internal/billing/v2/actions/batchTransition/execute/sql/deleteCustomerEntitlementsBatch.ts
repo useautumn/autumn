@@ -17,6 +17,7 @@ export const buildDeleteCustomerEntitlementsBatchQuery = ({
 		WITH candidate_rows AS MATERIALIZED (
 			SELECT
 				customer_entitlement.ctid AS target_ctid,
+				customer_entitlement.id AS target_id,
 				contribution.pooled_balance_id
 			FROM customer_products AS seat
 			INNER JOIN customer_entitlements AS customer_entitlement
@@ -31,7 +32,7 @@ export const buildDeleteCustomerEntitlementsBatchQuery = ({
 			LIMIT ${batchSize + 1}
 		),
 		target_rows AS MATERIALIZED (
-			SELECT target_ctid, pooled_balance_id
+			SELECT target_ctid, target_id, pooled_balance_id
 			FROM candidate_rows
 			LIMIT ${batchSize}
 		),
@@ -50,8 +51,20 @@ export const buildDeleteCustomerEntitlementsBatchQuery = ({
 				WHERE pooled_balance_id IS NOT NULL
 			) AS target_pool
 			WHERE pool.id = target_pool.pooled_balance_id
+				AND pool.customer_license_link_id IS NULL
 				AND (SELECT COUNT(*) <= ${batchSize} FROM candidate_rows)
 				AND (SELECT COUNT(*) FROM deleted) > 0
+				AND NOT EXISTS (
+					SELECT 1
+					FROM pooled_balance_contributions AS remaining_contribution
+					WHERE remaining_contribution.pooled_balance_id = pool.id
+						AND NOT EXISTS (
+							SELECT 1
+							FROM target_rows
+							WHERE target_rows.target_id =
+								remaining_contribution.source_customer_entitlement_id
+						)
+				)
 			RETURNING pool.id
 		),
 		expired_synthetic AS (

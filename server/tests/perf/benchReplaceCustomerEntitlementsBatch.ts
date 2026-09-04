@@ -208,6 +208,29 @@ const createTables = async () => {
 const seedNoise = async () => {
 	const now = Date.now();
 	await db.execute(sql`
+		INSERT INTO pooled_balances (
+			id, org_id, env, internal_customer_id, internal_feature_id,
+			unlimited, granted, interval, interval_count, reset_mode,
+			rollover_signature, customer_entitlement_id, created_at, updated_at
+		)
+		SELECT
+			'noise_pool_' || i,
+			'replace_bench_org',
+			'sandbox',
+			'noise_customer_' || i,
+			'noise_feature_internal',
+			false,
+			100,
+			'month',
+			1,
+			'lazy',
+			'none',
+			'noise_synthetic_' || i,
+			${now},
+			${now}
+		FROM generate_series(1, ${NOISE_ROWS}) AS i
+	`);
+	await db.execute(sql`
 		INSERT INTO customer_products (
 			id, internal_customer_id, internal_product_id, internal_entity_id,
 			created_at, status, customer_license_link_id
