@@ -13,6 +13,7 @@ import {
 import { syncStripeEventToSyncDb } from "../webhookMiddlewares/stripeSyncMiddleware.js";
 import { attachStripeEventCustomer } from "../webhookMiddlewares/stripeToAutumnCustomerMiddleware.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
+import { STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS } from "./stripeWebhookErrorWouldRedeliver.js";
 
 export type StripeWebhookReplayPayload = {
 	orgId: string;
@@ -38,9 +39,11 @@ export class StripeWebhookReplayInFlightError extends Error {
 export const runStripeWebhookReplay = async ({
 	ctx,
 	payload,
+	receiveCount = 1,
 }: {
 	ctx: AutumnContext;
 	payload: StripeWebhookReplayPayload;
+	receiveCount?: number;
 }) => {
 	const { stripeEvent } = payload;
 	const { logger } = ctx;
@@ -69,6 +72,7 @@ export const runStripeWebhookReplay = async ({
 	}
 
 	if (claim === "in_flight") {
+		if (receiveCount >= STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS) return;
 		throw new StripeWebhookReplayInFlightError(stripeEvent.id);
 	}
 
@@ -80,6 +84,7 @@ export const runStripeWebhookReplay = async ({
 		await runStripeWebhookHandlers({ ctx: routedCtx });
 	} catch (error) {
 		if (claim === "claimed") await releaseStripeWebhookEvent({ eventKey });
+		if (receiveCount >= STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS) return;
 		throw error;
 	}
 

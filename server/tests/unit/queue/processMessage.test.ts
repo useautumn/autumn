@@ -56,4 +56,22 @@ describe("shouldRetrySqsJobError", () => {
 			}),
 		).toBe(false);
 	});
+
+	test("retries stripe webhook replay on handler errors that would 500 Stripe", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.StripeWebhookReplay,
+				error: new Error("duplicate key value violates unique constraint"),
+			}),
+		).toBe(true);
+	});
+
+	test("does not retry stripe webhook replay on errors that would not 500 Stripe", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.StripeWebhookReplay,
+				error: new Error("Not a valid URL"),
+			}),
+		).toBe(false);
+	});
 });
