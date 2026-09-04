@@ -1,5 +1,5 @@
 /**
- * atmn scenarios/ids — internalId from another env → error surfaced
+ * atmn scenarios/ids — internalId from another env → unknown here, so it names a new resource and is rewritten
  *
  * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
  *
@@ -21,7 +21,7 @@ import chalk from "chalk";
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
-	`${chalk.yellowBright("atmn scenarios/ids: an internalId from a foreign tenant/env is unknown, error surfaced")}`,
+	`${chalk.yellowBright("atmn scenarios/ids: an internalId from a foreign tenant/env is unknown here: the row is created and the fixture takes this org's id")}`,
 	async () => {
 		const featureId = uniqueTestId("atmn_foreign_env");
 
@@ -46,8 +46,9 @@ test.concurrent(
 			const originInternalId = origin
 				.files()
 				.get("autumn.config.ts")
-				?.match(new RegExp(`internalId: "([^"]+)", featureId: "${featureId}"`))
-				?.[1];
+				?.match(
+					new RegExp(`internalId: "([^"]+)", featureId: "${featureId}"`),
+				)?.[1];
 			expect(originInternalId).toBeTruthy();
 
 			foreign.writeConfig(
@@ -58,9 +59,20 @@ test.concurrent(
 				}),
 			);
 
-			await expect(foreign.push()).rejects.toThrow(
-				new RegExp(`No feature exists for internal_id ${originInternalId}`),
-			);
+			await foreign.push();
+			const created = (await foreign.client.get({})) as {
+				features: { id: string; internalId?: string | null }[];
+			};
+			const row = created.features.find((feature) => feature.id === featureId);
+			expect(row?.internalId).toBeTruthy();
+			expect(row?.internalId).not.toBe(originInternalId);
+			const rewritten = foreign
+				.files()
+				.get("autumn.config.ts")
+				?.match(
+					new RegExp(`internalId: "([^"]+)", featureId: "${featureId}"`),
+				)?.[1];
+			expect(rewritten).toBe(row?.internalId);
 		} finally {
 			origin.cleanup();
 			foreign.cleanup();
