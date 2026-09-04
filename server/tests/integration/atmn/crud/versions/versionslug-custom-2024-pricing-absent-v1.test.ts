@@ -5,17 +5,47 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import { configBody, paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
+import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
+import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-test.todo("versionSlug [custom \"2024-pricing\", absent = v1]", () => {});
+type CatalogPlanRow = { id: string; versionSlug?: string | null };
+
+const VERSION_SLUG_CASES = {
+	'custom "2024-pricing"': {
+		extra: `
+				versionSlug: "2024-pricing",`,
+		expectedSlug: "2024-pricing",
+	},
+	"absent = v1": { extra: "", expectedSlug: "v1" },
+} as const;
+
+for (const [label, { extra, expectedSlug }] of Object.entries(
+	VERSION_SLUG_CASES,
+)) {
+	test.concurrent(`versionSlug (${label})`, async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({
+					userEmail: `atmn_version_slug_${expectedSlug}@autumn.test`,
+				}),
+			],
+			config: configBody({
+				plans: paidMonthly({ planId: "pro", items: "", extra }),
+			}),
+		});
+
+		try {
+			await expectRoundTrip({ scenario });
+
+			const catalog = (await scenario.client.get({})) as unknown as {
+				plans: CatalogPlanRow[];
+			};
+			const pro = catalog.plans.find((row) => row.id === "pro");
+			expect(pro?.versionSlug).toBe(expectedSlug);
+		} finally {
+			scenario.cleanup();
+		}
+	});
+}

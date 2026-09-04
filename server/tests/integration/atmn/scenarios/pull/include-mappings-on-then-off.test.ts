@@ -5,17 +5,60 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+	atmnImports,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-test.todo("`--include-mappings` on then off \u2192 processors kept then dropped", () => {});
+const emptyPlansConfig = `${atmnImports()}
+export default atmn({
+	plans: [],
+});
+`;
+
+test.concurrent(
+	"`--include-mappings` on then off → processors kept then dropped",
+	async () => {
+		const planId = uniqueTestId("atmn_mappings");
+
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
+			config: { raw: emptyPlansConfig },
+		});
+
+		try {
+			// A server-only plan, created straight through the client so it gets
+			// real Stripe processors (the same path push's default createInStripe uses).
+			await scenario.client.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "Mapped",
+						price: { amount: 20, interval: "month" },
+					},
+				],
+				skip_deletions: false,
+				migration: { draft: true },
+			});
+
+			const withMappings = await scenario.pull({ includeMappings: true });
+			expect(withMappings.appended).toContain(planId);
+			expect(scenario.files().get("autumn.config.ts")).toContain("processors:");
+
+			// Reset the local file back to empty so the plan is server-only again.
+			scenario.writeConfig(emptyPlansConfig);
+
+			const withoutMappings = await scenario.pull({ includeMappings: false });
+			expect(withoutMappings.appended).toContain(planId);
+			expect(scenario.files().get("autumn.config.ts")).not.toContain(
+				"processors:",
+			);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);

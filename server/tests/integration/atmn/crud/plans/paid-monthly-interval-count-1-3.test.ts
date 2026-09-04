@@ -5,17 +5,45 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
+import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
+import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
-test.todo("paid [monthly] [interval_count 1, 3]", () => {});
+const INTERVAL_COUNTS = [1, 3] as const;
+
+for (const intervalCount of INTERVAL_COUNTS) {
+	test.concurrent(
+		`paid [monthly] [interval_count ${intervalCount}]`,
+		async () => {
+			const scenario = await initAtmnScenario({
+				setup: [
+					s.platform.create({
+						userEmail: `${uniqueTestId("atmn")}@autumn.test`,
+					}),
+				],
+				config: configBody({
+					plans: `
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 49, interval: "month", intervalCount: ${intervalCount} },
+			items: [],
+		}),`,
+				}),
+			});
+
+			try {
+				const { freshWire } = await expectRoundTrip({ scenario });
+				const plans = freshWire.plans as Array<Record<string, unknown>>;
+				const pro = plans.find((plan) => plan.plan_id === "pro");
+				expect(pro?.price).toEqual(
+					expect.objectContaining({ interval_count: intervalCount }),
+				);
+			} finally {
+				scenario.cleanup();
+			}
+		},
+	);
+}

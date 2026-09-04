@@ -7,17 +7,42 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	configBody,
-	enterpriseWithSeats,
-	everyFeatureType,
-	freePlan,
-	paidMonthly,
-	seatPlan,
-	versionedPro,
-} from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
+import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
+import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-test.todo("unknown stripe id \u2192 error surfaced (stripe test mode)", () => {});
+// Unlike plan- and feature-level processors, an adopted price id IS checked
+// against real Stripe (validateAdoptedStripePrices, execute phase) — no
+// createInStripe: false here, so that check actually runs against the org's
+// Stripe test account and 400s on an id that was never created.
+const proPlanWithUnknownPrice = `
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: {
+				amount: 49,
+				interval: "month",
+				processors: { stripe: { priceId: "price_atmn_does_not_exist_123" } },
+			},
+		}),`;
+
+test.concurrent(
+	"adopting an unknown Stripe price id surfaces a clean error",
+	async () => {
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
+			config: configBody({ plans: proPlanWithUnknownPrice }),
+		});
+
+		try {
+			await expect(scenario.push()).rejects.toThrow(
+				/price_atmn_does_not_exist_123/,
+			);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+);
