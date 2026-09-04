@@ -177,6 +177,10 @@ apps/leaf/.workflow-data/
 # Built sandbox runner bundle (produced by sandbox/buildRunner.ts).
 apps/leaf/src/harness/claudeCode/runner/runner.mjs
 
+# ax-evals per-run output (transcripts, generated configs). Can contain real
+# org keys from throwaway provisioning — never commit.
+packages/ax-evals/.artifacts/
+
 
 tmp/
 .env*.local
