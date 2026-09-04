@@ -1,12 +1,31 @@
-import type { Feature, FullProduct, PlanChangeV0 } from "@autumn/shared";
+import type {
+	ApiPlanV1,
+	Feature,
+	FullProduct,
+	PlanChangeV0,
+} from "@autumn/shared";
 import { buildPlanChangeCore } from "./buildPlanChangeCore/buildPlanChangeCore.js";
 import { buildPlanLicenseChanges } from "./buildPlanLicenseChanges/buildPlanLicenseChanges.js";
 import { fullProductToApiPlanV1Sync } from "./fullProductToApiPlanV1Sync.js";
 import { mergePlanChangeCustomize } from "./mergePlanChangeCustomize.js";
 
+/** The identity of a row with none of its content: what a create is diffed against. */
+const emptyPlanBefore = (to: ApiPlanV1): ApiPlanV1 =>
+	({
+		id: to.id,
+		version: to.version,
+		version_slug: to.version_slug,
+		active: to.active,
+		created_at: to.created_at,
+		env: to.env,
+		archived: false,
+		items: [],
+	}) as unknown as ApiPlanV1;
+
 /**
  * Diff two FullProducts: core content (via ApiPlanV1) plus licenses[]
- * (create / update / remove). Undefined when nothing changed.
+ * (create / update / remove). Undefined when nothing changed; a missing
+ * `from` is a create and reads as everything added.
  */
 export const buildPlanChange = ({
 	from,
@@ -17,15 +36,19 @@ export const buildPlanChange = ({
 	to?: FullProduct;
 	features?: Feature[];
 }): PlanChangeV0 | undefined => {
-	if (!from || !to) return undefined;
+	if (!to) return undefined;
 
+	// A create diffs against an empty before, so every field reads as added.
+	const toPlan = fullProductToApiPlanV1Sync({ product: to, features });
 	const core = buildPlanChangeCore({
-		from: fullProductToApiPlanV1Sync({ product: from, features }),
-		to: fullProductToApiPlanV1Sync({ product: to, features }),
+		from: from
+			? fullProductToApiPlanV1Sync({ product: from, features })
+			: emptyPlanBefore(toPlan),
+		to: toPlan,
 	});
 	const { licenseChanges, upsertLicenses, removeLicenses } =
 		buildPlanLicenseChanges({
-			fromLicenses: from.licenses,
+			fromLicenses: from?.licenses ?? [],
 			toLicenses: to.licenses,
 			features,
 		});
