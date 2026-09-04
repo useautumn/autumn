@@ -3,8 +3,66 @@ import type {
 	LineItem,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
+import { stripeToAtmnAmount } from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+
+type RefundInvoice = NonNullable<AutumnBillingPlan["refundPlan"]>["invoice"];
+
+/**
+ * Resolves the invoice the refund is issued against.
+ *
+ * Autumn's own row is preferred because it tracks how much was already
+ * refunded. Subscriptions synced back from Stripe often have no mirrored row —
+ * Autumn only stores invoices it received a webhook for, and sync never
+ * backfills them — so fall back to reading the invoice from Stripe rather than
+ * silently dropping the refund.
+ */
+const resolveRefundInvoice = async ({
+	ctx,
+	stripeInvoiceId,
+}: {
+	ctx: AutumnContext;
+	stripeInvoiceId: string;
+}): Promise<RefundInvoice | undefined> => {
+	const autumnInvoice = await InvoiceService.getByStripeId({
+		db: ctx.db,
+		stripeId: stripeInvoiceId,
+	});
+
+	if (autumnInvoice) {
+		return {
+			stripe_id: autumnInvoice.stripe_id,
+			total: autumnInvoice.total,
+			current_refunded_amount: autumnInvoice.refunded_amount ?? 0,
+			currency: autumnInvoice.currency,
+		};
+	}
+
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeInvoice = await stripeCli.invoices.retrieve(stripeInvoiceId);
+
+	// An unpaid invoice has no charge to refund against.
+	if (stripeInvoice.status !== "paid") return undefined;
+
+	ctx.logger.info(
+		`[computeRefundPlan] No Autumn invoice for ${stripeInvoiceId}, falling back to the Stripe invoice`,
+	);
+
+	return {
+		stripe_id: stripeInvoiceId,
+		total: stripeToAtmnAmount({
+			amount: stripeInvoice.total,
+			currency: stripeInvoice.currency,
+		}),
+		// Without a mirrored row there is no Autumn-side refund history; the
+		// charge's already-refunded amount is applied when the refund action is
+		// built, so the refund is still capped at what Stripe will allow.
+		current_refunded_amount: 0,
+		currency: stripeInvoice.currency,
+	};
+};
 
 /**
  * Filters refund-direction line items out of the plan and computes
@@ -47,17 +105,17 @@ export const computeRefundPlan = async ({
 		return { lineItems: filteredLineItems, refundPlan: undefined };
 	}
 
-	const autumnInvoice = await InvoiceService.getByStripeId({
-		db: ctx.db,
-		stripeId: latestInvoiceId,
+	const refundInvoice = await resolveRefundInvoice({
+		ctx,
+		stripeInvoiceId: latestInvoiceId,
 	});
 
-	if (!autumnInvoice) {
+	if (!refundInvoice) {
 		return { lineItems: filteredLineItems, refundPlan: undefined };
 	}
 
-	const invoiceTotal = Math.abs(autumnInvoice.total);
-	const alreadyRefunded = autumnInvoice.refunded_amount ?? 0;
+	const invoiceTotal = Math.abs(refundInvoice.total);
+	const alreadyRefunded = refundInvoice.current_refunded_amount;
 	const remainingRefundable = invoiceTotal - alreadyRefunded;
 
 	let refundAmount: number;
@@ -78,12 +136,7 @@ export const computeRefundPlan = async ({
 		lineItems: filteredLineItems,
 		refundPlan: {
 			amount: refundAmount,
-			invoice: {
-				stripe_id: autumnInvoice.stripe_id,
-				total: autumnInvoice.total,
-				current_refunded_amount: alreadyRefunded,
-				currency: autumnInvoice.currency,
-			},
+			invoice: refundInvoice,
 		},
 	};
 };
