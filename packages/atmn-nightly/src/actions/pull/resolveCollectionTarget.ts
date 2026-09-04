@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import type { SgNode } from "@ast-grep/napi";
 import { Lang, parse } from "@ast-grep/napi";
+import { findArrayBinding } from "../../surgery/arrayBinding";
 
 export type CollectionTarget =
 	| { kind: "inline"; file: string }
@@ -10,8 +11,9 @@ const NAMED_IMPORT =
 	/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["']([^"']+)["']/;
 
 /**
- * Where a collection's array literal lives: inline in the atmn call, or a
- * const the call names, in the config or in a file it imports. Null when the
+ * Where a collection's array literal lives: inline in the atmn call, a const
+ * the call names, or the const behind the array's last `...spread`; a named
+ * const may be local or imported from a relative `.ts` file. Null when the
  * value is something this pull cannot append to.
  */
 export const resolveCollectionTarget = ({
@@ -28,18 +30,54 @@ export const resolveCollectionTarget = ({
 	const root = parse(Lang.TypeScript, source).root();
 	const value = collectionValue({ root, collection });
 	if (value === null) return null;
-	if (value.kind() === "array") return { kind: "inline", file: configPath };
-	if (value.kind() !== "identifier") return null;
-	const name = value.text();
-	if (declaresArray({ root, name }))
+	if (value.kind() === "array") {
+		const spread = trailingSpreadName(value);
+		return spread === null
+			? { kind: "inline", file: configPath }
+			: resolveBinding({ root, name: spread, configPath, files });
+	}
+	// `atmn({ plans })` names the binding without a pair.
+	const named =
+		value.kind() === "identifier" ||
+		value.kind() === "shorthand_property_identifier";
+	if (!named) return null;
+	return resolveBinding({ root, name: value.text(), configPath, files });
+};
+
+/** `[...a, ...b]` appends into `b`; a literal element last means inline. */
+const trailingSpreadName = (array: SgNode): string | null => {
+	const elements = array.namedChildren();
+	const last = elements[elements.length - 1];
+	if (last === undefined || last.kind() !== "spread_element") return null;
+	const argument = last.namedChildren()[0];
+	return argument?.kind() === "identifier" ? argument.text() : null;
+};
+
+const resolveBinding = ({
+	root,
+	name,
+	configPath,
+	files,
+}: {
+	root: SgNode;
+	name: string;
+	configPath: string;
+	files: Map<string, string>;
+}): CollectionTarget | null => {
+	if (findArrayBinding({ root, name }) !== null)
 		return { kind: "binding", file: configPath, name };
-	const specifier = importedFrom({ root, name });
-	if (specifier === null) return null;
-	const file = moduleFileOf({ from: configPath, specifier, files });
+	const imported = importedFrom({ root, name });
+	if (imported === null) return null;
+	const file = moduleFileOf({
+		from: configPath,
+		specifier: imported.specifier,
+		files,
+	});
 	if (file === null) return null;
-	const imported = parse(Lang.TypeScript, files.get(file) ?? "").root();
-	return declaresArray({ root: imported, name })
-		? { kind: "binding", file, name }
+	const module = parse(Lang.TypeScript, files.get(file) ?? "").root();
+	return findArrayBinding({ root: module, name: imported.exportedName }) !==
+		null
+		? { kind: "binding", file, name: imported.exportedName }
 		: null;
 };
 
@@ -52,39 +90,39 @@ const collectionValue = ({
 }): SgNode | null => {
 	const object = root.find("atmn($ARG)")?.getMatch("ARG") ?? null;
 	if (object === null || object.kind() !== "object") return null;
-	for (const pair of object.children()) {
-		if (pair.kind() !== "pair") continue;
-		const [key, value] = pair.namedChildren();
+	for (const member of object.children()) {
+		if (
+			member.kind() === "shorthand_property_identifier" &&
+			member.text() === collection
+		)
+			return member;
+		if (member.kind() !== "pair") continue;
+		const [key, value] = member.namedChildren();
 		if (key?.text() === collection && value !== undefined) return value;
 	}
 	return null;
 };
 
-const declaresArray = ({
-	root,
-	name,
-}: {
-	root: SgNode;
-	name: string;
-}): boolean => root.find(`const ${name} = [$$$ITEMS]`) !== null;
-
+/** The import binding `name`, with the name it had in the module it came from. */
 const importedFrom = ({
 	root,
 	name,
 }: {
 	root: SgNode;
 	name: string;
-}): string | null => {
+}): { specifier: string; exportedName: string } | null => {
 	for (const statement of root.findAll({
 		rule: { kind: "import_statement" },
 	})) {
 		const match = NAMED_IMPORT.exec(statement.text());
 		if (match === null) continue;
-		const names = match[1].split(",").map((entry) => entry.trim());
-		const binds = names.some(
-			(entry) => entry === name || entry.endsWith(` as ${name}`),
-		);
-		if (binds) return match[2];
+		for (const entry of match[1].split(",")) {
+			const [exportedName, localName = exportedName] = entry
+				.trim()
+				.split(/\s+as\s+/);
+			if (localName === name && exportedName !== "")
+				return { specifier: match[2], exportedName };
+		}
 	}
 	return null;
 };
