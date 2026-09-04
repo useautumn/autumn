@@ -91,8 +91,13 @@ export default atmn(${catalogConfig({ basePlanId, variantPlanId, archiveVariant:
 			const customer = await scenario.autumnV2_3.customers.get(
 				scenario.customerId as unknown as string,
 			);
+			// The customer keeps the archived variant.
 			expect(
-				customer.products?.some((product) => product.id === variantPlanId),
+				// @ts-expect-error the declared customer type predates this response shape
+				customer.subscriptions?.some(
+					(subscription: { plan_id?: string }) =>
+						subscription.plan_id === variantPlanId,
+				),
 			).toBe(true);
 		} finally {
 			scenario.cleanup();
