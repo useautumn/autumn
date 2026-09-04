@@ -3,6 +3,7 @@ import { appendToBinding } from "../../surgery/appendToBinding";
 import { appendToCollection } from "../../surgery/appendToCollection";
 import { deleteFixtureLiteral } from "../../surgery/deleteFixtureLiteral";
 import { deleteReference } from "../../surgery/deleteReference";
+import { ensureBuilderImport } from "../../surgery/ensureBuilderImport";
 import { leadingIndentOfLine } from "../../surgery/fixtureEdit";
 import { insertCollection } from "../../surgery/insertCollection";
 import { replaceFixture } from "../../surgery/replaceFixture";
@@ -235,7 +236,15 @@ export const applyPreview = ({
 			});
 			return false;
 		}
-		files.set(resolved.file, updated);
+		// The file now holds an inline literal, so it must import the builder.
+		files.set(
+			resolved.file,
+			ensureBuilderImport({
+				source: updated,
+				builder: spec.builder,
+				collection,
+			}),
+		);
 		result.appended.push(key);
 		result.lines.push(`+ ${key}`);
 		return true;
