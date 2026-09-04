@@ -1,5 +1,5 @@
 import { IconButton } from "@autumn/ui";
-import { ArrowElbowDownRightIcon, GridFourIcon } from "@phosphor-icons/react";
+import { GridFourIcon } from "@phosphor-icons/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PlusIcon } from "lucide-react";
 import { useMemo } from "react";
@@ -71,7 +71,7 @@ const creditsColumn: ColumnDef<RateRow, unknown> = {
 /** One select per dimension and a credits column; the strip beneath adds a row and names the fallback.
  * Cells are components to the table, so `data` and `columns` must stay referentially
  * stable while typing: values and handlers ride on `meta`. */
-export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
+export function CreditDimensionRateTable() {
 	const {
 		values,
 		rows,
@@ -151,22 +151,16 @@ export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
 			table={table}
 			columnCount={columns.length}
 			footer={
-				<div className="flex items-center gap-2">
-					<IconButton
-						type="button"
-						variant="muted"
-						size="sm"
-						className="w-full text-tertiary-foreground text-xs"
-						icon={<PlusIcon className="h-3 w-3" />}
-						onClick={addRow}
-					>
-						New rate
-					</IconButton>
-					<span className="flex shrink-0 items-center gap-1 text-xs text-tertiary-foreground">
-						<ArrowElbowDownRightIcon size={12} />
-						Empty values default to {baseRate}
-					</span>
-				</div>
+				<IconButton
+					type="button"
+					variant="muted"
+					size="sm"
+					className="w-full text-tertiary-foreground text-xs"
+					icon={<PlusIcon className="h-3 w-3" />}
+					onClick={addRow}
+				>
+					New rate
+				</IconButton>
 			}
 		/>
 	);

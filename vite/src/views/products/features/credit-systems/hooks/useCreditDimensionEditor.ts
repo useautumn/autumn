@@ -62,8 +62,11 @@ export function useCreditDimensionEditor({
 	);
 	const [draftRows, setDraftRows] = useState<CreditMatch[]>([]);
 	// Unnamed dimension rows have no key to live under yet, so they are counted
-	// separately until they are named.
-	const [unnamedFields, setUnnamedFields] = useState(0);
+	// separately until they are named. A row with nothing configured starts with
+	// one, since configuring dimensions always begins by naming one.
+	const [unnamedFields, setUnnamedFields] = useState(() =>
+		Object.keys(dimensionValues(item)).length === 0 ? 1 : 0,
+	);
 
 	const values = useMemo(
 		() => mergeDimensionValues(draftValues, dimensionValues(item)),
