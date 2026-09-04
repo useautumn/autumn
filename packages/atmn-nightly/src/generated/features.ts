@@ -55,6 +55,8 @@ export type Feature = {
 			markup: number;
 		}
 	> | null;
+	/** @deprecated Deprecated on the server, but existing catalogs carry it, so a config must keep round-tripping the field. */
+	eventNames?: Array<string>;
 	/** The ID of the feature to create. */
 	featureId: string;
 } & {

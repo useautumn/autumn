@@ -48,7 +48,6 @@ const messagesRow = {
 	name: "Messages",
 	type: "metered",
 	consumable: true,
-	eventNames: ["messages.sent"],
 	archived: false,
 };
 

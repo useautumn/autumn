@@ -21,7 +21,6 @@ test("a metered feature is emitted exactly as the surgery expects", () => {
 			name: "Messages",
 			type: "metered",
 			consumable: true,
-			eventNames: ["messages.sent"],
 			archived: false,
 		},
 		includeMappings: false,
@@ -61,7 +60,6 @@ const CASES: Case[] = [
 			name: "API Calls",
 			type: "metered",
 			consumable: true,
-			eventNames: ["api_call.created"],
 		},
 		includeMappings: false,
 		expected: {

@@ -15,6 +15,8 @@ export type CollectionSpec = {
 	readonly historyKey?: string;
 	/** Whether pull can address entries by idField alone. */
 	readonly pull: boolean;
+	/** Wire-named, item-rooted paths kept for existing catalogs only. */
+	readonly deprecated?: readonly { path: string; reason: string }[];
 };
 
 const PLAIN_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;

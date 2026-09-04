@@ -64,7 +64,8 @@ test("overlay and spec-order rules hold for features", () => {
 	]) {
 		expect(keys).toContain(expected);
 	}
-	expect(keys).not.toContain("eventNames");
+	// Deprecated, but existing catalogs carry it, so it stays a fixture key.
+	expect(keys).toContain("eventNames");
 	// Dead since internal_id: a changed featureId is the rename.
 	expect(keys).not.toContain("newFeatureId");
 	// Spec order across the allOf branches, not alphabetical.
@@ -79,5 +80,5 @@ test("objectMembers skips hidden and internal fields", () => {
 		context: { overlay: OVERLAY, collection: "features" },
 	}).map((member) => member.name);
 
-	expect(names).not.toContain("eventNames");
+	expect(names).not.toContain("newFeatureId");
 });
