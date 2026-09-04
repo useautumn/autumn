@@ -173,3 +173,18 @@ test("filling keeps exact rows, inherits from covering rules, drafts the rest, a
 		},
 	]);
 });
+
+test("dropping the last rate that used a value keeps the value in the merged set", () => {
+	const remaining = withRateRules({ item: row, rules: [] });
+
+	// The editor keeps the values it loaded, so removing every rate that matched
+	// on region must not remove region itself.
+	expect(dimensionValues(remaining).region).toBeUndefined();
+	expect(
+		mergeDimensionValues(dimensionValues(row), dimensionValues(remaining)),
+	).toEqual({
+		size: ["large"],
+		region: ["eu"],
+		lifecycle: ["spot"],
+	});
+});

@@ -119,7 +119,8 @@ test("the dimensions section lists each field's values and a rate table with a s
 	expect(html).toContain('aria-label="size values"');
 	expect(html).toContain('aria-label="region values"');
 	expect(html).toContain(">large<");
-	expect(html).toContain('aria-label="New dimension"');
+	expect(html).toContain('aria-label="size dimension name"');
+	expect(html).toContain("New dimension");
 	expect(html).toContain('aria-label="size_large region"');
 	expect(html).toContain('aria-label="size_large_region_eu credit cost"');
 	expect(html).toContain(">Credits<");

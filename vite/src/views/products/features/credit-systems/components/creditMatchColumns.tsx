@@ -93,7 +93,7 @@ export const removeColumn = <T extends MatchRow>(): ColumnDef<T, unknown> => ({
 				iconOrientation="center"
 				icon={<X className="h-3.5 w-3.5" />}
 				onClick={() => metaOf(table).onRemove(row.original.index)}
-				className="!text-subtle hover:!text-foreground"
+				className="!text-subtle hover:!text-foreground rounded-md p-1"
 			/>
 		</div>
 	),

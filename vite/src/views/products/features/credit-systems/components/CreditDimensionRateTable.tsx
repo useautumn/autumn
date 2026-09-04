@@ -1,13 +1,12 @@
 import { IconButton } from "@autumn/ui";
-import { GridFourIcon } from "@phosphor-icons/react";
+import { ArrowElbowDownRightIcon, GridFourIcon } from "@phosphor-icons/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PlusIcon } from "lucide-react";
 import { useMemo } from "react";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { useCreditDimensions } from "../hooks/CreditDimensionContext";
 import {
-	type CreditMatch,
 	type CreditRateRow,
-	type DimensionValues,
 	MAX_FILLED_COMBINATIONS,
 } from "../utils/creditDimensionUtils";
 import { CreditEditableTable } from "./CreditEditableTable";
@@ -58,36 +57,23 @@ const creditsColumn: ColumnDef<RateRow, unknown> = {
 	},
 };
 
-interface CreditDimensionRateTableProps {
-	values: DimensionValues;
-	rows: CreditRateRow[];
-	inheritedCredits: (match: CreditMatch) => string;
-	rateWarnings: Map<string, string>;
-	baseRate: string;
-	onMatchChange: (index: number, match: CreditMatch) => void;
-	onCreditsChange: (index: number, credits: number | undefined) => void;
-	onRemove: (index: number) => void;
-	onAdd: () => void;
-	missingCombinationCount: number;
-	onFillCombinations: () => void;
-}
-
 /** One select per dimension and a credits column; the strip beneath adds a row and names the fallback.
  * Cells are components to the table, so `data` and `columns` must stay referentially
  * stable while typing: values and handlers ride on `meta`. */
-export function CreditDimensionRateTable({
-	values,
-	rows,
-	inheritedCredits,
-	rateWarnings,
-	baseRate,
-	onMatchChange,
-	onCreditsChange,
-	onRemove,
-	onAdd,
-	missingCombinationCount,
-	onFillCombinations,
-}: CreditDimensionRateTableProps) {
+export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
+	const {
+		values,
+		rows,
+		inheritedCredits,
+		rateWarnings,
+		setRowMatch,
+		setRowCredits,
+		removeRow,
+		addRow,
+		missingCombinationCount,
+		fillCombinations,
+	} = useCreditDimensions();
+
 	const data: RateRow[] = useMemo(
 		() =>
 			rows.map((rate, index) => ({
@@ -114,15 +100,17 @@ export function CreditDimensionRateTable({
 
 	const meta: RateTableMeta = {
 		values,
-		onMatchChange,
-		onRemove,
-		onCreditsChange,
+		onMatchChange: setRowMatch,
+		onRemove: removeRow,
+		onCreditsChange: setRowCredits,
 	};
 	const table = useProductTable({
 		data,
 		columns,
 		options: { getRowId: (row) => row.id, meta },
 	});
+
+	if (fields.length === 0) return null;
 
 	return (
 		<CreditEditableTable
@@ -137,7 +125,7 @@ export function CreditDimensionRateTable({
 						size="sm"
 						className="text-tertiary-foreground text-xs"
 						icon={<GridFourIcon size={12} />}
-						onClick={onFillCombinations}
+						onClick={fillCombinations}
 					>
 						Fill {missingCombinationCount} combinations
 					</IconButton>
@@ -149,14 +137,15 @@ export function CreditDimensionRateTable({
 				<>
 					<button
 						type="button"
-						onClick={onAdd}
+						onClick={addRow}
 						className="flex items-center gap-1 flex-1 hover:text-foreground transition-colors"
 					>
 						<PlusIcon className="h-3 w-3" />
 						New rate
 					</button>
-					<span className="shrink-0 text-tertiary-foreground">
-						anything else · {baseRate}
+					<span className="flex shrink-0 items-center gap-1 text-tertiary-foreground">
+						<ArrowElbowDownRightIcon size={12} />
+						Empty values default to {baseRate}
 					</span>
 				</>
 			}

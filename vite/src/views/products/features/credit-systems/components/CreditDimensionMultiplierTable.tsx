@@ -2,10 +2,10 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { PlusIcon } from "lucide-react";
 import { useMemo } from "react";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { useCreditDimensions } from "../hooks/CreditDimensionContext";
 import type {
 	CreditMatch,
 	CreditMultiplierRule,
-	DimensionValues,
 } from "../utils/creditDimensionUtils";
 import { CreditEditableTable } from "./CreditEditableTable";
 import { CreditNumberInput } from "./CreditNumberInput";
@@ -55,22 +55,16 @@ const factorColumn: ColumnDef<MultiplierRow, unknown> = {
 	},
 };
 
-interface CreditDimensionMultiplierTableProps {
-	values: DimensionValues;
-	multipliers: CreditMultiplierRule[];
-	onMultiplierChange: (index: number, rule: CreditMultiplierRule) => void;
-	onMultiplierRemove: (index: number) => void;
-	onMultiplierAdd: () => void;
-}
-
 /** One select per dimension and a factor column; every matching multiplier stacks on the rate. */
-export function CreditDimensionMultiplierTable({
-	values,
-	multipliers,
-	onMultiplierChange,
-	onMultiplierRemove,
-	onMultiplierAdd,
-}: CreditDimensionMultiplierTableProps) {
+export function CreditDimensionMultiplierTable() {
+	const {
+		values,
+		multipliers,
+		setMultiplier,
+		removeMultiplier,
+		addMultiplier,
+	} = useCreditDimensions();
+
 	const data: MultiplierRow[] = useMemo(
 		() =>
 			multipliers.map((rule, index) => ({
@@ -95,7 +89,7 @@ export function CreditDimensionMultiplierTable({
 
 	const withMatch = (index: number, match: CreditMatch) => {
 		const rule = multipliers[index];
-		onMultiplierChange(index, {
+		setMultiplier(index, {
 			...rule,
 			multiplier: { ...rule.multiplier, match },
 		});
@@ -103,14 +97,16 @@ export function CreditDimensionMultiplierTable({
 	const meta: MultiplierTableMeta = {
 		values,
 		onMatchChange: withMatch,
-		onRemove: onMultiplierRemove,
-		onMultiplierChange,
+		onRemove: removeMultiplier,
+		onMultiplierChange: setMultiplier,
 	};
 	const table = useProductTable({
 		data,
 		columns,
 		options: { getRowId: (row) => row.id, meta },
 	});
+
+	if (fields.length === 0) return null;
 
 	return (
 		<CreditEditableTable
@@ -121,7 +117,7 @@ export function CreditDimensionMultiplierTable({
 			footer={
 				<button
 					type="button"
-					onClick={onMultiplierAdd}
+					onClick={addMultiplier}
 					className="flex items-center gap-1 flex-1 hover:text-foreground transition-colors"
 				>
 					<PlusIcon className="h-3 w-3" />

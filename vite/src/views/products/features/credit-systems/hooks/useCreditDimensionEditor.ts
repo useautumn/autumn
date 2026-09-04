@@ -20,12 +20,14 @@ import {
 	multiplierRules,
 	rateRowsOf,
 	rateRules,
+	renameDimensionValuesKey,
 	rulesOf,
 	withAllowedValues,
 	withMultiplierRules,
 	withRateCredits,
 	withRateMatch,
 	withRateRules,
+	withRenamedField,
 } from "../utils/creditDimensionUtils";
 
 const without = (values: string[], value: string) =>
@@ -42,6 +44,8 @@ const removeAt = <T>(list: T[], index: number) =>
  * them: a draft row has a match but no cost, shows what it would inherit, and
  * becomes a rule the moment a cost is typed.
  */
+export type CreditDimensionEditor = ReturnType<typeof useCreditDimensionEditor>;
+
 export function useCreditDimensionEditor({
 	item,
 	onChange,
@@ -49,11 +53,18 @@ export function useCreditDimensionEditor({
 	item: CreditSchemaItem;
 	onChange: (item: CreditSchemaItem) => void;
 }) {
-	const [draftValues, setDraftValues] = useState<DimensionValues>({});
+	// Seeded from what is saved so a dimension outlives the last rule using it:
+	// deleting rates must never delete the dimension they matched on.
+	const [draftValues, setDraftValues] = useState<DimensionValues>(() =>
+		dimensionValues(item),
+	);
 	const [draftRows, setDraftRows] = useState<CreditMatch[]>([]);
+	// Unnamed dimension rows have no key to live under yet, so they are counted
+	// separately until they are named.
+	const [unnamedFields, setUnnamedFields] = useState(0);
 
 	const values = useMemo(
-		() => mergeDimensionValues(dimensionValues(item), draftValues),
+		() => mergeDimensionValues(draftValues, dimensionValues(item)),
 		[item.dimensions, item.multipliers, draftValues],
 	);
 	const fields = Object.keys(values);
@@ -108,8 +119,20 @@ export function useCreditDimensionEditor({
 		multipliers,
 		inheritedCredits,
 		rateWarnings,
-		addField: (field: string) =>
-			setDraftValues({ ...draftValues, [field]: draftValues[field] ?? [] }),
+		unnamedFields,
+		addField: () => setUnnamedFields(unnamedFields + 1),
+		renameField: (from: string, to: string) => {
+			// A name already in use would merge two dimensions silently.
+			if (from === to || to in values) return;
+			if (from === "") {
+				setUnnamedFields(Math.max(unnamedFields - 1, 0));
+				setDraftValues({ ...draftValues, [to]: [] });
+				return;
+			}
+			setDraftValues(renameDimensionValuesKey({ values, from, to }));
+			onChange(withRenamedField({ item, from, to }));
+		},
+		removeUnnamedField: () => setUnnamedFields(Math.max(unnamedFields - 1, 0)),
 		removeField: (field: string) => {
 			const { [field]: _removed, ...allowed } = values;
 			restrictTo(allowed);

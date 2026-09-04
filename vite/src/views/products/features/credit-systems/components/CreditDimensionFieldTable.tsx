@@ -1,4 +1,3 @@
-import { Input } from "@autumn/ui";
 import { HashIcon, PlusIcon } from "@phosphor-icons/react";
 import type {
 	ColumnDef,
@@ -7,13 +6,14 @@ import type {
 } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
-import { useDraftValue } from "@/components/v2/rule-builder/useDraftValue";
 import { ValueChipInput } from "@/components/v2/rule-builder/ValueChipInput";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
-import type { DimensionValues } from "../utils/creditDimensionUtils";
+import { useCreditDimensions } from "../hooks/CreditDimensionContext";
+import { CreditDimensionNameInput } from "./CreditDimensionNameInput";
 import { CreditEditableTable } from "./CreditEditableTable";
 
 interface FieldTableRow {
+	id: string;
 	field: string;
 	values: string[];
 }
@@ -22,6 +22,9 @@ interface FieldTableMeta {
 	onAddValue: (field: string, value: string) => void;
 	onRemoveValue: (field: string, value: string) => void;
 	onRemoveField: (field: string) => void;
+	onRemoveUnnamedField: () => void;
+	onRenameField: (from: string, to: string) => void;
+	fields: string[];
 }
 
 interface FieldCellContext {
@@ -37,10 +40,16 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 		header: "Dimension",
 		id: "field",
 		size: 160,
-		cell: ({ row }: FieldCellContext) => (
+		cell: ({ row, table }: FieldCellContext) => (
 			<span className="flex items-center gap-1.5 min-w-0">
 				<HashIcon size={14} className="shrink-0 text-tertiary-foreground" />
-				<span className="text-sm truncate">{row.original.field}</span>
+				<CreditDimensionNameInput
+					field={row.original.field}
+					onRename={(to) => metaOf(table).onRenameField(row.original.field, to)}
+					isTaken={(name) =>
+						name !== row.original.field && metaOf(table).fields.includes(name)
+					}
+				/>
 			</span>
 		),
 	},
@@ -70,48 +79,58 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 			<div className="flex justify-end">
 				<RemoveButton
 					className="opacity-100"
-					onClick={() => metaOf(table).onRemoveField(row.original.field)}
+					onClick={() => {
+						const meta = metaOf(table);
+						if (row.original.field === "") return meta.onRemoveUnnamedField();
+						meta.onRemoveField(row.original.field);
+					}}
 				/>
 			</div>
 		),
 	},
 ];
 
-interface CreditDimensionFieldTableProps {
-	values: DimensionValues;
-	onAddField: (field: string) => void;
-	onRemoveField: (field: string) => void;
-	onAddValue: (field: string, value: string) => void;
-	onRemoveValue: (field: string, value: string) => void;
-}
+/** One row per dimension; the name is editable and its values are chips that wrap within the cell. */
+export function CreditDimensionFieldTable() {
+	const {
+		values,
+		unnamedFields,
+		addField,
+		removeField,
+		removeUnnamedField,
+		renameField,
+		addValue,
+		removeValue,
+	} = useCreditDimensions();
 
-/** One row per dimension; its values are chips that wrap within the cell. The strip beneath adds a dimension on enter. */
-export function CreditDimensionFieldTable({
-	values,
-	onAddField,
-	onRemoveField,
-	onAddValue,
-	onRemoveValue,
-}: CreditDimensionFieldTableProps) {
 	const data: FieldTableRow[] = useMemo(
-		() =>
-			Object.entries(values).map(([field, fieldValues]) => ({
+		() => [
+			...Object.entries(values).map(([field, fieldValues]) => ({
+				id: field,
 				field,
 				values: fieldValues,
 			})),
-		[values],
+			...Array.from({ length: unnamedFields }, (_, index) => ({
+				id: `unnamed-${index}`,
+				field: "",
+				values: [],
+			})),
+		],
+		[values, unnamedFields],
 	);
-	const newField = useDraftValue({
-		onSubmit: (field) => {
-			if (!(field in values)) onAddField(field);
-		},
-	});
 
-	const meta: FieldTableMeta = { onAddValue, onRemoveValue, onRemoveField };
+	const meta: FieldTableMeta = {
+		onAddValue: addValue,
+		onRemoveValue: removeValue,
+		onRemoveField: removeField,
+		onRemoveUnnamedField: removeUnnamedField,
+		onRenameField: renameField,
+		fields: Object.keys(values),
+	};
 	const table = useProductTable({
 		data,
 		columns: COLUMNS,
-		options: { getRowId: (row) => row.field, meta },
+		options: { getRowId: (row) => row.id, meta },
 	});
 
 	return (
@@ -121,16 +140,14 @@ export function CreditDimensionFieldTable({
 			table={table}
 			columnCount={COLUMNS.length}
 			footer={
-				<>
-					<PlusIcon className="h-3 w-3 shrink-0" />
-					<Input
-						{...newField.inputProps}
-						variant="headless"
-						aria-label="New dimension"
-						className="h-auto! text-xs"
-						placeholder="Add dimension, eg. size"
-					/>
-				</>
+				<button
+					type="button"
+					onClick={addField}
+					className="flex items-center gap-1 flex-1 hover:text-foreground transition-colors"
+				>
+					<PlusIcon className="h-3 w-3" />
+					New dimension
+				</button>
 			}
 		/>
 	);

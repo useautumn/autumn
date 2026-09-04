@@ -3,7 +3,7 @@ import type {
 	CreditMultiplier,
 	CreditSchemaItem,
 } from "@autumn/shared";
-import { isEmptyObject } from "@autumn/shared";
+import { isEmptyObject, mapRecordValues } from "@autumn/shared";
 
 /**
  * The dashboard edits dimensions as fields → values → rules: every rate or
@@ -162,6 +162,64 @@ export const createMultiplierRule = (): CreditMultiplierRule => ({
 });
 
 /** An unset cell means "any value" for that field. */
+const renameMatchKey = ({
+	match,
+	from,
+	to,
+}: {
+	match: CreditMatch;
+	from: string;
+	to: string;
+}): CreditMatch =>
+	Object.fromEntries(
+		Object.entries(match).map(([key, value]) => [
+			key === from ? to : key,
+			value,
+		]),
+	);
+
+/** Renaming a dimension rewrites the key in every rate and multiplier that matched on it. */
+export const withRenamedField = ({
+	item,
+	from,
+	to,
+}: {
+	item: CreditSchemaItem;
+	from: string;
+	to: string;
+}): CreditSchemaItem => {
+	const rename = <T extends Matched>(rules: Record<string, T> | undefined) =>
+		mapRecordValues({
+			record: rules ?? {},
+			mapValue: (rule) => ({
+				...rule,
+				match: renameMatchKey({ match: rule.match, from, to }),
+			}),
+		});
+
+	return {
+		...item,
+		...(item.dimensions ? { dimensions: rename(item.dimensions) } : {}),
+		...(item.multipliers ? { multipliers: rename(item.multipliers) } : {}),
+	};
+};
+
+export const renameDimensionValuesKey = ({
+	values,
+	from,
+	to,
+}: {
+	values: DimensionValues;
+	from: string;
+	to: string;
+}): DimensionValues =>
+	Object.fromEntries(
+		Object.entries(values).map(([field, list]) => [
+			field === from ? to : field,
+			list,
+		]),
+	);
+
 export const setMatchValue = ({
 	match,
 	field,
