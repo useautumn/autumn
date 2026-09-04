@@ -66,6 +66,33 @@ describe("shouldRetrySqsJobError", () => {
 		).toBe(true);
 	});
 
+	test("does not retry stripe webhook replay on Postgres foreign-key violations", () => {
+		const foreignKeyError = Object.assign(
+			new Error(
+				'insert or update on table "customer_prices" violates foreign key constraint "customer_prices_price_id_fkey"',
+			),
+			{ code: "23503" },
+		);
+
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.StripeWebhookReplay,
+				error: foreignKeyError,
+			}),
+		).toBe(false);
+	});
+
+	test("does not retry stripe webhook replay on wrapped foreign-key violations", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.StripeWebhookReplay,
+				error: new Error(
+					'insert or update on table "customer_prices" violates foreign key constraint "customer_prices_price_id_fkey"',
+				),
+			}),
+		).toBe(false);
+	});
+
 	test("does not retry stripe webhook replay on errors that would not 500 Stripe", () => {
 		expect(
 			shouldRetrySqsJobError({
