@@ -103,7 +103,10 @@ export const CopyButton = ({
 						icon={<AnimatedCopyIcon copied={copied} />}
 						className={cn("", props.className)}
 					>
-						<span className={cn("truncate", innerClassName)}>
+						<span
+							title={props.title ?? (children == null ? text : undefined)}
+							className={cn("truncate", innerClassName)}
+						>
 							{children ?? text}
 						</span>
 					</IconButton>
@@ -168,6 +171,7 @@ export const MiniCopyButton = ({
 			{iconOrientation === "left" && copyIcon}
 			{children}
 			<span
+				title={text}
 				className={cn("text-sm text-tiny-id w-full truncate", innerClassName)}
 			>
 				{text}
