@@ -10,6 +10,7 @@
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.1017.0",
 		"@autumn/balance-engine": "workspace:*",
 		"@autumn/kafka": "workspace:*",
 		"kafkajs": "^2.2.4"
