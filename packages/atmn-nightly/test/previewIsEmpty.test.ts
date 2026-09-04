@@ -34,3 +34,18 @@ test("all-none rows with all-none nesting are empty", () => {
 	// biome-ignore lint/suspicious/noExplicitAny: the preview shape under test
 	expect(previewIsEmpty({ preview: preview as any })).toBe(true);
 });
+
+test("a variant marked explicit (archived or customized) is work", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				action: "none",
+				variants: [{ variantPlanId: "pro_plus", variantAction: "explicit" }],
+			},
+		],
+	};
+	// biome-ignore lint/suspicious/noExplicitAny: the preview shape under test
+	expect(previewIsEmpty({ preview: preview as any })).toBe(false);
+});

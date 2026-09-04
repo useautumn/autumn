@@ -444,6 +444,8 @@ export const renderPreview = ({
 
 /** A row is work when its own action is, or when anything nested under it
  * (a variant, a license link, a sibling version) carries a changing action. */
+const NOOP_ACTIONS = new Set(["none", "skip"]);
+
 const rowHasWork = (row: PreviewChange): boolean => {
 	if (isChange(row)) return true;
 	return Object.values(row as Record<string, unknown>).some(
@@ -453,11 +455,13 @@ const rowHasWork = (row: PreviewChange): boolean => {
 				(entry) =>
 					entry !== null &&
 					typeof entry === "object" &&
+					// Nested rows speak their own vocabulary (a variant is `explicit`
+					// or `propagated`), so anything but a no-op counts.
 					Object.entries(entry as Record<string, unknown>).some(
 						([key, nested]) =>
 							key.endsWith("ction") &&
 							typeof nested === "string" &&
-							APPLIED_ACTIONS.has(nested),
+							!NOOP_ACTIONS.has(nested),
 					),
 			),
 	);
