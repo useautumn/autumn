@@ -55670,6 +55670,13 @@ paths:
                   description: "When false the payload is the complete desired catalog: plans
                     missing from it are removed. Defaults true, which leaves
                     anything unmentioned alone."
+                skip_version_deletions:
+                  type: boolean
+                  default: true
+                  description: "When false, a stated plan's versions the payload does not state
+                    are removed: archived while any customer holds them, hidden
+                    otherwise. Defaults true, which leaves unstated versions
+                    alone."
                 skip_plan_ids:
                   type: array
                   items:
@@ -75816,6 +75823,13 @@ paths:
                   description: "When false the payload is the complete desired catalog: plans
                     missing from it are removed. Defaults true, which leaves
                     anything unmentioned alone."
+                skip_version_deletions:
+                  type: boolean
+                  default: true
+                  description: "When false, a stated plan's versions the payload does not state
+                    are removed: archived while any customer holds them, hidden
+                    otherwise. Defaults true, which leaves unstated versions
+                    alone."
                 skip_plan_ids:
                   type: array
                   items:

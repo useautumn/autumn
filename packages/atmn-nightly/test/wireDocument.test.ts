@@ -12,6 +12,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import yaml from "yaml";
 import { feature } from "../src/generated/features";
+import { plan } from "../src/generated/plans";
 import { atmn } from "../src/generated/wire";
 
 // biome-ignore lint/suspicious/noExplicitAny: the raw OpenAPI document
@@ -101,3 +102,28 @@ test("collections the CLI cannot express yet stay absent", () => {
 		].schema;
 	expect(envelope.properties.plans.default).toBeUndefined();
 }, 30_000);
+
+test("stated history removes what it omits; absent history is not mine", () => {
+	// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
+	const absent = atmn({ plans: [] }) as any;
+	expect(absent.skip_version_deletions).toBe(true);
+	// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
+	const stated = atmn({ plans: [], planVersions: [] }) as any;
+	expect(stated.skip_version_deletions).toBe(false);
+});
+
+test("a declared variant is pinned to follow its base", () => {
+	const wire = atmn({
+		plans: [
+			plan({
+				planId: "pro",
+				name: "Pro",
+				variants: [{ variantPlanId: "pro_annual", name: "Pro (annual)" }],
+			}),
+		],
+		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
+	}) as any;
+	expect(wire.plans[0].propagate).toEqual({
+		variants: [{ plan_id: "pro_annual" }],
+	});
+});
