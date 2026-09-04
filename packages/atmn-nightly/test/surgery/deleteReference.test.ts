@@ -79,3 +79,11 @@ test("a name that appears nowhere returns the source unchanged", () => {
 		configSource,
 	);
 });
+
+test("removing the first of two inline elements leaves no stray space", () => {
+	const source =
+		'import { free, pro } from "./plans";\nexport default atmn({ plans: [pro, free] });\n';
+	expect(deleteReference({ source, name: "pro" })).toBe(
+		'import { free } from "./plans";\nexport default atmn({ plans: [free] });\n',
+	);
+});
