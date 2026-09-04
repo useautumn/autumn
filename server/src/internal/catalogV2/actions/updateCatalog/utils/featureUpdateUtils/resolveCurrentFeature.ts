@@ -1,9 +1,4 @@
-import {
-	ErrCode,
-	type Feature,
-	RecaseError,
-	type UpdateCatalogFeatureParams,
-} from "@autumn/shared";
+import type { Feature, UpdateCatalogFeatureParams } from "@autumn/shared";
 
 /**
  * The row a features[] entry addresses: by `internal_id` when stated (so a
@@ -22,14 +17,8 @@ export const resolveCurrentFeature = ({
 		const byInternalId = features.find(
 			(candidate) => candidate.internal_id === entry.internal_id,
 		);
-		if (!byInternalId) {
-			throw new RecaseError({
-				code: ErrCode.InvalidRequest,
-				message: `No feature exists for internal_id ${entry.internal_id}`,
-				statusCode: 400,
-			});
-		}
-		return byInternalId;
+		// An id nothing owns names a new resource: fall back to feature_id.
+		if (byInternalId) return byInternalId;
 	}
 	return (
 		features.find((candidate) => candidate.id === entry.feature_id) ?? null
