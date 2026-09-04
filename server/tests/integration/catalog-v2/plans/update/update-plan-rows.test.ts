@@ -1,7 +1,6 @@
 /**
  * catalogV2.update — claim / row carry-over (definition-exact → same row ids;
- * any change mints new rows; old deleted without customers, or retired +
- * is_custom with customers).
+ * any change mints new rows; old rows are always retired with is_custom).
  *
  * Customer refs are DB-seeded: the local Stripe Connect account is currently
  * unreachable from s.customer / attach, which would otherwise fail before the
@@ -135,7 +134,7 @@ const messagesItem = (included: number) => ({
 });
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 rows: base price change keeps feature rows; old base deleted (no customers)")}`,
+	`${chalk.yellowBright("catalogV2 rows: base price change keeps feature rows; old base retired (no customers)")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_row_base");
@@ -169,7 +168,7 @@ test.concurrent(
 					stableEnts: true,
 					stableFeaturePrices: true,
 					mintedBase: { amount: 40 },
-					deletedPrices: [before.basePriceId!],
+					retiredPrices: [before.basePriceId!],
 				},
 			});
 		} finally {
@@ -179,7 +178,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 rows: remove item deletes removed rows; remaining stable (no customers)")}`,
+	`${chalk.yellowBright("catalogV2 rows: remove item retires removed rows; remaining stable (no customers)")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_row_rm");
@@ -206,7 +205,7 @@ test.concurrent(
 				expected: {
 					stableEnts: [TestFeature.Messages],
 					absentFeatures: [TestFeature.Dashboard],
-					deletedEnts: [before.ents[TestFeature.Dashboard].id],
+					retiredEnts: [before.ents[TestFeature.Dashboard].id],
 				},
 			});
 		} finally {
@@ -216,7 +215,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 rows: included bump mints new ent; old deleted (no customers)")}`,
+	`${chalk.yellowBright("catalogV2 rows: included bump mints new ent; old retired (no customers)")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_row_incl");
@@ -238,7 +237,7 @@ test.concurrent(
 				before,
 				expected: {
 					mintedEnts: [{ featureId: TestFeature.Messages, allowance: 250 }],
-					deletedEnts: [before.ents[TestFeature.Messages].id],
+					retiredEnts: [before.ents[TestFeature.Messages].id],
 				},
 			});
 		} finally {

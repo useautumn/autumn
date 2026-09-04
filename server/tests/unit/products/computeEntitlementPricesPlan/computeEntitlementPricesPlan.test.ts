@@ -18,6 +18,7 @@ import {
 	computeEntitlementPricesPlan,
 	type EntitlementPricesPlan,
 } from "@/internal/products/actions/computeEntitlementPricesPlan";
+import { leaveBucketForMode } from "@/internal/products/actions/computeEntitlementPricesPlan/buildEntitlementPricesPlan/buildEntitlementPricesPlanUtils";
 
 const messagesFeature = features.create({
 	id: "messages",
@@ -173,7 +174,7 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(plan.entitlements.same[0].id).toBe("ent_messages");
 	});
 
-	test("3a. PUT amount edit (no protect) → delete old + mint new", () => {
+	test("3a. PUT amount edit (no protect) → retire old + mint new", () => {
 		const currentEnt = entitlements.buildWithFeature({
 			id: "ent_messages",
 			internal_feature_id: messagesFeature.internal_id,
@@ -213,10 +214,10 @@ describe("computeEntitlementPricesPlan", () => {
 			},
 		});
 
-		expect(plan.prices.deleted.map((price) => price.id)).toEqual([
+		expect(plan.prices.retired.map((price) => price.id)).toEqual([
 			"pr_messages",
 		]);
-		expect(plan.entitlements.deleted.map((ent) => ent.id)).toEqual([
+		expect(plan.entitlements.retired.map((ent) => ent.id)).toEqual([
 			"ent_messages",
 		]);
 		expect(plan.prices.new).toHaveLength(1);
@@ -319,7 +320,7 @@ describe("computeEntitlementPricesPlan", () => {
 		});
 
 		expect(plan.prices.same).toEqual([]);
-		expect(plan.prices.deleted.map((price) => price.id).sort()).toEqual([
+		expect(plan.prices.retired.map((price) => price.id).sort()).toEqual([
 			"pr_base",
 			"pr_messages",
 		]);
@@ -339,7 +340,7 @@ describe("computeEntitlementPricesPlan", () => {
 		]);
 	});
 
-	test("4. PUT remove feature → deleted / retired", () => {
+	test("4. PUT remove feature → retired", () => {
 		const currentEnt = entitlements.buildWithFeature({
 			id: "ent_messages",
 			internal_feature_id: messagesFeature.internal_id,
@@ -361,7 +362,7 @@ describe("computeEntitlementPricesPlan", () => {
 				},
 			},
 		});
-		expect(deletedPlan.entitlements.deleted.map((ent) => ent.id)).toEqual([
+		expect(deletedPlan.entitlements.retired.map((ent) => ent.id)).toEqual([
 			"ent_messages",
 		]);
 
@@ -419,7 +420,7 @@ describe("computeEntitlementPricesPlan", () => {
 			},
 		});
 
-		expect(plan.entitlements.deleted.map((ent) => ent.id)).toEqual([
+		expect(plan.entitlements.retired.map((ent) => ent.id)).toEqual([
 			"ent_messages",
 		]);
 		expect(plan.entitlements.new).toHaveLength(1);
@@ -444,7 +445,7 @@ describe("computeEntitlementPricesPlan", () => {
 				currentRows: { prices: [currentBase], entitlements: [] },
 			},
 		});
-		expect(amountEdit.prices.deleted.map((price) => price.id)).toEqual([
+		expect(amountEdit.prices.retired.map((price) => price.id)).toEqual([
 			"pr_base",
 		]);
 		expect(amountEdit.prices.new).toHaveLength(1);
@@ -459,7 +460,7 @@ describe("computeEntitlementPricesPlan", () => {
 				currentRows: { prices: [currentBase], entitlements: [] },
 			},
 		});
-		expect(removeBase.prices.deleted.map((price) => price.id)).toEqual([
+		expect(removeBase.prices.retired.map((price) => price.id)).toEqual([
 			"pr_base",
 		]);
 	});
@@ -637,7 +638,7 @@ describe("computeEntitlementPricesPlan", () => {
 			"ent_messages",
 		]);
 		expect(plan.prices.same.map((price) => price.id)).toEqual(["pr_messages"]);
-		expect(plan.prices.deleted.map((price) => price.id)).toEqual(["pr_base"]);
+		expect(plan.prices.retired.map((price) => price.id)).toEqual(["pr_base"]);
 		expect(plan.prices.new).toHaveLength(1);
 		expect(plan.entitlements.deleted).toEqual([]);
 	});
@@ -673,10 +674,10 @@ describe("computeEntitlementPricesPlan", () => {
 		});
 
 		expect(plan.prices.same.map((price) => price.id)).toEqual(["pr_base"]);
-		expect(plan.prices.deleted.map((price) => price.id)).toEqual([
+		expect(plan.prices.retired.map((price) => price.id)).toEqual([
 			"pr_messages",
 		]);
-		expect(plan.entitlements.deleted.map((ent) => ent.id)).toEqual([
+		expect(plan.entitlements.retired.map((ent) => ent.id)).toEqual([
 			"ent_messages",
 		]);
 		expect(plan.entitlements.new).toHaveLength(1);
@@ -717,6 +718,19 @@ describe("computeEntitlementPricesPlan", () => {
 			},
 		});
 		expect(plan.entitlements.new).toHaveLength(1);
+	});
+
+	test("update mode always retires leftover rows", () => {
+		expect(
+			leaveBucketForMode({
+				mode: { type: "update", protectReferencedRows: false },
+			}),
+		).toBe("retired");
+		expect(
+			leaveBucketForMode({
+				mode: { type: "update", protectReferencedRows: true },
+			}),
+		).toBe("retired");
 	});
 
 	test("items (PUT) cannot combine with add_items (PATCH)", () => {

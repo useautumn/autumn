@@ -109,6 +109,14 @@ export class EntitlementService {
 		await db.delete(entitlements).where(inArray(entitlements.id, ids));
 	}
 
+	static async retireInIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+		if (ids.length === 0) return;
+		await db
+			.update(entitlements)
+			.set({ is_custom: true })
+			.where(inArray(entitlements.id, ids));
+	}
+
 	static async hasEntityFeatureId({
 		db,
 		orgId,

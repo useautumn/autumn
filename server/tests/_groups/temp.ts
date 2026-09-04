@@ -1,7 +1,10 @@
 import type { TestGroup } from "./types";
 
 /** Scratch group for tw leftovers. Keep empty on trunk. */
-const activeTempPaths: string[] = [];
+const activeTempPaths: string[] = [
+	"integration/crud/plans/update/in-place/in-place-isolation.test.ts",
+	"integration/crud/plans/update/update-plan-allocated-v1-compat.test.ts",
+];
 
 export const temp: TestGroup = {
 	name: "temp",

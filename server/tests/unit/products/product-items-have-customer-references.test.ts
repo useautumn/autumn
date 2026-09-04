@@ -105,6 +105,11 @@ test("product item references: reloads current rows under the product lock", asy
 			};
 		},
 		delete: () => ({ where: async () => undefined }),
+		update: () => ({
+			set: () => ({
+				where: async () => undefined,
+			}),
+		}),
 		query: { prices: { findMany: async () => [] } },
 	} as unknown as DrizzleCli;
 	const db = {
