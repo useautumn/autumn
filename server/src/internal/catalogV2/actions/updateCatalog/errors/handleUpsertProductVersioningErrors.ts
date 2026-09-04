@@ -6,6 +6,7 @@ import {
 	type UpdateCatalogParams,
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { versionForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/versionForSlug";
@@ -234,6 +235,26 @@ export const handleUpsertProductVersioningErrors = ({
 					planParams.version,
 				),
 			);
+		} else if (
+			planParams.internal_id !== undefined &&
+			findFullProductByInternalId({
+				internalId: planParams.internal_id,
+				productStatesContext,
+			}) !== null
+		) {
+			// A stable id pins the entry to its own row; no slug is needed and it
+			// never competes with an unpinned sibling.
+			const current = findFullProductByInternalId({
+				internalId: planParams.internal_id,
+				productStatesContext,
+			});
+			if (current !== null && current.id === planParams.plan_id) {
+				claimPinnedVersion({
+					planId: planParams.plan_id,
+					version: current.version,
+					seenPinned,
+				});
+			}
 		} else if (planParams.version_slug !== undefined) {
 			const version = versionForSlug({
 				planId: planParams.plan_id,
