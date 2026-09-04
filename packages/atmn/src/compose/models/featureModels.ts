@@ -12,6 +12,15 @@ export const CreditTierSchema = z.object({
 // Matches are compared against event properties as strings, so numbers and
 // booleans are coerced on the way in — keeping them typed would make every
 // later diff report a change against the stored string.
+// Names become usage-attribution keys, so they carry the API's constraints.
+const CreditDimensionNameSchema = z
+	.string()
+	.min(1)
+	.max(64)
+	.refine((name) => !name.includes("::"), {
+		message: 'Dimension names cannot contain "::"',
+	});
+
 const CreditMatchSchema = z.record(
 	z.string(),
 	z.union([z.string(), z.number(), z.boolean()]).transform(String),
@@ -35,17 +44,27 @@ export const CreditDimensionSchema = z.union([
 	}),
 ]);
 
-export const CreditMultiplierSchema = z.object({
-	match: CreditMatchSchema,
-	factor: z.number().optional(),
-	add: z.number().optional(),
-});
+export const CreditMultiplierSchema = z
+	.object({
+		match: CreditMatchSchema,
+		factor: z.number().positive().optional(),
+		add: z.number().optional(),
+	})
+	.refine(
+		(multiplier) =>
+			multiplier.factor !== undefined || multiplier.add !== undefined,
+		{ message: "A multiplier needs a factor or an add" },
+	);
 
 const CreditSchemaItemBaseSchema = z.object({
 	meteredFeatureId: z.string(),
 	billingUnits: z.number().optional(),
-	dimensions: z.record(z.string(), CreditDimensionSchema).optional(),
-	multipliers: z.record(z.string(), CreditMultiplierSchema).optional(),
+	dimensions: z
+		.record(CreditDimensionNameSchema, CreditDimensionSchema)
+		.optional(),
+	multipliers: z
+		.record(CreditDimensionNameSchema, CreditMultiplierSchema)
+		.optional(),
 });
 
 export const FlatCreditSchemaItemSchema = CreditSchemaItemBaseSchema.extend({

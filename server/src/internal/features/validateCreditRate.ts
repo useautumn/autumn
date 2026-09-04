@@ -43,7 +43,11 @@ export const validateCreditRate = ({
 	rate.credit_amount = creditAmount;
 };
 
-export const minimumCreditRateAmount = (rate: CreditRate): number =>
-	rate.tier_behavior === "graduated"
-		? Math.min(...(rate.tiers ?? []).map((tier) => tier.credit_amount))
-		: (rate.credit_amount ?? 0);
+export const minimumCreditRateAmount = (rate: CreditRate): number => {
+	if (rate.tier_behavior !== "graduated") return rate.credit_amount ?? 0;
+	// Reduced rather than spread: a long ladder would exceed the argument limit.
+	return (rate.tiers ?? []).reduce(
+		(lowest, tier) => Math.min(lowest, tier.credit_amount),
+		Number.POSITIVE_INFINITY,
+	);
+};
