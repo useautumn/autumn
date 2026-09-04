@@ -64,6 +64,13 @@ export const computeCreateSchedulePlan = ({
 		...scheduled.insertCustomerProducts,
 	];
 
+	const insertPlanLicenses = [
+		...billingContext.productContexts,
+		...billingContext.scheduledPhaseContexts.flatMap(
+			(phase) => phase.productContexts,
+		),
+	].flatMap((productContext) => productContext.insertPlanLicenses ?? []);
+
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: immediateCustomerProducts,
@@ -110,6 +117,9 @@ export const computeCreateSchedulePlan = ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: billingContext.trialContext?.customFreeTrial,
+		insertPlanLicenses: insertPlanLicenses.length
+			? insertPlanLicenses
+			: undefined,
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,

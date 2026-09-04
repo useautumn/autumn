@@ -3,6 +3,7 @@ import type {
 	FeatureOptions,
 	FullCusProduct,
 	FullCustomer,
+	InsertPlanLicenseSpec,
 	Price,
 } from "@autumn/shared";
 import type { FullProduct } from "../../productModels/productModels";
@@ -14,6 +15,7 @@ export interface MultiAttachProductContext {
 	customPrices: Price[];
 	customEnts: Entitlement[];
 	featureQuantities: FeatureOptions[];
+	insertPlanLicenses?: InsertPlanLicenseSpec[];
 	fullCustomer: FullCustomer;
 	/** The existing active product in the same group and scope. */
 	currentCustomerProduct?: FullCusProduct;

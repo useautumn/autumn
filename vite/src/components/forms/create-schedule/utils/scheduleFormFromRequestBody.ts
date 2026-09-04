@@ -1,4 +1,8 @@
-import type { BillingBehavior, ProductItem } from "@autumn/shared";
+import type {
+	BillingBehavior,
+	CustomizePlanLicense,
+	ProductItem,
+} from "@autumn/shared";
 import { addMonths, addYears } from "date-fns";
 import {
 	type FieldReaders,
@@ -24,6 +28,14 @@ const PLAN_FIELD_READERS: FieldReaders<SchedulePlan> = {
 	version: readNumber("version"),
 };
 
+const upsertLicensesFrom = (plan: Record<string, unknown>) => {
+	const customize = requestRecord(plan.customize);
+	const upsertLicenses = customize?.upsert_licenses;
+	return Array.isArray(upsertLicenses)
+		? (upsertLicenses as CustomizePlanLicense[])
+		: null;
+};
+
 const planFrom = (value: unknown): SchedulePlan | undefined => {
 	const plan = requestRecord(value);
 	if (!plan || typeof plan.plan_id !== "string") return undefined;
@@ -32,6 +44,7 @@ const planFrom = (value: unknown): SchedulePlan | undefined => {
 		entityId: overrides.entityId ?? null,
 		isCustom: Array.isArray(plan.items),
 		items: overrides.items ?? null,
+		addLicenses: upsertLicensesFrom(plan),
 		prepaidOptions:
 			readQuantities("feature_quantities", "feature_id")(plan) ?? {},
 		productId: plan.plan_id,

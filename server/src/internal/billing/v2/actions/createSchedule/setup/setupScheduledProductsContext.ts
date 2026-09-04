@@ -34,6 +34,7 @@ export const setupScheduledProductsContext = async ({
 						fullProduct,
 						customPrices = [],
 						customEnts: customEntitlements = [],
+						insertPlanLicenses,
 					} = await setupAttachProductContext({
 						ctx,
 						params: plan,
@@ -55,6 +56,7 @@ export const setupScheduledProductsContext = async ({
 						customPrices,
 						customEntitlements,
 						featureQuantities,
+						insertPlanLicenses,
 						externalId: plan.subscription_id,
 						entity: computeScopeForScheduledProduct({
 							fullProduct,
