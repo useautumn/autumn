@@ -22,7 +22,17 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 })
 	.partial()
 	.extend({
-		// Diff emits null when the previous value was unset so the key survives JSON.
+		// Diff emits null when the previous value was unset so the key survives JSON;
+		// a create has every previous value unset, so each scalar admits null too.
+		id: ApiPlanV1Schema.shape.id.nullable().optional(),
+		name: ApiPlanV1Schema.shape.name.nullable().optional(),
+		description: ApiPlanV1Schema.shape.description.nullable().optional(),
+		group: ApiPlanV1Schema.shape.group.nullable().optional(),
+		add_on: ApiPlanV1Schema.shape.add_on.nullable().optional(),
+		auto_enable: ApiPlanV1Schema.shape.auto_enable.nullable().optional(),
+		config: ApiPlanV1Schema.shape.config.nullable().optional(),
+		archived: ApiPlanV1Schema.shape.archived.nullable().optional(),
+		metadata: ApiPlanV1Schema.shape.metadata.nullable().optional(),
 		processors: ApiPlanProcessorsSchema.nullable().optional().meta({
 			description:
 				"Previous payment processors when they changed. Null when the plan had none.",

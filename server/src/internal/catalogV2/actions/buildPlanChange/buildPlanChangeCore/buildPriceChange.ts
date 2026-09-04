@@ -16,7 +16,7 @@ export const buildPriceChange = ({
 	if (customize.price === undefined) return undefined;
 
 	return {
-		previous: from.price,
+		previous: from.price ?? null,
 		current: to.price,
 	};
 };
