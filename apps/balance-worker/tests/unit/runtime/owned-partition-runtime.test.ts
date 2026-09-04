@@ -83,7 +83,6 @@ const createTrackCommand = ({
 			overageBehavior: "reject",
 			properties: null,
 			occurredAt: 1_700_000_000_000,
-			deduplicationExpiresAt: 1_700_086_400_000,
 		},
 	});
 
@@ -255,7 +254,7 @@ const createStoreFixture = (): {
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
-	store.initializeState({
+	store.restoreState({
 		topic,
 		partition,
 		initializationId: "init_1",
@@ -285,6 +284,11 @@ const writerLimits = {
 	maxPendingCommandsPerCustomer: 100,
 };
 
+const trackReceiptPolicy = {
+	retentionMs: 86_400_000,
+	now: () => 1_700_000_000_000,
+};
+
 const createRuntime = ({
 	store,
 	producer,
@@ -297,23 +301,20 @@ const createRuntime = ({
 	follower: PartitionOutcomeFollowerPort;
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
 	recoveryDrainTimeoutMs?: number;
-}) => {
-	function createProducer(): OwnedPartitionProducerPort {
-		return producer;
-	}
-	const session = createProducerSession({
-		ctx: { kafka: { producer: createProducer } },
-		config: createWorkerProducerConfig({
-			deploymentEnvironment: "test",
-			topic,
-			partition,
-			limits: {
-				transactionTimeoutMs: 15_000,
-				retryCount: 3,
-				initialRetryTimeMs: 100,
-				maxRetryTimeMs: 2_000,
-			},
-		}),
+}) =>
+	createOwnedPartitionRuntime({
+		topic,
+		partition,
+		stateStore: store,
+		producer,
+		follower,
+		partitionResolver: {
+			partitionForIdentity: ({ identity: commandIdentity }) =>
+				partitionForIdentity(commandIdentity),
+		},
+		writerLimits,
+		trackReceiptPolicy,
+		recoveryDrainTimeoutMs,
 	});
 	const workerProducer = createWorkerProducer({
 		ctx: { session },

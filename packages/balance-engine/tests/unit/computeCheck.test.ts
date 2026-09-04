@@ -91,10 +91,13 @@ describe("check computation", () => {
 				overageBehavior: "reject",
 				properties: null,
 				occurredAt: 1_700_000_000_000,
-				deduplicationExpiresAt: 1_700_086_400_000,
 			},
 		});
-		const decision = computeTrack({ state, command: trackCommand });
+		const decision = computeTrack({
+			state,
+			command: trackCommand,
+			deduplicationExpiresAt: 1_700_086_400_000,
+		});
 		if (decision.kind !== "new") throw new Error("Expected a new outcome");
 
 		expect(

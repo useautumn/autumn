@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-	computeTrack,
+	computeTrack as computeTrackOutcome,
 	createCustomerMeteringState,
 	executeTrack,
 	meteringPartitionKeyOf,
@@ -8,6 +8,17 @@ import {
 	parseTrackCommand,
 	shadowComparisonKeyOf,
 } from "../../src/balanceEngine.js";
+
+const computeTrack = (
+	input: Omit<
+		Parameters<typeof computeTrackOutcome>[0],
+		"deduplicationExpiresAt"
+	>,
+) =>
+	computeTrackOutcome({
+		...input,
+		deduplicationExpiresAt: 1_700_086_400_000,
+	});
 
 const identity = {
 	orgId: "org_1",
@@ -52,7 +63,6 @@ const createCommand = ({
 			overageBehavior,
 			properties: null,
 			occurredAt: 1_700_000_000_000,
-			deduplicationExpiresAt: 1_700_086_400_000,
 		},
 	});
 

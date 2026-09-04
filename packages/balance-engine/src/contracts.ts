@@ -49,7 +49,6 @@ export const trackCommandSchema = z
 		overageBehavior: z.enum(["cap", "reject", "overflow"]),
 		properties: propertiesSchema,
 		occurredAt: z.number().int().nonnegative(),
-		deduplicationExpiresAt: z.number().int().nonnegative(),
 	})
 	.strict();
 
@@ -151,7 +150,6 @@ export const trackOutcomeSchema = z
 				overageBehavior: outcome.overageBehavior,
 				properties: outcome.properties,
 				occurredAt: outcome.occurredAt,
-				deduplicationExpiresAt: outcome.deduplicationExpiresAt,
 			},
 		});
 		if (outcome.commandFingerprint !== expectedCommandFingerprint) {
@@ -360,24 +358,27 @@ export const stateInitializationFingerprintOf = ({
 	initialization,
 }: {
 	initialization: StateInitializedEvent;
-}): string =>
-	JSON.stringify([
-		initialization.state.identity.orgId,
-		initialization.state.identity.env,
-		initialization.state.identity.customerId,
-		initialization.state.revision,
-		Object.entries(initialization.state.featureStatesById)
-			.sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-			.map(([featureId, featureState]) => [
-				featureId,
-				featureState.kind,
-				featureState.customerEntitlements.map((customerEntitlement) => [
-					customerEntitlement.id,
-					new Decimal(customerEntitlement.balance).toString(),
-					new Decimal(customerEntitlement.usage).toString(),
-				]),
-			]),
-	]);
+}): string => {
+	const state = {
+		...initialization.state,
+		featureStatesById: Object.fromEntries(
+			Object.entries(initialization.state.featureStatesById).map(
+				([featureId, featureState]) => [
+					featureId,
+					{
+						...featureState,
+						customerEntitlements: [...featureState.customerEntitlements].sort(
+							({ id: left }, { id: right }) =>
+								left < right ? -1 : left > right ? 1 : 0,
+						),
+					},
+				],
+			),
+		),
+	};
+
+	return JSON.stringify(canonicalizeJsonValue(state));
+};
 
 export type UnsupportedDecisionReason =
 	| "command_conflict"

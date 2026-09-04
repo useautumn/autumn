@@ -339,7 +339,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -420,7 +420,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -484,7 +484,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -534,7 +534,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -600,7 +600,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -662,7 +662,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -712,7 +712,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -754,7 +754,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -804,7 +804,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -846,7 +846,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -897,7 +897,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -943,7 +943,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -981,7 +981,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -1013,7 +1013,7 @@ describe("Kafka metering consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const initialState = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
