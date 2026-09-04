@@ -13,9 +13,9 @@
 
 import { expect, test } from "bun:test";
 import { join } from "node:path";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
@@ -56,6 +56,7 @@ const WIRED_CASES: Record<
 	},
 	exists: {
 		body: (id) => `{
+	features: [],
 	plans: [
 		plan({
 			planId: "${id}",
@@ -79,7 +80,8 @@ const WIRED_CASES: Record<
 		}),
 	],
 }`,
-		because: "featureOverride is only honoured on classic credit-system features.",
+		because:
+			"featureOverride is only honoured on classic credit-system features.",
 	},
 	valueWhen: {
 		body: (id) => `{
@@ -118,7 +120,7 @@ for (const [kind, testCase] of Object.entries(WIRED_CASES)) {
 			setup: [
 				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
-			config: configSource({ body: testCase.body(id) }),
+			config: { raw: configSource({ body: testCase.body(id) }) },
 		});
 
 		try {
@@ -153,20 +155,19 @@ test.todo(
 	() => {},
 );
 
-test(
-	"one failing config per rule kind: five distinct kinds failing at once are all collected into one throw, nothing sent",
-	async () => {
-		const dup = uniqueTestId("atmn_lint_dup");
-		const metered = uniqueTestId("atmn_lint_metered");
-		const seats = uniqueTestId("atmn_lint_seats");
-		const sso = uniqueTestId("atmn_lint_sso");
-		const planId = uniqueTestId("atmn_lint_plan");
+test("one failing config per rule kind: five distinct kinds failing at once are all collected into one throw, nothing sent", async () => {
+	const dup = uniqueTestId("atmn_lint_dup");
+	const metered = uniqueTestId("atmn_lint_metered");
+	const seats = uniqueTestId("atmn_lint_seats");
+	const sso = uniqueTestId("atmn_lint_sso");
+	const planId = uniqueTestId("atmn_lint_plan");
 
-		const scenario = await initAtmnScenario({
-			setup: [
-				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
-			],
-			config: configSource({
+	const scenario = await initAtmnScenario({
+		setup: [
+			s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+		],
+		config: {
+			raw: configSource({
 				body: `{
 	features: [
 		feature({ featureId: "${dup}", name: "Dup 1", type: "boolean" }),
@@ -198,34 +199,34 @@ test(
 	],
 }`,
 			}),
-		});
+		},
+	});
 
+	try {
+		let thrown: Error | undefined;
 		try {
-			let thrown: Error | undefined;
-			try {
-				await scenario.push();
-			} catch (error) {
-				thrown = error as Error;
-			}
-			expect(thrown).toBeDefined();
-			const message = thrown?.message ?? "";
-			for (const because of [
-				WIRED_CASES.requiredWhen?.because,
-				WIRED_CASES.unique?.because,
-				WIRED_CASES.exists?.because,
-				WIRED_CASES.targetHas?.because,
-				WIRED_CASES.valueWhen?.because,
-			]) {
-				expect(message).toContain(because);
-			}
-
-			const catalog = (await scenario.client.get({})) as unknown as {
-				features: Array<{ id: string }>;
-				plans: Array<{ id: string }>;
-			};
-			expect(catalog.plans.some((row) => row.id === planId)).toBe(false);
-		} finally {
-			scenario.cleanup();
+			await scenario.push();
+		} catch (error) {
+			thrown = error as Error;
 		}
-	},
-);
+		expect(thrown).toBeDefined();
+		const message = thrown?.message ?? "";
+		for (const because of [
+			WIRED_CASES.requiredWhen?.because,
+			WIRED_CASES.unique?.because,
+			WIRED_CASES.exists?.because,
+			WIRED_CASES.targetHas?.because,
+			WIRED_CASES.valueWhen?.because,
+		]) {
+			expect(message).toContain(because);
+		}
+
+		const catalog = (await scenario.client.get({})) as unknown as {
+			features: Array<{ id: string }>;
+			plans: Array<{ id: string }>;
+		};
+		expect(catalog.plans.some((row) => row.id === planId)).toBe(false);
+	} finally {
+		scenario.cleanup();
+	}
+});

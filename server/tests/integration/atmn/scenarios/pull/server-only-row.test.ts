@@ -61,7 +61,7 @@ for (const layout of LAYOUTS) {
 				await scenario.client.update(serverOnlyPlanWire({ planId }));
 
 				const pulled = await scenario.pull();
-				expect(pulled.appended).toContain(planId);
+				expect(pulled.appended).toContain(`${planId}@v1`);
 
 				const files = scenario.files();
 				const target =

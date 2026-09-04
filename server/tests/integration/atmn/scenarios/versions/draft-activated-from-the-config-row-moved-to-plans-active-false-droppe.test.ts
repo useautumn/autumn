@@ -57,7 +57,7 @@ test.concurrent(
 				extra: `\n\t\t\t\tversionSlug: "v2",\n\t\t\t\tactive: false,`,
 			});
 			scenario.writeConfig(
-				atmnConfigSource({ body: `{ plans: [${v1}, ${v2Draft}] }` }),
+				atmnConfigSource({ body: `{ plans: [${v1} ${v2Draft}] }` }),
 			);
 			await scenario.push();
 			const beforeActivation = await livePlanRows({

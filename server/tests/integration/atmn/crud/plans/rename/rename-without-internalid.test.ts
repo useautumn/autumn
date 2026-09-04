@@ -34,9 +34,19 @@ test.concurrent(
 
 		try {
 			await scenario.push();
+			const originalPro = await ProductService.getFull({
+				db: scenario.ctx.db,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+				idOrInternalId: "pro",
+			});
 
 			// The fixture's planId is edited to "proNew" without carrying the
-			// backfilled internalId forward — this is a create, not a rename.
+			// backfilled internalId forward — this is a create, not a rename. A
+			// push restates the whole catalog (skip_deletions: false) and "pro"
+			// is no longer in it, so with no customers or rewards keeping it
+			// around, the server removes it outright — the old id is not
+			// reserved as an alias either.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -53,6 +63,7 @@ test.concurrent(
 				orgId: scenario.ctx.org.id,
 				env: scenario.ctx.env,
 				idOrInternalId: "pro",
+				allowNotFound: true,
 			});
 			const proNew = await ProductService.getFull({
 				db: scenario.ctx.db,
@@ -60,15 +71,8 @@ test.concurrent(
 				env: scenario.ctx.env,
 				idOrInternalId: "proNew",
 			});
-			expect(proNew.internal_id).not.toBe(pro.internal_id);
-
-			// Decision pending: no internalId means no rename path is ever
-			// triggered, so nothing in this push instructs the server to touch
-			// `pro` — it stays exactly as it was (still active), and `proNew` is
-			// a wholly independent new row. If the intended contract is instead
-			// for an untouched sibling to end up archived, this is the line to
-			// flip.
-			expect(pro.archived).toBe(false);
+			expect(pro).toBeNull();
+			expect(proNew.internal_id).not.toBe(originalPro.internal_id);
 
 			const aliases = await listAliases({
 				ctx: scenario.ctx,

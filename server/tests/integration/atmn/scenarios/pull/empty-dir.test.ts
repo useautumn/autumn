@@ -46,7 +46,7 @@ test.concurrent(
 			});
 			expect(firstOutput).toContain("Scaffolded");
 			expect(existsSync(join(emptyDir, "planVersions", ".gitkeep"))).toBe(true);
-			expect(first.appended).toContain("free");
+			expect(first.appended).toContain("free@v1");
 			expect(
 				readFileSync(join(emptyDir, "autumn.config.ts"), "utf8"),
 			).toContain('planId: "free"');

@@ -61,13 +61,27 @@ test.concurrent(
 				idOrInternalId: "addon",
 			});
 
-			// Only the base is renamed; `variants` is omitted, leaving the variant
-			// link untouched.
+			// Only the base is renamed. A push is the whole desired catalog
+			// (skip_deletions: false), so the nested variant has to be restated
+			// too — an omitted `variants` array reads as "remove them", not
+			// "leave them alone" — while restating it unchanged leaves the link
+			// itself untouched.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "baseNew", internalId: "${base.internal_id}", name: "Base" }),
+		plan({
+			planId: "baseNew",
+			internalId: "${base.internal_id}",
+			name: "Base",
+			variants: [
+				{
+					variantPlanId: "addon",
+					name: "Addon",
+					customize: { price: { amount: 79, interval: "month" } },
+				},
+			],
+		}),
 	],
 }`,
 				}),

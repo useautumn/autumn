@@ -7,6 +7,7 @@
 import { expect, test } from "bun:test";
 import {
 	configBody,
+	everyFeatureType,
 	freePlan,
 	paidMonthly,
 } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -18,7 +19,10 @@ test("preview prints the plan, nothing applied", async () => {
 		setup: [
 			s.platform.create({ userEmail: "atmn-preview@autumn.test" }),
 		],
-		config: configBody({ plans: `${freePlan}${paidMonthly()}` }),
+		config: configBody({
+			features: everyFeatureType,
+			plans: `${freePlan}${paidMonthly()}`,
+		}),
 	});
 
 	try {

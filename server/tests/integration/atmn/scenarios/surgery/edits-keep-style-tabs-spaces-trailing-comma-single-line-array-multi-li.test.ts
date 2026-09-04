@@ -15,8 +15,27 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 type StyleCase = {
 	/** The whole config, with a `keep` plan the pull must never touch. */
 	raw: (editId: string, keepId: string) => string;
-	/** Verbatim text that must survive the edit unchanged. */
-	survives: (keepId: string) => string;
+};
+
+/** The `plan({...})` call naming `planId`, verbatim — balances parens rather
+ * than assuming a shape, since push backfills `internalId` into it first. */
+const extractPlanBlock = (text: string, planId: string): string => {
+	const markerIndex = text.indexOf(`planId: "${planId}"`);
+	if (markerIndex === -1) throw new Error(`planId ${planId} not found`);
+	const start = text.lastIndexOf("plan({", markerIndex);
+	let depth = 0;
+	let end = start;
+	for (; end < text.length; end++) {
+		if (text[end] === "(") depth++;
+		else if (text[end] === ")") {
+			depth--;
+			if (depth === 0) {
+				end++;
+				break;
+			}
+		}
+	}
+	return text.slice(start, end);
 };
 
 const STYLES: Record<string, StyleCase> = {
@@ -37,8 +56,6 @@ export default atmn({
 	],
 });
 `,
-		survives: (keepId) =>
-			`\t\tplan({\n\t\t\tplanId: "${keepId}",\n\t\t\tname: "Keep",\n\t\t\tprice: { amount: 5, interval: "month" },\n\t\t}),`,
 	},
 	spaces: {
 		raw: (editId, keepId) => `${atmnImports()}
@@ -57,8 +74,6 @@ export default atmn({
   ],
 });
 `,
-		survives: (keepId) =>
-			`    plan({\n      planId: "${keepId}",\n      name: "Keep",\n      price: { amount: 5, interval: "month" },\n    }),`,
 	},
 	"trailing comma": {
 		raw: (editId, keepId) => `${atmnImports()}
@@ -69,8 +84,6 @@ export default atmn({
 	],
 });
 `,
-		survives: (keepId) =>
-			`plan({ planId: "${keepId}", name: "Keep", price: { amount: 5, interval: "month" } }),`,
 	},
 	"single-line array": {
 		raw: (editId, keepId) => `${atmnImports()}
@@ -78,8 +91,6 @@ export default atmn({
 	plans: [plan({ planId: "${editId}", name: "Edit", price: { amount: 20, interval: "month" } }), plan({ planId: "${keepId}", name: "Keep", price: { amount: 5, interval: "month" } })],
 });
 `,
-		survives: (keepId) =>
-			`plan({ planId: "${keepId}", name: "Keep", price: { amount: 5, interval: "month" } })`,
 	},
 	"multi-line array": {
 		raw: (editId, keepId) => `${atmnImports()}
@@ -104,12 +115,10 @@ export default atmn({
 	],
 });
 `,
-		survives: (keepId) =>
-			`plan({\n\t\t\tplanId: "${keepId}",\n\t\t\tname: "Keep",\n\t\t\tprice: {\n\t\t\t\tamount: 5,\n\t\t\t\tinterval: "month",\n\t\t\t},\n\t\t}),`,
 	},
 };
 
-for (const [style, { raw, survives }] of Object.entries(STYLES)) {
+for (const [style, { raw }] of Object.entries(STYLES)) {
 	test.concurrent(`edits keep style [${style}]`, async () => {
 		const editId = uniqueTestId("atmn_style_edit");
 		const keepId = uniqueTestId("atmn_style_keep");
@@ -124,18 +133,34 @@ for (const [style, { raw, survives }] of Object.entries(STYLES)) {
 		try {
 			await scenario.push();
 
+			// `keep`'s block already carries the internalId push backfilled into
+			// it; that — not the internalId-less source — is what must survive.
+			const keepBeforeEdit = extractPlanBlock(
+				scenario.files().get("autumn.config.ts") ?? "",
+				keepId,
+			);
+
+			// Dashboard-style price edit of `edit` only; `keep` rides along in the
+			// full-state payload unchanged so it is not deleted server-side.
 			await scenario.client.update({
-				plans: [{ plan_id: editId, price: { amount: 30, interval: "month" } }],
+				plans: [
+					{ plan_id: editId, price: { amount: 30, interval: "month" } },
+					{
+						plan_id: keepId,
+						name: "Keep",
+						price: { amount: 5, interval: "month" },
+					},
+				],
 				skip_deletions: false,
 				migration: { draft: true },
 			});
 
 			const pulled = await scenario.pull();
-			expect(pulled.replaced).toContain(editId);
+			expect(pulled.replaced).toContain(`${editId}@v1`);
 
 			const text = scenario.files().get("autumn.config.ts") ?? "";
 			expect(text).toContain("amount: 30");
-			expect(text).toContain(survives(keepId));
+			expect(extractPlanBlock(text, keepId)).toBe(keepBeforeEdit);
 		} finally {
 			scenario.cleanup();
 		}
@@ -178,7 +203,7 @@ export default atmn({
 		});
 
 		const pulled = await scenario.pull();
-		expect(pulled.replaced).toContain(editId);
+		expect(pulled.replaced).toContain(`${editId}@v1`);
 
 		const text = scenario.files().get("autumn.config.ts") ?? "";
 		expect(text).toContain("amount: 30");

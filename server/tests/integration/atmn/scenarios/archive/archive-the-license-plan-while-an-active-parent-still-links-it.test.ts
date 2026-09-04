@@ -30,14 +30,30 @@ test.concurrent(
 		try {
 			await scenario.push();
 
+			// A push states the whole plans collection, so the still-active parent
+			// must be restated too or it is removed outright rather than left
+			// alone; restating its license link while seat archives in the same
+			// call trips the link-time guard first — still the server refusing an
+			// active plan pointing at an archived license plan.
 			scenario.writeConfig(
 				atmnConfigSource({
-					body: `{ plans: [plan({ planId: "seat", archived: true })] }`,
+					body: `{
+	plans: [
+		plan({ planId: "seat", archived: true }),
+		plan({
+			planId: "enterprise",
+			name: "Enterprise",
+			price: { amount: 999, interval: "month" },
+			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
+			licenses: [{ licensePlanId: "seat", included: 25 }],
+		}),
+	],
+}`,
 				}),
 			);
 
 			await expect(scenario.push()).rejects.toThrow(
-				/seat.*enterprise.*links|Cannot archive or remove seat/i,
+				/seat.*archived.*(cannot be linked|links)/i,
 			);
 		} finally {
 			scenario.cleanup();

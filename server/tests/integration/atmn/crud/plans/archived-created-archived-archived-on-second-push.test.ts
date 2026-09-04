@@ -1,7 +1,8 @@
 /**
- * atmn crud/plans — archived [created archived, archived on second push]
+ * atmn crud/plans — archived [archived on second push]
  *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
+ * One line of plans/atmn-v3/07_tests.md. Creating a plan archived from
+ * scratch is unsupported by decision, so only the second-push cell remains.
  */
 
 import { expect, test } from "bun:test";
@@ -18,23 +19,9 @@ const setup = () => [
 	s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 ];
 
-test.concurrent("archived: created archived", async () => {
-	const scenario = await initAtmnScenario({
-		setup: setup(),
-		config: configBody({
-			plans: paidMonthly({ extra: "\n\t\t\t\tarchived: true," }),
-		}),
-	});
-
-	try {
-		const { freshWire } = await expectRoundTrip({ scenario });
-		const plans = freshWire.plans as Array<Record<string, unknown>>;
-		const pro = plans.find((plan) => plan.plan_id === "pro");
-		expect(pro).toEqual(expect.objectContaining({ archived: true }));
-	} finally {
-		scenario.cleanup();
-	}
-});
+/** Pull excludes archived rows from the config (server history, not something
+ * to write); the catalog get, not the pulled wire, is the source of truth. */
+type CatalogPlanRow = { id: string; archived?: boolean };
 
 test.concurrent("archived: archived on second push", async () => {
 	const scenario = await initAtmnScenario({
@@ -53,10 +40,12 @@ test.concurrent("archived: archived on second push", async () => {
 			}),
 		);
 
-		const { freshWire } = await expectRoundTrip({ scenario });
-		const plans = freshWire.plans as Array<Record<string, unknown>>;
-		const pro = plans.find((plan) => plan.plan_id === "pro");
-		expect(pro).toEqual(expect.objectContaining({ archived: true }));
+		await expectRoundTrip({ scenario });
+		const catalog = (await scenario.client.get({
+			include_archived: true,
+		})) as unknown as { plans: CatalogPlanRow[] };
+		const pro = catalog.plans.find((plan) => plan.id === "pro");
+		expect(pro?.archived).toBe(true);
 	} finally {
 		scenario.cleanup();
 	}

@@ -51,13 +51,20 @@ test.concurrent(
 				idOrInternalId: "seat",
 			});
 
-			// The license plan is renamed by its internalId; `enterprise` is not
-			// mentioned in this push at all.
+			// The license plan is renamed by its internalId. A push is the whole
+			// desired catalog (skip_deletions: false), so `enterprise` has to be
+			// restated too — otherwise its omission reads as a removal.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
 	plans: [
 		plan({ planId: "seatNew", internalId: "${seat.internal_id}", name: "Seat" }),
+		plan({
+			planId: "enterprise",
+			name: "Enterprise",
+			price: { amount: 999, interval: "month" },
+			licenses: [{ licensePlanId: "seat", included: 25 }],
+		}),
 	],
 }`,
 				}),

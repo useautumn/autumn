@@ -11,12 +11,12 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const featureImport = `import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";\n`;
 const planImport = `import { type Plan, plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";\n`;
@@ -74,25 +74,27 @@ export const poo: Plan[] = [];
 			try {
 				await scenario.push();
 
+				// A hand-edit adds ONE row to the file push already backfilled;
+				// it must not retype the existing row and lose its internalId.
+				const afterFirstPush = scenario.files();
+
 				if (target.kind === "feature") {
+					const existing = afterFirstPush.get("bananas.ts") ?? "";
 					scenario.writeFile(
 						"bananas.ts",
-						`${featureImport}
-export const bananas = [
-	feature({ featureId: "${seats}", name: "Seats", type: "metered", consumable: false }),
-	feature({ featureId: "${pissId}", name: "Piss", type: "boolean" }),
-];
-`,
+						existing.replace(
+							"];\n",
+							`\tfeature({ featureId: "${pissId}", name: "Piss", type: "boolean" }),\n];\n`,
+						),
 					);
 				} else if (target.kind === "plan") {
+					const existing = afterFirstPush.get("strawberries.ts") ?? "";
 					scenario.writeFile(
 						"strawberries.ts",
-						`${planImport}
-export const strawberries: Plan[] = [
-	plan({ planId: "${pro}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
-	plan({ planId: "${pissId}", name: "Piss", price: { amount: 5, interval: "month" } }),
-];
-`,
+						existing.replace(
+							"];\n",
+							`\tplan({ planId: "${pissId}", name: "Piss", price: { amount: 5, interval: "month" } }),\n];\n`,
+						),
 					);
 				} else {
 					scenario.writeFile(

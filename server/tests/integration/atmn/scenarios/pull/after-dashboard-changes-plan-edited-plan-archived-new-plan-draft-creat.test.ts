@@ -106,6 +106,8 @@ test.concurrent(
 
 		try {
 			await scenario.push();
+			// skip_deletions: true — this call only states the new plan; the
+			// existing one must survive untouched, not be read as absentee.
 			await scenario.client.update({
 				plans: [
 					{
@@ -114,12 +116,12 @@ test.concurrent(
 						price: { amount: 15, interval: "month" },
 					},
 				],
-				skip_deletions: false,
+				skip_deletions: true,
 				migration: { draft: true },
 			});
 
 			const pulled = await scenario.pull();
-			expect(pulled.appended).toContain(newPlanId);
+			expect(pulled.appended).toContain(`${newPlanId}@v1`);
 			await expectPreviewNone({
 				client: scenario.client,
 				wire: await scenario.wireFromConfig(),
@@ -154,6 +156,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Pro",
+						active: true,
 						price: { amount: 20, interval: "month" },
 					},
 					{

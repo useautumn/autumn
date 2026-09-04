@@ -107,16 +107,18 @@ test.concurrent(
 			const [v1, v2, v3] = beforeRename;
 
 			// Every row renamed by its own internalId — the active row in `plans`,
-			// the history rows in `planVersions`.
+			// the history rows in `planVersions`. Each row keeps its own
+			// versionSlug so the server sees three pinned rows, not three
+			// unpinned rows racing for the same plan_id.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "proRenamed", internalId: "${v3.internalId}", name: "Pro" }),
+		plan({ planId: "proRenamed", versionSlug: "v3", internalId: "${v3.internalId}", name: "Pro" }),
 	],
 	planVersions: [
-		plan({ planId: "proRenamed", internalId: "${v1.internalId}", name: "Pro" }),
-		plan({ planId: "proRenamed", internalId: "${v2.internalId}", name: "Pro" }),
+		plan({ planId: "proRenamed", versionSlug: "v1", internalId: "${v1.internalId}", name: "Pro" }),
+		plan({ planId: "proRenamed", versionSlug: "v2", internalId: "${v2.internalId}", name: "Pro" }),
 	],
 }`,
 				}),

@@ -28,6 +28,15 @@ const RESET_INTERVALS = [
 ] as const;
 const INTERVAL_COUNTS = [1, 3] as const;
 
+// client.get() returns fixture-shaped (camelCase) objects, not the wire.
+type CatalogPlanRow = {
+	id: string;
+	items: Array<{
+		featureId: string;
+		reset?: { interval?: string; intervalCount?: number } | null;
+	}>;
+};
+
 for (const interval of RESET_INTERVALS) {
 	for (const intervalCount of INTERVAL_COUNTS) {
 		test.concurrent(
@@ -53,17 +62,36 @@ for (const interval of RESET_INTERVALS) {
 				});
 
 				try {
-					const { freshWire } = await expectRoundTrip({ scenario });
+					const { freshWire, freshFiles } = await expectRoundTrip({ scenario });
 					const plans = freshWire.plans as Array<Record<string, unknown>>;
 					const pro = plans.find((plan) => plan.plan_id === "pro");
 					const items = pro?.items as Array<Record<string, unknown>>;
 					const item = items.find((entry) => entry.feature_id === "messages");
-					expect(item?.reset).toEqual(
-						expect.objectContaining({
-							interval,
-							interval_count: intervalCount,
-						}),
-					);
+					const reset = item?.reset as Record<string, unknown> | undefined;
+
+					const catalog = (await scenario.client.get({})) as unknown as {
+						plans: CatalogPlanRow[];
+					};
+					const catalogReset = catalog.plans
+						.find((plan) => plan.id === "pro")
+						?.items.find((entry) => entry.featureId === "messages")?.reset;
+
+					const fixtureText = freshFiles.get("autumn.config.ts") ?? "";
+
+					expect(reset?.interval).toBe(interval);
+
+					// 1 is the implicit default: the server omits interval_count when
+					// it's 1, so it never round-trips as an explicit value, only n > 1
+					// does — checked on the wire, the catalog, and the fixture text.
+					if (intervalCount === 1) {
+						expect(reset?.interval_count).toBeUndefined();
+						expect(catalogReset?.intervalCount).toBeUndefined();
+						expect(fixtureText).not.toContain("intervalCount: 1,");
+					} else {
+						expect(reset?.interval_count).toBe(intervalCount);
+						expect(catalogReset?.intervalCount).toBe(intervalCount);
+						expect(fixtureText).toContain(`intervalCount: ${intervalCount},`);
+					}
 				} finally {
 					scenario.cleanup();
 				}

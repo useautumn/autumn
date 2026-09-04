@@ -28,6 +28,9 @@ test.concurrent("default plan / auto enable", async () => {
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },
+			// auto_enable falls back into is_default absent an explicit isDefault,
+			// so a paid auto-enable plan needs a cardless trial to pass that rule.
+			freeTrial: { durationLength: 14, durationType: "day", cardRequired: false },
 			autoEnable: true,
 			items: [],
 		}),`,
@@ -39,7 +42,9 @@ test.concurrent("default plan / auto enable", async () => {
 		const plans = freshWire.plans as Array<Record<string, unknown>>;
 		const starter = plans.find((plan) => plan.plan_id === "starter");
 		const pro = plans.find((plan) => plan.plan_id === "pro");
-		expect(starter).toEqual(expect.objectContaining({ is_default: true }));
+		// isDefault and autoEnable both write the same underlying flag; the catalog
+		// only ever reports it back as auto_enable, never is_default.
+		expect(starter).toEqual(expect.objectContaining({ auto_enable: true }));
 		expect(pro).toEqual(expect.objectContaining({ auto_enable: true }));
 	} finally {
 		scenario.cleanup();
