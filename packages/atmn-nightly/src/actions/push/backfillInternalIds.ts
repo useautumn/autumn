@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { COLLECTIONS } from "../../generated/emit";
+import { COLLECTIONS, NESTED_FIXTURES } from "../../generated/emit";
 import { insertFirstProperty } from "../../surgery/insertFirstProperty";
 import { setFixtureProperty } from "../../surgery/setFixtureProperty";
 import { listSourceFiles } from "../pull/listSourceFiles";
@@ -10,6 +10,12 @@ export type IdentityRow = {
 	id?: string;
 	internalId?: string | null;
 	versionSlug?: string | null;
+	/** A plan's variant edges as `get` returns them: the resolved plan carries the stable id. */
+	variants?: {
+		variantPlanId?: string;
+		internalId?: string | null;
+		plan?: { internalId?: string | null } | null;
+	}[];
 };
 
 /** Push: created features from `results`, every direct plan row in full. */
@@ -114,6 +120,52 @@ export const backfillInternalIds = ({
 			if (updated === null) continue;
 			files.set(located.file, updated);
 			backfilled.push(row.id);
+		}
+	}
+
+	// A variant written as its own `variant({...})` fixture takes its id too;
+	// an inline object under the plan is left as the plan's own text.
+	const variantSpec = NESTED_FIXTURES.variants;
+	for (const row of rows.plans ?? []) {
+		for (const edge of row.variants ?? []) {
+			const internalId = edge.internalId ?? edge.plan?.internalId;
+			if (
+				typeof edge.variantPlanId !== "string" ||
+				typeof internalId !== "string"
+			)
+				continue;
+			const located = locateFixture({
+				configPath,
+				files,
+				builder: variantSpec.builder,
+				idField: variantSpec.idField,
+				id: edge.variantPlanId,
+			});
+			if (located === null) continue;
+			const stated = INTERNAL_ID_VALUE.exec(located.node.text())?.[1];
+			if (stated === internalId) continue;
+			const updated =
+				stated === undefined
+					? insertFirstProperty({
+							source: located.source,
+							builder: variantSpec.builder,
+							idField: located.idField,
+							id: located.id,
+							where: located.where,
+							property: `internalId: ${JSON.stringify(internalId)}`,
+						})
+					: setFixtureProperty({
+							source: located.source,
+							builder: variantSpec.builder,
+							idField: located.idField,
+							id: located.id,
+							where: located.where,
+							property: "internalId",
+							value: internalId,
+						});
+			if (updated === null) continue;
+			files.set(located.file, updated);
+			backfilled.push(edge.variantPlanId);
 		}
 	}
 

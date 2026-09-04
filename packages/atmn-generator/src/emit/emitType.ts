@@ -221,14 +221,17 @@ export const emitFixtureType = ({
 	schema,
 	collection,
 	overlay,
+	path = "",
 }: {
 	name: string;
 	schema: JsonSchema;
 	collection: string;
 	overlay: Overlay;
+	/** Item-rooted path of a nested fixture, so overlay entries under it apply. */
+	path?: string;
 }): string =>
 	`export type ${name} = ${typeExpression({
 		schema,
-		path: "",
+		path,
 		context: { overlay, collection },
 	})};\n`;

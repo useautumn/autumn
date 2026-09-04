@@ -458,3 +458,24 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		],
 	},
 };
+
+/** Fixtures nested in a collection item: builder, id field, and where they live. */
+export const NESTED_FIXTURES: Readonly<
+	Record<
+		string,
+		{ builder: string; idField: string; parent: string; path: string }
+	>
+> = {
+	variants: {
+		builder: "variant",
+		idField: "variantPlanId",
+		parent: "plans",
+		path: "variants",
+	},
+	licenses: {
+		builder: "license",
+		idField: "licensePlanId",
+		parent: "plans",
+		path: "licenses",
+	},
+};
