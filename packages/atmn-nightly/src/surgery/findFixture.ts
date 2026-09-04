@@ -39,27 +39,39 @@ export const findFixture = ({
 }): SgNode | null => {
 	const root = parse(Lang.TypeScript, source).root();
 	const expected = JSON.stringify(id);
-	for (const call of root.findAll({
-		rule: {
-			all: [
-				{ kind: "call_expression" },
-				{ pattern: fixturePattern({ builder, idField }) },
-			],
-		},
-	})) {
-		const value = call.getMatch("VALUE");
+	// A rule walk rather than a pattern: a pattern misses an object whose id
+	// pair follows a spread, and the fixture must be found to be refused.
+	for (const call of root.findAll({ rule: { kind: "call_expression" } })) {
+		if (call.field("function")?.text() !== builder) continue;
+		const object = call.field("arguments")?.namedChildren()[0];
+		if (object === undefined || object.kind() !== "object") continue;
+		const idValue = topLevelPairValue({ object, key: idField });
 		if (
-			value === null ||
-			value.kind() !== "string" ||
-			value.text() !== expected
+			idValue === null ||
+			idValue.kind() !== "string" ||
+			idValue.text() !== expected
 		)
 			continue;
-		const object = call.find({ rule: { kind: "object" } });
-		if (object === null) continue;
 		if (!allowDynamic && containsDynamicValue(object)) continue;
 		if (where !== undefined && !satisfiesFixtureConstraints({ object, where }))
 			continue;
 		return call;
+	}
+	return null;
+};
+
+/** The value of the object's own `key: value` member, ignoring nested objects. */
+const topLevelPairValue = ({
+	object,
+	key,
+}: {
+	object: SgNode;
+	key: string;
+}): SgNode | null => {
+	for (const member of object.children()) {
+		if (member.kind() !== "pair") continue;
+		const [name, value] = member.namedChildren();
+		if (name?.text() === key && value !== undefined) return value;
 	}
 	return null;
 };
