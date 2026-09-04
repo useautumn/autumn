@@ -41,13 +41,22 @@ export const appendElementToArray = ({
 	const spansLines = source
 		.slice(array.range().start.index, last.range().start.index)
 		.includes("\n");
-	// Sibling indent, not a hard-coded one: the last element's own line indent.
-	const indent = source.slice(
-		lineStartOf(source, last.range().start.index),
-		last.range().start.index,
-	);
-	const resolved = resolveText({ text, elementIndent: indent });
-	if (!spansLines) {
+	if (spansLines) {
+		// Sibling indent: the whitespace opening the last element's line.
+		const indent = leadingIndentOfLine(source, last.range().start.index);
+		const resolved = resolveText({ text, elementIndent: indent });
+		return root.commitEdits([
+			{
+				startPos: insertAt,
+				endPos: insertAt,
+				insertedText: `${missingComma}\n${indent}${resolved},`,
+			},
+		]);
+	}
+	const lineIndent = leadingIndentOfLine(source, array.range().start.index);
+	const elementIndent = `${lineIndent}\t`;
+	const resolved = resolveText({ text, elementIndent });
+	if (!resolved.includes("\n")) {
 		return root.commitEdits([
 			{
 				startPos: insertAt,
@@ -56,11 +65,15 @@ export const appendElementToArray = ({
 			},
 		]);
 	}
+	// A one-line array cannot hold a multi-line element inline: reflow it.
+	const lines = [...elements.map((element) => element.text()), resolved].map(
+		(element) => `${elementIndent}${element},`,
+	);
 	return root.commitEdits([
 		{
-			startPos: insertAt,
-			endPos: insertAt,
-			insertedText: `${missingComma}\n${indent}${resolved},`,
+			startPos: array.range().start.index,
+			endPos: array.range().end.index,
+			insertedText: `[\n${lines.join("\n")}\n${lineIndent}]`,
 		},
 	]);
 };
