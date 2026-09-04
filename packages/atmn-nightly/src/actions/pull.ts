@@ -53,8 +53,26 @@ const loadOrScaffold = async ({
 	}
 };
 
-const entriesOf = (value: unknown): PreviewEntry[] =>
-	Array.isArray(value) ? (value as PreviewEntry[]) : [];
+/** Preview rows plus the sibling versions nested under them: a sibling has no
+ * action of its own, so it is walked as an update and acted on only when its
+ * active flag contradicts what the config states. */
+const entriesOf = (value: unknown): PreviewEntry[] => {
+	if (!Array.isArray(value)) return [];
+	const rows = value as PreviewEntry[];
+	return rows.flatMap((row) => {
+		const siblings = Array.isArray(row.siblingVersions)
+			? (row.siblingVersions as PreviewEntry[])
+			: [];
+		return [
+			row,
+			...siblings.map((sibling) => ({
+				...sibling,
+				action: "update",
+				siblingOf: row.planId,
+			})),
+		];
+	});
+};
 
 const rowsOf = (value: unknown): Record<string, unknown>[] =>
 	Array.isArray(value) ? (value as Record<string, unknown>[]) : [];

@@ -490,3 +490,46 @@ test("a row the server superseded moves from plans into history", async () => {
 	expect(result.appended).toEqual(["pro@v2"]);
 	expect(rootTextIn(historyDir)).toContain('internalId: "prod_v2"');
 });
+
+test("a sibling version demoted under the edited row moves into history", async () => {
+	const historyDir = freshWithHistory({
+		name: "sibling",
+		rootPlans:
+			'\t\tplan({ internalId: "prod_v1", planId: "pro", versionSlug: "v1", name: "Pro" }),\n\t\tplan({ internalId: "prod_v2", planId: "pro", versionSlug: "v2", name: "Pro" }),',
+		history: "",
+	});
+	const rows = {
+		features: [],
+		plans: [
+			{ ...numberedLaterRows.plans[0], version: 2, active: true },
+			{ ...numberedLaterRows.plans[1], version: 1, active: false },
+		],
+	};
+	const preview = {
+		features: [],
+		plans: [
+			{
+				...liveV2Entry,
+				action: "create",
+				internalId: null,
+				siblingVersions: [
+					{
+						planId: "pro",
+						version: 1,
+						versionSlug: "v1",
+						active: false,
+						internalId: "prod_v1",
+					},
+				],
+			},
+		],
+	};
+	const result = await runPull({
+		client: clientFor({ preview, rows }),
+		cwd: historyDir,
+		write: () => {},
+	});
+	expect(result.replaced).toEqual(["pro@v1"]);
+	expect(historyTextIn(historyDir)).toContain('internalId: "prod_v1"');
+	expect(rootTextIn(historyDir)).not.toContain('internalId: "prod_v1"');
+});
