@@ -1,4 +1,5 @@
 import { type CollectionSpec, emitFixture } from "../../generated/emitRuntime";
+import { appendToBinding } from "../../surgery/appendToBinding";
 import { appendToCollection } from "../../surgery/appendToCollection";
 import { deleteFixtureLiteral } from "../../surgery/deleteFixtureLiteral";
 import { deleteReference } from "../../surgery/deleteReference";
@@ -6,9 +7,14 @@ import { leadingIndentOfLine } from "../../surgery/fixtureEdit";
 import { insertCollection } from "../../surgery/insertCollection";
 import { replaceFixture } from "../../surgery/replaceFixture";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
+import { resolveCollectionTarget } from "./resolveCollectionTarget";
 import { activeVersionOf, routePlanRow } from "./routePlanRow";
 
 export type PreviewEntry = { action?: string } & Record<string, unknown>;
+
+const DRAFT_FLAG = /\bactive:\s*false\b/;
+const snakeOf = (camel: string): string =>
+	camel.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 
 export type ApplyPreviewArgs = {
 	collection: string;
@@ -17,6 +23,8 @@ export type ApplyPreviewArgs = {
 	entries: PreviewEntry[];
 	/** The catalog's server rows for this collection. */
 	catalogRows: Record<string, unknown>[];
+	/** The executed config's wire rows for this collection: what the code states. */
+	statedRows: Record<string, unknown>[];
 	configPath: string;
 	/** In-memory file sources, mutated in place; nothing touches disk here. */
 	files: Map<string, string>;
@@ -43,6 +51,7 @@ export const applyPreview = ({
 	spec,
 	entries,
 	catalogRows,
+	statedRows,
 	configPath,
 	files,
 	includeMappings,
@@ -72,6 +81,31 @@ export const applyPreview = ({
 		rowsById.set(keyOf({ id, slug: slugOf(row) }), row);
 		rowsByPlan.set(id, [...(rowsByPlan.get(id) ?? []), row]);
 	}
+
+	// The wire is snake_case; `active` there is membership: plans or history.
+	const statedActive = new Map<string, boolean>();
+	const wireIdField = snakeOf(spec.idField);
+	for (const row of statedRows) {
+		const active = row.active !== false;
+		if (typeof row.internal_id === "string")
+			statedActive.set(row.internal_id, active);
+		const id = row[wireIdField];
+		if (typeof id !== "string") continue;
+		const slug = typeof row.version_slug === "string" ? row.version_slug : "v1";
+		statedActive.set(keyOf({ id, slug }), active);
+	}
+	const configActiveOf = ({
+		id,
+		entry,
+	}: {
+		id: string;
+		entry: PreviewEntry;
+	}): boolean | undefined => {
+		const internalId = internalIdOf(entry);
+		if (internalId !== null && statedActive.has(internalId))
+			return statedActive.get(internalId);
+		return statedActive.get(keyOf({ id, slug: slugOf(entry) }));
+	};
 
 	const constraintsFor = (
 		entry: PreviewEntry,
@@ -126,24 +160,31 @@ export const applyPreview = ({
 	const appendRow = ({
 		id,
 		entry,
+		placement,
 	}: {
 		id: string;
 		entry: PreviewEntry;
-	}): void => {
-		const row = rowsById.get(keyOf({ id, slug: slugOf(entry) }));
-		if (row === undefined) return;
+		/** Known membership beats the numeric route: where a moved row goes. */
+		placement?: "plans" | "history";
+	}): boolean => {
+		const key = keyOf({ id, slug: slugOf(entry) });
+		const row = rowsById.get(key);
+		if (row === undefined) return false;
 		let target = collection;
 		let emitted: Record<string, unknown> = row;
 		if (versioned) {
-			const route = routePlanRow({
-				row: row as { active?: boolean; version?: number },
-				activeVersion: activeVersionOf({
-					rows: (rowsByPlan.get(id) ?? []) as {
-						active?: boolean;
-						version?: number;
-					}[],
-				}),
-			});
+			const route =
+				placement !== undefined
+					? { collection: placement, draft: false }
+					: routePlanRow({
+							row: row as { active?: boolean; version?: number },
+							activeVersion: activeVersionOf({
+								rows: (rowsByPlan.get(id) ?? []) as {
+									active?: boolean;
+									version?: number;
+								}[],
+							}),
+						});
 			target =
 				route.collection === "plans"
 					? collection
@@ -154,14 +195,26 @@ export const applyPreview = ({
 			const { active: _stamped, ...bare } = row;
 			emitted = route.draft ? { ...bare, active: false } : bare;
 		}
-		let configSource = files.get(configPath) ?? "";
 		// A config that never mentioned the collection gets the key, then the row.
 		const withKey = insertCollection({
-			source: configSource,
+			source: files.get(configPath) ?? "",
 			collection: target,
 		});
-		if (withKey === null) return;
-		configSource = withKey;
+		if (withKey === null) return false;
+		files.set(configPath, withKey);
+		// The array may be a const the config names, in this file or an imported one.
+		const resolved = resolveCollectionTarget({
+			configPath,
+			files,
+			collection: target,
+		});
+		if (resolved === null) {
+			result.unlocated.push({
+				id: key,
+				action: `append to \`${target}\` by hand: it is not an array literal`,
+			});
+			return false;
+		}
 		// The surgery indents the first line; the emitter indents the rest.
 		const text = (elementIndent: string) =>
 			emitFixture({
@@ -170,17 +223,22 @@ export const applyPreview = ({
 				includeMappings,
 				indent: elementIndent,
 			});
-		const updated = appendToCollection({
-			source: configSource,
-			collection: target,
-			text,
-		});
-		if (updated === null) return;
-		files.set(configPath, updated);
-		result.appended.push(versioned ? keyOf({ id, slug: slugOf(entry) }) : id);
-		result.lines.push(
-			`+ ${versioned ? keyOf({ id, slug: slugOf(entry) }) : id}`,
-		);
+		const targetSource = files.get(resolved.file) ?? "";
+		const updated =
+			resolved.kind === "inline"
+				? appendToCollection({ source: targetSource, collection: target, text })
+				: appendToBinding({ source: targetSource, name: resolved.name, text });
+		if (updated === null) {
+			result.unlocated.push({
+				id: key,
+				action: `append to \`${target}\` by hand: it is not an array literal`,
+			});
+			return false;
+		}
+		files.set(resolved.file, updated);
+		result.appended.push(key);
+		result.lines.push(`+ ${key}`);
+		return true;
 	};
 
 	const replaceRow = ({
@@ -210,33 +268,52 @@ export const applyPreview = ({
 			result.unlocated.push({ id, action: "replace with the server's copy" });
 			return;
 		}
-		// A version's array is its state: a row that stopped being active belongs
-		// in history now, so versioned rows are re-placed rather than rewritten.
+		const key = keyOf({ id, slug: slugOf(entry) });
+		let emitted: Record<string, unknown> = row;
 		if (versioned) {
-			const removed = deleteFixtureLiteral({
-				source: located.source,
-				builder: spec.builder,
-				idField: located.idField,
-				id: located.id,
-				where: located.where,
-			});
-			if (removed === null) return;
-			files.set(located.file, removed.source);
-			if (removed.exportedName !== undefined) {
-				const configSource = files.get(configPath) ?? "";
-				files.set(
-					configPath,
-					deleteReference({ source: configSource, name: removed.exportedName }),
-				);
+			// Membership is state, and the config's own statement is the truth
+			// about where a row sits: version numbers are creation order on the
+			// server, so history pushed later is numbered higher, not newer.
+			const serverActive = row.active === true;
+			const configActive = configActiveOf({ id, entry });
+			const moves = configActive !== undefined && configActive !== serverActive;
+			if (moves) {
+				const removed = deleteFixtureLiteral({
+					source: located.source,
+					builder: spec.builder,
+					idField: located.idField,
+					id: located.id,
+					where: located.where,
+				});
+				if (removed === null) return;
+				files.set(located.file, removed.source);
+				if (removed.exportedName !== undefined) {
+					const configSource = files.get(configPath) ?? "";
+					files.set(
+						configPath,
+						deleteReference({
+							source: configSource,
+							name: removed.exportedName,
+						}),
+					);
+				}
+				const appended = appendRow({
+					id,
+					entry,
+					placement: serverActive ? "plans" : "history",
+				});
+				if (!appended) return;
+				result.appended.pop();
+				result.lines.pop();
+				result.replaced.push(key);
+				result.lines.push(`~ ${key}`);
+				return;
 			}
-			appendRow({ id, entry });
-			result.appended.pop();
-			result.lines.pop();
-			result.replaced.push(keyOf({ id, slug: slugOf(entry) }));
-			result.lines.push(`~ ${keyOf({ id, slug: slugOf(entry) })}`);
-			return;
+			// Rewritten where it is; a draft keeps its spelled-out flag.
+			const isDraft = DRAFT_FLAG.test(located.node.text());
+			const { active: _stamped, ...bare } = row;
+			emitted = isDraft ? { ...bare, active: false } : bare;
 		}
-		const emitted = row;
 		// The emitter's indent is the found call's own line indent, so the
 		// closing `})` lines up with the text it replaces.
 		const indent = leadingIndentOfLine(
@@ -254,8 +331,8 @@ export const applyPreview = ({
 		});
 		if (updated === null) return;
 		files.set(located.file, updated);
-		result.replaced.push(id);
-		result.lines.push(`~ ${id}`);
+		result.replaced.push(key);
+		result.lines.push(`~ ${key}`);
 	};
 
 	// The preview speaks for what the config states. A version the config never

@@ -185,8 +185,8 @@ test("an update is re-placed by its state, found by its stable id even after a r
 			},
 		],
 	};
-	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	const result = await runPull({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
 		client: clientWith(preview) as any,
 		cwd: dir,
 		write: () => {},
@@ -229,8 +229,8 @@ test("a config-only version is deleted by planId and slug, leaving its sibling",
 			},
 		],
 	};
-	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	const result = await runPull({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
 		client: clientWith(preview) as any,
 		cwd: dir,
 		write: () => {},
@@ -296,4 +296,197 @@ test("a nested variant is pulled nested, pruned to its fixture shape", async () 
 	expect(text).toContain("amount: 490");
 	expect(text).not.toContain("plan: {");
 	expect(text).not.toContain("baseVariantId");
+});
+
+/** The fresh-key layout: history lives in its own file, wired by an import.
+ * Each case gets its own directory: bun caches the imported history module. */
+const historyImports = [
+	'import { plan } from "../../../src/generated/plans";',
+	'import { atmn } from "../../../src/generated/wire";',
+	'import { proVersions } from "./planVersions/pro";',
+	"",
+].join("\n");
+const freshWithHistory = ({
+	name,
+	rootPlans,
+	history,
+}: {
+	name: string;
+	rootPlans: string;
+	history: string;
+}): string => {
+	const historyDir = `${import.meta.dir}/.tmp/pull-plans-${name}`;
+	rmSync(historyDir, { recursive: true, force: true });
+	mkdirSync(`${historyDir}/planVersions`, { recursive: true });
+	writeFileSync(
+		`${historyDir}/autumn.config.ts`,
+		`${historyImports}export default atmn({
+	features: [],
+	plans: [
+${rootPlans}
+	],
+	planVersions: proVersions,
+});
+`,
+		"utf8",
+	);
+	writeFileSync(
+		`${historyDir}/planVersions/pro.ts`,
+		`import { plan } from "../../../../src/generated/plans";
+
+export const proVersions = [
+${history}
+];
+`,
+		"utf8",
+	);
+	return historyDir;
+};
+const rootTextIn = (historyDir: string) =>
+	readFileSync(`${historyDir}/autumn.config.ts`, "utf8");
+const historyTextIn = (historyDir: string) =>
+	readFileSync(`${historyDir}/planVersions/pro.ts`, "utf8");
+
+/** Version numbers are creation order on the server, so history pushed after
+ * the live row is numbered higher; the config's own statement wins. */
+const numberedLaterRows = {
+	features: [],
+	plans: [
+		{
+			id: "pro",
+			internalId: "prod_v2",
+			name: "Pro",
+			version: 1,
+			versionSlug: "v2",
+			active: true,
+			archived: false,
+			price: { amount: 49, interval: "month" },
+			items: [],
+		},
+		{
+			id: "pro",
+			internalId: "prod_v1",
+			name: "Pro (legacy)",
+			version: 3,
+			versionSlug: "v1",
+			active: false,
+			archived: false,
+			price: { amount: 39, interval: "month" },
+			items: [],
+		},
+	],
+};
+const clientFor = ({ preview, rows }: { preview: unknown; rows: unknown }) =>
+	({
+		previewUpdate: async () => preview,
+		update: async () => ({}),
+		get: async () => rows,
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+	}) as any;
+const liveV2Entry = {
+	planId: "pro",
+	version: 1,
+	versionSlug: "v2",
+	active: true,
+	action: "none",
+	internalId: "prod_v2",
+	state: { hasCustomers: false },
+};
+
+test("a history row the server numbered later is rewritten where it is, never as a draft", async () => {
+	const historyDir = freshWithHistory({
+		name: "stays",
+		rootPlans:
+			'\t\tplan({ internalId: "prod_v2", planId: "pro", versionSlug: "v2", name: "Pro" }),',
+		history:
+			'\tplan({ internalId: "prod_v1", planId: "pro", versionSlug: "v1", name: "Pro" }),',
+	});
+	const preview = {
+		features: [],
+		plans: [
+			liveV2Entry,
+			{
+				planId: "pro",
+				version: 3,
+				versionSlug: "v1",
+				active: false,
+				action: "update",
+				internalId: "prod_v1",
+				state: { hasCustomers: false },
+			},
+		],
+	};
+	const result = await runPull({
+		client: clientFor({ preview, rows: numberedLaterRows }),
+		cwd: historyDir,
+		write: () => {},
+	});
+	expect(result.replaced).toEqual(["pro@v1"]);
+	expect(result.appended).toEqual([]);
+	expect(historyTextIn(historyDir)).toContain('name: "Pro (legacy)"');
+	expect(historyTextIn(historyDir)).toContain('internalId: "prod_v1"');
+	expect(rootTextIn(historyDir)).not.toContain("active: false");
+	expect(rootTextIn(historyDir).match(/plan\(\{/g)?.length ?? 0).toBe(1);
+});
+
+test("an unstated older version is appended into the imported planVersions array", async () => {
+	const historyDir = freshWithHistory({
+		name: "unstated",
+		rootPlans:
+			'\t\tplan({ internalId: "prod_v2", planId: "pro", versionSlug: "v2", name: "Pro" }),',
+		history: "",
+	});
+	const rows = {
+		features: [],
+		plans: [
+			{ ...numberedLaterRows.plans[0], version: 2 },
+			{ ...numberedLaterRows.plans[1], version: 1 },
+		],
+	};
+	const result = await runPull({
+		client: clientFor({
+			preview: { features: [], plans: [liveV2Entry] },
+			rows,
+		}),
+		cwd: historyDir,
+		write: () => {},
+	});
+	expect(result.appended).toEqual(["pro@v1"]);
+	expect(historyTextIn(historyDir)).toContain('internalId: "prod_v1"');
+	expect(historyTextIn(historyDir)).not.toContain("active: false");
+	expect(rootTextIn(historyDir).match(/plan\(\{/g)?.length ?? 0).toBe(1);
+});
+
+test("a row the server superseded moves from plans into history", async () => {
+	const historyDir = freshWithHistory({
+		name: "moves",
+		rootPlans:
+			'\t\tplan({ internalId: "prod_v1", planId: "pro", versionSlug: "v1", name: "Pro" }),',
+		history: "",
+	});
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 3,
+				versionSlug: "v1",
+				active: false,
+				action: "update",
+				internalId: "prod_v1",
+				state: { hasCustomers: false },
+			},
+		],
+	};
+	const result = await runPull({
+		client: clientFor({ preview, rows: numberedLaterRows }),
+		cwd: historyDir,
+		write: () => {},
+	});
+	expect(result.replaced).toEqual(["pro@v1"]);
+	expect(historyTextIn(historyDir)).toContain('internalId: "prod_v1"');
+	expect(rootTextIn(historyDir)).not.toContain('internalId: "prod_v1"');
+	// The live row the config never stated arrives in plans.
+	expect(result.appended).toEqual(["pro@v2"]);
+	expect(rootTextIn(historyDir)).toContain('internalId: "prod_v2"');
 });
