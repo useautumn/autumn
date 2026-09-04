@@ -40,7 +40,33 @@ export type Overlay = {
 export const OVERLAY: Overlay = {
 	exposeInternal: ["internal_id"],
 	collections: {
+		plans: {
+			versioning: {
+				hidden: true,
+				reason:
+					"A decision. The server derives it from the rows (01_wire rule 6).",
+			},
+			propagate: {
+				hidden: true,
+				reason:
+					"A decision. The server derives it from the rows (01_wire rule 6).",
+			},
+			migration: {
+				hidden: true,
+				reason:
+					"Per-plan form is dashboard-only; atmn sends the request-level constant.",
+			},
+			version: {
+				hidden: true,
+				reason: "Deprecated by the spec itself: version_slug targets a row.",
+			},
+		},
 		features: {
+			invoice_credit: {
+				hidden: true,
+				reason:
+					"Admin-only for now: invoice credits are money, and a config must not mint them.",
+			},
 			event_names: {
 				hidden: true,
 				reason:
