@@ -164,6 +164,14 @@ export const LINT_RULES: LintRules = {
 				because:
 					"A stable id names exactly one row; two fixtures cannot both be it.",
 			},
+			{
+				kind: "unique",
+				field: "planId",
+				alongside: "versionSlug",
+				absentMeans: "v1",
+				because:
+					"A plan id plus a version slug names exactly one version; a fixture without a slug is v1.",
+			},
 		],
 	},
 	"plans.billingControls.autoTopups": {

@@ -269,8 +269,19 @@ export const applyPreview = ({
 			where: constraintsFor(entry),
 		});
 		if (located === null) {
-			// A version the config never had is missing, not unlocatable.
-			if (versioned) {
+			// A literal built from spreads or calls is there but cannot be edited;
+			// only a version the config never had is missing rather than unlocatable.
+			const dynamic = locateFixture({
+				configPath,
+				files,
+				builder: spec.builder,
+				idField: spec.idField,
+				id,
+				internalId: internalIdOf(entry),
+				where: constraintsFor(entry),
+				allowDynamic: true,
+			});
+			if (versioned && dynamic === null) {
 				appendRow({ id, entry });
 				return;
 			}

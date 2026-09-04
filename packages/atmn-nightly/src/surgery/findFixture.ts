@@ -27,12 +27,15 @@ export const findFixture = ({
 	idField,
 	id,
 	where,
+	allowDynamic = false,
 }: {
 	source: string;
 	builder: string;
 	idField: string;
 	id: string;
 	where?: FixtureConstraint[];
+	/** Match a literal built from spreads or calls too: to name it, not to edit it. */
+	allowDynamic?: boolean;
 }): SgNode | null => {
 	const root = parse(Lang.TypeScript, source).root();
 	const expected = JSON.stringify(id);
@@ -52,7 +55,8 @@ export const findFixture = ({
 		)
 			continue;
 		const object = call.find({ rule: { kind: "object" } });
-		if (object === null || containsDynamicValue(object)) continue;
+		if (object === null) continue;
+		if (!allowDynamic && containsDynamicValue(object)) continue;
 		if (where !== undefined && !satisfiesFixtureConstraints({ object, where }))
 			continue;
 		return call;
