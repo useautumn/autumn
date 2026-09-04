@@ -121,7 +121,7 @@ export const diffPlanV1PreviousAttributes = ({
 	return Object.keys(previous).length > 0 ? previous : null;
 };
 
-/** Unset lanes stay omitted. `[]` only when the previous lane was actually empty. */
+/** A lane that was unset and is now set reads as null (added), like a scalar. */
 const sparsePreviousBillingControls = ({
 	from,
 	to,
@@ -132,10 +132,12 @@ const sparsePreviousBillingControls = ({
 	const previous: Record<string, unknown> = {};
 	const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
 	for (const key of keys) {
-		if (from[key] == null) continue;
-		if (!valuesEqual(from[key], to[key])) {
-			previous[key] = from[key];
+		if (valuesEqual(from[key], to[key])) continue;
+		if (from[key] == null) {
+			if (to[key] != null) previous[key] = null;
+			continue;
 		}
+		previous[key] = from[key];
 	}
 	return previous;
 };
