@@ -84,6 +84,7 @@ export function CreditRateCardRow({
 						}
 						availableFeatures={availableFeatures}
 						allFeatures={allFeatures}
+						defaultOpen={isExpanded}
 					/>
 				</div>
 				<IconButton

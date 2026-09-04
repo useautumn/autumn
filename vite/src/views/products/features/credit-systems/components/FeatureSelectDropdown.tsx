@@ -17,13 +17,16 @@ export function FeatureSelectDropdown({
 	onValueChange,
 	availableFeatures,
 	allFeatures,
+	defaultOpen = false,
 }: {
 	value: string;
 	onValueChange: (featureId: string) => void;
 	availableFeatures: Feature[];
 	allFeatures: Feature[];
+	/** Opens on mount so a row added by the user is ready to pick from. */
+	defaultOpen?: boolean;
 }) {
-	const [open, setOpen] = useState(false);
+	const [open, setOpen] = useState(defaultOpen);
 	const [showCreateForm, setShowCreateForm] = useState(false);
 	const nameInputRef = useRef<HTMLInputElement>(null);
 
