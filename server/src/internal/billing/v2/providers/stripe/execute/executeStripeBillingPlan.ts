@@ -7,13 +7,13 @@ import { StripeBillingStage } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
+import { validatePromotionCodeMinimums } from "@/internal/billing/v2/providers/stripe/errors/validatePromotionCodeMinimums";
+import { rollbackAfterSubscriptionFailure } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlanRollback";
 import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
 import { executeStripeRefundAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeRefundAction.js";
-import { rollbackAfterSubscriptionFailure } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlanRollback";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
-import { validatePromotionCodeMinimums } from "@/internal/billing/v2/providers/stripe/errors/validatePromotionCodeMinimums";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 
 export const executeStripeBillingPlan = async ({
@@ -149,6 +149,12 @@ export const executeStripeBillingPlan = async ({
 				refundAction: billingPlan.stripe.refundAction,
 			});
 		} catch (error) {
+			// On a plan change the customer is already on the new plan, so a silent
+			// refund failure would strand their money. Only cancels tolerate it.
+			const isCancellation =
+				billingContext.cancelAction === "cancel_immediately" ||
+				billingContext.cancelAction === "cancel_end_of_cycle";
+			if (!isCancellation) throw error;
 			ctx.logger.error(
 				"[executeStripeBillingPlan] Refund failed after subscription cancel",
 				{ error },

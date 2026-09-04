@@ -72,7 +72,7 @@ export async function attach({
 	logAttachContext({ ctx, billingContext });
 
 	// 2. Compute
-	const autumnBillingPlan = computeAttachPlan({
+	const autumnBillingPlan = await computeAttachPlan({
 		ctx,
 		attachBillingContext: billingContext,
 		params,
