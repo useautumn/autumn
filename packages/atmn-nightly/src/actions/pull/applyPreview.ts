@@ -286,6 +286,8 @@ export const applyPreview = ({
 			const serverActive = row.active === true;
 			const configActive = configActiveOf({ id, entry });
 			const moves = configActive !== undefined && configActive !== serverActive;
+			// A sibling version only matters when its state changed.
+			if (entry.siblingOf !== undefined && !moves) return;
 			if (moves) {
 				const removed = deleteFixtureLiteral({
 					source: located.source,
