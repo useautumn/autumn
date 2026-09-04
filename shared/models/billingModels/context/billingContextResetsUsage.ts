@@ -8,9 +8,15 @@ export const billingContextResetsUsage = (billingContext: unknown): boolean => {
 	const context = billingContext as {
 		carryOverUsages?: CarryOverUsages;
 		intent?: unknown;
+		requestedBillingCycleAnchor?: number | "now";
 	} | null;
-	return (
+	const carriesUsagesOver = context?.carryOverUsages?.enabled === true;
+	if (carriesUsagesOver) return false;
+
+	const restartsBillingCycle = context?.requestedBillingCycleAnchor === "now";
+	const replacesPlan =
 		context?.intent === UpdateSubscriptionIntent.UpdatePlan &&
-		context.carryOverUsages?.enabled === false
-	);
+		context.carryOverUsages?.enabled === false;
+
+	return restartsBillingCycle || replacesPlan;
 };
