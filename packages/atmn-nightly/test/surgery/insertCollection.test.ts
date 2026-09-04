@@ -79,3 +79,10 @@ test("appendToCollection succeeds into a freshly inserted collection", () => {
 	});
 	expect(withStarter).toContain("\tplans: [\n\t\tstarter,\n\t],");
 });
+
+test("a one-line atmn object gains the key inline, still valid", () => {
+	const source = "export default atmn({ plans: [keep] });\n";
+	expect(insertCollection({ source, collection: "planVersions" })).toBe(
+		"export default atmn({ plans: [keep], planVersions: [], });\n",
+	);
+});

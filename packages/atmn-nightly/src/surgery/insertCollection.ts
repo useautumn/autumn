@@ -41,6 +41,17 @@ export const insertCollection = ({
 		commaAfter !== -1 && after.slice(0, commaAfter).trim() === "";
 	const insertAt = hasTrailingComma ? lastEnd + commaAfter + 1 : lastEnd;
 	const missingComma = hasTrailingComma ? "" : ",";
+	// A one-line object keeps its shape: the key goes inline after the last pair.
+	const spansLines = object.text().includes("\n");
+	if (!spansLines) {
+		return root.commitEdits([
+			{
+				startPos: insertAt,
+				endPos: insertAt,
+				insertedText: `${missingComma} ${collection}: [],`,
+			},
+		]);
+	}
 	const indent = source.slice(
 		lineStartOf(source, last.range().start.index),
 		last.range().start.index,
