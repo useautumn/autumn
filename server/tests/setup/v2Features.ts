@@ -29,6 +29,8 @@ export enum TestFeature {
 	TieredAction = "tiered_action",
 	TieredCredits = "tiered_credits",
 	InvoiceCredits = "invoice_credits",
+	DimensionAction = "dimension_action",
+	DimensionCredits = "dimension_credits",
 
 	Credits3 = "credits3", // credit system (overlaps with credits on action1)
 
@@ -164,6 +166,53 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 						{ to: 50_000, credit_amount: 0.8 },
 						{ to: "inf" as const, credit_amount: 0.5 },
 					],
+				},
+			],
+		},
+	},
+	[TestFeature.DimensionAction]: constructMeteredFeature({
+		featureId: TestFeature.DimensionAction,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Single,
+	}),
+	[TestFeature.DimensionCredits]: {
+		...constructCreditSystem({
+			featureId: TestFeature.DimensionCredits,
+			orgId,
+			env: AppEnv.Sandbox,
+			schema: [
+				{
+					metered_feature_id: TestFeature.DimensionAction,
+					credit_cost: 1,
+				},
+			],
+		}),
+		config: {
+			usage_type: FeatureUsageType.Single,
+			invoice_credit: true,
+			schema: [
+				{
+					metered_feature_id: TestFeature.DimensionAction,
+					credit_amount: 1,
+					dimensions: {
+						size_large: { match: { size: "large" }, credit_amount: 16 },
+						size_large_region_eu: {
+							match: { size: "large", region: "eu" },
+							credit_amount: 20,
+						},
+						size_xl: {
+							match: { size: "xl" },
+							tier_behavior: "graduated" as const,
+							tiers: [
+								{ to: 5, credit_amount: 2 },
+								{ to: "inf" as const, credit_amount: 1 },
+							],
+						},
+					},
+					multipliers: {
+						lifecycle_spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+					},
 				},
 			],
 		},
