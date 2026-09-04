@@ -79,11 +79,14 @@ export const upsertPooledBalance = ({
 		!computeContext.pooledBalanceIdsWithRemovedContributions.has(
 			existingContribution.pooled_balance_id,
 		);
-	const grantedDelta = alreadyCountedByPool
-		? contributionAmounts.currentContribution -
-			(existingContribution.current_contribution ?? 0)
-		: contributionAmounts.currentContribution;
-	if (alreadyCountedByPool) {
+	const isLicenseKeyed = identity.customerLicenseLinkId != null;
+	const grantedDelta = isLicenseKeyed
+		? 0
+		: alreadyCountedByPool
+			? contributionAmounts.currentContribution -
+				(existingContribution.current_contribution ?? 0)
+			: contributionAmounts.currentContribution;
+	if (alreadyCountedByPool || isLicenseKeyed) {
 		balanceDelta = 0;
 	}
 
@@ -94,7 +97,7 @@ export const upsertPooledBalance = ({
 			customerProduct,
 			identity,
 			balanceDelta,
-			granted: contributionAmounts.currentContribution,
+			granted: isLicenseKeyed ? 0 : contributionAmounts.currentContribution,
 			nextResetAt,
 			now,
 		});

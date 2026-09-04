@@ -214,6 +214,13 @@ export const executePooledBalancePlan = async ({
 			const poolId = pooledCustomerEntitlement.pooled_balance_id;
 			if (!poolId) continue;
 
+			if (
+				pooledCustomerEntitlement.pooled_balance?.customer_license_link_id !=
+				null
+			) {
+				continue;
+			}
+
 			const hasNoContributions = notExists(
 				tx
 					.select({ exists: sql`1` })

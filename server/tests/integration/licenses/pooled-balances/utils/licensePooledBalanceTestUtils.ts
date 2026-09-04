@@ -65,13 +65,7 @@ export const pooledMonthlyWords = ({
 	pooled: true,
 });
 
-export const parentPlan = ({
-	id,
-	group,
-}: {
-	id: string;
-	group?: string;
-}) =>
+export const parentPlan = ({ id, group }: { id: string; group?: string }) =>
 	products.base({
 		id,
 		items: [items.dashboard()],
@@ -109,7 +103,7 @@ export const seatLinkId = async ({
 	customerId: string;
 	licenseProductId: string;
 }) => {
-	const { assignments } = await getLicenseDbState({ db, customerId });
+	const { assignments, pools } = await getLicenseDbState({ db, customerId });
 	const matching = assignments.filter(
 		(candidate) => candidate.product_id === licenseProductId,
 	);
@@ -117,12 +111,24 @@ export const seatLinkId = async ({
 		matching.find(
 			(candidate) => candidate.status !== CusProductStatus.Expired,
 		) ?? matching[0];
-	if (!assignment?.customer_license_link_id) {
-		throw new Error(
-			`No seat assignment for license ${licenseProductId} on ${customerId}`,
-		);
+	if (assignment?.customer_license_link_id) {
+		return assignment.customer_license_link_id;
 	}
-	return assignment.customer_license_link_id;
+
+	const licenseProduct = await db.query.products.findFirst({
+		where: (table, { eq }) => eq(table.id, licenseProductId),
+		columns: { internal_id: true },
+	});
+	const pool =
+		pools.find(
+			(candidate) =>
+				candidate.license_internal_product_id === licenseProduct?.internal_id,
+		) ?? pools[0];
+	if (pool?.link_id) return pool.link_id;
+
+	throw new Error(
+		`No customer license for ${licenseProductId} on ${customerId}`,
+	);
 };
 
 const hydratedLicensePooledEntitlements = async ({
@@ -229,6 +235,7 @@ export const expectLicensePooledGrant = async ({
 	customerLicenseLinkId,
 	grantPerSeat,
 	seatCount,
+	contributionCount,
 	usage = 0,
 	featureId = TestFeature.Messages,
 	lifecycle = lazyLicensePoolLifecycle,
@@ -239,6 +246,7 @@ export const expectLicensePooledGrant = async ({
 	customerLicenseLinkId: string;
 	grantPerSeat: number;
 	seatCount: number;
+	contributionCount?: number;
 	usage?: number;
 	featureId?: string;
 	lifecycle?:
@@ -274,11 +282,15 @@ export const expectLicensePooledGrant = async ({
 			...lifecycle,
 		},
 		contributions: {
-			count: seatCount,
+			count: contributionCount ?? seatCount,
 			currentContribution: grantPerSeat,
 			nextCycleContribution: grantPerSeat,
 		},
-		sources: { count: seatCount, balance: 0, adjustment: 0 },
+		sources: {
+			count: contributionCount ?? seatCount,
+			balance: 0,
+			adjustment: 0,
+		},
 	});
 };
 

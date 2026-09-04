@@ -12,7 +12,6 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { getPooledBalanceDbState } from "@tests/integration/billing/pooled-balances/utils/getPooledBalanceDbState.js";
 import {
 	LICENSE_POOLED_GRANT,
 	lazyLicensePoolLifecycle,
@@ -129,7 +128,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("license pooled: parent attach alone mints no pool; first assign does")}`,
+	`${chalk.yellowBright("license pooled: parent attach mints the pool; first assign does not grow granted")}`,
 	async () => {
 		const parent = parentPlan({ id: "lic-pool-first-parent" });
 		const seat = pooledSeatPlan({
@@ -154,9 +153,25 @@ test.concurrent(
 			],
 		});
 
-		const before = await getPooledBalanceDbState({ db: ctx.db, customerId });
-		expect(before.pools).toHaveLength(0);
-		expect(before.contributions).toHaveLength(0);
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: seat.id,
+		});
+		await expectPooledBalanceCorrect({
+			db: ctx.db,
+			customerId,
+			filter: { customerLicenseLinkId },
+			pool: {
+				balance: LICENSE_POOLED_GRANT,
+				adjustment: 0,
+				granted: LICENSE_POOLED_GRANT,
+				customerLicenseLinkId,
+				...lazyLicensePoolLifecycle,
+			},
+			contributions: { count: 0 },
+			sources: { count: 0 },
+		});
 
 		await autumnV2_3.licenses.attach({
 			customer_id: customerId,
@@ -164,11 +179,6 @@ test.concurrent(
 			entities: [{ entity_id: entities[0].id }],
 		});
 
-		const customerLicenseLinkId = await seatLinkId({
-			db: ctx.db,
-			customerId,
-			licenseProductId: seat.id,
-		});
 		await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,

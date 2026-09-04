@@ -9,11 +9,11 @@ export type PromoteDuePooledContributionsResult = {
 };
 
 /**
- * Promotes due next-cycle contributions (effective_at passed) and recomputes
- * granted from ALL contributions in one statement. When the pool has any
- * contributions, granted is ALWAYS written back — self-heals drift and gives
- * concurrent resetters the authoritative value instead of their stale
- * in-memory copy. Contribution-less pools are left untouched.
+ * Promotes due next-cycle contributions (effective_at passed). Subscription-
+ * keyed pools recompute granted from ALL contributions. License-keyed granted
+ * is purchased × G — this statement only promotes due rows, it does not
+ * rewrite granted from Σ. Contribution-less subscription pools are left
+ * untouched.
  * DB + memory only — cache propagation is the caller's job, AFTER its own
  * cache writes (the lazy path patches the subject cache post-reset).
  */
@@ -29,11 +29,14 @@ export const promoteDuePooledContributions = async ({
 	const pooledBalance = customerEntitlement.pooled_balance;
 	if (!pooledBalance || pooledBalance.unlimited) return null;
 
+	const isLicenseKeyed = pooledBalance.customer_license_link_id != null;
+
 	// totals reads the pre-update snapshot: due rows count at their promoted
 	// value, so the recomputed granted matches the post-promotion state.
 	// The pool UPDATE guards on updated_at (latest row version vs statement
 	// snapshot): a transition committing mid-statement makes it 0 rows, and
 	// the contribution promotion is gated on it, so the whole statement no-ops.
+	// License-keyed granted is purchased × G, not Σ contributions.
 	const rows = await ctx.db.execute<{
 		granted: number | string;
 		due_count: number | string;
@@ -54,10 +57,16 @@ export const promoteDuePooledContributions = async ({
 		),
 		pool_update AS (
 			UPDATE pooled_balances
-			SET granted = totals.granted, updated_at = ${now}::numeric
+			SET
+				granted = ${isLicenseKeyed ? sql`pooled_balances.granted` : sql`totals.granted`},
+				updated_at = ${now}::numeric
 			FROM totals
 			WHERE pooled_balances.id = ${pooledBalance.id}
-				AND totals.total_count > 0
+				AND ${
+					isLicenseKeyed
+						? sql`totals.due_count > 0`
+						: sql`totals.total_count > 0`
+				}
 				AND pooled_balances.updated_at = (
 					SELECT updated_at FROM pooled_balances
 					WHERE id = ${pooledBalance.id}
