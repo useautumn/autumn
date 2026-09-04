@@ -2,7 +2,10 @@ import type { CreditSchemaItem, Feature } from "@autumn/shared";
 import { AreaCheckbox, IconButton } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { CreditDimensionsSection } from "@/views/products/features/credit-systems/components/CreditDimensionsSection";
+import { CreditDimensionsSwitch } from "@/views/products/features/credit-systems/components/CreditDimensionsSwitch";
 import { CreditRateCardRow } from "@/views/products/features/credit-systems/components/CreditRateCardRow";
+import { useCreditDimensionsToggle } from "@/views/products/features/credit-systems/hooks/useCreditDimensionsToggle";
 import { useCreditSchemaList } from "@/views/products/features/credit-systems/hooks/useCreditSchemaList";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
@@ -40,6 +43,10 @@ export function FeatureOverrideConfig() {
 		schema,
 		onChange: handleSchemaChange,
 		onRemoveLast: () => handleSchemaChange(null),
+	});
+	const dimensions = useCreditDimensionsToggle({
+		schema,
+		setSchema: handleSchemaChange,
 	});
 
 	if (!item) return null;
@@ -94,6 +101,18 @@ export function FeatureOverrideConfig() {
 				>
 					Add
 				</IconButton>
+				<CreditDimensionsSwitch
+					checked={dimensions.enabled}
+					onCheckedChange={dimensions.setEnabled}
+				/>
+				{dimensions.enabled && (
+					<CreditDimensionsSection
+						schema={schema}
+						schemaKeys={schemaKeys}
+						allFeatures={allSchemaCandidateFeatures}
+						onItemChange={setSchemaItem}
+					/>
+				)}
 			</div>
 		</AreaCheckbox>
 	);

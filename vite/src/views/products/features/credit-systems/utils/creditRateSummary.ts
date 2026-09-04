@@ -1,7 +1,7 @@
 import type { CreditSchemaItem } from "@autumn/shared";
 import { isGraduated } from "./creditSchemaUtils";
 
-const formatCredits = (amount: number) =>
+export const formatCredits = (amount: number) =>
 	`${amount} ${amount === 1 ? "credit" : "credits"}`;
 
 export const creditRateSummary = ({

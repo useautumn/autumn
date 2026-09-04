@@ -6,6 +6,7 @@ import {
 	FeatureUsageType,
 } from "@autumn/shared";
 import { renderToStaticMarkup } from "react-dom/server";
+import { CreditDimensionsSection } from "../src/views/products/features/credit-systems/components/CreditDimensionsSection";
 import { CreditRateCardRow } from "../src/views/products/features/credit-systems/components/CreditRateCardRow";
 
 const feature = {
@@ -89,4 +90,43 @@ test("collapsed rows summarize the rate without exposing controls", () => {
 
 	expect(html).toContain("1 credit per 100");
 	expect(html).not.toContain('aria-label="Credit cost"');
+});
+
+test("the dimensions section lists each field's values and a rate table with a select per field", () => {
+	const html = renderToStaticMarkup(
+		<CreditDimensionsSection
+			schemaKeys={["row-1"]}
+			schema={[
+				{
+					metered_feature_id: feature.id,
+					credit_amount: 1,
+					dimensions: {
+						size_large: { match: { size: "large" }, credit_amount: 16 },
+						size_large_region_eu: {
+							match: { size: "large", region: "eu" },
+							credit_amount: 20,
+						},
+					},
+					multipliers: {
+						region_eu: { match: { region: "eu" }, factor: 1.2 },
+					},
+				},
+			]}
+			allFeatures={[feature]}
+			onItemChange={() => {}}
+		/>,
+	);
+
+	expect(html).toContain('aria-label="size values"');
+	expect(html).toContain('aria-label="region values"');
+	expect(html).toContain(">large<");
+	expect(html).toContain('aria-label="size dimension name"');
+	expect(html).toContain("New dimension");
+	expect(html).toContain('aria-label="size_large region"');
+	expect(html).toContain('aria-label="size_large_region_eu credit cost"');
+	expect(html).toContain(">Credits<");
+	expect(html).toContain("New rate");
+	expect(html).toContain('aria-label="region_eu factor"');
+	expect(html).toContain("New multiplier");
+	expect(html).not.toContain(">Feature A<");
 });

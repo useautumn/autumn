@@ -1,6 +1,7 @@
 import type {
 	CustomerEntitlementFilters,
 	DbSpendLimit,
+	EventProperties,
 	FullCusEntWithFullCusProduct,
 	UsageWindowLimit,
 } from "@autumn/shared";
@@ -12,7 +13,7 @@ export type DeductionOptions = {
 	// windows — but monetary spend limits still clamp (unlike "allow").
 	overageBehaviour?: "cap" | "reject" | "allow" | "overflow";
 	/** The triggering event's properties; filtered usage limits only apply when these match. */
-	eventProperties?: Record<string, unknown> | null;
+	eventProperties?: EventProperties;
 	alterGrantedBalance?: boolean;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 

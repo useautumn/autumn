@@ -1,4 +1,4 @@
-import type { Feature, FullSubject } from "@autumn/shared";
+import type { EventProperties, Feature, FullSubject } from "@autumn/shared";
 import { type FinalizeLockParamsV0, findFeatureById } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { overrideCtxRedisV2 } from "@/external/redis/customerRedisRouting.js";
@@ -23,7 +23,10 @@ export type FinalizeLockContextV2 = {
 	additionalValue: number;
 	properties?: Record<string, unknown>;
 	deduction: FeatureDeduction;
-	deductionOptions: { triggerAutoTopUp: boolean };
+	deductionOptions: {
+		triggerAutoTopUp: boolean;
+		eventProperties?: EventProperties;
+	};
 };
 
 export const buildFinalizeLockContextV2 = async ({
@@ -88,6 +91,6 @@ export const buildFinalizeLockContextV2 = async ({
 			unwindValue,
 			lockReceiptKey,
 		},
-		deductionOptions: { triggerAutoTopUp: true },
+		deductionOptions: { triggerAutoTopUp: true, eventProperties },
 	};
 };

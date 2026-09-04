@@ -97,6 +97,7 @@ export const prepareFeatureDeduction = ({
 		cusEnts,
 		deduction,
 		catalogFeatures: ctx.features,
+		eventProperties: options?.eventProperties ?? undefined,
 	});
 
 	// Build input for each customer entitlement

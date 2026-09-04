@@ -9,9 +9,65 @@ export const CreditTierSchema = z.object({
 	creditCost: z.number(),
 });
 
+// Matches are compared against event properties as strings, so numbers and
+// booleans are coerced on the way in — keeping them typed would make every
+// later diff report a change against the stored string.
+// Names become usage-attribution keys, so they carry the API's constraints.
+const CreditDimensionNameSchema = z
+	.string()
+	.min(1)
+	.max(64)
+	.refine((name) => !name.includes("::"), {
+		message: 'Dimension names cannot contain "::"',
+	});
+
+const CreditMatchSchema = z.record(
+	z.string(),
+	z.codec(z.union([z.string(), z.number(), z.boolean()]), z.string(), {
+		decode: String,
+		encode: (value) => value,
+	}),
+);
+
+const CreditDimensionBaseSchema = z.object({
+	match: CreditMatchSchema,
+	priority: z.number().int().optional(),
+});
+
+export const CreditDimensionSchema = z.union([
+	CreditDimensionBaseSchema.extend({
+		creditCost: z.number(),
+		tierBehavior: z.never().optional(),
+		tiers: z.never().optional(),
+	}),
+	CreditDimensionBaseSchema.extend({
+		creditCost: z.never().optional(),
+		tierBehavior: z.literal("graduated"),
+		tiers: z.array(CreditTierSchema),
+	}),
+]);
+
+export const CreditMultiplierSchema = z
+	.object({
+		match: CreditMatchSchema,
+		factor: z.number().positive().optional(),
+		add: z.number().optional(),
+	})
+	.refine(
+		(multiplier) =>
+			multiplier.factor !== undefined || multiplier.add !== undefined,
+		{ message: "A multiplier needs a factor or an add" },
+	);
+
 const CreditSchemaItemBaseSchema = z.object({
 	meteredFeatureId: z.string(),
 	billingUnits: z.number().optional(),
+	dimensions: z
+		.record(CreditDimensionNameSchema, CreditDimensionSchema)
+		.optional(),
+	multipliers: z
+		.record(CreditDimensionNameSchema, CreditMultiplierSchema)
+		.optional(),
 });
 
 export const FlatCreditSchemaItemSchema = CreditSchemaItemBaseSchema.extend({
@@ -33,6 +89,8 @@ export const CreditSchemaItemSchema = z.union([
 ]);
 
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
+export type CreditDimension = z.infer<typeof CreditDimensionSchema>;
+export type CreditMultiplier = z.infer<typeof CreditMultiplierSchema>;
 
 export const FeatureSchema = z.object({
 	id: z.string().meta({

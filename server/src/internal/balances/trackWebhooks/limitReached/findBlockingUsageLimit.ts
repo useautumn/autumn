@@ -1,4 +1,5 @@
 import {
+	type EventProperties,
 	type Feature,
 	type FullSubject,
 	subtractSafe,
@@ -19,7 +20,7 @@ export const findBlockingUsageLimit = ({
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	feature: Feature;
-	eventProperties?: Record<string, unknown> | null;
+	eventProperties?: EventProperties;
 }): BlockingUsageLimit | undefined => {
 	const now = ctx.timestamp;
 	const usageWindows = fullSubject.usage_windows ?? [];

@@ -1,5 +1,5 @@
+import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { AddButton } from "../shared/AddButton";
-import { RemoveButton } from "../shared/RemoveButton";
 import { FilterRow } from "./FilterRow";
 import {
 	FIELD_CONFIGS,

@@ -6,6 +6,7 @@ import {
 import { FeatureType } from "@models/featureModels/featureEnums.js";
 import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import type { z } from "zod/v4";
+import { hasCreditDimensionRules } from "../../../utils/featureUtils/classifyFeature/hasCreditDimensionRules.js";
 import { ApiFeatureV1Schema } from "../apiFeatureV1.js";
 import { isGraduatedCreditSchemaItem } from "../creditRateCard.js";
 import {
@@ -26,6 +27,7 @@ export const apiCreditSchemaToV0 = ({
 	for (const item of creditSchema) {
 		if (
 			isGraduatedCreditSchemaItem(item) ||
+			hasCreditDimensionRules(item) ||
 			(item.billing_units ?? 1) !== 1
 		) {
 			return null;

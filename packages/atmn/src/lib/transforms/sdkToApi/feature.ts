@@ -1,5 +1,77 @@
-import type { Feature } from "../../../compose/models/index.js";
+import { mapRecordValues } from "@autumn/shared";
+import type {
+	CreditDimension,
+	CreditMultiplier,
+	CreditSchemaItem,
+	Feature,
+} from "../../../compose/models/index.js";
 import type { ApiFeature } from "../../api/types/feature.js";
+
+type ApiCreditSchemaItem = NonNullable<ApiFeature["credit_schema"]>[number];
+type ApiCreditDimension = NonNullable<
+	ApiCreditSchemaItem["dimensions"]
+>[string];
+
+type SdkCreditRate =
+	| {
+			tierBehavior: "graduated";
+			tiers: { to: number | "inf"; creditCost: number }[];
+	  }
+	| { tierBehavior?: undefined; creditCost: number };
+
+type ApiCreditRate =
+	| {
+			tier_behavior: "graduated";
+			tiers: { to: number | "inf"; credit_cost: number }[];
+	  }
+	| { credit_cost: number };
+
+/** The flat-or-graduated part of a rate, SDK → API naming. Rows and dimensions share it. */
+function creditRateToApi(rate: SdkCreditRate): ApiCreditRate {
+	if (rate.tierBehavior === "graduated") {
+		return {
+			tier_behavior: "graduated",
+			tiers: rate.tiers.map((tier) => ({
+				to: tier.to,
+				credit_cost: tier.creditCost,
+			})),
+		};
+	}
+	return { credit_cost: rate.creditCost };
+}
+
+function creditDimensionToApi(dimension: CreditDimension): ApiCreditDimension {
+	return {
+		match: dimension.match,
+		...(dimension.priority !== undefined && { priority: dimension.priority }),
+		...creditRateToApi(dimension),
+	};
+}
+
+function creditMultiplierToApi(
+	multiplier: CreditMultiplier,
+): NonNullable<ApiCreditSchemaItem["multipliers"]>[string] {
+	return { ...multiplier, match: multiplier.match };
+}
+
+function creditDimensionRulesToApi(
+	creditSchemaItem: Pick<CreditSchemaItem, "dimensions" | "multipliers">,
+) {
+	return {
+		...(creditSchemaItem.dimensions !== undefined && {
+			dimensions: mapRecordValues({
+				record: creditSchemaItem.dimensions,
+				mapValue: creditDimensionToApi,
+			}),
+		}),
+		...(creditSchemaItem.multipliers !== undefined && {
+			multipliers: mapRecordValues({
+				record: creditSchemaItem.multipliers,
+				mapValue: creditMultiplierToApi,
+			}),
+		}),
+	};
+}
 
 export interface ApiFeatureParams {
 	id: string;
@@ -9,11 +81,14 @@ export interface ApiFeatureParams {
 	archived?: boolean;
 	event_names?: string[];
 	credit_schema?: ApiFeature["credit_schema"];
-	model_markups?: Record<string, {
-		markup?: number;
-		input_cost?: number;
-		output_cost?: number;
-	}>;
+	model_markups?: Record<
+		string,
+		{
+			markup?: number;
+			input_cost?: number;
+			output_cost?: number;
+		}
+	>;
 	default_markup?: number;
 	provider_markups?: Record<string, { markup: number }>;
 }
@@ -38,30 +113,14 @@ export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
 	}
 
 	if (feature.type === "credit_system" && feature.creditSchema) {
-		base.credit_schema = feature.creditSchema.map((creditSchemaItem) => {
-			const baseItem = {
-				metered_feature_id: creditSchemaItem.meteredFeatureId,
-				...(creditSchemaItem.billingUnits !== undefined && {
-					billing_units: creditSchemaItem.billingUnits,
-				}),
-			};
-
-			if (creditSchemaItem.tierBehavior === "graduated") {
-				return {
-					...baseItem,
-					tier_behavior: "graduated" as const,
-					tiers: creditSchemaItem.tiers.map((tier) => ({
-						to: tier.to,
-						credit_cost: tier.creditCost,
-					})),
-				};
-			}
-
-			return {
-				...baseItem,
-				credit_cost: creditSchemaItem.creditCost,
-			};
-		});
+		base.credit_schema = feature.creditSchema.map((creditSchemaItem) => ({
+			metered_feature_id: creditSchemaItem.meteredFeatureId,
+			...(creditSchemaItem.billingUnits !== undefined && {
+				billing_units: creditSchemaItem.billingUnits,
+			}),
+			...creditDimensionRulesToApi(creditSchemaItem),
+			...creditRateToApi(creditSchemaItem),
+		}));
 	}
 
 	if (feature.type === "ai_credit_system") {
@@ -74,7 +133,7 @@ export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
 						input_cost: entry.inputCost,
 						output_cost: entry.outputCost,
 					},
-				])
+				]),
 			);
 		}
 		if (feature.defaultMarkup !== undefined) {

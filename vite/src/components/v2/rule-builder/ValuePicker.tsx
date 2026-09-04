@@ -9,10 +9,11 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@autumn/ui";
-import { CheckIcon, XIcon } from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ValueChip } from "./ValueChip";
 
 const MAX_VISIBLE_CHIPS = 3;
 
@@ -59,27 +60,13 @@ export function ValuePicker({
 								{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
 									const opt = getOption(val);
 									return (
-										<span
+										<ValueChip
 											key={val}
-											className="flex items-center gap-0.5 bg-accent border border-border text-foreground rounded px-1 h-4.5 text-[10px] shrink-0 max-w-48"
-										>
-											{opt?.icon && (
-												<span className="shrink-0 [&_svg]:size-3">
-													{opt.icon}
-												</span>
-											)}
-											<span className="truncate">{opt?.label ?? val}</span>
-											<span
-												className="cursor-pointer text-tertiary-foreground hover:text-destructive ml-0.5"
-												onClick={(e) => {
-													e.stopPropagation();
-													onRemove(val);
-												}}
-												onPointerDown={(e) => e.stopPropagation()}
-											>
-												<XIcon size={10} />
-											</span>
-										</span>
+											label={opt?.label ?? val}
+											icon={opt?.icon}
+											onRemove={() => onRemove(val)}
+											interactive={false}
+										/>
 									);
 								})}
 								{selectedValues.length > MAX_VISIBLE_CHIPS && (

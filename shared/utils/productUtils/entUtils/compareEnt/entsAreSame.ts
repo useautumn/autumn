@@ -3,6 +3,7 @@
 import {
 	AllowanceType,
 	type CreditSchemaItem,
+	creditDimensionRulesEqual,
 	EntInterval,
 	type Entitlement,
 	type FeatureConfigOverride,
@@ -51,6 +52,7 @@ const creditSchemasAreSame = ({
 		if (!item2) return false;
 		return (
 			(item1.feature_amount ?? 1) == (item2.feature_amount ?? 1) &&
+			creditDimensionRulesEqual({ left: item1, right: item2 }) &&
 			item1.credit_amount == item2.credit_amount &&
 			(item1.tier_behavior ?? null) === (item2.tier_behavior ?? null) &&
 			(item1.tiers ?? []).length === (item2.tiers ?? []).length &&

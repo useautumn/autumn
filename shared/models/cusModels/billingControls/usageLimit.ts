@@ -108,12 +108,18 @@ export const usageLimitFilterKey = (
  * must match (AND), scalar values compare string-normalized. No filter
  * matches everything; a filter never matches an event without properties.
  */
+/** The property bag carried on a tracked event, as filters and dimensions see it. */
+export type EventProperties = Record<string, unknown> | null | undefined;
+
+/** Property equality filter: every key must equal the tracked property, compared as strings. */
+export type PropertyFilter = Record<string, string> | null | undefined;
+
 export const usageLimitFilterMatchesProperties = ({
 	filterProperties,
 	eventProperties,
 }: {
-	filterProperties: Record<string, string> | null | undefined;
-	eventProperties: Record<string, unknown> | null | undefined;
+	filterProperties: PropertyFilter;
+	eventProperties: EventProperties;
 }): boolean => {
 	if (!filterProperties) return true;
 	if (!eventProperties) return false;

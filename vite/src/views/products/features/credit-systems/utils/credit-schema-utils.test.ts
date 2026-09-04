@@ -117,3 +117,45 @@ test("invalid zero billing units are preserved for validation", () => {
 	]);
 	expect(item.billing_units).toBe(0);
 });
+
+test("creditSchemaToApi carries dimensions and multipliers through a save", () => {
+	const [apiItem] = creditSchemaToApi([
+		{
+			metered_feature_id: "cpu_minutes",
+			credit_amount: 1,
+			dimensions: {
+				large: { match: { size: "large" }, credit_amount: 16 },
+			},
+			multipliers: {
+				spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+			},
+		},
+	]);
+
+	expect(apiItem).toEqual({
+		metered_feature_id: "cpu_minutes",
+		billing_units: 1,
+		credit_cost: 1,
+		dimensions: {
+			large: { match: { size: "large" }, credit_cost: 16 },
+		},
+		multipliers: {
+			spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+		},
+	});
+});
+
+test("setRateType keeps a row's dimension rules", () => {
+	const graduated = setRateType({
+		item: {
+			metered_feature_id: "cpu_minutes",
+			credit_amount: 1,
+			multipliers: { spot: { match: { lifecycle: "spot" }, factor: 0.3 } },
+		},
+		rateType: "graduated",
+	});
+
+	expect(graduated.multipliers).toEqual({
+		spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+	});
+});

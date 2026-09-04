@@ -1,13 +1,13 @@
 import type { Feature } from "@autumn/shared";
-import { Button } from "@autumn/ui";
-import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
 import {
+	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@autumn/ui";
+import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { InlineCreateFeatureForm } from "@/views/products/features/credit-systems/components/InlineCreateFeatureForm";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
@@ -17,13 +17,16 @@ export function FeatureSelectDropdown({
 	onValueChange,
 	availableFeatures,
 	allFeatures,
+	defaultOpen = false,
 }: {
 	value: string;
 	onValueChange: (featureId: string) => void;
 	availableFeatures: Feature[];
 	allFeatures: Feature[];
+	/** Opens on mount so a row added by the user is ready to pick from. */
+	defaultOpen?: boolean;
 }) {
-	const [open, setOpen] = useState(false);
+	const [open, setOpen] = useState(defaultOpen);
 	const [showCreateForm, setShowCreateForm] = useState(false);
 	const nameInputRef = useRef<HTMLInputElement>(null);
 

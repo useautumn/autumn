@@ -1,12 +1,16 @@
 import { Input } from "@autumn/ui";
+import type { ComponentProps } from "react";
 import { useState } from "react";
 
 interface CreditNumberInputProps {
 	value: number | undefined;
 	onValueChange: (value: number) => void;
+	/** Blurring while empty clears instead of writing 0. */
+	onClear?: () => void;
 	placeholder?: string;
 	className?: string;
 	disabled?: boolean;
+	variant?: ComponentProps<typeof Input>["variant"];
 	ariaLabel: string;
 }
 
@@ -15,9 +19,11 @@ interface CreditNumberInputProps {
 export function CreditNumberInput({
 	value,
 	onValueChange,
+	onClear,
 	placeholder,
 	className,
 	disabled,
+	variant,
 	ariaLabel,
 }: CreditNumberInputProps) {
 	const [draft, setDraft] = useState<string | null>(null);
@@ -28,6 +34,7 @@ export function CreditNumberInput({
 			type="text"
 			inputMode="decimal"
 			lang="en"
+			variant={variant}
 			className={className}
 			disabled={disabled}
 			placeholder={placeholder}
@@ -41,7 +48,7 @@ export function CreditNumberInput({
 				if (raw !== "" && Number.isFinite(parsed)) onValueChange(parsed);
 			}}
 			onBlur={() => {
-				if (draft === "") onValueChange(0);
+				if (draft === "") (onClear ?? (() => onValueChange(0)))();
 				setDraft(null);
 			}}
 		/>

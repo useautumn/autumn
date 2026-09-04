@@ -2,6 +2,7 @@ import {
 	type ApiCustomerV5,
 	type ApiEntityV2,
 	apiBalanceToAllowed,
+	type EventProperties,
 	type Feature,
 	type FullCustomer,
 	type FullSubject,
@@ -32,7 +33,7 @@ export const checkLimitReached = async ({
 	newFullSubject?: FullSubject;
 	feature: Feature;
 	entityId?: string;
-	eventProperties?: Record<string, unknown> | null;
+	eventProperties?: EventProperties;
 }) => {
 	try {
 		const oldBalance = oldEvalSubject.balances?.[feature.id];
