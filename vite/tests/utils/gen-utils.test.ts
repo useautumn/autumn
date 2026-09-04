@@ -5,6 +5,7 @@ import {
 	getSafeNextPath,
 } from "@/utils/genUtils";
 
+// No DOM here, so `readDismissed` reads false — these cover the not-yet-dismissed path.
 describe("getDefaultOrgPath", () => {
 	test("defaults deployed orgs to production", () => {
 		expect(getDefaultOrgPath({ deployed: true })).toBe(
@@ -12,15 +13,14 @@ describe("getDefaultOrgPath", () => {
 		);
 	});
 
-	test("defaults undeployed orgs to sandbox", () => {
-		expect(getDefaultOrgPath({ deployed: false })).toBe(
-			"/sandbox/products?tab=products",
-		);
+	test("sends undeployed orgs to onboarding until it is dismissed", () => {
+		expect(getDefaultOrgPath({ deployed: false })).toBe("/sandbox/onboarding");
 	});
 
-	test("defaults missing orgs to sandbox", () => {
-		expect(getDefaultOrgPath(null)).toBe("/sandbox/products?tab=products");
+	test("sends missing orgs to onboarding until it is dismissed", () => {
+		expect(getDefaultOrgPath(null)).toBe("/sandbox/onboarding");
 	});
+
 });
 
 describe("getSafeNextPath", () => {
@@ -57,9 +57,9 @@ describe("getOrgRouteRedirect", () => {
 		).toBe("/products?tab=products&invite=inv_123");
 	});
 
-	test("routes root to sandbox for undeployed orgs", () => {
+	test("routes root to onboarding for undeployed orgs", () => {
 		expect(getOrgRouteRedirect({ pathname: "/", deployed: false })).toBe(
-			"/sandbox/products?tab=products",
+			"/sandbox/onboarding",
 		);
 	});
 
