@@ -16,7 +16,8 @@ const validateMultiplierShape = ({
 	if (!hasFactor && !hasAdd) {
 		invalidCreditSystem(`Multiplier "${name}" needs a factor or an add.`);
 	}
-	if (hasFactor && !(Number(multiplier.factor) > 0)) {
+	const factor = Number(multiplier.factor);
+	if (hasFactor && !(Number.isFinite(factor) && factor > 0)) {
 		invalidCreditSystem(
 			`Multiplier "${name}" factor must be greater than zero.`,
 		);

@@ -40,6 +40,15 @@ const factorColumn: ColumnDef<MultiplierRow, unknown> = {
 				ariaLabel={`${label} factor`}
 				placeholder="1"
 				value={rule.multiplier.factor}
+				onClear={() =>
+					metaOf<MultiplierTableMeta, MultiplierRow>(table).onMultiplierChange(
+						index,
+						{
+							...rule,
+							multiplier: { ...rule.multiplier, factor: undefined },
+						},
+					)
+				}
 				onValueChange={(factor) =>
 					metaOf<MultiplierTableMeta, MultiplierRow>(table).onMultiplierChange(
 						index,
@@ -84,7 +93,7 @@ export function CreditDimensionMultiplierTable() {
 			factorColumn,
 			removeColumn<MultiplierRow>(),
 		],
-		[fields.join(",")],
+		[JSON.stringify(fields)],
 	);
 
 	const withMatch = (index: number, match: CreditMatch) => {

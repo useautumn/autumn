@@ -95,7 +95,7 @@ export function CreditDimensionRateTable({ baseRate }: { baseRate: string }) {
 			creditsColumn,
 			removeColumn<RateRow>(),
 		],
-		[fields.join(",")],
+		[JSON.stringify(fields)],
 	);
 
 	const meta: RateTableMeta = {

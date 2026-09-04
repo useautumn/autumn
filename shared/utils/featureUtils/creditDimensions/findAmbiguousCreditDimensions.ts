@@ -11,9 +11,12 @@ export const matchesCanCoexist = (
 	left: CreditDimension["match"],
 	right: CreditDimension["match"],
 ): boolean =>
-	Object.entries(left).every(
-		([key, value]) => right[key] === undefined || right[key] === value,
-	);
+	Object.entries(left).every(([key, value]) => {
+		// Compare the parsed record's own entries: an inherited name like
+		// `toString` would otherwise read as a value and hide a real overlap.
+		const rightValue = Object.entries(right).find(([k]) => k === key)?.[1];
+		return rightValue === undefined || rightValue === value;
+	});
 
 const sameSpecificity = (
 	left: CreditDimension,

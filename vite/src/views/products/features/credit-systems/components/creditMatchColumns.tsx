@@ -80,9 +80,13 @@ export const removeColumn = <T extends MatchRow>(): ColumnDef<T, unknown> => ({
 			{row.original.warning && (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<span className="inline-flex text-amber-600 dark:text-amber-500">
+						<button
+							type="button"
+							aria-label={row.original.warning}
+							className="inline-flex text-amber-600 dark:text-amber-500"
+						>
 							<WarningIcon size={14} weight="fill" />
-						</span>
+						</button>
 					</TooltipTrigger>
 					<TooltipContent>{row.original.warning}</TooltipContent>
 				</Tooltip>

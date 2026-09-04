@@ -34,7 +34,8 @@ export function useDraftValue({
 	};
 
 	const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-		if (event.key !== "Enter") return;
+		// Enter confirms an IME composition; committing here would eat the value.
+		if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
 		event.preventDefault();
 		submit();
 	};

@@ -17,5 +17,9 @@ export const scaleCreditAmount = ({
 	if (scaled.lt(0)) {
 		invalidRate("Credit multipliers took the rate below zero");
 	}
-	return scaled.toNumber();
+	const result = scaled.toNumber();
+	if (!Number.isFinite(result)) {
+		invalidRate("Credit multipliers produced a rate outside the numeric range");
+	}
+	return result;
 };

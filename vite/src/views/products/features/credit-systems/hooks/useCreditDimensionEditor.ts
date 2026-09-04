@@ -137,11 +137,12 @@ export function useCreditDimensionEditor({
 			const { [field]: _removed, ...allowed } = values;
 			restrictTo(allowed);
 		},
+		// Functional update: pasting a list calls this repeatedly before a rerender.
 		addValue: (field: string, value: string) =>
-			setDraftValues({
-				...draftValues,
-				[field]: [...(draftValues[field] ?? []), value],
-			}),
+			setDraftValues((current) => ({
+				...current,
+				[field]: [...(current[field] ?? []), value],
+			})),
 		removeValue: (field: string, value: string) =>
 			restrictTo({ ...values, [field]: without(values[field], value) }),
 		addRow: () => setDraftRows([...draftRows, {}]),
