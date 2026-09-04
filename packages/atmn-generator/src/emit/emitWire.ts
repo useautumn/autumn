@@ -172,9 +172,11 @@ export const emitWireModule = ({
 				? `\t...(config.${name} !== undefined
 \t\t? {
 \t\t\t\t${name}: [
-\t\t\t\t\t...config.${name}.map((row) => ({ ...row, active: row.active ?? true })),
-\t\t\t\t\t...(config.${meta.historyKey} ?? []).map((row) => ({ ...row, active: false })),
+\t\t\t\t\t...config.${name}.map((row) => followDeclaredVariants({ ...row, active: row.active ?? true })),
+\t\t\t\t\t...(config.${meta.historyKey} ?? []).map((row) => followDeclaredVariants({ ...row, active: false })),
 \t\t\t\t],
+\t\t\t\t// Absent history is "not mine"; stated history removes the versions it omits.
+\t\t\t\tskip_version_deletions: config.${meta.historyKey} === undefined,
 \t\t\t}
 \t\t: {}),`
 				: `\t...(config.${name} !== undefined ? { ${name}: config.${name} } : {}),`,
@@ -210,6 +212,20 @@ ${members}
 };
 
 /** The document as the server sees it: history rows folded into their collection. */
+/** A declared variant with no customize of its own follows its base: the
+ * server needs the pin stated, so it is derived here, never typed. */
+const followDeclaredVariants = <T extends { variants?: { variantPlanId: string }[] }>(
+	row: T,
+): T & { propagate?: { variants: { planId: string }[] } } =>
+	Array.isArray(row.variants) && row.variants.length > 0
+		? {
+				...row,
+				propagate: {
+					variants: row.variants.map((variant) => ({ planId: variant.variantPlanId })),
+				},
+			}
+		: row;
+
 const stated = (config: AtmnConfig): Record<string, unknown> => ({
 ${stated}
 });
