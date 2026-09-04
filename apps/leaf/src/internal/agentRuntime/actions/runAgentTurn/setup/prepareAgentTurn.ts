@@ -2,6 +2,7 @@ import { db } from "../../../../../lib/db.js";
 import { autumnOrgContextService } from "../../../../autumnMcp/orgContextService.js";
 import type { AgentTurnContext } from "../../../domain/agentTurnContext.js";
 import { getEveSession } from "../../../eve/repo.js";
+import { loadPendingApprovals } from "./loadPendingApprovals.js";
 
 export const loadAgentOrgContext = ({
 	env,
@@ -27,5 +28,14 @@ export const prepareAgentTurn = async (context: AgentTurnContext) => {
 		} as const;
 	}
 
-	return { existingSession, orgContext: undefined } as const;
+	return {
+		existingSession,
+		orgContext: undefined,
+		pendingApprovals: await loadPendingApprovals({
+			env,
+			orgId: org.id,
+			sessionId: existingSession.sessionId,
+			thread: context.thread,
+		}),
+	} as const;
 };

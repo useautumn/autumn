@@ -74,6 +74,7 @@ export const runAgentTurn = async ({
 				orgContext: prepared.orgContext,
 				orgSlug: org.slug,
 				params,
+				pendingApprovals: prepared.pendingApprovals,
 			}),
 			orgId: org.id,
 			params,

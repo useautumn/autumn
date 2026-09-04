@@ -1,5 +1,8 @@
 import type { AutumnOrgContext } from "../../../../autumnMcp/orgContextService.js";
-import type { AgentTurnParams } from "../../../domain/agentTurnContext.js";
+import type {
+	AgentTurnParams,
+	PendingApprovalNote,
+} from "../../../domain/agentTurnContext.js";
 import type { EveMessageContent } from "../../../eve/client.js";
 import { buildAgentMessageText } from "../../../messages/agentMessageText.js";
 
@@ -10,6 +13,7 @@ export const buildAgentTurnMessage = ({
 	orgContext,
 	orgSlug,
 	params,
+	pendingApprovals,
 }: {
 	env: string;
 	isAdminInstall?: boolean;
@@ -17,6 +21,7 @@ export const buildAgentTurnMessage = ({
 	orgContext?: AutumnOrgContext;
 	orgSlug?: string;
 	params: AgentTurnParams;
+	pendingApprovals?: ReadonlyArray<PendingApprovalNote>;
 }): EveMessageContent => {
 	const attachments = params.attachments ?? [];
 	const messageText = buildAgentMessageText({
@@ -26,6 +31,7 @@ export const buildAgentTurnMessage = ({
 		orgContext,
 		orgSlug,
 		params,
+		pendingApprovals,
 	});
 	if (attachments.length === 0) return messageText;
 
