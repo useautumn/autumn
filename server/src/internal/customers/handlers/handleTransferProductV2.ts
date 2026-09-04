@@ -3,6 +3,8 @@ import {
 	AttachScenario,
 	CusProductAlreadyExistsError,
 	CusProductNotFoundError,
+	customerProductToEffectivePrices,
+	isOneOffProduct,
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
@@ -123,6 +125,11 @@ export const handleTransferProductV2 = createRoute({
 			fullCustomer: customer,
 			toEntity,
 			product,
+			isOneOff: isOneOffProduct({
+				prices: customerProductToEffectivePrices({
+					customerProduct: cusProduct,
+				}),
+			}),
 			transferringCustomerProducts: getTransferCustomerProducts({
 				fullCustomer: customer,
 				fromEntity,

@@ -171,6 +171,7 @@ describe("transfer target collision", () => {
 			} as FullCustomer,
 			toEntity: targetEntity,
 			product,
+			isOneOff: false,
 			transferringCustomerProducts: [scheduledSource],
 		});
 
@@ -184,6 +185,7 @@ describe("transfer target collision", () => {
 			} as FullCustomer,
 			toEntity: targetEntity,
 			product,
+			isOneOff: false,
 			transferringCustomerProducts: [scheduledSource],
 		});
 
@@ -199,6 +201,7 @@ describe("transfer target collision", () => {
 			} as FullCustomer,
 			toEntity: targetEntity,
 			product,
+			isOneOff: false,
 			transferringCustomerProducts: [activeSource],
 		});
 
