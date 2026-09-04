@@ -31,7 +31,8 @@ import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
 import { SidebarRail } from "./SidebarRail";
 
-const buildDevSubTabs = ({
+/** Exported so the command bar can offer the same tabs without a second list. */
+export const buildDevSubTabs = ({
 	flags,
 }: {
 	flags: {
@@ -129,7 +130,9 @@ export const MainSidebar = ({
 			<div
 				data-slot="main-sidebar"
 				className={cn(
-					`h-full py-4 flex flex-col justify-between transition-all duration-150 relative`,
+					// Scrolls internally so a zoomed-in or crowded sidebar can't push
+					// its own content out of view.
+					`h-full py-4 flex flex-col justify-between overflow-y-auto overflow-x-hidden transition-all duration-150 relative`,
 					isMobileSheet
 						? "min-w-[200px]"
 						: expanded

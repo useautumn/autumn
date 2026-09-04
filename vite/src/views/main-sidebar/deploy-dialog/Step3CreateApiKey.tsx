@@ -1,43 +1,18 @@
-import { AppEnv } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { Check, Copy } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { useDevQuery } from "@/hooks/queries/useDevQuery";
-import { DevService } from "@/services/DevService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useState } from "react";
 import { SectionHeader } from "@/views/onboarding3/components/integration-step/SectionHeader";
+import { useCreateProdApiKey } from "./useDeployActions";
 
 export const Step3CreateApiKey = () => {
-	const { refetch } = useDevQuery();
-	const axiosInstance = useAxiosInstance({ env: AppEnv.Live });
-
-	const [loading, setLoading] = useState(false);
-	const [apiKey, setApiKey] = useState("");
+	const { apiKey, isCreating, createApiKey } = useCreateProdApiKey();
 	const [copied, setCopied] = useState(false);
 
-	useEffect(() => {
-		if (copied) {
-			setTimeout(() => setCopied(false), 1000);
-		}
-	}, [copied]);
-
-	const handleCreate = async () => {
-		setLoading(true);
-		try {
-			const { api_key } = await DevService.createAPIKey(axiosInstance, {
-				name: "Production Secret Key",
-			});
-
-			setApiKey(api_key);
-			refetch();
-		} catch (error) {
-			console.log("Error:", error);
-			toast.error("Failed to create API key");
-		}
-
-		setLoading(false);
+	const handleCopy = () => {
+		navigator.clipboard.writeText(apiKey);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 1000);
 	};
 
 	return (
@@ -69,18 +44,11 @@ export const Step3CreateApiKey = () => {
 								<button
 									type="button"
 									className="text-muted-foreground hover:text-muted-foreground/80 ml-4"
-									onClick={() => {
-										setCopied(true);
-										navigator.clipboard.writeText(apiKey);
-									}}
+									onClick={handleCopy}
 								>
 									{copied ? <Check size={15} /> : <Copy size={15} />}
 								</button>
 							</div>
-							{/* <p className="text-xs text-tertiary-foreground">
-								You won't be able to view this key anymore after closing the
-								dialog.
-							</p> */}
 						</motion.div>
 					) : (
 						<motion.div
@@ -96,8 +64,8 @@ export const Step3CreateApiKey = () => {
 							className="flex flex-col gap-2 w-full"
 						>
 							<Button
-								isLoading={loading}
-								onClick={handleCreate}
+								isLoading={isCreating}
+								onClick={createApiKey}
 								variant="secondary"
 								className="w-36"
 							>

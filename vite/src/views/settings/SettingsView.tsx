@@ -32,7 +32,7 @@ import { SubscriptionSection } from "./sections/SubscriptionSection";
 import { TransitionRulesSection } from "./sections/TransitionRulesSection";
 import { UsageAlertsSection } from "./sections/UsageAlertsSection";
 
-type SettingsTab =
+export type SettingsTab =
 	| "account"
 	| "organization"
 	| "subscription"
@@ -47,7 +47,7 @@ type SettingsTab =
 	| "usage-alerts"
 	| "transition-rules";
 
-interface SettingsNavItem {
+export interface SettingsNavItem {
 	readonly id: SettingsTab;
 	readonly label: string;
 	readonly icon: React.ReactNode;
@@ -58,7 +58,9 @@ interface SettingsNavGroup {
 	readonly items: readonly SettingsNavItem[];
 }
 
-const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
+/** Also drives the command bar, so a new tab is searchable without being
+ * registered in a second place. */
+export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 	{
 		label: "Organization",
 		items: [
@@ -153,7 +155,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 };
 
 /** Tabs that only render while their feature flag is on. */
-const FLAGGED_TABS: Partial<Record<SettingsTab, "sso">> = {
+export const FLAGGED_TABS: Partial<Record<SettingsTab, "sso">> = {
 	sso: "sso",
 };
 

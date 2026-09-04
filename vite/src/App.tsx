@@ -88,6 +88,9 @@ const MigrationView = React.lazy(() =>
 		({ MigrationView }) => ({ default: MigrationView }),
 	),
 );
+const OnboardingView = React.lazy(
+	() => import("./views/onboarding/OnboardingView"),
+);
 const QuickstartView = React.lazy(
 	() => import("./views/onboarding4/QuickstartView"),
 );
@@ -210,6 +213,7 @@ export default function App() {
 							)}
 							{envRoutes("dev", <DevScreen />)}
 							{envRoutes("analytics", <AnalyticsView />)}
+							{envRoutes("onboarding", <OnboardingView />)}
 						</Route>
 					</Route>
 				</Routes>

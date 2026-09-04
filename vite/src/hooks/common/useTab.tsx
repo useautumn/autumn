@@ -14,6 +14,9 @@ export const useTab = () => {
 	if (path.startsWith("/analytics")) {
 		return "analytics";
 	}
+	if (path.startsWith("/onboarding")) {
+		return "onboarding";
+	}
 
 	if (
 		pathname.startsWith("/features") ||
