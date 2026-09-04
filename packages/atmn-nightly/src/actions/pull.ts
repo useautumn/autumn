@@ -112,6 +112,7 @@ export const runPull = async ({
 			spec,
 			entries: entriesOf(previewRows[collection]),
 			catalogRows: rowsOf(catalogRows[collection]),
+			statedRows: rowsOf((wire as Record<string, unknown>)[collection]),
 			configPath,
 			files,
 			includeMappings,
