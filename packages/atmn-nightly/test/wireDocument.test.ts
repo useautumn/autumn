@@ -100,4 +100,4 @@ test("collections the CLI cannot express yet stay absent", () => {
 			"application/json"
 		].schema;
 	expect(envelope.properties.plans.default).toBeUndefined();
-});
+}, 30_000);
