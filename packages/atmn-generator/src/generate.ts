@@ -1,11 +1,17 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { copyRuntime } from "./emit/copyRuntime";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
 import { emitFeaturesModule } from "./emit/emitFeatures";
 import { emitWireModule } from "./emit/emitWire";
 import { wirePathHints } from "./emit/freeFormPaths";
-import { OVERLAY, OVERLAY as OVERLAY_FOR_CLIENT } from "./overlay/overlay";
+import { emitLintRulesModule } from "./lint/emitLintRules";
+import { LINT_REGISTRY } from "./lint/rules/registry";
+import { nodeRulesFromSpec } from "./lint/specRules/nodeRulesFromSpec";
+import { validateRegistry } from "./lint/validateRegistry";
+import { OVERLAY } from "./overlay/overlay";
 import {
+	catalogUpdateSchema,
 	collectionItemSchema,
 	loadSpec,
 	responseSchema,
@@ -14,6 +20,11 @@ import {
 
 const OUTPUT_DIR = join(import.meta.dir, "../../atmn-nightly/src/generated");
 const REPO_ROOT = join(import.meta.dir, "../../..");
+
+const LINT_RUNTIME_SOURCE = join(
+	import.meta.dir,
+	"lint/runtime/lintDocument.ts",
+);
 
 /**
  * Emitted source is not formatted by hand — it goes through the repo-pinned
@@ -42,33 +53,50 @@ const formatWithBiome = async ({
 
 export const generate = async (): Promise<string[]> => {
 	const spec = loadSpec();
+	const root = spec as never;
+	const envelope = catalogUpdateSchema({ spec });
 	mkdirSync(OUTPUT_DIR, { recursive: true });
 
 	const written: string[] = [];
+	const write = ({ name, source }: { name: string; source: string }) => {
+		const path = join(OUTPUT_DIR, name);
+		writeFileSync(path, source, "utf8");
+		written.push(path);
+	};
 
-	const featuresPath = join(OUTPUT_DIR, "features.ts");
-	writeFileSync(
-		featuresPath,
-		emitFeaturesModule({
+	write({
+		name: "features.ts",
+		source: emitFeaturesModule({
 			schema: collectionItemSchema({ spec, collection: "features" }),
 			overlay: OVERLAY,
 		}),
-		"utf8",
-	);
-	written.push(featuresPath);
+	});
 
-	const wirePath = join(OUTPUT_DIR, "wire.ts");
-	writeFileSync(
-		wirePath,
-		emitWireModule({
-			featureHints: wirePathHints({
-				schema: collectionItemSchema({ spec, collection: "features" }),
-				root: spec as never,
-			}),
+	const lintRuntimePath = join(OUTPUT_DIR, "lintRuntime.ts");
+	copyRuntime({
+		from: LINT_RUNTIME_SOURCE,
+		to: lintRuntimePath,
+		sourceLabel: "packages/atmn-generator/src/lint/runtime/lintDocument.ts",
+	});
+	written.push(lintRuntimePath);
+
+	// A typo in a rule's path or field would otherwise ship as a rule that
+	// never fires.
+	validateRegistry({ registry: LINT_REGISTRY, schema: envelope, root });
+	write({
+		name: "lintRules.ts",
+		source: emitLintRulesModule({
+			specRules: nodeRulesFromSpec({ schema: envelope, root }),
+			registry: LINT_REGISTRY,
 		}),
-		"utf8",
-	);
-	written.push(wirePath);
+	});
+
+	write({
+		name: "wire.ts",
+		source: emitWireModule({
+			catalogHints: wirePathHints({ schema: envelope, root }),
+		}),
+	});
 
 	const operations: ClientOperation[] = (
 		[
@@ -87,21 +115,18 @@ export const generate = async (): Promise<string[]> => {
 			path,
 			responseTypeName,
 			responseSchema: schema,
-			responseHints: wirePathHints({ schema, root: spec as never }),
+			responseHints: wirePathHints({ schema, root }),
 		};
 	});
 
-	const clientPath = join(OUTPUT_DIR, "client.ts");
-	writeFileSync(
-		clientPath,
-		emitClientModule({
+	write({
+		name: "client.ts",
+		source: emitClientModule({
 			baseUrl: serverBaseUrl({ spec }),
 			operations,
-			overlay: OVERLAY_FOR_CLIENT,
+			overlay: OVERLAY,
 		}),
-		"utf8",
-	);
-	written.push(clientPath);
+	});
 
 	await formatWithBiome({ paths: written });
 	return written;

@@ -26,7 +26,12 @@ const specDocument = (): any =>
 test("fixtures become a wire document with snake_case keys", () => {
 	const wire = atmn({
 		features: [
-			feature({ featureId: "messages", name: "Messages", type: "metered" }),
+			feature({
+				featureId: "messages",
+				name: "Messages",
+				type: "metered",
+				consumable: true,
+			}),
 		],
 		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
 	}) as any;
@@ -35,6 +40,7 @@ test("fixtures become a wire document with snake_case keys", () => {
 		feature_id: "messages",
 		name: "Messages",
 		type: "metered",
+		consumable: true,
 	});
 });
 
@@ -47,7 +53,7 @@ test("record keys survive while their values are recased", () => {
 				type: "ai_credit_system",
 				// A key with a capital ON PURPOSE: "gpt-4" would survive snake-casing
 				// by accident and the test would pass with record handling removed.
-				modelMarkups: { gptFourTurbo: { markup: 1.2, inputCost: 3 } },
+				modelMarkups: { "openai/gptFourTurbo": { markup: 1.2, inputCost: 3 } },
 			}),
 		],
 		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
@@ -55,7 +61,7 @@ test("record keys survive while their values are recased", () => {
 
 	// The slug is the user's; the fields inside are ours.
 	expect(wire.features[0].model_markups).toEqual({
-		gptFourTurbo: { markup: 1.2, input_cost: 3 },
+		"openai/gptFourTurbo": { markup: 1.2, input_cost: 3 },
 	});
 });
 
