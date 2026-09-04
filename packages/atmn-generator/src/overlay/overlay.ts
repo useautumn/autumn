@@ -38,7 +38,7 @@ export type Overlay = {
  * for a fixture that does not exist yet is a guess at a path.
  */
 export const OVERLAY: Overlay = {
-	exposeInternal: ["internal_id"],
+	exposeInternal: ["internal_id", "entity_feature_id"],
 	collections: {
 		plans: {
 			"licenses.version_slug": {

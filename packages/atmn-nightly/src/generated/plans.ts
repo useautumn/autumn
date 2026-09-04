@@ -197,6 +197,7 @@ export type Plan = {
 				  }
 			>;
 		};
+		entityFeatureId?: string;
 	}>;
 	/** Free trial. Omit to leave unchanged; null removes it. */
 	freeTrial?: {
@@ -460,6 +461,7 @@ export type Plan = {
 					/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 					creditSchema?: Array<unknown>;
 				};
+				entityFeatureId?: string;
 			}>;
 			/** Items to add to the plan. */
 			addItems?: Array<{
@@ -553,6 +555,7 @@ export type Plan = {
 					/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 					creditSchema?: Array<unknown>;
 				};
+				entityFeatureId?: string;
 			}>;
 			/** Filters selecting items to remove from the plan. */
 			removeItems?: Array<{
@@ -845,6 +848,7 @@ export type Plan = {
 					/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
 					creditSchema?: Array<unknown>;
 				};
+				entityFeatureId?: string;
 			}>;
 			removeItems?: Array<{
 				/** Match items linked to this feature. */
