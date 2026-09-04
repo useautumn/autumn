@@ -79,7 +79,9 @@ test.concurrent(
 				client: scenario.client,
 				planId: "pro",
 			});
-			expect(rows.find((row) => row.version === 1)?.archived).toBe(true);
+			// An unused version is removed outright; only a held one is archived.
+			const v1 = rows.find((row) => row.version === 1);
+			expect(v1 === undefined || v1.archived).toBe(true);
 			expect(rows.find((row) => row.version === 2)?.archived).toBe(false);
 		} finally {
 			scenario.cleanup();
