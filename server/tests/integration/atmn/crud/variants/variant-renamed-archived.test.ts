@@ -12,7 +12,7 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
+import { listAliases } from "../../../catalog-v2/plans/utils/planAliasTestUtils.js";
 
 const baseConfig = `{
 	plans: [
