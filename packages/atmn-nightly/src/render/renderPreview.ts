@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { PREVIOUS_ATTRIBUTE_LABELS } from "../generated/labels";
 
 /**
  * Headless rendering only, for now — the shape a CI log or a piped terminal
@@ -125,6 +126,12 @@ const formatValue = (value: unknown): string => {
 };
 
 /** `credit_schema` and `billingControls` both read as "Billing controls". */
+/** The shared label when there is one; the key's own words otherwise. */
+const labelFor = (key: string): string => {
+	const wireKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+	return PREVIOUS_ATTRIBUTE_LABELS[wireKey] ?? humanizeKey(key);
+};
+
 const humanizeKey = (key: string): string => {
 	const spaced = key.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2");
 	return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
@@ -150,7 +157,7 @@ const renderPreviousAttributes = ({
 	Object.entries(attributes ?? {})
 		.filter(([key]) => !skip.includes(key))
 		.map(([key, previous]) => {
-			const label = humanizeKey(key);
+			const label = labelFor(key);
 			const added = previous === null || previous === undefined;
 			const { symbol, paint } = marker(added ? "create" : "update");
 			const now = current[key];

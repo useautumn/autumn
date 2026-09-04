@@ -199,3 +199,9 @@ export const isInternalField = ({
 	schema["x-internal"] === true && !overlay.exposeInternal.includes(wireKey);
 
 type JsonSchemaLike = { [key: string]: unknown };
+
+/** CLI wording where the shared label reads wrong at the terminal. */
+export const LABEL_OVERLAY: Record<string, string> = {
+	processors: "Processor mappings",
+	id: "ID",
+};
