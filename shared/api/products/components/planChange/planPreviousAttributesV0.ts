@@ -1,5 +1,5 @@
 import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
-import type { z } from "zod/v4";
+import { z } from "zod/v4";
 import { ApiPlanV1Schema } from "../../apiPlanV1.js";
 import { ApiFreeTrialV2Schema } from "../apiFreeTrialV2.js";
 import { ApiPlanProcessorsSchema } from "../processors.js";
@@ -41,12 +41,20 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 			description:
 				"Previous free trial when it changed. Null when the plan had none.",
 		}),
-		billing_controls: CustomerBillingControlsSchema.partial()
+		// Each lane admits null too: a lane that was unset and is now set reads as added.
+		billing_controls: z
+			.object(
+				Object.fromEntries(
+					Object.entries(CustomerBillingControlsSchema.shape).map(
+						([lane, schema]) => [lane, schema.nullable().optional()],
+					),
+				),
+			)
 			.nullable()
 			.optional()
 			.meta({
 				description:
-					"Sparse previous billing_controls — only keys that changed. Null when unset.",
+					"Sparse previous billing_controls — only keys that changed. Null when unset; a null lane was unset before.",
 			}),
 	});
 
