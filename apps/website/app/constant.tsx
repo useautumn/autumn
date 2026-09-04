@@ -1447,7 +1447,7 @@ export const customerStoriesData: CustomerStory[] = [
 		slug: "t3-chat",
 		name: "T3.chat",
 		href: "/blog/working-with-t3-chat-on-a-new-way-of-pricing",
-		linkLabel: "Consumer psychology is important in AI pricing",
+		linkLabel: "Consumer psychology in AI pricing",
 		logo: "/images/logos/T3_svg.svg",
 		iconLogo: "/images/logos/icons/t3-chat.svg",
 		logoClassName: "scale-65",
