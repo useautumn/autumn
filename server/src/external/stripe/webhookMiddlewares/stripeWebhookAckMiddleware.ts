@@ -1,6 +1,7 @@
 import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import type { Context, Next } from "hono";
 import { enqueueStripeWebhookReplay } from "../webhookReplay/enqueueStripeWebhookReplay.js";
+import { stripeWebhookErrorWouldRedeliver } from "../webhookReplay/stripeWebhookErrorWouldRedeliver.js";
 import { classifyStripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
 import type { StripeWebhookHonoEnv } from "./stripeWebhookContext.js";
 
@@ -31,6 +32,15 @@ export const stripeWebhookAckMiddleware = async (
 	const idempotency = ctx.webhookIdempotency;
 
 	if (ackMode === "sync") {
+		const queueSyncFailure = (error: unknown) => {
+			if (!stripeWebhookErrorWouldRedeliver({ error })) return;
+			return enqueueStripeWebhookReplay({
+				ctx,
+				failureReason:
+					error instanceof Error ? error.message : String(error),
+			});
+		};
+
 		try {
 			await next();
 		} catch (error) {
@@ -38,6 +48,7 @@ export const stripeWebhookAckMiddleware = async (
 				error,
 			});
 			await idempotency?.release();
+			await queueSyncFailure(error);
 			return c.json(
 				{ message: "Webhook processing failed, Stripe will retry" },
 				500,
@@ -48,6 +59,7 @@ export const stripeWebhookAckMiddleware = async (
 		// the response), so failure must be detected here, not via catch.
 		if (c.error) {
 			await idempotency?.release();
+			await queueSyncFailure(c.error);
 			return;
 		}
 
