@@ -317,6 +317,16 @@
         "xo": "^0.53.1",
       },
     },
+    "packages/atmn-generator": {
+      "name": "@autumn/atmn-generator",
+      "version": "0.0.0",
+      "dependencies": {
+        "yaml": "2.9.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "packages/atmn-nightly": {
       "name": "atmn-nightly",
       "version": "3.0.0-nightly.1",
@@ -327,6 +337,7 @@
         "chalk": "5.6.2",
         "commander": "14.0.3",
         "dotenv": "16.6.1",
+        "yaml": "2.9.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -996,6 +1007,8 @@
     "@authenio/xml-encryption": ["@authenio/xml-encryption@2.0.2", "", { "dependencies": { "@xmldom/xmldom": "^0.8.6", "escape-html": "^1.0.3", "xpath": "0.0.32" } }, "sha512-cTlrKttbrRHEw3W+0/I609A2Matj5JQaRvfLtEIGZvlN0RaPi+3ANsMeqAyCAVlH/lUIW2tmtBlSMni74lcXeg=="],
 
     "@autumn/agent-docs": ["@autumn/agent-docs@workspace:packages/agent-docs"],
+
+    "@autumn/atmn-generator": ["@autumn/atmn-generator@workspace:packages/atmn-generator"],
 
     "@autumn/auth": ["@autumn/auth@workspace:packages/auth"],
 
