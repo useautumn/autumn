@@ -69,13 +69,18 @@ export const findExistingTransferTargetProduct = ({
 	fullCustomer,
 	toEntity,
 	product,
+	isOneOff,
 	transferringCustomerProducts,
 }: {
 	fullCustomer: FullCustomer;
 	toEntity: Entity | null;
 	product: TransferProduct;
+	/** One-off plans stack, so the target already holding one is not a collision. */
+	isOneOff: boolean;
 	transferringCustomerProducts: FullCusProduct[];
 }) => {
+	if (isOneOff) return undefined;
+
 	const transferringScheduledStates = new Set(
 		transferringCustomerProducts.map((cusProduct) =>
 			isCustomerProductScheduled(cusProduct),

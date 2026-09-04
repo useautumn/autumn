@@ -104,4 +104,15 @@ describe("unused assignment seats stay in entitlement batch SQL", () => {
 		});
 		expect(flattenSql(query)).not.toContain(ENTITY_REQUIRED);
 	});
+
+	test("delete leaves pooled contribution cleanup to the foreign key", () => {
+		const query = buildDeleteCustomerEntitlementsBatchQuery({
+			customerLicenseLinkId: "link_unused",
+			operation: removeOperation(),
+			batchSize: 50,
+			now: 0,
+		});
+		expect(flattenSql(query)).toContain("pooled_contribution_id");
+		expect(flattenSql(query)).toContain("pooled_balances");
+	});
 });

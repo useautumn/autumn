@@ -24,8 +24,8 @@ import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlem
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { getResetContextByIds } from "@/internal/customers/cusProducts/cusEnts/repos/getResetContextByIds.js";
 import {
-	LICENSE_POOLED_LOW_GRANT,
 	expectLicensePooledGrant,
+	LICENSE_POOLED_LOW_GRANT,
 	parentPlan,
 	pooledMonthlyMessages,
 	pooledSeatPlan,
@@ -264,5 +264,117 @@ test.concurrent(
 		expect(resettable.map((candidate) => candidate.id)).not.toContain(
 			pooledCustomerEntitlement.id,
 		);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license pooled reset: unassigned pool still resets to purchased × grant")}`,
+	async () => {
+		const customerId = "lic-pool-reset-unassigned";
+		const parent = parentPlan({ id: "lic-pool-reset-unassigned-parent" });
+		const seat = pooledSeatPlan({
+			id: "lic-pool-reset-unassigned-seat",
+			item: pooledMonthlyMessages({ includedUsage: LICENSE_POOLED_LOW_GRANT }),
+		});
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [parent, seat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: seat.id,
+					included: SEAT_COUNT,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
+		});
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: seat.id,
+		});
+
+		await expirePooledBalanceForReset({
+			ctx,
+			customerId,
+			resetMode: PooledBalanceResetMode.Lazy,
+		});
+
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: LICENSE_POOLED_LOW_GRANT,
+			seatCount: SEAT_COUNT,
+			contributionCount: 0,
+			usage: 0,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license pooled reset: one assigned of three still resets to purchased × grant")}`,
+	async () => {
+		const customerId = "lic-pool-reset-one-of-three";
+		const parent = parentPlan({ id: "lic-pool-reset-one-parent" });
+		const seat = pooledSeatPlan({
+			id: "lic-pool-reset-one-seat",
+			item: pooledMonthlyMessages({ includedUsage: LICENSE_POOLED_LOW_GRANT }),
+		});
+		const { autumnV2_3, ctx, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [parent, seat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: seat.id,
+					included: SEAT_COUNT,
+				}),
+				s.billing.attach({ productId: parent.id }),
+				s.licenses.assign({
+					licenseProductId: seat.id,
+					entityIndexes: [0],
+				}),
+			],
+		});
+		const customerLicenseLinkId = await seatLinkId({
+			db: ctx.db,
+			customerId,
+			licenseProductId: seat.id,
+		});
+
+		await autumnV2_3.track(
+			{
+				customer_id: customerId,
+				entity_id: entities[0].id,
+				feature_id: TestFeature.Messages,
+				value: USAGE,
+			},
+			{ timeout: 2000 },
+		);
+		await expirePooledBalanceForReset({
+			ctx,
+			customerId,
+			resetMode: PooledBalanceResetMode.Lazy,
+		});
+
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: LICENSE_POOLED_LOW_GRANT,
+			seatCount: SEAT_COUNT,
+			contributionCount: 1,
+			usage: 0,
+		});
 	},
 );

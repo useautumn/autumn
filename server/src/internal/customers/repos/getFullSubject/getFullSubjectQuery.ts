@@ -160,6 +160,7 @@ export const getFullSubjectQuery = ({
 	},
 	inStatuses = RELEVANT_STATUSES,
 	allowMissingEntity = false,
+	aggregateEntityData = true,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -174,6 +175,8 @@ export const getFullSubjectQuery = ({
 	// customer-scoped row even if the entity does not exist. No-op when
 	// customerId is absent (entity-only lookup has no customer anchor).
 	allowMissingEntity?: boolean;
+	/** Entity aggregation scales with the customer's entity count; V2_4+ drops it. */
+	aggregateEntityData?: boolean;
 }) => {
 	const page = pagination.page ?? 50;
 	const offset = pagination.offset ?? 0;
@@ -222,6 +225,6 @@ export const getFullSubjectQuery = ({
 		leadingCtes,
 		inStatuses,
 		includeInvoices: !entityId,
-		includeEntityAggregations: !entityId,
+		includeEntityAggregations: !entityId && aggregateEntityData,
 	});
 };

@@ -9,7 +9,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { setStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
+import { addStripeSubscriptionToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
 import { applyTemplateToDraft } from "@/internal/billing/v2/providers/stripe/utils/invoices/applyTemplateToDraft";
@@ -130,9 +130,9 @@ export const executeStripeSubscriptionAction = async ({
 		});
 	}
 
-	addStripeSubscriptionIdToBillingPlan({
+	addStripeSubscriptionToBillingPlan({
 		autumnBillingPlan: billingPlan.autumn,
-		stripeSubscriptionId: stripeSubscription.id,
+		stripeSubscription,
 	});
 
 	// Add subscription to DB

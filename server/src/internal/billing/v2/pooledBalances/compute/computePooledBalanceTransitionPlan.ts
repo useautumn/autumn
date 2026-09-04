@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyIncomingPooledBalanceSources } from "./applyIncomingPooledBalanceSources/applyIncomingPooledBalanceSources";
+import { applyLicensePooledGranted } from "./applyLicensePooledGranted/applyLicensePooledGranted";
 import { applyOutgoingPooledBalanceSources } from "./applyOutgoingPooledBalanceSources/applyOutgoingPooledBalanceSources";
 import { applyPooledBalancePlanToIncomingCustomerProducts } from "./applyPooledBalancePlanToIncomingCustomerProducts";
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
@@ -68,6 +69,29 @@ export const computePooledBalanceTransitionPlan = ({
 			now,
 		});
 	}
+
+	const incomingCustomerLicenses = incomingCustomerProducts.flatMap(
+		(customerProduct) => customerProduct.customer_licenses ?? [],
+	);
+	const incomingLicenseLinkIds = new Set(
+		incomingCustomerLicenses.map((customerLicense) => customerLicense.link_id),
+	);
+	applyLicensePooledGranted({
+		ctx,
+		computeContext,
+		customerLicenses: [
+			...incomingCustomerLicenses,
+			...outgoingCustomerProducts.flatMap((customerProduct) =>
+				incomingCustomerProductIds.has(customerProduct.id)
+					? []
+					: (customerProduct.customer_licenses ?? []).filter(
+							(customerLicense) =>
+								!incomingLicenseLinkIds.has(customerLicense.link_id),
+						),
+			),
+		],
+		now,
+	});
 
 	const pooledBalancePlan = finalizePooledBalanceTransitionPlan({
 		computeContext,
