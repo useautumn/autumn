@@ -1,5 +1,5 @@
 /**
- * atmn scenarios/ids — stale internalId (row deleted on the server) → 400 "No feature exists for internal_id" surfaced, config untouched
+ * atmn scenarios/ids — stale internalId (row deleted on the server) → the id names a new resource: push recreates the row and the fixture takes the new id
  *
  * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
  */
@@ -12,7 +12,7 @@ import chalk from "chalk";
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
-	`${chalk.yellowBright("atmn scenarios/ids: a stale internalId whose row was deleted server-side 400s, the config stays untouched")}`,
+	`${chalk.yellowBright("atmn scenarios/ids: a stale internalId whose row was deleted server-side is treated as new: the row comes back with a fresh id written into the fixture")}`,
 	async () => {
 		const featureId = uniqueTestId("atmn_stale_id");
 
@@ -30,8 +30,9 @@ test.concurrent(
 			const internalId = scenario
 				.files()
 				.get("autumn.config.ts")
-				?.match(new RegExp(`internalId: "([^"]+)", featureId: "${featureId}"`))
-				?.[1];
+				?.match(
+					new RegExp(`internalId: "([^"]+)", featureId: "${featureId}"`),
+				)?.[1];
 			expect(internalId).toBeTruthy();
 
 			// Deleted through the API directly — the dashboard/another tool, not
@@ -46,11 +47,22 @@ test.concurrent(
 				featureId,
 			);
 
-			const before = scenario.files();
-			await expect(scenario.push()).rejects.toThrow(
-				new RegExp(`No feature exists for internal_id ${internalId}`),
+			await scenario.push();
+			const recreated = (await scenario.client.get({})) as {
+				features: { id: string; internalId?: string | null }[];
+			};
+			const row = recreated.features.find(
+				(feature) => feature.id === featureId,
 			);
-			expect([...scenario.files().entries()]).toEqual([...before.entries()]);
+			expect(row?.internalId).toBeTruthy();
+			expect(row?.internalId).not.toBe(internalId);
+			const rewritten = scenario
+				.files()
+				.get("autumn.config.ts")
+				?.match(
+					new RegExp(`internalId: "([^"]+)", featureId: "${featureId}"`),
+				)?.[1];
+			expect(rewritten).toBe(row?.internalId);
 		} finally {
 			scenario.cleanup();
 		}
