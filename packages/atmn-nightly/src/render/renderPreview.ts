@@ -131,10 +131,31 @@ export const renderPreview = ({
 };
 
 /** True when there is nothing to apply — lets push skip the write entirely. */
+/** A row is work when its own action is, or when anything nested under it
+ * (a variant, a license link, a sibling version) carries a changing action. */
+const rowHasWork = (row: PreviewChange): boolean => {
+	if (isChange(row)) return true;
+	return Object.values(row as Record<string, unknown>).some(
+		(value) =>
+			Array.isArray(value) &&
+			value.some(
+				(entry) =>
+					entry !== null &&
+					typeof entry === "object" &&
+					Object.entries(entry as Record<string, unknown>).some(
+						([key, nested]) =>
+							key.endsWith("ction") &&
+							typeof nested === "string" &&
+							APPLIED_ACTIONS.has(nested),
+					),
+			),
+	);
+};
+
 export const previewIsEmpty = ({
 	preview,
 }: {
 	preview: CatalogPreview;
 }): boolean =>
-	(preview.features ?? []).filter(isChange).length === 0 &&
-	(preview.plans ?? []).filter(isChange).length === 0;
+	!(preview.features ?? []).some(rowHasWork) &&
+	!(preview.plans ?? []).some(rowHasWork);
