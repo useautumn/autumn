@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { COLLECTIONS } from "../../generated/emit";
 import { insertFirstProperty } from "../../surgery/insertFirstProperty";
+import { setFixtureProperty } from "../../surgery/setFixtureProperty";
 import { listSourceFiles } from "../pull/listSourceFiles";
 import { locateFixture } from "../pull/locateFixture";
 
@@ -41,7 +42,7 @@ export const identityRowsFromCatalog = ({
 		}),
 	);
 
-const HAS_INTERNAL_ID = /\binternalId\s*:/;
+const INTERNAL_ID_VALUE = /\binternalId\s*:\s*"([^"]*)"/;
 
 /**
  * Every row's stable id is written into its fixture when the fixture lacks one,
@@ -86,16 +87,30 @@ export const backfillInternalIds = ({
 					: undefined,
 			});
 			// Not a plain literal: the row still matches by public id next push.
-			if (located === null || HAS_INTERNAL_ID.test(located.node.text()))
-				continue;
-			const updated = insertFirstProperty({
-				source: located.source,
-				builder: spec.builder,
-				idField: located.idField,
-				id: located.id,
-				where: located.where,
-				property: `internalId: ${JSON.stringify(row.internalId)}`,
-			});
+			if (located === null) continue;
+			const stated = INTERNAL_ID_VALUE.exec(located.node.text())?.[1];
+			if (stated === row.internalId) continue;
+			// A stated id the server did not know was ignored and the row minted
+			// fresh, so the fixture takes the real id in place of the guess.
+			const updated =
+				stated === undefined
+					? insertFirstProperty({
+							source: located.source,
+							builder: spec.builder,
+							idField: located.idField,
+							id: located.id,
+							where: located.where,
+							property: `internalId: ${JSON.stringify(row.internalId)}`,
+						})
+					: setFixtureProperty({
+							source: located.source,
+							builder: spec.builder,
+							idField: located.idField,
+							id: located.id,
+							where: located.where,
+							property: "internalId",
+							value: row.internalId,
+						});
 			if (updated === null) continue;
 			files.set(located.file, updated);
 			backfilled.push(row.id);
