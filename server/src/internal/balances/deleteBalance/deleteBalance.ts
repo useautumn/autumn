@@ -2,6 +2,7 @@ import {
 	cusEntsToUsage,
 	type DeleteBalanceParamsV0,
 	fullCustomerToCustomerEntitlements,
+	isCusEntExpired,
 	isPaidCustomerEntitlement,
 	isPooledBalanceSourceCustomerEntitlement,
 	isSyntheticPooledBalanceCustomerEntitlement,
@@ -94,9 +95,13 @@ export const deleteBalance = async ({
 		}
 	}
 
+	// Recalculation redistributes usage onto live balances, so an expired row's
+	// historical usage must never enter the input.
 	const usageToRecalculate = recalculate_balances
 		? cusEntsToUsage({
-				cusEnts: customerEntitlements,
+				cusEnts: customerEntitlements.filter(
+					(cusEnt) => !isCusEntExpired({ cusEnt }),
+				),
 				entityId: fullCustomer.entity?.id ?? undefined,
 			})
 		: 0;
