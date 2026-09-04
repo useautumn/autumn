@@ -115,8 +115,7 @@ export const findEntitlementPriceSuccessor = ({
 	for (const currentMatchPrecision of matchPrecisions) {
 		const candidate = candidateEntitlementPrices.find(
 			(candidateEntitlementPrice) => {
-				const candidateEntitlementId =
-					candidateEntitlementPrice.entitlement.id;
+				const candidateEntitlementId = candidateEntitlementPrice.entitlement.id;
 				if (excludedEntitlementIds?.has(candidateEntitlementId)) return false;
 
 				return entitlementPricesMatchAtPrecision({
