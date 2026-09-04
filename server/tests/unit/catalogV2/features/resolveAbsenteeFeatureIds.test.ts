@@ -59,13 +59,19 @@ test("A2 a row nobody mentions is proposed for removal", () => {
 	expect(absent).toEqual(["forgotten"]);
 });
 
-test("A3 an unknown internal_id is refused with the id in the message", () => {
-	expect(() =>
+test("A3 an unknown internal_id falls back to feature_id", () => {
+	expect(
 		resolveCurrentFeature({
 			features: [feature({ id: "seats", internalId: "fe_1" })],
 			entry: { feature_id: "seats", internal_id: "fe_nope" },
+		})?.id,
+	).toBe("seats");
+	expect(
+		resolveCurrentFeature({
+			features: [feature({ id: "seats", internalId: "fe_1" })],
+			entry: { feature_id: "brand_new", internal_id: "fe_nope" },
 		}),
-	).toThrow(/fe_nope/);
+	).toBeNull();
 	expect(
 		resolveCurrentFeature({
 			features: [feature({ id: "seats", internalId: "fe_1" })],

@@ -6,11 +6,11 @@ import {
 	type PlanLicenseParams,
 	toCreatePlanItemParams,
 } from "@autumn/shared";
-import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
 import {
 	applyLicenseParamsPatch,
 	fullPlanLicenseToParams,
 } from "@/internal/catalogV2/actions/buildPlanChange/buildPlanLicenseChanges/toPlanLicenseParams";
+import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
 import type { ResolvedPlanParams } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
 const clonedLicenses = ({
@@ -53,7 +53,10 @@ export const initVariantPlanParams = ({
 				items: basePlan.items,
 				free_trial: basePlan.free_trial,
 			};
-	const billingControls = billingControlsFromColumns(baseFullProduct);
+	// The overlay's billing controls win over the base's columns.
+	const billingControls =
+		variant.customize?.billing_controls ??
+		billingControlsFromColumns(baseFullProduct);
 	const freeTrial = applied.free_trial
 		? {
 				...applied.free_trial,
