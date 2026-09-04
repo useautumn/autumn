@@ -43,7 +43,6 @@ import {
 	canRecalculateCustomerBalances,
 } from "./customerBalanceUtils";
 
-/** Expired entitlements are display-only: they must never feed sums or usage bars. */
 function getActiveRowEntitlements(
 	row: Row<CustomerBalanceRowData>,
 ): FullCusEntWithFullCusProduct[] {
@@ -182,7 +181,6 @@ function SubRowUsageCell({
 	);
 }
 
-/** Frozen balance, greyed out — no aggregation hooks run for an expired row. */
 function ExpiredUsageCell({
 	ent,
 	entityId,
@@ -249,7 +247,6 @@ function BalanceExpiryIcon({
 }) {
 	const expiredByClock = expiresAt != null && expiresAt <= Date.now();
 	const hasExpired = forceExpired || expiredByClock;
-	// A row expired only by its plan has no meaningful date of its own.
 	const label = hasExpired ? "Expired" : "Expires";
 	const date =
 		expiredByClock || !hasExpired ? ` ${formatChipDate(expiresAt)}` : "";
@@ -376,7 +373,6 @@ function SubRowBarCell({
 	);
 }
 
-/** Keeps the layout slot for an expired row: expiry icon only, no bar or chip. */
 function ExpiredBarCell({ ent }: { ent: FullCusEntWithFullCusProduct }) {
 	return (
 		<div className="flex gap-3 items-center opacity-50">
@@ -432,11 +428,9 @@ function BalanceActionsCell({
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) {
-	// Delete is the only cleanup path for an expired loose row.
 	const expired = isCusEntDisplayExpired({ cusEnt: row.original });
 
 	const isParentRow = row.depth === 0;
-	// Plan balances are strictly view-only; only loose rows keep delete.
 	const canDelete =
 		!row.getCanExpand() &&
 		canDeleteCustomerBalance({ balance: row.original }) &&
@@ -458,8 +452,7 @@ function BalanceActionsCell({
 			: [row.original]
 	).filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
 
-	// A row with no actions still reserves the slot, so the column edge stays
-	// straight rather than going ragged down the table.
+	// Reserve the slot, or the column edge goes ragged.
 	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
 		return (
 			<div className="flex justify-end" aria-hidden>

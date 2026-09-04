@@ -26,14 +26,13 @@ export function filterCustomerFeatureUsage({
 			) {
 				return false;
 			}
-			// Loose ents: live ones follow "active", time-expired ones follow "expired"
 			if (!ent.customer_product) {
 				return isCusEntExpired({ cusEnt: ent }) ? showExpired : showActive;
 			}
 			if (ent.customer_product.status === CusProductStatus.Expired) {
 				return showExpired;
 			}
-			// Scheduled products stay hidden from balance views regardless
+			// Scheduled products stay hidden from balance views.
 			if (ent.customer_product.status === CusProductStatus.Scheduled) {
 				return false;
 			}

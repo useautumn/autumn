@@ -119,12 +119,8 @@ export function CustomerBalanceTable({
 			return;
 		}
 
-		// Expired balances are view-only — never open the edit sheet for them
-		// (expanding aggregated sub-rows above stays available).
 		if (isCusEntDisplayExpired({ cusEnt: ent })) return;
 
-		// Single balance or sub-row: open edit sheet directly. Expired
-		// entitlements are excluded — the sheet only ever edits active balances.
 		const featureId = ent.entitlement.feature.id;
 		const ents = (aggregatedMap.get(featureId) || [ent]).filter(
 			(aggregatedEnt) => !isCusEntDisplayExpired({ cusEnt: aggregatedEnt }),
@@ -164,8 +160,7 @@ export function CustomerBalanceTable({
 					mobileCards: true,
 					selectedItemId: getSelectedRowId(),
 					rowClassName: "h-10 py-0",
-					// An expired row without sub-rows has no click target, so it must
-					// not inherit the table's default pointer.
+					// No click target, so it must not inherit the table's pointer.
 					getRowClassName: (balance: CustomerBalanceRowData) =>
 						isCusEntDisplayExpired({ cusEnt: balance }) &&
 						(balance.subRows?.length ?? 0) === 0

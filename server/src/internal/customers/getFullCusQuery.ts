@@ -400,9 +400,6 @@ const buildSubscriptionsCTE = (
   `;
 };
 
-// Expiry predicate for LOOSE (extra) customer entitlements only. Internal
-// dashboard reads can bypass it to surface expired loose balances; public
-// hydration paths always keep it.
 const looseEntitlementExpiryFilterSql = ({
 	includeExpiredLooseEntitlements,
 }: {
@@ -417,8 +414,7 @@ const buildExtraEntitlementsCTE = ({
 }: {
 	includeExpiredLooseEntitlements?: boolean;
 } = {}) => {
-	// Expired loose ents ride a SEPARATE budget (20) so they can never crowd
-	// active ones out of the shared active limit (30).
+	// A separate budget, so expired rows can never crowd out active ones.
 	const expiredBranch = includeExpiredLooseEntitlements
 		? sql`
         UNION ALL
@@ -549,7 +545,6 @@ export const getFullCusQuery = ({
 	entityId?: string;
 	cusProductLimit: number;
 	entitiesLimit?: number;
-	/** Internal dashboard only: also hydrate EXPIRED loose entitlements. */
 	includeExpiredLooseEntitlements?: boolean;
 }) => {
 	const sqlChunks: SQL[] = [];

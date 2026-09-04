@@ -35,7 +35,6 @@ export const fullCustomerToCustomerEntitlements = ({
 	entity?: Entity;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 	isRefund?: boolean;
-	/** Dashboard-only: keep expired loose rows so they stay deletable. */
 	includeExpired?: boolean;
 }) => {
 	const cusProducts = fullCustomer.customer_products;
@@ -110,7 +109,6 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
-	// A cached fullCustomer can hold rows that have since expired.
 	const now = Date.now();
 	if (!includeExpired) {
 		cusEnts = cusEnts.filter((cusEnt) => !isCusEntExpired({ cusEnt, now }));

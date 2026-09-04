@@ -102,10 +102,7 @@ export class CusService {
 		skipReset?: boolean;
 		/** Overrides the org-configured customer-product page size. */
 		cusProductLimit?: number;
-		/**
-		 * Internal dashboard only: also hydrate EXPIRED loose entitlements into
-		 * extra_customer_entitlements. Must stay false for public API paths.
-		 */
+		/** Must stay false on public API paths. */
 		includeExpiredLooseEntitlements?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
@@ -146,8 +143,7 @@ export class CusService {
 					!withTrialsUsed &&
 					!withEvents &&
 					!entityId &&
-					// The flat-model query has no expired-loose hydration; fall back to
-					// the legacy query so the flag takes effect.
+					// The flat-model query has no expired-loose hydration.
 					!includeExpiredLooseEntitlements;
 
 				const query = useFlatModel

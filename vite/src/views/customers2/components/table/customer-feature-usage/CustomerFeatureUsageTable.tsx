@@ -105,7 +105,7 @@ export function CustomerFeatureUsageTable() {
 		[features],
 	);
 
-	// Same nuqs key as the Plans table filter: one Status filter drives both.
+	// Same nuqs key as the Plans table filter.
 	const [productStatuses] = useQueryState(
 		"customerProductsStatuses",
 		parseAsArrayOf(
@@ -134,7 +134,6 @@ export function CustomerFeatureUsageTable() {
 				cusEnts: deduplicatedCusEnts,
 				featuresMap,
 			}).sort((a, b) => {
-				// Expired (view-only) rows sink to the bottom of the table
 				const aExpired = isCusEntDisplayExpired({ cusEnt: a });
 				const bExpired = isCusEntDisplayExpired({ cusEnt: b });
 				if (aExpired !== bExpired) return aExpired ? 1 : -1;
@@ -178,8 +177,7 @@ export function CustomerFeatureUsageTable() {
 		[meteredEnts],
 	);
 
-	// Expired entitlements never surface as flags — the flags section has no
-	// greyed-out state, and an expired boolean grant should read as not granted.
+	// The flags section has no greyed state, so an expired flag reads as ungranted.
 	const booleanEnts = useMemo(
 		() =>
 			deduplicatedCusEnts.filter(

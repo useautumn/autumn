@@ -28,8 +28,6 @@ export const deleteBalance = async ({
 }: {
 	ctx: AutumnContext;
 	params: DeleteBalanceParamsV0;
-	/** Dashboard-only: allow deleting EXPIRED loose balances (the only cleanup
-	 *  mechanism for them — the selector below filters them out otherwise). */
 	includeExpired?: boolean;
 }) => {
 	const { customer_id, entity_id, feature_id, recalculate_balances } = params;
@@ -51,8 +49,6 @@ export const deleteBalance = async ({
 		includeExpiredLooseEntitlements: includeExpired,
 	});
 
-	// 2. Get balance. includeExpired keeps expired loose rows in the selection so
-	// the dashboard can delete them — every other filter still applies.
 	const customerEntitlements = fullCustomerToCustomerEntitlements({
 		fullCustomer,
 		featureId: feature_id,
@@ -95,8 +91,7 @@ export const deleteBalance = async ({
 		}
 	}
 
-	// Recalculation redistributes usage onto live balances, so an expired row's
-	// historical usage must never enter the input.
+	// Expired usage must never be redistributed onto live balances.
 	const usageToRecalculate = recalculate_balances
 		? cusEntsToUsage({
 				cusEnts: customerEntitlements.filter(

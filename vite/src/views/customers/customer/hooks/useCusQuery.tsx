@@ -68,8 +68,7 @@ export const useCusQuery = ({
 
 	const effectiveEntityId = entityAlreadyLoaded ? null : entityId;
 
-	// Same nuqs key as the Plans filter: expired rows are fetched only when
-	// "Expired" is among the selected statuses.
+	// Same nuqs key as the Plans filter.
 	const [productStatuses] = useQueryState(
 		"customerProductsStatuses",
 		parseAsArrayOf(

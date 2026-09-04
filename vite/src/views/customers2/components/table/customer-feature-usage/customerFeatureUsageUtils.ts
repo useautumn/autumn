@@ -92,7 +92,6 @@ export function deduplicateEntitlements({
 				combined.push(ent);
 			}
 		} else {
-			// Expired entitlements stay visible as sub-rows but never feed the sums.
 			const activeEnts = ents.filter(
 				(ent) => !isCusEntDisplayExpired({ cusEnt: ent }),
 			);
@@ -100,11 +99,10 @@ export function deduplicateEntitlements({
 				isCusEntDisplayExpired({ cusEnt: ent }),
 			);
 
-			// An all-expired feature mirrors its expired values rather than showing zero.
+			// An all-expired feature mirrors its values rather than showing zero.
 			const mathEnts = activeEnts.length > 0 ? activeEnts : expiredEnts;
 			const first = mathEnts[0];
 
-			// Active first, so expired sub-rows sort to the bottom.
 			aggregatedMap.set(featureId, [...activeEnts, ...expiredEnts]);
 
 			// When entityId is present, use entity-specific balances
