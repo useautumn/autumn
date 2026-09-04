@@ -51,6 +51,15 @@ for (const prepaidOnly of [true, false] as const) {
 		});
 
 		try {
+			// License overflow billing (prepaidOnly: false) is not yet supported
+			// server-side — validateLicenseBillingMode rejects it unconditionally.
+			if (!prepaidOnly) {
+				await expect(scenario.push()).rejects.toThrow(
+					/License overflow billing \(prepaid_only: false\) is not yet available\. Set prepaid_only to true\./,
+				);
+				return;
+			}
+
 			const { freshWire } = await expectRoundTrip({ scenario });
 
 			const catalog = (await scenario.client.get({})) as unknown as {

@@ -80,7 +80,7 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
 				});
 
 				const pulled = await scenario.pull();
-				expect(pulled.replaced).toContain(planId);
+				expect(pulled.replaced).toContain(`${planId}@v1`);
 
 				const files = scenario.files();
 				expect(files.get(layout.fixtureFile)).toContain("amount: 30");

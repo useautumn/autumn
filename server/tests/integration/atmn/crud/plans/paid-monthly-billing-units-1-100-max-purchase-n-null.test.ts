@@ -35,7 +35,9 @@ for (const billingUnits of BILLING_UNITS) {
 							items: `
 				{
 					featureId: "seats",
-					included: 1,
+					// A multiple of billingUnits: included usage must divide evenly
+					// into the billing units when a feature carries both.
+					included: ${billingUnits},
 					price: {
 						billingMethod: "prepaid",
 						interval: "month",
@@ -54,12 +56,17 @@ for (const billingUnits of BILLING_UNITS) {
 					const pro = plans.find((plan) => plan.plan_id === "pro");
 					const items = pro?.items as Array<Record<string, unknown>>;
 					const item = items.find((entry) => entry.feature_id === "seats");
-					expect(item?.price).toEqual(
-						expect.objectContaining({
-							billing_units: billingUnits,
-							max_purchase: maxPurchase,
-						}),
+					const price = item?.price as Record<string, unknown> | undefined;
+					expect(price).toEqual(
+						expect.objectContaining({ billing_units: billingUnits }),
 					);
+					// Pull omits a null field rather than writing it explicitly, so a
+					// null max_purchase round-trips as absent, not `max_purchase: null`.
+					if (maxPurchase === null) {
+						expect(price?.max_purchase).toBeUndefined();
+					} else {
+						expect(price?.max_purchase).toBe(maxPurchase);
+					}
 				} finally {
 					scenario.cleanup();
 				}

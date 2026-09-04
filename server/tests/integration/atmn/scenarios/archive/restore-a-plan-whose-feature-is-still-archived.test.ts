@@ -37,11 +37,16 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// Archive both the plan and the feature it items on together.
+			// Archive both the plan and the feature it items on together. A
+			// feature restatement is the whole desired row, not a patch, so
+			// archiving still needs its other required fields (name, type) —
+			// unlike a plan, which the server merges by id.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	features: [feature({ featureId: "seats", archived: true })],
+	features: [
+		feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false, archived: true }),
+	],
 	plans: [plan({ planId: "pro", archived: true })],
 }`,
 				}),

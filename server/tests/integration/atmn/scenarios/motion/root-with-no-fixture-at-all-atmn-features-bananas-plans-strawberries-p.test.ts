@@ -7,12 +7,12 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const featureImport = `import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";\n`;
 const planImport = `import { type Plan, plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";\n`;
@@ -73,8 +73,12 @@ export const pee: Plan[] = [];
 			const planVersions =
 				(wire.plan_versions as Record<string, unknown>[]) ?? [];
 
-			// A remote-only history row: a second version of `pro` under a slug
-			// the local config has never seen, addressed by plan_id + slug alone.
+			// A remote-only history row: mint `pro` a v2 the config never
+			// mentioned, restating its v1 content with a changed price in
+			// `plan_versions` (a genuine diff, not a no-op) — the same shape a
+			// second config directory uses to push a new version (see
+			// pull-plans.test.ts). The server moves the existing v1 row to
+			// history rather than creating a new one.
 			await scenario.client.update({
 				...wire,
 				features: [
@@ -85,14 +89,23 @@ export const pee: Plan[] = [];
 						type: "boolean",
 					},
 				],
-				plans: [...plans, { plan_id: remotePlanId, name: "Remote Plan" }],
+				plans: [
+					...plans.filter((row) => row.plan_id !== pro),
+					{
+						plan_id: pro,
+						name: "Pro",
+						version_slug: "v2",
+						price: { amount: 59, interval: "month" },
+					},
+					{ plan_id: remotePlanId, name: "Remote Plan" },
+				],
 				plan_versions: [
 					...planVersions,
 					{
 						plan_id: pro,
 						name: "Pro",
-						version_slug: "v0",
-						price: { amount: 39, interval: "month" },
+						version_slug: "v1",
+						price: { amount: 45, interval: "month" },
 					},
 				],
 			});
@@ -117,7 +130,10 @@ export const pee: Plan[] = [];
 			// `[...poo, ...pee]`, which is pee.
 			expect(after.get("poo.ts")).toBe(before.get("poo.ts"));
 			expect(after.get("pee.ts")).not.toBe(before.get("pee.ts"));
-			expect(after.get("pee.ts")).toContain(`versionSlug: "v0"`);
+			// `pro`'s old v1 row moved to history: the only fixture holding
+			// `versionSlug: "v1"` once it is no longer the sole/default version.
+			expect(after.get("pee.ts")).toContain(`planId: "${pro}"`);
+			expect(after.get("pee.ts")).toContain(`versionSlug: "v1"`);
 		} finally {
 			scenario.cleanup();
 		}

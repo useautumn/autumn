@@ -59,7 +59,7 @@ export default atmn({
 				});
 
 				const pulled = await scenario.pull();
-				expect(pulled.replaced).toContain(planId);
+				expect(pulled.replaced).toContain(`${planId}@v1`);
 				expect(scenario.files().get("autumn.config.ts")).toContain(
 					"amount: 30",
 				);

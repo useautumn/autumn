@@ -44,8 +44,8 @@ test.concurrent(
 			scenario.writeConfig(configFor({ planId, amount: 99 }));
 
 			const pulled = await scenario.pull();
-			expect(pulled.replaced).toContain(planId);
-			expect(pulled.output).toContain(`~ ${planId}`);
+			expect(pulled.replaced).toContain(`${planId}@v1`);
+			expect(pulled.output).toContain(`~ ${planId}@v1`);
 
 			const text = scenario.files().get("autumn.config.ts") ?? "";
 			expect(text).toContain("amount: 20");

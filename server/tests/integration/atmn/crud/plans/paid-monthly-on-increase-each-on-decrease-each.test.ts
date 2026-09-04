@@ -10,8 +10,14 @@ import {
 	everyFeatureType,
 	paidMonthly,
 } from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import {
+	expectPreviewNone,
+	expectRoundTrip,
+} from "@tests/utils/atmnUtils/expectRoundTrip.js";
+import {
+	atmnConfigSource,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
@@ -29,52 +35,93 @@ const ON_DECREASE = [
 	"no_prorations",
 ] as const;
 
-for (const onIncrease of ON_INCREASE) {
-	for (const onDecrease of ON_DECREASE) {
-		test.concurrent(
-			`paid [monthly] [on_increase: ${onIncrease}] × [on_decrease: ${onDecrease}]`,
-			async () => {
-				const scenario = await initAtmnScenario({
-					setup: [
-						s.platform.create({
-							userEmail: `${uniqueTestId("atmn")}@autumn.test`,
-						}),
-					],
-					config: configBody({
-						features: everyFeatureType,
+/** bill_immediately isn't supported on a prepaid item price — every other
+ * on_increase is valid, so it's asserted separately as a clean rejection. */
+const SUPPORTED_ON_INCREASE = ON_INCREASE.filter(
+	(onIncrease) => onIncrease !== "bill_immediately",
+);
+
+const VALID_COMBOS = SUPPORTED_ON_INCREASE.flatMap((onIncrease) =>
+	ON_DECREASE.map((onDecrease) => ({ onIncrease, onDecrease })),
+);
+
+const prepaidSeatItem = ({
+	onIncrease,
+	onDecrease,
+}: {
+	onIncrease: string;
+	onDecrease: string;
+}): string => `
+			{
+				featureId: "seats",
+				included: 1,
+				price: {
+					billingMethod: "prepaid",
+					interval: "month",
+					amount: 10,
+					billingUnits: 1,
+				},
+				proration: { onIncrease: "${onIncrease}", onDecrease: "${onDecrease}" },
+			},`;
+
+test("paid [monthly] proration: every on_increase × on_decrease combination", async () => {
+	// One scenario, one plan reused in place for the whole matrix — a fresh
+	// org (or a fresh Stripe-backed plan) per cell hits real limits at this
+	// cell count.
+	const scenario = await initAtmnScenario({
+		setup: [
+			s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+		],
+		config: configBody({
+			features: everyFeatureType,
+			plans: paidMonthly({ items: prepaidSeatItem(VALID_COMBOS[0]) }),
+		}),
+	});
+
+	try {
+		// Round trip on the first combo, before any further in-place mutation
+		// piles up — proves push/pull stay consistent for a proration item.
+		await expectRoundTrip({ scenario });
+
+		for (const { onIncrease, onDecrease } of VALID_COMBOS) {
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: configBody({
 						plans: paidMonthly({
-							items: `
-				{
-					featureId: "seats",
-					included: 1,
-					price: {
-						billingMethod: "prepaid",
-						interval: "month",
-						amount: 10,
-						billingUnits: 1,
-					},
-					proration: { onIncrease: "${onIncrease}", onDecrease: "${onDecrease}" },
-				},`,
+							items: prepaidSeatItem({ onIncrease, onDecrease }),
 						}),
 					}),
-				});
+				}),
+			);
+			await scenario.push();
+			// A clean preview right after push proves the server stored exactly
+			// this on_increase/on_decrease pair, not just that push succeeded.
+			await expectPreviewNone({
+				client: scenario.client,
+				wire: await scenario.wireFromConfig(),
+			});
+		}
 
-				try {
-					const { freshWire } = await expectRoundTrip({ scenario });
-					const plans = freshWire.plans as Array<Record<string, unknown>>;
-					const pro = plans.find((plan) => plan.plan_id === "pro");
-					const items = pro?.items as Array<Record<string, unknown>>;
-					const item = items.find((entry) => entry.feature_id === "seats");
-					expect(item?.proration).toEqual(
-						expect.objectContaining({
-							on_increase: onIncrease,
-							on_decrease: onDecrease,
+		// bill_immediately is rejected outright on a prepaid item, for every
+		// on_decrease — a direct rejection, not a round trip.
+		for (const onDecrease of ON_DECREASE) {
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: configBody({
+						plans: paidMonthly({
+							items: prepaidSeatItem({
+								onIncrease: "bill_immediately",
+								onDecrease,
+							}),
 						}),
-					);
-				} finally {
-					scenario.cleanup();
-				}
-			},
-		);
+					}),
+				}),
+			);
+			await expect(scenario.push()).rejects.toThrow(
+				/Bill immediately is not supported for prepaid/,
+			);
+		}
+	} finally {
+		scenario.cleanup();
 	}
-}
+});

@@ -46,14 +46,14 @@ test.concurrent(
 			});
 
 			const withMappings = await scenario.pull({ includeMappings: true });
-			expect(withMappings.appended).toContain(planId);
+			expect(withMappings.appended).toContain(`${planId}@v1`);
 			expect(scenario.files().get("autumn.config.ts")).toContain("processors:");
 
 			// Reset the local file back to empty so the plan is server-only again.
 			scenario.writeConfig(emptyPlansConfig);
 
 			const withoutMappings = await scenario.pull({ includeMappings: false });
-			expect(withoutMappings.appended).toContain(planId);
+			expect(withoutMappings.appended).toContain(`${planId}@v1`);
 			expect(scenario.files().get("autumn.config.ts")).not.toContain(
 				"processors:",
 			);

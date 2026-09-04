@@ -45,7 +45,11 @@ test.concurrent(
 		try {
 			await scenario.push();
 			scenario.writeConfig(
-				atmnConfigSource({ body: `{ plans: [${v1}, ${v2Draft}] }` }),
+				atmnConfigSource({
+					body: `{
+	plans: [${v1} ${v2Draft}],
+}`,
+				}),
 			);
 			await scenario.push();
 
@@ -58,18 +62,17 @@ test.concurrent(
 
 			await scenario.pull();
 
+			// Membership is state: the wire has one `plans` array, and `active`
+			// on each row is what says plans vs planVersions — not a separate key.
 			const wire = (await scenario.wireFromConfig()) as {
 				plans?: WirePlanRow[];
-				planVersions?: WirePlanRow[];
 			};
 			const plans = wire.plans ?? [];
-			const planVersions = wire.planVersions ?? [];
 
 			expect(findPlan({ rows: plans, versionSlug: "v2" })).toEqual(
 				expect.objectContaining({ active: true }),
 			);
-			expect(findPlan({ rows: plans, versionSlug: "v1" })).toBeUndefined();
-			expect(findPlan({ rows: planVersions, versionSlug: "v1" })).toEqual(
+			expect(findPlan({ rows: plans, versionSlug: "v1" })).toEqual(
 				expect.objectContaining({ active: false }),
 			);
 

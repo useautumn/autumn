@@ -31,6 +31,9 @@ test.concurrent(
 
 		try {
 			await scenario.push();
+			// internalId is only backfilled into the fixture by a pull, not by
+			// the push that created the row.
+			await scenario.pull();
 			const before = scenario.files().get(CONFIG_PATH);
 			if (before === undefined)
 				throw new Error("config file missing after push");
@@ -39,9 +42,9 @@ test.concurrent(
 				before.indexOf('planId: "pro"'),
 			);
 			// internalId is backfilled as the first property, immediately before
-			// the planId it belongs to.
+			// the planId it belongs to, on the same `plan({ ... })` call.
 			const internalIdMatch = before.match(
-				/internalId: "([^"]+)",\s*\n\s*planId: "pro"/,
+				/internalId: "([^"]+)",\s+planId: "pro"/,
 			);
 			if (!internalIdMatch)
 				throw new Error("pro's backfilled internalId not found");

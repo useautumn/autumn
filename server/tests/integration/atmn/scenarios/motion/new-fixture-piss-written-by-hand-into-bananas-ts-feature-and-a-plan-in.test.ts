@@ -7,12 +7,12 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const featureImport = `import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";\n`;
 const planImport = `import { type Plan, plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";\n`;
@@ -79,25 +79,25 @@ export const poo: Plan[] = [];
 				await scenario.push();
 				const beforeHandEdit = scenario.files();
 
+				// A hand-edit adds ONE new fixture; it must not retype the file's
+				// existing row and lose the internalId push already backfilled.
 				if (target.kind === "feature") {
+					const existing = beforeHandEdit.get("bananas.ts") ?? "";
 					scenario.writeFile(
 						"bananas.ts",
-						`${featureImport}
-export const bananas = [
-	feature({ featureId: "${seats}", name: "Seats", type: "metered", consumable: false }),
-	feature({ featureId: "${pissId}", name: "Piss", type: "boolean" }),
-];
-`,
+						existing.replace(
+							"];\n",
+							`\tfeature({ featureId: "${pissId}", name: "Piss", type: "boolean" }),\n];\n`,
+						),
 					);
 				} else if (target.kind === "plan") {
+					const existing = beforeHandEdit.get("strawberries.ts") ?? "";
 					scenario.writeFile(
 						"strawberries.ts",
-						`${planImport}
-export const strawberries: Plan[] = [
-	plan({ planId: "${pro}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
-	plan({ planId: "${pissId}", name: "Piss", price: { amount: 5, interval: "month" } }),
-];
-`,
+						existing.replace(
+							"];\n",
+							`\tplan({ planId: "${pissId}", name: "Piss", price: { amount: 5, interval: "month" } }),\n];\n`,
+						),
 					);
 				} else {
 					// A second, older version row for the already-active `pro` plan.

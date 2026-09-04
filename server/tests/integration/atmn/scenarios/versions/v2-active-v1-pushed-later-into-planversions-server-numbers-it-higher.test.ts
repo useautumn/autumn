@@ -70,16 +70,18 @@ test.concurrent(
 			);
 
 			await scenario.pull();
+
+			// Membership is state: the wire has one `plans` array, and `active`
+			// on each row is what says plans vs planVersions — not a separate key.
 			const wire = (await scenario.wireFromConfig()) as {
 				plans?: WirePlanRow[];
-				planVersions?: WirePlanRow[];
 			};
 			const plans = wire.plans ?? [];
-			const planVersions = wire.planVersions ?? [];
 
 			// The higher-numbered-but-inactive v1 stays history, not a draft.
-			expect(planVersions.some((row) => row.version_slug === "v1")).toBe(true);
-			expect(plans.some((row) => row.version_slug === "v1")).toBe(false);
+			expect(plans.find((row) => row.version_slug === "v1")).toEqual(
+				expect.objectContaining({ active: false }),
+			);
 			expect(plans.find((row) => row.version_slug === "v2")).toEqual(
 				expect.objectContaining({ active: true }),
 			);

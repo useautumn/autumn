@@ -51,7 +51,7 @@ export default atmn({
 			});
 
 			const pulled = await scenario.pull();
-			expect(pulled.replaced).toContain(planId);
+			expect(pulled.replaced).toContain(`${planId}@v1`);
 
 			const text = scenario.files().get("autumn.config.ts") ?? "";
 			expect(text).toContain("// Top-level catalog comment.");
