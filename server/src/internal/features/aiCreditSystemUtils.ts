@@ -145,7 +145,12 @@ const computeCost = ({
 	cost: ModelsDevCost;
 	tokens: TokenInput;
 	markup: number;
-}): { cost: number; baseCost: number; tierApplied: boolean; rates: ModelCostRates } => {
+}): {
+	cost: number;
+	baseCost: number;
+	tierApplied: boolean;
+	rates: ModelCostRates;
+} => {
 	const cacheRead = tokens.cacheRead ?? 0;
 	const cacheWrite = tokens.cacheWrite ?? 0;
 	const audioInput = tokens.audioInput ?? 0;

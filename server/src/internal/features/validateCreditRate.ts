@@ -1,4 +1,4 @@
-import type { CreditTier } from "@autumn/shared";
+import { type CreditTier, findCreditTierViolations } from "@autumn/shared";
 
 type CreditRate = {
 	tier_behavior?: "graduated";
@@ -22,43 +22,17 @@ export const validateCreditRate = ({
 		}
 
 		const tiers = rate.tiers ?? [];
-		let previousBoundary = 0;
-		for (const [index, tier] of tiers.entries()) {
+		for (const tier of tiers) {
 			const creditAmount = Number(tier.credit_amount);
 			if (!Number.isFinite(creditAmount) || creditAmount < 0) {
 				invalidCreditSystem("Tier credit costs must be zero or greater.");
 			}
 			tier.credit_amount = creditAmount;
-
-			const isLastTier = index === tiers.length - 1;
-			if (tier.to === "inf") {
-				if (!isLastTier) {
-					invalidCreditSystem(
-						"Only the final graduated tier may use an infinity boundary.",
-					);
-				}
-				continue;
-			}
-
-			const boundary = Number(tier.to);
-			if (
-				!Number.isFinite(boundary) ||
-				boundary <= 0 ||
-				boundary <= previousBoundary
-			) {
-				invalidCreditSystem(
-					"Graduated tier boundaries must be positive and strictly increasing.",
-				);
-			}
-			if (isLastTier) {
-				invalidCreditSystem(
-					"The final graduated tier must use an infinity boundary.",
-				);
-			}
-
-			tier.to = boundary;
-			previousBoundary = boundary;
+			if (tier.to !== "inf") tier.to = Number(tier.to);
 		}
+
+		const [violation] = findCreditTierViolations(tiers.map((tier) => tier.to));
+		if (violation) invalidCreditSystem(violation.message);
 		return;
 	}
 

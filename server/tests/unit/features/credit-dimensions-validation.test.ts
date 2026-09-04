@@ -91,7 +91,7 @@ describe("credit dimension validation", () => {
 					},
 				},
 			},
-			/infinity boundary/,
+			/'inf' boundary/,
 		);
 	});
 

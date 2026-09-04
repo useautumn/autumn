@@ -7,10 +7,15 @@ import { scaleCreditAmount } from "./scaleCreditAmount.js";
 
 export type { EventProperties } from "./matchesEventProperties.js";
 
-/** A rate-card row with its dimension rules applied: a plain flat or graduated rate, plus which dimension won. */
-export type ResolvedCreditSchemaItem = CreditSchemaItem & {
-	dimension_name?: string;
-};
+/**
+ * A rate-card row with its dimension rules applied: the rules are spent, so the
+ * result is a plain flat or graduated rate plus the name of the dimension that won.
+ */
+type WithoutRules<T> = T extends unknown
+	? Omit<T, "dimensions" | "multipliers"> & { dimension_name?: string }
+	: never;
+
+export type ResolvedCreditSchemaItem = WithoutRules<CreditSchemaItem>;
 
 /**
  * The most specific matching dimension sets the rate (else the row's own);

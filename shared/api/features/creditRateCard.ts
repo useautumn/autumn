@@ -3,6 +3,7 @@ import {
 	CreditDimensionNameSchema,
 	CreditMatchSchema,
 } from "../../models/featureModels/featureConfig/creditConfig.js";
+import { findCreditTierViolations } from "../../utils/featureUtils/creditDimensions/creditTierRules.js";
 
 export const ApiCreditTierSchema = z.object({
 	to: z.union([z.number().positive(), z.enum(["inf"])]).meta({
@@ -18,38 +19,15 @@ const refineGraduatedTiers = (
 	item: { tiers: z.infer<typeof ApiCreditTierSchema>[] },
 	ctx: z.RefinementCtx,
 ) => {
-	let previousBoundary = 0;
-
-	for (const [index, tier] of item.tiers.entries()) {
-		const isLastTier = index === item.tiers.length - 1;
-
-		if (tier.to === "inf") {
-			if (!isLastTier) {
-				ctx.addIssue({
-					code: "custom",
-					message: "Only the final tier may use an 'inf' boundary.",
-					path: ["tiers", index, "to"],
-				});
-			}
-			continue;
-		}
-
-		if (tier.to <= previousBoundary) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Tier boundaries must be strictly increasing.",
-				path: ["tiers", index, "to"],
-			});
-		}
-		previousBoundary = tier.to;
-
-		if (isLastTier) {
-			ctx.addIssue({
-				code: "custom",
-				message: "The final tier must use an 'inf' boundary.",
-				path: ["tiers", index, "to"],
-			});
-		}
+	const violations = findCreditTierViolations(
+		item.tiers.map((tier) => tier.to),
+	);
+	for (const { index, message } of violations) {
+		ctx.addIssue({
+			code: "custom",
+			message,
+			path: ["tiers", index, "to"],
+		});
 	}
 };
 
