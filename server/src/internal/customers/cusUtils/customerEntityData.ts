@@ -9,12 +9,16 @@ import {
 export const shouldAggregateEntityData = ({
 	apiVersion,
 }: {
-	apiVersion: ApiVersionClass;
-}): boolean =>
-	backwardsChangeActive({
+	/** Omit for callers that are not tied to a request's API version. */
+	apiVersion?: ApiVersionClass;
+}): boolean => {
+	if (!apiVersion) return true;
+
+	return backwardsChangeActive({
 		apiVersion,
 		versionChange: V2_3_CustomerEntityData,
 	});
+};
 
 /** FullSubject carries entity rows as pre-computed aggregates, never as products. */
 export const subjectWithoutEntityData = ({

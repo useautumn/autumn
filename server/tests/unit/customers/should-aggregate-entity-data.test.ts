@@ -23,4 +23,8 @@ describe("shouldAggregateEntityData", () => {
 			}),
 		).toBe(false);
 	});
+
+	test("keeps aggregating when apiVersion is missing", () => {
+		expect(shouldAggregateEntityData({})).toBe(true);
+	});
 });
