@@ -14,6 +14,12 @@ export interface VersionMetadata {
  * SemVer ↔ CalVer mappings and metadata
  */
 export const VERSION_REGISTRY: Record<ApiVersion, VersionMetadata> = {
+	[ApiVersion.V2_4]: {
+		semver: ApiVersion.V2_4,
+		calver: "2026-09-04",
+		releasedAt: new Date("2026-09-04").getTime(),
+		description: "Customer object no longer returns entity-level data",
+	},
 	[ApiVersion.V2_3]: {
 		semver: ApiVersion.V2_3,
 		calver: "2026-05-13",
