@@ -26,6 +26,7 @@
   - `granted` is included grant plus prepaid grant.
   - `remaining` is the positive balance left from included/prepaid grants and never goes below 0.
   - `usage` is how much has been used; if usage exceeds granted, the subject is in overage.
+  - A pooled balance is one customer-level balance fed by entity-attached plans whose items have `pooled: true`. Every entity — and the customer — sees the same number, and any of them can spend it. Customer-level purchases (packs, overage) stack beside the pool.
   - Other balance fields, such as reset timing and unlimited status, are usually self-explanatory from the API reference.
 
   </balances>
@@ -49,6 +50,8 @@
 
 - Entity-level balances: one customer subscription grants per-entity limits, useful when all entities get the same features and limits.
 - Entity-level subscriptions: attach plans with `entity_id`, useful when each entity can have its own tier.
+- Pooled balances: entity-attached plans with pooled items feed one shared customer balance any entity can spend — see the pooled-balances concept.
+- License seats: an entity can hold one seat from the customer's license pool — see the licenses concept.
 - Entity-level controls can override customer-level controls for that entity where supported.
 
 </entity-patterns>

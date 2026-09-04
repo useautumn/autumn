@@ -11,6 +11,8 @@ interface PlanTypeBadgesProps {
 	className?: string;
 	iconOnly?: boolean;
 	noIcon?: boolean;
+	/** "sm" for dense surfaces like cards; defaults to the list/editor size. */
+	size?: "default" | "sm";
 }
 
 export const PlanTypeBadges = ({
@@ -18,6 +20,7 @@ export const PlanTypeBadges = ({
 	className,
 	iconOnly = false,
 	noIcon = false,
+	size = "default",
 }: PlanTypeBadgesProps) => {
 	const badges = [];
 
@@ -30,6 +33,7 @@ export const PlanTypeBadges = ({
 				className={className}
 				iconOnly={iconOnly}
 				noIcon={noIcon}
+				size={size}
 			/>,
 		);
 	} else {
@@ -42,6 +46,7 @@ export const PlanTypeBadges = ({
 					className={className}
 					iconOnly={iconOnly}
 					noIcon={noIcon}
+					size={size}
 				/>,
 			);
 		}
@@ -54,6 +59,7 @@ export const PlanTypeBadges = ({
 					className={className}
 					iconOnly={iconOnly}
 					noIcon={noIcon}
+					size={size}
 				/>,
 			);
 		}
@@ -67,6 +73,7 @@ export const PlanTypeBadges = ({
 				className={className}
 				iconOnly={iconOnly}
 				noIcon={noIcon}
+				size={size}
 			/>,
 		);
 	}

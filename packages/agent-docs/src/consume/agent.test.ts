@@ -4,12 +4,12 @@ import { type LeafAgentId, leafAgentPrompt, leafSkillsFor } from "./agent.js";
 describe("leafSkillsFor", () => {
 	test("adds transitive requires after declared skills", () => {
 		expect(leafSkillsFor("leaf").map((skill) => skill.name)).toEqual([
-			"billing",
+			"autumn-billing",
 			"autumn-investigate",
 			"autumn-concepts",
-			"trials",
-			"schedules",
-			"balances",
+			"autumn-trials",
+			"autumn-schedules",
+			"autumn-balances",
 		]);
 	});
 

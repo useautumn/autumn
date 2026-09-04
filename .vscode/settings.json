@@ -43,8 +43,16 @@
 	"typescript.native-preview.tsdk": "/Users/johnyeocx/autumn/main/node_modules/@typescript/native-preview",
 	"githubPullRequests.queries": [
 		{
+			"label": "Local Pull Request Branches",
+			"query": "default"
+		},
+		{
 			"label": "This Stack",
 			"query": "repo:${owner}/${repository} is:open (head:charlie/batch-plan-item-delete) sort:created-desc"
+		},
+		{
+			"label": "All Open",
+			"query": "default"
 		}
 	]
 }

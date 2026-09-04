@@ -1,0 +1,628 @@
+## Spend Limits & Usage Alerts
+
+Spend limits let you cap how much overage a customer (or entity) can accumulate on a usage-based feature. Without a spend limit, usage-based features allow unlimited overage — the customer is billed for whatever they use. With a spend limit, Autumn blocks usage once the overage reaches the configured cap.
+
+> **Example** <br />
+> A customer is on a plan with 1,000 API calls included per month and $1 per 1,000 additional calls. You set a spend limit of 5,000 on the `api_calls` feature. The customer can use up to 6,000 total API calls (1,000 included + 5,000 overage), and is blocked after that.
+
+## Prerequisites
+
+Spend limits apply to **usage-based** features — features with overage pricing that allow usage beyond the included amount. If a feature doesn't allow overage, spend limits have no effect.
+
+You'll need a plan with a usage-based price on the feature you want to cap:
+
+<Tabs>
+<Tab title="CLI">
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const apiCalls = feature({
+  id: 'api_calls',
+  name: 'API Calls',
+  type: 'metered',
+  consumable: true,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: apiCalls.id,
+      included: 1000,
+      price: {
+        amount: 1,
+        interval: 'month',
+        billingUnits: 1000,
+        billingMethod: 'usage_based',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`. Then configure spend limits per customer via the API (see below).
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and create or edit a plan
+2. Add a **consumable** feature (e.g., "API Calls")
+3. Set an **included** amount (e.g., 1,000)
+4. Add a **price** with **Billing method: Usage-based**
+5. Save the plan
+
+Spend limits are then configured per customer via the API.
+
+</Tab>
+</Tabs>
+
+## Configuring spend limits
+
+Spend limits are set per-customer (or per-entity) via the API, not at the plan level. Update a customer's `billingControls` to add spend limits:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    spendLimits: [{
+      featureId: "api_calls",
+      enabled: true,
+      overageLimit: 5000,
+    }],
+  },
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "spend_limits": [{
+            "feature_id": "api_calls",
+            "enabled": True,
+            "overage_limit": 5000,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "spend_limits": [{
+        "feature_id": "api_calls",
+        "enabled": true,
+        "overage_limit": 5000
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Spend limit fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature to apply the spend limit to |
+| `enabled` | boolean | Whether the spend limit is active |
+| `overage_limit` | number (optional) | Maximum overage units allowed beyond the included amount |
+| `skip_overage_billing` | boolean (optional) | When `true`, overage on this feature is never billed — usage beyond the included amount is not added to the customer's invoice. Usage tracking and balance resets are unaffected. |
+
+The `overage_limit` is measured in the same units as the feature's balance — not in dollars. For example, if your feature is "API calls", an `overage_limit` of 5,000 means 5,000 additional API calls beyond the included amount.
+
+## Skipping overage billing
+
+Set `skip_overage_billing` to `true` on a spend limit to let a customer use overage without being charged for it. Usage tracking, `check` responses, and end-of-cycle balance resets all behave as normal — the overage line items are simply never added to the customer's invoice.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    spendLimits: [{
+      featureId: "api_calls",
+      enabled: true,
+      skipOverageBilling: true,
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "spend_limits": [{
+            "feature_id": "api_calls",
+            "enabled": True,
+            "skip_overage_billing": True,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "spend_limits": [{
+        "feature_id": "api_calls",
+        "enabled": true,
+        "skip_overage_billing": true
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+The spend limit must be `enabled` and have a `feature_id`. It can also be set on an [entity](/documentation/customers/feature-entities) — resolution is per-feature, and the nearest configuration wins: entity-level spend limit, then customer-level, then plan-level billing controls.
+
+Combine `skip_overage_billing` with an `overage_limit` to allow a bounded amount of free overage: the customer is blocked once they hit the cap, and the overage they did use is never billed.
+
+## How it works
+
+1. The customer uses a usage-based feature and begins accumulating overage beyond their included amount
+2. On each `check` or `track` call, Autumn computes total overage across all of the customer's usage-based entitlements for that feature
+3. If the total overage would exceed the `overage_limit`, Autumn blocks the usage — `check` returns `allowed: false`, and `track` will not deduct beyond the limit
+
+Spend limits aggregate overage across **all** of the customer's entitlements for a given feature. If a customer has the same feature on multiple plans (e.g., a base plan and an add-on), the total overage across both is compared against the spend limit.
+
+## Checking access with spend limits
+
+When a spend limit is configured, the `check` endpoint accounts for it in the `allowed` response:
+
+<CodeGroup>
+
+```typescript TypeScript
+const { data } = await autumn.check({
+  customerId: "user_123",
+  featureId: "api_calls",
+});
+
+if (!data.allowed) {
+  // Customer has hit their spend limit
+}
+```
+
+```python Python
+response = await autumn.check(
+    customer_id="user_123",
+    feature_id="api_calls",
+)
+
+if not response.allowed:
+    # Customer has hit their spend limit
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "api_calls"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="check response (under spend limit)">
+```json
+{
+  "allowed": true,
+  "customerId": "user_123",
+  "requiredBalance": 1,
+  "balance": {
+    "featureId": "api_calls",
+    "granted": 1000,
+    "remaining": -3000,
+    "usage": 4000,
+    "unlimited": false,
+    "overageAllowed": true,
+    "nextResetAt": 1757192635393
+  }
+}
+```
+The customer has used 4,000 API calls (3,000 overage) against a spend limit of 5,000. They still have 2,000 overage units remaining, so `allowed` is `true`.
+</Expandable>
+
+<Expandable title="check response (at spend limit)">
+```json
+{
+  "allowed": false,
+  "customerId": "user_123",
+  "requiredBalance": 1,
+  "balance": {
+    "featureId": "api_calls",
+    "granted": 1000,
+    "remaining": -5000,
+    "usage": 6000,
+    "unlimited": false,
+    "overageAllowed": true,
+    "nextResetAt": 1757192635393
+  }
+}
+```
+The customer has reached their 5,000 overage limit (6,000 total usage). `allowed` is `false` even though the feature allows overage.
+</Expandable>
+
+## Entity-level spend limits
+
+You can also set spend limits on individual [entities](/documentation/customers/feature-entities) (users, workspaces, etc.) under a customer. Entity-level spend limits override customer-level limits for that entity.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.entities.update({
+  customerId: "user_123",
+  entityId: "workspace_a",
+  billingControls: {
+    spendLimits: [{
+      featureId: "api_calls",
+      enabled: true,
+      overageLimit: 2000,
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.entities.update(
+    customer_id="user_123",
+    entity_id="workspace_a",
+    billing_controls={
+        "spend_limits": [{
+            "feature_id": "api_calls",
+            "enabled": True,
+            "overage_limit": 2000,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/entities/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "entity_id": "workspace_a",
+    "billing_controls": {
+      "spend_limits": [{
+        "feature_id": "api_calls",
+        "enabled": true,
+        "overage_limit": 2000
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+This limits `workspace_a` to 2,000 overage API calls, regardless of the customer-level spend limit.
+
+## Disabling a spend limit
+
+To remove a spend limit, set `enabled` to `false` or omit the `overageLimit`:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    spendLimits: [{
+      featureId: "api_calls",
+      enabled: false,
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "spend_limits": [{
+            "feature_id": "api_calls",
+            "enabled": False,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "spend_limits": [{
+        "feature_id": "api_calls",
+        "enabled": false
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Interaction with max purchase (usage limits)
+
+Plans can also have a **max purchase** limit (also called "usage limit") set on a plan item. This is a per-entitlement cap configured in the plan editor or CLI, and applies globally to all customers on that plan.
+
+When **both** a spend limit and a max purchase are configured for the same feature, the **spend limit takes precedence**. The per-entitlement max purchase is not enforced while a spend limit is active.
+
+> **Example** <br />
+> A plan item has a max purchase of 1,000 (so customers can use up to 1,000 overage units). But you set a customer-level spend limit of 5,000 on that feature. The customer can use up to 5,000 overage units — the spend limit overrides the plan-level max purchase for that customer.
+
+This lets you use max purchase as a sensible default for all customers, then selectively raise (or lower) the cap for specific customers using spend limits.
+
+If you set a spend limit **higher** than the plan's max purchase, the customer will be able to exceed the plan-level limit. If you set it **lower**, the customer will be capped before hitting the plan-level limit. In either case, the spend limit is the one that's enforced.
+
+## Spend limits vs max purchase
+
+| | Spend Limits | Max Purchase |
+|--|-------------|--------------|
+| **Configured on** | Customer or entity | Plan item (in the plan editor) |
+| **Scope** | Aggregated across all entitlements for a feature | Per-entitlement |
+| **Set via** | [Update Customer](/api-reference/customers/updateCustomer) / [Update Entity](/api-reference/entities/updateEntity) API | Dashboard or CLI when creating a plan |
+| **Dynamic** | Yes — can be changed at any time per-customer | No — applies to all customers on the plan |
+| **Precedence** | Overrides max purchase when set | Used as default when no spend limit is set |
+| **Use case** | Per-customer overage caps (e.g., enterprise spending controls) | Global safety limits for a plan tier |
+
+## Usage Alerts
+
+Usage alerts send a webhook when a customer's usage crosses a threshold you define. You can use this to take an action like sending a warning email, prompting an upgrade, or flagging the account internally.
+
+## Configuring usage alerts
+
+Usage alerts are set per-customer (or per-entity) via the API, using the same `billingControls` field as spend limits. There are two threshold types:
+
+- **`usage`** — fires when absolute usage reaches a specific count
+- **`usage_percentage`** — fires when usage reaches a percentage of the included allowance
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    usageAlerts: [{
+      featureId: "api_calls",
+      threshold: 800,
+      thresholdType: "usage",
+      enabled: true,
+      name: "Approaching limit",
+    }],
+  },
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "usage_alerts": [{
+            "feature_id": "api_calls",
+            "threshold": 800,
+            "threshold_type": "usage",
+            "enabled": True,
+            "name": "Approaching limit",
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "usage_alerts": [{
+        "feature_id": "api_calls",
+        "threshold": 800,
+        "threshold_type": "usage",
+        "enabled": true,
+        "name": "Approaching limit"
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+For a percentage-based alert, use `threshold_type: "usage_percentage"` with a value between 0 and 100:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    usageAlerts: [{
+      featureId: "api_calls",
+      threshold: 80,
+      thresholdType: "usage_percentage",
+      enabled: true,
+      name: "80% usage warning",
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "usage_alerts": [{
+            "feature_id": "api_calls",
+            "threshold": 80,
+            "threshold_type": "usage_percentage",
+            "enabled": True,
+            "name": "80% usage warning",
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "usage_alerts": [{
+        "feature_id": "api_calls",
+        "threshold": 80,
+        "threshold_type": "usage_percentage",
+        "enabled": true,
+        "name": "80% usage warning"
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+The `usage_percentage` threshold is calculated against the **included** allowance only. If the customer has overage enabled with a spend limit or max purchase, the percentage still refers to the included balance — not the total available usage.
+
+### Usage alert fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string (optional) | The feature to monitor. If omitted, applies to all features. |
+| `threshold` | number | The value that triggers the alert. Absolute count for `usage`, percentage (0-100) for `usage_percentage`. |
+| `threshold_type` | string | `"usage"` for an absolute count, `"usage_percentage"` for a percentage of the included allowance. |
+| `enabled` | boolean | Whether the alert is active. Defaults to `true`. |
+| `name` | string (optional) | A label to distinguish multiple alerts on the same feature. |
+
+## How usage alerts work
+
+1. On each `track` call, Autumn compares the customer's old and new usage against each enabled alert
+2. If the usage crosses the threshold (old usage was below, new usage is at or above), Autumn fires a `balances.usage_alert_triggered` webhook
+3. The alert fires **once** per threshold crossing — it won't re-fire on subsequent track calls unless usage drops below the threshold and crosses it again
+
+Alerts also work at the entity level. If you configure alerts on an [entity](/documentation/customers/feature-entities), they fire based on that entity's usage independently.
+
+See the [balances.usage_alert_triggered webhook schema](/api-reference/webhooks/balancesUsageAlertTriggered) for the full payload reference.
+
+## Multiple usage alerts
+
+You can configure multiple alerts on the same feature or across different features. Each alert fires independently when its threshold is crossed.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    usageAlerts: [
+      {
+        featureId: "api_calls",
+        threshold: 500,
+        thresholdType: "usage",
+        enabled: true,
+        name: "500 calls used",
+      },
+      {
+        featureId: "api_calls",
+        threshold: 90,
+        thresholdType: "usage_percentage",
+        enabled: true,
+        name: "90% allowance used",
+      },
+    ],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "usage_alerts": [
+            {
+                "feature_id": "api_calls",
+                "threshold": 500,
+                "threshold_type": "usage",
+                "enabled": True,
+                "name": "500 calls used",
+            },
+            {
+                "feature_id": "api_calls",
+                "threshold": 90,
+                "threshold_type": "usage_percentage",
+                "enabled": True,
+                "name": "90% allowance used",
+            },
+        ],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "usage_alerts": [
+        {
+          "feature_id": "api_calls",
+          "threshold": 500,
+          "threshold_type": "usage",
+          "enabled": true,
+          "name": "500 calls used"
+        },
+        {
+          "feature_id": "api_calls",
+          "threshold": 90,
+          "threshold_type": "usage_percentage",
+          "enabled": true,
+          "name": "90% allowance used"
+        }
+      ]
+    }
+  }'
+```
+
+</CodeGroup>
+
+In this example, the customer will receive two separate webhook events as they use their API calls: one when they hit 500 absolute calls, and another when they reach 90% of their included allowance.

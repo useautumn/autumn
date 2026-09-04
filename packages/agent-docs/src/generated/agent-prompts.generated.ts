@@ -8,12 +8,12 @@ export const leafAgentPrompts: Record<"leaf" | "catalog", string> = {
 
 export const leafAgentSkillNames: Record<"leaf" | "catalog", string[]> = {
   "leaf": [
-    "billing",
+    "autumn-billing",
     "autumn-investigate",
     "autumn-concepts",
-    "trials",
-    "schedules",
-    "balances"
+    "autumn-trials",
+    "autumn-schedules",
+    "autumn-balances"
   ],
   "catalog": [
     "autumn-catalog"
@@ -22,13 +22,20 @@ export const leafAgentSkillNames: Record<"leaf" | "catalog", string[]> = {
 
 export const leafSkillRequires: Record<string, string[]> = {
   "autumn-concepts": [],
+  "autumn-setup": [
+    "autumn-catalog",
+    "autumn-integrate"
+  ],
   "autumn-catalog": [
     "autumn-concepts"
   ],
-  "billing": [],
-  "trials": [],
-  "schedules": [],
-  "balances": [],
+  "autumn-integrate": [
+    "autumn-concepts"
+  ],
+  "autumn-billing": [],
+  "autumn-trials": [],
+  "autumn-schedules": [],
+  "autumn-balances": [],
   "autumn-investigate": [
     "autumn-concepts"
   ]

@@ -64,7 +64,8 @@ export const provisionOrgResources = async ({
 	strict = false,
 }: {
 	org: Organization | BetterAuthOrganization;
-	user: User;
+	/** Only the contact email is used, so ownerless orgs can pass a stand-in. */
+	user: Pick<User, "email">;
 	createStripeAccount?: boolean;
 	pkey?: string;
 	livePkey?: string;

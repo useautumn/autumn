@@ -4,6 +4,16 @@ export interface ApiPlanLicenseParams {
 	license_plan_id: string;
 	version?: number;
 	included: number;
+	customize?: {
+		price?: { amount: number; interval: string } | null;
+		add_items?: ApiPlanItemParams[];
+		remove_items?: Array<{
+			feature_id?: string;
+			billing_method?: string;
+			interval?: string;
+			interval_count?: number;
+		}>;
+	};
 }
 
 /**
@@ -214,6 +224,42 @@ export function transformPlanToApi(plan: Plan): ApiPlanParams {
 			license_plan_id: license.licensePlanId,
 			...(license.version !== undefined ? { version: license.version } : {}),
 			included: license.included ?? 0,
+			...(license.customize !== undefined
+				? {
+						customize: {
+							...(license.customize.price !== undefined
+								? { price: license.customize.price }
+								: {}),
+							...(license.customize.addItems !== undefined
+								? {
+										add_items: license.customize.addItems.map((addItem) =>
+											transformPlanItem(addItem as PlanItem),
+										),
+									}
+								: {}),
+							...(license.customize.removeItems !== undefined
+								? {
+										remove_items: license.customize.removeItems.map(
+											(filter) => ({
+												...(filter.featureId !== undefined
+													? { feature_id: filter.featureId }
+													: {}),
+												...(filter.billingMethod !== undefined
+													? { billing_method: filter.billingMethod }
+													: {}),
+												...(filter.interval !== undefined
+													? { interval: filter.interval }
+													: {}),
+												...(filter.intervalCount !== undefined
+													? { interval_count: filter.intervalCount }
+													: {}),
+											}),
+										),
+									}
+								: {}),
+						},
+					}
+				: {}),
 		})),
 	};
 

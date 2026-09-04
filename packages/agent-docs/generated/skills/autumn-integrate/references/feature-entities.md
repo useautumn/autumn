@@ -1,0 +1,216 @@
+## Entities
+
+Entities are sub accounts of a customer. For example, you may have a product that allows 500 credits **per user** per month.
+
+## Product setup
+
+An entity can hold its own plan, with its own balances, while the parent customer pays. There are two ways to provision that, differing in where capacity comes from:
+
+1. **Attach directly**: pass the [entity ID](/api-reference/billing/attach#body-entity-id) into an attach call. The entity gets its own subscription in Stripe, with billing cycles synced to the parent. Use this when entities appear and you bill for them as they do.
+2. **Licenses**: the parent plan offers a pool of seats that the customer buys upfront, and you assign one to an entity to give it its plan. Use this when customers commit to a seat count before you know who fills it.
+
+Both support different tiers per entity. See [entity plans](/documentation/modelling-pricing/entity-plans) for the full setup of either.
+
+**Example**
+
+Max has a team product where each seat gets 30 meeting note summaries per month, and teams buy their seat count upfront. He creates a Seat license plan holding the 30 summaries, offers it under his Team plan, and assigns a license each time someone joins.
+
+Jamie also has a team product, but workspaces are created ad hoc and each can be on a Free or Pro tier. She creates the two tiers as normal and attaches them at the entity level as workspaces appear.
+
+## Creating entities
+
+You can manage feature entities via the `entities` route. This can be used to create, update and delete entities, such as when a seat or workspace is added or removed.
+
+When you create an entity, a **usage event** will automatically be sent that increments the count of the number of entities (eg seats) being used.
+
+This means if you create 2 entities for "seats", your usage of "seats" will be 2, allowing Autumn to bill accordingly if there's a price set.
+
+This is how seats are counted when you attach plans directly. With [licenses](/documentation/modelling-pricing/entity-plans#licenses), seats are counted by the license pool instead, and the entity's feature only identifies its type.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.entities.create({
+  customerId: "org_123",
+  entityId: "user_abc",
+  featureId: "seats",
+  name: "John Doe",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.entities.create(
+    customer_id="org_123",
+    entity_id="user_abc",
+    feature_id="seats",
+    name="John Doe",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/entities" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "entity_id": "user_abc",
+    "feature_id": "seats",
+    "name": "John Doe"
+  }'
+```
+
+</CodeGroup>
+
+## Managing entity balances
+
+Just like with normal features, you can check feature access and track usage events for each entity.
+
+#### Check feature access
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.check({
+  customerId: "org_123",
+  featureId: "ai-messages",
+  entityId: "user_abc",
+});
+
+console.log(response.allowed);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.check(
+    customer_id="org_123",
+    feature_id="ai-messages",
+    entity_id="user_abc",
+)
+print(response.allowed)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "feature_id": "ai-messages",
+    "entity_id": "user_abc"
+  }'
+```
+
+</CodeGroup>
+
+#### Send usage event
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.track({
+  customerId: "org_123",
+  featureId: "ai-messages",
+  entityId: "user_abc",
+  value: 10,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.track(
+    customer_id="org_123",
+    feature_id="ai-messages",
+    entity_id="user_abc",
+    value=10,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "feature_id": "ai-messages",
+    "entity_id": "user_abc",
+    "value": 10
+  }'
+```
+
+</CodeGroup>
+
+#### Customer-level vs entity-level balances
+
+A customer-level balance is the total balance for the feature across all entities. Entity-level balances are the balance for a specific entity. You can check access and track usage events either at the customer-level or entity-level.
+
+**Example**
+
+You have a product that allows 500 credits per user per month. However, the credits are shared across all users in the account.
+
+You can create a feature entity for "seats" and then check access and send usage events at the top-level.
+
+To use top-level balances, just omit the `entityId` from your check request.
+
+  This will increment the usage counter for the top-level balance, and also
+  deduct from the first-created entity so that the sum of the the entity
+  balances is always the same as the top-level balance.
+
+## Deleting Entities
+
+  Just as creating an entity sent a usage event for the associated feature,
+  deleting an entity will decrease the usage.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.entities.delete({
+  customerId: "org_123",
+  entityId: "user_abc",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.entities.delete(
+    customer_id="org_123",
+    entity_id="user_abc",
+)
+```
+
+```bash cURL
+curl -X DELETE "https://api.useautumn.com/v1/entities/user_abc" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "org_123" }'
+```
+
+</CodeGroup>

@@ -10,10 +10,7 @@ export const entitlementPricesAreSame = ({
 	entitlementPrice2: EntitlementPrice;
 }) => {
 	if (
-		!entsAreSame(
-			entitlementPrice1.entitlement,
-			entitlementPrice2.entitlement,
-		)
+		!entsAreSame(entitlementPrice1.entitlement, entitlementPrice2.entitlement)
 	) {
 		return false;
 	}

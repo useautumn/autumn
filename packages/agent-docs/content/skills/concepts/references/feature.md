@@ -27,6 +27,9 @@
 <credit-systems>
 
 - Classic `credit_system`: one shared balance for several metered features; `credit_schema` maps each `metered_feature_id` to a `credit_cost`. Track via the underlying `feature_id`.
+- A schema entry's cost can be flat (`credit_cost`) or a graduated rate card: `tier_behavior: "graduated"` with tiers, so an action costs fewer credits at higher volume. Useful for enterprise credit deals.
+- `invoice_credit`: credits that appear as line items on the invoice; requires a price of exactly one currency unit per credit. Activation is currently gated — confirm before promising it.
+- Direct balances always drain before credit-system balances, whatever their intervals.
 - `ai_credit_system`: a monetary balance (units = dollars) for AI/LLM token usage; no `credit_schema`. Cost = Models.dev model pricing + markup.
   - Markups, low to high priority: `default_markup` (global %), `provider_markups` (keyed by the model id's provider prefix), `model_markups` (per model). No markup = Models.dev base cost; `-100` = free (recorded, not deducted).
   - Model ids are `provider/model` (e.g. `anthropic/claude-opus-4-5`, `openrouter/anthropic/...`, `custom/...`). Standard models auto-price from Models.dev; `custom/...` models must set `input_cost`/`output_cost` ($/M tokens) and bill input/output only.

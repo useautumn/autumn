@@ -12,6 +12,7 @@ export const RESERVED_SANDBOX_SLUGS = new Set([
 	"admin",
 	"chat",
 	"quickstart",
+	"onboarding",
 	"impersonate-redirect",
 	"trmnl",
 ]);

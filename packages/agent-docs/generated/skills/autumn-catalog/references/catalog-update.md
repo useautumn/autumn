@@ -1,6 +1,15 @@
 # Catalog update flow
 
-Use this when changing an existing Autumn catalog through MCP/API or when mapping an `atmn push` preview back to tool params. For a single plan edit, use the same catalog flow with a one-plan `plans` array.
+Use this when the user is already running Autumn — customers are on these plans — and wants to change pricing or plans. (A half-built config from an earlier setup session is NOT this: keep building with the normal workflow.) This workflow is still growing — the ground rules below always apply; the rest of this file carries the preview/decide/apply mechanics.
+
+## Ground rules
+
+- **Never run the new-catalog interview against a live catalog.** Read `autumn.config.ts` (or `atmn pull`) first; the existing catalog is the truth to diff against, not a draft to replace.
+- **Touch only what the change names.** Every other plan, item, and id stays byte-identical — rewriting untouched plans is the classic update failure.
+- **Match the existing config's patterns** — if sibling plans model a thing one way, the change follows that way.
+- The questions here are "who's affected", not "what do you sell": new version or update in place? propagate to variants or not? migrate existing customers or grandfather them? Never decide these alone — preview, show the choices, let the user pick.
+- Structural changes ("add seats", "make credits shared") re-enter the Shape forks (licenses, pooled, add-on, variants) exactly as a new catalog would.
+- Preview before every write, apply only the exact previewed change.
 
 ## Loop
 

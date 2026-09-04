@@ -2,6 +2,7 @@ import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
 import { type Context, Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { getTrustedClientIp } from "@/internal/misc/rateLimiter/public/getTrustedClientIp.js";
 import { authBaseUrl } from "@/utils/auth.js";
 import { handleAuthServerMetadata } from "./handleAuthServerMetadata.js";
 import { handleGetOAuthClient } from "./handleGetOAuthClient.js";
@@ -13,11 +14,7 @@ import { handleOpenIdConfiguration } from "./handleOpenIdConfiguration.js";
 
 export const oauthRouter = new Hono<HonoEnv>();
 
-const getOAuthRateLimitKey = (c: Context<HonoEnv>) =>
-	c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
-	c.req.header("x-real-ip") ??
-	c.req.header("cf-connecting-ip") ??
-	"unknown";
+const getOAuthRateLimitKey = (c: Context<HonoEnv>) => getTrustedClientIp({ c });
 
 const oauthClientLookupLimiter = rateLimiter<HonoEnv>({
 	windowMs: 60 * 1000,

@@ -10,6 +10,7 @@ import { toMcpResource } from "../src/translate/formats/mcpResource.js";
 import { toSkill } from "../src/translate/formats/skill.js";
 import type { McpResource, Skill } from "../src/translate/formats/types.js";
 import { docsPageToMarkdown } from "../src/translate/ingest/docsPage.js";
+import { writePublicSkills } from "./publicSkills.js";
 
 // Build-time translation: read canonical docs (+ transitional legacy markdown),
 // emit self-contained TS artifacts so consumers need no runtime fs access, plus
@@ -27,13 +28,51 @@ const readSource = (source: Source): string => {
 	return readFileSync(resolve(legacyRoot, source.file), "utf8");
 };
 
+const headingAnchor = (heading: string): string =>
+	heading
+		.toLowerCase()
+		.replace(/[^a-z0-9\s-]/g, "")
+		.trim()
+		.replace(/\s+/g, "-");
+
+// `#anchor` slices one section: its heading through to the next heading of the
+// same or higher level. Build fails on an anchor that matches no heading.
+const sliceSection = ({
+	markdown,
+	anchor,
+	url,
+}: {
+	markdown: string;
+	anchor: string;
+	url: string;
+}): string => {
+	const lines = markdown.split("\n");
+	const headingAt = (line: string) => /^(#{1,6})\s+(.*)$/.exec(line);
+	const start = lines.findIndex((line) => {
+		const heading = headingAt(line);
+		return heading && headingAnchor(heading[2] ?? "") === anchor;
+	});
+	if (start === -1) {
+		throw new Error(`No heading matches anchor "#${anchor}" in ${url}`);
+	}
+	const level = (headingAt(lines[start] ?? "")?.[1] ?? "#").length;
+	const end = lines.findIndex((line, index) => {
+		if (index <= start) return false;
+		const heading = headingAt(line);
+		return Boolean(heading && (heading[1]?.length ?? 6) <= level);
+	});
+	return lines.slice(start, end === -1 ? undefined : end).join("\n");
+};
+
 // `<docs url="/documentation/..." />` → translated docs page (with its title).
 const resolveDocs = (url: string): string => {
-	const page = `${url.replace(/^\//, "")}.mdx`;
-	return docsPageToMarkdown({
+	const [path = "", anchor] = url.split("#");
+	const page = `${path.replace(/^\//, "")}.mdx`;
+	const markdown = docsPageToMarkdown({
 		path: page,
 		text: readFileSync(resolve(docsRoot, page), "utf8"),
 	});
+	return anchor ? sliceSection({ markdown, anchor, url }) : markdown;
 };
 
 // `<part file="…" />` → a sibling content file, resolved next to its document.
@@ -214,21 +253,35 @@ for (const resource of mcpResources) {
 		contents: resource.text,
 	});
 }
-for (const skill of skills) {
-	writeReadable({
-		relPath: `skills/${skill.name}/SKILL.md`,
-		contents: skill.markdown,
-	});
-	for (const reference of skill.references) {
-		writeReadable({
-			relPath: `skills/${skill.name}/${reference.path}`,
-			contents: reference.contents,
-		});
-	}
-}
+writePublicSkills({
+	outputDirectory: resolve(readableRoot, "skills"),
+	skills,
+});
 for (const id of agentIds) {
 	writeReadable({
 		relPath: `agents/${id}.md`,
 		contents: leafAgentPrompts[id],
 	});
 }
+
+// useautumn.com/SKILL.md — the one URL the dashboard's setup prompt points an
+// agent at. References inline because a single fetch can't follow them.
+const SETUP_SKILL_NAME = "autumn-setup";
+const setupSkill = skills.find((skill) => skill.name === SETUP_SKILL_NAME);
+if (!setupSkill) {
+	throw new Error(
+		`Missing "${SETUP_SKILL_NAME}" skill for the website SKILL.md`,
+	);
+}
+
+const websiteSkillPath = resolve(here, "../../../apps/website/public/SKILL.md");
+writeFileSync(
+	websiteSkillPath,
+	`${[
+		setupSkill.markdown.trim(),
+		...setupSkill.references.map(
+			(reference) => `## ${reference.path}\n\n${reference.contents.trim()}`,
+		),
+	].join("\n\n")}\n`,
+);
+process.stdout.write(`Wrote ${websiteSkillPath}\n`);

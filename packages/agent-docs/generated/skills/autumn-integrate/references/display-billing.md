@@ -1,0 +1,398 @@
+## Build your billing page
+
+Software applications typically ship with a billing page. This allows customers to change plan, cancel subscription and view their usage.
+
+The customer endpoint returns the current state of the customer, including their active subscriptions, one-time purchases, and feature balances.
+
+## Pricing table
+
+When building a pricing table, you need to know what each plan means for the current customer — is it an upgrade, a downgrade, or their current plan? Is a free trial available?
+
+Pass a `customerId` when listing plans and each plan will include a `customerEligibility` object:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `attachAction` | `"activate"` \| `"upgrade"` \| `"downgrade"` \| `"purchase"` \| `"none"` | What happens when this plan is attached |
+| `status` | `"active"` \| `"scheduled"` \| undefined | The customer's current relationship to this plan |
+| `trialAvailable` | boolean | Whether the customer is eligible for the plan's free trial |
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const { list: plans } = await autumn.plans.list({
+  customerId: "user_123",
+});
+
+for (const plan of plans) {
+  console.log(plan.name, plan.customerEligibility?.attachAction);
+  // e.g. "Free" "downgrade", "Pro" "none", "Enterprise" "upgrade"
+}
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+plans = await autumn.plans.list(customer_id="user_123")
+
+for plan in plans.list:
+    print(plan.name, plan.customer_eligibility.attach_action)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/plans.list' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{ "customer_id": "user_123" }'
+
+# Each plan in the response includes customer_eligibility
+```
+
+</CodeGroup>
+
+## Switching plans
+
+Switching plans uses `billing.attach`. See [Attaching Plans](/documentation/customers/payment-flow) for the full guide.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+});
+
+// Redirect to complete payment or confirm plan change
+redirect(response.paymentUrl);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+)
+# Redirect to response.payment_url
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/attach' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro"
+  }'
+```
+
+</CodeGroup>
+
+## Cancelling a plan
+
+Cancel a subscription using `billing.update` with a `cancelAction`. See [Subscription Lifecycle](/documentation/customers/subscription-lifecycle#cancellations) for the full guide on immediate vs end-of-cycle cancellations.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+// Cancel at end of billing cycle
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "pro",
+  cancelAction: "cancel_end_of_cycle",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+# Cancel at end of billing cycle
+await autumn.billing.update(
+    customer_id="user_123",
+    plan_id="pro",
+    cancel_action="cancel_end_of_cycle",
+)
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "cancel_end_of_cycle"
+  }'
+```
+
+</CodeGroup>
+
+## Uncancelling a plan
+
+If a subscription has a pending cancellation, a scheduled downgrade, or a scheduled plan switch, you can reverse it with `cancelAction: "uncancel"`.
+
+A subscription is pending cancellation when `canceledAt` is not null while the subscription is still `active`.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+});
+
+const cancellingSub = customer.subscriptions?.find(
+  (sub) => sub.status === "active" && sub.canceledAt !== null
+);
+
+if (cancellingSub) {
+  await autumn.billing.update({
+    customerId: "user_123",
+    planId: cancellingSub.planId,
+    cancelAction: "uncancel",
+  });
+}
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123"
+)
+
+cancelling_sub = next(
+    (s for s in customer.subscriptions
+     if s.status == "active" and s.canceled_at is not None),
+    None,
+)
+
+if cancelling_sub:
+    await autumn.billing.update(
+        customer_id="user_123",
+        plan_id=cancelling_sub.plan_id,
+        cancel_action="uncancel",
+    )
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "cancel_action": "uncancel"
+  }'
+```
+
+</CodeGroup>
+
+## Active plans
+
+Display the plan the user is currently on. Users can have multiple active subscriptions and purchases (e.g., main plan and add-ons).
+
+- **`subscriptions`** - Free and paid recurring plans
+- **`purchases`** - One-off plans (e.g., credit top-ups)
+
+<CodeGroup>
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+});
+
+const active = customer.subscriptions?.filter(
+  (sub) => sub.status === "active"
+);
+
+console.log(active?.map((sub) => sub.planId).join(", "));
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123"
+)
+
+active = [s for s in customer.subscriptions if s.status == "active"]
+print([s.plan_id for s in active])
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/customers' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{ "customer_id": "user_123" }'
+
+# Response includes subscriptions array
+```
+</CodeGroup>
+
+## Usage balances
+
+Metered features have `granted`, `usage`, and `remaining` fields. Use these to display current usage and remaining balance.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
+});
+
+const messages = customer.balances?.messages;
+console.log(`${messages?.remaining} / ${messages?.granted}`);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+customer = await autumn.customers.get_or_create(
+    customer_id="user_123"
+)
+
+messages = customer.balances.get("messages")
+print(f"{messages.remaining} / {messages.granted}")
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/customers' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{ "customer_id": "user_123" }'
+
+# Response includes balances.[feature_id]
+```
+</CodeGroup>
+
+## Stripe billing portal
+
+The Stripe billing portal lets users manage their payment method, view past invoices, and cancel their plan.
+
+Enable the billing portal in your [Stripe settings](https://dashboard.stripe.com/settings/billing/portal).
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const { url } = await autumn.billing.openCustomerPortal({
+  customerId: "user_123",
+  returnUrl: "https://your-app.com/billing",
+});
+
+redirect(url);
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.billing.open_customer_portal(
+    customer_id="user_123",
+    return_url="https://your-app.com/billing",
+)
+# Redirect to response.url
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.open_customer_portal' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "return_url": "https://your-app.com/billing"
+  }'
+```
+
+</CodeGroup>
+
+## Usage timeseries chart
+
+Autumn provides aggregate time series queries for usage data. Pass the response to a charting library like Recharts.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const { list, total } = await autumn.events.aggregate({
+  customerId: "user_123",
+  featureId: "messages",
+  range: "30d",
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+response = await autumn.events.aggregate(
+    customer_id="user_123",
+    feature_id="messages",
+    range="30d",
+)
+# response.list, response.total
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/events.aggregate' \
+  -H 'Authorization: Bearer am_sk_test_1234' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "messages",
+    "range": "30d"
+  }'
+```
+</CodeGroup>
+
+You can also use the [`events.list`](/api-reference/events/listEvents) method to get the raw event data and display it in a table.
+
+---
+
+**Next: Deploy to production**
+
+Once your billing page is in place, go through the production checklist to launch with real payments.
+
+A checklist to go live with confidence

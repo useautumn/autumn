@@ -7,13 +7,13 @@ import {
 	type ProductItem,
 	type ProductV2,
 } from "../../index.js";
+import { BillingInterval } from "../../models/productModels/intervals/billingInterval.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "../productV2Utils/productItemUtils/getItemType.js";
 import { itemToBillingInterval } from "../productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { nullish } from "../utils.js";
-import { BillingInterval } from "../../models/productModels/intervals/billingInterval.js";
 
 export const isDefaultTrialV2 = ({
 	freeTrial,
@@ -32,6 +32,13 @@ export const isDefaultTrialV2 = ({
 		!isFreeProductV2({ items })
 	);
 };
+
+/** A plan can bill for something a customer actually uses. A priced plan with
+ * no features, or features with no price, is half-built — which is what
+ * onboarding means by "your plans exist". */
+export const isBillablePlanV2 = ({ items }: { items: ProductItem[] }) =>
+	items.some((item) => item.price != null || item.tiers != null) &&
+	items.some((item) => item.feature_id != null);
 
 export const isOneOffProductV2 = ({ items }: { items: ProductItem[] }) => {
 	const pricedItems = items.filter(

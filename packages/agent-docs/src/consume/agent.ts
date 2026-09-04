@@ -1,12 +1,12 @@
 import {
 	leafAgentPrompts,
 	leafAgentSkillNames,
-	leafSkillRequires,
 } from "../generated/agent-prompts.generated.js";
 import { autumnMcpInstructions } from "../generated/instructions.generated.js";
 import { leafPrompts } from "../generated/leaf-prompts.generated.js";
 import { skills } from "../generated/skills.generated.js";
 import type { Skill } from "../translate/formats/types.js";
+import { expandRequires, findSkill } from "./skills.js";
 
 export { autumnMcpInstructions };
 export type { Skill };
@@ -34,29 +34,12 @@ export type LeafAgentId = keyof typeof leafAgentPrompts;
 export const leafAgentPrompt = (id: LeafAgentId): string =>
 	leafAgentPrompts[id];
 
-const findLeafSkill = (name: string): Skill => {
-	const skill = leafSkills.find((candidate) => candidate.name === name);
-	if (!skill) {
-		throw new Error(`Unknown leaf skill "${name}"`);
-	}
-	return skill;
-};
-
 /**
  * A skill bundle: the named skills first, then their transitive `requires`
  * in first-encountered order, deduped.
  */
-export const leafSkillBundle = (skillNames: readonly string[]): Skill[] => {
-	const names = [...skillNames];
-	for (const name of names) {
-		for (const required of leafSkillRequires[name] ?? []) {
-			if (!names.includes(required)) {
-				names.push(required);
-			}
-		}
-	}
-	return names.map((name) => findLeafSkill(name));
-};
+export const leafSkillBundle = (skillNames: readonly string[]): Skill[] =>
+	expandRequires([...skillNames]).map(findSkill);
 
 /** The skill bundle for one Eve agent, resolved from its declared skills. */
 export const leafSkillsFor = (id: LeafAgentId): Skill[] =>
@@ -71,7 +54,7 @@ export const leafSkillReference = ({
 	skill: string;
 	path: string;
 }): string => {
-	const reference = findLeafSkill(skill).references.find(
+	const reference = findSkill(skill).references.find(
 		(candidate) => candidate.path === path,
 	);
 	if (!reference) {

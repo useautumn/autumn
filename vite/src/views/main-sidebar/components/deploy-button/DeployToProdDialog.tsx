@@ -11,12 +11,10 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { Step1ConnectStripe } from "../../deploy-dialog/Step1ConnectStripe";
 import { Step2CopyProducts } from "../../deploy-dialog/Step2CopyProducts";
 import { Step3CreateApiKey } from "../../deploy-dialog/Step3CreateApiKey";
+import { useGoToProduction } from "../../deploy-dialog/useDeployActions";
 
 interface DeployToProdDialogProps {
 	open: boolean;
@@ -27,26 +25,8 @@ export const DeployToProdDialog = ({
 	open,
 	onOpenChange,
 }: DeployToProdDialogProps) => {
-	const [loading, setLoading] = useState(false);
-	const axiosInstance = useAxiosInstance();
-	const { mutate: mutateOrg } = useOrg();
+	const { isDeploying, goToProduction } = useGoToProduction();
 
-	const handleGoToProduction = async () => {
-		setLoading(true);
-		try {
-			await axiosInstance.patch("/v1/organization", {
-				deployed: true,
-			});
-
-			await mutateOrg();
-
-			window.location.href = "/products?tab=products";
-		} catch (error) {
-			console.error("Failed to deploy to production:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-xl">
@@ -70,8 +50,8 @@ export const DeployToProdDialog = ({
 								variant="primary"
 								icon={<ArrowRightIcon />}
 								iconOrientation="right"
-								onClick={handleGoToProduction}
-								isLoading={loading}
+								onClick={goToProduction}
+								isLoading={isDeploying}
 							>
 								Go to Production
 							</IconButton>

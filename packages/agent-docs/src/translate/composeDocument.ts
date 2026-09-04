@@ -2,6 +2,8 @@ import { parseFrontmatter } from "./ingest/frontmatter.js";
 
 // Inline a sibling content file at this tag.
 const PART_TAG = /<part\s+([^>]*?)\/>/g;
+// A skill renders these as cross-skill pointers; a document inlines the target.
+const POINTER_TAG = /<pointer\s+([^>]*?)\/>/g;
 // Inline a translated docs page at this tag.
 const DOCS_TAG = /<docs\s+([^>]*?)\/>/g;
 // A skill splits these into references/; a document inlines the docs page.
@@ -62,6 +64,14 @@ export const composeDocument = ({
 			if (!file) {
 				throw new Error(`<part> in ${path} is missing a file`);
 			}
+			return resolveContentFile(file).trim();
+		})
+		.replace(POINTER_TAG, (_match, raw: string) => {
+			const { file } = parseAttrs(raw);
+			if (!file) {
+				throw new Error(`<pointer> in ${path} is missing a file`);
+			}
+			// Documents have no references/ split, so inline the target.
 			return resolveContentFile(file).trim();
 		})
 		.replace(DOCS_TAG, (_match, raw: string) => {

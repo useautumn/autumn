@@ -2,6 +2,15 @@
 
 Use `atmn` when a project has or should have an `autumn.config.ts` source of truth.
 
+Commands — these two, not `atmn preview` (that is an interactive UI):
+
+```sh
+atmn --headless push          # validates, previews the diff — and applies when no decisions are needed
+atmn --headless push --yes    # apply, auto-confirming pending decisions
+```
+
+`--headless push` without `--yes` only stops when the diff needs decisions (versioning, deletions, prod). On a clean target — a new org, a plain create — it validates and applies in one step, so treat running it as pushing, not as a dry run.
+
 ## When to use it
 
 - New project: ask whether to use `atmn` to build and push the catalog. Recommend it for code-managed catalogs.
@@ -10,7 +19,7 @@ Use `atmn` when a project has or should have an `autumn.config.ts` source of tru
 
 ## Config shapes
 
-`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `billingMethod`, `billingUnits`, `freeTrial`, `addItems`, `removeItems`, `intervalCount`. Follow the exported types from the package when editing config.
+`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `billingMethod`, `billingUnits`, `freeTrial`, `addItems`, `removeItems`, `intervalCount`. Follow the exported types from the package when editing config. Amounts are plain dollars: $20 is `20`, never `2000`.
 
 Core builders:
 

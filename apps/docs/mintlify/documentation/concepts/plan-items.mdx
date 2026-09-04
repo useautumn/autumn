@@ -46,6 +46,8 @@ If `Reset existing usage when plan is enabled` is set to `true`, their balance w
 
 - **Rollovers**: configure whether granted usage should rollover to the next cycle. You can configure rollover duration, and a maximum rollover cap. Rollover balances can be retrieved from the `balances` object.
 
+- **Pooled**: on plans attached per entity (eg, per workspace), setting `pooled: true` makes each entity's grant join one shared customer-level balance instead of a per-entity one. A pooled item cannot carry a usage-based price — to charge overage on a pooled balance, add a separate usage-priced item (with no grant) alongside the pooled grant item.
+
 
 
 Features that are `non-consumable` have no advanced configuration options.

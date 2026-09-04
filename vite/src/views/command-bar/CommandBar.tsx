@@ -41,6 +41,10 @@ import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
+import {
+	usePageCommandNavigate,
+	usePageCommands,
+} from "@/views/command-bar/usePageCommands";
 import { useOrgSwitch } from "@/views/main-sidebar/components/OrgDropdown";
 import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
@@ -52,6 +56,13 @@ type User = {
 	lastSignedIn: string;
 	role?: string | null;
 };
+
+const PAGE_PLACEHOLDERS = {
+	main: "Search pages, customers and plans...",
+	impersonate: "Search users and organizations to impersonate...",
+	orgs: "Search organizations...",
+	theme: "Choose a theme...",
+} as const;
 
 type Org = {
 	id: string;
@@ -67,7 +78,7 @@ const CommandBar = () => {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [currentPage, setCurrentPage] = useState<
-		"main" | "impersonate" | "orgs"
+		"main" | "impersonate" | "orgs" | "theme"
 	>("main");
 	const [favouritesPage, setFavouritesPage] = useState(0);
 
@@ -142,16 +153,21 @@ const CommandBar = () => {
 	]);
 
 	// Helper to switch pages without causing flash
-	const switchToPage = useCallback((page: "main" | "impersonate" | "orgs") => {
-		if (!isTransitioningRef.current) {
-			// Batch state updates to prevent multiple re-renders
-			setCurrentPage(page);
-			setSearch("");
-			setDebouncedSearch("");
-		}
-	}, []);
+	const switchToPage = useCallback(
+		(page: "main" | "impersonate" | "orgs" | "theme") => {
+			if (!isTransitioningRef.current) {
+				// Batch state updates to prevent multiple re-renders
+				setCurrentPage(page);
+				setSearch("");
+				setDebouncedSearch("");
+			}
+		},
+		[],
+	);
 
 	const { products, isLoading: productsLoading } = useProductsQuery();
+	const pageCommands = usePageCommands();
+	const goToPage = usePageCommandNavigate();
 
 	// Debounce search for backend query
 	useEffect(() => {
@@ -257,7 +273,7 @@ const CommandBar = () => {
 	useHotkeys(
 		"escape",
 		(e) => {
-			if (currentPage === "impersonate" || currentPage === "orgs") {
+			if (currentPage !== "main") {
 				e.preventDefault(); // Prevent default ESC behavior (closing dialog)
 				switchToPage("main");
 			}
@@ -482,9 +498,7 @@ const CommandBar = () => {
 			title: `Theme: ${getThemeLabel()}`,
 			icon: getThemeIcon(),
 			shortcutKey: "5",
-			onSelect: () => {
-				cycleTheme();
-			},
+			onSelect: () => switchToPage("theme"),
 		},
 		...(!isLoadingOrgs && orgs && orgs.length > 1
 			? [
@@ -514,6 +528,23 @@ const CommandBar = () => {
 			)
 		: navigationItems;
 
+	// Sub-pages are search-only: listing every settings tab up front would bury
+	// the actions people open the bar for.
+	const matchedPages = useMemo(() => {
+		if (!search || currentPage !== "main") return [];
+		return pageCommands
+			.map((page) => ({
+				page,
+				score: Math.min(
+					calculateRelevanceScore(search, page.title),
+					calculateRelevanceScore(search, `${page.section} ${page.title}`),
+				),
+			}))
+			.filter(({ score }) => score < 100)
+			.sort((a, b) => a.score - b.score)
+			.slice(0, 6);
+	}, [pageCommands, search, currentPage]);
+
 	const renderMainPage = () => (
 		<>
 			{filteredNavigationItems.length > 0 && (
@@ -525,6 +556,23 @@ const CommandBar = () => {
 							title={item.title}
 							shortcutKey={item.shortcutKey}
 							onSelect={item.onSelect}
+						/>
+					))}
+				</CommandGroup>
+			)}
+
+			{showResults && matchedPages.length > 0 && (
+				<CommandGroup heading="Pages" className="p-1.5">
+					{matchedPages.map(({ page }) => (
+						<CommandRow
+							key={page.path ?? page.href}
+							icon={page.icon}
+							title={page.title}
+							subtext={page.section}
+							onSelect={() => {
+								goToPage({ page });
+								closeDialog();
+							}}
 						/>
 					))}
 				</CommandGroup>
@@ -598,9 +646,11 @@ const CommandBar = () => {
 						</div>
 					)}
 
-					{!isLoading && sortedResults.length === 0 && (
-						<CommandEmpty>No results found.</CommandEmpty>
-					)}
+					{!isLoading &&
+						sortedResults.length === 0 &&
+						matchedPages.length === 0 && (
+							<CommandEmpty>No results found.</CommandEmpty>
+						)}
 				</>
 			)}
 		</>
@@ -781,6 +831,37 @@ const CommandBar = () => {
 		);
 	};
 
+	const renderThemePage = () => {
+		const options = [
+			{ value: "light" as const, label: "Light", icon: <Sun /> },
+			{ value: "dark" as const, label: "Dark", icon: <Moon /> },
+			{ value: "system" as const, label: "System", icon: <Monitor /> },
+		].filter(({ label }) =>
+			search ? label.toLowerCase().includes(search.toLowerCase()) : true,
+		);
+
+		if (options.length === 0) {
+			return <CommandEmpty>No themes found.</CommandEmpty>;
+		}
+
+		return (
+			<CommandGroup heading="Theme" className="p-1.5">
+				{options.map((option) => (
+					<CommandRow
+						key={option.value}
+						icon={option.icon}
+						title={option.label}
+						subtext={theme === option.value ? "Current" : undefined}
+						onSelect={() => {
+							setTheme(option.value);
+							closeDialog();
+						}}
+					/>
+				))}
+			</CommandGroup>
+		);
+	};
+
 	const renderOrgsPage = () => {
 		return (
 			<>
@@ -833,12 +914,13 @@ const CommandBar = () => {
 
 	// Memoize the current content to prevent flashes during re-renders
 	// Using a simpler approach to avoid complex dependency issues
-	const currentContent =
-		currentPage === "main"
-			? renderMainPage()
-			: currentPage === "impersonate"
-				? renderImpersonatePage()
-				: renderOrgsPage();
+	const PAGE_CONTENT = {
+		main: renderMainPage,
+		impersonate: renderImpersonatePage,
+		orgs: renderOrgsPage,
+		theme: renderThemePage,
+	};
+	const currentContent = PAGE_CONTENT[currentPage]();
 
 	// Store the last rendered content when we have valid content
 	useEffect(() => {
@@ -862,13 +944,7 @@ const CommandBar = () => {
 	return (
 		<CommandDialog open={open} onOpenChange={handleOpenChange}>
 			<CommandInput
-				placeholder={
-					currentPage === "main"
-						? "Search customers and plans..."
-						: currentPage === "impersonate"
-							? "Search users and organizations to impersonate..."
-							: "Search organizations..."
-				}
+				placeholder={PAGE_PLACEHOLDERS[currentPage]}
 				value={search}
 				onValueChange={setSearch}
 				onKeyDown={handleInputKeyDown}
