@@ -39,6 +39,18 @@ export const TMP_ROOT = join(CLI_PACKAGE_DIR, "test/.tmp");
 
 type ScenarioSetup = Parameters<typeof initScenario>[0]["setup"];
 
+/** Resolves initScenario's with-customer overload, so the scenario type carries `customerId: string`. */
+const initScenarioWithCustomer = ({
+	setup,
+	customerId,
+}: {
+	setup: ScenarioSetup;
+	customerId: string;
+}) => initScenario({ setup, actions: [], customerId });
+type ScenarioWithCustomer = Awaited<
+	ReturnType<typeof initScenarioWithCustomer>
+>;
+
 export type PullOutcome = {
 	output: string;
 	appended: string[];
@@ -110,16 +122,19 @@ export const initAtmnScenario = async ({
 	setup,
 	config,
 	files = {},
+	customerId = generateId("atmn_cus"),
 	baseUrl = process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080",
 }: {
 	setup: ScenarioSetup;
+	/** The scenario's primary customer; initScenario only creates one when given an id. */
+	customerId?: string;
 	/** Body passed to `atmn({...})`, as source; or a whole file when `raw` is set. */
 	config: string | { raw: string };
 	/** Extra files under cwd (relative path → source), written before the config. */
 	files?: Record<string, string>;
 	baseUrl?: string;
-}): Promise<AtmnScenario & Awaited<ReturnType<typeof initScenario>>> => {
-	const scenario = await initScenario({ setup, actions: [] });
+}): Promise<AtmnScenario & ScenarioWithCustomer> => {
+	const scenario = await initScenarioWithCustomer({ setup, customerId });
 
 	const cwd = join(TMP_ROOT, generateId("atmn"));
 	mkdirSync(cwd, { recursive: true });
@@ -196,7 +211,9 @@ export const initAtmnScenario = async ({
 		attachCustomer: async ({ planId, customerId }) => {
 			const target = customerId ?? scenario.customerId;
 			if (target === undefined)
-				throw new Error("attachCustomer needs a customer: set one up with s.customer() or pass customerId");
+				throw new Error(
+					"attachCustomer needs a customer: set one up with s.customer() or pass customerId",
+				);
 			await scenario.autumnV2_3.billing.attach<AttachParamsV1Input>({
 				customer_id: target,
 				plan_id: planId,
