@@ -60,6 +60,7 @@ const createOutcome = ({
 }): TrackOutcome => {
 	const decision = computeTrack({
 		state,
+		deduplicationExpiresAt: 1_700_086_400_000,
 		command: parseTrackCommand({
 			input: {
 				schemaVersion: 1,
@@ -73,7 +74,6 @@ const createOutcome = ({
 				overageBehavior: "reject",
 				properties: null,
 				occurredAt: 1_700_000_000_000,
-				deduplicationExpiresAt: 1_700_086_400_000,
 			},
 		}),
 	});
@@ -227,7 +227,7 @@ describe("SQLite balance state store", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -267,7 +267,7 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState();
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",
@@ -311,7 +311,7 @@ describe("SQLite balance state store", () => {
 				partition: 1,
 				nextOffset: 0n,
 			});
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -334,7 +334,7 @@ describe("SQLite balance state store", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -385,7 +385,7 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState();
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",
@@ -432,7 +432,7 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState();
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",
@@ -476,7 +476,7 @@ describe("SQLite balance state store", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -524,7 +524,7 @@ describe("SQLite balance state store", () => {
 		const fixture = createStoreFixture();
 		try {
 			const state = createState();
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -575,7 +575,7 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState();
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",
@@ -614,13 +614,13 @@ describe("SQLite balance state store", () => {
 			const secondIdentity = { ...identity, customerId: "cus_2" };
 			const firstState = createState();
 			const secondState = createState({ meteringIdentity: secondIdentity });
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
 				state: firstState,
 			});
-			fixture.store.initializeState({
+			fixture.store.restoreState({
 				topic,
 				partition,
 				initializationId: "init_1",
@@ -667,13 +667,13 @@ describe("SQLite balance state store", () => {
 			try {
 				const state = createState();
 				fixture.store.initializePartition({ topic, partition, nextOffset: 0n });
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",
 					state,
 				});
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",
@@ -688,7 +688,7 @@ describe("SQLite balance state store", () => {
 					}),
 				).toThrow(ConflictingPartitionInitializationError);
 				expect(() =>
-					fixture.store.initializeState({
+					fixture.store.restoreState({
 						topic,
 						partition,
 						initializationId: "init_1",
@@ -709,13 +709,13 @@ describe("SQLite balance state store", () => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState({ balance: -0 });
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",
 					state,
 				});
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",
@@ -740,7 +740,7 @@ describe("SQLite balance state store", () => {
 			let reopenedStore: SqliteBalanceStateStore | null = null;
 			try {
 				const state = createState();
-				fixture.store.initializeState({
+				fixture.store.restoreState({
 					topic,
 					partition,
 					initializationId: "init_1",

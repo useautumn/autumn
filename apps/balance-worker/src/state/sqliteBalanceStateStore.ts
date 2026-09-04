@@ -137,7 +137,7 @@ export class SqliteBalanceStateStore {
 			.immediate();
 	}
 
-	initializeState({
+	restoreState({
 		topic,
 		partition,
 		initializationId,

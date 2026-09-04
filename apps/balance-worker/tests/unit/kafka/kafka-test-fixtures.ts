@@ -48,6 +48,7 @@ export const createOutcome = ({
 }): TrackOutcome => {
 	const decision = computeTrack({
 		state,
+		deduplicationExpiresAt: 1_700_086_400_000,
 		command: parseTrackCommand({
 			input: {
 				schemaVersion: 1,
@@ -61,7 +62,6 @@ export const createOutcome = ({
 				overageBehavior: "reject",
 				properties: null,
 				occurredAt: 1_700_000_000_000,
-				deduplicationExpiresAt: 1_700_086_400_000,
 			},
 		}),
 	});

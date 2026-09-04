@@ -59,6 +59,11 @@ export type PartitionTrackWriterLimits = {
 	maxPendingCommandsPerCustomer: number;
 };
 
+export type PartitionTrackWriterReceiptPolicy = {
+	retentionMs: number;
+	now: () => number;
+};
+
 type PendingTrackWaiter = {
 	kind: "new" | "duplicate";
 	resolve: (decision: TrackDecision) => void;
@@ -88,10 +93,12 @@ const validateWriterConfiguration = ({
 	topic,
 	partition,
 	limits,
+	receiptPolicy,
 }: {
 	topic: string;
 	partition: number;
 	limits: PartitionTrackWriterLimits;
+	receiptPolicy: PartitionTrackWriterReceiptPolicy;
 }): void => {
 	if (topic.trim().length === 0) throw new Error("Kafka topic cannot be empty");
 	if (!Number.isSafeInteger(partition) || partition < 0) {
@@ -109,6 +116,28 @@ const validateWriterConfiguration = ({
 		name: "maxPendingCommandsPerCustomer",
 		value: limits.maxPendingCommandsPerCustomer,
 	});
+	assertPositiveSafeInteger({
+		name: "receiptPolicy.retentionMs",
+		value: receiptPolicy.retentionMs,
+	});
+};
+
+const deduplicationExpiryOf = ({
+	receiptPolicy,
+}: {
+	receiptPolicy: PartitionTrackWriterReceiptPolicy;
+}): number => {
+	const acceptedAt = receiptPolicy.now();
+	if (!Number.isSafeInteger(acceptedAt) || acceptedAt < 0) {
+		throw new RangeError(
+			"receiptPolicy.now() must return a non-negative safe integer",
+		);
+	}
+	const expiresAt = acceptedAt + receiptPolicy.retentionMs;
+	if (!Number.isSafeInteger(expiresAt)) {
+		throw new RangeError("Track receipt expiry must be a safe integer");
+	}
+	return expiresAt;
 };
 
 const pendingKeyOf = ({ command }: { command: TrackCommand }): string =>
@@ -166,16 +195,18 @@ export const createPartitionTrackWriter = ({
 	stateStore,
 	appender,
 	limits,
+	receiptPolicy,
 }: {
 	topic: string;
 	partition: number;
 	stateStore: PartitionTrackStateStore;
 	appender: CommittedTrackOutcomeAppender;
 	limits: PartitionTrackWriterLimits;
+	receiptPolicy: PartitionTrackWriterReceiptPolicy;
 }): {
 	submitTrack({ command }: { command: TrackCommand }): Promise<TrackDecision>;
 } => {
-	validateWriterConfiguration({ topic, partition, limits });
+	validateWriterConfiguration({ topic, partition, limits, receiptPolicy });
 
 	const projectedStatesByCustomerKey = new Map<string, CustomerMeteringState>();
 	const pendingCommandsByKey = new Map<string, PendingTrackCommand>();
@@ -364,6 +395,7 @@ export const createPartitionTrackWriter = ({
 			state,
 			command: parsedCommand,
 			existingReceipt,
+			deduplicationExpiresAt: deduplicationExpiryOf({ receiptPolicy }),
 		});
 		if (decision.kind !== "new") return Promise.resolve(decision);
 
