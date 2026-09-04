@@ -102,7 +102,8 @@ export default atmn(${v2Config({ planId })});
 			const newCustomer = await scenario.autumnV2_3.customers.get(
 				scenario.customerId as unknown as string,
 			);
-			expect(newCustomer.products?.[0]?.id).toBe(planId);
+			// @ts-expect-error autumnV2_3's declared return type defaults to ApiCustomerV3; this API version actually returns subscriptions/balances
+			expect(newCustomer.subscriptions?.[0]?.plan_id).toBe(planId);
 
 			const newCusProduct =
 				await scenario.ctx.db.query.customerProducts.findFirst({

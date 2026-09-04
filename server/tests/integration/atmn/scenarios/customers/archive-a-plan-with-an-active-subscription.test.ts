@@ -71,14 +71,18 @@ export default atmn(${catalogConfig({ planId, includePlan: false })});
 
 			// Decision pending: the server archives a customered plan on removal
 			// rather than refusing the push — this asserts that observed behavior.
+			// The generated client hands back preview rows camelCased, like every
+			// fixture-facing response — not the snake_case wire.
 			const planRow = (result.preview.plans ?? []).find(
-				(row) => (row as { plan_id?: string }).plan_id === planId,
+				(row) => (row as { planId?: string }).planId === planId,
 			);
 			expect(planRow).toEqual(
 				expect.objectContaining({
-					action: "deleted",
-					has_customers: true,
-					will_archive: true,
+					action: "delete",
+					state: expect.objectContaining({
+						hasCustomers: true,
+						willArchive: true,
+					}),
 				}),
 			);
 
@@ -94,9 +98,13 @@ export default atmn(${catalogConfig({ planId, includePlan: false })});
 			const customer = await scenario.autumnV2_3.customers.get(
 				scenario.customerId as unknown as string,
 			);
-			expect(customer.products?.some((product) => product.id === planId)).toBe(
-				true,
-			);
+			expect(
+				// @ts-expect-error autumnV2_3's declared return type defaults to ApiCustomerV3; this API version actually returns subscriptions/balances
+				customer.subscriptions?.some(
+					(subscription: { plan_id?: string }) =>
+						subscription.plan_id === planId,
+				),
+			).toBe(true);
 		} finally {
 			scenario.cleanup();
 		}

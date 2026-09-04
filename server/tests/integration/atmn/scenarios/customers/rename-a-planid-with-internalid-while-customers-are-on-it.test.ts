@@ -15,12 +15,12 @@ import { ProductService } from "@/internal/products/ProductService.js";
 
 const catalogConfig = ({ planId }: { planId: string }): string => `{
 	plans: [
-		{
+		plan({
 			planId: "${planId}",
 			name: "Pro",
 			price: { amount: 20, interval: "month" },
 			createInStripe: false,
-		},
+		}),
 	],
 }`;
 
@@ -70,7 +70,8 @@ test.concurrent(
 			const customer = await scenario.autumnV2_3.customers.get(
 				scenario.customerId as unknown as string,
 			);
-			expect(customer.products?.[0]?.id).toBe(newPlanId);
+			// @ts-expect-error autumnV2_3's declared return type defaults to ApiCustomerV3; this API version actually returns subscriptions/balances
+			expect(customer.subscriptions?.[0]?.plan_id).toBe(newPlanId);
 		} finally {
 			scenario.cleanup();
 		}

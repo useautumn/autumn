@@ -77,11 +77,19 @@ export default atmn(${catalogConfig({ featureId, planId, includeFeature: false }
 			});
 			const result = await runPush({ client, cwd: scenario.cwd });
 
+			// The generated client hands back preview rows camelCased, like every
+			// fixture-facing response — not the snake_case wire.
 			const featureRow = (result.preview.features ?? []).find(
-				(row) => (row as { feature_id?: string }).feature_id === featureId,
+				(row) => (row as { featureId?: string }).featureId === featureId,
 			);
 			expect(featureRow).toEqual(
-				expect.objectContaining({ action: "remove", will_archive: true }),
+				expect.objectContaining({
+					action: "delete",
+					state: expect.objectContaining({
+						hasCustomers: true,
+						willArchive: true,
+					}),
+				}),
 			);
 
 			const feature = await FeatureService.get({
