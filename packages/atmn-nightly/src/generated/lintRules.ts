@@ -32,6 +32,12 @@ export const LINT_RULES: LintRules = {
 				field: "featureId",
 				because: "Two features claiming one id race to define the same row.",
 			},
+			{
+				kind: "unique",
+				field: "internalId",
+				because:
+					"A stable id names exactly one row; two fixtures cannot both be it.",
+			},
 		],
 	},
 	"features.creditSchema": {
@@ -151,6 +157,14 @@ export const LINT_RULES: LintRules = {
 				pattern: "^[a-zA-Z0-9_-]+$",
 			},
 		},
+		rules: [
+			{
+				kind: "unique",
+				field: "internalId",
+				because:
+					"A stable id names exactly one row; two fixtures cannot both be it.",
+			},
+		],
 	},
 	"plans.billingControls.autoTopups": {
 		required: ["featureId", "quantity", "threshold"],

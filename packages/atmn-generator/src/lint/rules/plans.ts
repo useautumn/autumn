@@ -1,5 +1,5 @@
 import type { LintRule } from "../runtime/lintDocument";
-import { exists, targetHas, valueWhen } from "./define";
+import { exists, targetHas, unique, valueWhen } from "./define";
 
 export const planItemRules: LintRule[] = [
 	exists({
@@ -27,5 +27,13 @@ export const planItemPriceRules: LintRule[] = [
 		field: "billingMethod",
 		mustBe: "prepaid",
 		because: "Volume tiers are prepaid-only.",
+	}),
+];
+
+export const planRules: LintRule[] = [
+	unique({
+		field: "internalId",
+		because:
+			"A stable id names exactly one row; two fixtures cannot both be it.",
 	}),
 ];

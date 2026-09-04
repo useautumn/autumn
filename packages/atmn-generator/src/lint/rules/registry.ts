@@ -1,6 +1,6 @@
 import type { LintRule } from "../runtime/lintDocument";
 import { featureRules } from "./features";
-import { planItemPriceRules, planItemRules } from "./plans";
+import { planItemPriceRules, planItemRules, planRules } from "./plans";
 
 /**
  * Hand-written rules and names, keyed by fixture path with array indices
@@ -17,7 +17,7 @@ export type RegistryEntry = {
 
 export const LINT_REGISTRY: Record<string, RegistryEntry> = {
 	features: { label: "feature", idField: "featureId", rules: featureRules },
-	plans: { label: "plan", idField: "planId" },
+	plans: { label: "plan", idField: "planId", rules: planRules },
 	"plans.items": { label: "item", idField: "featureId", rules: planItemRules },
 	"plans.items.price": { label: "price", rules: planItemPriceRules },
 	"plans.licenses": { label: "license", idField: "licensePlanId" },
