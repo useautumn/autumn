@@ -104,8 +104,11 @@ export const removeArrayElementEdits = ({
 		];
 	}
 	if (hasTrailingComma) {
+		// Inline siblings: take the comma and the spacing before the next one.
+		const afterComma = end + commaIndex + 1;
+		const spacing = /^[ \t]*/.exec(source.slice(afterComma))?.[0].length ?? 0;
 		return [
-			{ startPos: start, endPos: end + commaIndex + 1, insertedText: "" },
+			{ startPos: start, endPos: afterComma + spacing, insertedText: "" },
 		];
 	}
 	const commaBefore = source.lastIndexOf(",", start);
