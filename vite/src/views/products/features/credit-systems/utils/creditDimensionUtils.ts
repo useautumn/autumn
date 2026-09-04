@@ -332,6 +332,25 @@ export const withRateCredits = ({
 	return { ...row, dimension };
 };
 
+/** Preferring a row breaks a tie with an equally specific one; unset clears it. */
+export const withRatePriority = ({
+	row,
+	priority,
+}: {
+	row: CreditRateRow;
+	priority: number | undefined;
+}): CreditRateRow => {
+	if (!row.dimension) return row;
+	const { priority: _dropped, ...dimension } = row.dimension;
+	return {
+		...row,
+		dimension:
+			priority === undefined
+				? (dimension as CreditDimension)
+				: ({ ...dimension, priority } as CreditDimension),
+	};
+};
+
 export const withRateMatch = ({
 	row,
 	match,

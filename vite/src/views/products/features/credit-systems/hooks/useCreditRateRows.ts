@@ -22,6 +22,7 @@ import {
 	rulesOf,
 	withRateCredits,
 	withRateMatch,
+	withRatePriority,
 	withRateRules,
 } from "../utils/creditDimensionUtils";
 import { removeAt, replaceAt } from "../utils/listUtils";
@@ -121,6 +122,18 @@ export function useCreditRateRows({
 		setRowMatch: (index: number, match: CreditMatch) =>
 			setRows(
 				replaceAt(rows, index, withRateMatch({ row: rows[index], match })),
+			),
+		// Shown when a row carries one, or when a clash needs one to resolve it.
+		showPriority:
+			rateWarnings.size > 0 ||
+			rows.some((row) => row.dimension?.priority !== undefined),
+		setRowPriority: (index: number, priority: number | undefined) =>
+			setRows(
+				replaceAt(
+					rows,
+					index,
+					withRatePriority({ row: rows[index], priority }),
+				),
 			),
 		setRowCredits: (index: number, credits: number | undefined) =>
 			setRows(

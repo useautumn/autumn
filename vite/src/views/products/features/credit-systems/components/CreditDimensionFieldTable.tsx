@@ -16,6 +16,7 @@ import { CreditEditableTable } from "./CreditEditableTable";
 interface FieldTableRow {
 	id: string;
 	field: string;
+	unnamed?: boolean;
 	values: string[];
 }
 
@@ -23,7 +24,7 @@ interface FieldTableMeta {
 	onAddValue: (field: string, value: string) => void;
 	onRemoveValue: (field: string, value: string) => void;
 	onRemoveField: (field: string) => void;
-	onRemoveUnnamedField: () => void;
+	onRemoveUnnamedField: (key: string) => void;
 	onRenameField: (from: string, to: string) => void;
 	fields: string[];
 }
@@ -45,7 +46,7 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 			<span className="flex items-center gap-1.5 min-w-0">
 				<HashIcon size={14} className="shrink-0 text-tertiary-foreground" />
 				<CreditDimensionNameInput
-					field={row.original.field}
+					field={row.original.unnamed ? "" : row.original.field}
 					onRename={(to) => metaOf(table).onRenameField(row.original.field, to)}
 					isTaken={(name) =>
 						name !== row.original.field && metaOf(table).fields.includes(name)
@@ -66,7 +67,7 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 					values={values}
 					onAdd={(value) => metaOf(table).onAddValue(field, value)}
 					onRemove={(value) => metaOf(table).onRemoveValue(field, value)}
-					placeholder="eg. small, press enter"
+					placeholder="big, small"
 				/>
 			);
 		},
@@ -82,7 +83,9 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 					className="opacity-100"
 					onClick={() => {
 						const meta = metaOf(table);
-						if (row.original.field === "") return meta.onRemoveUnnamedField();
+						if (row.original.unnamed) {
+							return meta.onRemoveUnnamedField(row.original.field);
+						}
 						meta.onRemoveField(row.original.field);
 					}}
 				/>
@@ -95,7 +98,7 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 export function CreditDimensionFieldTable() {
 	const {
 		values,
-		unnamedFields,
+		unnamedKeys,
 		addField,
 		removeField,
 		removeUnnamedField,
@@ -111,13 +114,16 @@ export function CreditDimensionFieldTable() {
 				field,
 				values: fieldValues,
 			})),
-			...Array.from({ length: unnamedFields }, (_, index) => ({
-				id: `unnamed:${index}`,
-				field: "",
+			...unnamedKeys.map((key) => ({
+				id: `unnamed:${key}`,
+				// The row's key stands in for its name until it has one, so rename
+				// and remove can address it.
+				field: key,
+				unnamed: true,
 				values: [],
 			})),
 		],
-		[values, unnamedFields],
+		[values, unnamedKeys],
 	);
 
 	const meta: FieldTableMeta = {

@@ -31,8 +31,12 @@ export function useCreditDimensionFields({
 	const [draftValues, setDraftValues] = useState<DimensionValues>(() =>
 		dimensionValues(item),
 	);
-	const [unnamedFields, setUnnamedFields] = useState(() =>
-		Object.keys(dimensionValues(item)).length === 0 ? 1 : 0,
+	// Keyed, not counted: two blank rows must be distinguishable, or the same
+	// name typed into both passes the duplicate guard twice.
+	const [unnamedKeys, setUnnamedKeys] = useState<string[]>(() =>
+		Object.keys(dimensionValues(item)).length === 0
+			? [crypto.randomUUID()]
+			: [],
 	);
 
 	const values = useMemo(
@@ -46,21 +50,25 @@ export function useCreditDimensionFields({
 		onChange(withAllowedValues({ item, allowed }));
 	};
 
-	const addField = () => setUnnamedFields(unnamedFields + 1);
+	const addField = () => setUnnamedKeys([...unnamedKeys, crypto.randomUUID()]);
 
-	const removeUnnamedField = () =>
-		setUnnamedFields(Math.max(unnamedFields - 1, 0));
+	const removeUnnamedField = (key: string) =>
+		setUnnamedKeys(unnamedKeys.filter((current) => current !== key));
 
 	const removeField = (field: string) => {
 		const { [field]: _removed, ...allowed } = values;
 		restrictTo(allowed);
 	};
 
+	/**
+	 * `from` is a dimension name, or an unnamed row's key when it is being named.
+	 * Rejecting a name already in use here — not just at the call site — is what
+	 * stops two blank rows being given the same one.
+	 */
 	const renameField = (from: string, to: string) => {
-		// A name already in use would merge two dimensions silently.
 		if (from === to || to in values) return;
-		if (from === "") {
-			removeUnnamedField();
+		if (unnamedKeys.includes(from)) {
+			removeUnnamedField(from);
 			setDraftValues({ ...draftValues, [to]: [] });
 			return;
 		}
@@ -80,7 +88,7 @@ export function useCreditDimensionFields({
 	return {
 		values,
 		fields: Object.keys(values),
-		unnamedFields,
+		unnamedKeys,
 		addField,
 		removeField,
 		removeUnnamedField,

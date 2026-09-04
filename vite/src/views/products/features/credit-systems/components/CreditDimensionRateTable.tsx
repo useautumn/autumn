@@ -25,13 +25,48 @@ interface RateRow extends MatchRow {
 	rate: CreditRateRow;
 	inherited: string;
 	effective: string;
+	priority: number | undefined;
 }
 
 interface RateTableMeta extends MatchTableMeta {
 	onCreditsChange: (index: number, credits: number | undefined) => void;
+	onPriorityChange: (index: number, priority: number | undefined) => void;
 }
 
 const rowLabel = (row: CreditRateRow) => row.name || "new rate";
+
+/**
+ * Which row wins when several match the same event: highest priority takes it,
+ * and a blank ranks below any number. Only relevant when rows tie, so the
+ * column is hidden until one does.
+ */
+const priorityColumn: ColumnDef<RateRow, unknown> = {
+	header: "Priority",
+	id: "priority",
+	size: 80,
+	cell: ({ row, table }: MatchCellContext<RateRow>) => {
+		const { index, label, priority, rate } = row.original;
+		if (!rate.dimension) return null;
+		return (
+			<CreditNumberInput
+				variant="headless"
+				ariaLabel={`${label} priority`}
+				placeholder="—"
+				value={priority}
+				onValueChange={(next) =>
+					metaOf<RateTableMeta, RateRow>(table).onPriorityChange(index, next)
+				}
+				onClear={() =>
+					metaOf<RateTableMeta, RateRow>(table).onPriorityChange(
+						index,
+						undefined,
+					)
+				}
+				className="text-sm placeholder:text-tertiary-foreground"
+			/>
+		);
+	},
+};
 
 /** What a matching track actually costs once multipliers stack on the rate. */
 const effectiveColumn: ColumnDef<RateRow, unknown> = {
@@ -79,6 +114,8 @@ export function CreditDimensionRateTable() {
 		effectiveCredits,
 		hasMultipliers,
 		rateWarnings,
+		showPriority,
+		setRowPriority,
 		setRowMatch,
 		setRowCredits,
 		removeRow,
@@ -99,6 +136,7 @@ export function CreditDimensionRateTable() {
 				rate,
 				inherited: inheritedCredits(rate.match),
 				effective: effectiveCredits(rate),
+				priority: rate.dimension?.priority,
 				warning: rateWarnings.get(rate.name),
 			})),
 		[rows, inheritedCredits, effectiveCredits, rateWarnings],
@@ -109,10 +147,11 @@ export function CreditDimensionRateTable() {
 		() => [
 			...matchColumns<RateRow>(fields),
 			creditsColumn,
+			...(showPriority ? [priorityColumn] : []),
 			...(hasMultipliers ? [effectiveColumn] : []),
 			removeColumn<RateRow>(),
 		],
-		[JSON.stringify(fields), hasMultipliers],
+		[JSON.stringify(fields), hasMultipliers, showPriority],
 	);
 
 	const meta: RateTableMeta = {
@@ -120,6 +159,7 @@ export function CreditDimensionRateTable() {
 		onMatchChange: setRowMatch,
 		onRemove: removeRow,
 		onCreditsChange: setRowCredits,
+		onPriorityChange: setRowPriority,
 	};
 	const table = useProductTable({
 		data,
@@ -132,7 +172,7 @@ export function CreditDimensionRateTable() {
 	return (
 		<CreditEditableTable
 			title="Rates"
-			hint="What an event costs, before multipliers. Only one rate applies — the most specific match wins."
+			hint="What an event costs, before multipliers. Only one rate applies — the most specific match wins, then the highest priority."
 			action={
 				missingCombinationCount > 0 &&
 				missingCombinationCount <= MAX_FILLED_COMBINATIONS && (
