@@ -23,32 +23,14 @@ const statedPlanIds = ({
 	]);
 
 /**
- * Refuses to read an empty payload as "delete everything".
- *
- * A config that failed to load, or a first run pointed at the wrong
- * environment, both arrive as zero plans. Wiping a live catalog is not a
- * recoverable mistake, so this is the one place full state declines to act on
- * what it was literally told.
- */
-const assertNotAWipe = ({
-	params,
-	absentPlanIds,
-}: {
-	params: UpdateCatalogParams;
-	absentPlanIds: string[];
-}): void => {
-	if ((params.plans ?? []).length > 0 || absentPlanIds.length === 0) return;
-	throw new RecaseError({
-		code: ErrCode.InvalidRequest,
-		message: `skip_deletions: false with no plans would remove all ${absentPlanIds.length} plans in the catalog. State the plans you want, or pass them in skip_plan_ids.`,
-		statusCode: 400,
-	});
-};
-
-/**
  * Under full state, a plan the catalog holds but the payload never mentions is
  * a removal the caller is asking for by omission. Archived rows are already
  * out of the catalog's live surface, so they are not re-proposed.
+ *
+ * `plans: []` removes everything, and is allowed — see the note on the feature
+ * side. The guard that used to refuse it predates absent meaning "not mine",
+ * and it fired from `preview_update`, so it blocked seeing the deletions as
+ * well as doing them.
  */
 export const resolveAbsenteePlanTargets = ({
 	params,
@@ -69,8 +51,6 @@ export const resolveAbsenteePlanTargets = ({
 		([planId, versions]) =>
 			!stated.has(planId) && versions.some((product) => !product.archived),
 	);
-
-	assertNotAWipe({ params, absentPlanIds: absent.map(([planId]) => planId) });
 
 	return absent.flatMap(([planId, versions]) =>
 		versions

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "dotenv";
 
@@ -44,3 +44,60 @@ export const readAutumnKeys = (): AutumnKeys => ({
 	sandboxKey: process.env.AUTUMN_SECRET_KEY,
 	prodKey: process.env.AUTUMN_PROD_SECRET_KEY,
 });
+
+/** The file `loadEnvFiles` reads first, so writes land where reads look. */
+export const findEnvFile = ({
+	dirs,
+}: {
+	dirs: string[];
+}): string | undefined => {
+	for (const dir of dirs) {
+		for (const file of FILES_IN_PRECEDENCE_ORDER) {
+			const path = join(dir, file);
+			if (existsSync(path)) return path;
+		}
+	}
+	return undefined;
+};
+
+const isAssignmentFor = ({
+	line,
+	key,
+}: {
+	line: string;
+	key: string;
+}): boolean => line.trimStart().startsWith(`${key}=`);
+
+/** Rewrites keys in place and appends the rest; every other line survives. */
+export const upsertEnvContent = ({
+	content,
+	values,
+}: {
+	content: string;
+	values: Record<string, string>;
+}): string => {
+	const trimmed = content.endsWith("\n") ? content.slice(0, -1) : content;
+	const lines = trimmed === "" ? [] : trimmed.split("\n");
+
+	for (const [key, value] of Object.entries(values)) {
+		const index = lines.findIndex((line) => isAssignmentFor({ line, key }));
+		if (index === -1) lines.push(`${key}=${value}`);
+		else lines[index] = `${key}=${value}`;
+	}
+
+	return `${lines.join("\n")}\n`;
+};
+
+export const writeEnvValues = ({
+	dirs,
+	values,
+}: {
+	dirs: string[];
+	values: Record<string, string>;
+}): string => {
+	const path = findEnvFile({ dirs }) ?? join(dirs[0] ?? process.cwd(), ".env");
+	const content = existsSync(path) ? readFileSync(path, "utf8") : "";
+
+	writeFileSync(path, upsertEnvContent({ content, values }));
+	return path;
+};

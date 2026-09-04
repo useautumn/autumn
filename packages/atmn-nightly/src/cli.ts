@@ -1,9 +1,14 @@
 #!/usr/bin/env node
-import { join } from "node:path";
 import { Command } from "commander";
-import { loadConfig } from "./config/loadConfig";
+import { runLogin } from "./actions/login";
+import { configSearchDirs, runPush } from "./actions/push";
 import { loadEnvFiles } from "./env/loadEnv";
-import { findRepoLayout } from "./repo/findRepoRoot";
+import {
+	requireSecretKey,
+	resolveTarget,
+	type TargetFlags,
+} from "./env/resolveTarget";
+import { createClient } from "./generated/client";
 import { version } from "./version";
 
 const NOT_IMPLEMENTED = (step: string) => () => {
@@ -19,8 +24,12 @@ const normalizeVersionFlag = ({ argv }: { argv: string[] }): string[] =>
 
 const withEnvironmentFlags = (command: Command): Command =>
 	command
-		.option("--prod", "target production instead of sandbox")
-		.option("--sandbox <sandboxId>", "target a specific sandbox");
+		.option("-p, --prod", "target production instead of sandbox")
+		.option("--sandbox <sandboxId>", "target a specific sandbox")
+		.option("-l, --local", "target a local server (default port 8080)")
+		// Long-only: -p is prod.
+		.option("--port <port>", "port of a local server (implies --local)")
+		.option("-b, --base-url <url>", "send to this URL instead");
 
 export const buildProgram = (): Command => {
 	const program = new Command();
@@ -34,7 +43,9 @@ export const buildProgram = (): Command => {
 	program
 		.command("login")
 		.description("authenticate and write org keys to your .env")
-		.action(NOT_IMPLEMENTED("3.0"));
+		.action(async () => {
+			await runLogin();
+		});
 
 	withEnvironmentFlags(
 		program
@@ -42,14 +53,20 @@ export const buildProgram = (): Command => {
 			.description("apply autumn.config.ts to your catalog")
 			.option("-y, --yes", "skip confirmation prompts")
 			.option("-d, --dry-run", "preview without applying"),
-	).action(async () => {
-		const { packageRoot, repoRoot } = findRepoLayout();
-		const dirs = [
-			...new Set([packageRoot, join(packageRoot, "atmn"), repoRoot]),
-		];
-		loadEnvFiles({ dirs });
-		const { path } = await loadConfig({ dirs });
-		throw new Error(`Loaded ${path}. Push lands in 3.2.`);
+	).action(async (options: TargetFlags & { dryRun?: boolean }) => {
+		// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
+		// the config, so reading them after building the client would never see
+		// them — which is what the "put it in your .env" error message promises.
+		loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+
+		const target = resolveTarget(options);
+		await runPush({
+			client: createClient({
+				secretKey: requireSecretKey({ target }),
+				...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+			}),
+			dryRun: options.dryRun === true,
+		});
 	});
 
 	withEnvironmentFlags(
