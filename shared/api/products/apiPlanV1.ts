@@ -76,7 +76,7 @@ export const ApiPlanV1Schema = z.object({
 	id: z.string().meta({
 		description: "Unique identifier for the plan.",
 	}),
-	internal_id: z.string().optional().meta({
+	internal_id: z.string().nullable().optional().meta({
 		description:
 			"Stable row id. Survives renames of plan_id and version_slug, so config files address rows by it.",
 		internal: true,

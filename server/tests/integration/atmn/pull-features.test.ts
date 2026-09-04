@@ -106,6 +106,7 @@ const wireFeatures = async ({
 /** The catalog rows, recased to the wire shape a config executes to. */
 type CatalogFeatureRow = {
 	id: string;
+	internalId?: string | null;
 	name: string;
 	type: string;
 	consumable?: boolean;
@@ -123,6 +124,10 @@ const wireRowOf = ({
 	row: CatalogFeatureRow;
 }): Record<string, unknown> => ({
 	feature_id: row.id,
+	// Features round-trip their stable id now, so the wire carries it too.
+	...(typeof row.internalId === "string"
+		? { internal_id: row.internalId }
+		: {}),
 	name: row.name,
 	type: row.type,
 	...(row.consumable ? { consumable: true } : {}),

@@ -8,6 +8,10 @@ import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { listSourceFiles } from "./pull/listSourceFiles";
 import { type ConfigImports, scaffoldConfig } from "./pull/scaffoldConfig";
 import { configSearchDirs } from "./push";
+import {
+	backfillInternalIds,
+	identityRowsFromCatalog,
+} from "./push/backfillInternalIds";
 
 export type PullResult = {
 	configPath: string;
@@ -79,7 +83,8 @@ export const runPull = async ({
 
 	const [preview, catalog] = await Promise.all([
 		client.previewUpdate(wire),
-		client.get({}),
+		// History rows too: pull routes them into plans or planVersions.
+		client.get({ include_versions: true }),
 	]);
 
 	const files = new Map<string, string>();
@@ -107,6 +112,7 @@ export const runPull = async ({
 			spec,
 			entries: entriesOf(previewRows[collection]),
 			catalogRows: rowsOf(catalogRows[collection]),
+			statedRows: rowsOf((wire as Record<string, unknown>)[collection]),
 			configPath,
 			files,
 			includeMappings,
@@ -128,6 +134,17 @@ export const runPull = async ({
 		if (source === originals.get(file)) continue;
 		writeFileSync(file, source, "utf8");
 	}
+
+	// Fixtures the catalog already knows get their stable id, even when nothing
+	// else about them changed.
+	const { backfilled } = backfillInternalIds({
+		rows: identityRowsFromCatalog({ catalog: catalogRows }),
+		configPath,
+	});
+	if (backfilled.length > 0)
+		lines.push(
+			`↳ wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}`,
+		);
 
 	write(
 		lines.length === 0

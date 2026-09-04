@@ -730,7 +730,6 @@ export type Plan = {
 	/** Plans offered as assignable licenses under this plan. Omit to leave them unchanged. */
 	licenses?: Array<{
 		licensePlanId: string;
-		versionSlug?: string;
 		included?: number;
 		prepaidOnly?: boolean;
 		customize?: {

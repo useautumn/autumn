@@ -23,14 +23,13 @@ export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
 		responseIdField: "id",
 		pull: true,
 	},
-	// Versions of one plan share planId; pull needs internal_id to tell them
-	// apart (03_prereqs), so plans are push-only for now.
+	// Versions share planId: pull matches a stable id first, else id + slug.
 	plans: {
 		builder: "plan",
 		typeName: "Plan",
 		idField: "planId",
 		responseIdField: "id",
 		historyKey: "planVersions",
-		pull: false,
+		pull: true,
 	},
 };

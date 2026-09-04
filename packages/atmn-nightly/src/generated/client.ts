@@ -71,7 +71,7 @@ const post = async ({
 export type PreviewUpdateCatalogResponse = {
 	plans: Array<{
 		planId: string;
-		/** Stable id of this row; null when the row is minted by this update. */
+		/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 		internalId: string | null;
 		/** Present only when this row's public plan id changes. */
 		newPlanId?: string;
@@ -1425,7 +1425,7 @@ export type PreviewUpdateCatalogResponse = {
 		/** Other existing versions of this plan. Each may carry `license_parents` for links that still point at that version. Omitted when there are none, or when more than one entry in this update targets the same plan (`all_versions` is unavailable then). */
 		siblingVersions?: Array<{
 			planId: string;
-			/** Stable id of this row; null when the row is minted by this update. */
+			/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 			internalId: string | null;
 			/** Present only when this row's public plan id changes. */
 			newPlanId?: string;
@@ -2323,7 +2323,7 @@ export type PreviewUpdateCatalogResponse = {
 			/** Parents whose planLicense still points at this sibling version. Omitted when none do, or when this version is itself a direct `plans[]` entry. */
 			licenseParents?: Array<{
 				planId: string;
-				/** Stable id of this row; null when the row is minted by this update. */
+				/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 				internalId: string | null;
 				/** Present only when this row's public plan id changes. */
 				newPlanId?: string;
@@ -2702,7 +2702,7 @@ export type PreviewUpdateCatalogResponse = {
 				/** Other existing versions of this parent that offer the child. Omitted when only the latest version is linked. */
 				siblingVersions?: Array<{
 					planId: string;
-					/** Stable id of this row; null when the row is minted by this update. */
+					/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 					internalId: string | null;
 					/** Present only when this row's public plan id changes. */
 					newPlanId?: string;
@@ -2788,7 +2788,7 @@ export type PreviewUpdateCatalogResponse = {
 			/** Variant rows anchored to this sibling version. Only present on `all_versions` edits, where each sibling receives its own follow diff. */
 			variants?: Array<{
 				planId: string;
-				/** Stable id of this row; null when the row is minted by this update. */
+				/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 				internalId: string | null;
 				/** Present only when this row's public plan id changes. */
 				newPlanId?: string;
@@ -3165,7 +3165,7 @@ export type PreviewUpdateCatalogResponse = {
 				/** Other existing versions of this variant that could receive the base edit. Each version reports whether it is unchanged, propagated, or explicit. */
 				siblingVersions?: Array<{
 					planId: string;
-					/** Stable id of this row; null when the row is minted by this update. */
+					/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 					internalId: string | null;
 					/** Present only when this row's public plan id changes. */
 					newPlanId?: string;
@@ -3259,7 +3259,7 @@ export type PreviewUpdateCatalogResponse = {
 		/** Parents whose planLicense currently points at this version row, and how each resolves against this entry's change. Omitted when none do. */
 		licenseParents?: Array<{
 			planId: string;
-			/** Stable id of this row; null when the row is minted by this update. */
+			/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 			internalId: string | null;
 			/** Present only when this row's public plan id changes. */
 			newPlanId?: string;
@@ -4171,7 +4171,7 @@ export type PreviewUpdateCatalogResponse = {
 			/** Other existing versions of this parent that offer the child. Omitted when only the latest version is linked. */
 			siblingVersions?: Array<{
 				planId: string;
-				/** Stable id of this row; null when the row is minted by this update. */
+				/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 				internalId: string | null;
 				/** Present only when this row's public plan id changes. */
 				newPlanId?: string;
@@ -4540,7 +4540,7 @@ export type PreviewUpdateCatalogResponse = {
 		/** Variants of this plan and how each resolved against this entry's change. Omitted when the plan has none. */
 		variants?: Array<{
 			planId: string;
-			/** Stable id of this row; null when the row is minted by this update. */
+			/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 			internalId: string | null;
 			/** Present only when this row's public plan id changes. */
 			newPlanId?: string;
@@ -5450,7 +5450,7 @@ export type PreviewUpdateCatalogResponse = {
 			/** Other existing versions of this variant that could receive the base edit. Each version reports whether it is unchanged, propagated, or explicit. */
 			siblingVersions?: Array<{
 				planId: string;
-				/** Stable id of this row; null when the row is minted by this update. */
+				/** Stable id of this row. Null when the row is minted by this update — the applied result carries the id it received. */
 				internalId: string | null;
 				/** Present only when this row's public plan id changes. */
 				newPlanId?: string;
@@ -5991,7 +5991,7 @@ export type PreviewUpdateCatalogResponse = {
 	}>;
 	features: Array<{
 		featureId: string;
-		/** Stable id of the row this preview is about; on create, the id the row will receive. */
+		/** Stable id of the row this preview is about. Null on create — the applied result carries the id the row received. */
 		internalId: string | null;
 		name?: string;
 		/** What would happen to this resource: created, updated, deleted (or archived — see will_archive), explicitly skipped, or unchanged. For plans this is per plan_id, not per version — minting a new version of a live plan is `update`, and `create` means the plan_id had no live version. */
@@ -7134,6 +7134,7 @@ export type UpdateCatalogResponse = {
 	features: Array<{
 		/** The unique identifier for this feature, used in /check and /track calls. */
 		id: string;
+		internalId?: string | null;
 		/** Human-readable name displayed in the dashboard and billing UI. */
 		name: string;
 		/** Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing. */
@@ -8317,6 +8318,7 @@ export type GetCatalogResponse = {
 	features: Array<{
 		/** The unique identifier for this feature, used in /check and /track calls. */
 		id: string;
+		internalId?: string | null;
 		/** Human-readable name displayed in the dashboard and billing UI. */
 		name: string;
 		/** Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing. */
@@ -8398,7 +8400,7 @@ export type GetCatalogResponse = {
 	plans: Array<{
 		/** Unique identifier for the plan. */
 		id: string;
-		internalId?: string;
+		internalId?: string | null;
 		/** Display name of the plan. */
 		name: string;
 		/** Optional description of the plan. */
@@ -9543,7 +9545,7 @@ export type GetCatalogResponse = {
 			plan?: {
 				/** Unique identifier for the plan. */
 				id: string;
-				internalId?: string;
+				internalId?: string | null;
 				/** Display name of the plan. */
 				name: string;
 				/** Optional description of the plan. */

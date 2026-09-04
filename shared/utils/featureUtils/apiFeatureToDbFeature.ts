@@ -372,6 +372,7 @@ export const dbToApiFeatureV1 = ({
 }) => {
 	const result = {
 		id: dbFeature.id,
+		internal_id: dbFeature.internal_id,
 		name: dbFeature.name,
 		type: dbFeature.type,
 		consumable:

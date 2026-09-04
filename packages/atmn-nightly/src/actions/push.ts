@@ -8,7 +8,10 @@ import {
 	renderPreview,
 } from "../render/renderPreview";
 import { findRepoLayout } from "../repo/findRepoRoot";
-import { backfillInternalIds } from "./push/backfillInternalIds";
+import {
+	backfillInternalIds,
+	identityRowsFromApplied,
+} from "./push/backfillInternalIds";
 
 export type PushResult = {
 	configPath: string;
@@ -76,7 +79,7 @@ export const runPush = async ({
 	write("\nApplied.\n");
 
 	const { backfilled } = backfillInternalIds({
-		results: applied.results ?? {},
+		rows: identityRowsFromApplied({ applied }),
 		configPath,
 	});
 	if (backfilled.length > 0) {
