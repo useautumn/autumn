@@ -9,6 +9,7 @@ import {
 	cusEntsToPrepaidQuantity,
 	cusEntsToUnlimitedUsage,
 	getRolloverFields,
+	isCusEntDisplayExpired,
 	nullish,
 } from "@autumn/shared";
 import {
@@ -41,6 +42,16 @@ import {
 	canDeleteCustomerBalance,
 	canRecalculateCustomerBalances,
 } from "./customerBalanceUtils";
+
+/** Expired entitlements are display-only: they must never feed sums or usage bars. */
+function getActiveRowEntitlements(
+	row: Row<CustomerBalanceRowData>,
+): FullCusEntWithFullCusProduct[] {
+	const ents = row.original.subRows?.length
+		? row.original.subRows
+		: [row.original];
+	return ents.filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
+}
 
 /** Computes balance values from a single entitlement (for sub-rows) */
 function getIndividualEntValues({
@@ -171,6 +182,28 @@ function SubRowUsageCell({
 	);
 }
 
+/** Frozen balance, greyed out — no aggregation hooks run for an expired row. */
+function ExpiredUsageCell({
+	ent,
+	entityId,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	entityId: string | null;
+}) {
+	if (ent.unlimited) {
+		return (
+			<span className="text-tertiary-foreground opacity-50">Unlimited</span>
+		);
+	}
+	const { balance, allowance } = getIndividualEntValues({ ent, entityId });
+	const format = new Intl.NumberFormat().format;
+	return (
+		<span className="text-tertiary-foreground opacity-50">
+			{format(balance)} / {format(allowance)} left
+		</span>
+	);
+}
+
 function UsageCell({
 	row,
 	fullCustomer,
@@ -182,6 +215,9 @@ function UsageCell({
 	entityId: string | null;
 	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }) {
+	if (isCusEntDisplayExpired({ cusEnt: row.original })) {
+		return <ExpiredUsageCell ent={row.original} entityId={entityId} />;
+	}
 	if (row.depth > 0) {
 		return <SubRowUsageCell ent={row.original} entityId={entityId} />;
 	}
@@ -205,17 +241,35 @@ const formatChipDate = (timestamp: number | null | undefined) => {
 
 function BalanceExpiryIcon({
 	expiresAt,
+	forceExpired = false,
 }: {
 	expiresAt: number | null | undefined;
+	/** A churned plan's row is dead even if its own expires_at is in the future. */
+	forceExpired?: boolean;
 }) {
+	const expiredByClock = expiresAt != null && expiresAt <= Date.now();
+	const hasExpired = forceExpired || expiredByClock;
+	// A row expired only by its plan has no meaningful date of its own.
+	const label = hasExpired ? "Expired" : "Expires";
+	const date =
+		expiredByClock || !hasExpired ? ` ${formatChipDate(expiresAt)}` : "";
+
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<div className="shrink-0 text-amber-500">
+				<div
+					className={cn(
+						"shrink-0",
+						hasExpired ? "text-tertiary-foreground" : "text-amber-500",
+					)}
+				>
 					<ClockCountdownIcon size={14} weight="duotone" />
 				</div>
 			</TooltipTrigger>
-			<TooltipContent>Expires {formatChipDate(expiresAt)}</TooltipContent>
+			<TooltipContent>
+				{label}
+				{date}
+			</TooltipContent>
 		</Tooltip>
 	);
 }
@@ -322,6 +376,18 @@ function SubRowBarCell({
 	);
 }
 
+/** Keeps the layout slot for an expired row: expiry icon only, no bar or chip. */
+function ExpiredBarCell({ ent }: { ent: FullCusEntWithFullCusProduct }) {
+	return (
+		<div className="flex gap-3 items-center opacity-50">
+			<div className="flex items-center justify-end gap-1.5 shrink-0 min-w-44">
+				<BalanceExpiryIcon expiresAt={ent.expires_at} forceExpired />
+			</div>
+			<div className="w-full max-w-50 min-w-16" />
+		</div>
+	);
+}
+
 function BarCell({
 	row,
 	fullCustomer,
@@ -333,6 +399,9 @@ function BarCell({
 	entityId: string | null;
 	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }) {
+	if (isCusEntDisplayExpired({ cusEnt: row.original })) {
+		return <ExpiredBarCell ent={row.original} />;
+	}
 	if (row.depth > 0) {
 		return <SubRowBarCell ent={row.original} entityId={entityId} />;
 	}
@@ -363,12 +432,19 @@ function BalanceActionsCell({
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) {
+	// Delete is the only cleanup path for an expired loose row.
+	const expired = isCusEntDisplayExpired({ cusEnt: row.original });
+
 	const isParentRow = row.depth === 0;
+	// Plan balances are strictly view-only; only loose rows keep delete.
 	const canDelete =
-		!row.getCanExpand() && canDeleteCustomerBalance({ balance: row.original });
-	const canRecordUsage = isParentRow && !!onRecordUsageClick;
-	const canCheckBalance = isParentRow && !!onCheckBalanceClick;
+		!row.getCanExpand() &&
+		canDeleteCustomerBalance({ balance: row.original }) &&
+		(!expired || !row.original.customer_product);
+	const canRecordUsage = !expired && isParentRow && !!onRecordUsageClick;
+	const canCheckBalance = !expired && isParentRow && !!onCheckBalanceClick;
 	const canRecalculate =
+		!expired &&
 		isParentRow &&
 		!!onRecalculateClick &&
 		canRecalculateCustomerBalances({
@@ -376,10 +452,11 @@ function BalanceActionsCell({
 			featureId: row.original.entitlement.feature.id,
 			entityId,
 		});
-	const customerEntitlements =
+	const customerEntitlements = (
 		row.subRows.length > 0
 			? row.subRows.map((subRow) => subRow.original)
-			: [row.original];
+			: [row.original]
+	).filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
 
 	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
 		return null;
@@ -475,6 +552,28 @@ function MobileBalanceBar({
 	entityId: string | null;
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 }) {
+	if (isCusEntDisplayExpired({ cusEnt: ent })) return null;
+	return (
+		<MobileBalanceBarContent
+			ent={ent}
+			fullCustomer={fullCustomer}
+			entityId={entityId}
+			customerEntitlements={customerEntitlements}
+		/>
+	);
+}
+
+function MobileBalanceBarContent({
+	ent,
+	fullCustomer,
+	entityId,
+	customerEntitlements,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+}) {
 	const { allowance, balance, quantity } = useFeatureUsageBalance({
 		fullCustomer,
 		featureId: ent.entitlement.feature.id,
@@ -505,9 +604,7 @@ function MobileUsageWithBar({
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
 }) {
-	const customerEntitlements = row.original.subRows?.length
-		? row.original.subRows
-		: [row.original];
+	const customerEntitlements = getActiveRowEntitlements(row);
 
 	return (
 		<div className="flex items-center justify-between gap-3">
@@ -577,9 +674,7 @@ export const CustomerBalanceTableColumns = ({
 				row={row}
 				fullCustomer={fullCustomer}
 				entityId={entityId}
-				customerEntitlements={
-					row.original.subRows?.length ? row.original.subRows : [row.original]
-				}
+				customerEntitlements={getActiveRowEntitlements(row)}
 			/>
 		),
 	},
@@ -593,9 +688,7 @@ export const CustomerBalanceTableColumns = ({
 				row={row}
 				fullCustomer={fullCustomer}
 				entityId={entityId}
-				customerEntitlements={
-					row.original.subRows?.length ? row.original.subRows : [row.original]
-				}
+				customerEntitlements={getActiveRowEntitlements(row)}
 			/>
 		),
 	},

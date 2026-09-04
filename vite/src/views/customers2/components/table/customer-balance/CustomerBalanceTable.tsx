@@ -1,4 +1,7 @@
-import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import {
+	type FullCusEntWithFullCusProduct,
+	isCusEntDisplayExpired,
+} from "@autumn/shared";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -116,9 +119,16 @@ export function CustomerBalanceTable({
 			return;
 		}
 
-		// Single balance or sub-row: open edit sheet directly
+		// Expired balances are view-only — never open the edit sheet for them
+		// (expanding aggregated sub-rows above stays available).
+		if (isCusEntDisplayExpired({ cusEnt: ent })) return;
+
+		// Single balance or sub-row: open edit sheet directly. Expired
+		// entitlements are excluded — the sheet only ever edits active balances.
 		const featureId = ent.entitlement.feature.id;
-		const ents = aggregatedMap.get(featureId) || [ent];
+		const ents = (aggregatedMap.get(featureId) || [ent]).filter(
+			(aggregatedEnt) => !isCusEntDisplayExpired({ cusEnt: aggregatedEnt }),
+		);
 
 		setBalanceSheet({
 			type: "edit-balance",

@@ -1,4 +1,5 @@
 import {
+	AuthType,
 	DeleteBalanceParamsV0Schema,
 	RouteGroup,
 	Scopes,
@@ -17,6 +18,9 @@ export const handleDeleteBalance = createRoute({
 		await deleteBalance({
 			ctx,
 			params,
+			// Dashboard sessions may delete expired loose balances (their only
+			// cleanup path); API-key behavior is unchanged.
+			includeExpired: ctx.authType === AuthType.Dashboard,
 		});
 
 		return c.json({ success: true });

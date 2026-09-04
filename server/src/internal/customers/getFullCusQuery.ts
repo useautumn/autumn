@@ -21,6 +21,7 @@ const RECURRING_BILLING_INTERVALS = [
 ] as const;
 
 export const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 30;
+export const EXPIRED_EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 20;
 export const POOLED_CUSTOMER_ENTITLEMENT_LIMIT = 100;
 
 const buildFullCustomerEntitlementJson = ({
@@ -399,7 +400,44 @@ const buildSubscriptionsCTE = (
   `;
 };
 
-const buildExtraEntitlementsCTE = () => {
+// Expiry predicate for LOOSE (extra) customer entitlements only. Internal
+// dashboard reads can bypass it to surface expired loose balances; public
+// hydration paths always keep it.
+const looseEntitlementExpiryFilterSql = ({
+	includeExpiredLooseEntitlements,
+}: {
+	includeExpiredLooseEntitlements: boolean;
+}) =>
+	includeExpiredLooseEntitlements
+		? sql``
+		: sql`AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)`;
+
+const buildExtraEntitlementsCTE = ({
+	includeExpiredLooseEntitlements = false,
+}: {
+	includeExpiredLooseEntitlements?: boolean;
+} = {}) => {
+	// Expired loose ents ride a SEPARATE budget (20) so they can never crowd
+	// active ones out of the shared active limit (30).
+	const expiredBranch = includeExpiredLooseEntitlements
+		? sql`
+        UNION ALL
+        SELECT *
+        FROM (
+          SELECT *
+          FROM customer_entitlements ce
+          WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
+            AND ce.customer_product_id IS NULL
+            AND ce.pooled_balance_id IS NULL
+            AND ce.pooled_contribution_id IS NULL
+            AND ce.expires_at IS NOT NULL
+            AND ce.expires_at <= EXTRACT(EPOCH FROM now()) * 1000
+            AND ${looseEntitlementIsLiveSql()}
+          ORDER BY ce.id DESC
+          LIMIT ${EXPIRED_EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
+        ) expired_ce`
+		: sql``;
+
 	return sql`
     extra_customer_entitlements AS (
       SELECT
@@ -412,15 +450,19 @@ const buildExtraEntitlementsCTE = () => {
         ) AS extra_customer_entitlements
       FROM (
         SELECT *
-        FROM customer_entitlements ce
-        WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
-          AND ce.customer_product_id IS NULL
-		  AND ce.pooled_balance_id IS NULL
-		  AND ce.pooled_contribution_id IS NULL
-          AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-          AND ${looseEntitlementIsLiveSql()}
-        ORDER BY ce.id DESC
-		LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
+        FROM (
+          SELECT *
+          FROM customer_entitlements ce
+          WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
+            AND ce.customer_product_id IS NULL
+            AND ce.pooled_balance_id IS NULL
+            AND ce.pooled_contribution_id IS NULL
+            AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+            AND ${looseEntitlementIsLiveSql()}
+          ORDER BY ce.id DESC
+          LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
+        ) active_ce
+        ${expiredBranch}
       ) ce
     )
   `;
@@ -493,6 +535,7 @@ export const getFullCusQuery = ({
 	entityId,
 	cusProductLimit,
 	entitiesLimit = 300,
+	includeExpiredLooseEntitlements = false,
 }: {
 	idOrInternalId: string;
 	orgId: string;
@@ -506,6 +549,8 @@ export const getFullCusQuery = ({
 	entityId?: string;
 	cusProductLimit: number;
 	entitiesLimit?: number;
+	/** Internal dashboard only: also hydrate EXPIRED loose entitlements. */
+	includeExpiredLooseEntitlements?: boolean;
 }) => {
 	const sqlChunks: SQL[] = [];
 
@@ -556,7 +601,9 @@ export const getFullCusQuery = ({
 
 	// Unconditionally add extra entitlements CTE
 	sqlChunks.push(sql`, `);
-	sqlChunks.push(buildExtraEntitlementsCTE());
+	sqlChunks.push(
+		buildExtraEntitlementsCTE({ includeExpiredLooseEntitlements }),
+	);
 
 	// Unconditionally add synthetic pooled customer entitlements.
 	sqlChunks.push(sql`, `);
@@ -786,7 +833,7 @@ export const getPaginatedFullCusQuery = ({
         AND ce.customer_product_id IS NULL
 		AND ce.pooled_balance_id IS NULL
 		AND ce.pooled_contribution_id IS NULL
-        AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+        ${looseEntitlementExpiryFilterSql({ includeExpiredLooseEntitlements: false })}
         AND ${looseEntitlementIsLiveSql()}
         ${customerLevelOnly("ce")}
       ORDER BY ce.id DESC

@@ -1,9 +1,11 @@
-import type {
-	Entity,
-	FullCusEntWithFullCusProduct,
-	FullCustomer,
+import {
+	type Entity,
+	type FullCusEntWithFullCusProduct,
+	type FullCustomer,
+	isCusEntDisplayExpired,
 } from "@autumn/shared";
 import { AdminHover } from "@/components/general/AdminHover";
+import { cn } from "@/lib/utils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { CustomerBalanceBillingIcon } from "./CustomerBalanceBillingIcon";
 import { getCustomerBalanceSourceParts } from "./customerBalanceUtils";
@@ -21,10 +23,13 @@ export function CustomerBalanceSourceCell({
 		getCustomerBalanceSourceParts({ balance, entities, fullCustomer });
 	const hasPlan = productName !== "No plan";
 	const metaParts = [intervalLabel, entityName].filter(Boolean).join(" · ");
+	const expiredClass = isCusEntDisplayExpired({ cusEnt: balance })
+		? "opacity-50"
+		: undefined;
 
 	if (!hasPlan) {
 		return (
-			<div className="flex items-center gap-2 min-w-0">
+			<div className={cn("flex items-center gap-2 min-w-0", expiredClass)}>
 				<CustomerBalanceBillingIcon balance={balance} />
 				<AdminHover
 					texts={getCusEntHoverTexts({

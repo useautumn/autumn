@@ -11,7 +11,6 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerProductsPageQuery } from "@/views/customers2/hooks/useCustomerProductsPageQuery";
 import {
 	CUSTOMER_PRODUCTS_PAGE_SIZES,
-	isDefaultProductStatuses,
 	useCustomerProductsTableState,
 } from "@/views/customers2/hooks/useCustomerProductsTableState";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -91,11 +90,6 @@ export function CustomerProductsTable() {
 
 	const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : null;
 	const showFooter = totalCount >= CUSTOMER_PRODUCTS_PAGE_SIZES[0];
-
-	const hasActiveFilters =
-		kind !== "all" || !isDefaultProductStatuses(statuses);
-	const hasAnyProducts = customer.customer_products.length > 0;
-	const showFilter = hasAnyProducts || hasActiveFilters;
 
 	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
@@ -226,14 +220,12 @@ export function CustomerProductsTable() {
 							Plans
 						</Table.Heading>
 						<Table.Actions>
-							{showFilter && (
-								<CustomerProductsFilterButton
-									kind={kind}
-									setKind={setKind}
-									statuses={statuses}
-									setStatuses={setStatuses}
-								/>
-							)}
+							<CustomerProductsFilterButton
+								kind={kind}
+								setKind={setKind}
+								statuses={statuses}
+								setStatuses={setStatuses}
+							/>
 							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>

@@ -61,6 +61,28 @@ const checkSecrets = (): PreflightProblem | undefined => {
 	};
 };
 
+/**
+ * Workers run `bun install --frozen-lockfile`; a bun.lock that drifted from
+ * package.json (typically after a dev merge) fails EVERY worker at provision.
+ * WARN-ONLY: bun's frozen check has known false positives in workspaces and
+ * differs across platforms (oven-sh/bun#20913, #19088), so a local dry-run
+ * cannot be a fatal gate — it just flags the likely cause before a fanout dies.
+ */
+const warnLockfileDrift = (): void => {
+	const proc = Bun.spawnSync(
+		["bun", "install", "--frozen-lockfile", "--dry-run"],
+		{ stdout: "pipe", stderr: "pipe" },
+	);
+	if (proc.exitCode === 0) {
+		return;
+	}
+	console.warn(
+		chalk.yellow(
+			"[tw] warning: `bun install --frozen-lockfile --dry-run` failed locally — if workers die at provision with 'lockfile had changes', run `bun install`, commit bun.lock, and push. (Local check can false-positive: oven-sh/bun#20913.)",
+		),
+	);
+};
+
 const checkGit = (ref: string): PreflightProblem | undefined => {
 	const dirty = git("status", "--porcelain", "--", ".", ":(exclude)ai");
 	if (dirty) {
@@ -115,7 +137,13 @@ export const runPreflight = ({
 	}
 	push(checkSecrets());
 	if (!allowDirty) {
-		push(checkGit(ref));
+		const gitProblem = checkGit(ref);
+		push(gitProblem);
+		// Lockfile state reflects what workers will clone only when the tree
+		// matches origin, which the git gate just proved.
+		if (!gitProblem) {
+			warnLockfileDrift();
+		}
 	}
 
 	if (problems.length === 0) {
