@@ -5,11 +5,13 @@ import type {
 	PartitionChangeListeners,
 	PartitionOffsets,
 	PartitionRuntimeFactory,
-	PartitionRuntimePort,
-	PartitionRuntimeResources,
 	PartitionsDependencies,
 } from "../../../src/partitions/types/partitions.js";
 import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
+import {
+	createTestRuntimeResources,
+	type LifecycleTestRuntime,
+} from "../kafka/kafka-test-fixtures.js";
 
 const deferred = () => {
 	let resolve = (): void => undefined;
@@ -426,44 +428,6 @@ describe("Ownership publication and admission", () => {
 });
 
 describe("partitionLifecycle", function partitionLifecycleTests() {
-	type LifecycleTestRuntime = Pick<
-		PartitionRuntimePort,
-		"start" | "stop" | "getHealth"
-	>;
-
-	const createTestRuntimeResources = ({
-		runtime,
-		markUnavailable = () => undefined,
-	}: {
-		runtime: LifecycleTestRuntime;
-		markUnavailable?: PartitionRuntimeResources["markUnavailable"];
-	}): PartitionRuntimeResources => {
-		const drain = async (): Promise<void> => undefined;
-		const subscribeUnavailable: PartitionRuntimePort["subscribeUnavailable"] =
-			() => () =>
-				undefined;
-		const submitTrack: PartitionRuntimePort["submitTrack"] = async () => {
-			throw new Error("Lifecycle fixture cannot execute tracks");
-		};
-		const check: PartitionRuntimePort["check"] = async () => {
-			throw new Error("Lifecycle fixture cannot execute checks");
-		};
-		const claim = async () => ({ routeEpoch: "1" });
-		const release = async (): Promise<void> => undefined;
-		return {
-			runtime: {
-				...runtime,
-				drain,
-				waitForQuiescence: drain,
-				subscribeUnavailable,
-				submitTrack,
-				check,
-			},
-			publication: { claim, release },
-			markUnavailable,
-		};
-	};
-
 	type LifecycleTestFactory = (params: {
 		topic: string;
 		partition: number;
