@@ -6,6 +6,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	configBody,
 	enterpriseWithSeats,
@@ -16,11 +17,11 @@ import {
 } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const internalIdCount = ({ files }: { files: Map<string, string> }): number => {
 	let count = 0;
-	for (const text of files.values()) count += text.split("internalId:").length - 1;
+	for (const text of files.values())
+		count += text.split("internalId:").length - 1;
 	return count;
 };
 
@@ -38,25 +39,13 @@ test("fuzz-max config → one request, backfill covers every created row", async
 	});
 
 	try {
-		let previewCalls = 0;
-		let updateCalls = 0;
-		const previewUpdate = scenario.client.previewUpdate.bind(scenario.client);
-		const update = scenario.client.update.bind(scenario.client);
-		scenario.client.previewUpdate = (async (...args: Parameters<typeof previewUpdate>) => {
-			previewCalls += 1;
-			return previewUpdate(...args);
-		}) as typeof scenario.client.previewUpdate;
-		scenario.client.update = (async (...args: Parameters<typeof update>) => {
-			updateCalls += 1;
-			return update(...args);
-		}) as typeof scenario.client.update;
+		const result = await scenario.push();
 
-		await scenario.push();
-
-		// One preview, one apply — the whole batch travels as a single request,
-		// never one round trip per created row.
-		expect(previewCalls).toBe(1);
-		expect(updateCalls).toBe(1);
+		// The CLI runs in its own process, so its output is the evidence: one
+		// preview rendered, one apply — never a round trip per created row.
+		expect(result.output.match(/^Features \(\d+\)$/gm)).toHaveLength(1);
+		expect(result.output.match(/^Plans \(\d+\)$/gm)).toHaveLength(1);
+		expect(result.output.match(/^Applied\.$/gm)).toHaveLength(1);
 
 		// 7 features (everyFeatureType) + 4 plans (free, pro, seat, enterprise):
 		// every one of them lacked an internalId in the source, so backfill must
