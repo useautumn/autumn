@@ -22,6 +22,7 @@ import {
 	dragonflyPortFor,
 	dynamoDbPortFor,
 	elasticMqPortFor,
+	kafkaPortFor,
 	serverPortFor,
 } from "./ports.ts";
 import {
@@ -99,6 +100,9 @@ export function provisionedInfraEnv(
 		CACHE_V2_DRAGONFLY_URL: redisUrl,
 		CACHE_V2_DRAGONFLY_PUBLIC_URL: redisUrl,
 		DYNAMODB_ENDPOINT: `http://localhost:${dynamoDbPortFor(worktreeNum)}`,
+		...(!isCloudAgent() && {
+			KAFKA_BROKERS: `127.0.0.1:${kafkaPortFor(worktreeNum)}`,
+		}),
 		SQS_QUEUE_URL: queueUrl("autumn.fifo"),
 		SQS_QUEUE_URL_V2: queueUrl("autumn.fifo"),
 		TRACK_SQS_QUEUE_URL: queueUrl("autumn-track.fifo"),

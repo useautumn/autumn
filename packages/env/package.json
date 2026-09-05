@@ -10,6 +10,11 @@
 			"import": "./src/index.ts",
 			"default": "./src/index.ts"
 		},
+		"./balanceWorker": {
+			"types": "./src/balanceWorker.ts",
+			"import": "./src/balanceWorker.ts",
+			"default": "./src/balanceWorker.ts"
+		},
 		"./viteDev": {
 			"types": "./src/viteDev.ts",
 			"import": "./src/viteDev.ts",
