@@ -29,7 +29,7 @@ for (const label of ["archived on second push"] as const) {
 				}),
 			],
 			config: configBody({
-				features: featureLiteral({ archived: label === "created archived" }),
+				features: featureLiteral({ archived: false }),
 			}),
 		});
 

@@ -62,7 +62,7 @@ test.concurrent(
 				?.match(
 					new RegExp(`internalId: "([^"]+)", featureId: "${featureId}"`),
 				)?.[1];
-			expect(rewritten).toBe(row?.internalId);
+			expect(rewritten).toBe(row?.internalId ?? undefined);
 		} finally {
 			scenario.cleanup();
 		}
