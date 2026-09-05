@@ -35,6 +35,18 @@ const planIdsCurrentlyReferencingFeature = ({
 				: [],
 	);
 
+/** True when a plan this push states still lists an item on the feature. */
+const statedItemNamesFeature = ({
+	featureId,
+	params,
+}: {
+	featureId: string;
+	params: UpdateCatalogParams;
+}): boolean =>
+	(params.plans ?? []).some((plan) =>
+		(plan.items ?? []).some((item) => item.feature_id === featureId),
+	);
+
 /** True when this same push also names the plan — trusted to have reconciled
  * its own items, so a stale entitlement there is cleanup, not a forgotten ref. */
 const planIsPartOfThisPush = ({
@@ -105,15 +117,18 @@ export const computeRemoveFeaturesPlan = ({
 				internalFeatureId: removeFeaturePlan.current.internal_id,
 				productStatesContext: catalogContext.productStatesContext,
 			});
-			// Under full state every plan is in the push, stated or removed, so a
-			// plan item is never a forgotten reference there; only a partial push
-			// can leave a plan outside itself.
+			// Under full state every plan is in the push, stated or removed, so the
+			// only reference that survives is an item the push itself still states;
+			// a partial push can also leave a plan outside itself.
 			const fullState = params.skip_deletions === false;
-			const hasUnclearedPlanItem =
-				!fullState &&
-				referencingPlanIds.some(
-					(planId) => !planIsPartOfThisPush({ planId, params }),
-				);
+			const hasUnclearedPlanItem = fullState
+				? statedItemNamesFeature({
+						featureId: removeFeaturePlan.featureId,
+						params,
+					})
+				: referencingPlanIds.some(
+						(planId) => !planIsPartOfThisPush({ planId, params }),
+					);
 			const hasSurvivingCreditSystem =
 				getCreditSystemsFromFeature({
 					featureId: removeFeaturePlan.featureId,

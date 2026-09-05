@@ -36,11 +36,8 @@ export const handleRemovePlanErrors = ({
 			? upsertedPlanIds.has(removePlan.planId)
 			: upsertedVersions.has(`${removePlan.planId}@${removePlan.version}`);
 		if (collides) {
-			const scope = removePlan.allVersions
-				? "every version"
-				: `version ${removePlan.version}`;
 			throw new RecaseError({
-				message: `Cannot update and remove plan ${removePlan.planId} (${scope}) in the same call`,
+				message: `Cannot update and remove plan ${removePlan.planId} in the same call`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
