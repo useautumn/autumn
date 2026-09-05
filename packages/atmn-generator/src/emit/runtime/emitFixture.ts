@@ -178,8 +178,27 @@ const rowValueOf = ({
 	if (key === "creditSchema") return creditSchemaOf(value);
 	// Membership in `plans` stamps true; only a draft's `false` is fixture-worthy.
 	if (key === "active") return value === false ? false : undefined;
+	// A deprecated field is kept only while it carries data.
+	if (
+		isDeprecatedKey({ spec, key }) &&
+		Array.isArray(value) &&
+		value.length === 0
+	)
+		return undefined;
 	return value;
 };
+
+const isDeprecatedKey = ({
+	spec,
+	key,
+}: {
+	spec: CollectionSpec;
+	key: string;
+}): boolean =>
+	(spec.deprecated ?? []).some((entry) => camelOf(entry.path) === key);
+
+const camelOf = (snake: string): string =>
+	snake.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 
 /** One top-level fixture property as `key: value` text, or null when the row omits it. */
 export const emitFixtureProperty = ({

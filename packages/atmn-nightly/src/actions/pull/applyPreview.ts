@@ -9,7 +9,10 @@ import { deleteFixtureLiteral } from "../../surgery/deleteFixtureLiteral";
 import { deleteReference } from "../../surgery/deleteReference";
 import { ensureBuilderImport } from "../../surgery/ensureBuilderImport";
 import { leadingIndentOfLine } from "../../surgery/fixtureEdit";
-import { insertCollection } from "../../surgery/insertCollection";
+import {
+	insertCollection,
+	rootSpreadNames,
+} from "../../surgery/insertCollection";
 import {
 	fixturePropertyString,
 	patchFixtureProperty,
@@ -206,11 +209,22 @@ export const applyPreview = ({
 			emitted = route.draft ? { ...bare, active: false } : bare;
 		}
 		// A config that never mentioned the collection gets the key, then the row.
+		// Unless the object spreads another one: the key may live there, and a
+		// second `features:` after the spread would silently override it.
+		const configSource = files.get(configPath) ?? "";
 		const withKey = insertCollection({
-			source: files.get(configPath) ?? "",
+			source: configSource,
 			collection: target,
 		});
 		if (withKey === null) return false;
+		const spreads = rootSpreadNames({ source: configSource });
+		if (withKey !== configSource && spreads.length > 0) {
+			result.unlocated.push({
+				id: key,
+				action: `append to \`${target}\` by hand: atmn() spreads \`${spreads.join("`, `")}\`, which may already hold it`,
+			});
+			return false;
+		}
 		files.set(configPath, withKey);
 		// The array may be a const the config names, in this file or an imported one.
 		const resolved = resolveCollectionTarget({

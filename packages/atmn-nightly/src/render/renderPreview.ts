@@ -362,6 +362,23 @@ const isChange = (change: PreviewChange): boolean =>
 
 const DETAIL_INDENT = "    ";
 
+/** The drafted migrations, one link per line; ids the server has not minted yet print as `?`. */
+export const renderMigrationLinks = ({
+	migrations,
+	migrationLinkBase,
+}: {
+	migrations: { id?: string }[];
+	migrationLinkBase?: string;
+}): string =>
+	[
+		chalk.bold(`Draft migrations (${migrations.length})`),
+		...migrations.map((migration) =>
+			migrationLinkBase && migration.id
+				? `  ${chalk.cyan(`${migrationLinkBase}/migrations/${migration.id}`)}`
+				: `  ${chalk.cyan(migration.id ?? "?")}`,
+		),
+	].join("\n");
+
 export const renderPreview = ({
 	preview,
 	migrationLinkBase,
@@ -427,16 +444,7 @@ export const renderPreview = ({
 	if (migrations.length > 0) {
 		// Draft migrations are the server telling you customers need moving. The
 		// push still applies; these are run later, deliberately.
-		sections.push(
-			[
-				chalk.bold(`Draft migrations (${migrations.length})`),
-				...migrations.map((migration) =>
-					migrationLinkBase
-						? `  ${chalk.cyan(`${migrationLinkBase}/migrations/${migration.id}`)}`
-						: `  ${chalk.cyan(migration.id ?? "?")}`,
-				),
-			].join("\n"),
-		);
+		sections.push(renderMigrationLinks({ migrations, migrationLinkBase }));
 	}
 
 	return sections.join("\n\n");
