@@ -74,9 +74,7 @@ test.concurrent(
 			for (const [key, items] of Object.entries(lanes)) {
 				const createPreview = parsePlanPreview(
 					await autumnV2_3.catalogV2.previewUpdate({
-						plans: [
-							{ plan_id: planId, billing_controls: { [key]: items } },
-						],
+						plans: [{ plan_id: planId, billing_controls: { [key]: items } }],
 					}),
 				);
 				PreviewUpdateCatalogResponseSchema.parse(createPreview);
@@ -85,7 +83,8 @@ test.concurrent(
 					expected: {
 						planId,
 						action: "update",
-						previousAttributes: null,
+						// A lane that did not exist previews as added: its previous is null.
+						previousAttributes: { billing_controls: { [key]: null } },
 						customize: null,
 						itemChanges: [],
 						priceChange: null,
@@ -106,9 +105,7 @@ test.concurrent(
 
 				const deletePreview = parsePlanPreview(
 					await autumnV2_3.catalogV2.previewUpdate({
-						plans: [
-							{ plan_id: planId, billing_controls: { [key]: [] } },
-						],
+						plans: [{ plan_id: planId, billing_controls: { [key]: [] } }],
 					}),
 				);
 				PreviewUpdateCatalogResponseSchema.parse(deletePreview);
@@ -144,7 +141,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 billing-control lanes: null previous arrays never appear in preview")}`,
+	`${chalk.yellowBright("catalogV2 billing-control lanes: an added lane previews with a null previous")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_bc_null");
@@ -164,10 +161,11 @@ test.concurrent(
 				}),
 			);
 			const billingControls =
-				preview.plans[0]?.plan_change?.previous_attributes
-					?.billing_controls ?? {};
-			expect(JSON.stringify(billingControls)).not.toContain("null");
-			expect(billingControls.spend_limits).toBeUndefined();
+				preview.plans[0]?.plan_change?.previous_attributes?.billing_controls ??
+				{};
+			// The added lane is the only key, and its previous value is null.
+			expect(Object.keys(billingControls)).toEqual(["spend_limits"]);
+			expect(billingControls.spend_limits).toBeNull();
 			PreviewUpdateCatalogResponseSchema.parse(preview);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });

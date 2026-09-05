@@ -80,9 +80,13 @@ test.concurrent(
 			await expectDbFeaturesAbsent({ ctx, featureIds });
 
 			const updateResponse = await autumnV2_3.catalogV2.update(params);
-			expect(updateResponse.results.features).toEqual(
-				featureIds.map((id) => ({ id, action: "create" })),
-			);
+			// Results also carry the minted internal_id; identity and action are the contract here.
+			expect(
+				updateResponse.results.features.map(({ id, action }) => ({
+					id,
+					action,
+				})),
+			).toEqual(featureIds.map((id) => ({ id, action: "create" })));
 			await expectDbFeaturesCorrect({
 				ctx,
 				expected: [

@@ -246,17 +246,22 @@ test.concurrent(
 				});
 				await expect(conflicting).rejects.toThrow();
 
-				// A6: an id nothing owns must not quietly become a new row.
-				const unknown = autumnV2_3.catalogV2.update({
+				// A6: an id nothing owns is a new row — a config carrying a stale or
+				// foreign internal_id still pushes, and the CLI rewrites the id after.
+				const ghostId = `${planId}_ghost`;
+				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
-							plan_id: planId,
+							plan_id: ghostId,
 							internal_id: "prod_nothingownsthisid",
 							name: "Ghost",
 						},
 					],
 				});
-				await expect(unknown).rejects.toThrow();
+				const ghost = (await autumnV2_3.catalogV2.get({})) as unknown as {
+					plans: { id: string }[];
+				};
+				expect(ghost.plans.some((row) => row.id === ghostId)).toBe(true);
 			},
 		});
 	},
