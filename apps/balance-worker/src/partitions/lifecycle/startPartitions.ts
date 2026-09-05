@@ -1,48 +1,32 @@
-import { reportPartitionError } from "../reportPartitionError.js";
-import type {
-	AllocationScope,
-	PartitionEntry,
-} from "../types/partitionState.js";
+import { isCurrentAllocation } from "../allocation/partitionAllocation.js";
+import type { AllocationScope } from "../types/partitionState.js";
+import {
+	createPartitionEntries,
+	reportPartitionStartupFailures,
+	startPartition,
+} from "./partitionStartup.js";
 
 export async function startPartitions({
 	ctx,
 	state,
 	allocationGeneration,
 	partitions,
-}: AllocationScope & {
-	partitions: number[];
-}): Promise<void> {
-	if (
-		state.status !== "running" ||
-		state.retirementFailed ||
-		state.generation !== allocationGeneration
-	)
-		return;
-	const entries: PartitionEntry[] = [];
-	for (const partition of partitions) {
-		try {
-			const entry = {
-				partition,
-				...ctx.createRuntime({ topic: ctx.config.topic, partition }),
-			};
-			entries.push(entry);
-			state.entries.set(partition, entry);
-		} catch (cause) {
-			reportPartitionError({ ctx, cause });
-		}
-	}
+}: AllocationScope & { partitions: number[] }): Promise<void> {
+	if (!isCurrentAllocation({ state, allocationGeneration })) return;
+	const entries = createPartitionEntries({
+		ctx,
+		state,
+		allocationGeneration,
+		partitions,
+	});
 	const startups: Promise<void>[] = [];
 	for (const entry of entries) startups.push(startPartition({ entry }));
 	const results = await Promise.allSettled(startups);
-	for (const result of results) {
-		if (result.status === "rejected")
-			reportPartitionError({ ctx, cause: result.reason });
-	}
-}
-async function startPartition({
-	entry,
-}: {
-	entry: PartitionEntry;
-}): Promise<void> {
-	await entry.runtime.start();
+	reportPartitionStartupFailures({
+		ctx,
+		state,
+		allocationGeneration,
+		entries,
+		results,
+	});
 }

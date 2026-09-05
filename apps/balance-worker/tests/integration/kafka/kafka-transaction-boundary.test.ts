@@ -4,15 +4,23 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	createCustomerMeteringState,
+	executeTrack,
+	meteringPartitionKeyOf,
 	parseTrackCommand,
+	stateInitializationFingerprintOf,
 } from "@autumn/balance-engine";
 import { createKafkaClient as balanceWorkerKafkaConfigOf } from "@autumn/kafka";
 import { Kafka, logLevel, type RecordMetadata } from "kafkajs";
+import { createPartitionCheckpoint } from "../../../src/checkpoint/partitionCheckpoint.js";
+import type { PartitionCheckpointSource } from "../../../src/checkpoint/partitionCheckpointSource.js";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
 import { createWorkerConsumerConfig as balanceWorkerConsumerConfigOf } from "../../../src/init/workerConfig.js";
 import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
-import { openSqliteBalanceStateStore } from "../../../src/state/sqliteBalanceStateStore.js";
+import {
+	openSqliteBalanceStateStore,
+	type SqliteBalanceStateStore,
+} from "../../../src/state/sqliteBalanceStateStore.js";
 import {
 	createKafkaCommittedTrackOutcomeAppender,
 	createKafkaOwnedPartitionGroup,
@@ -29,11 +37,26 @@ const brokers = (process.env.KAFKA_BROKERS ?? "127.0.0.1:19092").split(",");
 const partition = 0;
 const timings = {
 	fetchMaxWaitTimeMs: 250,
+	healthRefreshIntervalMs: 5_000,
 	heartbeatIntervalMs: 3_000,
 	recoveryDrainTimeoutMs: 5_000,
 	rebalanceTimeoutMs: 60_000,
 	sessionTimeoutMs: 30_000,
 } satisfies KafkaBalanceWorkerTimings;
+
+const checkpointConfiguration = {
+	checkpointSource: { latest: async () => null },
+	checkpointRestoreLimits: {
+		maxSerializedBytes: 1_000_000,
+		maxStates: 1_000,
+		maxReceipts: 10_000,
+	},
+	checkpointRetryPolicy: {
+		maxAttempts: 3,
+		initialBackoffMs: 10,
+		maxBackoffMs: 100,
+	},
+};
 
 const uniqueName = ({ prefix }: { prefix: string }): string =>
 	`${prefix}-${crypto.randomUUID().replaceAll("-", "")}`;
@@ -124,9 +147,11 @@ const waitUntil = async ({
 const createStore = ({
 	topic,
 	initializeCustomer = true,
+	initializePartition = true,
 }: {
 	topic: string;
 	initializeCustomer?: boolean;
+	initializePartition?: boolean;
 }) => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-kafka-fence-"));
 	const store = openSqliteBalanceStateStore({
@@ -143,8 +168,13 @@ const createStore = ({
 			},
 		},
 	});
-	store.initializePartition({ topic, partition, nextOffset: 0n });
+	if (initializePartition) {
+		store.initializePartition({ topic, partition, nextOffset: 0n });
+	}
 	if (initializeCustomer) {
+		if (!initializePartition) {
+			throw new Error("Cannot initialize a customer without its partition");
+		}
 		store.restoreState({
 			topic,
 			partition,
@@ -163,11 +193,233 @@ const createStore = ({
 };
 
 const caughtUpFollower = (): PartitionOutcomeFollowerPort => ({
+	readLogRange: async () => ({ logStartOffset: 0n, logEndOffset: 0n }),
 	startAndCatchUp: async () => undefined,
+	readProgress: () => ({ consumedNextOffset: 0n, highWatermark: 0n }),
 	stop: async () => undefined,
 });
 
+const createTestRuntimeFactory = ({
+	kafka,
+	deploymentPrefix,
+	stateStore,
+	checkpointSource = checkpointConfiguration.checkpointSource,
+}: {
+	kafka: Kafka;
+	deploymentPrefix: string;
+	stateStore: SqliteBalanceStateStore;
+	checkpointSource?: PartitionCheckpointSource;
+}) =>
+	createKafkaOwnedPartitionRuntimeFactory({
+		kafka,
+		deploymentEnvironment: uniqueName({ prefix: deploymentPrefix }),
+		stateStore,
+		checkpointSource,
+		checkpointRestoreLimits: checkpointConfiguration.checkpointRestoreLimits,
+		checkpointRetryPolicy: checkpointConfiguration.checkpointRetryPolicy,
+		partitionResolver: { partitionForIdentity: () => partition },
+		writerLimits: {
+			maxBatchSize: 100,
+			maxPendingCommands: 1_000,
+			maxPendingCommandsPerCustomer: 100,
+		},
+		trackReceiptRetentionMs: 86_400_000,
+		producerLimits: {
+			transactionTimeoutMs: 10_000,
+			retryCount: 2,
+			initialRetryTimeMs: 100,
+			maxRetryTimeMs: 1_000,
+		},
+		timings,
+	});
+
 describe("Kafka transaction boundary", () => {
+	test("restores a checkpoint, replays its tail, and deduplicates the retried tail command", async () => {
+		const kafka = createKafka({
+			clientId: uniqueName({ prefix: "checkpoint-restore" }),
+		});
+		const topicFixture = await createTopic({ kafka });
+		const storeFixture = createStore({
+			topic: topicFixture.topic,
+			initializeCustomer: false,
+			initializePartition: false,
+		});
+		const seedProducer = createKafkaOwnedPartitionProducer({
+			kafka,
+			deploymentEnvironment: uniqueName({ prefix: "checkpoint-seed" }),
+			topic: topicFixture.topic,
+			partition,
+			limits: {
+				transactionTimeoutMs: 10_000,
+				retryCount: 2,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 1_000,
+			},
+		});
+		const initialState = storeFixture.state;
+		const firstOutcome = createOutcome({ state: initialState });
+		const firstExecution = executeTrack({
+			state: initialState,
+			outcome: firstOutcome,
+		});
+		const tailOutcome = createOutcome({
+			state: firstExecution.state,
+			commandId: "cmd_tail",
+			requestId: "req_tail",
+		});
+		const consumer = kafka.consumer(
+			balanceWorkerConsumerConfigOf({
+				groupId: uniqueName({ prefix: "checkpoint-restore" }),
+				timings,
+			}),
+		);
+		const partitionOffsets = kafka.admin();
+		let runtime: ReturnType<typeof createOwnedPartitionRuntime> | null = null;
+		const errors: unknown[] = [];
+		let group: ReturnType<typeof createKafkaOwnedPartitionGroup> | null = null;
+		try {
+			await seedProducer.connect();
+			const seedTransaction = await seedProducer.transaction();
+			const seedMetadata = await seedTransaction.send({
+				topic: topicFixture.topic,
+				acks: -1,
+				messages: [
+					{
+						...serializeKafkaStateInitializedRecord({
+							initialization: {
+								schemaVersion: 1,
+								type: "state_initialized",
+								initializationId: "init_1",
+								initializedAt: 1_700_000_000_000,
+								state: initialState,
+							},
+						}),
+						partition,
+					},
+					{
+						...serializeKafkaTrackOutcomeRecord({ outcome: firstOutcome }),
+						partition,
+					},
+				],
+			});
+			await seedTransaction.commit();
+			const seedBaseOffset = baseOffsetFrom({ metadata: seedMetadata });
+			const appender = createKafkaCommittedTrackOutcomeAppender({
+				producer: seedProducer,
+			});
+			const tailAppend = await appender.appendCommitted({
+				topic: topicFixture.topic,
+				partition,
+				outcomes: [tailOutcome],
+			});
+			const partitionKey = meteringPartitionKeyOf({
+				identity: initialState.identity,
+			});
+			const checkpoint = createPartitionCheckpoint({
+				engineSchemaVersion: 1,
+				createdAt: 1_700_000_000_000,
+				topic: topicFixture.topic,
+				partition,
+				nextOffset: seedBaseOffset + 2n,
+				states: [
+					{
+						partitionKey,
+						initializationId: "init_1",
+						initializationFingerprint: stateInitializationFingerprintOf({
+							initialization: {
+								schemaVersion: 1,
+								type: "state_initialized",
+								initializationId: "init_1",
+								initializedAt: 1_700_000_000_000,
+								state: initialState,
+							},
+						}),
+						state: firstExecution.state,
+					},
+				],
+				receipts: [
+					{
+						partitionKey,
+						recordOffset: seedBaseOffset + 1n,
+						outcome: firstOutcome,
+					},
+				],
+			});
+			const createRuntime = createTestRuntimeFactory({
+				kafka,
+				deploymentPrefix: "checkpoint-owner",
+				stateStore: storeFixture.store,
+				checkpointSource: { latest: async () => checkpoint },
+			});
+			group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets,
+				topic: topicFixture.topic,
+				stateStore: storeFixture.store,
+				partitionsConsumedConcurrently: 1,
+				healthRefreshIntervalMs: timings.healthRefreshIntervalMs,
+				createRuntime: (params) => {
+					const createdRuntime = createRuntime(params);
+					runtime = createdRuntime;
+					return createdRuntime;
+				},
+				onError: ({ cause }) => errors.push(cause),
+				onUnhealthyPartition: () => undefined,
+			});
+
+			await group.start();
+			await waitUntil({
+				condition: () => runtime?.getStatus() === "ready" || errors.length > 0,
+				timeoutMs: 10_000,
+			});
+			if (errors[0]) throw errors[0];
+			const readyRuntime = runtime as ReturnType<
+				typeof createOwnedPartitionRuntime
+			> | null;
+			if (!readyRuntime) throw new Error("Expected an owned partition runtime");
+
+			expect(
+				storeFixture.store.readState({ identity: initialState.identity }),
+			).toEqual(
+				executeTrack({ state: firstExecution.state, outcome: tailOutcome })
+					.state,
+			);
+			expect(
+				storeFixture.store.readNextOffset({
+					topic: topicFixture.topic,
+					partition,
+				}),
+			).toBe(tailAppend.baseOffset + 1n);
+			const retryCommand = parseTrackCommand({
+				input: {
+					schemaVersion: 1,
+					type: "track",
+					commandId: "cmd_tail",
+					requestId: "req_tail",
+					identity: initialState.identity,
+					entityId: null,
+					featureId: "messages",
+					value: 5,
+					overageBehavior: "reject",
+					properties: null,
+					occurredAt: 1_700_000_000_000,
+				},
+			});
+			await expect(
+				readyRuntime.submitTrack({ command: retryCommand }),
+			).resolves.toMatchObject({ kind: "duplicate" });
+			expect(
+				storeFixture.store.readState({ identity: initialState.identity })
+					?.revision,
+			).toBe(2);
+		} finally {
+			await seedProducer.disconnect().catch(() => undefined);
+			await group?.stop().catch(() => undefined);
+			storeFixture.cleanup();
+			await topicFixture.cleanup();
+		}
+	});
+
 	test("replays a committed state initialization before its first track", async () => {
 		const kafka = createKafka({
 			clientId: uniqueName({ prefix: "state-seed" }),
@@ -197,24 +449,10 @@ describe("Kafka transaction boundary", () => {
 		);
 		const partitionOffsets = kafka.admin();
 		let runtime: ReturnType<typeof createOwnedPartitionRuntime> | null = null;
-		const createRuntime = createKafkaOwnedPartitionRuntimeFactory({
+		const createRuntime = createTestRuntimeFactory({
 			kafka,
-			deploymentEnvironment: uniqueName({ prefix: "state-seed-owner" }),
+			deploymentPrefix: "state-seed-owner",
 			stateStore: storeFixture.store,
-			partitionResolver: { partitionForIdentity: () => partition },
-			writerLimits: {
-				maxBatchSize: 100,
-				maxPendingCommands: 1_000,
-				maxPendingCommandsPerCustomer: 100,
-			},
-			trackReceiptRetentionMs: 86_400_000,
-			producerLimits: {
-				transactionTimeoutMs: 10_000,
-				retryCount: 2,
-				initialRetryTimeMs: 100,
-				maxRetryTimeMs: 1_000,
-			},
-			timings,
 		});
 		const errors: unknown[] = [];
 		const group = createKafkaOwnedPartitionGroup({
@@ -223,12 +461,14 @@ describe("Kafka transaction boundary", () => {
 			topic: topicFixture.topic,
 			stateStore: storeFixture.store,
 			partitionsConsumedConcurrently: 1,
+			healthRefreshIntervalMs: timings.healthRefreshIntervalMs,
 			createRuntime: (params) => {
 				const createdRuntime = createRuntime(params);
 				runtime = createdRuntime;
 				return createdRuntime;
 			},
 			onError: ({ cause }) => errors.push(cause),
+			onUnhealthyPartition: () => undefined,
 		});
 
 		try {
@@ -395,24 +635,10 @@ describe("Kafka transaction boundary", () => {
 		);
 		const partitionOffsets = kafka.admin();
 		let runtime: ReturnType<typeof createOwnedPartitionRuntime> | null = null;
-		const createRuntime = createKafkaOwnedPartitionRuntimeFactory({
+		const createRuntime = createTestRuntimeFactory({
 			kafka,
-			deploymentEnvironment: uniqueName({ prefix: "catch-up-owner" }),
+			deploymentPrefix: "catch-up-owner",
 			stateStore: storeFixture.store,
-			partitionResolver: { partitionForIdentity: () => partition },
-			writerLimits: {
-				maxBatchSize: 100,
-				maxPendingCommands: 1_000,
-				maxPendingCommandsPerCustomer: 100,
-			},
-			trackReceiptRetentionMs: 86_400_000,
-			producerLimits: {
-				transactionTimeoutMs: 10_000,
-				retryCount: 2,
-				initialRetryTimeMs: 100,
-				maxRetryTimeMs: 1_000,
-			},
-			timings,
 		});
 		const errors: unknown[] = [];
 		const group = createKafkaOwnedPartitionGroup({
@@ -421,12 +647,14 @@ describe("Kafka transaction boundary", () => {
 			topic: topicFixture.topic,
 			stateStore: storeFixture.store,
 			partitionsConsumedConcurrently: 2,
+			healthRefreshIntervalMs: timings.healthRefreshIntervalMs,
 			createRuntime: (params) => {
 				const createdRuntime = createRuntime(params);
 				runtime = createdRuntime;
 				return createdRuntime;
 			},
 			onError: ({ cause }) => errors.push(cause),
+			onUnhealthyPartition: () => undefined,
 		});
 		try {
 			await seedProducer.connect();
@@ -487,6 +715,9 @@ describe("Kafka transaction boundary", () => {
 					},
 				}),
 				follower: caughtUpFollower(),
+				bootstrapper: {
+					bootstrap: async () => ({ kind: "continued", nextOffset: 0n }),
+				},
 				partitionResolver: { partitionForIdentity: () => partition },
 				writerLimits: {
 					maxBatchSize: 100,

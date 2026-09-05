@@ -1,3 +1,4 @@
+import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
 import type {
 	PartitionRuntimeScope,
 	PartitionRuntimeState,
@@ -48,6 +49,9 @@ export function cancelRuntimeReaders({
 	ctx,
 	state,
 }: PartitionRuntimeScope): void {
+	state.startupAbortController.abort(
+		new OwnedPartitionNotReadyError({ status: state.status }),
+	);
 	if (state.followerStartAttempted)
 		void stopFollowerInBackground({ ctx, state });
 }

@@ -10,6 +10,7 @@ import {
 	submitRuntimeTrack,
 } from "./commands/balanceCommands.js";
 import { createRequestTracker } from "./createRequestTracker.js";
+import { getRuntimeHealth } from "./getRuntimeHealth.js";
 import { startRuntime } from "./lifecycle/startRuntime.js";
 import {
 	drainRuntime,
@@ -83,6 +84,10 @@ export function createPartitionRuntime({
 		return checkRuntimeBalance({ ctx, state, command });
 	}
 
+	function getHealth() {
+		return getRuntimeHealth({ ctx, state });
+	}
+
 	function getStatus(): PartitionRuntimeStatus {
 		return state.status;
 	}
@@ -105,6 +110,7 @@ export function createPartitionRuntime({
 		submitTrack,
 		check,
 		getStatus,
+		getHealth,
 		subscribeUnavailable,
 	};
 }
@@ -128,6 +134,8 @@ function validateRuntimeConfig(config: PartitionRuntimeConfig): void {
 function createRuntimeState(): PartitionRuntimeState {
 	return {
 		drainPromise: null,
+		failureReason: null,
+		startupAbortController: new AbortController(),
 		status: "created",
 		terminalError: null,
 		producerConnectionAttempted: false,

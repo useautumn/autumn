@@ -19,6 +19,7 @@ export function detachPartitions({
 	const entries = [...state.entries.values()];
 	state.entries.clear();
 	for (const entry of entries) {
+		state.retiringEntries.set(entry.partition, entry);
 		if (failure) entry.markUnavailable(failure);
 		else if (revocation)
 			entry.markUnavailable({

@@ -1,3 +1,4 @@
+import { listPartitionHealth } from "./health/partitionHealth.js";
 import {
 	startPartitionService,
 	stopPartitionService,
@@ -17,9 +18,33 @@ export function createPartitions({
 	config: PartitionsConfig;
 }): Partitions {
 	if (!config.topic.trim()) throw new Error("Kafka topic cannot be empty");
-	const ctx = { ...dependencies, config };
+	if (
+		!Number.isSafeInteger(config.healthRefreshIntervalMs) ||
+		config.healthRefreshIntervalMs <= 0
+	)
+		throw new RangeError(
+			"healthRefreshIntervalMs must be a positive safe integer",
+		);
+	const partitionBootstrapRetryIntervalMs =
+		config.partitionBootstrapRetryIntervalMs ?? 30_000;
+	if (
+		!Number.isSafeInteger(partitionBootstrapRetryIntervalMs) ||
+		partitionBootstrapRetryIntervalMs <= 0
+	)
+		throw new RangeError(
+			"partitionBootstrapRetryIntervalMs must be a positive safe integer",
+		);
+	const ctx = {
+		...dependencies,
+		config: { ...config, partitionBootstrapRetryIntervalMs },
+	};
 	const state: PartitionsState = {
 		entries: new Map(),
+		retiringEntries: new Map(),
+		terminalHealthByPartition: new Map(),
+		partitionRetryTimers: new Map(),
+		healthRefreshTimer: null,
+		healthRefreshPromise: null,
 		status: "created",
 		generation: 0,
 		retirementFailed: false,
@@ -34,5 +59,8 @@ export function createPartitions({
 	function stop(): Promise<void> {
 		return stopPartitionService({ ctx, state });
 	}
-	return { start, stop };
+	function partitions() {
+		return listPartitionHealth({ state });
+	}
+	return { start, stop, partitions };
 }

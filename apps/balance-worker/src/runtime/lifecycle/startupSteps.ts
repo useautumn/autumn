@@ -29,11 +29,27 @@ export async function completeRuntimeStartup({
 		await ctx.producer.fence();
 		assertStartupContinues({ state });
 
+		state.status = "bootstrapping";
+		const logRange = await ctx.follower.readLogRange({
+			topic,
+			partition,
+			signal: state.startupAbortController.signal,
+		});
+		assertStartupContinues({ state });
+		await ctx.bootstrapper.bootstrap({
+			topic,
+			partition,
+			logRange,
+			signal: state.startupAbortController.signal,
+		});
+		assertStartupContinues({ state });
+		state.status = "catching_up";
 		state.followerStartAttempted = true;
 		await ctx.follower.startAndCatchUp({
 			topic,
 			partition,
 			onUnavailable,
+			targetNextOffset: logRange.logEndOffset,
 		});
 		assertStartupContinues({ state });
 		state.status = "ready";
@@ -51,7 +67,11 @@ function assertStartupContinues({
 	state: PartitionRuntimeState;
 }): void {
 	if (state.terminalError) throw state.terminalError;
-	if (state.status !== "starting") {
+	if (
+		state.status !== "fencing" &&
+		state.status !== "bootstrapping" &&
+		state.status !== "catching_up"
+	) {
 		throw new OwnedPartitionNotReadyError({ status: state.status });
 	}
 }

@@ -24,6 +24,7 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import type { PartitionLogRange } from "../../../src/runtime/bootstrap/types/partitionBootstrap.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import { createRequestTracker } from "../../../src/runtime/createRequestTracker.js";
 import {
@@ -31,7 +32,10 @@ import {
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
-import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
+import type {
+	OwnedPartitionBootstrapPort,
+	PartitionOutcomeFollowerPort,
+} from "../../../src/runtime/types/partitionRuntime.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
@@ -131,6 +135,7 @@ type FakeProducerOptions = {
 	appendCommitError?: Error;
 	appendSendError?: Error;
 	appendAbortError?: Error;
+	lifecycle?: string[];
 };
 
 const createFakeProducer = ({
@@ -138,12 +143,12 @@ const createFakeProducer = ({
 	appendCommitError,
 	appendSendError,
 	appendAbortError,
+	lifecycle = [],
 }: FakeProducerOptions = {}): {
 	producer: OwnedPartitionProducerPort;
 	lifecycle: string[];
 	records: ProducerRecord[];
 } => {
-	const lifecycle: string[] = [];
 	const records: ProducerRecord[] = [];
 	let transactionCount = 0;
 	let nextOffset = 0n;
@@ -211,31 +216,50 @@ const createFakeProducer = ({
 const createFollower = ({
 	catchUpGate = Promise.resolve(),
 	stopError,
+	lifecycle = [],
+	logRange = { logStartOffset: 0n, logEndOffset: 0n },
 }: {
 	catchUpGate?: Promise<void>;
 	stopError?: Error;
+	lifecycle?: string[];
+	logRange?: PartitionLogRange;
 } = {}): {
 	follower: PartitionOutcomeFollowerPort;
 	lifecycle: string[];
 	emitUnavailable: ({ cause }: { cause: unknown }) => void;
 } => {
-	const lifecycle: string[] = [];
 	let unavailableListener: (({ cause }: { cause: unknown }) => void) | null =
 		null;
+	let consumedNextOffset: bigint | null = null;
+	let highWatermark: bigint | null = null;
+	const follower = {
+		readLogRange: async () => {
+			lifecycle.push("follower:range");
+			highWatermark = logRange.logEndOffset;
+			return logRange;
+		},
+		startAndCatchUp: async ({
+			onUnavailable: handleUnavailable,
+			targetNextOffset,
+		}: {
+			onUnavailable: ({ cause }: { cause: unknown }) => void;
+			targetNextOffset: bigint;
+		}) => {
+			lifecycle.push("follower:start");
+			unavailableListener = handleUnavailable;
+			await catchUpGate;
+			consumedNextOffset = targetNextOffset;
+			lifecycle.push("follower:caught-up");
+		},
+		readProgress: () => ({ consumedNextOffset, highWatermark }),
+		stop: async () => {
+			lifecycle.push("follower:stop");
+			if (stopError) throw stopError;
+		},
+	} as PartitionOutcomeFollowerPort;
 	return {
 		lifecycle,
-		follower: {
-			startAndCatchUp: async ({ onUnavailable }) => {
-				lifecycle.push("follower:start");
-				unavailableListener = onUnavailable;
-				await catchUpGate;
-				lifecycle.push("follower:caught-up");
-			},
-			stop: async () => {
-				lifecycle.push("follower:stop");
-				if (stopError) throw stopError;
-			},
-		},
+		follower,
 		emitUnavailable: ({ cause }) => {
 			if (!unavailableListener) {
 				throw new Error("Follower has no unavailability listener");
@@ -288,12 +312,14 @@ const createRuntime = ({
 	store,
 	producer,
 	follower,
+	bootstrap = async () => ({ kind: "continued", nextOffset: 0n }),
 	partitionForIdentity = () => partition,
 	recoveryDrainTimeoutMs = 1_000,
 }: {
 	store: SqliteBalanceStateStore;
 	producer: OwnedPartitionProducerPort;
 	follower: PartitionOutcomeFollowerPort;
+	bootstrap?: OwnedPartitionBootstrapPort["bootstrap"];
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
 	recoveryDrainTimeoutMs?: number;
 }) => {
@@ -322,6 +348,7 @@ const createRuntime = ({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
 			stateStore: store,
+			bootstrapper: { bootstrap },
 			trackReceiptPolicy: {
 				retentionMs: 86_400_000,
 				now: () => 1_700_000_000_000,
@@ -343,25 +370,52 @@ describe("owned partition runtime", () => {
 	test("fences the previous owner and catches up before serving", async () => {
 		const fixture = createStoreFixture();
 		const catchUp = createDeferred<void>();
-		const fakeProducer = createFakeProducer();
-		const fakeFollower = createFollower({ catchUpGate: catchUp.promise });
+		const startup: string[] = [];
+		const fakeProducer = createFakeProducer({ lifecycle: startup });
+		const fakeFollower = createFollower({
+			catchUpGate: catchUp.promise,
+			lifecycle: startup,
+			logRange: { logStartOffset: 0n, logEndOffset: 5n },
+		});
 		const runtime = createRuntime({
 			store: fixture.store,
 			producer: fakeProducer.producer,
 			follower: fakeFollower.follower,
+			bootstrap: async ({ logRange }) => {
+				startup.push("bootstrap");
+				expect(runtime.getStatus()).toBe("bootstrapping");
+				expect(logRange).toEqual({
+					logStartOffset: 0n,
+					logEndOffset: 5n,
+				});
+				return { kind: "continued", nextOffset: 0n };
+			},
 		});
 
 		try {
 			const startPromise = runtime.start();
+			expect(runtime.getStatus()).toBe("fencing");
 			await waitForTurn();
 
-			expect(runtime.getStatus()).toBe("starting");
-			expect(fakeProducer.lifecycle).toEqual([
+			expect(runtime.getStatus()).toBe("catching_up");
+			expect(startup).toEqual([
 				"producer:connect",
 				"producer:fence",
 				"producer:fence-abort",
+				"follower:range",
+				"bootstrap",
+				"follower:start",
 			]);
-			expect(fakeFollower.lifecycle).toEqual(["follower:start"]);
+			expect(runtime.getHealth()).toEqual({
+				topic,
+				partition,
+				status: "catching_up",
+				localNextOffset: 0n,
+				consumedNextOffset: null,
+				highWatermark: 5n,
+				lag: 5n,
+				failureReason: null,
+			});
 			await expect(
 				runtime.check({ command: createCheckCommand({ requestId: "req_1" }) }),
 			).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
@@ -370,10 +424,8 @@ describe("owned partition runtime", () => {
 			await startPromise;
 
 			expect(runtime.getStatus()).toBe("ready");
-			expect(fakeFollower.lifecycle).toEqual([
-				"follower:start",
-				"follower:caught-up",
-			]);
+			expect(runtime.getHealth().lag).toBe(0n);
+			expect(startup.at(-1)).toBe("follower:caught-up");
 			await expect(
 				runtime.check({ command: createCheckCommand({ requestId: "req_2" }) }),
 			).resolves.toMatchObject({ kind: "decided", balance: 10, revision: 0 });
@@ -401,6 +453,10 @@ describe("owned partition runtime", () => {
 				OwnedPartitionRecoveryRequiredError,
 			);
 			expect(runtime.getStatus()).toBe("recovery_required");
+			expect(runtime.getHealth()).toMatchObject({
+				status: "recovery_required",
+				failureReason: "Error: catch-up failed",
+			});
 			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
 			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
 		} finally {
@@ -418,10 +474,18 @@ describe("owned partition runtime", () => {
 			store: fixture.store,
 			producer: fakeProducer.producer,
 			follower: {
+				readLogRange: async () => ({
+					logStartOffset: 0n,
+					logEndOffset: 1n,
+				}),
 				startAndCatchUp: async () => {
 					followerLifecycle.push("follower:start");
 					await catchUpStopped.promise;
 				},
+				readProgress: () => ({
+					consumedNextOffset: null,
+					highWatermark: 1n,
+				}),
 				stop: async () => {
 					followerLifecycle.push("follower:stop");
 					catchUpStopped.resolve(undefined);
@@ -440,6 +504,51 @@ describe("owned partition runtime", () => {
 			expect(runtime.getStatus()).toBe("stopped");
 			expect(followerLifecycle).toEqual(["follower:start", "follower:stop"]);
 			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("does not mutate state when revoked during checkpoint loading", async () => {
+		const fixture = createStoreFixture();
+		const fakeProducer = createFakeProducer();
+		const fakeFollower = createFollower({
+			logRange: { logStartOffset: 10n, logEndOffset: 20n },
+		});
+		const bootstrapStarted = createDeferred<void>();
+		let mutationCount = 0;
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+			bootstrap: async ({ signal }) => {
+				bootstrapStarted.resolve(undefined);
+				await new Promise<void>((_resolve, reject) => {
+					if (signal.aborted) {
+						reject(signal.reason);
+						return;
+					}
+					signal.addEventListener("abort", () => reject(signal.reason), {
+						once: true,
+					});
+				});
+				mutationCount += 1;
+				return { kind: "restored", nextOffset: 10n };
+			},
+		});
+
+		try {
+			const startPromise = runtime.start();
+			await bootstrapStarted.promise;
+			await runtime.stop();
+
+			await expect(startPromise).rejects.toBeInstanceOf(
+				OwnedPartitionNotReadyError,
+			);
+			expect(mutationCount).toBe(0);
+			expect(fakeFollower.lifecycle).toEqual(["follower:range"]);
+			expect(runtime.getStatus()).toBe("stopped");
 		} finally {
 			await runtime.stop();
 			closeStoreFixture(fixture);

@@ -9,6 +9,10 @@ import {
 	type TrackOutcome,
 } from "@autumn/balance-engine";
 import {
+	type OwnedPartitionHealth,
+	ownedPartitionHealthOf,
+} from "../../../src/health/ownedPartitionHealth.js";
+import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
 } from "../../../src/state/sqliteBalanceStateStore.js";
@@ -140,12 +144,22 @@ import type {
 
 // Keep Owen's scenarios intact while adapting construction to the new component boundaries.
 export function createKafkaOwnedPartitionGroup(
-	params: Omit<WorkerPartitionsContext, "createRuntime"> &
-		WorkerPartitionsConfig & { createRuntime: KafkaPartitionRuntimeFactory },
+	params: Omit<
+		WorkerPartitionsContext,
+		"createRuntime" | "onUnhealthyPartition"
+	> &
+		Omit<WorkerPartitionsConfig, "healthRefreshIntervalMs"> & {
+			createRuntime: KafkaPartitionRuntimeFactory;
+			healthRefreshIntervalMs?: number;
+			onUnhealthyPartition?: WorkerPartitionsContext["onUnhealthyPartition"];
+		},
 ) {
 	const {
 		topic,
 		partitionsConsumedConcurrently,
+		healthRefreshIntervalMs = 60_000,
+		partitionBootstrapRetryIntervalMs,
+		onUnhealthyPartition = ignoreUnhealthy,
 		createRuntime: factory,
 		...dependencies
 	} = params;
@@ -154,11 +168,30 @@ export function createKafkaOwnedPartitionGroup(
 		async function waitForQuiescence(): Promise<void> {
 			await runtime.waitForQuiescence?.();
 		}
-		return { ...runtime, waitForQuiescence };
+		function getHealth(): OwnedPartitionHealth {
+			return (
+				runtime.getHealth?.() ??
+				ownedPartitionHealthOf({
+					topic,
+					partition: input.partition,
+					status: "ready",
+					localNextOffset: 0n,
+					consumedNextOffset: 0n,
+					highWatermark: 0n,
+					failureReason: null,
+				})
+			);
+		}
+		return { ...runtime, waitForQuiescence, getHealth };
 	}
 	return createWorkerPartitions({
-		ctx: { ...dependencies, createRuntime },
-		config: { topic, partitionsConsumedConcurrently },
+		ctx: { ...dependencies, createRuntime, onUnhealthyPartition },
+		config: {
+			topic,
+			partitionsConsumedConcurrently,
+			healthRefreshIntervalMs,
+			partitionBootstrapRetryIntervalMs,
+		},
 	});
 }
 export type KafkaOwnedPartitionGroupConsumerPort = KafkaConsumerClient;
@@ -168,6 +201,7 @@ export type KafkaPartitionRuntimeFactory = (
 	start(): Promise<void>;
 	stop(): Promise<void>;
 	waitForQuiescence?(): Promise<void>;
+	getHealth?(): OwnedPartitionHealth;
 };
 export type KafkaPartitionControlPort = Pick<
 	Consumer,
@@ -177,9 +211,10 @@ export type KafkaPartitionControlPort = Pick<
 export function createKafkaOwnedPartitionRuntimeFactory(
 	params: PartitionRuntimeFactoryContext & PartitionRuntimeFactoryConfig,
 ) {
-	const { kafka, stateStore, partitionResolver, ...config } = params;
+	const { kafka, stateStore, partitionResolver, checkpointSource, ...config } =
+		params;
 	return createPartitionRuntimeFactory({
-		ctx: { kafka, stateStore, partitionResolver },
+		ctx: { kafka, stateStore, partitionResolver, checkpointSource },
 		config,
 	});
 }
@@ -282,3 +317,5 @@ export function serializeKafkaStateInitializedRecord({
 }) {
 	return serializeMeteringRecord({ record: initialization });
 }
+
+function ignoreUnhealthy(): void {}
