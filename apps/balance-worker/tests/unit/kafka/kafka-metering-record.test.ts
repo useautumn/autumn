@@ -1,14 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import {
-	InvalidKafkaMeteringRecordError,
-	KafkaMeteringRecordKeyMismatchError,
-	parseKafkaMeteringRecord,
-	parseKafkaTrackOutcomeRecord,
+	InvalidRecordError as InvalidKafkaMeteringRecordError,
+	RecordKeyMismatchError as KafkaMeteringRecordKeyMismatchError,
+	parseMeteringRecord as parseKafkaMeteringRecord,
+	parseMeteringTrackOutcome,
+	serializeMeteringRecord,
+	UnsupportedRecordVersionError as UnsupportedKafkaMeteringRecordVersionError,
+} from "@autumn/kafka";
+import {
+	createOutcome,
+	createState,
 	serializeKafkaStateInitializedRecord,
-	serializeKafkaTrackOutcomeRecord,
-	UnsupportedKafkaMeteringRecordVersionError,
-} from "../../../src/kafka/kafkaMeteringRecord.js";
-import { createOutcome, createState } from "./kafka-test-fixtures.js";
+} from "./kafka-test-fixtures.js";
 
 describe("Kafka metering record", () => {
 	test("round-trips a versioned outcome with its customer partition key", () => {

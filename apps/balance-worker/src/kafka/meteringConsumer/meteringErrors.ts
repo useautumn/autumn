@@ -11,8 +11,10 @@ import {
 	UnsupportedRecordVersionError,
 } from "@autumn/kafka";
 import {
+	ConflictingMeteringStateInitializationError,
 	CorruptBalanceStateError,
 	MeteringStateNotFoundError,
+	MeteringStatePartitionMismatchError,
 	PartitionProgressNotFoundError,
 	UnexpectedKafkaOffsetError,
 } from "../../state/sqliteBalanceStateErrors.js";
@@ -55,6 +57,8 @@ export function isPartitionInvariantCause(cause: unknown): cause is Error {
 		cause instanceof OutOfOrderTrackOutcomeError ||
 		cause instanceof StaleTrackOutcomeError ||
 		cause instanceof TrackOutcomeSubjectMismatchError ||
+		cause instanceof ConflictingMeteringStateInitializationError ||
+		cause instanceof MeteringStatePartitionMismatchError ||
 		cause instanceof CorruptBalanceStateError ||
 		cause instanceof MeteringStateNotFoundError ||
 		cause instanceof PartitionProgressNotFoundError ||

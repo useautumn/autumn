@@ -274,3 +274,11 @@ export function createOwnedPartitionRuntime(
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 	});
 }
+
+export function serializeKafkaStateInitializedRecord({
+	initialization,
+}: {
+	initialization: import("@autumn/balance-engine").StateInitializedEvent;
+}) {
+	return serializeMeteringRecord({ record: initialization });
+}
