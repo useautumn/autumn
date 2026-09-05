@@ -10,6 +10,7 @@ import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 /**
  * The base every case nests its variant under: a metered feature and an
@@ -147,7 +148,7 @@ for (const { key, customize, assert } of CASES) {
 			const scenario = await initAtmnScenario({
 				setup: [
 					s.platform.create({
-						userEmail: `atmn_variant_customize_${key}@autumn.test`,
+						userEmail: `${uniqueTestId("atmn")}@autumn.test`,
 					}),
 				],
 				config: baseConfig({ variantCustomize: customize }),

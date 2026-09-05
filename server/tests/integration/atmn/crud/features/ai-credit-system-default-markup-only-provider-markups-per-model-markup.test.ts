@@ -9,6 +9,7 @@ import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const MARKUP_CASES = {
 	"default markup only": {
@@ -55,7 +56,7 @@ for (const [label, { fields, assertRow }] of Object.entries(MARKUP_CASES)) {
 		const scenario = await initAtmnScenario({
 			setup: [
 				s.platform.create({
-					userEmail: `atmn_ai_credit_${label.replace(/\s+/g, "_")}@autumn.test`,
+					userEmail: `${uniqueTestId("atmn")}@autumn.test`,
 				}),
 			],
 			config: configBody({

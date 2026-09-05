@@ -9,6 +9,7 @@ import { configBody, paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type CatalogPlanRow = { id: string; versionSlug?: string | null };
 
@@ -28,7 +29,7 @@ for (const [label, { extra, expectedSlug }] of Object.entries(
 		const scenario = await initAtmnScenario({
 			setup: [
 				s.platform.create({
-					userEmail: `atmn_version_slug_${expectedSlug}@autumn.test`,
+					userEmail: `${uniqueTestId("atmn")}@autumn.test`,
 				}),
 			],
 			config: configBody({

@@ -17,6 +17,7 @@ import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 /** Every live version row for a plan_id, oldest first. */
 const livePlanVersions = async ({
@@ -50,7 +51,7 @@ test.concurrent(
 		const scenario = await initAtmnScenario({
 			setup: [
 				s.platform.create({
-					userEmail: "atmn_rename_all_versions@autumn.test",
+					userEmail: `${uniqueTestId("atmn")}@autumn.test`,
 				}),
 				s.otherCustomers([{ id: "cus_on_old_id", paymentMethod: "success" }]),
 			],

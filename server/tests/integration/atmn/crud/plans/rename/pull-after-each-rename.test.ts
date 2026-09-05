@@ -11,6 +11,7 @@ import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { renamePlan } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const CONFIG_PATH = "autumn.config.ts";
 
@@ -19,7 +20,7 @@ test.concurrent(
 	async () => {
 		const scenario = await initAtmnScenario({
 			setup: [
-				s.platform.create({ userEmail: "atmn_pull_after_rename@autumn.test" }),
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
 			config: `{
 	plans: [

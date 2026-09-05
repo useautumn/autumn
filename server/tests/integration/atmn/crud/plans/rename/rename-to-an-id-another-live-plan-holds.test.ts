@@ -15,6 +15,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const activeInternalId = async ({
 	ctx,
@@ -38,7 +39,7 @@ test.concurrent(
 	async () => {
 		const scenario = await initAtmnScenario({
 			setup: [
-				s.platform.create({ userEmail: "atmn_rename_collision@autumn.test" }),
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
 			config: `{
 	plans: [

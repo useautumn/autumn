@@ -18,6 +18,7 @@ import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 /** The single live row's internal_id — renames address a row by this, never by plan_id. */
 const activeInternalId = async ({
@@ -42,7 +43,7 @@ test.concurrent(
 	async () => {
 		const scenario = await initAtmnScenario({
 			setup: [
-				s.platform.create({ userEmail: "atmn_rename_single@autumn.test" }),
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 				s.otherCustomers([
 					{ id: "cus_old_id", paymentMethod: "success" },
 					{ id: "cus_new_id", paymentMethod: "success" },
