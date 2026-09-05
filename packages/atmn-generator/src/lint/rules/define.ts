@@ -60,3 +60,10 @@ export const targetHas = (rule: RuleOf<"targetHas">): LintRule => ({
 	kind: "targetHas",
 	...rule,
 });
+
+/** `field` names a row of top-level collection `in`; that row's `target` must
+ * not be `true`, unless the entry's own parent already has `parentGuard` true. */
+export const targetLacks = (rule: RuleOf<"targetLacks">): LintRule => ({
+	kind: "targetLacks",
+	...rule,
+});

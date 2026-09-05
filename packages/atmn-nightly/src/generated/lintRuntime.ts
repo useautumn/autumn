@@ -114,6 +114,24 @@ export type LintRule =
 			readonly target: string;
 			readonly equals: string;
 			readonly because: string;
+	  }
+	| {
+			/** `field` names a row of top-level collection `in` by `matching`,
+			 * shown in the message as `label`; that row's `target` must not be
+			 * `true`. Skipped when the entry's own parent already has
+			 * `parentGuard` true — an archived plan may reference whatever
+			 * archived features it likes. `parentLabel`/`parentIdField` name
+			 * that parent in the message. */
+			readonly kind: "targetLacks";
+			readonly field: string;
+			readonly in: string;
+			readonly matching: string;
+			readonly target: string;
+			readonly label: string;
+			readonly parentGuard: string;
+			readonly parentIdField: string;
+			readonly parentLabel: string;
+			readonly because: string;
 	  };
 
 /** The part of a node's rules that an anyOf/oneOf branch can override. */
@@ -338,10 +356,12 @@ const entryRuleFailures = ({
 	entry,
 	rule,
 	document,
+	parent,
 }: {
 	entry: Entry;
 	rule: LintRule;
 	document: Entry;
+	parent?: Entry;
 }): string[] => {
 	switch (rule.kind) {
 		case "requiredWhen": {
@@ -419,6 +439,19 @@ const entryRuleFailures = ({
 				`${rule.when} needs ${rule.in} ${show(entry[rule.field])} to have ${rule.target} ${show(rule.equals)} — got ${show(row[rule.target])}. ${rule.because}`,
 			];
 		}
+		case "targetLacks": {
+			const target = document[rule.in];
+			if (!Array.isArray(target)) return [];
+			const row = target.find(
+				(candidate) =>
+					isEntry(candidate) && candidate[rule.matching] === entry[rule.field],
+			);
+			if (!row || row[rule.target] !== true) return [];
+			if (parent?.[rule.parentGuard] === true) return [];
+			return [
+				`${rule.label} ${show(entry[rule.field])} is ${rule.target}. Unarchive it, or archive ${rule.parentLabel} ${show(parent?.[rule.parentIdField])}. ${rule.because}`,
+			];
+		}
 		case "unique":
 			return [];
 	}
@@ -471,11 +504,13 @@ const checkEntry = ({
 	node,
 	at,
 	walk,
+	parent,
 }: {
 	entry: Entry;
 	node: NodeRules;
 	at: string;
 	walk: Walk;
+	parent?: Entry;
 }): void => {
 	checkShape({ entry, shape: node, at, issues: walk.issues });
 	if (node.variants) {
@@ -486,6 +521,7 @@ const checkEntry = ({
 			entry,
 			rule,
 			document: walk.document,
+			parent,
 		})) {
 			walk.issues.push({ path: at, message });
 		}
@@ -497,14 +533,16 @@ const walkEntry = ({
 	path,
 	trail,
 	walk,
+	parent,
 }: {
 	entry: Entry;
 	path: string;
 	trail: readonly string[];
 	walk: Walk;
+	parent?: Entry;
 }): void => {
 	const node = walk.rules[path];
-	if (node) checkEntry({ entry, node, at: render(trail), walk });
+	if (node) checkEntry({ entry, node, at: render(trail), walk, parent });
 
 	for (const [key, child] of Object.entries(entry)) {
 		walkValue({
@@ -513,6 +551,7 @@ const walkEntry = ({
 			key,
 			trail,
 			walk,
+			parent: entry,
 		});
 	}
 };
@@ -524,12 +563,14 @@ const walkValue = ({
 	key,
 	trail,
 	walk,
+	parent,
 }: {
 	value: unknown;
 	path: string;
 	key: string;
 	trail: readonly string[];
 	walk: Walk;
+	parent?: Entry;
 }): void => {
 	if (walk.hints.frozenPaths.has(path)) return;
 
@@ -551,6 +592,7 @@ const walkValue = ({
 				path,
 				trail: [...trail, crumbFor({ node, key, entry, index })],
 				walk,
+				parent,
 			});
 		}
 		return;
@@ -578,12 +620,13 @@ const walkValue = ({
 				key: `${key}[${show(recordKey)}]`,
 				trail,
 				walk,
+				parent,
 			});
 		}
 		return;
 	}
 
-	walkEntry({ entry: value, path, trail: [...trail, key], walk });
+	walkEntry({ entry: value, path, trail: [...trail, key], walk, parent });
 };
 
 /** Every issue in the document, in document order. */

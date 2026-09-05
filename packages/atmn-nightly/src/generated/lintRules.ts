@@ -290,6 +290,19 @@ export const LINT_RULES: LintRules = {
 				because:
 					"featureOverride is only honoured on classic credit-system features.",
 			},
+			{
+				kind: "targetLacks",
+				field: "featureId",
+				in: "features",
+				matching: "featureId",
+				target: "archived",
+				label: "Feature",
+				parentGuard: "archived",
+				parentIdField: "planId",
+				parentLabel: "plan",
+				because:
+					"An archived feature should not gain new customers through a live plan.",
+			},
 		],
 	},
 	"plans.items.featureOverride.creditSchema": {

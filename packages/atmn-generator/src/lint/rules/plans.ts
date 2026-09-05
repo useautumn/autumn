@@ -1,5 +1,5 @@
 import type { LintRule } from "../runtime/lintDocument";
-import { exists, targetHas, unique, valueWhen } from "./define";
+import { exists, targetHas, targetLacks, unique, valueWhen } from "./define";
 
 export const planItemRules: LintRule[] = [
 	exists({
@@ -17,6 +17,18 @@ export const planItemRules: LintRule[] = [
 		equals: "credit_system",
 		because:
 			"featureOverride is only honoured on classic credit-system features.",
+	}),
+	targetLacks({
+		field: "featureId",
+		in: "features",
+		matching: "featureId",
+		target: "archived",
+		label: "Feature",
+		parentGuard: "archived",
+		parentIdField: "planId",
+		parentLabel: "plan",
+		because:
+			"An archived feature should not gain new customers through a live plan.",
 	}),
 ];
 
