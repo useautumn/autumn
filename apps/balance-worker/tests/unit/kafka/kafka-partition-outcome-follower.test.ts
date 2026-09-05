@@ -345,3 +345,59 @@ describe("Kafka partition outcome follower", () => {
 		}
 	});
 });
+
+async function rejectsMismatchedReplayPositionBeforeMutation(): Promise<void> {
+	const fixture = createStoreFixture();
+	const consumer = createPartitionControl();
+	const positionTracker = createProgressTracker();
+	const follower = createKafkaPartitionOutcomeFollower({
+		consumer,
+		partitionOffsets: createPartitionOffsets({ low: "0", high: "0" }),
+		stateStore: fixture.store,
+		positionTracker,
+	});
+	function onUnavailable(): void {}
+	try {
+		await expect(
+			follower.startAndCatchUp({
+				topic: `${topic}-other`,
+				partition,
+				targetNextOffset: 0n,
+				onUnavailable,
+			}),
+		).rejects.toThrow("does not match its assigned partition");
+		await expect(
+			follower.startAndCatchUp({
+				topic,
+				partition: partition + 1,
+				targetNextOffset: 0n,
+				onUnavailable,
+			}),
+		).rejects.toThrow("does not match its assigned partition");
+		expect(consumer.seeks).toEqual([]);
+		expect(consumer.resumes).toEqual([]);
+		expect(positionTracker.read({ topic, partition })).toBeNull();
+		expect(
+			positionTracker.read({ topic: `${topic}-other`, partition }),
+		).toBeNull();
+		expect(
+			positionTracker.read({ topic, partition: partition + 1 }),
+		).toBeNull();
+		await follower.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable,
+		});
+		expect(consumer.seeks).toEqual([{ topic, partition, offset: "0" }]);
+		expect(consumer.resumes).toEqual([{ topic, partitions: [partition] }]);
+	} finally {
+		await follower.stop();
+		closeStoreFixture(fixture);
+	}
+}
+
+test(
+	"replay rejects a mismatched topic or partition before mutating consumption",
+	rejectsMismatchedReplayPositionBeforeMutation,
+);

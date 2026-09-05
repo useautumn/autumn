@@ -1088,3 +1088,124 @@ describe("Kafka metering consumer", () => {
 		}
 	});
 });
+
+test("withdrawal settles a pending batch without seeking or publishing its stale position", async () => {
+	const fixture = createStoreFixture();
+	let finishOffsets = (): void => undefined;
+	const offsetsGate = new Promise<void>((resolve) => {
+		finishOffsets = resolve;
+	});
+	const port = createFakeKafkaConsumer();
+	const tracker = createProgressTracker();
+	const consumer = createKafkaMeteringConsumer({
+		consumer: port,
+		topic,
+		stateStore: fixture.store,
+		positionTracker: tracker,
+		partitionOffsets: {
+			fetchTopicOffsets: async () => {
+				await offsetsGate;
+				return [{ partition, low: "0", high: "2", offset: "2" }];
+			},
+		},
+	});
+	try {
+		await consumer.start();
+		const batch = port.deliver({
+			offset: "1",
+			...serializeMeteringRecord({
+				record: createOutcome({ state: createState() }),
+			}),
+		});
+		let settled = false;
+		const withdrawal = consumer.withdrawPartition({ partition }).then(() => {
+			settled = true;
+		});
+		await Bun.sleep(1);
+		expect(settled).toBe(false);
+		finishOffsets();
+		await batch;
+		await withdrawal;
+		expect(port.seeks).toEqual([]);
+		expect(port.commits).toEqual([]);
+		expect(tracker.read({ topic, partition })).toBeNull();
+		expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
+	} finally {
+		finishOffsets();
+		await consumer.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+async function replayStopSettlesBatchesBeforeReplacement(): Promise<void> {
+	const fixture = createStoreFixture();
+	const offsets = Promise.withResolvers<void>();
+	const port = createFakeKafkaConsumer();
+	const tracker = createProgressTracker();
+	function onUnavailable(): void {}
+	async function fetchTopicOffsets() {
+		await offsets.promise;
+		return [{ partition, low: "0", high: "2", offset: "2" }];
+	}
+	const consumer = createKafkaMeteringConsumer({
+		consumer: port,
+		partitionOffsets: { fetchTopicOffsets },
+		stateStore: fixture.store,
+		positionTracker: tracker,
+		topic,
+	});
+	const replay = consumer.createReplay({ partition });
+	try {
+		const state = createState();
+		fixture.store.restoreState({
+			topic,
+			partition,
+			initializationId: "init_1",
+			state,
+		});
+		const record = serializeMeteringRecord({
+			record: createOutcome({ state }),
+		});
+		await consumer.start();
+		await replay.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable,
+		});
+		const delivery = port.deliver({ offset: "1", ...record });
+		const stopping = replay.stop();
+		expect(await Promise.race([stopping, Promise.resolve("pending")])).toBe(
+			"pending",
+		);
+		offsets.resolve();
+		await delivery;
+		await stopping;
+		expect(port.commits).toEqual([]);
+		expect(port.seeks).toEqual([{ topic, partition, offset: "0" }]);
+		expect(tracker.read({ topic, partition })).toBe(0n);
+		expect(fixture.store.readState({ identity })?.revision).toBe(0);
+
+		const replacement = consumer.createReplay({ partition });
+		await replacement.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable,
+		});
+		await port.deliver({ offset: "0", ...record });
+		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		expect(tracker.read({ topic, partition })).toBe(1n);
+		await replacement.stop();
+	} finally {
+		offsets.resolve();
+		await replay.stop();
+		await consumer.stop();
+		closeStoreFixture(fixture);
+	}
+}
+
+test(
+	"replay stop settles stale batches before a replacement resumes consumption",
+	replayStopSettlesBatchesBeforeReplacement,
+);
