@@ -406,6 +406,18 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/balance-worker-protocol": {
+      "name": "@autumn/balance-worker-protocol",
+      "version": "0.0.1",
+      "dependencies": {
+        "@autumn/balance-engine": "workspace:*",
+        "zod": "^3.25.23",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "typescript": "~5.8.3",
+      },
+    },
     "packages/ducklake": {
       "name": "@autumn/ducklake",
       "version": "0.0.1",
@@ -463,6 +475,7 @@
       "dependencies": {
         "@autumn/balance-engine": "workspace:*",
         "kafkajs": "^2.2.4",
+        "zod": "^3.25.23",
       },
       "devDependencies": {
         "@types/bun": "1.3.14",
@@ -1028,6 +1041,8 @@
     "@autumn/balance-engine": ["@autumn/balance-engine@workspace:packages/balance-engine"],
 
     "@autumn/balance-worker": ["@autumn/balance-worker@workspace:apps/balance-worker"],
+
+    "@autumn/balance-worker-protocol": ["@autumn/balance-worker-protocol@workspace:packages/balance-worker-protocol"],
 
     "@autumn/docs": ["@autumn/docs@workspace:apps/docs"],
 

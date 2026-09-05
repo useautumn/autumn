@@ -19,7 +19,8 @@
 	},
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
-		"kafkajs": "^2.2.4"
+		"kafkajs": "^2.2.4",
+		"zod": "^3.25.23"
 	},
 	"devDependencies": {
 		"@types/bun": "1.3.14",

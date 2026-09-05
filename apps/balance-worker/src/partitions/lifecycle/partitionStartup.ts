@@ -2,12 +2,18 @@ import {
 	ownedPartitionFailureReasonOf,
 	ownedPartitionHealthOf,
 } from "../../health/ownedPartitionHealth.js";
-import { respondToPartitionFailure } from "../health/partitionHealthChecks.js";
+import { isCurrentAllocation } from "../allocation/partitionAllocation.js";
+import {
+	onPartitionUnavailable,
+	respondToPartitionFailure,
+} from "../health/partitionHealthChecks.js";
 import { reportPartitionError } from "../reportPartitionError.js";
 import type {
 	AllocationScope,
 	PartitionEntry,
+	PartitionsState,
 } from "../types/partitionState.js";
+import type { PartitionFailure } from "../types/partitions.js";
 import { clearPartitionRetry } from "./retryPartition.js";
 
 export function createPartitionEntries({
@@ -30,9 +36,26 @@ export function createPartitionEntries({
 				partition,
 				...resources,
 				startupSettled: false,
+				startup: null,
+				claimed: false,
+				publicationFailed: false,
+				unsubscribeUnavailable: null,
+				retirement: null,
+				drain: null,
 			};
 			entries.push(entry);
 			state.entries.set(partition, entry);
+			function onUnavailable(failure: PartitionFailure): void {
+				onPartitionUnavailable({
+					ctx,
+					state,
+					entry,
+					allocationGeneration,
+					cause: failure.cause,
+				});
+			}
+			entry.unsubscribeUnavailable =
+				entry.runtime.subscribeUnavailable(onUnavailable);
 		} catch (cause) {
 			reportPartitionError({ ctx, cause });
 			const progress = ctx.progress.readProgress({ topic, partition });
@@ -56,12 +79,45 @@ export function createPartitionEntries({
 }
 
 export async function startPartition({
+	state,
 	entry,
+	allocationGeneration,
 }: {
+	state: PartitionsState;
 	entry: PartitionEntry;
+	allocationGeneration: number;
 }): Promise<void> {
 	try {
 		await entry.runtime.start();
+		if (
+			!isCurrentAllocation({ state, allocationGeneration }) ||
+			state.entries.get(entry.partition) !== entry
+		)
+			return;
+
+		const health = entry.runtime.getHealth();
+		if (health.status !== "ready" || health.failureReason !== null) return;
+
+		let routeEpoch: string;
+		try {
+			({ routeEpoch } = await entry.publication.claim());
+			entry.claimed = true;
+		} catch (cause) {
+			entry.publicationFailed = true;
+			throw cause;
+		}
+
+		if (
+			!isCurrentAllocation({ state, allocationGeneration }) ||
+			state.entries.get(entry.partition) !== entry
+		)
+			return;
+
+		state.directory.admit({
+			partition: entry.partition,
+			routeEpoch,
+			runtime: entry.runtime,
+		});
 	} finally {
 		entry.startupSettled = true;
 	}

@@ -1,6 +1,5 @@
 import {
 	createMeteringConsumer as createKafkaMeteringConsumer,
-	createProgressTracker,
 	type TopicConsumerConfig,
 } from "@autumn/kafka";
 import { createMeteringRecordHandler } from "./createMeteringRecordHandler.js";
@@ -9,6 +8,7 @@ import type {
 	MeteringConsumer,
 	MeteringConsumerContext,
 } from "./types/meteringConsumer.js";
+import type { PartitionReplay } from "./types/partitionReplay.js";
 
 export function createMeteringConsumer({
 	ctx,
@@ -18,20 +18,23 @@ export function createMeteringConsumer({
 	config: TopicConsumerConfig;
 }): MeteringConsumer {
 	const handler = createMeteringRecordHandler({ ctx });
-	const positionTracker = ctx.positionTracker ?? createProgressTracker();
-	const consumption = createKafkaMeteringConsumer({
-		ctx: { consumer: ctx.consumer, handler, progress: positionTracker },
+	const consumer = createKafkaMeteringConsumer({
+		ctx: { consumer: ctx.consumer, handler, progress: ctx.positionTracker },
 		config,
 	});
-	function createReplay() {
+	const { start, stop, withdrawPartition, resumePartition } = consumer;
+
+	function createReplay({ partition }: { partition: number }): PartitionReplay {
 		return createPartitionReplay({
 			ctx: {
-				consumption,
-				partitionOffsets: ctx.partitionOffsets,
 				stateStore: ctx.stateStore,
-				positionTracker,
+				partitionOffsets: ctx.partitionOffsets,
+				positionTracker: consumer.progress,
+				consumption: consumer,
 			},
+			position: { topic: config.topic, partition },
 		});
 	}
-	return { start: consumption.start, stop: consumption.stop, createReplay };
+
+	return { start, stop, createReplay, withdrawPartition, resumePartition };
 }

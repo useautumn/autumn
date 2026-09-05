@@ -87,7 +87,10 @@ function createKafkaMeteringConsumer(params: {
 }) {
 	const { topic, partitionsConsumedConcurrently, ...ctx } = params;
 	return createMeteringConsumer({
-		ctx,
+		ctx: {
+			...ctx,
+			positionTracker: ctx.positionTracker ?? createProgressTracker(),
+		},
 		config: { topic, partitionsConsumedConcurrently },
 	});
 }

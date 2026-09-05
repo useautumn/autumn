@@ -24,7 +24,10 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
-import type { PartitionLogRange } from "../../../src/runtime/bootstrap/types/partitionBootstrap.js";
+import type {
+	PartitionBootstrapper as OwnedPartitionBootstrapPort,
+	PartitionLogRange,
+} from "../../../src/runtime/bootstrap/types/partitionBootstrap.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import { createRequestTracker } from "../../../src/runtime/createRequestTracker.js";
 import {
@@ -32,10 +35,7 @@ import {
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
-import type {
-	OwnedPartitionBootstrapPort,
-	PartitionOutcomeFollowerPort,
-} from "../../../src/runtime/types/partitionRuntime.js";
+import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,

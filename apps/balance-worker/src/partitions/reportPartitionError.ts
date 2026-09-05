@@ -1,9 +1,10 @@
-import type { PartitionsDependencies } from "./types/partitions.js";
+import type { PartitionsContext } from "./types/partitionState.js";
+
 export function reportPartitionError({
 	ctx,
 	cause,
 }: {
-	ctx: Pick<PartitionsDependencies, "onError">;
+	ctx: PartitionsContext;
 	cause: unknown;
 }): void {
 	try {
