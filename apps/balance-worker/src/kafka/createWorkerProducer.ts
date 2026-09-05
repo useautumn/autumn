@@ -1,33 +1,8 @@
-import {
-	type KafkaProducerLimits,
-	type KafkaProducerSession,
-	type KafkaProducerSessionConfig,
-	type KafkaTransaction,
-	partitionProducerTransactionalIdOf,
-} from "@autumn/kafka";
-import { translateKafkaProducerError } from "./workerKafkaErrors.js";
+import type { KafkaProducerSession, KafkaTransaction } from "@autumn/kafka";
 
-export function createWorkerProducerConfig({
-	deploymentEnvironment,
-	topic,
-	partition,
-	limits,
-}: {
-	deploymentEnvironment: string;
-	topic: string;
-	partition: number;
-	limits: KafkaProducerLimits;
-}): KafkaProducerSessionConfig {
-	return {
-		transactionalId: partitionProducerTransactionalIdOf({
-			prefix: "autumn-balance-worker",
-			deploymentEnvironment,
-			topic,
-			partition,
-		}),
-		limits,
-	};
-}
+export { createWorkerProducerConfig } from "../init/workerConfig.js";
+
+import { translateKafkaProducerError } from "./workerKafkaErrors.js";
 
 export function createWorkerProducer({
 	ctx,

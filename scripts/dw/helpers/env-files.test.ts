@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { LOCAL_DATABASE_URL } from "../constants.ts";
-import { databaseUrlForEnvLocal, urlsForEntry } from "./env-files.ts";
+import {
+	databaseUrlForEnvLocal,
+	provisionedInfraEnv,
+	urlsForEntry,
+} from "./env-files.ts";
 import { aliasesFor } from "./ports.ts";
 
 const cloudEntry = {
@@ -20,6 +24,14 @@ describe("urlsForEntry", () => {
 		else process.env.CLOUD_AGENT = prevCloud;
 		if (prevLegacy === undefined) delete process.env.DW_HEADLESS;
 		else process.env.DW_HEADLESS = prevLegacy;
+	});
+
+	test("laptop infrastructure supplies its own Kafka; cloud has no Docker endpoint", () => {
+		delete process.env.CLOUD_AGENT;
+		delete process.env.DW_HEADLESS;
+		expect(provisionedInfraEnv(6).KAFKA_BROKERS).toBe("127.0.0.1:19592");
+		process.env.CLOUD_AGENT = "1";
+		expect(provisionedInfraEnv(6).KAFKA_BROKERS).toBeUndefined();
 	});
 
 	test("laptop UI and browser API stay on portless; public API is inbound-only", () => {
