@@ -74,10 +74,11 @@ test.concurrent(
 			};
 			expect(featureMatch?.[1]).toBe(
 				catalog.features.find((feature) => feature.id === featureId)
-					?.internalId,
+					?.internalId ?? undefined,
 			);
 			expect(planMatch?.[1]).toBe(
-				catalog.plans.find((plan) => plan.id === planId)?.internalId,
+				catalog.plans.find((plan) => plan.id === planId)?.internalId ??
+					undefined,
 			);
 		} finally {
 			scenario.cleanup();

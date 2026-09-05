@@ -4,6 +4,7 @@
  * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
  */
 
+import { FeatureType } from "@autumn/shared";
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
@@ -55,7 +56,7 @@ test.concurrent(
 				env: scenario.ctx.env,
 			});
 			expect(dbFeatures.find((feature) => feature.id === featureId)?.type).toBe(
-				"metered",
+				FeatureType.Metered,
 			);
 		} finally {
 			scenario.cleanup();

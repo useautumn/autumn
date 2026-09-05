@@ -12,8 +12,6 @@ import { generateId } from "@/utils/genUtils.js";
 // Relative rather than a package import: atmn-nightly publishes only its bin,
 // and exposing src through `exports` for a test's benefit would leak internals
 // into the published package.
-import { runPull } from "../../../../packages/atmn-nightly/src/actions/pull";
-import { runPush } from "../../../../packages/atmn-nightly/src/actions/push";
 import {
 	type AutumnClient,
 	createClient,
@@ -36,6 +34,79 @@ export const CLI_PACKAGE_DIR = join(
 	"../../../../packages/atmn-nightly",
 );
 export const TMP_ROOT = join(CLI_PACKAGE_DIR, "test/.tmp");
+const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");
+
+/**
+ * Every push and pull runs the real CLI in a fresh process: a config's
+ * imported files are re-read each time, which an in-process import cannot
+ * promise, and the output is what a user sees.
+ */
+const runCli = ({
+	cwd,
+	args,
+	secretKey,
+	baseUrl,
+}: {
+	cwd: string;
+	args: string[];
+	secretKey: string;
+	baseUrl: string;
+}): string => {
+	const result = Bun.spawnSync(["bun", CLI_ENTRY, ...args], {
+		cwd,
+		env: {
+			...process.env,
+			AUTUMN_SECRET_KEY: secretKey,
+			AUTUMN_BASE_URL: baseUrl,
+			NO_COLOR: "1",
+			FORCE_COLOR: "0",
+		},
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	const output = `${result.stdout.toString()}${result.stderr.toString()}`;
+	if (result.exitCode !== 0) throw new Error(output.trim());
+	return output;
+};
+
+/** Ids under the "Draft migrations (n)" heading, one per indented line. */
+const migrationIdsIn = (output: string): string[] => {
+	const lines = output.split("\n");
+	const start = lines.findIndex((line) =>
+		line.startsWith("Draft migrations ("),
+	);
+	if (start === -1) return [];
+	const ids: string[] = [];
+	for (const line of lines.slice(start + 1)) {
+		if (line.trim() === "") break;
+		const segments = line.trim().split("/");
+		const id = segments[segments.length - 1];
+		if (id) ids.push(id);
+	}
+	return ids;
+};
+
+const PULL_EDIT_LINE = /^([+~-]) (\S+)$/;
+
+/** Pull prints one line per edit: `+ id`, `~ id`, `- id`. */
+const pullEditsIn = (
+	output: string,
+): { appended: string[]; replaced: string[]; deleted: string[] } => {
+	const edits = {
+		appended: [] as string[],
+		replaced: [] as string[],
+		deleted: [] as string[],
+	};
+	for (const raw of output.split("\n")) {
+		const match = PULL_EDIT_LINE.exec(raw.trim());
+		if (!match) continue;
+		const [, symbol, id] = match;
+		if (symbol === "+") edits.appended.push(id);
+		else if (symbol === "~") edits.replaced.push(id);
+		else edits.deleted.push(id);
+	}
+	return edits;
+};
 
 type ScenarioSetup = Parameters<typeof initScenario>[0]["setup"];
 
@@ -175,38 +246,36 @@ export const initAtmnScenario = async ({
 			return out;
 		},
 		push: async ({ dryRun = false } = {}) => {
-			let output = "";
-			const result = await runPush({
-				client,
+			const output = runCli({
 				cwd,
-				dryRun,
-				write: (text: string) => {
-					output += text;
-				},
+				args: ["push", ...(dryRun ? ["--dry-run"] : [])],
+				secretKey: scenario.ctx.orgSecretKey,
+				baseUrl,
 			});
-			return { output, migrationIds: result.migrationIds };
+			return { output, migrationIds: migrationIdsIn(output) };
 		},
 		pull: async ({ includeMappings = false } = {}) => {
-			let output = "";
-			const result = await runPull({
-				client,
+			const output = runCli({
 				cwd,
-				includeMappings,
-				write: (text: string) => {
-					output += text;
-				},
+				args: ["pull", ...(includeMappings ? ["--include-mappings"] : [])],
+				secretKey: scenario.ctx.orgSecretKey,
+				baseUrl,
 			});
-			return {
-				output,
-				appended: result.appended,
-				replaced: result.replaced,
-				deleted: result.deleted,
-			};
+			return { output, ...pullEditsIn(output) };
 		},
 		wireFromConfig: async () => {
-			// Cache-bust: the same path is rewritten between steps.
-			const module = await import(`${configPath}?v=${Date.now()}`);
-			return module.default as Record<string, unknown>;
+			// A fresh process: files the config imports are re-read every time.
+			const result = Bun.spawnSync(
+				[
+					"bun",
+					"-e",
+					`import(${JSON.stringify(configPath)}).then((m) => process.stdout.write(JSON.stringify(m.default)))`,
+				],
+				{ cwd, stdout: "pipe", stderr: "pipe" },
+			);
+			if (result.exitCode !== 0)
+				throw new Error(result.stderr.toString().trim());
+			return JSON.parse(result.stdout.toString()) as Record<string, unknown>;
 		},
 		attachCustomer: async ({ planId, customerId }) => {
 			const target = customerId ?? scenario.customerId;

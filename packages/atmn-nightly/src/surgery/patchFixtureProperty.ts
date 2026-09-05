@@ -96,7 +96,7 @@ const insertPairEdit = ({
 	const multiline = source
 		.slice(object.range().start.index, closing)
 		.includes("\n");
-	const last = pairs.at(-1);
+	const last = pairs[pairs.length - 1];
 	if (last === undefined) {
 		return multiline
 			? {
