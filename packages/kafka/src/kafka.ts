@@ -115,7 +115,11 @@ export {
 	applyOwnershipRecord,
 	readOwnershipToEnd,
 } from "./topics/ownership/consumer/ownershipReplay.js";
-export type { OwnershipConsumer } from "./topics/ownership/consumer/types/ownershipConsumer.js";
+export type {
+	OwnershipConsumer,
+	OwnershipConsumerConfig,
+	OwnershipKafka,
+} from "./topics/ownership/consumer/types/ownershipConsumer.js";
 export { ownershipTopic } from "./topics/ownership/ownershipTopic.js";
 export { claimPartition } from "./topics/ownership/publisher/claimPartition.js";
 export { createOwnershipPublisher } from "./topics/ownership/publisher/createOwnershipPublisher.js";

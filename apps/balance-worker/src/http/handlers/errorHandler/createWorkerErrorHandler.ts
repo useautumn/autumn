@@ -17,16 +17,9 @@ import {
 	PartitionRouteMismatchError,
 	PartitionRouteNotOwnedError,
 } from "../../middlewares/runtimeRouting/runtimeRoutingErrors.js";
-import type {
-	BalanceWorkerHttpContext,
-	BalanceWorkerHttpEnv,
-} from "../../types/balanceWorkerHttp.js";
+import type { BalanceWorkerHttpEnv } from "../../types/balanceWorkerHttp.js";
 
-export function createWorkerErrorHandler({
-	ctx,
-}: {
-	ctx: BalanceWorkerHttpContext;
-}): ErrorHandler<BalanceWorkerHttpEnv> {
+export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 	function respondToWorkerError(
 		cause: Error,
 		context: Context<BalanceWorkerHttpEnv>,
@@ -61,9 +54,10 @@ export function createWorkerErrorHandler({
 				code: "NOT_READY",
 				message: "Partition cannot accept this request",
 			};
-		} else {
-			ctx.onError({ cause });
 		}
+		const requestLog = context.get("requestLog");
+		requestLog.error = cause;
+		requestLog.errorCode = error.code;
 		return context.json({ error } satisfies WorkerErrorResponse, status);
 	}
 	return respondToWorkerError;

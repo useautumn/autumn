@@ -1,7 +1,10 @@
+import type { TrackCommand, TrackDecision } from "@autumn/balance-engine";
 import type {
 	PartitionRoute,
+	WorkerErrorCode,
 	WorkerRequest,
 } from "@autumn/balance-worker-client/protocol";
+import type { AutumnLogger } from "@autumn/logging";
 import type {
 	MeteringPartitionResolver,
 	PartitionRuntime,
@@ -15,7 +18,16 @@ export type BalanceWorkerHttpEnv = {
 	Variables: {
 		ctx: BalanceWorkerRequestContext;
 		request: WorkerRequest;
+		requestLog: BalanceWorkerRequestLog;
 	};
+};
+
+export type BalanceWorkerRequestLog = {
+	id: string;
+	command?: TrackCommand;
+	decision?: TrackDecision;
+	error?: Error;
+	errorCode?: WorkerErrorCode;
 };
 
 export type BalanceWorkerHttpContext = {
@@ -25,5 +37,5 @@ export type BalanceWorkerHttpContext = {
 		): BalanceWorkerRequestContext["runtime"] | undefined;
 	};
 	partitionResolver: MeteringPartitionResolver;
-	onError(failure: { cause: unknown }): void;
+	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 };

@@ -3,8 +3,8 @@ import { Kafka, logLevel } from "kafkajs";
 import { createKafkaClient } from "../../src/client/createKafkaClient.js";
 import { createProducerSession } from "../../src/producer/createProducerSession.js";
 import { partitionProducerTransactionalIdOf } from "../../src/producer/producerConfig.js";
-import { createKafkaOwnershipLog } from "../../src/topics/ownership/consumer/createKafkaOwnershipLog.js";
 import { createOwnershipConsumer } from "../../src/topics/ownership/consumer/createOwnershipConsumer.js";
+import type { OwnershipConsumer } from "../../src/topics/ownership/consumer/types/ownershipConsumer.js";
 import { createOwnershipPublisher } from "../../src/topics/ownership/publisher/createOwnershipPublisher.js";
 
 if (!process.env.KAFKA_BROKERS?.trim()) {
@@ -44,7 +44,7 @@ describe("ownership topic", () => {
 			topics: [
 				{
 					topic,
-					numPartitions: 1,
+					numPartitions: 2,
 					replicationFactor: 1,
 					configEntries: [{ name: "cleanup.policy", value: "compact" }],
 				},
@@ -74,8 +74,14 @@ describe("ownership topic", () => {
 			ctx: { producer },
 			config: { topic },
 		});
-		const log = createKafkaOwnershipLog({ ctx: { kafka }, config: { topic } });
-		const consumer = createOwnershipConsumer({ ctx: { log } });
+		const consumer = createOwnershipConsumer({
+			ctx: { kafka },
+			config: { topic },
+		});
+		const secondConsumer = createOwnershipConsumer({
+			ctx: { kafka },
+			config: { topic },
+		});
 
 		try {
 			const first = await ownershipPublisher.claim({
@@ -83,7 +89,20 @@ describe("ownership topic", () => {
 				endpoint: "http://10.0.0.4:8080",
 				claimedAt: Date.now(),
 			});
-			await consumer.start();
+			const otherPartition = await ownershipPublisher.claim({
+				partition: 1,
+				endpoint: "http://10.0.0.9:8080",
+				claimedAt: Date.now(),
+			});
+			await Promise.all([consumer.start(), secondConsumer.start()]);
+			for (const observer of [consumer, secondConsumer]) {
+				expect(observer.findOwner({ partition: 0 })?.routeEpoch).toBe(
+					first.routeEpoch,
+				);
+				expect(observer.findOwner({ partition: 1 })?.routeEpoch).toBe(
+					otherPartition.routeEpoch,
+				);
+			}
 			expect(consumer.findOwner({ partition })).toEqual({
 				partition,
 				endpoint: "http://10.0.0.4:8080",
@@ -96,6 +115,11 @@ describe("ownership topic", () => {
 			});
 			await consumer.refresh();
 			expect(consumer.findOwner({ partition })).toBeUndefined();
+			await waitForOwnership({
+				consumer: secondConsumer,
+				partition,
+				routeEpoch: undefined,
+			});
 
 			const second = await ownershipPublisher.claim({
 				partition,
@@ -103,6 +127,11 @@ describe("ownership topic", () => {
 				claimedAt: Date.now(),
 			});
 			await consumer.refresh();
+			await waitForOwnership({
+				consumer: secondConsumer,
+				partition,
+				routeEpoch: second.routeEpoch,
+			});
 			expect(consumer.findOwner({ partition })).toEqual({
 				partition,
 				endpoint: "http://10.0.0.8:8080",
@@ -113,10 +142,27 @@ describe("ownership topic", () => {
 			);
 		} finally {
 			await consumer.stop();
-			await log.disconnect?.();
+			await secondConsumer.stop();
 			await producer.disconnect();
 			await admin.deleteTopics({ topics: [topic] }).catch(() => undefined);
 			await admin.disconnect();
 		}
 	});
 });
+
+async function waitForOwnership({
+	consumer,
+	partition,
+	routeEpoch,
+}: {
+	consumer: OwnershipConsumer;
+	partition: number;
+	routeEpoch: string | undefined;
+}): Promise<void> {
+	const deadline = Date.now() + 5000;
+	while (consumer.findOwner({ partition })?.routeEpoch !== routeEpoch) {
+		if (Date.now() >= deadline)
+			throw new Error("Ownership did not update continuously");
+		await Bun.sleep(10);
+	}
+}
