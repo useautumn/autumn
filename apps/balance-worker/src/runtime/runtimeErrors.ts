@@ -1,4 +1,5 @@
 import type { PartitionRuntimeStatus } from "./types/partitionRuntimeState.js";
+
 export class OwnedPartitionNotReadyError extends Error {
 	readonly status: PartitionRuntimeStatus;
 

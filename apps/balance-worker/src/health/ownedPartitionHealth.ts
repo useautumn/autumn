@@ -1,9 +1,9 @@
-import type { PartitionRuntimeStatus as OwnedPartitionRuntimeStatus } from "../runtime/types/partitionRuntimeState.js";
+import type { PartitionRuntimeStatus } from "../runtime/types/partitionRuntimeState.js";
 
 export type OwnedPartitionHealth = {
 	topic: string;
 	partition: number;
-	status: OwnedPartitionRuntimeStatus;
+	status: PartitionRuntimeStatus;
 	localNextOffset: bigint | null;
 	consumedNextOffset: bigint | null;
 	highWatermark: bigint | null;

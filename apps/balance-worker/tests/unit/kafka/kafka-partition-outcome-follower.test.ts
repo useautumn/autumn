@@ -42,6 +42,7 @@ async function coordinatesReplayWithoutMutatingConsumer(): Promise<void> {
 		consumer.resume();
 	}
 	const metering = createPartitionReplay({
+		position: { topic, partition: 2 },
 		ctx: {
 			stateStore: { readNextOffset },
 			partitionOffsets: { fetchTopicOffsets },
@@ -239,6 +240,7 @@ describe("Kafka partition outcome follower", () => {
 		const fixture = createStoreFixture();
 		try {
 			const follower = createKafkaPartitionOutcomeFollower({
+				assignedPartition: 1,
 				consumer: createPartitionControl(),
 				partitionOffsets: createPartitionOffsets({ low: "0", high: "0" }),
 				stateStore: fixture.store,

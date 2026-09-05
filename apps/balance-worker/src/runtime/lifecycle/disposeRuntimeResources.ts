@@ -1,4 +1,3 @@
-import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
 import type {
 	PartitionRuntimeScope,
 	PartitionRuntimeState,
@@ -9,6 +8,11 @@ export async function disposeRuntimeResources({
 	state,
 }: PartitionRuntimeScope): Promise<void> {
 	const cleanupErrors: unknown[] = [];
+	try {
+		await stopRuntimePreparation({ state });
+	} catch (cause) {
+		cleanupErrors.push(cause);
+	}
 	try {
 		await stopRuntimeFollower({ ctx, state });
 	} catch (cause) {
@@ -45,15 +49,35 @@ function disconnectRuntimeProducer({
 	return state.disconnectProducerPromise;
 }
 
+export function stopRuntimePreparation({
+	state,
+}: {
+	state: PartitionRuntimeState;
+}): Promise<void> {
+	if (!state.preparationFollower) return Promise.resolve();
+	state.preparationStopPromise ??= state.preparationFollower.stop();
+	return state.preparationStopPromise;
+}
+
 export function cancelRuntimeReaders({
 	ctx,
 	state,
 }: PartitionRuntimeScope): void {
-	state.startupAbortController.abort(
-		new OwnedPartitionNotReadyError({ status: state.status }),
-	);
+	void stopPreparationInBackground({ state });
 	if (state.followerStartAttempted)
 		void stopFollowerInBackground({ ctx, state });
+}
+
+export async function stopPreparationInBackground({
+	state,
+}: {
+	state: PartitionRuntimeState;
+}): Promise<void> {
+	try {
+		await stopRuntimePreparation({ state });
+	} catch {
+		// The retained stop promise carries cleanup failure to disposal and quiescence.
+	}
 }
 
 async function stopFollowerInBackground({

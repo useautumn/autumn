@@ -42,12 +42,13 @@ export async function startPartitionService({
 			try {
 				await ctx.partitionOffsets.disconnect();
 			} catch {
-				/* Keep the startup failure. */
+				// Keep the original startup failure.
 			}
 		}
 		throw cause;
 	}
 }
+
 export function stopPartitionService({
 	ctx,
 	state,
@@ -64,29 +65,64 @@ export function stopPartitionService({
 	state.generation += 1;
 	state.unsubscribePartitionChanges?.();
 	state.unsubscribePartitionChanges = null;
+
 	const entriesToStop = detachPartitions({ state });
 	const previousLifecycle = state.lifecycle;
-	const stopping = stopPartitions({ entriesToStop });
-	state.stopPromise = finishStop({ ctx, state, previousLifecycle, stopping });
+	const healthRefresh = state.healthRefreshPromise;
+	const stopping = stopPartitions({ ctx, entriesToStop });
+	state.stopPromise = finishPartitionServiceStop({
+		ctx,
+		state,
+		previousLifecycle,
+		healthRefresh,
+		stopping,
+	});
 	return state.stopPromise;
 }
-async function finishStop({
+
+export function requestPartitionServiceStop({
+	ctx,
+	state,
+	allocationGeneration,
+}: AllocationScope): void {
+	function stopCurrentAllocation(): void {
+		if (!isCurrentAllocation({ state, allocationGeneration })) return;
+		void stopPartitionServiceSafely({ ctx, state });
+	}
+	queueMicrotask(stopCurrentAllocation);
+}
+
+export async function stopPartitionServiceSafely({
+	ctx,
+	state,
+}: PartitionsScope): Promise<void> {
+	try {
+		await stopPartitionService({ ctx, state });
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
+	}
+}
+
+async function finishPartitionServiceStop({
 	ctx,
 	state,
 	previousLifecycle,
+	healthRefresh,
 	stopping,
 }: PartitionsScope & {
 	previousLifecycle: Promise<void>;
+	healthRefresh: Promise<void> | null;
 	stopping: Promise<void>;
 }): Promise<void> {
 	const results = await Promise.allSettled([
 		previousLifecycle,
 		stopping,
-		state.healthRefreshPromise,
+		healthRefresh,
 	]);
 	const errors: unknown[] = [];
-	for (const result of results)
+	for (const result of results) {
 		if (result.status === "rejected") errors.push(result.reason);
+	}
 	try {
 		await ctx.consumer.stop();
 	} catch (cause) {
@@ -107,19 +143,4 @@ async function finishStop({
 			errors,
 			"Failed to stop Kafka owned partition group",
 		);
-}
-
-export function requestPartitionServiceStop(scope: AllocationScope): void {
-	queueMicrotask(stopIfCurrent);
-	function stopIfCurrent(): void {
-		void stopSafely();
-	}
-	async function stopSafely(): Promise<void> {
-		if (!isCurrentAllocation(scope)) return;
-		try {
-			await stopPartitionService(scope);
-		} catch (cause) {
-			reportPartitionError({ ctx: scope.ctx, cause });
-		}
-	}
 }
