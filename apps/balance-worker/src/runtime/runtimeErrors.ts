@@ -1,15 +1,9 @@
-export type OwnedPartitionRuntimeStatus =
-	| "created"
-	| "starting"
-	| "ready"
-	| "draining"
-	| "stopped"
-	| "recovery_required";
+import type { PartitionRuntimeStatus } from "./types/partitionRuntimeState.js";
 
 export class OwnedPartitionNotReadyError extends Error {
-	readonly status: OwnedPartitionRuntimeStatus;
+	readonly status: PartitionRuntimeStatus;
 
-	constructor({ status }: { status: OwnedPartitionRuntimeStatus }) {
+	constructor({ status }: { status: PartitionRuntimeStatus }) {
 		super(`Owned partition runtime is not ready: ${status}`);
 		this.name = "OwnedPartitionNotReadyError";
 		this.status = status;
@@ -73,58 +67,24 @@ export class OwnedPartitionProducerFencedError extends OwnedPartitionRecoveryReq
 	}
 }
 
-type KafkaErrorMetadata = {
-	type?: unknown;
-	code?: unknown;
-	cause?: unknown;
-	abortCause?: unknown;
-	errors?: unknown;
-};
-
-const kafkaFencingErrorTypes = new Set([
-	"INVALID_PRODUCER_EPOCH",
-	"INVALID_PRODUCER_ID_MAPPING",
-	"PRODUCER_FENCED",
-]);
-const kafkaFencingErrorCodes = new Set([47, 49, 90]);
-
-export const isKafkaProducerFencingCause = ({
-	cause,
-}: {
-	cause: unknown;
-}): boolean => {
-	const pendingCauses = [cause];
-	const visitedCauses = new Set<unknown>();
-
-	while (pendingCauses.length > 0) {
-		const currentCause = pendingCauses.pop();
-		if (
-			currentCause === null ||
-			typeof currentCause !== "object" ||
-			visitedCauses.has(currentCause)
-		) {
+function findFencedCause(
+	cause: unknown,
+): OwnedPartitionProducerFencedError | undefined {
+	const pending = [cause];
+	const visited = new Set<unknown>();
+	while (pending.length > 0) {
+		const current = pending.pop();
+		if (current === null || typeof current !== "object" || visited.has(current))
 			continue;
-		}
-		visitedCauses.add(currentCause);
-		const metadata = currentCause as KafkaErrorMetadata;
-		if (
-			(typeof metadata.type === "string" &&
-				kafkaFencingErrorTypes.has(metadata.type)) ||
-			(typeof metadata.code === "number" &&
-				kafkaFencingErrorCodes.has(metadata.code))
-		) {
-			return true;
-		}
-		pendingCauses.push(metadata.cause, metadata.abortCause);
-		if (Array.isArray(metadata.errors)) {
-			pendingCauses.push(...metadata.errors);
-		}
+		if (current instanceof OwnedPartitionProducerFencedError) return current;
+		visited.add(current);
+		if ("cause" in current) pending.push(current.cause);
+		if (current instanceof AggregateError) pending.push(...current.errors);
 	}
+	return undefined;
+}
 
-	return false;
-};
-
-export const createOwnedPartitionRecoveryError = ({
+export function createOwnedPartitionRecoveryError({
 	topic,
 	partition,
 	cause,
@@ -132,7 +92,9 @@ export const createOwnedPartitionRecoveryError = ({
 	topic: string;
 	partition: number;
 	cause: unknown;
-}): OwnedPartitionRecoveryRequiredError =>
-	isKafkaProducerFencingCause({ cause })
+}): OwnedPartitionRecoveryRequiredError {
+	const fencedCause = findFencedCause(cause);
+	return fencedCause
 		? new OwnedPartitionProducerFencedError({ topic, partition, cause })
 		: new OwnedPartitionRecoveryRequiredError({ topic, partition, cause });
+}
