@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	createProducerSession,
+	KafkaBatchNotCommittedError,
 	type KafkaProducerFactory,
 	type KafkaProducerLimits,
 	type KafkaProducerSession,
@@ -8,11 +9,13 @@ import {
 	type KafkaProducerClient as OwnedPartitionProducerPort,
 } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
+import { createOwnershipPublisher } from "../../../src/kafka/createOwnershipPublisher.js";
 import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
 import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
 import {
 	createOutcome,
 	createState,
@@ -214,4 +217,31 @@ describe("Runtime producer error adapter", function runtimeProducerTests() {
 			cause: { name: "KafkaBatchNotCommittedError", cause },
 		});
 	});
+});
+
+test("ownership acquisition preserves the fenced cause inside the batch error", async function ownershipAcquisitionFailure() {
+	const cause = createFencingError();
+	const session = createWorkerProducer({
+		ctx: { session: createFailingSession({ cause }) },
+		config: { topic, partition },
+	});
+	async function fetchTopicOffsets() {
+		return [{ partition, offset: "0", high: "0", low: "0" }];
+	}
+	const publication = createOwnershipPublisher({
+		ctx: { session, partitionOffsets: { fetchTopicOffsets } },
+		config: { topic: "owners", partition, endpoint: "http://worker.test" },
+	});
+	try {
+		await publication.claim();
+		throw new Error("Expected ownership acquisition to fail");
+	} catch (error) {
+		expect(error).toBeInstanceOf(KafkaBatchNotCommittedError);
+		const batchError = error as KafkaBatchNotCommittedError;
+		expect(batchError.cause).toBeInstanceOf(OwnedPartitionProducerFencedError);
+		expect(batchError.cause).toMatchObject({
+			message: `Owned partition producer ${topic}[${partition}] was fenced`,
+			cause,
+		});
+	}
 });

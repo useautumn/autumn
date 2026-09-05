@@ -226,3 +226,21 @@ test(
 	"rejects unknown or mismatched metering payloads and retains domain validation causes",
 	rejectsInvalidMeteringPayloads,
 );
+
+test("round-trips a versioned state initialization", function roundTripsInitialization() {
+	const initialization = {
+		schemaVersion: 1 as const,
+		type: "state_initialized" as const,
+		initializationId: "init_1",
+		initializedAt: 1_700_000_000_000,
+		state: createState(),
+	};
+	const serialized = serializeMeteringRecord({ record: initialization });
+
+	expect(
+		parseMeteringRecord({
+			key: serialized.key,
+			value: serialized.value,
+		}),
+	).toEqual(initialization);
+});
