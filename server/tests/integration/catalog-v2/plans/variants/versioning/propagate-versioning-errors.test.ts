@@ -1,23 +1,23 @@
 /**
  * catalogV2.update — propagate.variants target guards.
- * existing/all_versions targets must pin; new_version targets are plan-level.
+ * existing/all_versions targets may pin; unpinned ones follow the anchored row.
  * Off-anchor / missing plan → InvalidPropagationTarget. Under new_version:
  * pins 400, duplicate plan_ids 400, resolved row older than the plan's latest
  * with customers 400. Latest-but-inactive with customers mints.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	dashboardItem,
 	messagesItem,
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	seedBaseWithVariant,
 	seedDivergedVariantBase,
@@ -25,7 +25,7 @@ import {
 } from "../utils/seedVariantPlans.js";
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants: propagate target missing pin → 400")}`,
+	`${chalk.yellowBright("catalogV2 variants: propagate target without a pin follows the row anchored to the edited base")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_var_err_pin");
@@ -39,19 +39,26 @@ test.concurrent(
 					baseId,
 					variantId,
 				});
-				await expectAutumnError({
-					errMessage: "Propagate targets must pin a row",
-					func: () =>
-						autumnV2_3.catalogV2.update({
-							plans: [
-								{
-									plan_id: baseId,
-									items: [messagesItem(100), dashboardItem()],
-									propagate: { variants: [{ plan_id: variantId }] },
-								},
-							],
-						}),
-				});
+				// A config pins nothing: the server resolves the variant row anchored
+				// to the edited base and propagates the in-place edit to it.
+				const preview = (await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{
+							plan_id: baseId,
+							items: [messagesItem(100), dashboardItem()],
+							propagate: { variants: [{ plan_id: variantId }] },
+						},
+					],
+				})) as unknown as {
+					plans: {
+						plan_id: string;
+						variants?: { plan_id: string; variant_action?: string }[];
+					}[];
+				};
+				const variant = preview.plans
+					.find((row) => row.plan_id === baseId)
+					?.variants?.find((row) => row.plan_id === variantId);
+				expect(variant?.variant_action).toBe("propagated");
 			},
 		});
 	},
@@ -179,10 +186,7 @@ test.concurrent(
 									versioning: "new_version",
 									active: true,
 									propagate: {
-										variants: [
-											{ plan_id: variantId },
-											{ plan_id: variantId },
-										],
+										variants: [{ plan_id: variantId }, { plan_id: variantId }],
 									},
 								},
 							],
