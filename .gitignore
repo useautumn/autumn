@@ -21,6 +21,7 @@ supabase.sh
 **/.env*
 tests/
 !server/tests
+!packages/balance-worker-protocol/tests
 !packages/kafka/tests
 !apps/balance-worker/tests
 !packages/balance-engine/tests
