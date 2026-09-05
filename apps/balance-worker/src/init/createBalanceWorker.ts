@@ -4,6 +4,7 @@ import { createPartitionRuntimeFactory } from "./construction/createPartitionRun
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
 import { stopWorker } from "./lifecycle/stopWorker.js";
+import { resolveWorkerAddress } from "./resolveWorkerAddress.js";
 import type {
 	BalanceWorker,
 	BalanceWorkerConfig,
@@ -30,7 +31,11 @@ export async function createBalanceWorker({
 	config: BalanceWorkerConfig;
 }): Promise<BalanceWorker> {
 	const { env } = config;
-	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({ env });
+	const address = await resolveWorkerAddress({ env });
+	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
+		env,
+		endpoint: address.endpoint,
+	});
 	const resources = await openWorkerResources({ config });
 	try {
 		const runtimeFactory = createPartitionRuntimeFactory({
@@ -75,18 +80,22 @@ export async function createBalanceWorker({
 			ctx: {
 				ownership: partitions,
 				partitionResolver: resources.partitionResolver,
-				onError: dependencies.onError,
+				logger: dependencies.logger,
 			},
 		});
 
 		function listen(): WorkerListener {
-			return Bun.serve({
-				hostname: env.BALANCE_WORKER_HOST,
+			const listener = Bun.serve({
+				hostname: address.hostname,
 				port: env.BALANCE_WORKER_PORT,
 				maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
 				fetch: app.fetch,
 				idleTimeout: 0,
 			});
+			dependencies.logger.info(
+				`Balance worker listening at ${address.endpoint}; partition admission follows recovery`,
+			);
+			return listener;
 		}
 
 		const ctx: WorkerLifecycleContext = {
