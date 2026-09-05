@@ -81,12 +81,12 @@ test(
 );
 
 import { describe, expect, test } from "bun:test";
-import { StateBehindKafkaLogStartError } from "../../../src/kafka/kafkaMeteringConsumer.js";
+import { createProgressTracker } from "@autumn/kafka";
 import {
 	KafkaPartitionFollowerStoppedError,
 	StateAheadOfKafkaLogEndError,
-} from "../../../src/kafka/kafkaPartitionOutcomeFollower.js";
-import { KafkaPartitionPositionTracker } from "../../../src/kafka/kafkaPartitionPositionTracker.js";
+	StateBehindKafkaLogStartError,
+} from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { PartitionProgressNotFoundError } from "../../../src/state/sqliteBalanceStateErrors.js";
 import {
 	closeStoreFixture,

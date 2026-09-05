@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { executeTrack } from "@autumn/balance-engine";
-import type { KafkaConsumerClient } from "@autumn/kafka";
+import type { KafkaConsumerClient, ProgressTracker } from "@autumn/kafka";
 import { createProgressTracker, serializeMeteringRecord } from "@autumn/kafka";
 import type {
 	Admin,
@@ -12,18 +12,12 @@ import type {
 	KafkaMessage,
 	OffsetsByTopicPartition,
 } from "kafkajs";
-import {
-	createKafkaMeteringConsumer as createKafkaMeteringConsumerWithoutDefaults,
-	type KafkaMeteringConsumerPort,
-	type KafkaMeteringConsumerRunConfig,
-	type KafkaPartitionOffsetsPort,
-	StateBehindKafkaLogStartError,
-} from "../../../src/kafka/kafkaMeteringConsumer.js";
-import {
-	serializeKafkaStateInitializedRecord,
-	serializeKafkaTrackOutcomeRecord,
-} from "../../../src/kafka/kafkaMeteringRecord.js";
-import { KafkaPartitionPositionTracker } from "../../../src/kafka/kafkaPartitionPositionTracker.js";
+import { createMeteringConsumer } from "../../../src/kafka/meteringConsumer/createMeteringConsumer.js";
+import { StateBehindKafkaLogStartError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
+
+type KafkaMeteringConsumerPort = KafkaConsumerClient;
+type KafkaMeteringConsumerRunConfig = ConsumerRunConfig;
+
 import {
 	closeStoreFixture,
 	createOutcome,
@@ -31,6 +25,8 @@ import {
 	createStoreFixture,
 	identity,
 	partition,
+	serializeKafkaStateInitializedRecord,
+	serializeKafkaTrackOutcomeRecord,
 	topic,
 } from "./kafka-test-fixtures.js";
 
@@ -81,19 +77,20 @@ const createFakeKafkaPartitionOffsets = ({
 	],
 });
 
-const createKafkaMeteringConsumer = ({
-	positionTracker = new KafkaPartitionPositionTracker(),
-	...params
-}: Omit<
-	Parameters<typeof createKafkaMeteringConsumerWithoutDefaults>[0],
-	"positionTracker"
-> & {
-	positionTracker?: KafkaPartitionPositionTracker;
-}) =>
-	createKafkaMeteringConsumerWithoutDefaults({
-		...params,
-		positionTracker,
+function createKafkaMeteringConsumer(params: {
+	consumer: KafkaConsumerClient;
+	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
+	stateStore: import("../../../src/state/sqliteBalanceStateStore.js").SqliteBalanceStateStore;
+	topic: string;
+	positionTracker?: ProgressTracker;
+	partitionsConsumedConcurrently?: number;
+}) {
+	const { topic, partitionsConsumedConcurrently, ...ctx } = params;
+	return createMeteringConsumer({
+		ctx,
+		config: { topic, partitionsConsumedConcurrently },
 	});
+}
 
 const createFakeKafkaConsumer = ({
 	onCommit,
@@ -376,7 +373,7 @@ describe("Kafka metering consumer", () => {
 		try {
 			const state = createState();
 			const outcome = createOutcome({ state });
-			const positionTracker = new KafkaPartitionPositionTracker();
+			const positionTracker = createProgressTracker();
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaMeteringConsumer({
 				consumer: consumerPort,

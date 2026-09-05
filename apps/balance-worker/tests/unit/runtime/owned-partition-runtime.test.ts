@@ -284,11 +284,6 @@ const writerLimits = {
 	maxPendingCommandsPerCustomer: 100,
 };
 
-const trackReceiptPolicy = {
-	retentionMs: 86_400_000,
-	now: () => 1_700_000_000_000,
-};
-
 const createRuntime = ({
 	store,
 	producer,
@@ -301,20 +296,23 @@ const createRuntime = ({
 	follower: PartitionOutcomeFollowerPort;
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
 	recoveryDrainTimeoutMs?: number;
-}) =>
-	createOwnedPartitionRuntime({
-		topic,
-		partition,
-		stateStore: store,
-		producer,
-		follower,
-		partitionResolver: {
-			partitionForIdentity: ({ identity: commandIdentity }) =>
-				partitionForIdentity(commandIdentity),
-		},
-		writerLimits,
-		trackReceiptPolicy,
-		recoveryDrainTimeoutMs,
+}) => {
+	function createProducer(): OwnedPartitionProducerPort {
+		return producer;
+	}
+	const session = createProducerSession({
+		ctx: { kafka: { producer: createProducer } },
+		config: createWorkerProducerConfig({
+			deploymentEnvironment: "test",
+			topic,
+			partition,
+			limits: {
+				transactionTimeoutMs: 15_000,
+				retryCount: 3,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 2_000,
+			},
+		}),
 	});
 	const workerProducer = createWorkerProducer({
 		ctx: { session },
@@ -324,6 +322,10 @@ const createRuntime = ({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
 			stateStore: store,
+			trackReceiptPolicy: {
+				retentionMs: 86_400_000,
+				now: () => 1_700_000_000_000,
+			},
 			producer: workerProducer,
 			follower,
 			appender: createTrackOutcomePublisher({

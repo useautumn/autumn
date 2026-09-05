@@ -275,6 +275,7 @@ function meteringPublisherTests(): void {
 			},
 		});
 		const decision = computeTrack({
+			deduplicationExpiresAt: 1_700_086_400_000,
 			state,
 			command: parseTrackCommand({
 				input: {

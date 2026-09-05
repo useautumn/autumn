@@ -21,6 +21,14 @@ export function createPartitionRuntimeFactory({
 	config: PartitionRuntimeFactoryConfig;
 }): PartitionRuntimeFactory {
 	assertKafkaBalanceWorkerTimings({ timings: config.timings });
+	if (
+		!Number.isSafeInteger(config.trackReceiptRetentionMs) ||
+		config.trackReceiptRetentionMs <= 0
+	) {
+		throw new RangeError(
+			"trackReceiptRetentionMs must be a positive safe integer",
+		);
+	}
 	function createRuntime({
 		topic,
 		partition,
@@ -42,6 +50,10 @@ export function createPartitionRuntimeFactory({
 		const appender = createTrackOutcomePublisher({ ctx: { producer } });
 		return createPartitionRuntime({
 			ctx: {
+				trackReceiptPolicy: {
+					retentionMs: config.trackReceiptRetentionMs,
+					now: Date.now,
+				},
 				stateStore: ctx.stateStore,
 				partitionResolver: ctx.partitionResolver,
 				follower,
