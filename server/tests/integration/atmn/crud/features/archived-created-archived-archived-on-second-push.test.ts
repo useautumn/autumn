@@ -12,6 +12,7 @@ import {
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const featureLiteral = ({ archived }: { archived: boolean }): string => `
 		feature({ featureId: "sso", name: "SSO", type: "boolean"${archived ? ", archived: true" : ""} }),`;
@@ -25,7 +26,7 @@ for (const label of ["archived on second push"] as const) {
 		const scenario = await initAtmnScenario({
 			setup: [
 				s.platform.create({
-					userEmail: `atmn_archived_${label.replace(/\s+/g, "_")}@autumn.test`,
+					userEmail: `${uniqueTestId("atmn")}@autumn.test`,
 				}),
 			],
 			config: configBody({

@@ -8,13 +8,14 @@ import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	"active: false on a plan_id with no prior row is refused, not silently minted",
 	async () => {
 		const scenario = await initAtmnScenario({
 			setup: [
-				s.platform.create({ userEmail: "atmn_versions_new_draft@autumn.test" }),
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
 			config: configBody({
 				plans: `

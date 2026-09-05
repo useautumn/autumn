@@ -13,6 +13,7 @@ import {
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type CatalogPlanRow = {
 	id: string;
@@ -29,7 +30,7 @@ test.concurrent(
 		// active `plans` row is created before the `planVersions` history row.
 		const scenario = await initAtmnScenario({
 			setup: [
-				s.platform.create({ userEmail: "atmn_versions_v2v1@autumn.test" }),
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
 			config: configBody({
 				features: everyFeatureType,
