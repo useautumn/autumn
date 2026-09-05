@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { executeTrack } from "@autumn/balance-engine";
-import type { KafkaConsumerClient, ProgressTracker } from "@autumn/kafka";
-import { createProgressTracker, serializeMeteringRecord } from "@autumn/kafka";
+import {
+	createProgressTracker,
+	InvalidRecordError,
+	type KafkaConsumerClient,
+	type ProgressTracker,
+	serializeMeteringRecord,
+} from "@autumn/kafka";
 import type {
 	Admin,
 	Batch,
@@ -13,11 +18,11 @@ import type {
 	OffsetsByTopicPartition,
 } from "kafkajs";
 import { createMeteringConsumer } from "../../../src/kafka/meteringConsumer/createMeteringConsumer.js";
-import { StateBehindKafkaLogStartError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
-
-type KafkaMeteringConsumerPort = KafkaConsumerClient;
-type KafkaMeteringConsumerRunConfig = ConsumerRunConfig;
-
+import { createMeteringRecordHandler } from "../../../src/kafka/meteringConsumer/createMeteringRecordHandler.js";
+import {
+	KafkaPartitionInvariantError,
+	StateBehindKafkaLogStartError,
+} from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import {
 	closeStoreFixture,
 	createOutcome,
@@ -29,6 +34,10 @@ import {
 	serializeKafkaTrackOutcomeRecord,
 	topic,
 } from "./kafka-test-fixtures.js";
+
+type KafkaMeteringConsumerPort = KafkaConsumerClient;
+
+type KafkaMeteringConsumerRunConfig = ConsumerRunConfig;
 
 type Commit = {
 	topic: string;
@@ -1209,3 +1218,307 @@ test(
 	"replay stop settles stale batches before a replacement resumes consumption",
 	replayStopSettlesBatchesBeforeReplacement,
 );
+
+describe("recordApplication", function recordApplicationTests() {
+	function preservesSynchronousReadsAndApplications(): void {
+		const fixture = createStoreFixture({ nextOffset: 3n });
+		async function fetchTopicOffsets(): Promise<never> {
+			throw new Error("No broker read expected");
+		}
+		const handler = createMeteringRecordHandler({
+			ctx: {
+				stateStore: fixture.store,
+				partitionOffsets: { fetchTopicOffsets },
+			},
+		});
+		try {
+			expect(
+				handler.readResumeOffset({ topic, partition, firstOffset: 3n }),
+			).toBeNull();
+			expect(
+				handler.readResumeOffset({ topic, partition, firstOffset: 1n }),
+			).toBe(3n);
+			expect(
+				handler.readResumeOffset({ topic, partition: 1, firstOffset: 0n }),
+			).toBeNull();
+			const state = createState();
+			expect(
+				handler.applyRecord({
+					position: { topic, partition, offset: 3n },
+					record: {
+						schemaVersion: 1,
+						type: "state_initialized",
+						initializationId: "initial",
+						initializedAt: 1_700_000_000_000,
+						state,
+					},
+				}),
+			).toBeUndefined();
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(4n);
+			const record = createOutcome({ state });
+			expect(
+				handler.applyRecord({
+					position: { topic, partition, offset: 4n },
+					record,
+				}),
+			).toBeUndefined();
+			expect(
+				fixture.store.readState({ identity: state.identity })?.revision,
+			).toBe(1);
+			expect(
+				handler.applyRecord({
+					position: { topic, partition, offset: 4n },
+					record,
+				}),
+			).toEqual({ nextOffset: 5n });
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	}
+
+	async function readsRetentionOnlyWhenRewinding(): Promise<void> {
+		const fixture = createStoreFixture({ nextOffset: 3n });
+		const gate = Promise.withResolvers<void>();
+		let low = "1";
+		let brokerReads = 0;
+		async function fetchTopicOffsets() {
+			brokerReads++;
+			await gate.promise;
+			return [{ partition, offset: "8", high: "8", low }];
+		}
+		const handler = createMeteringRecordHandler({
+			ctx: {
+				stateStore: fixture.store,
+				partitionOffsets: { fetchTopicOffsets },
+			},
+		});
+		try {
+			const resume = handler.readResumeOffset({
+				topic,
+				partition,
+				firstOffset: 5n,
+			});
+			expect(resume).toBeInstanceOf(Promise);
+			expect(brokerReads).toBe(1);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
+			gate.resolve();
+			await expect(Promise.resolve(resume)).resolves.toBe(3n);
+			low = "4";
+			const lost = handler.readResumeOffset({
+				topic,
+				partition,
+				firstOffset: 5n,
+			});
+			await expect(Promise.resolve(lost)).rejects.toBeInstanceOf(
+				StateBehindKafkaLogStartError,
+			);
+			await expect(Promise.resolve(lost)).rejects.toMatchObject({
+				retriable: false,
+				storedNextOffset: 3n,
+				logStartOffset: 4n,
+			});
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(3n);
+		} finally {
+			gate.resolve();
+			closeStoreFixture(fixture);
+		}
+	}
+
+	function mapsOnlyPartitionInvariantErrors(): void {
+		const fixture = createStoreFixture();
+		async function fetchTopicOffsets() {
+			return [];
+		}
+		const handler = createMeteringRecordHandler({
+			ctx: {
+				stateStore: fixture.store,
+				partitionOffsets: { fetchTopicOffsets },
+			},
+		});
+		const invariant = new InvalidRecordError();
+		const ordinary = new Error("store disconnected");
+		function throwInvariant(): never {
+			if (!handler.onRecordError) throw new Error("Expected an error boundary");
+			return handler.onRecordError({
+				topic,
+				partition,
+				offset: "7",
+				cause: invariant,
+			});
+		}
+		function readOrdinaryFailure(): unknown {
+			try {
+				if (!handler.onRecordError)
+					throw new Error("Expected an error boundary");
+				handler.onRecordError({
+					topic,
+					partition,
+					offset: "7",
+					cause: ordinary,
+				});
+			} catch (cause) {
+				return cause;
+			}
+		}
+		try {
+			expect(throwInvariant).toThrow(KafkaPartitionInvariantError);
+			try {
+				throwInvariant();
+			} catch (cause) {
+				expect(cause).toMatchObject({
+					topic,
+					partition,
+					offset: "7",
+					cause: invariant,
+					retriable: false,
+				});
+			}
+			expect(readOrdinaryFailure()).toBe(ordinary);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	}
+
+	test(
+		"metering handler preserves synchronous resume reads, applies, and writer-race offsets",
+		preservesSynchronousReadsAndApplications,
+	);
+
+	test(
+		"metering handler awaits retention only when rewinding behind the first fetched record",
+		readsRetentionOnlyWhenRewinding,
+	);
+
+	test(
+		"metering handler wraps known partition invariants and preserves other errors",
+		mapsOnlyPartitionInvariantErrors,
+	);
+});
+
+describe("consumerLifecycle", function consumerLifecycleTests() {
+	function createLifecycleFixture({
+		startFailure,
+		stopFailure,
+		disconnectFailure,
+	}: {
+		startFailure?: Error;
+		stopFailure?: Error;
+		disconnectFailure?: Error;
+	} = {}) {
+		const fixture = createStoreFixture();
+		const events: string[] = [];
+		const listeners = new Set<unknown>();
+		function on(_event: string, listener: unknown) {
+			listeners.add(listener);
+			function unsubscribe(): void {
+				listeners.delete(listener);
+			}
+			return unsubscribe;
+		}
+		async function connect(): Promise<void> {
+			events.push("connect");
+		}
+		async function subscribe(): Promise<void> {
+			events.push("subscribe");
+		}
+		async function run(): Promise<void> {
+			events.push("run");
+			if (startFailure) throw startFailure;
+		}
+		async function stop(): Promise<void> {
+			events.push("stop");
+			if (stopFailure) throw stopFailure;
+		}
+		async function disconnect(): Promise<void> {
+			events.push("disconnect");
+			if (disconnectFailure) throw disconnectFailure;
+		}
+		async function commitOffsets(): Promise<void> {}
+		function seek(): void {}
+		function pause(): void {}
+		function resume(): void {}
+		async function fetchTopicOffsets() {
+			return [];
+		}
+		function close(): void {
+			closeStoreFixture(fixture);
+		}
+		const kafka: KafkaConsumerClient = {
+			connect,
+			subscribe,
+			run,
+			stop,
+			disconnect,
+			commitOffsets,
+			seek,
+			pause,
+			resume,
+			events: {
+				GROUP_JOIN: "consumer.group_join",
+				END_BATCH_PROCESS: "consumer.end_batch_process",
+			} as KafkaConsumerClient["events"],
+			on: on as KafkaConsumerClient["on"],
+		};
+		const consumer = createMeteringConsumer({
+			ctx: {
+				consumer: kafka,
+				partitionOffsets: { fetchTopicOffsets },
+				stateStore: fixture.store,
+				positionTracker: createProgressTracker(),
+			},
+			config: { topic },
+		});
+		return { consumer, events, listeners, close };
+	}
+
+	async function startupFailureCleansUp(): Promise<void> {
+		const startFailure = new Error("run failed");
+		const fixture = createLifecycleFixture({
+			startFailure,
+			disconnectFailure: new Error("disconnect failed"),
+		});
+		try {
+			await expect(fixture.consumer.start()).rejects.toBe(startFailure);
+			expect(fixture.listeners.size).toBe(0);
+			expect(fixture.events).toEqual([
+				"connect",
+				"subscribe",
+				"run",
+				"disconnect",
+			]);
+		} finally {
+			fixture.close();
+		}
+	}
+
+	async function stopFailureStillDisconnects(): Promise<void> {
+		const stopFailure = new Error("stop failed");
+		const fixture = createLifecycleFixture({ stopFailure });
+		try {
+			await fixture.consumer.start();
+			await expect(fixture.consumer.stop()).rejects.toBe(stopFailure);
+			expect(fixture.listeners.size).toBe(0);
+			expect(fixture.events).toEqual([
+				"connect",
+				"subscribe",
+				"run",
+				"stop",
+				"disconnect",
+			]);
+			await fixture.consumer.stop();
+			expect(fixture.events.length).toBe(5);
+		} finally {
+			fixture.close();
+		}
+	}
+
+	test(
+		"consumer startup cleanup preserves the startup error and removes listeners",
+		startupFailureCleansUp,
+	);
+
+	test(
+		"consumer shutdown disconnects and removes listeners even when stop fails",
+		stopFailureStillDisconnects,
+	);
+});
