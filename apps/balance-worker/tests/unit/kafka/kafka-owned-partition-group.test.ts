@@ -1,4 +1,86 @@
+test("waits for runtime quiescence before starting a replacement", async () => {
+	const fixture = createStoreFixture();
+	const consumer = createFakeGroupConsumer();
+	const settling = Promise.withResolvers<void>();
+	const started: number[] = [];
+	let sequence = 0;
+	const group = createKafkaOwnedPartitionGroup({
+		consumer,
+		partitionOffsets: createPartitionOffsets(),
+		topic,
+		stateStore: fixture.store,
+		partitionsConsumedConcurrently: 1,
+		createRuntime: () => {
+			const id = ++sequence;
+			return {
+				start: async () => {
+					started.push(id);
+				},
+				stop: async () => {},
+				waitForQuiescence: async () => {
+					if (id === 1) await settling.promise;
+				},
+			};
+		},
+		onError: () => {},
+	});
+	try {
+		await group.start();
+		consumer.emitGroupJoin([0]);
+		await waitFor(() => started.length === 1);
+		consumer.emitGroupJoin([0]);
+		await new Promise<void>(setImmediate);
+		expect(started).toEqual([1]);
+		settling.resolve();
+		await waitFor(() => started.length === 2);
+		expect(started).toEqual([1, 2]);
+	} finally {
+		settling.resolve();
+		await group.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+test("failed retirement stops the group without starting a replacement", async () => {
+	const fixture = createStoreFixture();
+	const consumer = createFakeGroupConsumer();
+	const errors: unknown[] = [];
+	const started: number[] = [];
+	const failure = new Error("replay did not settle");
+	const group = createKafkaOwnedPartitionGroup({
+		consumer,
+		partitionOffsets: createPartitionOffsets(),
+		topic,
+		stateStore: fixture.store,
+		partitionsConsumedConcurrently: 1,
+		createRuntime: () => ({
+			start: async () => {
+				started.push(0);
+			},
+			stop: async () => {},
+			waitForQuiescence: async () => {
+				throw failure;
+			},
+		}),
+		onError: ({ cause }) => errors.push(cause),
+	});
+	try {
+		await group.start();
+		consumer.emitGroupJoin([0]);
+		await waitFor(() => started.length === 1);
+		consumer.emitGroupJoin([0]);
+		await waitFor(() => consumer.lifecycle.includes("consumer-stop"));
+		expect(started).toEqual([0]);
+		expect(errors).toHaveLength(1);
+		expect((errors[0] as AggregateError).errors).toEqual([failure]);
+	} finally {
+		await group.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
 import { describe, expect, test } from "bun:test";
+import { KafkaPartitionAssignmentRevokedError } from "@autumn/kafka";
 import type {
 	ConsumerCrashEvent,
 	ConsumerGroupJoinEvent,
@@ -6,14 +88,11 @@ import type {
 	ConsumerRunConfig,
 } from "kafkajs";
 import {
-	createKafkaOwnedPartitionGroup,
-	type KafkaOwnedPartitionGroupConsumerPort,
-	KafkaPartitionAssignmentRevokedError,
-	type KafkaPartitionRuntimeFactory,
-} from "../../../src/kafka/kafkaOwnedPartitionGroup.js";
-import {
 	closeStoreFixture,
+	createKafkaOwnedPartitionGroup,
 	createStoreFixture,
+	type KafkaOwnedPartitionGroupConsumerPort,
+	type KafkaPartitionRuntimeFactory,
 	topic,
 } from "./kafka-test-fixtures.js";
 
@@ -475,3 +554,58 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 });
+
+import { readFileSync } from "node:fs";
+import { Glob } from "bun";
+import ts from "typescript";
+
+function ownershipUsesNamedFunctions(): void {
+	const directory = new URL("../../../src/", import.meta.url).pathname;
+	const violations: string[] = [];
+	for (const file of new Glob(
+		"{partitions,init,kafka/meteringConsumer}/**/*.ts",
+	).scanSync({
+		cwd: directory,
+		absolute: true,
+	})) {
+		const source = ts.createSourceFile(
+			file,
+			readFileSync(file, "utf8"),
+			ts.ScriptTarget.Latest,
+			true,
+		);
+		const pending: ts.Node[] = [source];
+		while (pending.length > 0) {
+			const node = pending.pop();
+			if (!node) continue;
+			const anonymous =
+				ts.isArrowFunction(node) ||
+				ts.isFunctionExpression(node) ||
+				(ts.isFunctionDeclaration(node) && !node.name);
+			const inlineMethod =
+				ts.isMethodDeclaration(node) &&
+				ts.isObjectLiteralExpression(node.parent);
+			const callbackWiring =
+				ts.isCallExpression(node) &&
+				ts.isPropertyAccessExpression(node.expression) &&
+				["bind", "then", "catch", "finally"].includes(
+					node.expression.name.text,
+				);
+			if (anonymous || inlineMethod || callbackWiring) {
+				const { line } = source.getLineAndCharacterOfPosition(
+					node.getStart(source),
+				);
+				violations.push(
+					`${file}:${line + 1}: ${node.getText(source).slice(0, 80)}`,
+				);
+			}
+			pending.push(...node.getChildren(source));
+		}
+	}
+	expect(violations).toEqual([]);
+}
+
+test(
+	"partition ownership, construction and replay use named functions",
+	ownershipUsesNamedFunctions,
+);

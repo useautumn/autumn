@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { KafkaPartitionPositionTracker } from "../../../src/kafka/kafkaPartitionPositionTracker.js";
+import { createProgressTracker } from "@autumn/kafka";
 
 const topic = "metering-events-v1";
 const partition = 2;
 
 describe("Kafka partition position tracker", () => {
 	test("resolves catch-up only after the consumed position reaches the target", async () => {
-		const tracker = new KafkaPartitionPositionTracker();
+		const tracker = createProgressTracker();
 		let caughtUp = false;
 		const catchUp = tracker
 			.waitUntil({ topic, partition, nextOffset: 5n })
@@ -26,7 +26,7 @@ describe("Kafka partition position tracker", () => {
 	});
 
 	test("never moves a consumed position backwards", () => {
-		const tracker = new KafkaPartitionPositionTracker();
+		const tracker = createProgressTracker();
 
 		tracker.advance({ topic, partition, nextOffset: 8n });
 		tracker.advance({ topic, partition, nextOffset: 3n });
@@ -35,7 +35,7 @@ describe("Kafka partition position tracker", () => {
 	});
 
 	test("cancels a pending catch-up wait", async () => {
-		const tracker = new KafkaPartitionPositionTracker();
+		const tracker = createProgressTracker();
 		const controller = new AbortController();
 		const stopped = new Error("partition stopped");
 		const catchUp = tracker.waitUntil({
