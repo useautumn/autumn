@@ -136,8 +136,11 @@ export const computeRemoveFeaturesPlan = ({
 				}).length > 0;
 			const hasSurvivingCatalogReference =
 				hasUnclearedPlanItem || hasSurvivingCreditSystem;
+			// The DB flags see the whole catalog; the states context only holds the
+			// plans this push names, so a partial push still archives a referenced feature.
 			const hasAnyCatalogReference = Boolean(
 				referencingPlanIds.length > 0 ||
+					state?.has_entitlements ||
 					state?.has_loose_entitlements ||
 					state?.has_entity_feature_entitlements ||
 					state?.has_loose_entity_feature_entitlements ||
