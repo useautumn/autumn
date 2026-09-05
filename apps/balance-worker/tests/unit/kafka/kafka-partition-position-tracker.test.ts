@@ -35,7 +35,7 @@ describe("Kafka partition position tracker", () => {
 	});
 
 	test("tracks consumed position and the latest observed high watermark", () => {
-		const tracker = new KafkaPartitionPositionTracker();
+		const tracker = createProgressTracker();
 
 		tracker.advance({ topic, partition, nextOffset: 8n });
 		tracker.observeHighWatermark({ topic, partition, highWatermark: 12n });
@@ -47,7 +47,7 @@ describe("Kafka partition position tracker", () => {
 	});
 
 	test("never moves an observed high watermark backwards", () => {
-		const tracker = new KafkaPartitionPositionTracker();
+		const tracker = createProgressTracker();
 
 		tracker.observeHighWatermark({ topic, partition, highWatermark: 12n });
 		tracker.observeHighWatermark({ topic, partition, highWatermark: 9n });

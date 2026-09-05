@@ -91,17 +91,10 @@ import {
 	type OwnedPartitionHealth,
 	ownedPartitionHealthOf,
 } from "../../../src/health/ownedPartitionHealth.js";
-import {
-	createKafkaOwnedPartitionGroup,
-	type KafkaOwnedPartitionGroupConsumerPort,
-	KafkaPartitionAssignmentRevokedError,
-	type KafkaPartitionRuntimeFactory,
-} from "../../../src/kafka/kafkaOwnedPartitionGroup.js";
-import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrap.js";
-import {
-	OwnedPartitionRecoveryRequiredError,
-	type OwnedPartitionRuntimeStatus,
-} from "../../../src/runtime/ownedPartitionRuntime.js";
+
+import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
+import { OwnedPartitionRecoveryRequiredError } from "../../../src/runtime/runtimeErrors.js";
+import type { PartitionRuntimeStatus as OwnedPartitionRuntimeStatus } from "../../../src/runtime/types/partitionRuntimeState.js";
 import {
 	closeStoreFixture,
 	createKafkaOwnedPartitionGroup,

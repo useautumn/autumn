@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createPartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
-import { planPartitionBootstrap } from "../../../../src/runtime/bootstrap/partitionBootstrapPlan.js";
+import { planPartitionBootstrap } from "../../../../src/runtime/bootstrap/plan/planPartitionBootstrap.js";
 
 const checkpointAt = (nextOffset: bigint) =>
 	createPartitionCheckpoint({

@@ -5,6 +5,11 @@ import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStor
 import type { PartitionRuntimeFactoryInput } from "./partitionRuntimeFactory.js";
 
 export type WorkerPartitionsContext = {
+	onUnhealthyPartition(failure: {
+		topic: string;
+		partition: number;
+		cause: unknown;
+	}): void;
 	consumer: KafkaConsumerClient;
 	partitionOffsets: Pick<Admin, "connect" | "disconnect" | "fetchTopicOffsets">;
 	stateStore: SqliteBalanceStateStore;
@@ -14,4 +19,10 @@ export type WorkerPartitionsContext = {
 export type WorkerPartitionsConfig = {
 	topic: string;
 	partitionsConsumedConcurrently: number;
+	healthRefreshIntervalMs: number;
+	partitionBootstrapRetryIntervalMs?: number;
+};
+
+export type WorkerPartitionHighWatermarks = {
+	readHighWatermark(position: { partition: number }): bigint;
 };

@@ -5,8 +5,10 @@ import {
 	UnsupportedPartitionCheckpointSchemaVersionError,
 } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { PartitionCheckpointSourceError } from "../../../../src/checkpoint/partitionCheckpointSource.js";
-import { PartitionBootstrapRefusedError } from "../../../../src/runtime/bootstrap/partitionBootstrap.js";
-import { isPartitionBootstrapBlockedCause } from "../../../../src/runtime/bootstrap/partitionBootstrapFailure.js";
+import {
+	isPartitionBootstrapBlockedCause,
+	PartitionBootstrapRefusedError,
+} from "../../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import {
 	PartitionCheckpointLimitExceededError,
 	PartitionCheckpointRestoreConflictError,

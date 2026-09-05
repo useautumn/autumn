@@ -1,3 +1,4 @@
+import { ownedPartitionFailureReasonOf } from "../../health/ownedPartitionHealth.js";
 import {
 	createOwnedPartitionRecoveryError,
 	type OwnedPartitionRecoveryRequiredError,
@@ -23,6 +24,8 @@ export function enterRuntimeRecovery({
 		cause,
 	});
 	state.terminalError = recoveryError;
+	state.failureReason = ownedPartitionFailureReasonOf({ cause });
+	state.startupAbortController.abort(recoveryError);
 	state.status = "recovery_required";
 	state.recoveryPromise = finishRuntimeRecovery({
 		ctx,

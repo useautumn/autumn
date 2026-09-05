@@ -7,10 +7,7 @@ import {
 	PartitionCheckpointContentHashMismatchError,
 } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { PartitionCheckpointSourceError } from "../../../../src/checkpoint/partitionCheckpointSource.js";
-import {
-	createPartitionBootstrapper,
-	PartitionBootstrapRefusedError,
-} from "../../../../src/runtime/bootstrap/partitionBootstrap.js";
+import { createPartitionBootstrapper } from "../../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
@@ -295,3 +292,142 @@ describe("partition bootstrap", () => {
 		}
 	});
 });
+
+import type { PartitionCheckpointV1 } from "../../../../src/checkpoint/partitionCheckpoint.js";
+import { PartitionBootstrapRefusedError } from "../../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
+import type { PartitionBootstrapOptions } from "../../../../src/runtime/bootstrap/types/partitionBootstrap.js";
+
+function createBootstrapFixture({
+	localNextOffset,
+	abortOnRead = 0,
+}: {
+	localNextOffset: bigint | null;
+	abortOnRead?: number;
+}) {
+	const events: string[] = [];
+	const controller = new AbortController();
+	let reads = 0;
+	const checkpoint = createPartitionCheckpoint({
+		engineSchemaVersion: 1,
+		createdAt: 1_700_000_000_000,
+		topic: "metering-events-v1",
+		partition: 0,
+		nextOffset: 100n,
+		states: [],
+		receipts: [],
+	});
+
+	function abortAfterRead(): void {
+		events.push("abort");
+		controller.abort(new Error("assignment revoked"));
+	}
+
+	function readNextOffset(): bigint | null {
+		events.push("read");
+		reads += 1;
+		if (reads === abortOnRead) queueMicrotask(abortAfterRead);
+		return localNextOffset;
+	}
+
+	function initializePartition({ nextOffset }: { nextOffset: bigint }): void {
+		events.push("initialize");
+		localNextOffset = nextOffset;
+	}
+
+	function restorePartitionCheckpoint({
+		checkpoint: restoredCheckpoint,
+		mode,
+	}: {
+		checkpoint: PartitionCheckpointV1;
+		mode: "restore" | "replace";
+	}): void {
+		events.push(mode);
+		localNextOffset = restoredCheckpoint.nextOffset;
+	}
+
+	async function latest(): Promise<PartitionCheckpointV1> {
+		events.push("load");
+		return checkpoint;
+	}
+
+	function partitionForIdentity(): number {
+		return 0;
+	}
+
+	const options: PartitionBootstrapOptions = {
+		stateStore: {
+			readNextOffset,
+			initializePartition,
+			restorePartitionCheckpoint,
+		},
+		checkpointSource: { latest },
+		partitionResolver: { partitionForIdentity },
+		restoreLimits: {
+			maxSerializedBytes: 1_000_000,
+			maxStates: 100,
+			maxReceipts: 1_000,
+		},
+		retryPolicy: { maxAttempts: 3, initialBackoffMs: 10, maxBackoffMs: 50 },
+	};
+	const bootstrapper = createPartitionBootstrapper(options);
+	const input = {
+		topic: "metering-events-v1",
+		partition: 0,
+		logRange: { logStartOffset: 0n, logEndOffset: 120n },
+		signal: controller.signal,
+	};
+	return { bootstrapper, input, events, controller };
+}
+
+async function continuesLocalStateWithoutYielding(): Promise<void> {
+	const fixture = createBootstrapFixture({
+		localNextOffset: 42n,
+		abortOnRead: 1,
+	});
+	expect(fixture.events).toEqual([]);
+	const result = await fixture.bootstrapper.bootstrap(fixture.input);
+	expect(result).toEqual({ kind: "continued", nextOffset: 42n });
+	expect(fixture.events).toEqual(["read", "abort"]);
+}
+
+async function appliesImmediatelyAfterFinalRead(): Promise<void> {
+	const fixture = createBootstrapFixture({
+		localNextOffset: null,
+		abortOnRead: 2,
+	});
+	const result = await fixture.bootstrapper.bootstrap(fixture.input);
+	expect(result).toEqual({ kind: "restored", nextOffset: 100n });
+	expect(fixture.events).toEqual(["read", "load", "read", "restore", "abort"]);
+}
+
+async function rejectsInvalidInputBeforeReading(): Promise<void> {
+	const cancelled = createBootstrapFixture({ localNextOffset: null });
+	const cause = new Error("assignment revoked before bootstrap");
+	cancelled.controller.abort(cause);
+	await expect(cancelled.bootstrapper.bootstrap(cancelled.input)).rejects.toBe(
+		cause,
+	);
+	expect(cancelled.events).toEqual([]);
+
+	const invalidRange = createBootstrapFixture({ localNextOffset: null });
+	await expect(
+		invalidRange.bootstrapper.bootstrap({
+			...invalidRange.input,
+			logRange: { logStartOffset: 2n, logEndOffset: 1n },
+		}),
+	).rejects.toThrow("Kafka log start cannot exceed its end");
+	expect(invalidRange.events).toEqual([]);
+}
+
+test(
+	"bootstrap creation is inert and retained state does not yield",
+	continuesLocalStateWithoutYielding,
+);
+test(
+	"bootstrap re-reads, plans, and applies without another yield",
+	appliesImmediatelyAfterFinalRead,
+);
+test(
+	"bootstrap checks cancellation and Kafka range before reading state",
+	rejectsInvalidInputBeforeReading,
+);
