@@ -5,6 +5,7 @@
 	"type": "module",
 	"sideEffects": false,
 	"exports": {
+		"./partitioning": "./src/partitioning/meteringIdentityToPartition.ts",
 		".": {
 			"types": "./src/kafka.ts",
 			"import": "./src/kafka.ts",
