@@ -181,6 +181,32 @@ const rowValueOf = ({
 	return value;
 };
 
+/** One top-level fixture property as `key: value` text, or null when the row omits it. */
+export const emitFixtureProperty = ({
+	spec,
+	row,
+	key,
+	includeMappings,
+	indent,
+}: {
+	spec: CollectionSpec;
+	row: Record<string, unknown>;
+	key: string;
+	includeMappings: boolean;
+	indent: string;
+}): string | null => {
+	const value = rowValueOf({ spec, key, row, includeMappings });
+	if (value === undefined || value === null) return null;
+	const index = pathIndexOf(spec.paths);
+	return serialize({
+		includeMappings,
+		value,
+		path: key,
+		index,
+		indent: `${indent}\t`,
+	});
+};
+
 export const emitFixture = ({
 	spec,
 	row,
