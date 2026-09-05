@@ -22,9 +22,29 @@ const parentsAnchoredTo = ({
 	),
 ];
 
+/** Parents this same call declares a link to the child plan on. */
+const parentsDeclaringLink = ({
+	childPlanId,
+	updateCatalogPlan,
+}: {
+	childPlanId: string;
+	updateCatalogPlan: UpdateCatalogPlan;
+}): string[] => [
+	...new Set(
+		updateCatalogPlan.upsertProducts
+			.filter((upsert) =>
+				(upsert.declaredLicenses ?? []).some(
+					(license) => license.license_plan_id === childPlanId,
+				),
+			)
+			.map((upsert) => upsert.row.planId),
+	),
+];
+
 /**
  * Block archive/remove of a child version that catalog links still point at.
- * Named parents come from the projected catalog (same-call unlinks are gone).
+ * Named parents come from the projected catalog (same-call unlinks are gone),
+ * plus parents whose declared licenses[] still name a plan removed outright.
  */
 export const handleLicenseAnchorLifecycleErrors = ({
 	updateCatalogPlan,
@@ -39,6 +59,7 @@ export const handleLicenseAnchorLifecycleErrors = ({
 							planId: removePlan.planId,
 							version: removePlan.version,
 							internalId: removePlan.current.internal_id,
+							wholePlan: removePlan.allVersions === true,
 						},
 					]
 				: [],
@@ -51,16 +72,27 @@ export const handleLicenseAnchorLifecycleErrors = ({
 					planId: upsert.row.planId,
 					version: upsert.row.version,
 					internalId: nextFullProduct.internal_id,
+					wholePlan: false,
 				},
 			];
 		}),
 	];
 
 	for (const row of retiring) {
-		const parentIds = parentsAnchoredTo({
-			childInternalId: row.internalId,
-			updateCatalogPlan,
-		});
+		const parentIds = [
+			...new Set([
+				...parentsAnchoredTo({
+					childInternalId: row.internalId,
+					updateCatalogPlan,
+				}),
+				...(row.wholePlan
+					? parentsDeclaringLink({
+							childPlanId: row.planId,
+							updateCatalogPlan,
+						})
+					: []),
+			]),
+		];
 		if (parentIds.length === 0) continue;
 		throw new RecaseError({
 			message: `Cannot archive or remove ${row.planId} version ${row.version} while ${parentIds.join(", ")} still ${parentIds.length === 1 ? "links" : "link"} to it`,
