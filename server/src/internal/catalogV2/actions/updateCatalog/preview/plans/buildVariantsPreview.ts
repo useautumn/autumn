@@ -288,6 +288,61 @@ const anchoredRowsByVariantPlan = ({
 	return byPlan;
 };
 
+/** Declared variants that do not exist yet: `variant_link` creates anchored to this base row. */
+const variantCreatesForBase = ({
+	directUpsert,
+	upsertProducts,
+}: {
+	directUpsert: UpsertProductPlan;
+	upsertProducts: UpsertProductPlan[];
+}): UpsertProductPlan[] => {
+	const anchors = new Set(editedBaseInternalIds({ upsert: directUpsert }));
+	return upsertProducts.filter((upsert) => {
+		const baseInternalId = upsert.row.nextFullProduct.base_internal_product_id;
+		return (
+			upsert.row.source === "variant_link" &&
+			upsert.row.op === "create" &&
+			typeof baseInternalId === "string" &&
+			anchors.has(baseInternalId)
+		);
+	});
+};
+
+/** A variant the config declares that the catalog does not have yet. */
+const variantCreatePreview = ({
+	createUpsert,
+	previewContext,
+	renamePlans,
+}: {
+	createUpsert: UpsertProductPlan;
+	previewContext: PreviewCatalogContext | undefined;
+	renamePlans: RenameProductPlan[];
+}): CatalogVariantPreview => {
+	const { planId, version, nextFullProduct } = createUpsert.row;
+	const planChange = variantPlanChange({ variantUpsert: createUpsert });
+	const aliasReplacement = aliasReplacementForPlan({
+		planId,
+		upsert: createUpsert,
+		renamePlans,
+	});
+	return {
+		...catalogRowIdentity({
+			planId,
+			version,
+			current: null,
+			next: nextFullProduct,
+		}),
+		state: {
+			has_customers: false,
+			will_archive: false,
+			usage: customerUsageForPreview({ planId, version, previewContext }),
+		},
+		variant_action: "explicit",
+		...(planChange ? { plan_change: planChange } : {}),
+		...(aliasReplacement ? { alias_replacement: aliasReplacement } : {}),
+	};
+};
+
 /** Variant rows anchored to THIS base row. Empty → omit the lane. */
 export const buildVariantsPreview = ({
 	directUpsert,
@@ -306,13 +361,17 @@ export const buildVariantsPreview = ({
 		upsert: directUpsert,
 		productStatesContext,
 	});
-	if (anchoredByPlan.size === 0) return [];
+	const creates = variantCreatesForBase({ directUpsert, upsertProducts });
+	if (anchoredByPlan.size === 0 && creates.length === 0) return [];
 
 	const editedCurrent = directUpsert.row.currentFullProduct;
 	const editedNext = directUpsert.row.nextFullProduct;
 
-	return [...anchoredByPlan.values()]
-		.map(([variant, ...anchoredSiblings]) => {
+	const createPreviews = creates.map((createUpsert) =>
+		variantCreatePreview({ createUpsert, previewContext, renamePlans }),
+	);
+	const existingPreviews = [...anchoredByPlan.values()].map(
+		([variant, ...anchoredSiblings]) => {
 			const mintUpsert = findVariantMintUpsert({
 				upsertProducts,
 				planId: variant.id,
@@ -383,6 +442,7 @@ export const buildVariantsPreview = ({
 				// Pre-edit variant. Follow's next already applied the diff.
 				relative: variant,
 			});
-		})
-		.sort(byPlanThenVersion);
+		},
+	);
+	return [...existingPreviews, ...createPreviews].sort(byPlanThenVersion);
 };
