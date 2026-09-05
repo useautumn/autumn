@@ -5,6 +5,7 @@ import type { AutumnClient } from "../generated/client";
 import {
 	type CatalogPreview,
 	previewIsEmpty,
+	renderMigrationLinks,
 	renderPreview,
 } from "../render/renderPreview";
 import { findRepoLayout } from "../repo/findRepoRoot";
@@ -87,6 +88,14 @@ export const runPush = async ({
 		.filter((id): id is string => typeof id === "string");
 
 	write("\nApplied.\n");
+	if (migrationIds.length > 0) {
+		write(
+			`${renderMigrationLinks({
+				migrations: migrationIds.map((id) => ({ id })),
+				migrationLinkBase,
+			})}\n\n`,
+		);
+	}
 
 	// The update response has no variant edges; when the config states any,
 	// the catalog's plan rows (with each variant's resolved plan) fill them in.

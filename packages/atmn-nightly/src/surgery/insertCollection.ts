@@ -1,6 +1,19 @@
 import { Lang, parse } from "@ast-grep/napi";
 import { leadingIndentOfLine, lineStartOf } from "./fixtureEdit";
 
+/** Identifiers spread into the `atmn({...})` object: `atmn({ ...shared })` → ["shared"]. */
+export const rootSpreadNames = ({ source }: { source: string }): string[] => {
+	const root = parse(Lang.TypeScript, source).root();
+	const call = root.find("atmn($ARG)");
+	const object = call?.getMatch("ARG");
+	if (object === null || object === undefined || object.kind() !== "object")
+		return [];
+	return object
+		.children()
+		.filter((child) => child.kind() === "spread_element")
+		.map((child) => child.namedChildren()[0]?.text() ?? child.text());
+};
+
 export const insertCollection = ({
 	source,
 	collection,
