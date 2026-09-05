@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
 import {
-	createKafkaCommittedTrackOutcomeAppender,
-	type KafkaTrackOutcomeProducerPort,
-	type KafkaTrackOutcomeTransactionPort,
-	KafkaTrackOutcomeTransactionStateUnknownError,
-} from "../../../src/kafka/kafkaCommittedTrackOutcomeAppender.js";
-import { parseKafkaTrackOutcomeRecord } from "../../../src/kafka/trackOutcomeRecord.js";
+	type KafkaProducer,
+	type KafkaTransaction,
+	KafkaTransactionStateUnknownError,
+	parseMeteringTrackOutcome,
+} from "@autumn/kafka";
+import type { ProducerRecord, RecordMetadata } from "kafkajs";
+import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
 import { TrackOutcomeBatchNotCommittedError } from "../../../src/writer/committedTrackOutcomeAppender.js";
 import {
 	createOutcome,
@@ -39,13 +39,13 @@ const createFakeProducer = ({
 	abortError,
 	commitGate = Promise.resolve(),
 }: FakeProducerOptions = {}): {
-	producer: KafkaTrackOutcomeProducerPort;
+	producer: KafkaProducer;
 	lifecycle: string[];
 	records: ProducerRecord[];
 } => {
 	const lifecycle: string[] = [];
 	const records: ProducerRecord[] = [];
-	const transaction: KafkaTrackOutcomeTransactionPort = {
+	const transaction: KafkaTransaction = {
 		send: async (record) => {
 			lifecycle.push("send");
 			records.push(record);
@@ -62,7 +62,7 @@ const createFakeProducer = ({
 			if (abortError) throw abortError;
 		},
 	};
-	const producer: KafkaTrackOutcomeProducerPort = {
+	const producer: KafkaProducer = {
 		transaction: async () => {
 			lifecycle.push("transaction");
 			if (transactionError) throw transactionError;
@@ -88,8 +88,8 @@ describe("Kafka committed track outcome appender", () => {
 			commandId: "cmd_2",
 		});
 		const fake = createFakeProducer();
-		const appender = createKafkaCommittedTrackOutcomeAppender({
-			producer: fake.producer,
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer: fake.producer },
 		});
 
 		await expect(
@@ -108,7 +108,7 @@ describe("Kafka committed track outcome appender", () => {
 		);
 		expect(
 			fake.records[0]?.messages.map(({ key, value }) =>
-				parseKafkaTrackOutcomeRecord({
+				parseMeteringTrackOutcome({
 					key: Buffer.isBuffer(key) ? key : null,
 					value: Buffer.isBuffer(value) ? value : null,
 				}),
@@ -124,8 +124,8 @@ describe("Kafka committed track outcome appender", () => {
 			releaseCommit = resolve;
 		});
 		const fake = createFakeProducer({ commitGate });
-		const appender = createKafkaCommittedTrackOutcomeAppender({
-			producer: fake.producer,
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer: fake.producer },
 		});
 		let settled = false;
 		const appendPromise = appender
@@ -151,8 +151,8 @@ describe("Kafka committed track outcome appender", () => {
 		const fake = createFakeProducer({
 			transactionError: new Error("producer unavailable"),
 		});
-		const appender = createKafkaCommittedTrackOutcomeAppender({
-			producer: fake.producer,
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer: fake.producer },
 		});
 
 		await expect(
@@ -167,8 +167,8 @@ describe("Kafka committed track outcome appender", () => {
 
 	test("aborts a failed send before declaring the batch not committed", async () => {
 		const fake = createFakeProducer({ sendError: new Error("send failed") });
-		const appender = createKafkaCommittedTrackOutcomeAppender({
-			producer: fake.producer,
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer: fake.producer },
 		});
 
 		await expect(
@@ -187,8 +187,8 @@ describe("Kafka committed track outcome appender", () => {
 			sendError: new Error("send failed"),
 			abortError,
 		});
-		const appender = createKafkaCommittedTrackOutcomeAppender({
-			producer: fake.producer,
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer: fake.producer },
 		});
 
 		const error = await appender
@@ -199,7 +199,7 @@ describe("Kafka committed track outcome appender", () => {
 			})
 			.catch((cause: unknown) => cause);
 
-		expect(error).toBeInstanceOf(KafkaTrackOutcomeTransactionStateUnknownError);
+		expect(error).toBeInstanceOf(KafkaTransactionStateUnknownError);
 		expect(error).not.toBeInstanceOf(TrackOutcomeBatchNotCommittedError);
 		expect(error).toMatchObject({
 			failureStage: "abort",
@@ -211,8 +211,8 @@ describe("Kafka committed track outcome appender", () => {
 	test("parks on commit failure without claiming the transaction was aborted", async () => {
 		const commitError = new Error("commit response lost");
 		const fake = createFakeProducer({ commitError });
-		const appender = createKafkaCommittedTrackOutcomeAppender({
-			producer: fake.producer,
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer: fake.producer },
 		});
 
 		const error = await appender
@@ -223,7 +223,7 @@ describe("Kafka committed track outcome appender", () => {
 			})
 			.catch((cause: unknown) => cause);
 
-		expect(error).toBeInstanceOf(KafkaTrackOutcomeTransactionStateUnknownError);
+		expect(error).toBeInstanceOf(KafkaTransactionStateUnknownError);
 		expect(error).not.toBeInstanceOf(TrackOutcomeBatchNotCommittedError);
 		expect(error).toMatchObject({ failureStage: "commit", cause: commitError });
 		expect(fake.lifecycle).toEqual(["transaction", "send", "commit"]);
@@ -231,8 +231,8 @@ describe("Kafka committed track outcome appender", () => {
 
 	test("aborts when Kafka does not return usable metadata for the batch", async () => {
 		const fake = createFakeProducer({ metadata: [] });
-		const appender = createKafkaCommittedTrackOutcomeAppender({
-			producer: fake.producer,
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer: fake.producer },
 		});
 
 		await expect(
@@ -247,8 +247,8 @@ describe("Kafka committed track outcome appender", () => {
 
 	test("rejects an empty batch before opening a transaction", async () => {
 		const fake = createFakeProducer();
-		const appender = createKafkaCommittedTrackOutcomeAppender({
-			producer: fake.producer,
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer: fake.producer },
 		});
 
 		await expect(

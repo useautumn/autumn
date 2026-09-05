@@ -8,6 +8,7 @@ import {
 import { Kafka, logLevel, type Producer } from "kafkajs";
 import {
 	createMeteringConsumer,
+	createMeteringPublisher,
 	createMeteringReader,
 	createProgressTracker,
 	type MeteringRecordApplication,
@@ -109,16 +110,8 @@ async function appendCommittedOutcome({
 	topic: string;
 	record: TrackOutcome;
 }): Promise<{ baseOffset: bigint }> {
-	const transaction = await producer.transaction();
-	const metadata = await transaction.send({
-		topic,
-		acks: -1,
-		messages: [{ ...serializeMeteringRecord({ record }), partition }],
-	});
-	await transaction.commit();
-	const offset = metadata[0]?.baseOffset;
-	if (offset === undefined) throw new Error("Missing appended offset");
-	return { baseOffset: BigInt(offset) };
+	const publisher = createMeteringPublisher({ ctx: { producer } });
+	return publisher.append({ topic, partition, records: [record] });
 }
 
 async function consumesAndReadsMeteringWithoutWorkerState(): Promise<void> {

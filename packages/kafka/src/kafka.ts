@@ -1,5 +1,16 @@
-export { InvalidKafkaOffsetError } from "./client/kafkaErrors.js";
-export { parseKafkaOffset } from "./client/kafkaOffsetUtils.js";
+export {
+	InvalidKafkaOffsetError,
+	KafkaBatchNotCommittedError,
+	KafkaTransactionStateUnknownError,
+} from "./client/kafkaErrors.js";
+export {
+	metadataToBaseOffset,
+	parseKafkaOffset,
+} from "./client/kafkaOffsetUtils.js";
+export type {
+	KafkaProducer,
+	KafkaTransaction,
+} from "./client/types/kafkaClient.js";
 export { KafkaPartitionOffsetsNotFoundError } from "./consumer/consumerErrors.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";
@@ -39,6 +50,7 @@ export {
 	UnsupportedRecordVersionError,
 } from "./lib/recordErrors.js";
 export type { TopicSchema } from "./lib/types/topicSchema.js";
+export { sendTransactionalBatch } from "./producer/sendTransactionalBatch.js";
 export { createMeteringConsumer } from "./topics/metering/consumer/createMeteringConsumer.js";
 export { createMeteringReader } from "./topics/metering/consumer/createMeteringReader.js";
 export type {
@@ -57,4 +69,10 @@ export {
 	parseMeteringTrackOutcome,
 	serializeMeteringRecord,
 } from "./topics/metering/meteringTopic.js";
+export { createMeteringPublisher } from "./topics/metering/publisher/createMeteringPublisher.js";
+export type {
+	MeteringAppend,
+	MeteringPublisher,
+	MeteringPublisherContext,
+} from "./topics/metering/publisher/types/meteringPublisher.js";
 export type { MeteringRecord } from "./topics/metering/types/meteringRecord.js";
