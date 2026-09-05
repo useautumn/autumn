@@ -9,7 +9,9 @@ import { versionForSlug } from "../../utils/productStateUtils/versionForSlug";
 import type { RemovePlanTarget } from "./resolveRemoveProductTargets";
 
 /** A row addressed by internal_id is spoken for under its CURRENT id too, or
- * renaming it would propose removing the id it is leaving. */
+ * renaming it would propose removing the id it is leaving. A licenses[] link
+ * does not speak for its child: pull writes every plan, so an omitted child
+ * is a removal, and a parent still linking it is refused by name. */
 const currentIdOf = ({
 	internalId,
 	productStatesContext,
@@ -46,7 +48,6 @@ const statedPlanIds = ({
 					productStatesContext,
 				}),
 			]),
-			...(plan.licenses ?? []).map((license) => license.license_plan_id),
 		]),
 		...params.remove_plans.map((entry) => entry.plan_id),
 		...params.skip_plan_ids,

@@ -10,13 +10,17 @@ export const handleRemovePlanErrors = ({
 	updateCatalogPlan: UpdateCatalogPlan;
 	productStatesContext: ProductStatesContext;
 }): void => {
+	// A row demoted because an older version is stated active may also be
+	// removed by the same full-state config: the demotion runs first, then
+	// the removal takes the row, so the two do not contradict each other.
+	const contradicting = updateCatalogPlan.upsertProducts.filter(
+		(upsert) => upsert.row.source !== "demoted_product",
+	);
 	const upsertedPlanIds = new Set(
-		updateCatalogPlan.upsertProducts.map((upsert) => upsert.row.planId),
+		contradicting.map((upsert) => upsert.row.planId),
 	);
 	const upsertedVersions = new Set(
-		updateCatalogPlan.upsertProducts.map(
-			(upsert) => `${upsert.row.planId}@${upsert.row.version}`,
-		),
+		contradicting.map((upsert) => `${upsert.row.planId}@${upsert.row.version}`),
 	);
 
 	for (const removePlan of updateCatalogPlan.removePlans) {
