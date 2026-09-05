@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -9,17 +9,29 @@ import {
 	parseCheckCommand,
 	parseTrackCommand,
 	type TrackCommand,
+	type TrackDecision,
 } from "@autumn/balance-engine";
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
-import type { KafkaTrackOutcomeTransactionPort } from "../../../src/kafka/kafkaCommittedTrackOutcomeAppender.js";
 import {
-	createOwnedPartitionRuntime,
+	createProducerSession,
+	type KafkaTransaction as KafkaTrackOutcomeTransactionPort,
+	type KafkaProducerClient as OwnedPartitionProducerPort,
+} from "@autumn/kafka";
+import { Glob } from "bun";
+import type { ProducerRecord, RecordMetadata } from "kafkajs";
+import ts from "typescript";
+import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
+import {
+	createWorkerProducer,
+	createWorkerProducerConfig,
+} from "../../../src/kafka/createWorkerProducer.js";
+import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
+import { createRequestTracker } from "../../../src/runtime/createRequestTracker.js";
+import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
-	type OwnedPartitionProducerPort,
 	OwnedPartitionRecoveryRequiredError,
-	type PartitionOutcomeFollowerPort,
-} from "../../../src/runtime/ownedPartitionRuntime.js";
+} from "../../../src/runtime/runtimeErrors.js";
+import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
@@ -279,20 +291,44 @@ const createRuntime = ({
 	follower: PartitionOutcomeFollowerPort;
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
 	recoveryDrainTimeoutMs?: number;
-}) =>
-	createOwnedPartitionRuntime({
-		topic,
-		partition,
-		stateStore: store,
-		producer,
-		follower,
-		partitionResolver: {
-			partitionForIdentity: ({ identity: commandIdentity }) =>
-				partitionForIdentity(commandIdentity),
-		},
-		writerLimits,
-		recoveryDrainTimeoutMs,
+}) => {
+	function createProducer(): OwnedPartitionProducerPort {
+		return producer;
+	}
+	const session = createProducerSession({
+		ctx: { kafka: { producer: createProducer } },
+		config: createWorkerProducerConfig({
+			deploymentEnvironment: "test",
+			topic,
+			partition,
+			limits: {
+				transactionTimeoutMs: 15_000,
+				retryCount: 3,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 2_000,
+			},
+		}),
 	});
+	const workerProducer = createWorkerProducer({
+		ctx: { session },
+		config: { topic, partition },
+	});
+	return createPartitionRuntime({
+		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
+		ctx: {
+			stateStore: store,
+			producer: workerProducer,
+			follower,
+			appender: createTrackOutcomePublisher({
+				ctx: { producer: workerProducer },
+			}),
+			partitionResolver: {
+				partitionForIdentity: ({ identity: commandIdentity }) =>
+					partitionForIdentity(commandIdentity),
+			},
+		},
+	});
+};
 
 describe("owned partition runtime", () => {
 	test("fences the previous owner and catches up before serving", async () => {
@@ -818,3 +854,187 @@ describe("owned partition runtime", () => {
 		}
 	});
 });
+
+test("drain waits for accepted tracks but keeps the producer connected", async () => {
+	const fixture = createStoreFixture();
+	const commit = createDeferred<void>();
+	const producer = createFakeProducer({ appendCommitGate: commit.promise });
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: createFollower().follower,
+	});
+	try {
+		await runtime.start();
+		const track = runtime.submitTrack({
+			command: createTrackCommand({ commandId: "cmd_drain" }),
+		});
+		await waitForTurn();
+		let drained = false;
+		const draining = runtime.drain().then(() => {
+			drained = true;
+		});
+		await waitForTurn();
+		expect(drained).toBe(false);
+		expect(producer.lifecycle).not.toContain("producer:disconnect");
+		await expect(
+			runtime.check({
+				command: createCheckCommand({ requestId: "after_drain" }),
+			}),
+		).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
+		commit.resolve(undefined);
+		await track;
+		await draining;
+		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		expect(producer.lifecycle).not.toContain("producer:disconnect");
+		await runtime.stop();
+		expect(producer.lifecycle.at(-1)).toBe("producer:disconnect");
+	} finally {
+		commit.resolve(undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+test("quiescence remains pending after recovery disposal until accepted apply settles", async () => {
+	const fixture = createStoreFixture();
+	const commit = createDeferred<void>();
+	const producer = createFakeProducer({ appendCommitGate: commit.promise });
+	const follower = createFollower();
+	const runtime = createRuntime({
+		store: fixture.store,
+		producer: producer.producer,
+		follower: follower.follower,
+		recoveryDrainTimeoutMs: 1,
+	});
+	let track: Promise<unknown> | undefined;
+	try {
+		await runtime.start();
+		let unavailable = false;
+		runtime.subscribeUnavailable(() => {
+			unavailable = true;
+		});
+		track = runtime.submitTrack({
+			command: createTrackCommand({ commandId: "quiescence" }),
+		});
+		await waitForTurn();
+		follower.emitUnavailable({ cause: new Error("lost follower") });
+		expect(unavailable).toBe(true);
+		await runtime.stop();
+		let settled = false;
+		const quiescence = runtime.waitForQuiescence().then(() => {
+			settled = true;
+		});
+		await waitForTurn();
+		expect(producer.lifecycle.at(-1)).toBe("producer:disconnect");
+		expect(settled).toBe(false);
+		commit.resolve(undefined);
+		await track.catch(() => undefined);
+		await quiescence;
+		expect(settled).toBe(true);
+	} finally {
+		commit.resolve(undefined);
+		await track?.catch(() => undefined);
+		await runtime.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
+async function tracksAreRemovedAfterSettlement(): Promise<void> {
+	const tracker = createRequestTracker();
+	const first = Promise.withResolvers<TrackDecision>();
+	const later = Promise.withResolvers<TrackDecision>();
+	tracker.registerTrack({ customerKey: "customer", operation: first.promise });
+	const precedingTracks = tracker.precedingTracks({ customerKey: "customer" });
+	tracker.registerTrack({ customerKey: "customer", operation: later.promise });
+
+	expect(precedingTracks).toEqual([first.promise]);
+	expect(tracker.precedingTracks({ customerKey: "another" })).toEqual([]);
+	first.resolve({ kind: "unsupported", reason: "command_conflict" });
+	await Promise.allSettled(precedingTracks);
+	expect(tracker.precedingTracks({ customerKey: "customer" })).toEqual([
+		later.promise,
+	]);
+
+	let drained = false;
+	async function finishDrain(): Promise<void> {
+		await tracker.drain();
+		drained = true;
+	}
+	const draining = finishDrain();
+	await Promise.resolve();
+	expect(drained).toBe(false);
+	later.reject(new Error("track rejected"));
+	await draining;
+	expect(drained).toBe(true);
+	expect(tracker.precedingTracks({ customerKey: "customer" })).toEqual([]);
+}
+
+async function trackersKeepIndependentState(): Promise<void> {
+	const first = createRequestTracker();
+	const second = createRequestTracker();
+	const operation = Promise.withResolvers<void>();
+	const { register, drain } = first;
+	expect(register({ operation: operation.promise })).toBe(operation.promise);
+	await second.drain();
+	operation.resolve();
+	await drain();
+}
+
+test(
+	"request tracking snapshots earlier tracks and drains fulfilled or rejected work",
+	tracksAreRemovedAfterSettlement,
+);
+test(
+	"request tracker methods retain independent state when detached",
+	trackersKeepIndependentState,
+);
+
+function runtimeUsesNamedFunctions(): void {
+	const directory = new URL("../../../src/runtime/", import.meta.url).pathname;
+	const violations: string[] = [];
+	for (const file of new Glob("**/*.ts").scanSync({
+		cwd: directory,
+		absolute: true,
+	})) {
+		const source = ts.createSourceFile(
+			file,
+			readFileSync(file, "utf8"),
+			ts.ScriptTarget.Latest,
+			true,
+		);
+		const pending: ts.Node[] = [source];
+		while (pending.length > 0) {
+			const node = pending.pop();
+			if (!node) continue;
+			const anonymous =
+				ts.isArrowFunction(node) ||
+				ts.isFunctionExpression(node) ||
+				(ts.isFunctionDeclaration(node) && !node.name);
+			const inlineMethod =
+				ts.isMethodDeclaration(node) &&
+				ts.isObjectLiteralExpression(node.parent);
+			const callbackWiring =
+				ts.isCallExpression(node) &&
+				ts.isPropertyAccessExpression(node.expression) &&
+				["bind", "then", "catch", "finally"].includes(
+					node.expression.name.text,
+				);
+			if (anonymous || inlineMethod || callbackWiring) {
+				const { line } = source.getLineAndCharacterOfPosition(
+					node.getStart(source),
+				);
+				violations.push(
+					`${file}:${line + 1}: ${node.getText(source).slice(0, 80)}`,
+				);
+			}
+			pending.push(...node.getChildren(source));
+		}
+	}
+	expect(violations).toEqual([]);
+}
+
+test(
+	"runtime uses named functions without bind or callback promise chains",
+	runtimeUsesNamedFunctions,
+);
