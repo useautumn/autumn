@@ -603,6 +603,7 @@ function createMeteringRecords() {
 		},
 	});
 	const decision = computeTrack({
+		deduplicationExpiresAt: 1_700_086_400_000,
 		state,
 		command,
 	});

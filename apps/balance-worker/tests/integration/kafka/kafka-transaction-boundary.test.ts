@@ -21,6 +21,7 @@ import {
 	createOutcome,
 	createOwnedPartitionRuntime,
 	createState,
+	serializeKafkaStateInitializedRecord,
 	serializeKafkaTrackOutcomeRecord,
 } from "../../unit/kafka/kafka-test-fixtures.js";
 
@@ -120,7 +121,13 @@ const waitUntil = async ({
 	});
 };
 
-const createStore = ({ topic }: { topic: string }) => {
+const createStore = ({
+	topic,
+	initializeCustomer = true,
+}: {
+	topic: string;
+	initializeCustomer?: boolean;
+}) => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-kafka-fence-"));
 	const store = openSqliteBalanceStateStore({
 		databasePath: join(directory, "balance-state.sqlite"),
@@ -137,7 +144,14 @@ const createStore = ({ topic }: { topic: string }) => {
 		},
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
-	store.initializeState({ state });
+	if (initializeCustomer) {
+		store.restoreState({
+			topic,
+			partition,
+			initializationId: "init_1",
+			state,
+		});
+	}
 	return {
 		store,
 		state,
@@ -154,6 +168,125 @@ const caughtUpFollower = (): PartitionOutcomeFollowerPort => ({
 });
 
 describe("Kafka transaction boundary", () => {
+	test("replays a committed state initialization before its first track", async () => {
+		const kafka = createKafka({
+			clientId: uniqueName({ prefix: "state-seed" }),
+		});
+		const topicFixture = await createTopic({ kafka });
+		const storeFixture = createStore({
+			topic: topicFixture.topic,
+			initializeCustomer: false,
+		});
+		const seedProducer = createKafkaOwnedPartitionProducer({
+			kafka,
+			deploymentEnvironment: uniqueName({ prefix: "state-seed" }),
+			topic: topicFixture.topic,
+			partition,
+			limits: {
+				transactionTimeoutMs: 10_000,
+				retryCount: 2,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 1_000,
+			},
+		});
+		const consumer = kafka.consumer(
+			balanceWorkerConsumerConfigOf({
+				groupId: uniqueName({ prefix: "state-seed" }),
+				timings,
+			}),
+		);
+		const partitionOffsets = kafka.admin();
+		let runtime: ReturnType<typeof createOwnedPartitionRuntime> | null = null;
+		const createRuntime = createKafkaOwnedPartitionRuntimeFactory({
+			kafka,
+			deploymentEnvironment: uniqueName({ prefix: "state-seed-owner" }),
+			stateStore: storeFixture.store,
+			partitionResolver: { partitionForIdentity: () => partition },
+			writerLimits: {
+				maxBatchSize: 100,
+				maxPendingCommands: 1_000,
+				maxPendingCommandsPerCustomer: 100,
+			},
+			trackReceiptRetentionMs: 86_400_000,
+			producerLimits: {
+				transactionTimeoutMs: 10_000,
+				retryCount: 2,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 1_000,
+			},
+			timings,
+		});
+		const errors: unknown[] = [];
+		const group = createKafkaOwnedPartitionGroup({
+			consumer,
+			partitionOffsets,
+			topic: topicFixture.topic,
+			stateStore: storeFixture.store,
+			partitionsConsumedConcurrently: 1,
+			createRuntime: (params) => {
+				const createdRuntime = createRuntime(params);
+				runtime = createdRuntime;
+				return createdRuntime;
+			},
+			onError: ({ cause }) => errors.push(cause),
+		});
+
+		try {
+			await seedProducer.connect();
+			const outcome = createOutcome({ state: storeFixture.state });
+			const transaction = await seedProducer.transaction();
+			await transaction.send({
+				topic: topicFixture.topic,
+				acks: -1,
+				messages: [
+					{
+						...serializeKafkaStateInitializedRecord({
+							initialization: {
+								schemaVersion: 1,
+								type: "state_initialized",
+								initializationId: "init_1",
+								initializedAt: 1_700_000_000_000,
+								state: storeFixture.state,
+							},
+						}),
+						partition,
+					},
+					{
+						...serializeKafkaTrackOutcomeRecord({ outcome }),
+						partition,
+					},
+				],
+			});
+			await transaction.commit();
+
+			await group.start();
+			await waitUntil({
+				condition: () => runtime?.getStatus() === "ready" || errors.length > 0,
+				timeoutMs: 10_000,
+			});
+			if (errors[0]) throw errors[0];
+
+			expect(
+				storeFixture.store.readState({
+					identity: storeFixture.state.identity,
+				}),
+			).toMatchObject({
+				revision: 1,
+				featureStatesById: {
+					messages: {
+						customerEntitlements: [{ balance: 5, usage: 5 }],
+					},
+				},
+			});
+			expect(errors).toEqual([]);
+		} finally {
+			await seedProducer.disconnect().catch(() => undefined);
+			await group.stop().catch(() => undefined);
+			storeFixture.cleanup();
+			await topicFixture.cleanup();
+		}
+	});
+
 	test("returns committed base offsets and hides aborted records", async () => {
 		const kafka = createKafka({
 			clientId: uniqueName({ prefix: "visibility" }),
@@ -272,6 +405,7 @@ describe("Kafka transaction boundary", () => {
 				maxPendingCommands: 1_000,
 				maxPendingCommandsPerCustomer: 100,
 			},
+			trackReceiptRetentionMs: 86_400_000,
 			producerLimits: {
 				transactionTimeoutMs: 10_000,
 				retryCount: 2,
@@ -358,6 +492,10 @@ describe("Kafka transaction boundary", () => {
 					maxBatchSize: 100,
 					maxPendingCommands: 1_000,
 					maxPendingCommandsPerCustomer: 100,
+				},
+				trackReceiptPolicy: {
+					retentionMs: 86_400_000,
+					now: Date.now,
 				},
 				recoveryDrainTimeoutMs: timings.recoveryDrainTimeoutMs,
 			});

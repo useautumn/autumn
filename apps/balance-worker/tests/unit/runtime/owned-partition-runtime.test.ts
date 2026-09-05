@@ -254,7 +254,12 @@ const createStoreFixture = (): {
 		databasePath: join(directory, "balance-state.sqlite"),
 	});
 	store.initializePartition({ topic, partition, nextOffset: 0n });
-	store.initializeState({ state: createState() });
+	store.restoreState({
+		topic,
+		partition,
+		initializationId: "init_1",
+		state: createState(),
+	});
 	return { directory, store };
 };
 
@@ -317,6 +322,10 @@ const createRuntime = ({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
 			stateStore: store,
+			trackReceiptPolicy: {
+				retentionMs: 86_400_000,
+				now: () => 1_700_000_000_000,
+			},
 			producer: workerProducer,
 			follower,
 			appender: createTrackOutcomePublisher({

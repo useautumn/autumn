@@ -7,7 +7,10 @@ import type {
 } from "@autumn/balance-engine";
 import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
 import type { CommittedTrackOutcomeAppender } from "../../writer/committedTrackOutcomeAppender.js";
-import type { PartitionTrackWriterLimits } from "../../writer/partitionTrackWriter.js";
+import type {
+	PartitionTrackWriterLimits,
+	PartitionTrackWriterReceiptPolicy,
+} from "../../writer/partitionTrackWriter.js";
 import type { PartitionRuntimeStatus } from "./partitionRuntimeState.js";
 
 export type OwnedPartitionProducer = {
@@ -32,6 +35,7 @@ export type MeteringPartitionResolver = {
 };
 
 export type PartitionRuntimeDependencies = {
+	trackReceiptPolicy: PartitionTrackWriterReceiptPolicy;
 	stateStore: SqliteBalanceStateStore;
 	producer: OwnedPartitionProducer;
 	appender: CommittedTrackOutcomeAppender;

@@ -122,6 +122,7 @@ const createState = () =>
 
 const createOutcome = () => {
 	const decision = computeTrack({
+		deduplicationExpiresAt: 1_700_086_400_000,
 		state: createState(),
 		command: parseTrackCommand({
 			input: {
