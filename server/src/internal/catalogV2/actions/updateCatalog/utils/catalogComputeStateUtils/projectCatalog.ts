@@ -41,8 +41,23 @@ export const projectCatalog = ({
 	const removedFeatureInternalIds = new Set(
 		plan.removeFeatures.flatMap((removeFeaturePlan) =>
 			removeFeaturePlan.current?.internal_id &&
+			!removeFeaturePlan.willArchive &&
 			!upsertedFeatureIds.has(removeFeaturePlan.featureId)
 				? [removeFeaturePlan.current.internal_id]
+				: [],
+		),
+	);
+	// Archived (not hard-deleted) features stay in the projection, same as
+	// archived plans below — other rows keep referencing them after this batch.
+	const archivedFeatureByInternalId = new Map(
+		plan.removeFeatures.flatMap((removeFeaturePlan) =>
+			removeFeaturePlan.current?.internal_id && removeFeaturePlan.willArchive
+				? [
+						[
+							removeFeaturePlan.current.internal_id,
+							{ ...removeFeaturePlan.current, archived: true },
+						] as const,
+					]
 				: [],
 		),
 	);
@@ -95,16 +110,15 @@ export const projectCatalog = ({
 				.map(
 					(feature) =>
 						(feature.internal_id &&
-							nextFeatureByInternalId.get(feature.internal_id)) ||
+							(nextFeatureByInternalId.get(feature.internal_id) ??
+								archivedFeatureByInternalId.get(feature.internal_id))) ||
 						feature,
 				),
 			...plan.insertFeatures,
 		],
 		products: [
 			...originalProducts
-				.filter(
-					(product) => !hardDeletedInternalIds.has(product.internal_id),
-				)
+				.filter((product) => !hardDeletedInternalIds.has(product.internal_id))
 				.map(
 					(product) =>
 						nextProductByInternalId.get(product.internal_id) ??

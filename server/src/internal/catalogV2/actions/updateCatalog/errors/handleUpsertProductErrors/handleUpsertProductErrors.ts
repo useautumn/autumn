@@ -4,6 +4,7 @@ import { handleDirectBaseAndVariantPairErrors } from "@/internal/catalogV2/actio
 import { handleFreeTrialErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleFreeTrialErrors";
 import { handleLicenseParentPropagationErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleLicenseParentPropagationErrors";
 import { handlePlanLicenseErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handlePlanLicenseErrors";
+import { handleRestoreArchivedFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleRestoreArchivedFeatureErrors";
 import { handleVariantErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleVariantErrors";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
@@ -85,6 +86,10 @@ export const handleUpsertProductErrors = ({
 			editedSourceInternalIds,
 		});
 		handleArchivedPropagationErrors({ upsert, productStatesContext });
+		handleRestoreArchivedFeatureErrors({
+			upsert,
+			projectedFeatures: updateCatalogPlan.projected.features,
+		});
 		handleLicenseParentPropagationErrors({
 			upsert,
 			productStatesContext,

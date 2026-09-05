@@ -47,10 +47,9 @@ export const setupFeatureUsagePersisted = async ({
 	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 }): Promise<Record<string, PersistedFeatureUsage>> => {
-	const touchedFeatures = paramsToTouchedFeatures({
-		features: ctx.features,
-		params,
-	}).filter((feature) => feature.internal_id);
+	const touchedFeatures = paramsToTouchedFeatures({ ctx, params }).filter(
+		(feature) => feature.internal_id,
+	);
 
 	const rows = await listFeatureUsageSummaries({
 		db: ctx.db,

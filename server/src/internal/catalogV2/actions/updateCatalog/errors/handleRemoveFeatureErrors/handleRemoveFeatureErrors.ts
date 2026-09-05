@@ -16,7 +16,10 @@ export const handleRemoveFeatureErrors = ({
 	]);
 
 	for (const removeFeaturePlan of updateCatalogPlan.removeFeatures) {
-		if (removeFeaturePlan.byOmission && removeFeaturePlan.willArchive) {
+		if (
+			removeFeaturePlan.byOmission &&
+			removeFeaturePlan.hasSurvivingCatalogReference
+		) {
 			throw new RecaseError({
 				message: `Feature ${removeFeaturePlan.featureId} is missing from the catalog but still referenced. Remove the plans, credit systems or entitlements that use it in the same push, or list it in skip_feature_ids.`,
 				code: ErrCode.InvalidFeature,

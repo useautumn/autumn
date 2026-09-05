@@ -15,6 +15,7 @@ import {
 	computeLicenseCustomize,
 	derivePlanLicenseItemRefs,
 } from "@/internal/licenses/actions/customize/computeLicenseCustomize.js";
+import { licensePlanCustomize } from "../../licenseLinkCustomize.js";
 import {
 	getFullLicenseProduct,
 	toApiPlanLicenses,
@@ -82,12 +83,19 @@ export const previewPlanLicenseSync = async (
 	const previous = toApiPlanLicenses(args.parentProduct.licenses ?? []);
 	const prepared = await preparePlanLicenseSync(args);
 	const current = prepared
-		? prepared.resolved.map((license) => ({
-				license_plan_id: license.licenseProduct.id,
-				version: license.licenseProduct.version,
-				included: license.included,
-				prepaid_only: license.prepaidOnly,
-			}))
+		? prepared.resolved.map((license) => {
+				const customize = licensePlanCustomize({
+					product: license.effectiveProduct,
+					baseProduct: license.licenseProduct,
+				});
+				return {
+					license_plan_id: license.licenseProduct.id,
+					version: license.licenseProduct.version,
+					included: license.included,
+					prepaid_only: license.prepaidOnly,
+					...(customize ? { customize } : {}),
+				};
+			})
 		: previous;
 	const before = new Map(
 		previous.map((license) => [license.license_plan_id, license]),
