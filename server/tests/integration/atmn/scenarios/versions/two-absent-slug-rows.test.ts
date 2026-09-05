@@ -9,7 +9,6 @@ import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { ConfigError } from "../../../../../../packages/atmn-nightly/src/generated/lintRuntime";
 
 test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/versions: two rows for one plan that both omit versionSlug collide on the implicit v1, and lint refuses before any request")}`,
@@ -29,7 +28,7 @@ test.concurrent(
 		});
 
 		try {
-			await expect(scenario.push()).rejects.toThrow(ConfigError);
+			await expect(scenario.push()).rejects.toThrow(/is used more than once/);
 		} finally {
 			scenario.cleanup();
 		}

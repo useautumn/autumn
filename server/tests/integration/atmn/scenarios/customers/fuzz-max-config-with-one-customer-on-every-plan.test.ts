@@ -23,8 +23,6 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { runPush } from "../../../../../../packages/atmn-nightly/src/actions/push";
-import { createClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
 
 const proItems = `
 					{ featureId: "messages", included: 100, reset: { interval: "month" } },`;
@@ -76,15 +74,11 @@ export default atmn(${configBody({ features: everyFeatureType, plans: plansBlock
 `,
 			);
 
-			const client = createClient({
-				secretKey: scenario.ctx.orgSecretKey,
-				baseUrl: scenario.baseUrl,
-			});
-			const result = await runPush({ client, cwd: scenario.cwd });
+			const result = await scenario.push();
 
 			// Push succeeded (no thrown 4xx) and only the customered, in-place-edited
 			// plan — `pro` — drafted a migration; free/seat/enterprise are unchanged.
-			expect(result.migrationIds).toHaveLength(1);
+			expect(result.migrationIds, result.output).toHaveLength(1);
 		} finally {
 			scenario.cleanup();
 		}

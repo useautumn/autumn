@@ -87,19 +87,22 @@ export const wireOfConfig = ({
 	return JSON.parse(result.stdout.toString()) as Record<string, unknown>;
 };
 
-/** Ids under the "Draft migrations (n)" heading, one per indented line. */
+/** Ids under the last "Draft migrations (n)" heading — the applied block; the
+ * preview's block prints `?` for ids the server has not minted yet. */
 const migrationIdsIn = (output: string): string[] => {
 	const lines = output.split("\n");
-	const start = lines.findIndex((line) =>
-		line.startsWith("Draft migrations ("),
-	);
+	let start = -1;
+	for (const [index, line] of lines.entries()) {
+		if (line.trim().startsWith("Draft migrations (")) start = index;
+	}
 	if (start === -1) return [];
 	const ids: string[] = [];
 	for (const line of lines.slice(start + 1)) {
-		if (line.trim() === "") break;
+		// The block is its indented lines; the first flush-left line ends it.
+		if (!line.startsWith("  ")) break;
 		const segments = line.trim().split("/");
 		const id = segments[segments.length - 1];
-		if (id) ids.push(id);
+		if (id && id !== "?") ids.push(id);
 	}
 	return ids;
 };

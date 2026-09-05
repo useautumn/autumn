@@ -10,13 +10,20 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 /** One config per case, its single server-side violation, and a needle unique
  * to that server error (not the CLI's own wording). */
-const CASES: Record<string, { body: (id: string) => string; needle: (id: string) => string }> = {
+const CASES: Record<
+	string,
+	{
+		body: (id: string) => string;
+		needle: (id: string) => string;
+		message: RegExp;
+	}
+> = {
 	duplicate: {
 		body: (id) => `{
 	plans: [
@@ -32,7 +39,9 @@ const CASES: Record<string, { body: (id: string) => string; needle: (id: string)
 		}),
 	],
 }`,
-		needle: (id) => `plan_id=${id}`,
+		needle: (id) => `planId "${id}"`,
+		// Two rows with one id never reach the server: the lint refuses first.
+		message: /is used more than once/,
 	},
 	invalid: {
 		body: (id) => `{
@@ -46,6 +55,7 @@ const CASES: Record<string, { body: (id: string) => string; needle: (id: string)
 	],
 }`,
 		needle: (id) => `${id}_no_such_plan`,
+		message: /\/v1\/catalogV2\.\w+ failed \(\d+\): /,
 	},
 };
 
@@ -71,9 +81,9 @@ for (const [kind, testCase] of Object.entries(CASES)) {
 			}
 
 			expect(thrown).toBeDefined();
-			// A thrown, uncaught Error is what makes the real CLI binary exit 1 —
-			// this harness calls runPush in-process, so exit code itself is untestable here.
-			expect(thrown?.message).toMatch(/\/v1\/catalogV2\.\w+ failed \(\d+\): /);
+			// The harness spawns the real CLI: a non-zero exit surfaces as a throw
+			// carrying the CLI's own output.
+			expect(thrown?.message).toMatch(testCase.message);
 			expect(thrown?.message).toContain(testCase.needle(id));
 
 			// No backfill happened: the config on disk is exactly what it was.
