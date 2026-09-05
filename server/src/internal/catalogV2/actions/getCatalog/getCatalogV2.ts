@@ -70,13 +70,15 @@ export const getCatalogV2 = async ({
 		),
 	);
 
-	const features = ctx.features.map((feature) =>
-		dbToApiFeatureV1({
-			ctx,
-			dbFeature: feature,
-			targetVersion: FEATURE_TARGET_VERSION,
-		}),
-	);
+	const features = ctx.features
+		.filter((feature) => include_archived || !feature.archived)
+		.map((feature) =>
+			dbToApiFeatureV1({
+				ctx,
+				dbFeature: feature,
+				targetVersion: FEATURE_TARGET_VERSION,
+			}),
+		);
 
 	return { features, plans };
 };

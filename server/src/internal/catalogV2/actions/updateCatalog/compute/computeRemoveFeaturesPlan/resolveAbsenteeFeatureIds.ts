@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
+import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveCurrentFeature } from "../../utils/featureUpdateUtils/resolveCurrentFeature";
 

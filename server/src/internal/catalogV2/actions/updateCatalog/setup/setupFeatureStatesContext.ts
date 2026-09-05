@@ -43,10 +43,7 @@ export const setupFeatureStatesContext = async ({
 	params: UpdateCatalogParams;
 }): Promise<UpdateCatalogContext["featureStatesContext"]> => {
 	const { db, org, env, features } = ctx;
-	const touchedFeatures = paramsToTouchedFeatures({
-		features: ctx.features,
-		params,
-	});
+	const touchedFeatures = paramsToTouchedFeatures({ ctx, params });
 
 	const entryByFeatureId = new Map(
 		(params.features ?? []).map((entry) => [entry.feature_id, entry]),
