@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import type { KafkaProducerClient as OwnedPartitionProducerPort } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
-import type { KafkaBalanceWorkerTimings } from "../../../src/kafka/kafkaBalanceWorkerConfig.js";
-import { createKafkaOwnedPartitionRuntimeFactory } from "../../../src/kafka/kafkaOwnedPartitionRuntimeFactory.js";
-import type { KafkaPartitionOutcomeFollower } from "../../../src/kafka/kafkaPartitionOutcomeFollower.js";
-import type { OwnedPartitionProducerPort } from "../../../src/runtime/ownedPartitionRuntime.js";
+import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
+import type { PartitionReplay as KafkaPartitionOutcomeFollower } from "../../../src/kafka/meteringConsumer/types/partitionReplay.js";
 import {
 	closeStoreFixture,
+	createKafkaOwnedPartitionRuntimeFactory,
 	createStoreFixture,
 	topic,
 } from "./kafka-test-fixtures.js";

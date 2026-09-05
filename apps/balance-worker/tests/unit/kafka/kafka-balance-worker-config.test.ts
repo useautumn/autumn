@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import {
-	balanceWorkerConsumerConfigOf,
-	balanceWorkerKafkaConfigOf,
-	type KafkaBalanceWorkerTimings,
-} from "../../../src/kafka/kafkaBalanceWorkerConfig.js";
+import { createKafkaClient as balanceWorkerKafkaConfigOf } from "@autumn/kafka";
+import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
+import { createWorkerConsumerConfig as balanceWorkerConsumerConfigOf } from "../../../src/init/workerConfig.js";
 
 const timings = {
 	fetchMaxWaitTimeMs: 250,

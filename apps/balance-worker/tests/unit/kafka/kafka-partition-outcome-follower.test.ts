@@ -1,16 +1,98 @@
+import { createPartitionReplay } from "../../../src/kafka/meteringConsumer/replay/createPartitionReplay.js";
+
+async function coordinatesReplayWithoutMutatingConsumer(): Promise<void> {
+	const events: string[] = [];
+	const batch = Promise.withResolvers<void>();
+	function readNextOffset(): bigint {
+		return 0n;
+	}
+	async function fetchTopicOffsets() {
+		return [{ partition: 2, offset: "0", low: "0", high: "0" }];
+	}
+	function seek(): void {
+		events.push("seek");
+	}
+	function resume(): void {
+		events.push("read");
+	}
+	function pause(): void {
+		events.push("pause");
+	}
+	function resumePartition({ partition }: { partition: number }): void {
+		events.push(`resume:${partition}`);
+	}
+	function withdrawPartition({
+		partition,
+	}: {
+		partition: number;
+	}): Promise<void> {
+		events.push(`withdraw:${partition}`);
+		return batch.promise;
+	}
+	function onUnavailable(): void {}
+	const consumer = { seek, resume, pause };
+	function seekPartition(): void {
+		consumer.seek();
+	}
+	function pausePartition(): void {
+		consumer.pause();
+	}
+	function resumeFetching(): void {
+		consumer.resume();
+	}
+	const metering = createPartitionReplay({
+		ctx: {
+			stateStore: { readNextOffset },
+			partitionOffsets: { fetchTopicOffsets },
+			positionTracker: createProgressTracker(),
+			consumption: {
+				resumePartition,
+				withdrawPartition,
+				seekPartition,
+				pausePartition,
+				resumeFetching,
+			},
+		},
+	});
+	expect(consumer.resume).toBe(resume);
+	expect(consumer.pause).toBe(pause);
+	const starting = metering.startAndCatchUp({
+		topic: "metering-events-v1",
+		partition: 2,
+		onUnavailable,
+	});
+	await starting;
+	expect(events).toEqual(["resume:2", "seek", "read"]);
+	const stopping = metering.stop();
+	expect(events).toEqual(["resume:2", "seek", "read", "withdraw:2", "pause"]);
+	expect(metering.stop()).toBe(stopping);
+	await Promise.resolve();
+	expect(
+		await Promise.race([stopping, Promise.resolve("still-draining")]),
+	).toBe("still-draining");
+	batch.resolve();
+	await stopping;
+	expect(consumer.pause).toBe(pause);
+}
+
+test(
+	"partition replay resumes before catch-up and waits for withdrawn batches without replacing consumer methods",
+	coordinatesReplayWithoutMutatingConsumer,
+);
+
 import { describe, expect, test } from "bun:test";
+import { createProgressTracker } from "@autumn/kafka";
 import {
-	createKafkaPartitionOutcomeFollower,
-	type KafkaPartitionControlPort,
 	KafkaPartitionFollowerStoppedError,
 	StateAheadOfKafkaLogEndError,
-} from "../../../src/kafka/kafkaPartitionOutcomeFollower.js";
-import { KafkaPartitionPositionTracker } from "../../../src/kafka/kafkaPartitionPositionTracker.js";
-import { StateBehindKafkaLogStartError } from "../../../src/kafka/kafkaTrackOutcomeConsumer.js";
+	StateBehindKafkaLogStartError,
+} from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { PartitionProgressNotFoundError } from "../../../src/state/sqliteBalanceStateErrors.js";
 import {
 	closeStoreFixture,
+	createKafkaPartitionOutcomeFollower,
 	createStoreFixture,
+	type KafkaPartitionControlPort,
 	partition,
 	topic,
 } from "./kafka-test-fixtures.js";
@@ -48,7 +130,7 @@ describe("Kafka partition outcome follower", () => {
 		const fixture = createStoreFixture();
 		try {
 			const consumer = createPartitionControl();
-			const positionTracker = new KafkaPartitionPositionTracker();
+			const positionTracker = createProgressTracker();
 			const follower = createKafkaPartitionOutcomeFollower({
 				consumer,
 				partitionOffsets: createPartitionOffsets({ low: "0", high: "5" }),
@@ -62,7 +144,7 @@ describe("Kafka partition outcome follower", () => {
 					caughtUp = true;
 				});
 
-			await Promise.resolve();
+			await new Promise<void>(setImmediate);
 			expect(consumer.seeks).toEqual([{ topic, partition, offset: "0" }]);
 			expect(consumer.resumes).toEqual([{ topic, partitions: [partition] }]);
 
@@ -87,7 +169,7 @@ describe("Kafka partition outcome follower", () => {
 				consumer,
 				partitionOffsets: createPartitionOffsets({ low: "0", high: "0" }),
 				stateStore: fixture.store,
-				positionTracker: new KafkaPartitionPositionTracker(),
+				positionTracker: createProgressTracker(),
 			});
 
 			await follower.startAndCatchUp({
@@ -111,13 +193,13 @@ describe("Kafka partition outcome follower", () => {
 				consumer: createPartitionControl(),
 				partitionOffsets: createPartitionOffsets({ low: "5", high: "10" }),
 				stateStore: behindFixture.store,
-				positionTracker: new KafkaPartitionPositionTracker(),
+				positionTracker: createProgressTracker(),
 			});
 			const aheadFollower = createKafkaPartitionOutcomeFollower({
 				consumer: createPartitionControl(),
 				partitionOffsets: createPartitionOffsets({ low: "5", high: "10" }),
 				stateStore: aheadFixture.store,
-				positionTracker: new KafkaPartitionPositionTracker(),
+				positionTracker: createProgressTracker(),
 			});
 
 			await expect(
@@ -147,7 +229,7 @@ describe("Kafka partition outcome follower", () => {
 				consumer: createPartitionControl(),
 				partitionOffsets: createPartitionOffsets({ low: "0", high: "0" }),
 				stateStore: fixture.store,
-				positionTracker: new KafkaPartitionPositionTracker(),
+				positionTracker: createProgressTracker(),
 			});
 
 			await expect(
@@ -170,7 +252,7 @@ describe("Kafka partition outcome follower", () => {
 				consumer,
 				partitionOffsets: createPartitionOffsets({ low: "0", high: "5" }),
 				stateStore: fixture.store,
-				positionTracker: new KafkaPartitionPositionTracker(),
+				positionTracker: createProgressTracker(),
 			});
 			const catchUp = follower.startAndCatchUp({
 				topic,
@@ -197,7 +279,7 @@ describe("Kafka partition outcome follower", () => {
 				consumer: createPartitionControl(),
 				partitionOffsets: createPartitionOffsets({ low: "0", high: "0" }),
 				stateStore: fixture.store,
-				positionTracker: new KafkaPartitionPositionTracker(),
+				positionTracker: createProgressTracker(),
 			});
 			const failures: unknown[] = [];
 			await follower.startAndCatchUp({
@@ -223,7 +305,7 @@ describe("Kafka partition outcome follower", () => {
 				consumer: createPartitionControl(),
 				partitionOffsets: createPartitionOffsets({ low: "0", high: "5" }),
 				stateStore: fixture.store,
-				positionTracker: new KafkaPartitionPositionTracker(),
+				positionTracker: createProgressTracker(),
 			});
 			const failures: unknown[] = [];
 			const catchUp = follower.startAndCatchUp({

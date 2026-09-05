@@ -6,26 +6,22 @@ import {
 	createCustomerMeteringState,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
+import { createKafkaClient as balanceWorkerKafkaConfigOf } from "@autumn/kafka";
 import { Kafka, logLevel, type RecordMetadata } from "kafkajs";
-import {
-	balanceWorkerConsumerConfigOf,
-	balanceWorkerKafkaConfigOf,
-	type KafkaBalanceWorkerTimings,
-} from "../../../src/kafka/kafkaBalanceWorkerConfig.js";
-import { createKafkaCommittedTrackOutcomeAppender } from "../../../src/kafka/kafkaCommittedTrackOutcomeAppender.js";
-import { createKafkaOwnedPartitionGroup } from "../../../src/kafka/kafkaOwnedPartitionGroup.js";
-import { createKafkaOwnedPartitionProducer } from "../../../src/kafka/kafkaOwnedPartitionProducer.js";
-import { createKafkaOwnedPartitionRuntimeFactory } from "../../../src/kafka/kafkaOwnedPartitionRuntimeFactory.js";
-import { serializeKafkaTrackOutcomeRecord } from "../../../src/kafka/trackOutcomeRecord.js";
-import {
-	createOwnedPartitionRuntime,
-	OwnedPartitionProducerFencedError,
-	type PartitionOutcomeFollowerPort,
-} from "../../../src/runtime/ownedPartitionRuntime.js";
+import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
+import { createWorkerConsumerConfig as balanceWorkerConsumerConfigOf } from "../../../src/init/workerConfig.js";
+import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
+import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
 import { openSqliteBalanceStateStore } from "../../../src/state/sqliteBalanceStateStore.js";
 import {
+	createKafkaCommittedTrackOutcomeAppender,
+	createKafkaOwnedPartitionGroup,
+	createKafkaOwnedPartitionProducer,
+	createKafkaOwnedPartitionRuntimeFactory,
 	createOutcome,
+	createOwnedPartitionRuntime,
 	createState,
+	serializeKafkaTrackOutcomeRecord,
 } from "../../unit/kafka/kafka-test-fixtures.js";
 
 const brokers = (process.env.KAFKA_BROKERS ?? "127.0.0.1:19092").split(",");
