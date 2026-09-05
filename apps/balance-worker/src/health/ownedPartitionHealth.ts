@@ -1,4 +1,4 @@
-import type { OwnedPartitionRuntimeStatus } from "../runtime/ownedPartitionErrors.js";
+import type { PartitionRuntimeStatus as OwnedPartitionRuntimeStatus } from "../runtime/types/partitionRuntimeState.js";
 
 export type OwnedPartitionHealth = {
 	topic: string;

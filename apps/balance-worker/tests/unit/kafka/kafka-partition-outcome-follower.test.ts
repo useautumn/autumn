@@ -1,3 +1,4 @@
+import { createProgressTracker } from "@autumn/kafka";
 import { createPartitionReplay } from "../../../src/kafka/meteringConsumer/replay/createPartitionReplay.js";
 
 async function coordinatesReplayWithoutMutatingConsumer(): Promise<void> {
@@ -59,6 +60,7 @@ async function coordinatesReplayWithoutMutatingConsumer(): Promise<void> {
 	const starting = metering.startAndCatchUp({
 		topic: "metering-events-v1",
 		partition: 2,
+		targetNextOffset: 0n,
 		onUnavailable,
 	});
 	await starting;
@@ -84,7 +86,6 @@ import { describe, expect, test } from "bun:test";
 import {
 	KafkaPartitionFollowerStoppedError,
 	StateAheadOfKafkaLogEndError,
-	StateBehindKafkaLogStartError,
 } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { PartitionProgressNotFoundError } from "../../../src/state/sqliteBalanceStateErrors.js";
 import {
@@ -138,7 +139,7 @@ describe("Kafka partition outcome follower", () => {
 		const fixture = createStoreFixture();
 		try {
 			const consumer = createPartitionControl();
-			const positionTracker = new KafkaPartitionPositionTracker();
+			const positionTracker = createProgressTracker();
 			const partitionOffsets = createPartitionOffsets({ low: "0", high: "5" });
 			const follower = createKafkaPartitionOutcomeFollower({
 				consumer,

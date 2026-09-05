@@ -11,10 +11,6 @@ import {
 	type TrackCommand,
 	type TrackDecision,
 } from "@autumn/balance-engine";
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
-import type { KafkaTrackOutcomeTransactionPort } from "../../../src/kafka/kafkaCommittedTrackOutcomeAppender.js";
-import type { PartitionBootstrapResult } from "../../../src/runtime/bootstrap/partitionBootstrap.js";
-import type { PartitionLogRange } from "../../../src/runtime/bootstrap/partitionBootstrapPlan.js";
 import {
 	createProducerSession,
 	type KafkaTransaction as KafkaTrackOutcomeTransactionPort,
@@ -28,6 +24,7 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import type { PartitionLogRange } from "../../../src/runtime/bootstrap/types/partitionBootstrap.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import { createRequestTracker } from "../../../src/runtime/createRequestTracker.js";
 import {
@@ -35,7 +32,10 @@ import {
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
-import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
+import type {
+	OwnedPartitionBootstrapPort,
+	PartitionOutcomeFollowerPort,
+} from "../../../src/runtime/types/partitionRuntime.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
@@ -319,29 +319,26 @@ const createRuntime = ({
 	store: SqliteBalanceStateStore;
 	producer: OwnedPartitionProducerPort;
 	follower: PartitionOutcomeFollowerPort;
-	bootstrap?: (input: {
-		topic: string;
-		partition: number;
-		logRange: PartitionLogRange;
-		signal: AbortSignal;
-	}) => Promise<PartitionBootstrapResult>;
+	bootstrap?: OwnedPartitionBootstrapPort["bootstrap"];
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
 	recoveryDrainTimeoutMs?: number;
-}) =>
-	createOwnedPartitionRuntime({
-		topic,
-		partition,
-		stateStore: store,
-		producer,
-		follower,
-		partitionResolver: {
-			partitionForIdentity: ({ identity: commandIdentity }) =>
-				partitionForIdentity(commandIdentity),
-		},
-		bootstrapper: { bootstrap },
-		writerLimits,
-		trackReceiptPolicy,
-		recoveryDrainTimeoutMs,
+}) => {
+	function createProducer(): OwnedPartitionProducerPort {
+		return producer;
+	}
+	const session = createProducerSession({
+		ctx: { kafka: { producer: createProducer } },
+		config: createWorkerProducerConfig({
+			deploymentEnvironment: "test",
+			topic,
+			partition,
+			limits: {
+				transactionTimeoutMs: 15_000,
+				retryCount: 3,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 2_000,
+			},
+		}),
 	});
 	const workerProducer = createWorkerProducer({
 		ctx: { session },
@@ -351,6 +348,7 @@ const createRuntime = ({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
 			stateStore: store,
+			bootstrapper: { bootstrap },
 			trackReceiptPolicy: {
 				retentionMs: 86_400_000,
 				now: () => 1_700_000_000_000,

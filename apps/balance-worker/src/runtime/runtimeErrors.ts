@@ -1,13 +1,4 @@
-export type OwnedPartitionRuntimeStatus =
-	| "created"
-	| "fencing"
-	| "bootstrapping"
-	| "catching_up"
-	| "ready"
-	| "draining"
-	| "stopped"
-	| "recovery_required";
-
+import type { PartitionRuntimeStatus } from "./types/partitionRuntimeState.js";
 export class OwnedPartitionNotReadyError extends Error {
 	readonly status: PartitionRuntimeStatus;
 

@@ -1,53 +1,29 @@
-import type { PartitionCheckpointV1 } from "../../checkpoint/partitionCheckpoint.js";
+import type {
+	PartitionBootstrapPlan,
+	PartitionBootstrapState,
+	PartitionLogRange,
+} from "../types/partitionBootstrap.js";
 
-export type PartitionLogRange = {
-	logStartOffset: bigint;
-	logEndOffset: bigint;
-};
-
-export type PartitionBootstrapRefusalReason =
-	| "checkpoint_ahead_of_log_end"
-	| "checkpoint_behind_log_start"
-	| "checkpoint_required_for_retention_gap"
-	| "local_state_ahead_of_log_end";
-
-export type PartitionBootstrapPlan =
-	| { kind: "continue"; nextOffset: bigint }
-	| { kind: "initialize"; nextOffset: 0n }
-	| { kind: "replace"; checkpoint: PartitionCheckpointV1 }
-	| { kind: "restore"; checkpoint: PartitionCheckpointV1 }
-	| { kind: "refuse"; reason: PartitionBootstrapRefusalReason };
-
-const assertOffset = ({
-	name,
-	value,
-}: {
-	name: string;
-	value: bigint;
-}): void => {
+function assertOffset({ name, value }: { name: string; value: bigint }): void {
 	if (value < 0n) throw new RangeError(`${name} cannot be negative`);
-};
+}
 
-export const assertPartitionLogRange = ({
+export function assertPartitionLogRange({
 	logStartOffset,
 	logEndOffset,
-}: PartitionLogRange): void => {
+}: PartitionLogRange): void {
 	assertOffset({ name: "Kafka log start", value: logStartOffset });
 	assertOffset({ name: "Kafka log end", value: logEndOffset });
 	if (logStartOffset > logEndOffset) {
 		throw new RangeError("Kafka log start cannot exceed its end");
 	}
-};
+}
 
-export const planPartitionBootstrap = ({
+export function planPartitionBootstrap({
 	localNextOffset,
 	checkpoint,
 	logRange,
-}: {
-	localNextOffset: bigint | null;
-	checkpoint: PartitionCheckpointV1 | null;
-	logRange: PartitionLogRange;
-}): PartitionBootstrapPlan => {
+}: PartitionBootstrapState): PartitionBootstrapPlan {
 	const checkpointNextOffset = checkpoint?.nextOffset ?? null;
 	assertPartitionLogRange(logRange);
 	if (localNextOffset !== null) {
@@ -101,4 +77,4 @@ export const planPartitionBootstrap = ({
 		kind: "refuse",
 		reason: "checkpoint_required_for_retention_gap",
 	};
-};
+}

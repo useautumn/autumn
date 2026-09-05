@@ -13,24 +13,10 @@ import { createKafkaClient as balanceWorkerKafkaConfigOf } from "@autumn/kafka";
 import { Kafka, logLevel, type RecordMetadata } from "kafkajs";
 import { createPartitionCheckpoint } from "../../../src/checkpoint/partitionCheckpoint.js";
 import type { PartitionCheckpointSource } from "../../../src/checkpoint/partitionCheckpointSource.js";
-import {
-	balanceWorkerConsumerConfigOf,
-	balanceWorkerKafkaConfigOf,
-	type KafkaBalanceWorkerTimings,
-} from "../../../src/kafka/kafkaBalanceWorkerConfig.js";
-import { createKafkaCommittedTrackOutcomeAppender } from "../../../src/kafka/kafkaCommittedTrackOutcomeAppender.js";
-import {
-	serializeKafkaStateInitializedRecord,
-	serializeKafkaTrackOutcomeRecord,
-} from "../../../src/kafka/kafkaMeteringRecord.js";
-import { createKafkaOwnedPartitionGroup } from "../../../src/kafka/kafkaOwnedPartitionGroup.js";
-import { createKafkaOwnedPartitionProducer } from "../../../src/kafka/kafkaOwnedPartitionProducer.js";
-import { createKafkaOwnedPartitionRuntimeFactory } from "../../../src/kafka/kafkaOwnedPartitionRuntimeFactory.js";
-import {
-	createOwnedPartitionRuntime,
-	OwnedPartitionProducerFencedError,
-	type PartitionOutcomeFollowerPort,
-} from "../../../src/runtime/ownedPartitionRuntime.js";
+import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
+import { createWorkerConsumerConfig as balanceWorkerConsumerConfigOf } from "../../../src/init/workerConfig.js";
+import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
+import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,

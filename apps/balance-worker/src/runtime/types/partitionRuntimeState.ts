@@ -7,7 +7,9 @@ import type {
 
 export type PartitionRuntimeStatus =
 	| "created"
-	| "starting"
+	| "fencing"
+	| "bootstrapping"
+	| "catching_up"
 	| "ready"
 	| "draining"
 	| "stopped"
@@ -20,6 +22,8 @@ export type PartitionRuntimeScope = {
 
 export type PartitionRuntimeState = {
 	drainPromise: Promise<void> | null;
+	failureReason: string | null;
+	startupAbortController: AbortController;
 	status: PartitionRuntimeStatus;
 	terminalError: OwnedPartitionRecoveryRequiredError | null;
 	producerConnectionAttempted: boolean;
