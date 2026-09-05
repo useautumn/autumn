@@ -1,6 +1,11 @@
 name: autumn-dev-services
 
 services:
+  kafka:
+    extends:
+      file: ./kafka.compose.yml
+      service: kafka
+
   postgres:
     image: postgres:18.3-alpine
     environment:
@@ -61,6 +66,7 @@ services:
       - "host.docker.internal:host-gateway"
 
 volumes:
+  kafka-data:
   autumn-dev-postgres-18:
   autumn-dev-dragonfly-misc:
   autumn-dev-dragonfly:

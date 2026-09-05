@@ -33,6 +33,14 @@ export const meteringIdentitySchema = z
 
 export type MeteringIdentity = z.infer<typeof meteringIdentitySchema>;
 
+export function parseMeteringIdentity({
+	input,
+}: {
+	input: unknown;
+}): MeteringIdentity {
+	return meteringIdentitySchema.parse(input);
+}
+
 export const trackCommandSchema = z
 	.object({
 		schemaVersion: z.literal(1),

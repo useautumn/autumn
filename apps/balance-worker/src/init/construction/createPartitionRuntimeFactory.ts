@@ -1,10 +1,7 @@
 import { createProducerSession } from "@autumn/kafka";
 import { createOwnershipPublisher } from "../../kafka/createOwnershipPublisher.js";
 import { createTrackOutcomePublisher } from "../../kafka/createTrackOutcomePublisher.js";
-import {
-	createWorkerProducer,
-	createWorkerProducerConfig,
-} from "../../kafka/createWorkerProducer.js";
+import { createWorkerProducer } from "../../kafka/createWorkerProducer.js";
 import { createPartitionBootstrapper } from "../../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
 import type {
@@ -14,7 +11,10 @@ import type {
 	PartitionRuntimeFactoryContext,
 	PartitionRuntimeFactoryInput,
 } from "../types/partitionRuntimeFactory.js";
-import { assertKafkaBalanceWorkerTimings } from "../workerConfig.js";
+import {
+	assertKafkaBalanceWorkerTimings,
+	createWorkerProducerConfig,
+} from "../workerConfig.js";
 
 export function createPartitionRuntimeFactory({
 	ctx,

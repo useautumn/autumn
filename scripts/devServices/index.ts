@@ -21,6 +21,7 @@ const localConfig = {
 	miscCachePort: 6379,
 	dragonflyPort: 6380,
 	dynamoDbPort: 8000,
+	kafkaPort: 19092,
 	apiServerPort: 8080,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
@@ -34,7 +35,10 @@ const flags = new Set(process.argv.slice(3));
 
 const log = (message: string) => console.log(`[dev:services] ${message}`);
 
-const composeEnv = { ...process.env };
+const composeEnv: NodeJS.ProcessEnv = {
+	...process.env,
+	KAFKA_PORT: String(localConfig.kafkaPort),
+};
 
 const readShellConfigEnvVar = ({ key }: { key: string }) => {
 	if (!existsSync(zshrcFile)) return;
@@ -226,6 +230,7 @@ const removeVolumes = ({
 					"autumn-dev-dragonfly-misc",
 					"autumn-dev-dragonfly",
 					"autumn-dev-localstack",
+					"kafka-data",
 					// Left behind by the pre-Dragonfly misc cache.
 					"autumn-dev-redis-stack",
 				]
@@ -260,6 +265,21 @@ const check = async ({
 	}
 };
 
+function checkKafka(): void {
+	dockerCompose({
+		args: [
+			"exec",
+			"-T",
+			"kafka",
+			"/opt/kafka/bin/kafka-topics.sh",
+			"--bootstrap-server",
+			"localhost:9092",
+			"--list",
+		],
+		quiet: true,
+	});
+}
+
 const doctor = async () => {
 	const results = await Promise.all([
 		check({
@@ -279,6 +299,10 @@ const doctor = async () => {
 			label: "Dragonfly :6380",
 			fn: () =>
 				waitForTcp({ port: localConfig.dragonflyPort, label: "Dragonfly" }),
+		}),
+		check({
+			label: "Kafka :19092",
+			fn: checkKafka,
 		}),
 		check({
 			label: "DynamoDB :8000",
@@ -374,7 +398,7 @@ const up = async () => {
 		allowFailure: true,
 	});
 	dockerCompose({
-		args: ["up", "-d", "--remove-orphans"],
+		args: ["up", "-d", "--wait", "--wait-timeout", "90", "--remove-orphans"],
 	});
 
 	await Promise.all([
@@ -428,9 +452,9 @@ const help = () => {
 	console.log(`Usage: bun dev:services <command>
 
 Commands:
-  up                         Start local Postgres, Dragonfly (misc cache + cache v2), DynamoDB, and ngrok
+  up                         Start local Postgres, Dragonfly (misc cache + cache v2), DynamoDB, Kafka, and ngrok
   down                       Stop local services and keep all data
-  down --volumes             Stop services and delete Dragonfly data
+  down --volumes             Stop services and delete Dragonfly and Kafka data
   down --postgres            Stop services and delete Postgres data
   doctor                     Check local service readiness
   prune [--postgres]         Delete non-Postgres volumes and prune dangling Docker cache
@@ -443,6 +467,7 @@ Local service values:
   MISC_CACHE_DRAGONFLY_PUBLIC_URL=${localConfig.miscCacheUrl}
   CACHE_V2_DRAGONFLY_URL=${localConfig.dragonflyUrl}
   DYNAMODB_ENDPOINT=${localConfig.dynamoDbEndpoint}
+  KAFKA_BROKERS=127.0.0.1:${localConfig.kafkaPort}
 `);
 };
 
