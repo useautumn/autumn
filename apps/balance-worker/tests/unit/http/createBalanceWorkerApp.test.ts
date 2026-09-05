@@ -6,7 +6,7 @@ import {
 	parseCheckCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
-import type { PartitionRoute } from "@autumn/balance-worker-protocol";
+import type { PartitionRoute } from "@autumn/balance-worker-client/protocol";
 import { Hono } from "hono";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { requestValidationMiddleware } from "../../../src/http/middlewares/requestValidationMiddleware.js";

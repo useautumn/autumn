@@ -1,11 +1,16 @@
 {
-	"name": "@autumn/balance-worker-protocol",
+	"name": "@autumn/balance-worker-client",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
 	"sideEffects": false,
 	"exports": {
 		".": {
+			"types": "./src/balanceWorkerClient.ts",
+			"import": "./src/balanceWorkerClient.ts",
+			"default": "./src/balanceWorkerClient.ts"
+		},
+		"./protocol": {
 			"types": "./src/protocol.ts",
 			"import": "./src/protocol.ts",
 			"default": "./src/protocol.ts"
@@ -17,7 +22,7 @@
 	},
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
-		"zod": "^3.25.23"
+		"@autumn/kafka": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "1.3.14",

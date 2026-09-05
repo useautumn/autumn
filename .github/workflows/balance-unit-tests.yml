@@ -5,7 +5,7 @@ on:
     paths:
       - "apps/balance-worker/**"
       - "packages/balance-engine/**"
-      - "packages/balance-worker-protocol/**"
+      - "packages/balance-worker-client/**"
       - "packages/env/**"
       - "packages/kafka/**"
       - "package.json"
@@ -16,7 +16,7 @@ on:
     paths:
       - "apps/balance-worker/**"
       - "packages/balance-engine/**"
-      - "packages/balance-worker-protocol/**"
+      - "packages/balance-worker-client/**"
       - "packages/env/**"
       - "packages/kafka/**"
       - "package.json"
@@ -57,9 +57,9 @@ jobs:
       - name: Run balance worker unit tests
         run: bun -F @autumn/balance-worker test:unit
 
-      - name: Run protocol and environment unit tests
+      - name: Run client and environment unit tests
         run: |
-          bun -F @autumn/balance-worker-protocol test
+          bun -F @autumn/balance-worker-client test
           bun -F @autumn/env test
 
       - name: Run balance engine type check
@@ -71,7 +71,7 @@ jobs:
       - name: Run balance worker type check
         run: bun -F @autumn/balance-worker ts
 
-      - name: Run protocol and environment type checks
+      - name: Run client and environment type checks
         run: |
-          bun -F @autumn/balance-worker-protocol ts
+          bun -F @autumn/balance-worker-client ts
           bun -F @autumn/env ts

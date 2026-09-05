@@ -1,4 +1,7 @@
-import type { WorkerErrorResponse } from "@autumn/balance-worker-protocol";
+import {
+	type WorkerErrorResponse,
+	WorkerProtocolError,
+} from "@autumn/balance-worker-client/protocol";
 import type { Context, ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod/v4";
@@ -35,6 +38,7 @@ export function createWorkerErrorHandler({
 		};
 		if (
 			cause instanceof ZodError ||
+			cause instanceof WorkerProtocolError ||
 			cause instanceof PartitionRouteMismatchError ||
 			cause instanceof OwnedPartitionMismatchError ||
 			(cause instanceof HTTPException && cause.status === 400)
