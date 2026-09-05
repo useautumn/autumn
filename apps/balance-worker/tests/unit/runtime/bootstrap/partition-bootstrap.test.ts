@@ -4,10 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	createPartitionCheckpoint,
+	InvalidPartitionCheckpointError,
 	PartitionCheckpointContentHashMismatchError,
 } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { PartitionCheckpointSourceError } from "../../../../src/checkpoint/partitionCheckpointSource.js";
 import { createPartitionBootstrapper } from "../../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
+import type { PartitionBootstrapRetryPolicy } from "../../../../src/runtime/bootstrap/types/partitionBootstrap.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
@@ -431,3 +433,183 @@ test(
 	"bootstrap checks cancellation and Kafka range before reading state",
 	rejectsInvalidInputBeforeReading,
 );
+
+test.each([
+	{ checkpointTopic: "another-topic", checkpointPartition: partition },
+	{ checkpointTopic: topic, checkpointPartition: partition + 1 },
+])(
+	"rejects a checkpoint from another topic or partition %#",
+	async ({ checkpointTopic, checkpointPartition }) => {
+		const fixture = createStore();
+		let sourceCalls = 0;
+		try {
+			const bootstrapper = createBootstrapper({
+				store: fixture.store,
+				latest: async () => {
+					sourceCalls += 1;
+					return createPartitionCheckpoint({
+						...checkpointAt(100n),
+						topic: checkpointTopic,
+						partition: checkpointPartition,
+					});
+				},
+			});
+
+			await expect(
+				bootstrapper.bootstrap({
+					topic,
+					partition,
+					logRange: { logStartOffset: 100n, logEndOffset: 120n },
+					signal: new AbortController().signal,
+				}),
+			).rejects.toBeInstanceOf(InvalidPartitionCheckpointError);
+			expect(sourceCalls).toBe(1);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBeNull();
+		} finally {
+			closeStore(fixture);
+		}
+	},
+);
+
+test("caps retry backoff and stops at the configured attempt limit", async () => {
+	const fixture = createStore();
+	const sourceFailure = new PartitionCheckpointSourceError({
+		message: "source unavailable",
+		retriable: true,
+	});
+	const delays: number[] = [];
+	let sourceCalls = 0;
+	try {
+		const bootstrapper = createPartitionBootstrapper({
+			stateStore: fixture.store,
+			checkpointSource: {
+				latest: async () => {
+					sourceCalls += 1;
+					throw sourceFailure;
+				},
+			},
+			partitionResolver: { partitionForIdentity: () => partition },
+			restoreLimits,
+			retryPolicy: { ...retryPolicy, maxAttempts: 5, maxBackoffMs: 20 },
+			sleep: async ({ delayMs }) => {
+				delays.push(delayMs);
+			},
+		});
+
+		await expect(
+			bootstrapper.bootstrap({
+				topic,
+				partition,
+				logRange: { logStartOffset: 0n, logEndOffset: 0n },
+				signal: new AbortController().signal,
+			}),
+		).rejects.toBe(sourceFailure);
+		expect(sourceCalls).toBe(5);
+		expect(delays).toEqual([10, 20, 20, 20]);
+		expect(fixture.store.readNextOffset({ topic, partition })).toBeNull();
+	} finally {
+		closeStore(fixture);
+	}
+});
+
+test.each([
+	new PartitionCheckpointSourceError({
+		message: "invalid source response",
+		retriable: false,
+	}),
+	new Error("unexpected source failure"),
+])("does not retry a non-retriable source failure %#", async (cause) => {
+	const fixture = createStore();
+	const delays: number[] = [];
+	let sourceCalls = 0;
+	try {
+		const bootstrapper = createBootstrapper({
+			store: fixture.store,
+			latest: async () => {
+				sourceCalls += 1;
+				throw cause;
+			},
+			sleep: async ({ delayMs }) => {
+				delays.push(delayMs);
+			},
+		});
+
+		await expect(
+			bootstrapper.bootstrap({
+				topic,
+				partition,
+				logRange: { logStartOffset: 0n, logEndOffset: 0n },
+				signal: new AbortController().signal,
+			}),
+		).rejects.toBe(cause);
+		expect(sourceCalls).toBe(1);
+		expect(delays).toEqual([]);
+		expect(fixture.store.readNextOffset({ topic, partition })).toBeNull();
+	} finally {
+		closeStore(fixture);
+	}
+});
+
+test("cancels retry backoff before loading another checkpoint", async () => {
+	const fixture = createStore();
+	const abortController = new AbortController();
+	const revoked = new Error("assignment revoked during backoff");
+	let sourceCalls = 0;
+	let sleepCalls = 0;
+	try {
+		const bootstrapper = createBootstrapper({
+			store: fixture.store,
+			latest: async () => {
+				sourceCalls += 1;
+				throw new PartitionCheckpointSourceError({
+					message: "temporary source failure",
+					retriable: true,
+				});
+			},
+			sleep: async () => {
+				sleepCalls += 1;
+				abortController.abort(revoked);
+			},
+		});
+
+		await expect(
+			bootstrapper.bootstrap({
+				topic,
+				partition,
+				logRange: { logStartOffset: 0n, logEndOffset: 0n },
+				signal: abortController.signal,
+			}),
+		).rejects.toBe(revoked);
+		expect(sourceCalls).toBe(1);
+		expect(sleepCalls).toBe(1);
+		expect(fixture.store.readNextOffset({ topic, partition })).toBeNull();
+	} finally {
+		closeStore(fixture);
+	}
+});
+
+test.each<Partial<PartitionBootstrapRetryPolicy>>([
+	{ maxAttempts: 0 },
+	{ maxAttempts: 11 },
+	{ maxAttempts: 1.5 },
+	{ initialBackoffMs: 0 },
+	{ initialBackoffMs: Number.POSITIVE_INFINITY },
+	{ maxBackoffMs: 0 },
+	{ maxBackoffMs: Number.NaN },
+	{ initialBackoffMs: 51 },
+])("rejects an invalid retry policy at construction %#", (policy) => {
+	const fixture = createStore();
+	try {
+		expect(() =>
+			createPartitionBootstrapper({
+				stateStore: fixture.store,
+				checkpointSource: { latest: async () => null },
+				partitionResolver: { partitionForIdentity: () => partition },
+				restoreLimits,
+				retryPolicy: { ...retryPolicy, ...policy },
+			}),
+		).toThrow(RangeError);
+	} finally {
+		closeStore(fixture);
+	}
+});

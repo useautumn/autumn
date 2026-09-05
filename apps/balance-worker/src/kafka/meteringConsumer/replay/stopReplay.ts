@@ -12,45 +12,46 @@ export function stopReplay({
 	state: PartitionReplayState;
 }): Promise<void> {
 	if (state.stopPromise) return state.stopPromise;
+	const started = state.status !== "created";
 	state.status = "stopped";
-	const { topic, partition } = state.position ?? {
-		topic: "unassigned",
-		partition: 0,
-	};
+	const { topic, partition } = state.position;
+	const settling = ctx.consumption.withdrawPartition({ partition });
 	state.abortController?.abort(
 		new KafkaPartitionFollowerStoppedError({ topic, partition }),
 	);
-	state.stopPromise = settleReplay({ ctx, state });
+	state.stopPromise = settleReplay({ ctx, state, settling, started });
 	return state.stopPromise;
 }
+
 async function settleReplay({
 	ctx,
 	state,
+	settling,
+	started,
 }: {
 	ctx: PartitionReplayContext;
 	state: PartitionReplayState;
+	settling: Promise<void>;
+	started: boolean;
 }): Promise<void> {
+	const { partition } = state.position;
 	const failures: unknown[] = [];
-	let withdrawal: Promise<void> | undefined;
-	if (state.position) {
-		const { partition } = state.position;
-		withdrawal = ctx.consumption.withdrawPartition({ partition });
-		try {
-			ctx.consumption.pausePartition({ partition });
-		} catch (cause) {
-			failures.push(cause);
-		}
+	try {
+		if (started) ctx.consumption.pausePartition({ partition });
+	} catch (cause) {
+		failures.push(cause);
 	}
 	// Pausing does not settle callbacks already writing to SQLite.
-	const [, settled] = await Promise.allSettled([
+	const [, withdrawal] = await Promise.allSettled([
 		state.startPromise,
-		withdrawal,
+		settling,
 	]);
-	if (settled.status === "rejected") failures.push(settled.reason);
+	if (withdrawal.status === "rejected") failures.push(withdrawal.reason);
 	if (failures.length === 1) throw failures[0];
 	if (failures.length > 1)
 		throw new AggregateError(failures, "Partition replay did not stop safely");
 }
+
 export function markReplayUnavailable({
 	state,
 	cause,

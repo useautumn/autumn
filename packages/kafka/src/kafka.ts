@@ -72,6 +72,7 @@ export {
 	UnsupportedRecordVersionError,
 } from "./lib/recordErrors.js";
 export type { TopicSchema } from "./lib/types/topicSchema.js";
+export { meteringIdentityToPartition } from "./partitioning/meteringIdentityToPartition.js";
 export { createProducerSession } from "./producer/createProducerSession.js";
 export {
 	createProducerConfig,
@@ -108,3 +109,21 @@ export type {
 	MeteringPublisherContext,
 } from "./topics/metering/publisher/types/meteringPublisher.js";
 export type { MeteringRecord } from "./topics/metering/types/meteringRecord.js";
+export { createKafkaOwnershipLog } from "./topics/ownership/consumer/createKafkaOwnershipLog.js";
+export { createOwnershipConsumer } from "./topics/ownership/consumer/createOwnershipConsumer.js";
+export {
+	applyOwnershipRecord,
+	readOwnershipToEnd,
+} from "./topics/ownership/consumer/ownershipReplay.js";
+export type { OwnershipConsumer } from "./topics/ownership/consumer/types/ownershipConsumer.js";
+export { ownershipTopic } from "./topics/ownership/ownershipTopic.js";
+export { claimPartition } from "./topics/ownership/publisher/claimPartition.js";
+export { createOwnershipPublisher } from "./topics/ownership/publisher/createOwnershipPublisher.js";
+export { releasePartition } from "./topics/ownership/publisher/releasePartition.js";
+export type { OwnershipPublisher } from "./topics/ownership/publisher/types/ownershipPublisher.js";
+export type {
+	OwnershipLog,
+	OwnershipLogRecord,
+} from "./topics/ownership/types/ownershipLog.js";
+export type { OwnershipRecord } from "./topics/ownership/types/ownershipRecord.js";
+export type { PartitionOwner } from "./topics/ownership/types/partitionOwner.js";

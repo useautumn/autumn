@@ -55,12 +55,21 @@ export async function startReplay({
 			`Kafka partition follower cannot start while ${state.status}`,
 		);
 	validateReplayPosition({ topic, partition });
+	if (
+		topic !== state.position.topic ||
+		partition !== state.position.partition
+	) {
+		throw new Error(
+			`Kafka partition follower ${topic}[${partition}] does not match its assigned partition ${state.position.topic}[${state.position.partition}]`,
+		);
+	}
 	if (targetNextOffset < 0n)
 		throw new RangeError(`Invalid target next offset: ${targetNextOffset}`);
 	state.status = "starting";
 	state.position = { topic, partition };
 	state.onUnavailable = onUnavailable;
 	state.abortController = new AbortController();
+	ctx.consumption.resumePartition({ partition });
 	state.startPromise = catchUpPartition({
 		ctx,
 		state,
@@ -81,7 +90,6 @@ async function catchUpPartition({
 	targetNextOffset: bigint;
 	signal: AbortSignal;
 }): Promise<void> {
-	if (!state.position) throw new Error("Replay has no assigned partition");
 	const { topic, partition } = state.position;
 	const storedNextOffset = ctx.stateStore.readNextOffset({ topic, partition });
 	if (storedNextOffset === null)
@@ -99,7 +107,6 @@ async function catchUpPartition({
 		partition,
 		nextOffset: storedNextOffset,
 	});
-	ctx.consumption.resumePartition({ partition });
 	ctx.consumption.seekPartition({ partition, nextOffset: storedNextOffset });
 	ctx.consumption.resumeFetching({ partition });
 	await ctx.positionTracker.waitUntil({

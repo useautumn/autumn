@@ -182,7 +182,32 @@ export function createKafkaOwnedPartitionGroup(
 				})
 			);
 		}
-		return { ...runtime, waitForQuiescence, getHealth };
+		async function drain(): Promise<void> {}
+		function subscribeUnavailable(): () => void {
+			return ignoreUnhealthy;
+		}
+		async function claim(): Promise<{ routeEpoch: string }> {
+			return { routeEpoch: "0" };
+		}
+		async function release(): Promise<void> {}
+		async function submitTrack(): Promise<never> {
+			throw new Error("Not used by group fixture");
+		}
+		async function check(): Promise<never> {
+			throw new Error("Not used by group fixture");
+		}
+		return {
+			runtime: {
+				drain,
+				subscribeUnavailable,
+				submitTrack,
+				check,
+				...runtime,
+				waitForQuiescence,
+				getHealth,
+			},
+			publication: { claim, release },
+		};
 	}
 	return createWorkerPartitions({
 		ctx: { ...dependencies, createRuntime, onUnhealthyPartition },
@@ -209,21 +234,40 @@ export type KafkaPartitionControlPort = Pick<
 >;
 
 export function createKafkaOwnedPartitionRuntimeFactory(
-	params: PartitionRuntimeFactoryContext & PartitionRuntimeFactoryConfig,
+	params: Omit<PartitionRuntimeFactoryContext, "ownershipOffsets"> &
+		Omit<PartitionRuntimeFactoryConfig, "ownership">,
 ) {
 	const { kafka, stateStore, partitionResolver, checkpointSource, ...config } =
 		params;
-	return createPartitionRuntimeFactory({
-		ctx: { kafka, stateStore, partitionResolver, checkpointSource },
-		config,
+	async function fetchTopicOffsets() {
+		return [{ partition: 0, offset: "0", low: "0", high: "0" }];
+	}
+	const factory = createPartitionRuntimeFactory({
+		ctx: {
+			kafka,
+			stateStore,
+			partitionResolver,
+			checkpointSource,
+			ownershipOffsets: { fetchTopicOffsets },
+		},
+		config: {
+			...config,
+			ownership: { topic: "test-ownership", endpoint: "http://localhost" },
+		},
 	});
+	function createRuntime(input: Parameters<typeof factory>[0]) {
+		return factory(input).runtime;
+	}
+	return createRuntime;
 }
 export function createKafkaPartitionOutcomeFollower({
+	assignedPartition = partition,
 	consumer,
 	partitionOffsets,
 	stateStore,
 	positionTracker,
 }: {
+	assignedPartition?: number;
 	consumer: KafkaPartitionControlPort;
 	partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
 	stateStore: Pick<SqliteBalanceStateStore, "readNextOffset">;
@@ -247,6 +291,7 @@ export function createKafkaPartitionOutcomeFollower({
 		consumer.resume([{ topic, partitions: [partition] }]);
 	}
 	return createPartitionReplay({
+		position: { topic, partition: assignedPartition },
 		ctx: {
 			partitionOffsets,
 			stateStore,
@@ -319,3 +364,46 @@ export function serializeKafkaStateInitializedRecord({
 }
 
 function ignoreUnhealthy(): void {}
+
+import type {
+	PartitionRuntimePort,
+	PartitionRuntimeResources,
+} from "../../../src/partitions/types/partitions.js";
+
+export type LifecycleTestRuntime = Pick<
+	PartitionRuntimePort,
+	"start" | "stop" | "getHealth"
+>;
+
+export const createTestRuntimeResources = ({
+	runtime,
+	markUnavailable = () => undefined,
+}: {
+	runtime: LifecycleTestRuntime;
+	markUnavailable?: PartitionRuntimeResources["markUnavailable"];
+}): PartitionRuntimeResources => {
+	const drain = async (): Promise<void> => undefined;
+	const subscribeUnavailable: PartitionRuntimePort["subscribeUnavailable"] =
+		() => () =>
+			undefined;
+	const submitTrack: PartitionRuntimePort["submitTrack"] = async () => {
+		throw new Error("Lifecycle fixture cannot execute tracks");
+	};
+	const check: PartitionRuntimePort["check"] = async () => {
+		throw new Error("Lifecycle fixture cannot execute checks");
+	};
+	const claim = async () => ({ routeEpoch: "1" });
+	const release = async (): Promise<void> => undefined;
+	return {
+		runtime: {
+			...runtime,
+			drain,
+			waitForQuiescence: drain,
+			subscribeUnavailable,
+			submitTrack,
+			check,
+		},
+		publication: { claim, release },
+		markUnavailable,
+	};
+};
