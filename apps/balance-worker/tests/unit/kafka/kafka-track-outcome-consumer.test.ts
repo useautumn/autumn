@@ -1,20 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { executeTrack } from "@autumn/balance-engine";
+import type { KafkaConsumerClient } from "@autumn/kafka";
+import { serializeMeteringRecord } from "@autumn/kafka";
 import type {
+	Admin,
 	Batch,
+	ConsumerRunConfig,
 	EachBatchHandler,
 	EachMessageHandler,
 	KafkaMessage,
 	OffsetsByTopicPartition,
 } from "kafkajs";
-import {
-	createKafkaTrackOutcomeConsumer,
-	type KafkaPartitionOffsetsPort,
-	type KafkaTrackOutcomeConsumerPort,
-	type KafkaTrackOutcomeConsumerRunConfig,
-	StateBehindKafkaLogStartError,
-} from "../../../src/kafka/kafkaTrackOutcomeConsumer.js";
-import { serializeKafkaTrackOutcomeRecord } from "../../../src/kafka/trackOutcomeRecord.js";
+import { createMeteringConsumer } from "../../../src/kafka/meteringConsumer/createMeteringConsumer.js";
+import { StateBehindKafkaLogStartError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import {
 	closeStoreFixture,
 	createOutcome,
@@ -31,11 +29,11 @@ type Commit = {
 	offset: string;
 };
 
-type FakeKafkaConsumer = KafkaTrackOutcomeConsumerPort & {
+type FakeKafkaConsumer = KafkaConsumerClient & {
 	commits: Commit[][];
 	emitGroupJoin: () => void;
 	lifecycle: string[];
-	runConfig: KafkaTrackOutcomeConsumerRunConfig | null;
+	runConfig: ConsumerRunConfig | null;
 	seeks: Commit[];
 	deliverBatch: (params: {
 		records: Array<{
@@ -58,7 +56,7 @@ const createFakeKafkaPartitionOffsets = ({
 }: {
 	low?: string;
 	high?: string;
-} = {}): KafkaPartitionOffsetsPort => ({
+} = {}): Pick<Admin, "fetchTopicOffsets"> => ({
 	fetchTopicOffsets: async () => [
 		{
 			partition,
@@ -115,13 +113,13 @@ const createFakeKafkaConsumer = ({
 		runConfig: null,
 		events: {
 			GROUP_JOIN: "consumer.group_join",
-		} as KafkaTrackOutcomeConsumerPort["events"],
+		} as KafkaConsumerClient["events"],
 		on: ((eventName: string, listener: () => void) => {
 			if (eventName === "consumer.group_join") groupJoinListener = listener;
 			return () => {
 				if (groupJoinListener === listener) groupJoinListener = null;
 			};
-		}) as KafkaTrackOutcomeConsumerPort["on"],
+		}) as KafkaConsumerClient["on"],
 		connect: async () => {
 			lifecycle.push("connect");
 		},
@@ -133,12 +131,14 @@ const createFakeKafkaConsumer = ({
 			if (!config?.eachBatch && !config?.eachMessage) {
 				throw new Error("Expected a Kafka record handler");
 			}
-			const runConfig = config as KafkaTrackOutcomeConsumerRunConfig;
+			const runConfig = config as ConsumerRunConfig;
 			this.runConfig = runConfig;
 			eachBatch = config.eachBatch ?? null;
 			eachMessage = config.eachMessage ?? null;
 		},
 		commitOffsets,
+		pause: () => undefined,
+		resume: () => undefined,
 		seek: (position) => {
 			lifecycle.push("seek");
 			seeks.push(position);
@@ -236,8 +236,8 @@ describe("Kafka track outcome consumer", () => {
 		try {
 			const state = createState();
 			fixture.store.initializeState({ state });
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeMeteringRecord({
+				record: createOutcome({ state }),
 			});
 			const consumerPort = createFakeKafkaConsumer({
 				onCommit: () => {
@@ -245,12 +245,16 @@ describe("Kafka track outcome consumer", () => {
 					expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
 				},
 			});
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
-				partitionsConsumedConcurrently: 2,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+					partitionsConsumedConcurrently: 2,
+				},
 			});
 
 			await consumer.start();
@@ -296,11 +300,15 @@ describe("Kafka track outcome consumer", () => {
 				requestId: "req_2",
 			});
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 
 			await consumer.start();
@@ -308,11 +316,11 @@ describe("Kafka track outcome consumer", () => {
 				records: [
 					{
 						offset: "0",
-						...serializeKafkaTrackOutcomeRecord({ outcome: firstOutcome }),
+						...serializeMeteringRecord({ record: firstOutcome }),
 					},
 					{
 						offset: "1",
-						...serializeKafkaTrackOutcomeRecord({ outcome: secondOutcome }),
+						...serializeMeteringRecord({ record: secondOutcome }),
 					},
 				],
 			});
@@ -359,19 +367,23 @@ describe("Kafka track outcome consumer", () => {
 			const records = [
 				{
 					offset: "0",
-					...serializeKafkaTrackOutcomeRecord({ outcome: firstOutcome }),
+					...serializeMeteringRecord({ record: firstOutcome }),
 				},
 				{
 					offset: "1",
-					...serializeKafkaTrackOutcomeRecord({ outcome: secondOutcome }),
+					...serializeMeteringRecord({ record: secondOutcome }),
 				},
 			];
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 			await consumer.start();
 
@@ -401,16 +413,20 @@ describe("Kafka track outcome consumer", () => {
 			fixture.store.initializeState({ state: initialState });
 			const firstOutcome = createOutcome({ state: initialState });
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 			await consumer.start();
 			await consumerPort.deliver({
 				offset: "0",
-				...serializeKafkaTrackOutcomeRecord({ outcome: firstOutcome }),
+				...serializeMeteringRecord({ record: firstOutcome }),
 			});
 
 			const currentState = fixture.store.readState({ identity });
@@ -427,7 +443,7 @@ describe("Kafka track outcome consumer", () => {
 
 			await consumerPort.deliver({
 				offset: "1",
-				...serializeKafkaTrackOutcomeRecord({ outcome: secondOutcome }),
+				...serializeMeteringRecord({ record: secondOutcome }),
 			});
 
 			expect(consumerPort.seeks).toEqual([]);
@@ -444,15 +460,19 @@ describe("Kafka track outcome consumer", () => {
 		try {
 			const state = createState();
 			fixture.store.initializeState({ state });
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeMeteringRecord({
+				record: createOutcome({ state }),
 			});
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 
 			await consumer.start();
@@ -487,22 +507,26 @@ describe("Kafka track outcome consumer", () => {
 			});
 			const restoredState = fixture.store.readState({ identity });
 			if (!restoredState) throw new Error("Expected restored state");
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({
+			const serialized = serializeMeteringRecord({
+				record: createOutcome({
 					state: restoredState,
 					commandId: "cmd_2",
 					requestId: "req_2",
 				}),
 			});
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets({
-					low: "5000",
-					high: "5001",
-				}),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets({
+						low: "5000",
+						high: "5001",
+					}),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 
 			await consumer.start();
@@ -526,15 +550,19 @@ describe("Kafka track outcome consumer", () => {
 		try {
 			const state = createState();
 			fixture.store.initializeState({ state });
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeMeteringRecord({
+				record: createOutcome({ state }),
 			});
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 			await consumer.start();
 
@@ -569,19 +597,23 @@ describe("Kafka track outcome consumer", () => {
 			});
 			const restoredState = fixture.store.readState({ identity });
 			if (!restoredState) throw new Error("Expected restored state");
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({
+			const serialized = serializeMeteringRecord({
+				record: createOutcome({
 					state: restoredState,
 					commandId: "cmd_2",
 					requestId: "req_2",
 				}),
 			});
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 
 			await consumer.start();
@@ -609,23 +641,27 @@ describe("Kafka track outcome consumer", () => {
 		try {
 			const initialState = createState();
 			fixture.store.initializeState({ state: initialState });
-			const firstSerialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state: initialState }),
+			const firstSerialized = serializeMeteringRecord({
+				record: createOutcome({ state: initialState }),
 			});
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 			await consumer.start();
 			await consumerPort.deliver({ offset: "0", ...firstSerialized });
 
 			const restoredState = fixture.store.readState({ identity });
 			if (!restoredState) throw new Error("Expected restored state");
-			const secondSerialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({
+			const secondSerialized = serializeMeteringRecord({
+				record: createOutcome({
 					state: restoredState,
 					commandId: "cmd_2",
 					requestId: "req_2",
@@ -651,11 +687,15 @@ describe("Kafka track outcome consumer", () => {
 			const state = createState();
 			fixture.store.initializeState({ state });
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 
 			await consumer.start();
@@ -683,15 +723,19 @@ describe("Kafka track outcome consumer", () => {
 		try {
 			const state = createState();
 			fixture.store.initializeState({ state });
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const serialized = serializeMeteringRecord({
+				record: createOutcome({ state }),
 			});
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 
 			await consumer.start();
@@ -721,18 +765,22 @@ describe("Kafka track outcome consumer", () => {
 				requestId: "req_2",
 			});
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 
 			await consumer.start();
 			await expect(
 				consumerPort.deliver({
 					offset: "1",
-					...serializeKafkaTrackOutcomeRecord({ outcome: staleOutcome }),
+					...serializeMeteringRecord({ record: staleOutcome }),
 				}),
 			).rejects.toMatchObject({
 				name: "KafkaPartitionInvariantError",
@@ -749,11 +797,15 @@ describe("Kafka track outcome consumer", () => {
 		const fixture = createStoreFixture();
 		try {
 			const consumerPort = createFakeKafkaConsumer();
-			const consumer = createKafkaTrackOutcomeConsumer({
-				consumer: consumerPort,
-				partitionOffsets: createFakeKafkaPartitionOffsets(),
-				topic,
-				stateStore: fixture.store,
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+				},
+				config: {
+					topic,
+				},
 			});
 
 			await consumer.start();
