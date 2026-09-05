@@ -25,7 +25,7 @@ import {
 	PartitionTrackStateNotFoundError,
 	PartitionTrackWriterCapacityError,
 } from "../../../src/writer/partitionTrackWriter.js";
-import { createTestRuntimeResources } from "../partitions/ownershipTestFixtures.js";
+import { createTestRuntimeResources } from "../kafka/kafka-test-fixtures.js";
 
 const command = parseTrackCommand({
 	input: {
