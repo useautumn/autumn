@@ -10,6 +10,7 @@ const topicName = z
 	.refine(isTopicName);
 const loopbackHost = z.enum(["127.0.0.1", "localhost", "::1"]);
 const workerEnvironmentBaseSchema = z.object({
+	ECS_CONTAINER_METADATA_URI_V4: z.string().url().optional(),
 	KAFKA_BROKERS: z
 		.string()
 		.transform(parseBrokers)

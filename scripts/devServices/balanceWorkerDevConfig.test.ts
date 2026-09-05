@@ -1,6 +1,23 @@
 import { describe, expect, test } from "bun:test";
 import { balanceWorkerDevConfig } from "./balanceWorkerDevConfig.ts";
 
+test("dev Kafka logs only errors unless explicitly overridden", kafkaLogLevel);
+
+function kafkaLogLevel(): void {
+	expect(
+		balanceWorkerDevConfig({ worktreeNum: 50, runtimeEnv: {} })
+			.KAFKAJS_LOG_LEVEL,
+	).toBe("error");
+	for (const level of ["warn", "info", "debug"]) {
+		expect(
+			balanceWorkerDevConfig({
+				worktreeNum: 50,
+				runtimeEnv: { KAFKAJS_LOG_LEVEL: level },
+			}).KAFKAJS_LOG_LEVEL,
+		).toBe(level);
+	}
+}
+
 describe("local balance worker launch settings", () => {
 	test("assigns collision-free per-worktree listener ports", () => {
 		const ports = new Set<number>();

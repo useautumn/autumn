@@ -17,23 +17,30 @@ async function setup(): Promise<void> {
 	}).admin();
 	await admin.connect();
 	try {
-		await admin.createTopics({
-			waitForLeaders: true,
-			topics: [
-				{
-					topic: env.BALANCE_WORKER_METERING_TOPIC,
-					numPartitions: env.BALANCE_WORKER_PARTITION_COUNT,
-					replicationFactor: 1,
-				},
-				{
-					topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
-					numPartitions: env.BALANCE_WORKER_PARTITION_COUNT,
-					replicationFactor: 1,
-					configEntries: [{ name: "cleanup.policy", value: "compact" }],
-				},
-			],
-		});
+		const topics = [
+			{
+				topic: env.BALANCE_WORKER_METERING_TOPIC,
+				numPartitions: env.BALANCE_WORKER_PARTITION_COUNT,
+				replicationFactor: 1,
+			},
+			{
+				topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+				numPartitions: env.BALANCE_WORKER_PARTITION_COUNT,
+				replicationFactor: 1,
+				configEntries: [{ name: "cleanup.policy", value: "compact" }],
+			},
+		];
+		const existingTopics = new Set(await admin.listTopics());
+		const missingTopics = [];
+		for (const topic of topics) {
+			if (!existingTopics.has(topic.topic)) missingTopics.push(topic);
+		}
+		if (missingTopics.length > 0)
+			await admin.createTopics({ waitForLeaders: true, topics: missingTopics });
 		await validateBalanceWorkerTopics({ admin, env });
+		console.info(
+			`Balance worker topics ready on ${env.KAFKA_BROKERS.join(", ")}: ${env.BALANCE_WORKER_METERING_TOPIC}, ${env.BALANCE_WORKER_OWNERSHIP_TOPIC} (${env.BALANCE_WORKER_PARTITION_COUNT} partitions)`,
+		);
 	} finally {
 		await admin.disconnect();
 	}

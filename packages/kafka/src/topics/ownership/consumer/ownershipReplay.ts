@@ -2,7 +2,38 @@ import { ownershipTopic } from "../ownershipTopic.js";
 import type { OwnershipLog } from "../types/ownershipLog.js";
 import type { OwnershipRecord } from "../types/ownershipRecord.js";
 import type { PartitionOwner } from "../types/partitionOwner.js";
-import type { OwnershipLogEntry } from "./types/ownershipConsumer.js";
+import type {
+	OwnershipConsumerState,
+	OwnershipLogEntry,
+} from "./types/ownershipConsumer.js";
+
+export function applyOwnershipMessage({
+	state,
+	message,
+	partition,
+	offset,
+}: {
+	state: OwnershipConsumerState;
+	message: { key: Buffer | null; value: Buffer | null };
+	partition: number;
+	offset: bigint;
+}): void {
+	const record = ownershipTopic.parse(message);
+	if (record.partition !== partition)
+		throw new Error("Ownership record does not match its Kafka partition");
+	const previous = state.lastAppliedOffsets.get(partition);
+	if (previous !== undefined && previous >= offset) return;
+	if (record.type === "claimed") {
+		state.owners.set(partition, {
+			partition,
+			endpoint: record.endpoint,
+			routeEpoch: offset.toString(),
+		});
+	} else {
+		state.owners.delete(partition);
+	}
+	state.lastAppliedOffsets.set(partition, offset);
+}
 
 export async function readOwnershipToEnd({
 	log,
