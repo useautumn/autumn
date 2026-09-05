@@ -1,4 +1,8 @@
-import { type CollectionSpec, emitFixture } from "../../generated/emitRuntime";
+import {
+	type CollectionSpec,
+	emitFixture,
+	emitFixtureProperty,
+} from "../../generated/emitRuntime";
 import { appendToBinding } from "../../surgery/appendToBinding";
 import { appendToCollection } from "../../surgery/appendToCollection";
 import { deleteFixtureLiteral } from "../../surgery/deleteFixtureLiteral";
@@ -6,7 +10,12 @@ import { deleteReference } from "../../surgery/deleteReference";
 import { ensureBuilderImport } from "../../surgery/ensureBuilderImport";
 import { leadingIndentOfLine } from "../../surgery/fixtureEdit";
 import { insertCollection } from "../../surgery/insertCollection";
+import {
+	fixturePropertyString,
+	patchFixtureProperty,
+} from "../../surgery/patchFixtureProperty";
 import { replaceFixture } from "../../surgery/replaceFixture";
+import { changedFixtureKeys } from "./changedFixtureKeys";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
 import { resolveCollectionTarget } from "./resolveCollectionTarget";
 import { activeVersionOf, routePlanRow } from "./routePlanRow";
@@ -250,6 +259,62 @@ export const applyPreview = ({
 		return true;
 	};
 
+	const patchChangedProperties = ({
+		entry,
+		row,
+		indent,
+		located,
+	}: {
+		entry: PreviewEntry;
+		row: Record<string, unknown>;
+		indent: string;
+		located: NonNullable<ReturnType<typeof locateFixture>>;
+	}): string | null => {
+		// The fixture may have been found by its stable id; the public id it
+		// states is what a rename has to move.
+		const keys = changedFixtureKeys({
+			spec,
+			entry,
+			includeMappings,
+			fixtureId: fixturePropertyString({
+				call: located.node,
+				property: spec.idField,
+			}),
+			rowId: row[spec.responseIdField],
+		});
+		if (keys === null) return null;
+		let source = located.source;
+		// Identity keys come last, and the slug moves before the id, so every
+		// lookup still finds the fixture by what the config said before.
+		let where = located.where;
+		for (const property of keys) {
+			const text = emitFixtureProperty({
+				spec,
+				row,
+				key: property,
+				includeMappings,
+				indent,
+			});
+			const next = patchFixtureProperty({
+				source,
+				builder: spec.builder,
+				idField: located.idField,
+				id: located.id,
+				where,
+				property,
+				text,
+			});
+			if (next === null) return null;
+			source = next;
+			if (property === "versionSlug" && versioned) {
+				const slug =
+					typeof row.versionSlug === "string" ? row.versionSlug : "v1";
+				where = [{ field: "versionSlug", equals: slug, absentMeans: "v1" }];
+			}
+		}
+		return source;
+	};
+
 	const replaceRow = ({
 		id,
 		entry,
@@ -342,6 +407,20 @@ export const applyPreview = ({
 			located.source,
 			located.node.range().start.index,
 		);
+		// When the preview names the fields, only those move; the rest of the
+		// fixture keeps its bytes. A diff without fields rewrites the whole call.
+		const patched = patchChangedProperties({
+			entry,
+			row: emitted,
+			indent,
+			located,
+		});
+		if (patched !== null) {
+			files.set(located.file, patched);
+			result.replaced.push(key);
+			result.lines.push(`~ ${key}`);
+			return;
+		}
 		const text = emitFixture({ spec, row: emitted, includeMappings, indent });
 		const updated = replaceFixture({
 			source: located.source,
