@@ -1,10 +1,14 @@
 import { expect } from "bun:test";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { runPull } from "../../../../packages/atmn-nightly/src/actions/pull";
 import type { AutumnClient } from "../../../../packages/atmn-nightly/src/generated/client";
 import { uniqueTestId } from "../../integration/catalog-v2/utils/uniqueTestId.js";
-import { type AtmnScenario, TMP_ROOT } from "./initAtmnScenario.js";
+import {
+	type AtmnScenario,
+	runCli,
+	TMP_ROOT,
+	wireOfConfig,
+} from "./initAtmnScenario.js";
 
 type PreviewRow = { action?: string } & Record<string, unknown>;
 
@@ -77,29 +81,31 @@ export const expectRoundTrip = async ({
 	const freshDir = join(TMP_ROOT, uniqueTestId("atmn_fresh"));
 	mkdirSync(freshDir, { recursive: true });
 	try {
-		await runPull({
-			client: scenario.client,
-			cwd: freshDir,
-			includeMappings,
-			write: () => {},
+		const pullFresh = () =>
+			runCli({
+				cwd: freshDir,
+				args: ["pull", ...(includeMappings ? ["--include-mappings"] : [])],
+				secretKey: scenario.secretKey,
+				baseUrl: scenario.baseUrl,
+			});
+		pullFresh();
+		const freshWire = wireOfConfig({
+			configPath: join(freshDir, "autumn.config.ts"),
 		});
-		const freshWire = (
-			await import(`${join(freshDir, "autumn.config.ts")}?v=${Date.now()}`)
-		).default as Record<string, unknown>;
 		await expectPreviewNone({ client: scenario.client, wire: freshWire });
 
 		const before = snapshot(freshDir);
-		await runPull({
-			client: scenario.client,
-			cwd: freshDir,
-			includeMappings,
-			write: () => {},
-		});
+		pullFresh();
 		const after = snapshot(freshDir);
 		expect([...after.entries()]).toEqual([...before.entries()]);
 		return { freshDir, freshFiles: after, freshWire };
 	} catch (error) {
+		// What the pull wrote is the evidence; the dir is gone by the time anyone looks.
+		const written = [...snapshot(freshDir).entries()]
+			.map(([file, text]) => `--- ${file}\n${text}`)
+			.join("\n");
 		rmSync(freshDir, { recursive: true, force: true });
-		throw error;
+		const message = error instanceof Error ? error.message : String(error);
+		throw new Error(`${message}\n\nFresh pull wrote:\n${written}`);
 	}
 };

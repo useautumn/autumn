@@ -41,7 +41,7 @@ const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");
  * imported files are re-read each time, which an in-process import cannot
  * promise, and the output is what a user sees.
  */
-const runCli = ({
+export const runCli = ({
 	cwd,
 	args,
 	secretKey,
@@ -67,6 +67,24 @@ const runCli = ({
 	const output = `${result.stdout.toString()}${result.stderr.toString()}`;
 	if (result.exitCode !== 0) throw new Error(output.trim());
 	return output;
+};
+
+/** The wire a config evaluates to, in a fresh process so imported files are re-read. */
+export const wireOfConfig = ({
+	configPath,
+}: {
+	configPath: string;
+}): Record<string, unknown> => {
+	const result = Bun.spawnSync(
+		[
+			"bun",
+			"-e",
+			`import(${JSON.stringify(configPath)}).then((m) => process.stdout.write(JSON.stringify(m.default)))`,
+		],
+		{ cwd: dirname(configPath), stdout: "pipe", stderr: "pipe" },
+	);
+	if (result.exitCode !== 0) throw new Error(result.stderr.toString().trim());
+	return JSON.parse(result.stdout.toString()) as Record<string, unknown>;
 };
 
 /** Ids under the "Draft migrations (n)" heading, one per indented line. */
@@ -135,6 +153,8 @@ export type AtmnScenario = {
 	configPath: string;
 	/** Base URL the scenario's client talks to — reuse for any client a test builds itself. */
 	baseUrl: string;
+	/** The org's secret key, for any CLI a helper spawns itself. */
+	secretKey: string;
 	/** The CLI client for this org: previewUpdate / update / get. */
 	client: AutumnClient;
 	/** Rewrite the config between steps. */
@@ -148,6 +168,8 @@ export type AtmnScenario = {
 		migrationIds: string[];
 	}>;
 	pull: (options?: { includeMappings?: boolean }) => Promise<PullOutcome>;
+	/** The server's diff for the config as it stands — what a push would apply. */
+	preview: () => Promise<Record<string, unknown>>;
 	/** What the config currently evaluates to — the wire document. */
 	wireFromConfig: () => Promise<Record<string, unknown>>;
 	/** A real attach through the billing API: customer_products, entitlements, prices. */
@@ -237,6 +259,7 @@ export const initAtmnScenario = async ({
 		cwd,
 		configPath,
 		baseUrl,
+		secretKey: scenario.ctx.orgSecretKey,
 		client,
 		writeConfig,
 		writeFile,
@@ -263,20 +286,12 @@ export const initAtmnScenario = async ({
 			});
 			return { output, ...pullEditsIn(output) };
 		},
-		wireFromConfig: async () => {
-			// A fresh process: files the config imports are re-read every time.
-			const result = Bun.spawnSync(
-				[
-					"bun",
-					"-e",
-					`import(${JSON.stringify(configPath)}).then((m) => process.stdout.write(JSON.stringify(m.default)))`,
-				],
-				{ cwd, stdout: "pipe", stderr: "pipe" },
-			);
-			if (result.exitCode !== 0)
-				throw new Error(result.stderr.toString().trim());
-			return JSON.parse(result.stdout.toString()) as Record<string, unknown>;
-		},
+		wireFromConfig: async () => wireOfConfig({ configPath }),
+		preview: async () =>
+			(await client.previewUpdate(
+				// biome-ignore lint/suspicious/noExplicitAny: the wire is the CLI's own document
+				wireOfConfig({ configPath }) as any,
+			)) as Record<string, unknown>,
 		attachCustomer: async ({ planId, customerId }) => {
 			const target = customerId ?? scenario.customerId;
 			if (target === undefined)
