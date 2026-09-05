@@ -105,26 +105,36 @@ export const computeRemoveFeaturesPlan = ({
 				internalFeatureId: removeFeaturePlan.current.internal_id,
 				productStatesContext: catalogContext.productStatesContext,
 			});
-			const hasUnclearedPlanItem = referencingPlanIds.some(
-				(planId) => !planIsPartOfThisPush({ planId, params }),
-			);
-			const hasSurvivingCatalogReference = Boolean(
-				hasUnclearedPlanItem ||
+			// Under full state every plan is in the push, stated or removed, so a
+			// plan item is never a forgotten reference there; only a partial push
+			// can leave a plan outside itself.
+			const fullState = params.skip_deletions === false;
+			const hasUnclearedPlanItem =
+				!fullState &&
+				referencingPlanIds.some(
+					(planId) => !planIsPartOfThisPush({ planId, params }),
+				);
+			const hasSurvivingCreditSystem =
+				getCreditSystemsFromFeature({
+					featureId: removeFeaturePlan.featureId,
+					features: survivingFeatures,
+				}).length > 0;
+			const hasSurvivingCatalogReference =
+				hasUnclearedPlanItem || hasSurvivingCreditSystem;
+			const hasAnyCatalogReference = Boolean(
+				referencingPlanIds.length > 0 ||
 					state?.has_loose_entitlements ||
 					state?.has_entity_feature_entitlements ||
 					state?.has_loose_entity_feature_entitlements ||
-					state?.has_prices ||
-					getCreditSystemsFromFeature({
-						featureId: removeFeaturePlan.featureId,
-						features: survivingFeatures,
-					}).length,
+					state?.has_prices,
 			);
 
 			return {
 				...removeFeaturePlan,
 				willArchive:
 					removeFeaturePlan.hasCustomerEntitlements ||
-					hasSurvivingCatalogReference,
+					hasSurvivingCatalogReference ||
+					hasAnyCatalogReference,
 				hasSurvivingCatalogReference,
 			};
 		}),
