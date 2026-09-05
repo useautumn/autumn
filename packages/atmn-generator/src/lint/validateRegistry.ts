@@ -31,6 +31,8 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return [rule.when, rule.field];
 		case "targetHas":
 			return [rule.when, rule.field];
+		case "targetLacks":
+			return [rule.field];
 	}
 };
 
@@ -110,6 +112,47 @@ export const validateRegistry = ({
 				if (!targetFields?.has(rule.target)) {
 					problems.push(
 						`"${path}": targetHas rule targets "${rule.in}.${rule.target}", which is not a field there.`,
+					);
+				}
+			}
+			if (rule.kind === "targetLacks") {
+				if (!topLevel.has(rule.in)) {
+					problems.push(
+						`"${path}": targetLacks rule points at "${rule.in}", which is not a top-level collection.`,
+					);
+					continue;
+				}
+				const targetFields = fieldsAtPath({
+					schema,
+					root,
+					path: rule.in,
+					overlay,
+				});
+				if (!targetFields?.has(rule.matching)) {
+					problems.push(
+						`"${path}": targetLacks rule matches on "${rule.in}.${rule.matching}", which is not a field there.`,
+					);
+				}
+				if (!targetFields?.has(rule.target)) {
+					problems.push(
+						`"${path}": targetLacks rule targets "${rule.in}.${rule.target}", which is not a field there.`,
+					);
+				}
+				const parentPath = path.split(".").slice(0, -1).join(".");
+				const parentFields = fieldsAtPath({
+					schema,
+					root,
+					path: parentPath,
+					overlay,
+				});
+				if (!parentFields?.has(rule.parentGuard)) {
+					problems.push(
+						`"${path}": targetLacks rule's parentGuard "${rule.parentGuard}" is not a field of "${parentPath || "config"}".`,
+					);
+				}
+				if (!parentFields?.has(rule.parentIdField)) {
+					problems.push(
+						`"${path}": targetLacks rule's parentIdField "${rule.parentIdField}" is not a field of "${parentPath || "config"}".`,
 					);
 				}
 			}

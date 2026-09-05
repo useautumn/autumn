@@ -330,6 +330,59 @@ test("targetHas checks a present collection, skips an absent one or an unmatched
 	]);
 });
 
+test("targetLacks checks a present collection, skips a guarded parent or an unmatched row", () => {
+	const rules = [
+		{
+			kind: "targetLacks" as const,
+			field: "featureId",
+			in: "features",
+			matching: "featureId",
+			target: "archived",
+			label: "Feature",
+			parentGuard: "archived",
+			parentIdField: "planId",
+			parentLabel: "plan",
+			because: "Because.",
+		},
+	];
+	const lint = ({
+		document,
+		parentEntry,
+	}: {
+		document: Record<string, unknown>;
+		parentEntry?: Record<string, unknown>;
+	}) =>
+		lintDocument({
+			document: {
+				...document,
+				plans: [
+					{ planId: "pro", ...parentEntry, items: [{ featureId: "seats" }] },
+				],
+			},
+			rules: { "plans.items": { rules } },
+			hints: noHints,
+		}).map((issue) => issue.message);
+
+	expect(
+		lint({ document: { features: [{ featureId: "seats", archived: true }] } }),
+	).toEqual([
+		'Feature "seats" is archived. Unarchive it, or archive plan "pro". Because.',
+	]);
+	// The referenced feature is not archived: nothing to flag.
+	expect(
+		lint({ document: { features: [{ featureId: "seats", archived: false }] } }),
+	).toEqual([]);
+	// An archived plan may reference an archived feature freely.
+	expect(
+		lint({
+			document: { features: [{ featureId: "seats", archived: true }] },
+			parentEntry: { archived: true },
+		}),
+	).toEqual([]);
+	// Omitted means "not mine": the exists rule owns unmatched references.
+	expect(lint({ document: {} })).toEqual([]);
+});
+
 test("compare", () => {
 	const rules = [
 		{
