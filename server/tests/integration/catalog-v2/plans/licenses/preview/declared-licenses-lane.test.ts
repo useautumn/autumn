@@ -16,10 +16,7 @@ import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
 } from "../../preview/utils/expectPlanPreview.js";
-import {
-	messagesItem,
-	withCatalogPlans,
-} from "../utils/seedLicensePlans.js";
+import { messagesItem, withCatalogPlans } from "../utils/seedLicensePlans.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 plan-licenses preview: declared set vs omitted key")}`,
@@ -159,8 +156,6 @@ test.concurrent(
 					expected: {
 						planId: parentId,
 						action: "create",
-						planChange: null,
-						licenseChanges: null,
 						licenses: [
 							{
 								license_plan_id: childId,

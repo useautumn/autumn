@@ -239,7 +239,8 @@ test.concurrent(
 					plans: [
 						{
 							plan_id: parentId,
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							licenses: [
 								{
 									license_plan_id: childId,
@@ -279,6 +280,17 @@ test.concurrent(
 								version_slug: "v1",
 								included: 2,
 								prepaid_only: true,
+								// The link's own overlay rides the row now, so a pull can restate it.
+								customize: {
+									add_items: [
+										{
+											feature_id: TestFeature.Dashboard,
+											included: 0,
+											pooled: false,
+											unlimited: false,
+										},
+									],
+								},
 							},
 						],
 					},
