@@ -19,38 +19,17 @@ import {
 	computeDeduction,
 } from "../../deduction/computeDeduction.js";
 
-const receiptMatchesCommand = ({
-	receipt,
-	command,
-}: {
-	receipt: TrackOutcome;
-	command: TrackCommand;
-}): boolean =>
-	receipt.commandId === command.commandId &&
-	receipt.commandFingerprint === trackCommandFingerprintOf({ command });
-
 type TerminalTrackDecision = Exclude<TrackDecision, { kind: "new" }>;
 
 const classifyTrackCommand = ({
 	state,
 	command,
-	existingReceipt,
 }: {
 	state: CustomerMeteringState;
 	command: TrackCommand;
-	existingReceipt: TrackOutcome | null;
 }): DirectMeteredV1FeatureState | TerminalTrackDecision => {
 	if (!identitiesMatch({ left: state.identity, right: command.identity })) {
 		return { kind: "unsupported", reason: "subject_mismatch" };
-	}
-
-	const receipt = existingReceipt
-		? parseTrackOutcome({ input: existingReceipt })
-		: null;
-	if (receipt) {
-		return receiptMatchesCommand({ receipt, command })
-			? { kind: "duplicate", outcome: receipt }
-			: { kind: "unsupported", reason: "command_conflict" };
 	}
 	if (command.entityId) {
 		return { kind: "unsupported", reason: "entity_not_supported" };
@@ -129,22 +108,17 @@ const buildTrackOutcome = ({
 	});
 };
 
+/** Pure: same state and command always yield the same decision. Deduplication is the writer's job. */
 export const computeTrack = ({
 	state,
 	command,
-	existingReceipt = null,
 	deduplicationExpiresAt,
 }: {
 	state: CustomerMeteringState;
 	command: TrackCommand;
-	existingReceipt?: TrackOutcome | null;
 	deduplicationExpiresAt: number;
 }): TrackDecision => {
-	const classification = classifyTrackCommand({
-		state,
-		command,
-		existingReceipt,
-	});
+	const classification = classifyTrackCommand({ state, command });
 	if (classification.kind !== "direct_metered_v1") return classification;
 
 	const requestedValue = new Decimal(command.value);

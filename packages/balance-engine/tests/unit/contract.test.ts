@@ -4,7 +4,6 @@ import {
 	computeCheck,
 	computeTrack as computeTrackOutcome,
 	createCustomerMeteringState,
-	executeTrack,
 	parseCheckCommand,
 	parseCustomerMeteringState,
 	parseStateInitializedEvent,
@@ -129,45 +128,16 @@ describe("balance engine contract boundaries", () => {
 		).toThrow();
 	});
 
-	test("treats attempt metadata changes as the same logical command", () => {
-		const state = createState();
-		const outcome = requireNewOutcome(
-			computeTrack({ state, command: createTrackCommand() }),
-		);
-		const appliedState = executeTrack({ state, outcome }).state;
-
-		expect(
-			computeTrack({
-				state: appliedState,
-				existingReceipt: outcome,
-				command: createTrackCommand({
-					requestId: "req_2",
-					occurredAt: 1_700_000_000_001,
-				}),
-			}),
-		).toEqual({ kind: "duplicate", outcome });
-	});
-
-	test("carries the resolved deduplication deadline without changing command identity", () => {
-		const state = createState();
+	test("stamps the resolved deduplication deadline onto the outcome", () => {
 		const outcome = requireNewOutcome(
 			computeTrack({
-				state,
+				state: createState(),
 				command: createTrackCommand(),
 				deduplicationExpiresAt: 1_700_086_400_000,
 			}),
 		);
-		const appliedState = executeTrack({ state, outcome }).state;
 
 		expect(outcome.deduplicationExpiresAt).toBe(1_700_086_400_000);
-		expect(
-			computeTrack({
-				state: appliedState,
-				existingReceipt: outcome,
-				command: createTrackCommand({ requestId: "req_2" }),
-				deduplicationExpiresAt: 1_700_086_400_001,
-			}),
-		).toEqual({ kind: "duplicate", outcome });
 	});
 
 	test("validates a versioned initial-state event", () => {

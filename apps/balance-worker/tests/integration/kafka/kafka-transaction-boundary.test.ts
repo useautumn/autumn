@@ -24,7 +24,7 @@ import { createPartitionCheckpointExporter } from "../../../src/checkpoint/parti
 import type { PartitionCheckpointSource } from "../../../src/checkpoint/partitionCheckpointSource.js";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
 import { createWorkerConsumerConfig as balanceWorkerConsumerConfigOf } from "../../../src/init/workerConfig.js";
-import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
+import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
@@ -44,7 +44,7 @@ import {
 	type SqliteBalanceStateStore,
 } from "../../../src/state/sqliteBalanceStateStore.js";
 import {
-	createKafkaCommittedTrackOutcomeAppender,
+	createKafkaCommittedMutationAppender,
 	createKafkaOwnedPartitionGroup,
 	createKafkaOwnedPartitionProducer,
 	createKafkaOwnedPartitionRuntimeFactory,
@@ -379,7 +379,7 @@ describe("Kafka transaction boundary", () => {
 			});
 			await seedTransaction.commit();
 			const seedBaseOffset = baseOffsetFrom({ metadata: seedMetadata });
-			const appender = createKafkaCommittedTrackOutcomeAppender({
+			const appender = createKafkaCommittedMutationAppender({
 				producer: seedProducer,
 			});
 			const tailAppend = await appender.appendCommitted({
@@ -656,7 +656,7 @@ describe("Kafka transaction boundary", () => {
 			await abortedTransaction.abort();
 			const abortedOffset = baseOffsetFrom({ metadata: abortedMetadata });
 
-			const appender = createKafkaCommittedTrackOutcomeAppender({ producer });
+			const appender = createKafkaCommittedMutationAppender({ producer });
 			const { baseOffset: committedOffset } = await appender.appendCommitted({
 				topic: topicFixture.topic,
 				partition,
@@ -983,7 +983,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 				ctx: { session: replacement },
 				config: { topic: fixture.topic, partition },
 			}),
-			appender: createTrackOutcomePublisher({
+			appender: createMutationPublisher({
 				ctx: { producer: replacement },
 			}),
 			follower: replay,
@@ -1037,7 +1037,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 			commandId: "cmd_handoff",
 			requestId: "req_handoff",
 		});
-		await createTrackOutcomePublisher({
+		await createMutationPublisher({
 			ctx: { producer: active },
 		}).appendCommitted({
 			topic: fixture.topic,
@@ -1068,7 +1068,7 @@ test("prepares without fencing and activates from the committed tail", async fun
 			kind: "duplicate",
 		});
 		await expect(
-			createTrackOutcomePublisher({
+			createMutationPublisher({
 				ctx: { producer: active },
 			}).appendCommitted({
 				topic: fixture.topic,

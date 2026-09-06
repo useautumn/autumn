@@ -5,24 +5,40 @@ import { join } from "node:path";
 import {
 	createCustomerMeteringState,
 	type MeteringIdentity,
+	parseStateInitializedEvent,
 	parseTrackCommand,
+	type StateInitializedEvent,
 	type TrackCommand,
-	type TrackOutcome,
+	type TrackDecision,
 } from "@autumn/balance-engine";
+import type { MeteringRecord } from "@autumn/kafka";
+import {
+	type InitializationDecision,
+	initialize,
+} from "../../../../src/processor/commands/initialize.js";
+import {
+	submitTrack,
+	type TrackReceiptPolicy,
+} from "../../../../src/processor/commands/track.js";
+import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
+import type {
+	CommittedOutcomeAppender,
+	PartitionWriterContext,
+	PartitionWriterLimits,
+} from "../../../../src/processor/writer/types/partitionWriter.js";
+import {
+	MutationBatchAppendError,
+	MutationBatchNotCommittedError,
+	PartitionWriterCapacityError,
+	PartitionWriterCommandConflictError,
+	PartitionWriterRecoveryRequiredError,
+	PartitionWriterStateNotFoundError,
+} from "../../../../src/processor/writer/writerErrors.js";
+import { ConflictingMeteringStateInitializationError } from "../../../../src/state/sqliteBalanceStateErrors.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
-} from "../../../src/state/sqliteBalanceStateStore.js";
-import {
-	type CommittedTrackOutcomeAppender,
-	TrackOutcomeBatchNotCommittedError,
-} from "../../../src/writer/committedTrackOutcomeAppender.js";
-import {
-	createPartitionTrackWriter as createPartitionTrackWriterCore,
-	PartitionTrackWriterCapacityError,
-	PartitionTrackWriterRecoveryRequiredError,
-	TrackOutcomeBatchAppendError,
-} from "../../../src/writer/partitionTrackWriter.js";
+} from "../../../../src/state/sqliteBalanceStateStore.js";
 
 const topic = "metering-events-v1";
 const partition = 0;
@@ -93,8 +109,27 @@ const readBalance = ({
 	};
 };
 
-class RecordingCommittedAppender implements CommittedTrackOutcomeAppender {
-	readonly batches: TrackOutcome[][] = [];
+const createInitialization = ({
+	identity,
+	initializationId = `init_${identity.customerId}`,
+	balance = 10,
+}: {
+	identity: MeteringIdentity;
+	initializationId?: string;
+	balance?: number;
+}): StateInitializedEvent =>
+	parseStateInitializedEvent({
+		input: {
+			schemaVersion: 1,
+			type: "state_initialized",
+			initializationId,
+			initializedAt: 1_700_000_000_000,
+			state: createState({ identity, balance }),
+		},
+	});
+
+class RecordingCommittedAppender implements CommittedOutcomeAppender {
+	readonly batches: MeteringRecord[][] = [];
 	private nextOffset = 0n;
 
 	async appendCommitted({
@@ -102,7 +137,7 @@ class RecordingCommittedAppender implements CommittedTrackOutcomeAppender {
 	}: {
 		topic: string;
 		partition: number;
-		outcomes: readonly TrackOutcome[];
+		outcomes: readonly MeteringRecord[];
 	}): Promise<{ baseOffset: bigint }> {
 		const baseOffset = this.nextOffset;
 		this.batches.push([...outcomes]);
@@ -111,8 +146,8 @@ class RecordingCommittedAppender implements CommittedTrackOutcomeAppender {
 	}
 }
 
-class ControlledCommittedAppender implements CommittedTrackOutcomeAppender {
-	readonly batches: TrackOutcome[][] = [];
+class ControlledCommittedAppender implements CommittedOutcomeAppender {
+	readonly batches: MeteringRecord[][] = [];
 	private resolveAppend: ((result: { baseOffset: bigint }) => void) | null =
 		null;
 
@@ -121,7 +156,7 @@ class ControlledCommittedAppender implements CommittedTrackOutcomeAppender {
 	}: {
 		topic: string;
 		partition: number;
-		outcomes: readonly TrackOutcome[];
+		outcomes: readonly MeteringRecord[];
 	}): Promise<{ baseOffset: bigint }> {
 		this.batches.push([...outcomes]);
 		return new Promise((resolve) => {
@@ -172,6 +207,13 @@ const closeFixture = ({
 	rmSync(directory, { recursive: true, force: true });
 };
 
+const batchKeys = (batch: MeteringRecord[] | undefined) =>
+	batch?.map((mutation) =>
+		mutation.type === "track_outcome"
+			? mutation.commandId
+			: mutation.initializationId,
+	);
+
 const waitForBatch = async (): Promise<void> => {
 	await new Promise<void>((resolve) => setImmediate(resolve));
 };
@@ -187,19 +229,41 @@ const defaultReceiptPolicy = {
 	now: () => 1_700_000_000_000,
 };
 
-const createPartitionTrackWriter = ({
-	receiptPolicy = defaultReceiptPolicy,
-	...input
-}: Omit<
-	Parameters<typeof createPartitionTrackWriterCore>[0],
-	"receiptPolicy"
-> & {
-	receiptPolicy?: Parameters<
-		typeof createPartitionTrackWriterCore
-	>[0]["receiptPolicy"];
-}) => createPartitionTrackWriterCore({ ...input, receiptPolicy });
+type TestWriter = {
+	submitTrack(params: { command: TrackCommand }): Promise<TrackDecision>;
+	submitInitialization(params: {
+		initialization: StateInitializedEvent;
+	}): Promise<InitializationDecision>;
+};
 
-describe("partition track writer", () => {
+const createPartitionTrackWriter = ({
+	topic,
+	partition,
+	stateStore,
+	appender,
+	limits,
+	receiptPolicy = defaultReceiptPolicy,
+}: {
+	topic: string;
+	partition: number;
+	stateStore: PartitionWriterContext["stateStore"];
+	appender: CommittedOutcomeAppender;
+	limits: PartitionWriterLimits;
+	receiptPolicy?: TrackReceiptPolicy;
+}): TestWriter => {
+	const writer = createPartitionWriterCore({
+		ctx: { stateStore, appender },
+		config: { topic, partition, limits },
+	});
+	return {
+		submitTrack: ({ command }) =>
+			submitTrack({ writer, command, receiptPolicy }),
+		submitInitialization: ({ initialization }) =>
+			initialize({ writer, initialization }),
+	};
+};
+
+describe("partition writer", () => {
 	test("stamps receipt expiry from worker policy", async () => {
 		const fixture = createFixture();
 		try {
@@ -221,9 +285,9 @@ describe("partition track writer", () => {
 				kind: "new",
 				outcome: { deduplicationExpiresAt: 1_700_086_400_000 },
 			});
-			expect(appender.batches[0]?.[0]?.deduplicationExpiresAt).toBe(
-				1_700_086_400_000,
-			);
+			expect(appender.batches[0]?.[0]).toMatchObject({
+				deduplicationExpiresAt: 1_700_086_400_000,
+			});
 		} finally {
 			closeFixture(fixture);
 		}
@@ -254,7 +318,7 @@ describe("partition track writer", () => {
 				),
 			).toEqual(["applied", "applied", "rejected"]);
 			expect(appender.batches).toHaveLength(1);
-			expect(appender.batches[0]?.map(({ commandId }) => commandId)).toEqual([
+			expect(batchKeys(appender.batches[0])).toEqual([
 				"cmd_1",
 				"cmd_2",
 				"cmd_3",
@@ -301,7 +365,7 @@ describe("partition track writer", () => {
 				}),
 			]);
 
-			expect(appender.batches[0]?.map(({ commandId }) => commandId)).toEqual([
+			expect(batchKeys(appender.batches[0])).toEqual([
 				"cmd_a1",
 				"cmd_b1",
 				"cmd_a2",
@@ -387,7 +451,8 @@ describe("partition track writer", () => {
 
 			await waitForBatch();
 			const outcome = appender.batches[0]?.[0];
-			if (!outcome) throw new Error("Expected an appended track outcome");
+			if (!outcome || outcome.type !== "track_outcome")
+				throw new Error("Expected an appended track outcome");
 			expect(
 				fixture.store.applyDurableTrackOutcome({
 					position: { topic, partition, offset: 0n },
@@ -472,26 +537,32 @@ describe("partition track writer", () => {
 			});
 			const command = createCommand({ commandId: "cmd_1" });
 
-			const [firstDecision, retryDecision, conflictDecision] =
-				await Promise.all([
+			const [firstDecision, retryDecision, conflict] = await Promise.allSettled(
+				[
 					writer.submitTrack({ command }),
 					writer.submitTrack({
 						command: { ...command, requestId: "req_retry" },
 					}),
 					writer.submitTrack({ command: { ...command, value: 6 } }),
-				]);
+				],
+			);
 
-			expect(firstDecision.kind).toBe("new");
-			expect(retryDecision.kind).toBe("duplicate");
-			expect(retryDecision).toMatchObject({
+			if (firstDecision.status !== "fulfilled") throw firstDecision.reason;
+			if (retryDecision.status !== "fulfilled") throw retryDecision.reason;
+			expect(firstDecision.value.kind).toBe("new");
+			expect(retryDecision.value).toMatchObject({
 				kind: "duplicate",
 				outcome:
-					firstDecision.kind === "new" ? firstDecision.outcome : undefined,
+					firstDecision.value.kind === "new"
+						? firstDecision.value.outcome
+						: undefined,
 			});
-			expect(conflictDecision).toEqual({
-				kind: "unsupported",
-				reason: "command_conflict",
-			});
+			expect(conflict.status).toBe("rejected");
+			if (conflict.status === "rejected") {
+				expect(conflict.reason).toBeInstanceOf(
+					PartitionWriterCommandConflictError,
+				);
+			}
 			expect(appender.batches).toHaveLength(1);
 			expect(appender.batches[0]).toHaveLength(1);
 			expect(
@@ -511,13 +582,13 @@ describe("partition track writer", () => {
 		try {
 			let appendAttempts = 0;
 			let nextOffset = 0n;
-			const batches: TrackOutcome[][] = [];
-			const appender: CommittedTrackOutcomeAppender = {
+			const batches: MeteringRecord[][] = [];
+			const appender: CommittedOutcomeAppender = {
 				appendCommitted: async ({ outcomes }) => {
 					appendAttempts += 1;
 					batches.push([...outcomes]);
 					if (appendAttempts === 1) {
-						throw new TrackOutcomeBatchNotCommittedError({
+						throw new MutationBatchNotCommittedError({
 							cause: new Error("broker unavailable"),
 						});
 					}
@@ -542,7 +613,7 @@ describe("partition track writer", () => {
 			expect(failed.every(({ status }) => status === "rejected")).toBe(true);
 			for (const result of failed) {
 				if (result.status === "rejected") {
-					expect(result.reason).toBeInstanceOf(TrackOutcomeBatchAppendError);
+					expect(result.reason).toBeInstanceOf(MutationBatchAppendError);
 				}
 			}
 			expect(
@@ -574,7 +645,7 @@ describe("partition track writer", () => {
 	test("stops when an append failure could have committed", async () => {
 		const fixture = createFixture();
 		try {
-			const appender: CommittedTrackOutcomeAppender = {
+			const appender: CommittedOutcomeAppender = {
 				appendCommitted: async () => {
 					throw new Error("commit acknowledgement lost");
 				},
@@ -589,10 +660,10 @@ describe("partition track writer", () => {
 
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
-			).rejects.toBeInstanceOf(PartitionTrackWriterRecoveryRequiredError);
+			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_2" }) }),
-			).rejects.toBeInstanceOf(PartitionTrackWriterRecoveryRequiredError);
+			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
@@ -608,7 +679,7 @@ describe("partition track writer", () => {
 	test("stops when a committed appender returns an invalid offset", async () => {
 		const fixture = createFixture();
 		try {
-			const appender: CommittedTrackOutcomeAppender = {
+			const appender: CommittedOutcomeAppender = {
 				appendCommitted: async () => ({ baseOffset: -1n }),
 			};
 			const writer = createPartitionTrackWriter({
@@ -621,10 +692,10 @@ describe("partition track writer", () => {
 
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
-			).rejects.toBeInstanceOf(PartitionTrackWriterRecoveryRequiredError);
+			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_2" }) }),
-			).rejects.toBeInstanceOf(PartitionTrackWriterRecoveryRequiredError);
+			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
 		} finally {
 			closeFixture(fixture);
 		}
@@ -682,7 +753,7 @@ describe("partition track writer", () => {
 						identity: secondIdentity,
 					}),
 				}),
-			).rejects.toBeInstanceOf(PartitionTrackWriterCapacityError);
+			).rejects.toBeInstanceOf(PartitionWriterCapacityError);
 
 			await waitForBatch();
 			appender.resolve();
@@ -723,7 +794,7 @@ describe("partition track writer", () => {
 				writer.submitTrack({
 					command: createCommand({ commandId: "cmd_a2" }),
 				}),
-			).rejects.toBeInstanceOf(PartitionTrackWriterCapacityError);
+			).rejects.toBeInstanceOf(PartitionWriterCapacityError);
 			const secondCustomerPromise = writer.submitTrack({
 				command: createCommand({
 					commandId: "cmd_b1",
@@ -734,10 +805,7 @@ describe("partition track writer", () => {
 			await waitForBatch();
 			appender.resolve();
 			await Promise.all([firstCustomerPromise, secondCustomerPromise]);
-			expect(appender.batches[0]?.map(({ commandId }) => commandId)).toEqual([
-				"cmd_a1",
-				"cmd_b1",
-			]);
+			expect(batchKeys(appender.batches[0])).toEqual(["cmd_a1", "cmd_b1"]);
 		} finally {
 			closeFixture(fixture);
 		}
@@ -750,7 +818,7 @@ describe("partition track writer", () => {
 			const stateStore = {
 				readState: fixture.store.readState.bind(fixture.store),
 				readTrackReceipt: fixture.store.readTrackReceipt.bind(fixture.store),
-				applyDurableTrackOutcomes: () => {
+				applyDurableMutations: () => {
 					throw new Error("disk write failed");
 				},
 			};
@@ -764,10 +832,10 @@ describe("partition track writer", () => {
 
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
-			).rejects.toBeInstanceOf(PartitionTrackWriterRecoveryRequiredError);
+			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_2" }) }),
-			).rejects.toBeInstanceOf(PartitionTrackWriterRecoveryRequiredError);
+			).rejects.toBeInstanceOf(PartitionWriterRecoveryRequiredError);
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toEqual({
@@ -804,6 +872,185 @@ describe("partition track writer", () => {
 				reason: "properties_not_supported",
 			});
 			expect(appender.batches).toHaveLength(0);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("rejects a track for a customer with no state without appending", async () => {
+		const fixture = createFixture({ identities: [] });
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+			});
+
+			await expect(
+				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
+			).rejects.toBeInstanceOf(PartitionWriterStateNotFoundError);
+			expect(appender.batches).toHaveLength(0);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("commits an initialization then serves tracks against it in one batch", async () => {
+		const fixture = createFixture({ identities: [] });
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+			});
+
+			const [initialized, tracked] = await Promise.all([
+				writer.submitInitialization({
+					initialization: createInitialization({ identity: firstIdentity }),
+				}),
+				writer.submitTrack({ command: createCommand({ commandId: "cmd_1" }) }),
+			]);
+
+			expect(initialized).toMatchObject({ kind: "initialized" });
+			expect(tracked).toMatchObject({
+				kind: "new",
+				outcome: { status: "applied", balanceBefore: 10, balanceAfter: 5 },
+			});
+			expect(appender.batches).toHaveLength(1);
+			expect(batchKeys(appender.batches[0])).toEqual(["init_cus_1", "cmd_1"]);
+			expect(
+				readBalance({ store: fixture.store, identity: firstIdentity }),
+			).toEqual({ balance: 5, usage: 5, revision: 1 });
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("replies already_initialized for a customer that has state", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+			});
+
+			const decision = await writer.submitInitialization({
+				initialization: createInitialization({
+					identity: firstIdentity,
+					initializationId: "init_other",
+					balance: 99,
+				}),
+			});
+
+			expect(decision).toEqual({ kind: "already_initialized" });
+			expect(appender.batches).toHaveLength(0);
+			expect(
+				readBalance({ store: fixture.store, identity: firstIdentity }),
+			).toEqual({ balance: 10, usage: 0, revision: 0 });
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("coalesces a concurrent identical initialization; a differing one sees the pending baseline", async () => {
+		const fixture = createFixture({ identities: [] });
+		try {
+			const appender = new RecordingCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+			});
+			const initialization = createInitialization({ identity: firstIdentity });
+
+			const [first, duplicate, competing, conflict] = await Promise.allSettled([
+				writer.submitInitialization({ initialization }),
+				writer.submitInitialization({ initialization }),
+				writer.submitInitialization({
+					initialization: createInitialization({
+						identity: firstIdentity,
+						initializationId: "init_other",
+						balance: 99,
+					}),
+				}),
+				writer.submitInitialization({
+					initialization: createInitialization({
+						identity: firstIdentity,
+						balance: 99,
+					}),
+				}),
+			]);
+
+			expect(first).toMatchObject({
+				status: "fulfilled",
+				value: { kind: "initialized" },
+			});
+			expect(duplicate).toMatchObject({
+				status: "fulfilled",
+				value: { kind: "duplicate" },
+			});
+			// The pending projection already exists, so a competing baseline never appends.
+			expect(competing).toMatchObject({
+				status: "fulfilled",
+				value: { kind: "already_initialized" },
+			});
+			// Same initializationId with a different baseline is a caller bug.
+			expect(conflict).toMatchObject({
+				status: "rejected",
+				reason: expect.any(ConflictingMeteringStateInitializationError),
+			});
+			expect(appender.batches).toHaveLength(1);
+			expect(appender.batches[0]).toHaveLength(1);
+			expect(
+				readBalance({ store: fixture.store, identity: firstIdentity }),
+			).toEqual({ balance: 10, usage: 0, revision: 0 });
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("still resolves initialized when the consumer applies the initialization first", async () => {
+		const fixture = createFixture({ identities: [] });
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+			});
+			const initialization = createInitialization({ identity: firstIdentity });
+			const decisionPromise = writer.submitInitialization({ initialization });
+
+			await waitForBatch();
+			expect(
+				fixture.store.applyDurableStateInitialization({
+					position: { topic, partition, offset: 0n },
+					initialization,
+				}),
+			).toMatchObject({ kind: "initialized", nextOffset: 1n });
+
+			appender.resolve();
+			// The submitter wrote it; who applied the position first does not change that.
+			await expect(decisionPromise).resolves.toMatchObject({
+				kind: "initialized",
+				state: { revision: 0 },
+			});
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
 		} finally {
 			closeFixture(fixture);
 		}
