@@ -11,7 +11,7 @@ import type {
 } from "../../runtime/types/partitionRuntime.js";
 
 export type BalanceWorkerRequestContext = {
-	runtime: Pick<PartitionRuntime, "submitTrack" | "check">;
+	runtime: Pick<PartitionRuntime, "process">;
 };
 
 export type BalanceWorkerHttpEnv = {

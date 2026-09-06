@@ -480,7 +480,9 @@ describe("Kafka transaction boundary", () => {
 				},
 			});
 			await expect(
-				readyRuntime.submitTrack({ command: retryCommand }),
+				readyRuntime.process((processor) =>
+					processor.track({ command: retryCommand }),
+				),
 			).resolves.toMatchObject({ kind: "duplicate" });
 			expect(
 				storeFixture.store.readState({ identity: initialState.identity })
@@ -845,7 +847,9 @@ describe("Kafka transaction boundary", () => {
 
 			await expect(
 				waitWithin({
-					promise: firstRuntime.submitTrack({ command }),
+					promise: firstRuntime.process((processor) =>
+						processor.track({ command }),
+					),
 					timeoutMs: 10_000,
 				}),
 			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
@@ -1064,7 +1068,9 @@ test("prepares without fencing and activates from the committed tail", async fun
 				occurredAt: 1_700_000_000_000,
 			},
 		});
-		await expect(runtime.submitTrack({ command })).resolves.toMatchObject({
+		await expect(
+			runtime.process((processor) => processor.track({ command })),
+		).resolves.toMatchObject({
 			kind: "duplicate",
 		});
 		await expect(

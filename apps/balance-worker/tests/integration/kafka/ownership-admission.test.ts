@@ -205,7 +205,9 @@ describe("Real ownership admission", () => {
 					occurredAt: Date.now(),
 				},
 			});
-			const submitted = admitted.submitTrack({ command });
+			const submitted = admitted.process((processor) =>
+				processor.track({ command }),
+			);
 			const stopping = worker.stop();
 			expect(worker.findRuntime(owner)).toBeUndefined();
 			await submitted;

@@ -30,7 +30,6 @@ import type {
 	PartitionLogRange,
 } from "../../../src/runtime/bootstrap/types/partitionBootstrap.js";
 import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
-import { createRequestTracker } from "../../../src/runtime/createRequestTracker.js";
 import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
@@ -420,7 +419,11 @@ describe("owned partition runtime", () => {
 				failureReason: null,
 			});
 			await expect(
-				runtime.check({ command: createCheckCommand({ requestId: "req_1" }) }),
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_1" }),
+					}),
+				),
 			).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
 
 			catchUp.resolve(undefined);
@@ -430,7 +433,11 @@ describe("owned partition runtime", () => {
 			expect(runtime.getHealth().lag).toBe(0n);
 			expect(startup.at(-1)).toBe("follower:caught-up");
 			await expect(
-				runtime.check({ command: createCheckCommand({ requestId: "req_2" }) }),
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_2" }),
+					}),
+				),
 			).resolves.toMatchObject({ kind: "decided", balance: 10, revision: 0 });
 		} finally {
 			await runtime.stop();
@@ -572,12 +579,16 @@ describe("owned partition runtime", () => {
 
 		try {
 			await runtime.start();
-			const trackPromise = runtime.submitTrack({
-				command: createTrackCommand({ commandId: "cmd_1" }),
-			});
-			const checkPromise = runtime.check({
-				command: createCheckCommand({ requestId: "req_after_track" }),
-			});
+			const trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			const checkPromise = runtime.process((processor) =>
+				processor.check({
+					command: createCheckCommand({ requestId: "req_after_track" }),
+				}),
+			);
 			let checkSettled = false;
 			void checkPromise.finally(() => {
 				checkSettled = true;
@@ -622,14 +633,18 @@ describe("owned partition runtime", () => {
 
 			expect(runtime.getStatus()).toBe("recovery_required");
 			await expect(
-				runtime.check({
-					command: createCheckCommand({ requestId: "req_after_failure" }),
-				}),
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_after_failure" }),
+					}),
+				),
 			).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 			await expect(
-				runtime.submitTrack({
-					command: createTrackCommand({ commandId: "cmd_after_failure" }),
-				}),
+				runtime.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "cmd_after_failure" }),
+					}),
+				),
 			).rejects.toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
 			expect(fakeFollower.lifecycle.at(-1)).toBe("follower:stop");
 			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
@@ -652,13 +667,15 @@ describe("owned partition runtime", () => {
 			producer: fakeProducer.producer,
 			follower: fakeFollower.follower,
 		});
-		let trackPromise: ReturnType<typeof runtime.submitTrack> | null = null;
+		let trackPromise: Promise<TrackDecision> | null = null;
 
 		try {
 			await runtime.start();
-			trackPromise = runtime.submitTrack({
-				command: createTrackCommand({ commandId: "cmd_1" }),
-			});
+			trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
 			await waitForTurn();
 			expect(fakeProducer.lifecycle).toContain("producer:commit");
 
@@ -700,13 +717,15 @@ describe("owned partition runtime", () => {
 			producer: fakeProducer.producer,
 			follower: fakeFollower.follower,
 		});
-		let trackPromise: ReturnType<typeof runtime.submitTrack> | null = null;
+		let trackPromise: Promise<TrackDecision> | null = null;
 
 		try {
 			await runtime.start();
-			trackPromise = runtime.submitTrack({
-				command: createTrackCommand({ commandId: "cmd_1" }),
-			});
+			trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
 			await waitForTurn();
 
 			fakeFollower.emitUnavailable({
@@ -741,13 +760,15 @@ describe("owned partition runtime", () => {
 			follower: fakeFollower.follower,
 			recoveryDrainTimeoutMs: 1,
 		});
-		let trackPromise: ReturnType<typeof runtime.submitTrack> | null = null;
+		let trackPromise: Promise<TrackDecision> | null = null;
 
 		try {
 			await runtime.start();
-			trackPromise = runtime.submitTrack({
-				command: createTrackCommand({ commandId: "cmd_1" }),
-			});
+			trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
 			await waitForTurn();
 
 			fakeFollower.emitUnavailable({
@@ -780,17 +801,21 @@ describe("owned partition runtime", () => {
 
 		try {
 			await runtime.start();
-			const trackPromise = runtime.submitTrack({
-				command: createTrackCommand({ commandId: "cmd_1" }),
-			});
+			const trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
 			await waitForTurn();
 			const stopPromise = runtime.stop();
 
 			expect(runtime.getStatus()).toBe("draining");
 			await expect(
-				runtime.check({
-					command: createCheckCommand({ requestId: "req_late" }),
-				}),
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_late" }),
+					}),
+				),
 			).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
 			expect(fakeProducer.lifecycle).not.toContain("producer:disconnect");
 
@@ -828,9 +853,11 @@ describe("owned partition runtime", () => {
 		try {
 			await runtime.start();
 			await expect(
-				runtime.submitTrack({
-					command: createTrackCommand({ commandId: "cmd_1" }),
-				}),
+				runtime.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "cmd_1" }),
+					}),
+				),
 			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
 
 			expect(runtime.getStatus()).toBe("recovery_required");
@@ -841,9 +868,11 @@ describe("owned partition runtime", () => {
 				),
 			).toHaveLength(1);
 			await expect(
-				runtime.check({
-					command: createCheckCommand({ requestId: "req_late" }),
-				}),
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_late" }),
+					}),
+				),
 			).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
 		} finally {
 			await runtime.stop();
@@ -865,16 +894,20 @@ describe("owned partition runtime", () => {
 		try {
 			await runtime.start();
 			await expect(
-				runtime.submitTrack({
-					command: createTrackCommand({ commandId: "cmd_1" }),
-				}),
+				runtime.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "cmd_1" }),
+					}),
+				),
 			).rejects.toBeInstanceOf(MutationBatchAppendError);
 
 			expect(runtime.getStatus()).toBe("ready");
 			await expect(
-				runtime.check({
-					command: createCheckCommand({ requestId: "req_after_abort" }),
-				}),
+				runtime.process((processor) =>
+					processor.check({
+						command: createCheckCommand({ requestId: "req_after_abort" }),
+					}),
+				),
 			).resolves.toMatchObject({ kind: "decided", balance: 10, revision: 0 });
 		} finally {
 			await runtime.stop();
@@ -897,9 +930,11 @@ describe("owned partition runtime", () => {
 		try {
 			await runtime.start();
 			const error = await runtime
-				.submitTrack({
-					command: createTrackCommand({ commandId: "cmd_1" }),
-				})
+				.process((processor) =>
+					processor.track({
+						command: createTrackCommand({ commandId: "cmd_1" }),
+					}),
+				)
 				.catch((cause: unknown) => cause);
 
 			expect(error).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
@@ -928,9 +963,11 @@ describe("owned partition runtime", () => {
 
 		try {
 			await runtime.start();
-			const trackPromise = runtime.submitTrack({
-				command: createTrackCommand({ commandId: "cmd_1" }),
-			});
+			const trackPromise = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
 			await waitForTurn();
 			const stopPromise = runtime.stop();
 			commit.resolve(undefined);
@@ -940,35 +977,6 @@ describe("owned partition runtime", () => {
 			);
 			await stopPromise;
 			expect(runtime.getStatus()).toBe("recovery_required");
-		} finally {
-			await runtime.stop();
-			closeStoreFixture(fixture);
-		}
-	});
-
-	test("rejects commands that do not belong to the owned partition", async () => {
-		const fixture = createStoreFixture();
-		const fakeProducer = createFakeProducer();
-		const runtime = createRuntime({
-			store: fixture.store,
-			producer: fakeProducer.producer,
-			follower: createFollower().follower,
-			partitionForIdentity: () => partition + 1,
-		});
-
-		try {
-			await runtime.start();
-			await expect(
-				runtime.submitTrack({
-					command: createTrackCommand({ commandId: "cmd_wrong_partition" }),
-				}),
-			).rejects.toThrow("does not belong to owned partition");
-			await expect(
-				runtime.check({
-					command: createCheckCommand({ requestId: "req_wrong" }),
-				}),
-			).rejects.toThrow("does not belong to owned partition");
-			expect(fakeProducer.records).toHaveLength(0);
 		} finally {
 			await runtime.stop();
 			closeStoreFixture(fixture);
@@ -987,9 +995,11 @@ test("drain waits for accepted tracks but keeps the producer connected", async (
 	});
 	try {
 		await runtime.start();
-		const track = runtime.submitTrack({
-			command: createTrackCommand({ commandId: "cmd_drain" }),
-		});
+		const track = runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "cmd_drain" }),
+			}),
+		);
 		await waitForTurn();
 		let drained = false;
 		const draining = runtime.drain().then(() => {
@@ -999,9 +1009,11 @@ test("drain waits for accepted tracks but keeps the producer connected", async (
 		expect(drained).toBe(false);
 		expect(producer.lifecycle).not.toContain("producer:disconnect");
 		await expect(
-			runtime.check({
-				command: createCheckCommand({ requestId: "after_drain" }),
-			}),
+			runtime.process((processor) =>
+				processor.check({
+					command: createCheckCommand({ requestId: "after_drain" }),
+				}),
+			),
 		).rejects.toBeInstanceOf(OwnedPartitionNotReadyError);
 		commit.resolve(undefined);
 		await track;
@@ -1035,9 +1047,11 @@ test("quiescence remains pending after recovery disposal until accepted apply se
 		runtime.subscribeUnavailable(() => {
 			unavailable = true;
 		});
-		track = runtime.submitTrack({
-			command: createTrackCommand({ commandId: "quiescence" }),
-		});
+		track = runtime.process((processor) =>
+			processor.track({
+				command: createTrackCommand({ commandId: "quiescence" }),
+			}),
+		);
 		await waitForTurn();
 		follower.emitUnavailable({ cause: new Error("lost follower") });
 		expect(unavailable).toBe(true);
@@ -1060,57 +1074,6 @@ test("quiescence remains pending after recovery disposal until accepted apply se
 		closeStoreFixture(fixture);
 	}
 });
-
-async function tracksAreRemovedAfterSettlement(): Promise<void> {
-	const tracker = createRequestTracker();
-	const first = Promise.withResolvers<TrackDecision>();
-	const later = Promise.withResolvers<TrackDecision>();
-	tracker.registerTrack({ customerKey: "customer", operation: first.promise });
-	const precedingTracks = tracker.precedingTracks({ customerKey: "customer" });
-	tracker.registerTrack({ customerKey: "customer", operation: later.promise });
-
-	expect(precedingTracks).toEqual([first.promise]);
-	expect(tracker.precedingTracks({ customerKey: "another" })).toEqual([]);
-	first.resolve({ kind: "unsupported", reason: "command_conflict" });
-	await Promise.allSettled(precedingTracks);
-	expect(tracker.precedingTracks({ customerKey: "customer" })).toEqual([
-		later.promise,
-	]);
-
-	let drained = false;
-	async function finishDrain(): Promise<void> {
-		await tracker.drain();
-		drained = true;
-	}
-	const draining = finishDrain();
-	await Promise.resolve();
-	expect(drained).toBe(false);
-	later.reject(new Error("track rejected"));
-	await draining;
-	expect(drained).toBe(true);
-	expect(tracker.precedingTracks({ customerKey: "customer" })).toEqual([]);
-}
-
-async function trackersKeepIndependentState(): Promise<void> {
-	const first = createRequestTracker();
-	const second = createRequestTracker();
-	const operation = Promise.withResolvers<void>();
-	const { register, drain } = first;
-	expect(register({ operation: operation.promise })).toBe(operation.promise);
-	await second.drain();
-	operation.resolve();
-	await drain();
-}
-
-test(
-	"request tracking snapshots earlier tracks and drains fulfilled or rejected work",
-	tracksAreRemovedAfterSettlement,
-);
-
-test(
-	"request tracker methods retain independent state when detached",
-	trackersKeepIndependentState,
-);
 
 function runtimeUsesNamedFunctions(): void {
 	const directory = new URL("../../../src/runtime/", import.meta.url).pathname;

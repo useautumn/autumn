@@ -152,13 +152,15 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 				occurredAt: 1_700_000_000_000,
 			},
 		});
-		await expect(previous.submitTrack({ command })).rejects.toBeInstanceOf(
-			OwnedPartitionProducerFencedError,
-		);
+		await expect(
+			previous.process((processor) => processor.track({ command })),
+		).rejects.toBeInstanceOf(OwnedPartitionProducerFencedError);
 		expect(previous.getStatus()).toBe("recovery_required");
 		expect(stores[0].readState({ identity })?.revision).toBe(0);
 		await previous.stop();
-		await expect(replacement.submitTrack({ command })).resolves.toMatchObject({
+		await expect(
+			replacement.process((processor) => processor.track({ command })),
+		).resolves.toMatchObject({
 			kind: "new",
 			outcome: { status: "applied", balanceAfter: 5 },
 		});

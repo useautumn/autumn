@@ -5,14 +5,13 @@ import {
 import type { Context, ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod/v4";
+import { PartitionProcessorStateNotFoundError } from "../../../processor/common/processorErrors.js";
 import {
 	PartitionWriterCapacityError,
+	PartitionWriterCommandConflictError,
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
-import {
-	OwnedPartitionMismatchError,
-	OwnedPartitionNotReadyError,
-} from "../../../runtime/runtimeErrors.js";
+import { OwnedPartitionNotReadyError } from "../../../runtime/runtimeErrors.js";
 import {
 	PartitionRouteMismatchError,
 	PartitionRouteNotOwnedError,
@@ -33,11 +32,16 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			cause instanceof ZodError ||
 			cause instanceof WorkerProtocolError ||
 			cause instanceof PartitionRouteMismatchError ||
-			cause instanceof OwnedPartitionMismatchError ||
 			(cause instanceof HTTPException && cause.status === 400)
 		) {
 			status = 400;
 			error = { code: "INVALID_REQUEST", message: "Invalid worker request" };
+		} else if (cause instanceof PartitionWriterCommandConflictError) {
+			status = 400;
+			error = {
+				code: "INVALID_REQUEST",
+				message: "Command id reused with different input",
+			};
 		} else if (cause instanceof PartitionRouteNotOwnedError) {
 			status = 409;
 			error = {
@@ -47,7 +51,8 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 		} else if (
 			cause instanceof OwnedPartitionNotReadyError ||
 			cause instanceof PartitionWriterCapacityError ||
-			cause instanceof PartitionWriterStateNotFoundError
+			cause instanceof PartitionWriterStateNotFoundError ||
+			cause instanceof PartitionProcessorStateNotFoundError
 		) {
 			status = 503;
 			error = {

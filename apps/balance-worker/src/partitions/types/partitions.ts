@@ -1,10 +1,5 @@
-import type {
-	CheckCommand,
-	CheckDecision,
-	TrackCommand,
-	TrackDecision,
-} from "@autumn/balance-engine";
 import type { OwnedPartitionHealth } from "../../health/ownedPartitionHealth.js";
+import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 
 export interface PartitionRuntimePort {
 	start(): Promise<void>;
@@ -13,8 +8,9 @@ export interface PartitionRuntimePort {
 	waitForQuiescence(): Promise<void>;
 	getHealth(): OwnedPartitionHealth;
 	subscribeUnavailable(listener: PartitionUnavailableListener): Unsubscribe;
-	submitTrack(params: { command: TrackCommand }): Promise<TrackDecision>;
-	check(params: { command: CheckCommand }): Promise<CheckDecision>;
+	process<Decision>(
+		run: (processor: PartitionProcessor) => Promise<Decision>,
+	): Promise<Decision>;
 }
 
 export type Unsubscribe = () => void;
