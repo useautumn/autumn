@@ -7,9 +7,14 @@ import {
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { ConflictingMeteringStateInitializationError } from "../../../state/sqliteBalanceStateErrors.js";
-import { enqueueOutcome, pendingKeyOf } from "../pendingOutcomes.js";
+import {
+	enqueueOutcome,
+	pendingCommitsFor,
+	pendingKeyOf,
+} from "../pendingOutcomes.js";
 import type {
 	CommittedMutation,
+	DecidedMutation,
 	MutationSubmission,
 } from "../types/mutation.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
@@ -17,30 +22,29 @@ import {
 	PartitionWriterCommandConflictError,
 	PartitionWriterStateNotFoundError,
 } from "../writerErrors.js";
-import { scheduleDrain } from "./drainOutcomes.js";
+import { scheduleCommit } from "./commit.js";
 
 /**
  * Synchronous until the outcome is enqueued: no await may separate reading the
  * projection from recording the next one, or concurrent commands would interleave.
  */
-export function submitMutation<Reply>({
+export function decide<Reply>({
 	scope,
 	submission,
 }: {
 	scope: PartitionWriterScope;
 	submission: MutationSubmission<Reply>;
-}): Promise<Reply | CommittedMutation> {
+}): DecidedMutation<Reply> {
 	const { ctx, state } = scope;
 	if (state.recoveryError) throw state.recoveryError;
 	const { identity, commandId, fingerprint } = submission;
 	const customerKey = meteringPartitionKeyOf({ identity });
+	const pendingKey = pendingKeyOf({ customerKey, commandId });
 
-	const inFlight = state.pendingByKey.get(
-		pendingKeyOf({ customerKey, commandId }),
-	);
+	const inFlight = state.pendingByKey.get(pendingKey);
 	if (inFlight) {
 		assertSameRequest({ commandId, fingerprint, outcome: inFlight.outcome });
-		return inFlight.settlement.join({ kind: "duplicate" });
+		return decidedWith<Reply>(inFlight.settlement.join({ kind: "duplicate" }));
 	}
 
 	const currentState = readFreshestState({ scope, customerKey, identity });
@@ -50,20 +54,44 @@ export function submitMutation<Reply>({
 	const receipt = ctx.stateStore.readTrackReceipt({ identity, commandId });
 	if (receipt) {
 		assertSameRequest({ commandId, fingerprint, outcome: receipt });
-		return Promise.resolve({ kind: "duplicate", outcome: receipt });
+		return decidedWith<Reply>(
+			Promise.resolve({ kind: "duplicate", outcome: receipt }),
+		);
 	}
 
 	const result = submission.mutate({ state: currentState });
-	if (result.kind === "reply") return Promise.resolve(result.reply);
+	if (result.kind === "reply")
+		return decidedWith<Reply>(Promise.resolve(result.reply));
 
 	const committed = enqueueOutcome({
 		scope,
-		pendingKey: pendingKeyOf({ customerKey, commandId }),
+		pendingKey,
 		customerKey,
 		...result,
 	});
-	scheduleDrain({ scope });
-	return committed;
+	scheduleCommit({ scope });
+	return decidedWith<Reply>(committed);
+}
+
+function decidedWith<Reply>(
+	committed: Promise<Reply | CommittedMutation>,
+): DecidedMutation<Reply> {
+	function waitForCommit(): Promise<Reply | CommittedMutation> {
+		return committed;
+	}
+	return { waitForCommit };
+}
+
+/** Snapshot at call time: outcomes enqueued after this returns do not extend the wait. */
+export async function waitForPendingCommits({
+	scope,
+	customerKey,
+}: {
+	scope: PartitionWriterScope;
+	customerKey: string;
+}): Promise<void> {
+	const commits = pendingCommitsFor({ state: scope.state, customerKey });
+	if (commits.length > 0) await Promise.allSettled(commits);
 }
 
 export function submitInitialization({
@@ -101,7 +129,7 @@ export function submitInitialization({
 		outcome: initialization,
 		nextState: initialization.state,
 	});
-	scheduleDrain({ scope });
+	scheduleCommit({ scope });
 	return committed;
 }
 

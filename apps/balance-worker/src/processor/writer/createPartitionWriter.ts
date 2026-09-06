@@ -1,10 +1,11 @@
 import type { StateInitializedEvent } from "@autumn/balance-engine";
 import {
+	decide as decideOutcome,
 	submitInitialization as submitInitializationToPartition,
-	submitMutation as submitMutationToPartition,
-} from "./actions/submitMutation.js";
+	waitForPendingCommits as waitForCustomerCommits,
+} from "./actions/decide.js";
 import { createPartitionWriterState } from "./pendingOutcomes.js";
-import type { MutationSubmission } from "./types/mutation.js";
+import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
 import type {
 	PartitionWriter,
 	PartitionWriterConfig,
@@ -26,15 +27,21 @@ export function createPartitionWriter({
 		state: createPartitionWriterState(),
 	};
 
-	// Async wrappers so every failure surfaces as a rejection; the actions never await.
-	async function submitMutation<Reply>({
-		submission,
-	}: {
-		submission: MutationSubmission<Reply>;
-	}) {
-		return submitMutationToPartition({ scope, submission });
+	function decide<Reply>(
+		submission: MutationSubmission<Reply>,
+	): DecidedMutation<Reply> {
+		return decideOutcome({ scope, submission });
 	}
 
+	function waitForPendingCommits({
+		customerKey,
+	}: {
+		customerKey: string;
+	}): Promise<void> {
+		return waitForCustomerCommits({ scope, customerKey });
+	}
+
+	// Async wrapper so every failure surfaces as a rejection; the action never awaits.
 	async function submitInitialization({
 		initialization,
 	}: {
@@ -43,7 +50,7 @@ export function createPartitionWriter({
 		return submitInitializationToPartition({ scope, initialization });
 	}
 
-	return { submitMutation, submitInitialization };
+	return { decide, waitForPendingCommits, submitInitialization };
 }
 
 function validateWriterConfig(config: PartitionWriterConfig): void {

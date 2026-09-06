@@ -17,7 +17,7 @@ export type TrackReceiptPolicy = {
 	now: () => number;
 };
 
-/** Track's meaning: decide against the freshest state, project the deduction, commit via the writer. */
+/** Decide now, reply once committed. */
 export async function submitTrack({
 	writer,
 	command,
@@ -30,19 +30,20 @@ export async function submitTrack({
 	const deduplicationExpiresAt =
 		receiptPolicy.now() + receiptPolicy.retentionMs;
 
-	function mutateTrack(params: MutateParams): MutationResult<TrackDecision> {
-		return decideTrack({ ...params, command, deduplicationExpiresAt });
-	}
-
-	const committed = await writer.submitMutation({
-		submission: {
-			identity: command.identity,
-			commandId: command.commandId,
-			fingerprint: trackCommandFingerprintOf({ command }),
-			mutate: mutateTrack,
-		},
+	// Synchronous: `mutate` runs against the freshest state and the outcome is enqueued before this returns.
+	const decided = writer.decide({
+		identity: command.identity,
+		commandId: command.commandId,
+		fingerprint: trackCommandFingerprintOf({ command }),
+		mutate: ({ state }) =>
+			decideTrack({ state, command, deduplicationExpiresAt }),
 	});
-	return trackDecisionOf({ committed });
+
+	// Asynchronous: Kafka commit, then SQLite apply.
+	const committed = await decided.waitForCommit();
+	if (!("outcome" in committed)) return committed;
+	const { kind, outcome } = committed;
+	return committedMutationToTrackDecision({ kind, outcome });
 }
 
 /** Runs inside the writer's critical section: no await, no I/O. */
@@ -63,14 +64,12 @@ function decideTrack({
 	return { kind: "write", outcome: decision.outcome, nextState };
 }
 
-function trackDecisionOf({
-	committed,
-}: {
-	committed: TrackDecision | CommittedMutation;
-}): TrackDecision {
-	if (!("outcome" in committed)) return committed;
-	if (committed.outcome.type !== "track_outcome") {
+function committedMutationToTrackDecision({
+	kind,
+	outcome,
+}: CommittedMutation): TrackDecision {
+	if (outcome.type !== "track_outcome") {
 		throw new Error("Track committed a non-track record");
 	}
-	return { kind: committed.kind, outcome: committed.outcome };
+	return { kind, outcome };
 }

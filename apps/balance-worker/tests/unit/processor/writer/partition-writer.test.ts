@@ -3,13 +3,17 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	computeTrack,
 	createCustomerMeteringState,
+	executeTrack,
 	type MeteringIdentity,
+	meteringPartitionKeyOf,
 	parseStateInitializedEvent,
 	parseTrackCommand,
 	type StateInitializedEvent,
 	type TrackCommand,
 	type TrackDecision,
+	trackCommandFingerprintOf,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import {
@@ -21,6 +25,11 @@ import {
 	type TrackReceiptPolicy,
 } from "../../../../src/processor/commands/track.js";
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
+import type {
+	MutateParams,
+	MutationResult,
+	MutationSubmission,
+} from "../../../../src/processor/writer/types/mutation.js";
 import type {
 	CommittedOutcomeAppender,
 	PartitionWriterContext,
@@ -262,6 +271,23 @@ const createPartitionTrackWriter = ({
 			initialize({ writer, initialization }),
 	};
 };
+
+function decideForTest({
+	state,
+	command,
+}: MutateParams & { command: TrackCommand }): MutationResult<TrackDecision> {
+	const decision = computeTrack({
+		state,
+		command,
+		deduplicationExpiresAt: 1_700_086_400_000,
+	});
+	if (decision.kind !== "new") return { kind: "reply", reply: decision };
+	const { state: nextState } = executeTrack({
+		state,
+		outcome: decision.outcome,
+	});
+	return { kind: "write", outcome: decision.outcome, nextState };
+}
 
 describe("partition writer", () => {
 	test("stamps receipt expiry from worker policy", async () => {
@@ -1051,6 +1077,52 @@ describe("partition writer", () => {
 				state: { revision: 0 },
 			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+	test("waitForPendingCommits snapshots what is pending at call time", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionWriterCore({
+				ctx: { stateStore: fixture.store, appender },
+				config: { topic, partition, limits: defaultLimits },
+			});
+			const customerKey = meteringPartitionKeyOf({ identity: firstIdentity });
+			const submission = (
+				commandId: string,
+			): MutationSubmission<TrackDecision> => {
+				const command = createCommand({ commandId });
+				return {
+					identity: command.identity,
+					commandId,
+					fingerprint: trackCommandFingerprintOf({ command }),
+					mutate: ({ state }) => decideForTest({ state, command }),
+				};
+			};
+
+			const first = writer.decide(submission("cmd_1"));
+			let settledResolved = false;
+			const settled = writer.waitForPendingCommits({ customerKey }).then(() => {
+				settledResolved = true;
+			});
+			await waitForBatch();
+			// Enqueued after the wait began: must not extend it.
+			const second = writer.decide(submission("cmd_2"));
+
+			expect(settledResolved).toBe(false);
+			appender.resolve({ baseOffset: 0n });
+			await first.waitForCommit();
+			await settled;
+			expect(settledResolved).toBe(true);
+
+			await waitForBatch();
+			appender.resolve({ baseOffset: 1n });
+			await second.waitForCommit();
+			await expect(
+				writer.waitForPendingCommits({ customerKey }),
+			).resolves.toBeUndefined();
 		} finally {
 			closeFixture(fixture);
 		}
