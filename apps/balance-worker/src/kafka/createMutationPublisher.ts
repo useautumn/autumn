@@ -1,20 +1,18 @@
-import type { TrackOutcome } from "@autumn/balance-engine";
 import {
 	createMeteringPublisher,
 	KafkaBatchNotCommittedError,
 	type KafkaProducer,
+	type MeteringRecord,
 } from "@autumn/kafka";
-import {
-	type CommittedTrackOutcomeAppender,
-	TrackOutcomeBatchNotCommittedError,
-} from "../writer/committedTrackOutcomeAppender.js";
+import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
+import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
 import { translateKafkaProducerError } from "./workerKafkaErrors.js";
 
-export function createTrackOutcomePublisher({
+export function createMutationPublisher({
 	ctx,
 }: {
 	ctx: { producer: KafkaProducer };
-}): CommittedTrackOutcomeAppender {
+}): CommittedOutcomeAppender {
 	const publisher = createMeteringPublisher({ ctx });
 
 	async function appendCommitted({
@@ -24,7 +22,7 @@ export function createTrackOutcomePublisher({
 	}: {
 		topic: string;
 		partition: number;
-		outcomes: readonly TrackOutcome[];
+		outcomes: readonly MeteringRecord[];
 	}): Promise<{ baseOffset: bigint }> {
 		try {
 			return await publisher.append({ topic, partition, records: outcomes });
@@ -36,7 +34,7 @@ export function createTrackOutcomePublisher({
 			});
 			if (translated !== cause) throw translated;
 			if (cause instanceof KafkaBatchNotCommittedError) {
-				throw new TrackOutcomeBatchNotCommittedError({ cause: cause.cause });
+				throw new MutationBatchNotCommittedError({ cause: cause.cause });
 			}
 			throw cause;
 		}

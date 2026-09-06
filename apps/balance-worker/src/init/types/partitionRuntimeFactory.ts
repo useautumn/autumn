@@ -6,6 +6,7 @@ import type {
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
+import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
 import type { PartitionBootstrapRetryPolicy } from "../../runtime/bootstrap/types/partitionBootstrap.js";
 import type {
 	MeteringPartitionResolver,
@@ -14,7 +15,6 @@ import type {
 } from "../../runtime/types/partitionRuntime.js";
 import type { PartitionCheckpointRestoreLimits } from "../../state/checkpoint/restorePartitionCheckpoint.js";
 import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
-import type { PartitionTrackWriterLimits } from "../../writer/partitionTrackWriter.js";
 
 export type KafkaBalanceWorkerTimings = KafkaConsumerGroupTimings & {
 	healthRefreshIntervalMs: number;
@@ -49,7 +49,7 @@ export type PartitionRuntimeFactoryConfig = {
 	ownership: { topic: string; endpoint: string };
 	checkpointRestoreLimits: PartitionCheckpointRestoreLimits;
 	checkpointRetryPolicy: PartitionBootstrapRetryPolicy;
-	writerLimits: PartitionTrackWriterLimits;
+	writerLimits: PartitionWriterLimits;
 	trackReceiptRetentionMs: number;
 	producerLimits: KafkaProducerLimits;
 	timings: KafkaBalanceWorkerTimings;

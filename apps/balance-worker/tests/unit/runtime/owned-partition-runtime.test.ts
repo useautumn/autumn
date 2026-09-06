@@ -19,11 +19,12 @@ import {
 import { Glob } from "bun";
 import type { ProducerRecord, RecordMetadata } from "kafkajs";
 import ts from "typescript";
-import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
+import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../../src/kafka/createWorkerProducer.js";
+import { MutationBatchAppendError } from "../../../src/processor/writer/writerErrors.js";
 import type {
 	PartitionBootstrapper as OwnedPartitionBootstrapPort,
 	PartitionLogRange,
@@ -40,7 +41,6 @@ import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
 } from "../../../src/state/sqliteBalanceStateStore.js";
-import { TrackOutcomeBatchAppendError } from "../../../src/writer/partitionTrackWriter.js";
 import * as preparationFixtures from "../kafka/kafka-test-fixtures.js";
 
 const topic = "metering-events-v1";
@@ -358,7 +358,7 @@ const createRuntime = ({
 			},
 			producer: workerProducer,
 			follower,
-			appender: createTrackOutcomePublisher({
+			appender: createMutationPublisher({
 				ctx: { producer: workerProducer },
 			}),
 			partitionResolver: {
@@ -868,7 +868,7 @@ describe("owned partition runtime", () => {
 				runtime.submitTrack({
 					command: createTrackCommand({ commandId: "cmd_1" }),
 				}),
-			).rejects.toBeInstanceOf(TrackOutcomeBatchAppendError);
+			).rejects.toBeInstanceOf(MutationBatchAppendError);
 
 			expect(runtime.getStatus()).toBe("ready");
 			await expect(

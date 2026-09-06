@@ -18,13 +18,13 @@ import type {
 } from "../../../src/http/types/balanceWorkerHttp.js";
 import { createRuntimeDirectory } from "../../../src/partitions/directory/createRuntimeDirectory.js";
 import {
+	PartitionWriterCapacityError,
+	PartitionWriterStateNotFoundError,
+} from "../../../src/processor/writer/writerErrors.js";
+import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionRecoveryRequiredError,
 } from "../../../src/runtime/runtimeErrors.js";
-import {
-	PartitionTrackStateNotFoundError,
-	PartitionTrackWriterCapacityError,
-} from "../../../src/writer/partitionTrackWriter.js";
 import { createTestRuntimeResources } from "../kafka/kafka-test-fixtures.js";
 
 const command = parseTrackCommand({
@@ -147,7 +147,7 @@ async function logsCompletedRequest(): Promise<void> {
 async function logsFailedRequest(): Promise<void> {
 	for (const [cause, statusCode, errorCode] of [
 		[
-			new PartitionTrackStateNotFoundError({ customerKey: "missing" }),
+			new PartitionWriterStateNotFoundError({ customerKey: "missing" }),
 			503,
 			"NOT_READY",
 		],
@@ -412,8 +412,8 @@ describe("Balance worker HTTP", () => {
 		});
 	});
 	test.each([
-		new PartitionTrackStateNotFoundError({ customerKey: "missing" }),
-		new PartitionTrackWriterCapacityError(),
+		new PartitionWriterStateNotFoundError({ customerKey: "missing" }),
+		new PartitionWriterCapacityError(),
 	])(
 		"reports unavailable state or capacity without inventing balances",
 		async (cause) => {
