@@ -83,7 +83,7 @@ async function drainWithinRecoveryTimeout({
 	}
 	try {
 		await Promise.race([
-			ctx.requestTracker.drain(),
+			ctx.processor.drain(),
 			new Promise<void>(scheduleTimeout),
 		]);
 	} finally {

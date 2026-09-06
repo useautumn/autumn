@@ -17,6 +17,7 @@ import type {
 	BalanceWorkerRequestContext,
 } from "../../../src/http/types/balanceWorkerHttp.js";
 import { createRuntimeDirectory } from "../../../src/partitions/directory/createRuntimeDirectory.js";
+import type { PartitionProcessor } from "../../../src/processor/types/partitionProcessor.js";
 import {
 	PartitionWriterCapacityError,
 	PartitionWriterStateNotFoundError,
@@ -69,16 +70,18 @@ const fixture = ({
 	}
 	const submitted: unknown[] = [];
 	const lookups: PartitionRoute[] = [];
-	const submitTrack: BalanceWorkerRequestContext["runtime"]["submitTrack"] =
-		async (params) => {
+	const processor: PartitionProcessor = {
+		track: async (params) => {
 			submitted.push(params);
 			if (cause) throw cause;
 			return decision;
-		};
-	const check: BalanceWorkerRequestContext["runtime"]["check"] = async ({
-		command,
-	}) => computeCheck({ state, command });
-	const runtime = { submitTrack, check };
+		},
+		check: async ({ command }) => computeCheck({ state, command }),
+		drain: async () => undefined,
+	};
+	const process: BalanceWorkerRequestContext["runtime"]["process"] = (run) =>
+		run(processor);
+	const runtime = { process };
 	const findRuntime = (requested: PartitionRoute) => {
 		lookups.push(requested);
 		return owned &&
@@ -351,7 +354,9 @@ describe("Balance worker HTTP", () => {
 				const command = parseCheckCommand({
 					input: context.get("request").command,
 				});
-				const decision = await context.get("ctx").runtime.check({ command });
+				const decision = await context
+					.get("ctx")
+					.runtime.process((processor) => processor.check({ command }));
 				return context.json({ decision });
 			},
 		);

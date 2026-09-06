@@ -50,7 +50,7 @@ export async function waitForRuntimeQuiescence({
 	state,
 }: PartitionRuntimeScope): Promise<void> {
 	await settleRuntimeStartup({ state });
-	await ctx.requestTracker.drain();
+	await ctx.processor.drain();
 	await state.preparationStopPromise;
 	await state.stopFollowerPromise;
 }
@@ -60,7 +60,7 @@ async function finishRuntimeStop({
 	state,
 }: PartitionRuntimeScope): Promise<void> {
 	await settleRuntimeStartup({ state });
-	await ctx.requestTracker.drain();
+	await ctx.processor.drain();
 	await disposeRuntimeResources({ ctx, state });
 	state.status = state.terminalError ? "recovery_required" : "stopped";
 }
@@ -70,7 +70,7 @@ async function finishRuntimeDrain({
 	state,
 }: PartitionRuntimeScope): Promise<void> {
 	await settleRuntimeStartup({ state });
-	await ctx.requestTracker.drain();
+	await ctx.processor.drain();
 	await stopRuntimeFollower({ ctx, state });
 	if (state.terminalError) throw state.terminalError;
 }

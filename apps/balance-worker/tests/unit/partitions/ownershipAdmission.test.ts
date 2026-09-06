@@ -111,10 +111,7 @@ const fixture = ({
 					unavailableListeners.delete(listener);
 				};
 			},
-			submitTrack: async () => {
-				throw new Error("No command fixture");
-			},
-			check: async () => {
+			process: async () => {
 				throw new Error("No command fixture");
 			},
 		};
