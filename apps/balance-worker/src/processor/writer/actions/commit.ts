@@ -15,7 +15,7 @@ import {
 	PartitionWriterRecoveryRequiredError,
 } from "../writerErrors.js";
 
-export function scheduleDrain({
+export function scheduleCommit({
 	scope,
 }: {
 	scope: PartitionWriterScope;
@@ -25,13 +25,13 @@ export function scheduleDrain({
 	state.drainScheduled = true;
 	function runScheduledDrain(): void {
 		state.drainScheduled = false;
-		void drainOutcomes({ scope });
+		void commitOutcomes({ scope });
 	}
 	setImmediate(runScheduledDrain);
 }
 
 /** Kafka commit → SQLite apply → settle waiters, one batch at a time until the queue empties. */
-async function drainOutcomes({
+async function commitOutcomes({
 	scope,
 }: {
 	scope: PartitionWriterScope;

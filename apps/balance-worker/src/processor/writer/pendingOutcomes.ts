@@ -13,7 +13,7 @@ export function createPartitionWriterState(): PartitionWriterState {
 	return {
 		projectedStateByCustomerKey: new Map(),
 		pendingByKey: new Map(),
-		pendingCountByCustomerKey: new Map(),
+		pendingByCustomerKey: new Map(),
 		queue: [],
 		draining: false,
 		drainScheduled: false,
@@ -75,25 +75,44 @@ export function enqueueOutcome({
 	nextState: CustomerMeteringState;
 }): Promise<CommittedMutation> {
 	const { state, config } = scope;
-	const customerCount = state.pendingCountByCustomerKey.get(customerKey) ?? 0;
+	const customerPending =
+		state.pendingByCustomerKey.get(customerKey) ?? new Set<PendingOutcome>();
 	if (
 		state.pendingByKey.size >= config.limits.maxPendingCommands ||
-		customerCount >= config.limits.maxPendingCommandsPerCustomer
+		customerPending.size >= config.limits.maxPendingCommandsPerCustomer
 	) {
 		throw new PartitionWriterCapacityError();
 	}
 	const settlement = createPendingSettlement();
+	const committed = settlement.join({ kind: "new" });
 	const pending: PendingOutcome = {
 		pendingKey,
 		customerKey,
 		outcome,
 		settlement,
+		committed,
 	};
 	state.projectedStateByCustomerKey.set(customerKey, nextState);
 	state.pendingByKey.set(pendingKey, pending);
-	state.pendingCountByCustomerKey.set(customerKey, customerCount + 1);
+	customerPending.add(pending);
+	state.pendingByCustomerKey.set(customerKey, customerPending);
 	state.queue.push(pending);
-	return settlement.join({ kind: "new" });
+	return committed;
+}
+
+/** Snapshot at call time: outcomes enqueued later must not extend the wait. */
+export function pendingCommitsFor({
+	state,
+	customerKey,
+}: {
+	state: PartitionWriterState;
+	customerKey: string;
+}): Promise<CommittedMutation>[] {
+	const customerPending = state.pendingByCustomerKey.get(customerKey);
+	if (!customerPending) return [];
+	const commits: Promise<CommittedMutation>[] = [];
+	for (const pending of customerPending) commits.push(pending.committed);
+	return commits;
 }
 
 export function removePendingOutcome({
@@ -104,14 +123,11 @@ export function removePendingOutcome({
 	pending: PendingOutcome;
 }): void {
 	state.pendingByKey.delete(pending.pendingKey);
-	const customerCount =
-		(state.pendingCountByCustomerKey.get(pending.customerKey) ?? 0) - 1;
-	if (customerCount > 0) {
-		state.pendingCountByCustomerKey.set(pending.customerKey, customerCount);
-		return;
-	}
+	const customerPending = state.pendingByCustomerKey.get(pending.customerKey);
+	customerPending?.delete(pending);
+	if (customerPending && customerPending.size > 0) return;
 	// The projection only outlives its last pending outcome for that customer.
-	state.pendingCountByCustomerKey.delete(pending.customerKey);
+	state.pendingByCustomerKey.delete(pending.customerKey);
 	state.projectedStateByCustomerKey.delete(pending.customerKey);
 }
 
@@ -127,6 +143,6 @@ export function rejectAllPending({
 	}
 	state.queue.length = 0;
 	state.pendingByKey.clear();
-	state.pendingCountByCustomerKey.clear();
+	state.pendingByCustomerKey.clear();
 	state.projectedStateByCustomerKey.clear();
 }
