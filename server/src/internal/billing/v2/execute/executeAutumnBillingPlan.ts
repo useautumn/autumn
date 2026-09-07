@@ -224,7 +224,10 @@ export const executeAutumnBillingPlan = async ({
 	const mayTouchLicenses =
 		(autumnBillingPlan.customerLicenseUpdates?.length ?? 0) > 0 ||
 		(autumnBillingPlan.insertPlanLicenses?.length ?? 0) > 0 ||
-		(autumnBillingPlan.insertCustomerProducts?.length ?? 0) > 0;
+		(autumnBillingPlan.insertCustomerProducts?.some(
+			(customerProduct) => (customerProduct.customer_licenses?.length ?? 0) > 0,
+		) ??
+			false);
 
 	if (mayTouchLicenses && autumnBillingPlan.customerId) {
 		await reconcileLicenseStateForCustomer({
