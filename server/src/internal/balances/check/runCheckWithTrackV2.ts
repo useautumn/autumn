@@ -83,7 +83,7 @@ export const runCheckWithTrackV2 = async ({
 		featureToUse.type === FeatureType.CreditSystem &&
 		featureToUse.id !== originalFeature.id
 			? getCreditRateRequiredBalance({
-					fullSubject: checkData.evaluationFullSubject,
+					fullSubject: checkData.fullSubject,
 					sourceFeature: originalFeature,
 					creditSystem: featureToUse,
 					amount: requiredBalance,
