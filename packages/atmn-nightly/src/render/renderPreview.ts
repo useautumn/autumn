@@ -83,6 +83,7 @@ type VariantChange = {
 type PlanChange = PreviewChange & {
 	planId?: string;
 	version?: number;
+	active?: boolean;
 	planChange?: PlanChangeLite | null;
 	siblingVersions?: PlanChange[];
 	variants?: VariantChange[];
@@ -145,9 +146,13 @@ const formatValue = (value: unknown): string => {
 	return JSON.stringify(value);
 };
 
+/** Printed as the API names them, because prose would read as a different field. */
+const LITERAL_LABEL_KEYS = new Set(["active"]);
+
 /** `credit_schema` and `billingControls` both read as "Billing controls". */
 /** The shared label when there is one; the key's own words otherwise. */
 const labelFor = (key: string): string => {
+	if (LITERAL_LABEL_KEYS.has(key)) return key;
 	const wireKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 	return PREVIOUS_ATTRIBUTE_LABELS[wireKey] ?? humanizeKey(key);
 };
@@ -522,6 +527,12 @@ const renderVariantLanes = ({ plan }: { plan: PlanChange }): string[] =>
 			),
 	);
 
+/** The row's own scalars, so a previous value can complete its arrow. */
+const currentAttributes = (plan: PlanChange): Record<string, unknown> => ({
+	...(plan.name === undefined ? {} : { name: plan.name }),
+	...(plan.active === undefined ? {} : { active: plan.active }),
+});
+
 /** The plan's own line — a marker when it changes, context when its variants
  * are the only work — then its diff, then those variants. */
 const renderPlanRow = ({ plan }: { plan: PlanChange }): string[] => {
@@ -533,7 +544,7 @@ const renderPlanRow = ({ plan }: { plan: PlanChange }): string[] => {
 		...(plan.planChange
 			? renderPlanChangeDetail({
 					planChange: plan.planChange,
-					current: plan.name === undefined ? {} : { name: plan.name },
+					current: currentAttributes(plan),
 					indent: DETAIL_INDENT,
 				})
 			: []),

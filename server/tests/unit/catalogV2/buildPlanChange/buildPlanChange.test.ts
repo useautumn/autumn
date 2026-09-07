@@ -6,6 +6,7 @@ import {
 	FreeTrialDuration,
 	type FullPlanLicense,
 	type FullProduct,
+	PlanPreviousAttributesV0Schema,
 	ResetInterval,
 } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";
@@ -413,4 +414,19 @@ test("license product content change: nested core plan_change", () => {
 			plan_change: { previous_attributes: { name: "Seat" } },
 		},
 	]);
+});
+
+test("demotion reports the active pointer it hands over", () => {
+	const change = buildPlanChangeCore({
+		from: plan({ active: true }),
+		to: plan({ active: false }),
+	});
+
+	expect(change?.previous_attributes).toEqual({ active: true });
+});
+
+test("the preview schema carries the demoted active flag through", () => {
+	expect(PlanPreviousAttributesV0Schema.parse({ active: true })).toEqual({
+		active: true,
+	});
 });

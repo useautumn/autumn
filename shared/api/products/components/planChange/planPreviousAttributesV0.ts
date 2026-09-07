@@ -16,6 +16,7 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 	add_on: true,
 	auto_enable: true,
 	config: true,
+	active: true,
 	archived: true,
 	metadata: true,
 	processors: true,
@@ -31,6 +32,10 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 		add_on: ApiPlanV1Schema.shape.add_on.nullable().optional(),
 		auto_enable: ApiPlanV1Schema.shape.auto_enable.nullable().optional(),
 		config: ApiPlanV1Schema.shape.config.nullable().optional(),
+		active: ApiPlanV1Schema.shape.active.nullable().optional().meta({
+			description:
+				"Previous active pointer when it changed. True on the version this update demotes.",
+		}),
 		archived: ApiPlanV1Schema.shape.archived.nullable().optional(),
 		metadata: ApiPlanV1Schema.shape.metadata.nullable().optional(),
 		processors: ApiPlanProcessorsSchema.nullable().optional().meta({

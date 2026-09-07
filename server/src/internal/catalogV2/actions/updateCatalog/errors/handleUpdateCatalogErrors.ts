@@ -18,6 +18,7 @@ import { handleUpsertProductErrors } from "@/internal/catalogV2/actions/updateCa
 import { handleUpsertProductRenameErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductRenameErrors";
 import { handleUpsertProductVersioningErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersioningErrors";
 import { handleUpsertProductVersionSlugErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersionSlugErrors";
+import { handleVariantSharedAcrossVersionsErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleVariantSharedAcrossVersionsErrors";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import {
@@ -167,6 +168,10 @@ export const handleUpdateCatalogErrors = async ({
 		productStatesContext: catalogContext.productStatesContext,
 	});
 	handleDeclaredVariantAnchorErrors({
+		params,
+		productStatesContext: catalogContext.productStatesContext,
+	});
+	handleVariantSharedAcrossVersionsErrors({
 		params,
 		productStatesContext: catalogContext.productStatesContext,
 	});

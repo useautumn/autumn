@@ -86424,6 +86424,14 @@ paths:
                                                   default: false
                                               description: Miscellaneous plan-level configuration flags.
                                             - type: "null"
+                                        active:
+                                          anyOf:
+                                            - type: boolean
+                                              description: Whether this is the active version of the plan. At most one version
+                                                is active.
+                                            - type: "null"
+                                          description: Previous active pointer when it changed. True on the version this
+                                            update demotes.
                                         archived:
                                           anyOf:
                                             - type: boolean
@@ -90172,6 +90180,14 @@ paths:
                                                                 default: false
                                                             description: Miscellaneous plan-level configuration flags.
                                                           - type: "null"
+                                                      active:
+                                                        anyOf:
+                                                          - type: boolean
+                                                            description: Whether this is the active version of the plan. At most one version
+                                                              is active.
+                                                          - type: "null"
+                                                        description: Previous active pointer when it changed. True on the version this
+                                                          update demotes.
                                                       archived:
                                                         anyOf:
                                                           - type: boolean
@@ -92829,6 +92845,14 @@ paths:
                                                         default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
+                                              active:
+                                                anyOf:
+                                                  - type: boolean
+                                                    description: Whether this is the active version of the plan. At most one version
+                                                      is active.
+                                                  - type: "null"
+                                                description: Previous active pointer when it changed. True on the version this
+                                                  update demotes.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -96585,6 +96609,14 @@ paths:
                                                                       default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
+                                                            active:
+                                                              anyOf:
+                                                                - type: boolean
+                                                                  description: Whether this is the active version of the plan. At most one version
+                                                                    is active.
+                                                                - type: "null"
+                                                              description: Previous active pointer when it changed. True on the version this
+                                                                update demotes.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -99227,6 +99259,14 @@ paths:
                                                               default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
+                                                    active:
+                                                      anyOf:
+                                                        - type: boolean
+                                                          description: Whether this is the active version of the plan. At most one version
+                                                            is active.
+                                                        - type: "null"
+                                                      description: Previous active pointer when it changed. True on the version this
+                                                        update demotes.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -102874,6 +102914,14 @@ paths:
                                                                             default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
+                                                                  active:
+                                                                    anyOf:
+                                                                      - type: boolean
+                                                                        description: Whether this is the active version of the plan. At most one version
+                                                                          is active.
+                                                                      - type: "null"
+                                                                    description: Previous active pointer when it changed. True on the version this
+                                                                      update demotes.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -105375,6 +105423,14 @@ paths:
                                                                     default: false
                                                                 description: Miscellaneous plan-level configuration flags.
                                                               - type: "null"
+                                                          active:
+                                                            anyOf:
+                                                              - type: boolean
+                                                                description: Whether this is the active version of the plan. At most one version
+                                                                  is active.
+                                                              - type: "null"
+                                                            description: Previous active pointer when it changed. True on the version this
+                                                              update demotes.
                                                           archived:
                                                             anyOf:
                                                               - type: boolean
@@ -108724,6 +108780,14 @@ paths:
                                                                                   default: false
                                                                               description: Miscellaneous plan-level configuration flags.
                                                                             - type: "null"
+                                                                        active:
+                                                                          anyOf:
+                                                                            - type: boolean
+                                                                              description: Whether this is the active version of the plan. At most one version
+                                                                                is active.
+                                                                            - type: "null"
+                                                                          description: Previous active pointer when it changed. True on the version this
+                                                                            update demotes.
                                                                         archived:
                                                                           anyOf:
                                                                             - type: boolean
@@ -111007,6 +111071,14 @@ paths:
                                                               default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
+                                                    active:
+                                                      anyOf:
+                                                        - type: boolean
+                                                          description: Whether this is the active version of the plan. At most one version
+                                                            is active.
+                                                        - type: "null"
+                                                      description: Previous active pointer when it changed. True on the version this
+                                                        update demotes.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -114654,6 +114726,14 @@ paths:
                                                                             default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
+                                                                  active:
+                                                                    anyOf:
+                                                                      - type: boolean
+                                                                        description: Whether this is the active version of the plan. At most one version
+                                                                          is active.
+                                                                      - type: "null"
+                                                                    description: Previous active pointer when it changed. True on the version this
+                                                                      update demotes.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -117151,6 +117231,14 @@ paths:
                                                                     default: false
                                                                 description: Miscellaneous plan-level configuration flags.
                                                               - type: "null"
+                                                          active:
+                                                            anyOf:
+                                                              - type: boolean
+                                                                description: Whether this is the active version of the plan. At most one version
+                                                                  is active.
+                                                              - type: "null"
+                                                            description: Previous active pointer when it changed. True on the version this
+                                                              update demotes.
                                                           archived:
                                                             anyOf:
                                                               - type: boolean
@@ -120500,6 +120588,14 @@ paths:
                                                                                   default: false
                                                                               description: Miscellaneous plan-level configuration flags.
                                                                             - type: "null"
+                                                                        active:
+                                                                          anyOf:
+                                                                            - type: boolean
+                                                                              description: Whether this is the active version of the plan. At most one version
+                                                                                is active.
+                                                                            - type: "null"
+                                                                          description: Previous active pointer when it changed. True on the version this
+                                                                            update demotes.
                                                                         archived:
                                                                           anyOf:
                                                                             - type: boolean
@@ -122804,6 +122900,14 @@ paths:
                                                         default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
+                                              active:
+                                                anyOf:
+                                                  - type: boolean
+                                                    description: Whether this is the active version of the plan. At most one version
+                                                      is active.
+                                                  - type: "null"
+                                                description: Previous active pointer when it changed. True on the version this
+                                                  update demotes.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -126560,6 +126664,14 @@ paths:
                                                                       default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
+                                                            active:
+                                                              anyOf:
+                                                                - type: boolean
+                                                                  description: Whether this is the active version of the plan. At most one version
+                                                                    is active.
+                                                                - type: "null"
+                                                              description: Previous active pointer when it changed. True on the version this
+                                                                update demotes.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -129251,6 +129363,14 @@ paths:
                                                               default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
+                                                    active:
+                                                      anyOf:
+                                                        - type: boolean
+                                                          description: Whether this is the active version of the plan. At most one version
+                                                            is active.
+                                                        - type: "null"
+                                                      description: Previous active pointer when it changed. True on the version this
+                                                        update demotes.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -132898,6 +133018,14 @@ paths:
                                                                             default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
+                                                                  active:
+                                                                    anyOf:
+                                                                      - type: boolean
+                                                                        description: Whether this is the active version of the plan. At most one version
+                                                                          is active.
+                                                                      - type: "null"
+                                                                    description: Previous active pointer when it changed. True on the version this
+                                                                      update demotes.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -135372,6 +135500,14 @@ paths:
                                                         default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
+                                              active:
+                                                anyOf:
+                                                  - type: boolean
+                                                    description: Whether this is the active version of the plan. At most one version
+                                                      is active.
+                                                  - type: "null"
+                                                description: Previous active pointer when it changed. True on the version this
+                                                  update demotes.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -139128,6 +139264,14 @@ paths:
                                                                       default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
+                                                            active:
+                                                              anyOf:
+                                                                - type: boolean
+                                                                  description: Whether this is the active version of the plan. At most one version
+                                                                    is active.
+                                                                - type: "null"
+                                                              description: Previous active pointer when it changed. True on the version this
+                                                                update demotes.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -141816,6 +141960,14 @@ paths:
                                                               default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
+                                                    active:
+                                                      anyOf:
+                                                        - type: boolean
+                                                          description: Whether this is the active version of the plan. At most one version
+                                                            is active.
+                                                        - type: "null"
+                                                      description: Previous active pointer when it changed. True on the version this
+                                                        update demotes.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -145463,6 +145615,14 @@ paths:
                                                                             default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
+                                                                  active:
+                                                                    anyOf:
+                                                                      - type: boolean
+                                                                        description: Whether this is the active version of the plan. At most one version
+                                                                          is active.
+                                                                      - type: "null"
+                                                                    description: Previous active pointer when it changed. True on the version this
+                                                                      update demotes.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean

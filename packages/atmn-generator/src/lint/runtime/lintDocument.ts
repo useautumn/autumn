@@ -76,6 +76,20 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
+			/** No two entries sharing `groupBy` may link the same entry of their
+			 * own `collection`. A link is identified by `identity` plus the first
+			 * `pins` field it states; the entries themselves are named by
+			 * `namedBy`, reading as `absentMeans` when they state none. */
+			readonly kind: "linkedOnce";
+			readonly groupBy: string;
+			readonly namedBy: string;
+			readonly absentMeans: string;
+			readonly collection: string;
+			readonly identity: string;
+			readonly pins: readonly string[];
+			readonly because: string;
+	  }
+	| {
 			/** `field` names an entry of top-level collection `in` by `matching`.
 			 * Skipped when that collection is absent: absent means "not mine". */
 			readonly kind: "exists";
@@ -450,7 +464,103 @@ const entryRuleFailures = ({
 			];
 		}
 		case "unique":
+		case "linkedOnce":
 			return [];
+	}
+};
+
+type CollectionCheck<K extends LintRule["kind"]> = {
+	entries: unknown[];
+	rule: Extract<LintRule, { kind: K }>;
+	node: NodeRules;
+	key: string;
+	trail: readonly string[];
+	issues: LintIssue[];
+};
+
+const checkUnique = ({
+	entries,
+	rule,
+	node,
+	key,
+	trail,
+	issues,
+}: CollectionCheck<"unique">): void => {
+	const seen = new Set<string>();
+	for (const [index, entry] of entries.entries()) {
+		if (!isEntry(entry)) continue;
+		const value = entry[rule.field];
+		if (typeof value !== "string") continue;
+		const pair =
+			rule.alongside === undefined
+				? undefined
+				: (entry[rule.alongside] ?? rule.absentMeans);
+		const composite =
+			rule.alongside === undefined ? value : `${value}@${String(pair)}`;
+		if (seen.has(composite)) {
+			const label =
+				rule.alongside === undefined
+					? `${rule.field} ${show(value)}`
+					: `${rule.field} ${show(value)} with ${rule.alongside} ${show(pair)}`;
+			issues.push({
+				path: render([...trail, crumbFor({ node, key, entry, index })]),
+				message: `${label} is used more than once. ${rule.because}`,
+			});
+		}
+		seen.add(composite);
+	}
+};
+
+/** The first pin an entry states — what names the row it addresses. */
+const pinOf = ({
+	entry,
+	pins,
+}: {
+	entry: Entry;
+	pins: readonly string[];
+}): string | undefined => {
+	for (const pin of pins) {
+		const value = entry[pin];
+		if (typeof value === "string") return value;
+		if (typeof value === "number") return `v${value}`;
+	}
+	return undefined;
+};
+
+const checkLinkedOnce = ({
+	entries,
+	rule,
+	node,
+	key,
+	trail,
+	issues,
+}: CollectionCheck<"linkedOnce">): void => {
+	const ownerByLink = new Map<string, string>();
+	for (const [index, entry] of entries.entries()) {
+		if (!isEntry(entry)) continue;
+		const group = entry[rule.groupBy];
+		const links = entry[rule.collection];
+		if (typeof group !== "string" || !Array.isArray(links)) continue;
+		const owner = pinOf({ entry, pins: [rule.namedBy] }) ?? rule.absentMeans;
+
+		for (const link of links) {
+			if (!isEntry(link)) continue;
+			const id = link[rule.identity];
+			if (typeof id !== "string") continue;
+			const pin = pinOf({ entry: link, pins: rule.pins });
+			const composite = `${group} ${id} ${pin ?? "latest"}`;
+			const previous = ownerByLink.get(composite);
+			if (previous === undefined) {
+				ownerByLink.set(composite, owner);
+				continue;
+			}
+			// Two entries naming one version is the unique rule's error, not this one.
+			if (previous === owner) continue;
+			issues.push({
+				path: render([...trail, crumbFor({ node, key, entry, index })]),
+				message: `${pin === undefined ? id : `${id} ${pin}`} is linked from ${group} ${previous} and ${group} ${owner}. ${rule.because}`,
+			});
+		}
 	}
 };
 
@@ -469,30 +579,10 @@ const checkCollection = ({
 	issues: LintIssue[];
 }): void => {
 	for (const rule of node.rules ?? []) {
-		if (rule.kind !== "unique") continue;
-		const seen = new Set<string>();
-		for (const [index, entry] of entries.entries()) {
-			if (!isEntry(entry)) continue;
-			const value = entry[rule.field];
-			if (typeof value !== "string") continue;
-			const pair =
-				rule.alongside === undefined
-					? undefined
-					: (entry[rule.alongside] ?? rule.absentMeans);
-			const composite =
-				rule.alongside === undefined ? value : `${value}@${String(pair)}`;
-			if (seen.has(composite)) {
-				const label =
-					rule.alongside === undefined
-						? `${rule.field} ${show(value)}`
-						: `${rule.field} ${show(value)} with ${rule.alongside} ${show(pair)}`;
-				issues.push({
-					path: render([...trail, crumbFor({ node, key, entry, index })]),
-					message: `${label} is used more than once. ${rule.because}`,
-				});
-			}
-			seen.add(composite);
-		}
+		if (rule.kind === "unique")
+			checkUnique({ entries, rule, node, key, trail, issues });
+		if (rule.kind === "linkedOnce")
+			checkLinkedOnce({ entries, rule, node, key, trail, issues });
 	}
 };
 

@@ -334,3 +334,22 @@ test("a propagated variant says whose change it takes, in one line", () => {
 	expect(out).not.toContain("$250 per year");
 	expect(previewIsEmpty({ preview: preview as never })).toBe(false);
 });
+
+test("names the field a demoted version hands over", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 1,
+				active: false,
+				action: "update",
+				name: "Pro",
+				planChange: { previousAttributes: { active: true }, itemChanges: [] },
+			},
+		],
+	});
+
+	expect(out).toContain("~ pro@v1");
+	expect(out).toContain("~ active: true -> false");
+});
