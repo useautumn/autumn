@@ -115,6 +115,11 @@ export const compareConfig = ({
 			condition: newConfig?.ignore_past_due === curConfig?.ignore_past_due,
 			message: `Ignore past due different: ${newConfig?.ignore_past_due} !== ${curConfig?.ignore_past_due}`,
 		},
+		allow_overdue_entitlements: {
+			condition:
+				!!newConfig?.allow_overdue_entitlements ===
+				!!curConfig?.allow_overdue_entitlements,
+		},
 	};
 
 	const detailsSame = Object.values(checks).every((d) => d.condition);

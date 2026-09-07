@@ -102,7 +102,7 @@ export const MoreSettingsSection = () => {
 
 					<ConfigRow
 						title="Ignore past due"
-						description="Keep entitlements usable and resetting while overdue, and exclude this plan from auto-cancellation"
+						description="Exclude this plan from any auto-cancellation behavior"
 						action={
 							<Switch
 								checked={!!product.config?.ignore_past_due}
@@ -110,6 +110,27 @@ export const MoreSettingsSection = () => {
 									setProduct({
 										...product,
 										config: { ...product.config, ignore_past_due: checked },
+									})
+								}
+							/>
+						}
+					/>
+
+					<ConfigRow
+						title="Allow access while overdue"
+						description="Override the organization's overdue access block for this plan. Cancellation and balance resets are unchanged."
+						action={
+							<Switch
+								aria-label="Allow access while overdue"
+								checked={!!product.config?.allow_overdue_entitlements}
+								onCheckedChange={(checked) =>
+									setProduct({
+										...product,
+										config: {
+											...product.config,
+											ignore_past_due: product.config?.ignore_past_due ?? false,
+											allow_overdue_entitlements: checked,
+										},
 									})
 								}
 							/>

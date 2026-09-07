@@ -113,12 +113,28 @@ export const getCheckDataV2 = async ({
 		features: ctx.features,
 	});
 
-	const featureToUseMin = getFeatureToUseForCheck({
+	let featureToUseMin = getFeatureToUseForCheck({
 		creditSystems,
 		feature,
 		apiSubject: evaluationApiSubject,
 		requiredBalance,
 	});
+	if (
+		ctx.org.config.block_overdue_entitlements &&
+		!evaluationApiSubject.balances?.[featureToUseMin.id] &&
+		!evaluationApiSubject.flags?.[featureToUseMin.id]
+	) {
+		featureToUseMin = getFeatureToUseForCheck({
+			creditSystems: fullSubjectToCreditSystems({
+				fullSubject,
+				featureId: feature_id,
+				features: ctx.features,
+			}),
+			feature,
+			apiSubject,
+			requiredBalance,
+		});
+	}
 
 	const featureToUse = findFeatureById({
 		features: ctx.features,

@@ -14,7 +14,7 @@ export const getCheckSubject = ({
 		...fullSubject,
 		customer_products: fullSubject.customer_products.filter(
 			(customerProduct) =>
-				customerProduct.product.config?.ignore_past_due ||
+				customerProduct.product.config?.allow_overdue_entitlements ||
 				customerProduct.status !== CusProductStatus.PastDue,
 		),
 	};

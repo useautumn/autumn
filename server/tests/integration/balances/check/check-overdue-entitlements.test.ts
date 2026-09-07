@@ -26,7 +26,11 @@ test("overdue entitlements: visible balances, plan exemption, mixed deductions a
 		isAddOn: true,
 		items: [items.free({ featureId: TestFeature.Workflows, includedUsage: 7 })],
 	});
-	enterprise.config = { ignore_past_due: true };
+	overdue.config = { ignore_past_due: true };
+	enterprise.config = {
+		ignore_past_due: false,
+		allow_overdue_entitlements: true,
+	};
 	const active = products.base({
 		id: "active",
 		isAddOn: true,

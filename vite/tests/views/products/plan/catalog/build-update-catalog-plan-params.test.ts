@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
+	compareConfig,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -127,6 +128,26 @@ describe("buildUpdateCatalogPlanParams", () => {
 			]),
 		);
 		expect(() => UpdateCatalogPlanParamsSchema.parse(body)).not.toThrow();
+	});
+
+	test("overdue access override is detected and saved independently of cancellation protection", () => {
+		const current = { ...baseProduct, config: { ignore_past_due: true } };
+		const edited = {
+			...current,
+			config: { ...current.config, allow_overdue_entitlements: true },
+		};
+		expect(
+			compareConfig({ newConfig: edited.config, curConfig: current.config }),
+		).toBe(false);
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct: current,
+			editedProduct: edited,
+			features,
+		});
+		expect(UpdateCatalogPlanParamsSchema.parse(params).config).toEqual({
+			ignore_past_due: true,
+			allow_overdue_entitlements: true,
+		});
 	});
 
 	test("rename sends new_plan_id and keeps the original plan_id", () => {

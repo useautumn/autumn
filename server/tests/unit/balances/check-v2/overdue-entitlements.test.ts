@@ -58,7 +58,7 @@ const createPlan = ({
 	id = "overdue",
 	status = CusProductStatus.PastDue,
 	amount = 100,
-	ignorePastDue = false,
+	allowOverdueEntitlements = false,
 	featureType = FeatureType.Metered,
 	unlimited = false,
 } = {}) => {
@@ -79,7 +79,7 @@ const createPlan = ({
 		status,
 		customerEntitlements: [entitlement],
 	});
-	plan.product.config.ignore_past_due = ignorePastDue;
+	plan.product.config.allow_overdue_entitlements = allowOverdueEntitlements;
 	return plan;
 };
 
@@ -100,7 +100,7 @@ const setup = ({ blocked = true, plans = [createPlan()] } = {}) => {
 };
 
 test("overdue access: org default, status and plan exemption preserve normal limits", async () => {
-	for (const [blocked, status, ignorePastDue, allowed] of [
+	for (const [blocked, status, allowOverdueEntitlements, allowed] of [
 		[false, CusProductStatus.PastDue, false, true],
 		[true, CusProductStatus.Active, false, true],
 		[true, CusProductStatus.PastDue, false, false],
@@ -108,7 +108,7 @@ test("overdue access: org default, status and plan exemption preserve normal lim
 	] as const) {
 		const { ctx } = setup({
 			blocked,
-			plans: [createPlan({ status, ignorePastDue })],
+			plans: [createPlan({ status, allowOverdueEntitlements })],
 		});
 		const checkData = await getCheckDataV2({
 			ctx,
@@ -126,6 +126,20 @@ test("overdue access: org default, status and plan exemption preserve normal lim
 				.allowed,
 		).toBe(false);
 	}
+});
+
+test("overdue access: cancellation protection does not grant access", async () => {
+	const plan = createPlan();
+	plan.product.config.ignore_past_due = true;
+	const { ctx } = setup({ plans: [plan] });
+	const checkData = await getCheckDataV2({
+		ctx,
+		body: { customer_id: "cus_test", feature_id: "messages" },
+		requiredBalance: 1,
+	});
+	expect(
+		await getCheckResponseV2({ ctx, checkData, requiredBalance: 1 }),
+	).toMatchObject({ allowed: false, balance: { remaining: 100 } });
 });
 
 test("overdue access: blocked flags and unlimited grants remain visible without granting access", async () => {
@@ -294,7 +308,23 @@ test("overdue access: credit fallback and tracked responses select eligible fund
 
 	activePlan.status = CusProductStatus.PastDue;
 	creditEntitlement.unlimited = false;
-	creditPlan.product.config.ignore_past_due = true;
+	const allBlockedCheck = await getCheckDataV2({
+		ctx,
+		body,
+		requiredBalance: 1,
+	});
+	expect(
+		await getCheckResponseV2({
+			ctx,
+			checkData: allBlockedCheck,
+			requiredBalance: 1,
+		}),
+	).toMatchObject({
+		allowed: false,
+		required_balance: 1,
+		balance: { feature_id: "messages", remaining: 2 },
+	});
+	creditPlan.product.config.allow_overdue_entitlements = true;
 	const exemptCreditCheck = await getCheckDataV2({
 		ctx,
 		body,
