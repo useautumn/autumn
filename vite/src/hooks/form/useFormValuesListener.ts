@@ -5,16 +5,8 @@ type ValuesStore<TValues> = {
 	subscribe: (listener: () => void) => { unsubscribe: () => void };
 };
 
-/**
- * Calls `onChange` whenever a form store's values change, without re-rendering
- * the component that owns the form.
- *
- * TanStack's form-level `listeners.onChange` only fires for fields mounted via
- * `<form.Field>`, so stores driven by `setFieldValue` need a subscription
- * instead. Reading the values through `useStore` here would re-render the
- * owner on every keystroke, remounting the editor beneath it and dropping
- * input focus — so the subscription stays out of the render path entirely.
- */
+/** Notifies on form value changes without re-rendering the form's owner —
+ * `useStore` here would remount the editor and drop input focus on keystroke. */
 export const useFormValuesListener = <TValues>({
 	store,
 	onChange,

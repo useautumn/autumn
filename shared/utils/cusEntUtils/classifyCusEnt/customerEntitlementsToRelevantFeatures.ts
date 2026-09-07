@@ -5,14 +5,10 @@ import { creditSystemContainsFeature } from "../../featureUtils/creditSystemUtil
 import { customerEntitlementFundsFeature } from "./customerEntitlementFundsFeature.js";
 
 /**
- * The feature plus every credit system that can fund it, judged from the
- * entitlements a customer actually holds — the override-aware twin of the
- * catalog-only getRelevantFeatures. Works off cusEnts so both FullSubject and
- * FullCustomer callers share one implementation.
- *
- * A credit system the customer holds is judged by its EFFECTIVE schema, so an
- * override can add or remove membership. One the customer holds no balance
- * for keeps catalog membership, so responses and conversions still resolve it.
+ * The feature plus every credit system that can fund it — the override-aware
+ * twin of the catalog-only getRelevantFeatures. A credit system the customer
+ * holds is judged by its EFFECTIVE schema; one they hold no balance for keeps
+ * catalog membership so responses still resolve it.
  */
 export const customerEntitlementsToRelevantFeatures = ({
 	customerEntitlements,

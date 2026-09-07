@@ -85,6 +85,8 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 	];
 };
 
+/** The customer's own entitlement supplies the effective markups; the catalog
+ * feature is the fallback for one they hold no balance on yet. */
 const resolveAiCreditFeature = async ({
 	ctx,
 	input,
@@ -92,39 +94,30 @@ const resolveAiCreditFeature = async ({
 	ctx: AutumnContext;
 	input: TrackTokensParams;
 }): Promise<Feature> => {
-	// An explicit feature_id names the catalog feature; the customer's own
-	// entitlement supplies the effective markups when they hold one. A customer
-	// with no balance on it yet simply prices at catalog rates.
-	if (input.feature_id) {
-		const catalogFeature = resolveAiCreditFeatureById({
-			features: ctx.features,
-			featureId: input.feature_id,
-		});
-		const heldFeature = (
-			await resolveAiCreditFeaturesFromEntitlements({
-				ctx,
-				customerId: input.customer_id,
-				entityId: input.entity_id,
-			})
-		).find((feature) => feature.id === input.feature_id);
-
-		return heldFeature ?? catalogFeature;
-	}
-
-	const aiCreditFeatures = await resolveAiCreditFeaturesFromEntitlements({
+	const held = await resolveAiCreditFeaturesFromEntitlements({
 		ctx,
 		customerId: input.customer_id,
 		entityId: input.entity_id,
 	});
 
-	if (aiCreditFeatures.length === 0) {
+	if (input.feature_id) {
+		return (
+			held.find((feature) => feature.id === input.feature_id) ??
+			resolveAiCreditFeatureById({
+				features: ctx.features,
+				featureId: input.feature_id,
+			})
+		);
+	}
+
+	if (held.length === 0) {
 		throw new RecaseError({
 			message: "No AI credit system feature found for this customer",
 			code: ErrCode.FeatureNotFound,
 			statusCode: 404,
 		});
 	}
-	if (aiCreditFeatures.length > 1) {
+	if (held.length > 1) {
 		throw new RecaseError({
 			message:
 				"Multiple AI credit system features found for this customer. Please specify a feature_id to disambiguate.",
@@ -132,7 +125,7 @@ const resolveAiCreditFeature = async ({
 			statusCode: 400,
 		});
 	}
-	return aiCreditFeatures[0];
+	return held[0];
 };
 
 export const getTokenTrackParams = async ({

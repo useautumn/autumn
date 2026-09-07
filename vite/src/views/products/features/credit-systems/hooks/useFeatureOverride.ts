@@ -8,14 +8,8 @@ import { isAiCreditSystem } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
-/**
- * The single owner of a plan item's feature_override: which credit system it
- * targets, whether one exists, and how to seed, patch and clear it.
- *
- * Seeding copies the feature's current values so an override always starts as
- * an edit of the real config rather than a blank slate — an override replaces
- * what it covers, so an empty one silently means "no rates" / "no markup".
- */
+/** The one owner of a plan item's feature_override. Seeding copies the
+ * feature's values, since an override replaces what it covers. */
 export const useFeatureOverride = () => {
 	const { item, setItem } = useProductItemContext();
 	const { features } = useFeaturesQuery();

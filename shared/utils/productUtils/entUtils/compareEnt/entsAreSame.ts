@@ -74,33 +74,21 @@ const creditSchemasAreSame = ({
 	});
 };
 
-/** Markup records are keyed by model/provider, so ordering is not semantic —
- * compare as keyed sets over the union of both sides' keys. */
-type MarkupEntry = {
-	markup?: number | null;
-	input_cost?: number | null;
-	output_cost?: number | null;
-};
+type MarkupEntry = Record<string, number | null | undefined>;
+const MARKUP_FIELDS = ["markup", "input_cost", "output_cost"] as const;
 
+/** Keyed by model/provider, so ordering is not semantic — compare as sets. */
 const markupRecordsAreSame = (
 	left: Record<string, MarkupEntry> | null | undefined,
 	right: Record<string, MarkupEntry> | null | undefined,
-) => {
-	const keys = new Set([
-		...Object.keys(left ?? {}),
-		...Object.keys(right ?? {}),
-	]);
-	for (const key of keys) {
-		const leftEntry = left?.[key];
-		const rightEntry = right?.[key];
-		const differs =
-			(leftEntry?.markup ?? null) !== (rightEntry?.markup ?? null) ||
-			(leftEntry?.input_cost ?? null) !== (rightEntry?.input_cost ?? null) ||
-			(leftEntry?.output_cost ?? null) !== (rightEntry?.output_cost ?? null);
-		if (differs) return false;
-	}
-	return true;
-};
+) =>
+	[...new Set([...Object.keys(left ?? {}), ...Object.keys(right ?? {})])].every(
+		(key) =>
+			MARKUP_FIELDS.every(
+				(field) =>
+					(left?.[key]?.[field] ?? null) === (right?.[key]?.[field] ?? null),
+			),
+	);
 
 const markupOverridesAreSame = ({
 	markups1,
@@ -109,8 +97,7 @@ const markupOverridesAreSame = ({
 	markups1?: FeatureMarkupsOverride | null;
 	markups2?: FeatureMarkupsOverride | null;
 }) => {
-	if (!(markups1 || markups2)) return true;
-	if (!(markups1 && markups2)) return false;
+	if (!(markups1 && markups2)) return !(markups1 || markups2);
 
 	return (
 		(markups1.default_markup ?? null) === (markups2.default_markup ?? null) &&

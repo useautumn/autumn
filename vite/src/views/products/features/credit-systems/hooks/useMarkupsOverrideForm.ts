@@ -4,13 +4,8 @@ import {
 	useCreditSystemForm,
 } from "./useCreditSystemForm";
 
-/**
- * The feature-level AI editor bound to a plan item's markup override, so both
- * surfaces run the same form and component.
- *
- * The editor reads its values off a credit-system feature, so the override is
- * presented as one: the feature's identity with the override's markups.
- */
+/** Binds the feature-level AI editor to a plan item's markup override by
+ * presenting the override as the feature it overrides. */
 export const useMarkupsOverrideForm = ({
 	creditSystem,
 	markups,

@@ -150,8 +150,7 @@ export const resolveCreditCost = ({
 	const creditSystem = ctx.features.find((f) => f.id === balanceFeatureId);
 	if (!creditSystem || !isAnyCreditSystem(creditSystem.type)) return null;
 
-	// A plan item's override reprices this balance, and the catalog rate below
-	// would report the wrong number rather than none.
+	// An override reprices this balance; the catalog rate below would be wrong, not absent.
 	const isOverridden = customerEntitlements?.some(
 		(customerEntitlement) =>
 			customerEntitlement.entitlement.feature.id === balanceFeatureId &&

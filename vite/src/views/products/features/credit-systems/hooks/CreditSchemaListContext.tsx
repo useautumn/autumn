@@ -10,11 +10,8 @@ const CreditSchemaListContext = createContext<CreditSchemaListValue | null>(
 	null,
 );
 
-/**
- * Owns the rate card's list state — row keys, candidate features, the expanded
- * row — so the card, its rows and the dimensions editor all read one source
- * instead of threading it through props.
- */
+/** Owns the rate card's list state so the card, its rows and the dimensions
+ * editor read one source rather than threading props. */
 export function CreditSchemaListProvider({
 	schema,
 	onChange,

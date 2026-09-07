@@ -14,14 +14,8 @@ type AiProviderTableValue = {
 
 const AiProviderTableContext = createContext<AiProviderTableValue | null>(null);
 
-/**
- * Per-provider context for the AI rate table's cells.
- *
- * Cells read this instead of closing over props, which lets the column
- * definitions be module-level constants. Closures would force the column array
- * to be rebuilt whenever the form, provider or a handler changed identity —
- * remounting every cell and dropping input focus mid-keystroke.
- */
+/** Read by the rate table's cells so the column defs can be constants —
+ * closing over props rebuilds them on every keystroke and drops focus. */
 export function AiProviderTableProvider({
 	value,
 	children,
