@@ -15,6 +15,7 @@ const toApiPlanV1 = (product: FullProductWithoutLicenses): ApiPlanV1 => {
 	return productV2ToApiPlanV1({
 		product: mapToProductV2({ product, features }),
 		features,
+		includeProration: true,
 	});
 };
 

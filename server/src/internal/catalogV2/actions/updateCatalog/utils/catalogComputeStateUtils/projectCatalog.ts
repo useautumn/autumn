@@ -74,14 +74,18 @@ export const projectCatalog = ({
 		.filter((upsertProductPlan) => upsertProductPlan.row.op === "create")
 		.map((upsertProductPlan) => upsertProductPlan.row.nextFullProduct);
 
-	const upsertedPlanIds = new Set(
-		plan.upsertProducts.map((upsert) => upsert.row.planId),
+	// Keyed by row, not plan: removing one version beside an upsert of a
+	// sibling version must still drop the removed row from the projection.
+	const upsertedRows = new Set(
+		plan.upsertProducts.map(
+			(upsert) => `${upsert.row.planId}@${upsert.row.version}`,
+		),
 	);
 	const hardDeletedInternalIds = new Set(
 		plan.removePlans.flatMap((removePlan) =>
 			removePlan.current &&
 			!removePlan.willArchive &&
-			!upsertedPlanIds.has(removePlan.planId)
+			!upsertedRows.has(`${removePlan.planId}@${removePlan.version}`)
 				? [removePlan.current.internal_id]
 				: [],
 		),

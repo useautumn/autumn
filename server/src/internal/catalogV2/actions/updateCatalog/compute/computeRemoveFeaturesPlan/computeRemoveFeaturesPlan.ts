@@ -121,11 +121,14 @@ export const computeRemoveFeaturesPlan = ({
 			// only reference that survives is an item the push itself still states;
 			// a partial push can also leave a plan outside itself.
 			const fullState = params.skip_deletions === false;
+			const skippedPlanIds = new Set(params.skip_plan_ids ?? []);
 			const hasUnclearedPlanItem = fullState
 				? statedItemNamesFeature({
 						featureId: removeFeaturePlan.featureId,
 						params,
-					})
+					}) ||
+					// A plan the push exempts is kept as it is, items included.
+					referencingPlanIds.some((planId) => skippedPlanIds.has(planId))
 				: referencingPlanIds.some(
 						(planId) => !planIsPartOfThisPush({ planId, params }),
 					);

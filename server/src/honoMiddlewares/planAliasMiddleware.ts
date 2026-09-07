@@ -25,10 +25,14 @@ const isCreatePlanRoute = ({
 /** `plans[]` and nested `variants[]` entries carrying internal_id, with the plan_id they stated. */
 const statedPlanIdsByInternalId = (
 	body: object,
-): { entry: { plan_id?: unknown }; planId: unknown }[] => {
+): { entry: Record<string, unknown>; field: string; planId: unknown }[] => {
 	const plans = (body as { plans?: unknown }).plans;
 	if (!Array.isArray(plans)) return [];
-	const stated: { entry: { plan_id?: unknown }; planId: unknown }[] = [];
+	const stated: {
+		entry: Record<string, unknown>;
+		field: string;
+		planId: unknown;
+	}[] = [];
 	for (const plan of plans) {
 		if (plan === null || typeof plan !== "object") continue;
 		const entry = plan as {
@@ -37,7 +41,11 @@ const statedPlanIdsByInternalId = (
 			variants?: unknown;
 		};
 		if (typeof entry.internal_id === "string")
-			stated.push({ entry, planId: entry.plan_id });
+			stated.push({
+				entry: entry as Record<string, unknown>,
+				field: "plan_id",
+				planId: entry.plan_id,
+			});
 		if (!Array.isArray(entry.variants)) continue;
 		for (const variant of entry.variants) {
 			if (variant === null || typeof variant !== "object") continue;
@@ -47,7 +55,8 @@ const statedPlanIdsByInternalId = (
 			};
 			if (typeof nested.internal_id === "string")
 				stated.push({
-					entry: nested as unknown as { plan_id?: unknown },
+					entry: nested as Record<string, unknown>,
+					field: "variant_plan_id",
 					planId: nested.variant_plan_id,
 				});
 		}
@@ -108,7 +117,7 @@ export const planAliasMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			? CREATE_PLAN_ID_SKIP_KEYS
 			: undefined,
 	});
-	for (const { entry, planId } of statedIds) entry.plan_id = planId;
+	for (const { entry, field, planId } of statedIds) entry[field] = planId;
 	// Skip replaceJsonBody on a no-op rewrite so bodyCache.text stays the
 	// original bytes (Vercel HMAC runs captureRawBody after this middleware).
 	if (before !== JSON.stringify(body)) {
