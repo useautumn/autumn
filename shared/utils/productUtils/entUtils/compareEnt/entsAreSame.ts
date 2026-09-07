@@ -7,6 +7,7 @@ import {
 	EntInterval,
 	type Entitlement,
 	type FeatureConfigOverride,
+	type FeatureMarkupsOverride,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
@@ -31,9 +32,28 @@ const rolloversAreSame = ({
 	);
 };
 
+/** Same rate for the same metered feature. Tiers ARE ordered (usage
+ * boundaries), so they stay index-compared. */
+export const creditSchemaItemsAreSame = ({
+	left,
+	right,
+}: {
+	left: CreditSchemaItem;
+	right: CreditSchemaItem;
+}) =>
+	(left.feature_amount ?? 1) == (right.feature_amount ?? 1) &&
+	creditDimensionRulesEqual({ left, right }) &&
+	left.credit_amount == right.credit_amount &&
+	(left.tier_behavior ?? null) === (right.tier_behavior ?? null) &&
+	(left.tiers ?? []).length === (right.tiers ?? []).length &&
+	(left.tiers ?? []).every(
+		(tier, tierIndex) =>
+			tier.to === right.tiers?.[tierIndex]?.to &&
+			tier.credit_amount == right.tiers?.[tierIndex]?.credit_amount,
+	);
+
 /** Entries are keyed by metered_feature_id (rate lookup is a find over the
- * array), so ordering is not semantic — compare as a keyed set. Tiers ARE
- * ordered (usage boundaries), so they stay index-compared. */
+ * array), so ordering is not semantic — compare as a keyed set. */
 const creditSchemasAreSame = ({
 	schema1,
 	schema2,
@@ -50,19 +70,56 @@ const creditSchemasAreSame = ({
 			(candidate) => candidate.metered_feature_id === item1.metered_feature_id,
 		);
 		if (!item2) return false;
-		return (
-			(item1.feature_amount ?? 1) == (item2.feature_amount ?? 1) &&
-			creditDimensionRulesEqual({ left: item1, right: item2 }) &&
-			item1.credit_amount == item2.credit_amount &&
-			(item1.tier_behavior ?? null) === (item2.tier_behavior ?? null) &&
-			(item1.tiers ?? []).length === (item2.tiers ?? []).length &&
-			(item1.tiers ?? []).every(
-				(tier1, tierIndex) =>
-					tier1.to === item2.tiers?.[tierIndex]?.to &&
-					tier1.credit_amount == item2.tiers?.[tierIndex]?.credit_amount,
-			)
-		);
+		return creditSchemaItemsAreSame({ left: item1, right: item2 });
 	});
+};
+
+/** Markup records are keyed by model/provider, so ordering is not semantic —
+ * compare as keyed sets over the union of both sides' keys. */
+type MarkupEntry = {
+	markup?: number | null;
+	input_cost?: number | null;
+	output_cost?: number | null;
+};
+
+const markupRecordsAreSame = (
+	left: Record<string, MarkupEntry> | null | undefined,
+	right: Record<string, MarkupEntry> | null | undefined,
+) => {
+	const keys = new Set([
+		...Object.keys(left ?? {}),
+		...Object.keys(right ?? {}),
+	]);
+	for (const key of keys) {
+		const leftEntry = left?.[key];
+		const rightEntry = right?.[key];
+		const differs =
+			(leftEntry?.markup ?? null) !== (rightEntry?.markup ?? null) ||
+			(leftEntry?.input_cost ?? null) !== (rightEntry?.input_cost ?? null) ||
+			(leftEntry?.output_cost ?? null) !== (rightEntry?.output_cost ?? null);
+		if (differs) return false;
+	}
+	return true;
+};
+
+const markupOverridesAreSame = ({
+	markups1,
+	markups2,
+}: {
+	markups1?: FeatureMarkupsOverride | null;
+	markups2?: FeatureMarkupsOverride | null;
+}) => {
+	if (!(markups1 || markups2)) return true;
+	if (!(markups1 && markups2)) return false;
+
+	return (
+		(markups1.default_markup ?? null) === (markups2.default_markup ?? null) &&
+		markupRecordsAreSame(
+			markups1.provider_markups,
+			markups2.provider_markups,
+		) &&
+		markupRecordsAreSame(markups1.model_markups, markups2.model_markups)
+	);
 };
 
 /** Field-by-field so new override keys must be added here deliberately. */
@@ -76,6 +133,10 @@ export const featureOverridesAreSame = ({
 	creditSchemasAreSame({
 		schema1: override1?.schema,
 		schema2: override2?.schema,
+	}) &&
+	markupOverridesAreSame({
+		markups1: override1?.markups,
+		markups2: override2?.markups,
 	});
 
 const normalizeOptionalId = (value?: string | null) => value || null;

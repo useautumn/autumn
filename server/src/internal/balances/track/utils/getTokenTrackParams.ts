@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	entitlementToCreditSystem,
 	type Feature,
 	fullCustomerToCustomerEntitlements,
 	fullSubjectToFullCustomer,
@@ -11,7 +12,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { getModelCreditCostBreakdown } from "@/internal/features/aiCreditSystemUtils.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
 const resolveAiCreditFeatureById = ({
@@ -39,7 +39,14 @@ const resolveAiCreditFeatureById = ({
 	return candidate;
 };
 
-const resolveAiCreditFeatureFromEntitlements = async ({
+/**
+ * The AI credit systems this customer holds, each resolved through its own
+ * entitlement so a plan item's markup override is priced instead of the
+ * catalog's. Entitlements arrive in deduction order, so the first one for a
+ * feature is the one that will actually be drained — and therefore the one
+ * whose markups apply.
+ */
+const resolveAiCreditFeaturesFromEntitlements = async ({
 	ctx,
 	customerId,
 	entityId,
@@ -47,10 +54,7 @@ const resolveAiCreditFeatureFromEntitlements = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
-}): Promise<Feature> => {
-	if (isFullSubjectRolloutEnabled({ ctx })) {
-	}
-
+}): Promise<Feature[]> => {
 	const fullCustomer = fullSubjectToFullCustomer({
 		fullSubject: await getOrSetCachedFullSubject({
 			ctx,
@@ -69,13 +73,49 @@ const resolveAiCreditFeatureFromEntitlements = async ({
 		entity,
 	});
 
-	const aiCreditFeatures = [
+	return [
 		...new Map(
 			cusEnts
 				.filter((ce) => isAiCreditSystem(ce.entitlement.feature.type))
-				.map((ce) => [ce.entitlement.feature.id, ce.entitlement.feature]),
+				.map((ce) => [
+					ce.entitlement.feature.id,
+					entitlementToCreditSystem({ entitlement: ce.entitlement }),
+				]),
 		).values(),
 	];
+};
+
+const resolveAiCreditFeature = async ({
+	ctx,
+	input,
+}: {
+	ctx: AutumnContext;
+	input: TrackTokensParams;
+}): Promise<Feature> => {
+	// An explicit feature_id names the catalog feature; the customer's own
+	// entitlement supplies the effective markups when they hold one. A customer
+	// with no balance on it yet simply prices at catalog rates.
+	if (input.feature_id) {
+		const catalogFeature = resolveAiCreditFeatureById({
+			features: ctx.features,
+			featureId: input.feature_id,
+		});
+		const heldFeature = (
+			await resolveAiCreditFeaturesFromEntitlements({
+				ctx,
+				customerId: input.customer_id,
+				entityId: input.entity_id,
+			})
+		).find((feature) => feature.id === input.feature_id);
+
+		return heldFeature ?? catalogFeature;
+	}
+
+	const aiCreditFeatures = await resolveAiCreditFeaturesFromEntitlements({
+		ctx,
+		customerId: input.customer_id,
+		entityId: input.entity_id,
+	});
 
 	if (aiCreditFeatures.length === 0) {
 		throw new RecaseError({
@@ -102,16 +142,7 @@ export const getTokenTrackParams = async ({
 	ctx: AutumnContext;
 	input: TrackTokensParams;
 }): Promise<{ body: TrackParams; featureDeductions: FeatureDeduction[] }> => {
-	const aiCreditFeature = input.feature_id
-		? resolveAiCreditFeatureById({
-				features: ctx.features,
-				featureId: input.feature_id,
-			})
-		: await resolveAiCreditFeatureFromEntitlements({
-				ctx,
-				customerId: input.customer_id,
-				entityId: input.entity_id,
-			});
+	const aiCreditFeature = await resolveAiCreditFeature({ ctx, input });
 
 	const pricing = await getModelCreditCostBreakdown({
 		modelName: input.model_id,

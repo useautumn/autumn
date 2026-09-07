@@ -3,8 +3,8 @@ import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductMod
 import type { UsageWindowScope } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
 import type { Feature } from "../../../models/featureModels/featureModels.js";
-import { getRelevantFeatures } from "../../featureUtils.js";
 import { fullSubjectToCustomerEntitlements } from "../../fullSubjectUtils/fullSubjectToCustomerEntitlements.js";
+import { fullSubjectToRelevantFeatures } from "../../fullSubjectUtils/fullSubjectToRelevantFeatures.js";
 import {
 	type AnchorCandidate,
 	pickAnchorCustomerEntitlementId,
@@ -76,9 +76,10 @@ export const findUsageWindowAnchor = ({
 	anchorCustomerEntitlementId: string | null;
 	anchorCustomerEntitlement?: FullCusEntWithFullCusProduct;
 } => {
-	const containingCreditSystemFeatureIds = getRelevantFeatures({
-		features,
+	const containingCreditSystemFeatureIds = fullSubjectToRelevantFeatures({
+		fullSubject,
 		featureId,
+		features,
 	})
 		.map((feature) => feature.id)
 		.filter((relevantFeatureId) => relevantFeatureId !== featureId);

@@ -1,7 +1,24 @@
 import type { ApiSubjectV0 } from "@api/customers/apiSubjectV0";
 import { usageLimitFilterMatchesProperties } from "@models/cusModels/billingControls/usageLimit";
 import type { Feature } from "@models/featureModels/featureModels";
+import { hasCreditDimensionRules } from "@utils/featureUtils/classifyFeature/hasCreditDimensionRules";
 import { Decimal } from "decimal.js";
+
+type CreditRateLookup = {
+	metered_feature_id: string;
+	credit_amount?: number;
+	feature_amount?: number;
+	tier_behavior?: string;
+	dimensions?: Record<string, unknown> | null;
+	multipliers?: Record<string, unknown> | null;
+};
+
+const isFlatCreditRate = (
+	item: CreditRateLookup,
+): item is CreditRateLookup & { credit_amount: number } =>
+	item.credit_amount != null &&
+	item.tier_behavior !== "graduated" &&
+	!hasCreditDimensionRules(item);
 
 /**
  * Remaining usage-window headroom for a check, in the EVALUATED feature's
@@ -58,7 +75,10 @@ export const apiSubjectToUsageLimitHeadroom = ({
 			(item: { metered_feature_id: string }) =>
 				item.metered_feature_id === originalFeature.id,
 		);
-		if (schemaItem) {
+		// Only a flat rate converts to a scalar. A graduated or dimensioned rate
+		// depends on usage and event properties that aren't in scope here, and
+		// treating it as 1 credit/unit silently under-reports the cap.
+		if (schemaItem && isFlatCreditRate(schemaItem)) {
 			for (const capOnOriginal of applicableCaps(originalFeature.id)) {
 				const headroomUnits = Decimal.max(
 					0,
@@ -66,7 +86,7 @@ export const apiSubjectToUsageLimitHeadroom = ({
 				);
 				headrooms.push(
 					headroomUnits
-						.mul(schemaItem.credit_amount ?? 1)
+						.mul(schemaItem.credit_amount)
 						.div(schemaItem.feature_amount ?? 1),
 				);
 			}

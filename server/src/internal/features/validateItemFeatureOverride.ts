@@ -3,6 +3,8 @@ import {
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
+	isAiCreditSystem,
+	isAnyCreditSystem,
 	type ProductItem,
 	RecaseError,
 } from "@autumn/shared";
@@ -27,9 +29,27 @@ export const validateItemFeatureOverride = ({
 	const featureOverride = item.config?.feature_override;
 	if (!featureOverride) return;
 
-	if (feature?.type !== FeatureType.CreditSystem) {
+	if (!(feature && isAnyCreditSystem(feature.type))) {
 		throw new RecaseError({
 			message: `feature_override is only supported on credit system items (feature: ${item.feature_id})`,
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	// The two keys target different feature types: a rate card only exists on a
+	// classic credit system, markups only on an AI one.
+	if (featureOverride.schema && feature.type !== FeatureType.CreditSystem) {
+		throw new RecaseError({
+			message: `feature_override.credit_schema is not supported on AI credit system items (feature: ${item.feature_id})`,
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (featureOverride.markups && !isAiCreditSystem(feature.type)) {
+		throw new RecaseError({
+			message: `feature_override.markups is only supported on AI credit system items (feature: ${item.feature_id})`,
 			code: ErrCode.InvalidProductItem,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

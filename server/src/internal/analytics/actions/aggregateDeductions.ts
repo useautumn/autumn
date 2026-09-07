@@ -6,11 +6,13 @@ import type {
 	DeductionPeriod,
 	FeatureType,
 	FullCustomer,
+	FullCustomerEntitlement,
 	RangeEnum,
 } from "@autumn/shared";
 import {
 	type CreditSchemaItem,
 	findFeatureById,
+	fullCustomerToCustomerEntitlements,
 	hasCreditDimensionRules,
 	isAnyCreditSystem,
 	notNullish,
@@ -136,15 +138,26 @@ export const resolveCreditCost = ({
 	ctx,
 	sourceFeatureId,
 	balanceFeatureId,
+	customerEntitlements,
 }: {
 	ctx: AutumnContext;
 	sourceFeatureId?: string;
 	balanceFeatureId: string;
+	customerEntitlements?: Pick<FullCustomerEntitlement, "entitlement">[];
 }): number | null => {
 	if (!sourceFeatureId || sourceFeatureId === balanceFeatureId) return null;
 
 	const creditSystem = ctx.features.find((f) => f.id === balanceFeatureId);
 	if (!creditSystem || !isAnyCreditSystem(creditSystem.type)) return null;
+
+	// A plan item's override reprices this balance, and the catalog rate below
+	// would report the wrong number rather than none.
+	const isOverridden = customerEntitlements?.some(
+		(customerEntitlement) =>
+			customerEntitlement.entitlement.feature.id === balanceFeatureId &&
+			customerEntitlement.entitlement.feature_override,
+	);
+	if (isOverridden) return null;
 	const sourceFeature = findFeatureById({
 		features: ctx.features,
 		featureId: sourceFeatureId,
@@ -297,6 +310,9 @@ export const aggregateDeductions = async ({
 		entityIdByInternalId,
 		cusEntById,
 		featureById,
+		customerEntitlements: fullCustomerToCustomerEntitlements({
+			fullCustomer: params.customer,
+		}),
 	});
 };
 
@@ -316,6 +332,7 @@ const pivotRows = ({
 	entityIdByInternalId,
 	cusEntById,
 	featureById,
+	customerEntitlements,
 }: {
 	rows: AggregateDeductionsPipeRow[];
 	ctx: AutumnContext;
@@ -325,6 +342,7 @@ const pivotRows = ({
 	entityIdByInternalId: Map<string, string>;
 	cusEntById: Map<string, BalanceOwner>;
 	featureById: Map<string, { id: string; type: FeatureType }>;
+	customerEntitlements: Pick<FullCustomerEntitlement, "entitlement">[];
 }): DeductionPeriod[] => {
 	const byPeriod = new Map<number, DeductionPeriod>();
 	// Balance accumulators, keyed period -> feature -> balance_id.
@@ -385,6 +403,7 @@ const pivotRows = ({
 					ctx,
 					sourceFeatureId: pinnedSource,
 					balanceFeatureId,
+					customerEntitlements,
 				}),
 				deducted: 0,
 				events: 0,
@@ -422,6 +441,7 @@ const pivotRows = ({
 							ctx,
 							sourceFeatureId: groupValue,
 							balanceFeatureId,
+							customerEntitlements,
 						}),
 					}
 				: {}),

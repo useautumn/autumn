@@ -6,10 +6,10 @@ import {
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	fullSubjectToOverageAllowedByFeatureId,
+	fullSubjectToRelevantFeatures,
 	fullSubjectToSpendLimitByFeatureId,
 	fullSubjectToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
-	getRelevantFeatures,
 	InsufficientBalanceError,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
@@ -108,9 +108,10 @@ export const prepareFeatureDeductionV2 = ({
 	// even under set_usage, so a parent-feature cap can't be bypassed by set_usage
 	// on a member feature.
 	const windowFeatureIds = notNullish(targetBalance)
-		? getRelevantFeatures({
-				features: ctx.features,
+		? fullSubjectToRelevantFeatures({
+				fullSubject,
 				featureId: feature.id,
+				features: ctx.features,
 			}).map((candidate) => candidate.id)
 		: effectiveFeatureIds;
 	const allUsageWindowLimits = resolveUsageWindowLimits({

@@ -1,7 +1,8 @@
 import {
+	customerEntitlementsToRelevantFeatures,
 	type Feature,
 	type FullCustomer,
-	getRelevantFeatures,
+	fullCustomerToCustomerEntitlements,
 } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -19,9 +20,12 @@ export const triggerAutoTopUp = async ({
 	newFullCus: FullCustomer;
 	feature: Feature;
 }) => {
-	const relevantFeatures = getRelevantFeatures({
-		features: ctx.features,
+	const relevantFeatures = customerEntitlementsToRelevantFeatures({
+		customerEntitlements: fullCustomerToCustomerEntitlements({
+			fullCustomer: newFullCus,
+		}),
 		featureId: feature.id,
+		features: ctx.features,
 	});
 
 	for (const relevantFeature of relevantFeatures) {

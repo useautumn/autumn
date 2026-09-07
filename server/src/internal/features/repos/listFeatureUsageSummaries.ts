@@ -94,6 +94,18 @@ export const buildFeatureUsageSummariesQuery = ({
 						= candidate.internal_feature_id
 					LIMIT ${scanLimit}
 				)
+				UNION ALL
+				(
+					-- A plan item's feature_override rate card can reference a
+					-- feature the catalog credit system does not, so deleting it
+					-- would orphan the override (which fails closed at track time).
+					SELECT 'override' AS arm, entitlement.internal_product_id
+					FROM entitlements entitlement
+					WHERE entitlement.feature_override -> 'schema' @> json_build_array(
+						json_build_object('metered_feature_id', candidate.feature_id)
+					)::jsonb
+					LIMIT ${scanLimit}
+				)
 			),
 			-- Distinct LOGICAL plans (latest version's name), oldest first
 			plan_rows AS (

@@ -1,4 +1,5 @@
 import {
+	CUSTOM_PROVIDER,
 	joinModelId,
 	type ModelsDevProvider,
 	splitModelId,
@@ -35,24 +36,47 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 		[modelMarkups],
 	);
 	// A provider is "active" if it has model overrides OR a provider-level markup.
+	// Custom is the exception: its models set their own rates and its section
+	// shows no provider markup input, so only its models can summon it.
 	const activeProviderKeys = useMemo(
 		() =>
 			Array.from(
 				new Set([
 					...Object.keys(providerGroups),
-					...Object.keys(providerMarkups),
+					...Object.keys(providerMarkups).filter(
+						(providerKey) => providerKey !== CUSTOM_PROVIDER,
+					),
 				]),
 			),
 		[providerGroups, providerMarkups],
+	);
+
+	// A provider with no models.dev entry (custom) still needs a provider object.
+	// It must be referentially stable: consumers memoize table columns on it, and
+	// a fresh literal each render remounts the cells and drops input focus.
+	const resolvedProviders = useMemo(
+		() =>
+			Object.fromEntries(
+				activeProviderKeys.map((providerKey) => [
+					providerKey,
+					providers[providerKey] ??
+						({
+							id: providerKey,
+							name: providerKey,
+							models: {},
+						} as ModelsDevProvider),
+				]),
+			),
+		[providers, activeProviderKeys],
 	);
 
 	const availableProviders = useMemo(() => {
 		const filtered = Object.values(providers).filter(
 			(p) => !activeProviderKeys.includes(p.id),
 		);
-		if (!activeProviderKeys.includes("custom")) {
+		if (!activeProviderKeys.includes(CUSTOM_PROVIDER)) {
 			filtered.push({
-				id: "custom",
+				id: CUSTOM_PROVIDER,
 				name: "Custom",
 				models: {},
 			} as ModelsDevProvider);
@@ -62,7 +86,7 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 
 	const addProvider = (providerKey: string) => {
 		form.setFieldValue("model_markups", (prev) => {
-			if (providerKey === "custom") {
+			if (providerKey === CUSTOM_PROVIDER) {
 				return addCustomModelMarkup(prev);
 			}
 			const provider = providers[providerKey];
@@ -115,6 +139,7 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 
 	return {
 		providers,
+		resolvedProviders,
 		isLoading,
 		defaultMarkup,
 		providerMarkups,

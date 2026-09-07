@@ -2,6 +2,7 @@
 import {
 	BillingInterval,
 	FeatureUsageType,
+	isAnyCreditSystem,
 	isFeaturePriceItem,
 	itemToBillingInterval,
 	UsageModel,
@@ -36,7 +37,10 @@ export function AdvancedSettings() {
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	const showFeatureOverride = hasCreditSystem;
+	// AI credit systems override their markup chain rather than a rate card.
+	const showFeatureOverride = isAnyCreditSystem(
+		features.find((feature) => feature.id === item.feature_id)?.type,
+	);
 	// Deprecated in favor of licenses. Surface it whenever any item in the plan
 	// uses an entity feature, so all items in such plans keep working.
 	const showEntityFeature =
