@@ -8,6 +8,7 @@ import {
 	type CommittedTrackOutcomeAppender,
 	TrackOutcomeBatchNotCommittedError,
 } from "../writer/committedTrackOutcomeAppender.js";
+import { translateKafkaProducerError } from "./workerKafkaErrors.js";
 
 export function createTrackOutcomePublisher({
 	ctx,
@@ -28,6 +29,12 @@ export function createTrackOutcomePublisher({
 		try {
 			return await publisher.append({ topic, partition, records: outcomes });
 		} catch (cause) {
+			const translated = translateKafkaProducerError({
+				topic,
+				partition,
+				cause,
+			});
+			if (translated !== cause) throw translated;
 			if (cause instanceof KafkaBatchNotCommittedError) {
 				throw new TrackOutcomeBatchNotCommittedError({ cause: cause.cause });
 			}
