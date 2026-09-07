@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { UnsupportedBalanceStateSchemaVersionError } from "./sqliteBalanceStateErrors.js";
 
-const SQLITE_SCHEMA_VERSION = 1;
+export const SQLITE_SCHEMA_VERSION = 1;
 
 const configureDatabase = ({ database }: { database: Database }) => {
 	database.run("PRAGMA foreign_keys = ON");

@@ -42,6 +42,7 @@ export function createPartitionRuntime({
 				stateStore: dependencies.stateStore,
 				appender: dependencies.appender,
 				trackReceiptPolicy: dependencies.trackReceiptPolicy,
+				assertCanRead,
 			},
 			config: {
 				topic: config.topic,
@@ -50,6 +51,10 @@ export function createPartitionRuntime({
 			},
 		}),
 	};
+
+	function assertCanRead(): void {
+		if (state.terminalError) throw state.terminalError;
+	}
 
 	function start(): Promise<void> {
 		return startRuntime({ ctx, state });
