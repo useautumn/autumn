@@ -13,6 +13,7 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type CatalogPlanRow = {
 	id: string;
@@ -42,7 +43,7 @@ test.concurrent(
 			extra: `\n\t\t\t\tversionSlug: "v1",`,
 		});
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: "atmn@autumn.test" })],
+			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
 			config: `{ plans: [${v1}] }`,
 		});
 

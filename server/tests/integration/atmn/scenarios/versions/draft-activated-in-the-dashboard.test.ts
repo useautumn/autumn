@@ -12,6 +12,7 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type WirePlanRow = Record<string, unknown>;
 
@@ -38,7 +39,7 @@ test.concurrent(
 			extra: `\n\t\t\t\tversionSlug: "v2",\n\t\t\t\tactive: false,`,
 		});
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: "atmn@autumn.test" })],
+			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
 			config: `{ plans: [${v1}] }`,
 		});
 

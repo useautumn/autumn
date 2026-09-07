@@ -16,6 +16,7 @@ import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const internalIdForVersion = async ({
 	ctx,
@@ -59,7 +60,7 @@ test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/versions: an in-place price change on a customered version drafts a migration and leaves the customer where they are")}`,
 	async () => {
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: "atmn@autumn.test" })],
+			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
 			config: `{ plans: [${paidMonthly({ planId: "pro", amount: 20, extra: `\n\t\t\t\tversionSlug: "v1",` })}] }`,
 		});
 

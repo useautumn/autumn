@@ -13,12 +13,13 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/archive: restoring a plan whose item feature is still archived is refused, naming the feature")}`,
 	async () => {
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: "atmn@autumn.test" })],
+			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
 			config: `{
 	features: [
 		feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false }),

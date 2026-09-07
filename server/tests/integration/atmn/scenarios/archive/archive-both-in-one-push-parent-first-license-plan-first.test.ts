@@ -19,6 +19,7 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type CatalogPlanRow = { id: string; archived: boolean };
 
@@ -60,7 +61,7 @@ for (const order of ["parent first", "license plan first"] as const) {
 		`${chalk.yellowBright(`atmn scenarios/archive: archiving the parent and its license plan in one push [${order}] archives both`)}`,
 		async () => {
 			const scenario = await initAtmnScenario({
-				setup: [s.platform.create({ userEmail: "atmn@autumn.test" })],
+				setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
 				config: `{ features: [${everyFeatureType}], plans: [${seatPlan}${enterpriseWithSeats({})}] }`,
 			});
 
