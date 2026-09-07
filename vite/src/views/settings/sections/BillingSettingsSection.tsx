@@ -49,9 +49,9 @@ const BILLING_TOGGLES = [
 	},
 	{
 		key: "block_overdue_entitlements",
-		label: "Block overdue entitlements",
+		label: "Block access while overdue",
 		description:
-			"Block access while payment is past due, except for plans with Allow access while overdue enabled",
+			"Block access when a plan is past due. Plans can override this setting.",
 	},
 	{
 		key: "invoice_memos",
