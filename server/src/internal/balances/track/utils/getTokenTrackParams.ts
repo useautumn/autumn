@@ -45,45 +45,47 @@ const isMissingSubject = (error: unknown) =>
 	error instanceof CustomerNotFoundError ||
 	error instanceof EntityNotFoundError;
 
-const resolveAiCreditFeaturesFromEntitlements = async ({
+const resolveHeldAiCreditFeatures = async ({
 	ctx,
-	customerId,
-	entityId,
+	input,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
-	entityId?: string;
+	input: TrackTokensParams;
 }): Promise<Feature[]> => {
-	const fullCustomer = fullSubjectToFullCustomer({
-		fullSubject: await getOrSetCachedFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			source: "resolveAiCreditFeature",
-		}),
-	});
+	try {
+		const fullCustomer = fullSubjectToFullCustomer({
+			fullSubject: await getOrSetCachedFullSubject({
+				ctx,
+				customerId: input.customer_id,
+				entityId: input.entity_id,
+				source: "resolveAiCreditFeature",
+			}),
+		});
+		const entity = input.entity_id
+			? fullCustomer.entities?.find((e) => e.id === input.entity_id)
+			: undefined;
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			entity,
+		});
 
-	const entity = entityId
-		? fullCustomer.entities?.find((e) => e.id === entityId)
-		: undefined;
-
-	const cusEnts = fullCustomerToCustomerEntitlements({
-		fullCustomer,
-		entity,
-	});
-
-	// Deduction order: the first entitlement drains, so it sets the markup.
-	const byFeatureId = new Map<string, Feature>();
-	for (const ce of cusEnts) {
-		const { feature } = ce.entitlement;
-		if (!isAiCreditSystem(feature.type) || byFeatureId.has(feature.id))
-			continue;
-		byFeatureId.set(
-			feature.id,
-			entitlementToCreditSystem({ entitlement: ce.entitlement }),
-		);
+		// Deduction order: the first entitlement drains, so it sets the markup.
+		const byFeatureId = new Map<string, Feature>();
+		for (const ce of cusEnts) {
+			const { feature } = ce.entitlement;
+			if (!isAiCreditSystem(feature.type) || byFeatureId.has(feature.id))
+				continue;
+			byFeatureId.set(
+				feature.id,
+				entitlementToCreditSystem({ entitlement: ce.entitlement }),
+			);
+		}
+		return [...byFeatureId.values()];
+	} catch (error) {
+		// A named feature must not block the create-customer-on-track path.
+		if (input.feature_id && isMissingSubject(error)) return [];
+		throw error;
 	}
-	return [...byFeatureId.values()];
 };
 
 const resolveAiCreditFeature = async ({
@@ -93,15 +95,7 @@ const resolveAiCreditFeature = async ({
 	ctx: AutumnContext;
 	input: TrackTokensParams;
 }): Promise<Feature> => {
-	// A named feature must not block the create-customer-on-track path.
-	const held = await resolveAiCreditFeaturesFromEntitlements({
-		ctx,
-		customerId: input.customer_id,
-		entityId: input.entity_id,
-	}).catch((error) => {
-		if (input.feature_id && isMissingSubject(error)) return [];
-		throw error;
-	});
+	const held = await resolveHeldAiCreditFeatures({ ctx, input });
 
 	if (input.feature_id) {
 		return (

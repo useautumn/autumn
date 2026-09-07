@@ -139,19 +139,15 @@ export const resolveCreditCost = ({
 	ctx,
 	sourceFeatureId,
 	balanceFeatureId,
-	owner,
 }: {
 	ctx: AutumnContext;
 	sourceFeatureId?: string;
 	balanceFeatureId: string;
-	owner?: BalanceOwner;
 }): number | null => {
 	if (!sourceFeatureId || sourceFeatureId === balanceFeatureId) return null;
 
 	const creditSystem = ctx.features.find((f) => f.id === balanceFeatureId);
 	if (!creditSystem || !isAnyCreditSystem(creditSystem.type)) return null;
-
-	if (owner?.cusEnt.entitlement?.feature_override) return null;
 	const sourceFeature = findFeatureById({
 		features: ctx.features,
 		featureId: sourceFeatureId,
@@ -347,6 +343,9 @@ const pivotRows = ({
 		}
 
 		const balanceFeatureId = row.balance_feature_id;
+		const balanceOverridden = Boolean(
+			cusEntById.get(row.balance_id)?.cusEnt.entitlement?.feature_override,
+		);
 		const feature = featureById.get(balanceFeatureId);
 
 		let featureEntry: DeductionFeature | undefined =
@@ -388,12 +387,13 @@ const pivotRows = ({
 									? Number(cusEnt?.next_reset_at)
 									: null,
 							},
-				credit_cost: resolveCreditCost({
-					ctx,
-					sourceFeatureId: pinnedSource,
-					balanceFeatureId,
-					owner: cusEntById.get(row.balance_id),
-				}),
+				credit_cost: balanceOverridden
+					? null
+					: resolveCreditCost({
+							ctx,
+							sourceFeatureId: pinnedSource,
+							balanceFeatureId,
+						}),
 				deducted: 0,
 				events: 0,
 			};
@@ -426,12 +426,13 @@ const pivotRows = ({
 			// pair, so the rate is exact here even when the balance-level one is null.
 			...(groupColumn === "source_feature_id" && groupValue !== OTHER_GROUP
 				? {
-						credit_cost: resolveCreditCost({
-							ctx,
-							sourceFeatureId: groupValue,
-							balanceFeatureId,
-							owner: cusEntById.get(row.balance_id),
-						}),
+						credit_cost: balanceOverridden
+							? null
+							: resolveCreditCost({
+									ctx,
+									sourceFeatureId: groupValue,
+									balanceFeatureId,
+								}),
 					}
 				: {}),
 		};
