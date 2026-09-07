@@ -28,11 +28,25 @@ export function organizationSchema() {
 		"@type": "Organization",
 		"@id": `${SITE_URL}/#organization`,
 		name: ORG_NAME,
+		legalName: "Rebase, Inc.",
+		alternateName: "Autumn Billing",
 		url: SITE_URL,
 		logo: LOGO_URL,
 		description:
 			"Billing infrastructure for AI startups: usage-based billing, credits, entitlements, and subscription state in one API.",
 		sameAs: SAME_AS,
+		contactPoint: {
+			"@type": "ContactPoint",
+			contactType: "sales and support",
+			email: "hey@useautumn.com",
+			url: `${SITE_URL}/contact`,
+			availableLanguage: "English",
+		},
+		address: {
+			"@type": "PostalAddress",
+			addressRegion: "Delaware",
+			addressCountry: "US",
+		},
 	};
 }
 
@@ -42,7 +56,7 @@ export function websiteSchema() {
 		"@type": "WebSite",
 		"@id": `${SITE_URL}/#website`,
 		name: ORG_NAME,
-		alternateName: "useautumn.com",
+		alternateName: ["Autumn Billing", "useautumn.com"],
 		url: SITE_URL,
 		publisher: { "@id": `${SITE_URL}/#organization` },
 	};

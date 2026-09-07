@@ -1,7 +1,14 @@
-import { createAutumnOperationsMCPServer } from "@autumn/mcp";
+import {
+	createAutumnMcpServerCard,
+	createAutumnOperationsMCPServer,
+} from "@autumn/mcp";
 import type { HttpBindings } from "@hono/node-server";
 import { Hono } from "hono";
-import { MCP_PATH, PROTECTED_RESOURCE_METADATA_PATH } from "./constants.js";
+import {
+	MCP_PATH,
+	MCP_SERVER_CARD_PATH,
+	PROTECTED_RESOURCE_METADATA_PATH,
+} from "./constants.js";
 import { createHandleMcp } from "./handlers/handleMcp.js";
 import { createHandleProtectedResourceMetadata } from "./handlers/handleProtectedResourceMetadata.js";
 import type { McpRouteOptions } from "./types.js";
@@ -18,6 +25,12 @@ export const createMcpRouter = (options: McpRouteOptions) => {
 			options,
 		}),
 	);
+	router.get(MCP_SERVER_CARD_PATH, (c) => {
+		c.header("Cache-Control", "public, max-age=3600");
+		return c.json(
+			createAutumnMcpServerCard({ serverUrl: options.resourceUrl }),
+		);
+	});
 	router.all(
 		MCP_PATH,
 		createHandleMcp({

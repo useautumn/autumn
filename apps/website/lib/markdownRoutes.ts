@@ -2,8 +2,12 @@ export function markdownTargetFor(pathname: string): string | null {
 	const path = pathname.replace(/\/+$/, "") || "/";
 
 	if (path === "/") return "/home.md";
+	if (path === "/pricing") return "/pricing.md";
 	if (path === "/privacy") return "/privacy.md";
 	if (path === "/terms") return "/terms.md";
+	if (path === "/about") return "/about.md";
+	if (path === "/contact") return "/contact.md";
+	if (path === "/developers") return "/developers.md";
 	if (path === "/blog") return "/blog.md";
 	if (path === "/alog") return "/alog.md";
 

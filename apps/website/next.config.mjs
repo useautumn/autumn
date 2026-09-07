@@ -53,6 +53,21 @@ const nextConfig = {
   async rewrites() {
     return [
       {
+        source: "/.well-known/oauth-authorization-server",
+        destination:
+          "https://api.useautumn.com/.well-known/oauth-authorization-server",
+      },
+      {
+        source: "/openapi.yml",
+        destination:
+          "https://raw.githubusercontent.com/useautumn/autumn/dev/packages/openapi/openapi.yml",
+      },
+      {
+        source: "/openapi.yaml",
+        destination:
+          "https://raw.githubusercontent.com/useautumn/autumn/dev/packages/openapi/openapi.yml",
+      },
+      {
         source: "/alog/:slug.md",
         destination: "/api/alog-md/:slug",
       },
