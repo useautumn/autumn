@@ -452,26 +452,25 @@ export const renderPreview = ({
 
 /** A row is work when its own action is, or when anything nested under it
  * (a variant, a license link, a sibling version) carries a changing action. */
-const NOOP_ACTIONS = new Set(["none", "skip"]);
+const NOOP_ACTIONS = new Set(["none", "skip", "unchanged"]);
+
+/** Nested rows speak their own vocabulary (a variant is `explicit` or
+ * `propagated`), so anything but a no-op counts, at any depth. */
+const nestedRowHasWork = (entry: unknown): boolean => {
+	if (entry === null || typeof entry !== "object") return false;
+	return Object.entries(entry as Record<string, unknown>).some(
+		([key, nested]) => {
+			if (key.endsWith("ction") && typeof nested === "string")
+				return !NOOP_ACTIONS.has(nested);
+			return Array.isArray(nested) && nested.some(nestedRowHasWork);
+		},
+	);
+};
 
 const rowHasWork = (row: PreviewChange): boolean => {
 	if (isChange(row)) return true;
 	return Object.values(row as Record<string, unknown>).some(
-		(value) =>
-			Array.isArray(value) &&
-			value.some(
-				(entry) =>
-					entry !== null &&
-					typeof entry === "object" &&
-					// Nested rows speak their own vocabulary (a variant is `explicit`
-					// or `propagated`), so anything but a no-op counts.
-					Object.entries(entry as Record<string, unknown>).some(
-						([key, nested]) =>
-							key.endsWith("ction") &&
-							typeof nested === "string" &&
-							!NOOP_ACTIONS.has(nested),
-					),
-			),
+		(value) => Array.isArray(value) && value.some(nestedRowHasWork),
 	);
 };
 

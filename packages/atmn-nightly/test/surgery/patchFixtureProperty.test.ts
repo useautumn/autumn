@@ -105,4 +105,31 @@ describe("patchFixtureProperty", () => {
 			}),
 		).toBeNull();
 	});
+
+	test("appends after a comma-less last property and after a nested close", () => {
+		const noComma = `plan({
+	planId: "pro",
+	name: "Pro"
+})`;
+		expect(patch({ source: noComma, property: "group", text: '"core"' })).toBe(
+			`plan({
+	planId: "pro",
+	name: "Pro",
+	group: "core",
+})`,
+		);
+		const nestedClose = `const plans = [
+	plan({
+		planId: "pro",
+		price: { amount: 49, interval: "month" } }),
+];`;
+		expect(
+			patch({ source: nestedClose, property: "group", text: '"core"' }),
+		).toBe(`const plans = [
+	plan({
+		planId: "pro",
+		price: { amount: 49, interval: "month" },
+		group: "core", }),
+];`);
+	});
 });

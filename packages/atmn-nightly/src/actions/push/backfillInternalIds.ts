@@ -13,6 +13,7 @@ export type IdentityRow = {
 	/** A plan's variant edges as `get` returns them: the resolved plan carries the stable id. */
 	variants?: {
 		variantPlanId?: string;
+		versionSlug?: string | null;
 		internalId?: string | null;
 		plan?: { internalId?: string | null } | null;
 	}[];
@@ -140,6 +141,19 @@ export const backfillInternalIds = ({
 				builder: variantSpec.builder,
 				idField: variantSpec.idField,
 				id: edge.variantPlanId,
+				// Versions of one variant share the id; the slug tells them apart
+				// whenever the catalog states one.
+				...(typeof edge.versionSlug === "string"
+					? {
+							where: [
+								{
+									field: "versionSlug",
+									equals: edge.versionSlug,
+									absentMeans: "v1",
+								},
+							],
+						}
+					: {}),
 			});
 			if (located === null) continue;
 			const stated = INTERNAL_ID_VALUE.exec(located.node.text())?.[1];

@@ -113,18 +113,21 @@ const insertPairEdit = ({
 	const lastEnd = last.range().end.index;
 	const between = source.slice(lastEnd, closing);
 	const trailingComma = between.trimStart().startsWith(",");
-	if (multiline) {
-		const indent = leadingIndentOfLine(source, last.range().start.index);
-		const lineEnd = lineEndInclusive(source, lastEnd);
-		return {
-			startPos: lineEnd,
-			endPos: lineEnd,
-			insertedText: `${indent}${property}: ${text},\n`,
-		};
-	}
 	const afterComma = trailingComma
 		? lastEnd + between.indexOf(",") + 1
 		: lastEnd;
+	if (multiline) {
+		// Anchored to the last pair itself, so a value whose closing brace shares
+		// the object's closing line can never push the insert outside the literal.
+		const indent = leadingIndentOfLine(source, last.range().start.index);
+		return {
+			startPos: afterComma,
+			endPos: afterComma,
+			insertedText: trailingComma
+				? `\n${indent}${property}: ${text},`
+				: `,\n${indent}${property}: ${text},`,
+		};
+	}
 	return {
 		startPos: afterComma,
 		endPos: afterComma,

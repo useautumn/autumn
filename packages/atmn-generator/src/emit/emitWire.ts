@@ -214,14 +214,28 @@ ${members}
 /** The document as the server sees it: history rows folded into their collection. */
 /** A declared variant with no customize of its own follows its base: the
  * server needs the pin stated, so it is derived here, never typed. */
-const followDeclaredVariants = <T extends { variants?: { variantPlanId: string }[] }>(
+const followDeclaredVariants = <
+	T extends {
+		variants?: { variantPlanId: string; version?: number; versionSlug?: string }[];
+	},
+>(
 	row: T,
-): T & { propagate?: { variants: { planId: string }[] } } =>
+): T & {
+	propagate?: {
+		variants: { planId: string; version?: number; versionSlug?: string }[];
+	};
+} =>
 	Array.isArray(row.variants) && row.variants.length > 0
 		? {
 				...row,
 				propagate: {
-					variants: row.variants.map((variant) => ({ planId: variant.variantPlanId })),
+					// A declared version pin travels with the follow, or the server
+					// would resolve the active variant row instead of the stated one.
+					variants: row.variants.map((variant) => ({
+						planId: variant.variantPlanId,
+						...(variant.version !== undefined ? { version: variant.version } : {}),
+						...(variant.versionSlug !== undefined ? { versionSlug: variant.versionSlug } : {}),
+					})),
 				},
 			}
 		: row;
