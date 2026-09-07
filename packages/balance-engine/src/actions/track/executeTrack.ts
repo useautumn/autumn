@@ -34,12 +34,22 @@ export const executeTrack = ({
 
 	if (existingReceipt) {
 		const parsedReceipt = parseTrackOutcome({ input: existingReceipt });
-		if (!isDeepStrictEqual(parsedReceipt, parsedOutcome)) {
+		if (isDeepStrictEqual(parsedReceipt, parsedOutcome)) {
+			return { kind: "duplicate", state, receipt: parsedReceipt };
+		}
+		// Replay can retain a receipt that the deciding owner pruned; durable revisions order reuse.
+		if (
+			parsedReceipt.commandId !== parsedOutcome.commandId ||
+			!identitiesMatch({
+				left: parsedReceipt.identity,
+				right: parsedOutcome.identity,
+			}) ||
+			parsedReceipt.revisionAfter > parsedOutcome.revisionBefore
+		) {
 			throw new ConflictingTrackReceiptError({
 				commandId: parsedOutcome.commandId,
 			});
 		}
-		return { kind: "duplicate", state, receipt: parsedReceipt };
 	}
 
 	if (

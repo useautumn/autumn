@@ -44,6 +44,7 @@ import {
 	readStoredState,
 	readTrackReceipt,
 	updateState,
+	updateTrackReceipt,
 } from "./sqliteBalanceStateRows.js";
 import { openBalanceStateDatabase } from "./sqliteBalanceStateSchema.js";
 
@@ -479,12 +480,24 @@ export class SqliteBalanceStateStore {
 				throw new CorruptBalanceStateError({ partitionKey });
 			}
 
-			insertTrackReceipt({
-				database: this.database,
-				partitionKey,
-				position,
-				receipt: executed.receipt,
-			});
+			if (existingReceipt) {
+				const receiptUpdate = updateTrackReceipt({
+					database: this.database,
+					partitionKey,
+					position,
+					receipt: executed.receipt,
+				});
+				if (receiptUpdate.changes !== 1) {
+					throw new CorruptBalanceStateError({ partitionKey });
+				}
+			} else {
+				insertTrackReceipt({
+					database: this.database,
+					partitionKey,
+					position,
+					receipt: executed.receipt,
+				});
+			}
 		}
 
 		this.advanceProgress({ position, expectedOffset, nextOffset });
