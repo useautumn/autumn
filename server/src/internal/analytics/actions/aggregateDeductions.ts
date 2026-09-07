@@ -138,25 +138,27 @@ export const resolveCreditCost = ({
 	ctx,
 	sourceFeatureId,
 	balanceFeatureId,
+	balanceId,
 	customerEntitlements,
 }: {
 	ctx: AutumnContext;
 	sourceFeatureId?: string;
 	balanceFeatureId: string;
-	customerEntitlements?: Pick<FullCustomerEntitlement, "entitlement">[];
+	balanceId?: string;
+	customerEntitlements?: (Pick<FullCustomerEntitlement, "entitlement"> & {
+		id?: string;
+	})[];
 }): number | null => {
 	if (!sourceFeatureId || sourceFeatureId === balanceFeatureId) return null;
 
 	const creditSystem = ctx.features.find((f) => f.id === balanceFeatureId);
 	if (!creditSystem || !isAnyCreditSystem(creditSystem.type)) return null;
 
-	// An override reprices this balance; the catalog rate below would be wrong, not absent.
-	const isOverridden = customerEntitlements?.some(
-		(customerEntitlement) =>
-			customerEntitlement.entitlement.feature.id === balanceFeatureId &&
-			customerEntitlement.entitlement.feature_override,
+	// Only THIS balance's override matters; a sibling's must not blank its rate.
+	const owningEntitlement = customerEntitlements?.find(
+		(customerEntitlement) => customerEntitlement.id === balanceId,
 	);
-	if (isOverridden) return null;
+	if (owningEntitlement?.entitlement.feature_override) return null;
 	const sourceFeature = findFeatureById({
 		features: ctx.features,
 		featureId: sourceFeatureId,
@@ -402,6 +404,7 @@ const pivotRows = ({
 					ctx,
 					sourceFeatureId: pinnedSource,
 					balanceFeatureId,
+					balanceId: row.balance_id,
 					customerEntitlements,
 				}),
 				deducted: 0,
@@ -440,6 +443,7 @@ const pivotRows = ({
 							ctx,
 							sourceFeatureId: groupValue,
 							balanceFeatureId,
+							balanceId: row.balance_id,
 							customerEntitlements,
 						}),
 					}

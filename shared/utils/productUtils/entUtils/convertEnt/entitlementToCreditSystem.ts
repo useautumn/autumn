@@ -18,7 +18,8 @@ const mergeModelMarkups = ({
 	for (const [modelId, { markup: _perPlan, ...costBasis }] of Object.entries(
 		catalog,
 	)) {
-		merged[modelId] = { ...costBasis, ...override?.[modelId] };
+		// Cost basis last: a plan sets markup, never what the model itself costs.
+		merged[modelId] = { ...override?.[modelId], ...costBasis };
 	}
 	return merged;
 };

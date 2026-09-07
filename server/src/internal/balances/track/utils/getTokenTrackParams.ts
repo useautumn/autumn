@@ -1,4 +1,6 @@
 import {
+	CustomerNotFoundError,
+	EntityNotFoundError,
 	ErrCode,
 	entitlementToCreditSystem,
 	type Feature,
@@ -73,16 +75,19 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		entity,
 	});
 
-	return [
-		...new Map(
-			cusEnts
-				.filter((ce) => isAiCreditSystem(ce.entitlement.feature.type))
-				.map((ce) => [
-					ce.entitlement.feature.id,
-					entitlementToCreditSystem({ entitlement: ce.entitlement }),
-				]),
-		).values(),
-	];
+	// Entitlements arrive in deduction order, so the FIRST for a feature is the
+	// one that drains — and must be the one whose markups price the call.
+	const byFeatureId = new Map<string, Feature>();
+	for (const ce of cusEnts) {
+		const { feature } = ce.entitlement;
+		if (!isAiCreditSystem(feature.type) || byFeatureId.has(feature.id))
+			continue;
+		byFeatureId.set(
+			feature.id,
+			entitlementToCreditSystem({ entitlement: ce.entitlement }),
+		);
+	}
+	return [...byFeatureId.values()];
 };
 
 /** The customer's own entitlement supplies the effective markups; the catalog
@@ -94,10 +99,18 @@ const resolveAiCreditFeature = async ({
 	ctx: AutumnContext;
 	input: TrackTokensParams;
 }): Promise<Feature> => {
+	// A named feature still prices through the customer's entitlement when they
+	// hold one, but must not block the create-customer-on-track path.
 	const held = await resolveAiCreditFeaturesFromEntitlements({
 		ctx,
 		customerId: input.customer_id,
 		entityId: input.entity_id,
+	}).catch((error) => {
+		const isMissingSubject =
+			error instanceof CustomerNotFoundError ||
+			error instanceof EntityNotFoundError;
+		if (input.feature_id && isMissingSubject) return [];
+		throw error;
 	});
 
 	if (input.feature_id) {

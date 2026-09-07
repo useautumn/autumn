@@ -14,6 +14,7 @@ import {
 	getFeatureCreditSystem,
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
 import { FeatureOverrideConfig } from "./advanced-settings/FeatureOverrideConfig";
@@ -25,6 +26,7 @@ import { StripePriceConfig } from "./advanced-settings/StripePriceConfig";
 import { UsageLimit } from "./advanced-settings/UsageLimit";
 
 export function AdvancedSettings() {
+	const { isAdmin } = useAdmin();
 	const { features } = useFeaturesQuery();
 	const { item } = useProductItemContext();
 	const { product } = useProduct();
@@ -37,10 +39,13 @@ export function AdvancedSettings() {
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	// AI credit systems override their markup chain rather than a rate card.
-	const showFeatureOverride = isAnyCreditSystem(
-		features.find((feature) => feature.id === item.feature_id)?.type,
-	);
+	// Admin-only, matching the feature-level editor. AI credit systems override
+	// their markup chain rather than a rate card.
+	const showFeatureOverride =
+		isAdmin &&
+		isAnyCreditSystem(
+			features.find((feature) => feature.id === item.feature_id)?.type,
+		);
 	// Deprecated in favor of licenses. Surface it whenever any item in the plan
 	// uses an entity feature, so all items in such plans keep working.
 	const showEntityFeature =
