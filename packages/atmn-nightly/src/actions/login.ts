@@ -1,11 +1,7 @@
 import { announceAuthorizationUrl } from "../auth/announceAuthorizationUrl";
 import { openSystemBrowser } from "../auth/browser/openSystemBrowser";
 import { createOrgApiKeys } from "../auth/createOrgApiKeys";
-import {
-	CLI_OAUTH_SCOPES,
-	getBackendUrl,
-	getCliClientId,
-} from "../auth/oauthConfig";
+import { CLI_OAUTH_SCOPES } from "../auth/oauthConfig";
 import {
 	type AuthorizationUrlListener,
 	runOAuthFlow,
@@ -14,6 +10,11 @@ import type { BrowserOpener } from "../auth/types/browserOpener";
 import type { OAuthTokens } from "../auth/types/oauthTokens";
 import type { OrgApiKeys } from "../auth/types/orgApiKeys";
 import { loadEnvFiles, writeEnvValues } from "../env/loadEnv";
+import {
+	resolveTarget,
+	type Target,
+	targetBaseUrl,
+} from "../env/resolveTarget";
 import { configSearchDirs } from "./push";
 
 export type Authorize = ({
@@ -33,6 +34,8 @@ export type LoginOptions = {
 	/** Where to write progress. Injected so tests can capture it. */
 	write?: (text: string) => void;
 	openBrowser?: BrowserOpener;
+	/** Resolved by the CLI from its global flags; defaults to the env-driven target. */
+	target?: Target;
 	authorize?: Authorize;
 	createApiKeys?: CreateApiKeys;
 };
@@ -43,16 +46,20 @@ export type LoginResult = {
 	writtenKeys: string[];
 };
 
-const authorizeWithAutumn: Authorize = ({ onAuthorizationUrl }) =>
-	runOAuthFlow({
-		clientId: getCliClientId(),
-		backendUrl: getBackendUrl(),
-		scopes: CLI_OAUTH_SCOPES,
-		onAuthorizationUrl,
-	});
+const authorizeWith =
+	({ target }: { target: Target }): Authorize =>
+	({ onAuthorizationUrl }) =>
+		runOAuthFlow({
+			clientId: target.clientId,
+			backendUrl: targetBaseUrl({ target }),
+			scopes: CLI_OAUTH_SCOPES,
+			onAuthorizationUrl,
+		});
 
-const createAutumnApiKeys: CreateApiKeys = ({ accessToken }) =>
-	createOrgApiKeys({ accessToken, backendUrl: getBackendUrl() });
+const createApiKeysWith =
+	({ target }: { target: Target }): CreateApiKeys =>
+	({ accessToken }) =>
+		createOrgApiKeys({ accessToken, backendUrl: targetBaseUrl({ target }) });
 
 const keysToEnvValues = ({
 	keys,
@@ -71,20 +78,27 @@ const keysToEnvValues = ({
  */
 export const runLogin = async ({
 	cwd = process.cwd(),
+	target,
 	write = (text) => process.stdout.write(text),
 	openBrowser = openSystemBrowser,
-	authorize = authorizeWithAutumn,
-	createApiKeys = createAutumnApiKeys,
+	authorize,
+	createApiKeys,
 }: LoginOptions = {}): Promise<LoginResult> => {
 	const dirs = configSearchDirs({ cwd });
 	loadEnvFiles({ dirs });
+	// The same target every other command resolves: a local server or a
+	// staging URL authenticates against itself, never against production.
+	const resolved = target ?? resolveTarget({});
+	const authorizeStep = authorize ?? authorizeWith({ target: resolved });
+	const createApiKeysStep =
+		createApiKeys ?? createApiKeysWith({ target: resolved });
 
-	const tokens = await authorize({
+	const tokens = await authorizeStep({
 		onAuthorizationUrl: ({ url }) =>
 			announceAuthorizationUrl({ url, write, openBrowser }),
 	});
 
-	const keys = await createApiKeys({ accessToken: tokens.accessToken });
+	const keys = await createApiKeysStep({ accessToken: tokens.accessToken });
 	const values = keysToEnvValues({ keys });
 
 	if (Object.keys(values).length === 0) {

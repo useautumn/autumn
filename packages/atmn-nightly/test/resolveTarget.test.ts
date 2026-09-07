@@ -4,16 +4,26 @@
  */
 
 import { expect, test } from "bun:test";
-import { requireSecretKey, resolveTarget } from "../src/env/resolveTarget";
+import { CLI_CLIENT_ID } from "../src/auth/oauthConfig";
+import {
+	DEFAULT_BASE_URL,
+	requireSecretKey,
+	resolveTarget,
+	targetBaseUrl,
+} from "../src/env/resolveTarget";
 
 test("defaults to sandbox and the spec's server", () => {
-	expect(resolveTarget({})).toEqual({ secretKeyName: "AUTUMN_SECRET_KEY" });
+	expect(resolveTarget({})).toEqual({
+		secretKeyName: "AUTUMN_SECRET_KEY",
+		clientId: CLI_CLIENT_ID,
+	});
 });
 
 test("--prod only swaps the key, never the URL", () => {
 	// The spec's server is production; --prod is about which key authenticates.
 	expect(resolveTarget({ prod: true })).toEqual({
 		secretKeyName: "AUTUMN_PROD_SECRET_KEY",
+		clientId: CLI_CLIENT_ID,
 	});
 });
 
@@ -34,6 +44,7 @@ test("--local and --prod compose: local server, prod key", () => {
 	expect(resolveTarget({ local: true, prod: true })).toEqual({
 		baseUrl: "http://localhost:8080",
 		secretKeyName: "AUTUMN_PROD_SECRET_KEY",
+		clientId: CLI_CLIENT_ID,
 	});
 });
 
@@ -75,4 +86,60 @@ test("a missing key names the variable it wants", () => {
 	} finally {
 		if (previous !== undefined) process.env.AUTUMN_SECRET_KEY = previous;
 	}
+});
+
+const withEnv = (
+	values: Record<string, string | undefined>,
+	run: () => void,
+): void => {
+	const previous = Object.fromEntries(
+		Object.keys(values).map((key) => [key, process.env[key]]),
+	);
+	for (const [key, value] of Object.entries(values)) {
+		if (value === undefined) delete process.env[key];
+		else process.env[key] = value;
+	}
+	try {
+		run();
+	} finally {
+		for (const [key, value] of Object.entries(previous)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+	}
+};
+
+test("the client id: flag beats AUTUMN_CLIENT_ID, which beats the registered default", () => {
+	withEnv(
+		{ AUTUMN_CLIENT_ID: undefined, ATMN_CLI_CLIENT_ID: undefined },
+		() => {
+			expect(resolveTarget({}).clientId).toBe(CLI_CLIENT_ID);
+		},
+	);
+	withEnv({ AUTUMN_CLIENT_ID: "client_from_env" }, () => {
+		expect(resolveTarget({}).clientId).toBe("client_from_env");
+		expect(resolveTarget({ clientId: "client_from_flag" }).clientId).toBe(
+			"client_from_flag",
+		);
+	});
+});
+
+test("a sandbox is carried from the flag or AUTUMN_SANDBOX_ID, and absent otherwise", () => {
+	withEnv({ AUTUMN_SANDBOX_ID: undefined }, () => {
+		expect(resolveTarget({}).sandboxId).toBeUndefined();
+		expect(resolveTarget({ sandbox: "sb_1" }).sandboxId).toBe("sb_1");
+	});
+	withEnv({ AUTUMN_SANDBOX_ID: "sb_env" }, () => {
+		expect(resolveTarget({}).sandboxId).toBe("sb_env");
+		expect(resolveTarget({ sandbox: "sb_flag" }).sandboxId).toBe("sb_flag");
+	});
+});
+
+test("every command hits the same URL: the target's, else the spec's server", () => {
+	withEnv({ AUTUMN_BASE_URL: undefined }, () => {
+		expect(targetBaseUrl({ target: resolveTarget({}) })).toBe(DEFAULT_BASE_URL);
+		expect(targetBaseUrl({ target: resolveTarget({ local: true }) })).toBe(
+			"http://localhost:8080",
+		);
+	});
 });

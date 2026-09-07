@@ -7,6 +7,7 @@ import { loadEnvFiles } from "./env/loadEnv";
 import {
 	requireSecretKey,
 	resolveTarget,
+	type Target,
 	type TargetFlags,
 } from "./env/resolveTarget";
 import { createClient } from "./generated/client";
@@ -24,85 +25,89 @@ const NOT_IMPLEMENTED = (step: string) => () => {
 const normalizeVersionFlag = ({ argv }: { argv: string[] }): string[] =>
 	argv.map((token) => (token === "-v" ? "--version" : token));
 
-const withEnvironmentFlags = (command: Command): Command =>
-	command
+/** The flags every command shares: where to send, which key, who the CLI is. */
+const withTargetFlags = (program: Command): Command =>
+	program
 		.option("-p, --prod", "target production instead of sandbox")
 		.option("--sandbox <sandboxId>", "target a specific sandbox")
 		.option("-l, --local", "target a local server (default port 8080)")
 		// Long-only: -p is prod.
 		.option("--port <port>", "port of a local server (implies --local)")
-		.option("-b, --base-url <url>", "send to this URL instead");
+		.option("-b, --base-url <url>", "send to this URL instead")
+		.option("--client-id <id>", "OAuth client id the CLI identifies as");
+
+/**
+ * Env first: the key and AUTUMN_BASE_URL usually live in a .env beside the
+ * config, so reading them after building the client would never see them —
+ * which is what the "put it in your .env" error message promises.
+ */
+const prepareTarget = ({ command }: { command: Command }): Target => {
+	loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+	return resolveTarget(command.optsWithGlobals<TargetFlags>());
+};
+
+const clientFor = ({ target }: { target: Target }) =>
+	createClient({
+		secretKey: requireSecretKey({ target }),
+		...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+	});
 
 export const buildProgram = (): Command => {
 	const program = new Command();
 
-	program
-		.name("atmn-nightly")
-		.description("Autumn CLI — nightly")
-		.version(`atmn-nightly v${version}`, "-V, --version", "print the version")
-		.showHelpAfterError();
+	withTargetFlags(
+		program
+			.name("atmn-nightly")
+			.description("Autumn CLI — nightly")
+			.version(`atmn-nightly v${version}`, "-V, --version", "print the version")
+			.showHelpAfterError(),
+	);
 
 	program
 		.command("login")
 		.description("authenticate and write org keys to your .env")
-		.action(async () => {
-			await runLogin();
+		.action(async (_options: unknown, command: Command) => {
+			await runLogin({ target: prepareTarget({ command }) });
 		});
 
-	withEnvironmentFlags(
-		program
-			.command("push")
-			.description(
-				"preview autumn.config.ts against your catalog; --yes applies it",
-			)
-			.option("-y, --yes", "apply the changes the preview shows")
-			.option("-d, --dry-run", "preview only, even with --yes"),
-	).action(
-		async (options: TargetFlags & { dryRun?: boolean; yes?: boolean }) => {
-			// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
-			// the config, so reading them after building the client would never see
-			// them — which is what the "put it in your .env" error message promises.
-			loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+	program
+		.command("push")
+		.description(
+			"preview autumn.config.ts against your catalog; --yes applies it",
+		)
+		.option("-y, --yes", "apply the changes the preview shows")
+		.option("-d, --dry-run", "preview only, even with --yes")
+		.action(
+			async (
+				options: { dryRun?: boolean; yes?: boolean },
+				command: Command,
+			) => {
+				const target = prepareTarget({ command });
+				// Nothing is applied unless asked: a plain push is the preview, and the
+				// same command with --yes is the write. Deletions ride the same gate.
+				const apply = options.yes === true && options.dryRun !== true;
+				const result = await runPush({
+					client: clientFor({ target }),
+					dryRun: !apply,
+				});
+				if (!apply && !previewIsEmpty({ preview: result.preview }))
+					process.stdout.write("Re-run with --yes to apply these changes.\n");
+			},
+		);
 
-			const target = resolveTarget(options);
-			// Nothing is applied unless asked: a plain push is the preview, and the
-			// same command with --yes is the write. Deletions ride the same gate.
-			const apply = options.yes === true && options.dryRun !== true;
-			const result = await runPush({
-				client: createClient({
-					secretKey: requireSecretKey({ target }),
-					...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
-				}),
-				dryRun: !apply,
-			});
-			if (!apply && !previewIsEmpty({ preview: result.preview }))
-				process.stdout.write("Re-run with --yes to apply these changes.\n");
-		},
-	);
-
-	withEnvironmentFlags(
-		program
-			.command("pull")
-			.description("write your remote catalog back into autumn.config.ts")
-			.option(
-				"--include-mappings",
-				"keep processor mappings in pulled fixtures",
-			),
-	).action(async (options: TargetFlags & { includeMappings?: boolean }) => {
-		// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
-		// the config, so reading them after building the client would never see
-		// them — which is what the "put it in your .env" error message promises.
-		loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
-
-		const target = resolveTarget(options);
-		await runPull({
-			client: createClient({
-				secretKey: requireSecretKey({ target }),
-				...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
-			}),
-			includeMappings: options.includeMappings === true,
-		});
-	});
+	program
+		.command("pull")
+		.description("write your remote catalog back into autumn.config.ts")
+		.option("--include-mappings", "keep processor mappings in pulled fixtures")
+		.action(
+			async (options: { includeMappings?: boolean }, command: Command) => {
+				const target = prepareTarget({ command });
+				await runPull({
+					client: clientFor({ target }),
+					includeMappings: options.includeMappings === true,
+				});
+			},
+		);
 
 	const sandbox = program
 		.command("sandbox")

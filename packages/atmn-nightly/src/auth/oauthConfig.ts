@@ -1,10 +1,9 @@
-const DEFAULT_BACKEND_URL = "https://api.useautumn.com";
-
 /**
  * The registered Better Auth client for the atmn CLI, carried over from v2 so
- * existing consent records keep working.
+ * existing consent records keep working. `resolveTarget` lets `--client-id`
+ * or `AUTUMN_CLIENT_ID` replace it.
  */
-const CLI_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr";
+export const CLI_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr";
 
 const OAUTH_PORT_BASE = 31448;
 const OAUTH_PORT_RANGE = 5;
@@ -32,12 +31,6 @@ export const CLI_OAUTH_SCOPES = [
 	"apiKeys:read",
 	"apiKeys:write",
 ] as const;
-
-export const getBackendUrl = (): string =>
-	process.env.ATMN_BACKEND_URL ?? DEFAULT_BACKEND_URL;
-
-export const getCliClientId = (): string =>
-	process.env.ATMN_CLI_CLIENT_ID ?? CLI_CLIENT_ID;
 
 export const getOAuthRedirectUri = ({ port }: { port: number }): string =>
 	`http://localhost:${port}/`;
