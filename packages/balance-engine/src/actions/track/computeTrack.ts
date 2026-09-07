@@ -75,6 +75,13 @@ const buildTrackOutcome = ({
 	deduplicationExpiresAt: number;
 }): TrackOutcome => {
 	const balanceBefore = balanceOf({ featureState });
+	const balanceAfter = rejected
+		? balanceBefore
+		: balanceAfterMutations({
+				customerEntitlements: featureState.customerEntitlements,
+				mutations,
+			});
+	const customerEntitlement = featureState.customerEntitlements[0];
 
 	return parseTrackOutcome({
 		input: {
@@ -93,12 +100,12 @@ const buildTrackOutcome = ({
 			status: rejected ? "rejected" : "applied",
 			reason: rejected ? "insufficient_balance" : null,
 			balanceBefore,
-			balanceAfter: rejected
-				? balanceBefore
-				: balanceAfterMutations({
-						customerEntitlements: featureState.customerEntitlements,
-						mutations,
-					}),
+			balanceAfter,
+			balanceSnapshot: {
+				...customerEntitlement,
+				balance: balanceAfter,
+				usage: mutations[0]?.usageAfter ?? customerEntitlement.usage,
+			},
 			revisionBefore: state.revision,
 			revisionAfter: state.revision + 1,
 			mutations,

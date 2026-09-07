@@ -5,6 +5,7 @@ import * as kafka from "@autumn/kafka";
 import {
 	ApiVersionClass,
 	AppEnv,
+	type CheckResponseV3,
 	LATEST_VERSION,
 	type TrackParams,
 	type TrackResponseV3,
@@ -13,6 +14,9 @@ import { type Context, Hono, type Next } from "hono";
 import * as ownershipAccess from "@/external/balanceWorker/getOwnershipConsumer.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleCheck } from "@/internal/api/check/handleCheck.js";
+import * as balanceWorkerCheck from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
+import * as legacyCheck from "@/internal/balances/check/runCheckWithRollout.js";
 import { handleTrack } from "@/internal/balances/handlers/handleTrack.js";
 import * as balanceWorkerTrack from "@/internal/balances/track/balanceWorker/runBalanceWorkerTrack.js";
 import * as asyncTrack from "@/internal/balances/track/runAsyncTrack.js";
@@ -47,6 +51,7 @@ function createContext({
 } = {}): AutumnContext {
 	return {
 		id: "balance-worker-wiring",
+		timestamp: Date.now(),
 		org: { id: "org_balance_worker", slug: "balance-worker-wiring" },
 		env,
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
@@ -66,10 +71,10 @@ function createContext({
 function gatesBalanceWorkerToEnabledDevelopmentSandbox(): void {
 	for (const [nodeEnv, enabled, requestEnv, expected] of [
 		["development", "true", AppEnv.Sandbox, true],
-		["development", "false", AppEnv.Sandbox, true],
+		["development", "false", AppEnv.Sandbox, false],
 		["development", "true", AppEnv.Live, false],
-		["production", "true", AppEnv.Sandbox, false],
-		["test", "true", AppEnv.Sandbox, false],
+		["production", "false", AppEnv.Sandbox, false],
+		["test", "false", AppEnv.Sandbox, false],
 	] as const) {
 		balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
 			NODE_ENV: nodeEnv,
@@ -103,8 +108,11 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	async function track() {
 		return { kind: "unsupported", reason: "feature_not_found" } as const;
 	}
+	async function initialize() {
+		return { kind: "already_initialized" } as const;
+	}
 	const consumer = { start, stop, findOwner, refresh };
-	const client = { track };
+	const client = { track, check: track, initialize };
 	const createKafka = spyOn(kafka, "createKafkaClient");
 	const createConsumer = spyOn(
 		kafka,
@@ -346,3 +354,60 @@ test(
 	"track selects one path and never falls back after a balance worker failure",
 	selectsBalanceWorkerWithoutLegacyFallback,
 );
+
+test("check selects the worker without falling back or using the blanket fail-open timer", async () => {
+	const calls: string[] = [];
+	const response: CheckResponseV3 = {
+		allowed: false,
+		customer_id: "customer",
+		required_balance: 1,
+		balance: null,
+		flag: null,
+	};
+	let failure: Error | undefined;
+	let delay = false;
+	spyOn(balanceWorkerCheck, "runBalanceWorkerCheck").mockImplementation(
+		async () => {
+			calls.push("worker");
+			if (failure) throw failure;
+			if (delay)
+				await new Promise<void>((resolve) => setTimeout(resolve, 3_050));
+			return response;
+		},
+	);
+	spyOn(legacyCheck, "runCheckWithRollout").mockImplementation(async () => {
+		calls.push("legacy");
+		return { response, checkData: null };
+	});
+	const app = new Hono<HonoEnv>();
+	app.use("*", async (context, next) => {
+		context.set("ctx", createContext());
+		await next();
+	});
+	app.onError((cause, context) => context.json({ error: cause.message }, 500));
+	app.post("/check", ...handleCheck);
+	const post = () =>
+		app.request("/check", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ customer_id: "customer", feature_id: "messages" }),
+		});
+	expect((await post()).status).toBe(202);
+	expect(calls).toEqual(["legacy"]);
+	calls.length = 0;
+	balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
+		NODE_ENV: "development",
+		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
+	});
+	const checked = await post();
+	expect(checked.status).toBe(200);
+	expect(await checked.json()).toEqual(response);
+	expect(calls).toEqual(["worker"]);
+	calls.length = 0;
+	failure = new Error("owner unavailable");
+	expect((await post()).status).toBe(500);
+	expect(calls).toEqual(["worker"]);
+	failure = undefined;
+	delay = true;
+	expect((await post()).status).toBe(200);
+});

@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
 import {
+	createCustomerMeteringState,
+	parseCheckCommand,
+	parseInitializeCommand,
+} from "@autumn/balance-engine";
+import {
 	createBalanceWorkerClient,
 	type PartitionOwner,
 } from "../src/balanceWorkerClient.js";
@@ -274,6 +279,162 @@ test(
 	preservesOwnershipFailures,
 );
 test("a canceled request never sends", respectsCallerCancellation);
+
+const initialState = createCustomerMeteringState({
+	identity: command.identity,
+	featureStatesById: {
+		feature: {
+			kind: "direct_metered_v1",
+			customerEntitlements: [
+				{
+					id: "grant",
+					balance: 10,
+					usage: 0,
+					granted: 10,
+					externalId: null,
+					planId: null,
+					reset: null,
+					expiresAt: null,
+				},
+			],
+		},
+	},
+});
+const initializeCommand = parseInitializeCommand({
+	input: {
+		schemaVersion: 1,
+		type: "initialize",
+		requestId: "initialize",
+		initializationId: "baseline",
+		identity: command.identity,
+		state: initialState,
+		occurredAt: 0,
+	},
+});
+const checkCommand = parseCheckCommand({
+	input: {
+		schemaVersion: 1,
+		type: "check",
+		requestId: "check",
+		identity: command.identity,
+		entityId: null,
+		featureId: "feature",
+		requiredBalance: 1,
+		properties: null,
+		occurredAt: 0,
+	},
+});
+
+test.concurrent(
+	"initialize and check use the existing owner routing envelope",
+	async () => {
+		const initialized = { kind: "initialized" as const, state: initialState };
+		const checked = {
+			kind: "decided" as const,
+			allowed: true,
+			reason: null,
+			balance: 10,
+			requiredBalance: 1,
+			revision: 0,
+			balanceSnapshot:
+				initialState.featureStatesById.feature.customerEntitlements[0],
+		};
+		const fixture = createFixture({
+			responses: [
+				{ status: 200, body: { decision: initialized } },
+				{ status: 200, body: { decision: checked } },
+			],
+		});
+		expect(
+			await fixture.client.initialize({ command: initializeCommand }),
+		).toEqual(initialized);
+		expect(await fixture.client.check({ command: checkCommand })).toEqual(
+			checked,
+		);
+		expect(fixture.stats()).toEqual({
+			refreshes: 0,
+			requests: [
+				{
+					url: "http://worker-a:8080/v1/initialize",
+					body: {
+						route: { partition: 0, routeEpoch: "1" },
+						command: initializeCommand,
+					},
+				},
+				{
+					url: "http://worker-a:8080/v1/check",
+					body: {
+						route: { partition: 0, routeEpoch: "1" },
+						command: checkCommand,
+					},
+				},
+			],
+		});
+	},
+);
+
+test.concurrent(
+	"initialization preserves its baseline while rerouting a stale owner",
+	async () => {
+		const gate = Promise.withResolvers<void>();
+		const fixture = createFixture({
+			responses: [
+				stale,
+				{
+					status: 200,
+					body: { decision: { kind: "duplicate", state: initialState } },
+				},
+			],
+			refreshGate: gate.promise,
+		});
+		const input = structuredClone(initializeCommand);
+		const pending = fixture.client.initialize({ command: input });
+		await fixture.refreshed;
+		input.state.featureStatesById.feature.customerEntitlements[0].balance = 999;
+		gate.resolve();
+		expect(await pending).toMatchObject({
+			kind: "duplicate",
+			state: initialState,
+		});
+		for (const request of fixture.stats().requests)
+			expect(request.body).toMatchObject({ command: initializeCommand });
+		expect(fixture.stats().requests[1].url).toBe(
+			"http://worker-b:8080/v1/initialize",
+		);
+	},
+);
+
+test.concurrent(
+	"missing initialization and conflicting baselines are named errors without rerouting",
+	async () => {
+		for (const workerCode of [
+			"NOT_INITIALIZED",
+			"INITIALIZATION_CONFLICT",
+		] as const) {
+			const fixture = createFixture({
+				responses: [
+					{
+						status: 409,
+						body: {
+							error: { code: workerCode, message: "Invalid customer baseline" },
+						},
+					},
+				],
+			});
+			const request =
+				workerCode === "NOT_INITIALIZED"
+					? fixture.client.check({ command: checkCommand })
+					: fixture.client.initialize({ command: initializeCommand });
+			await expect(request).rejects.toMatchObject({
+				code: "WORKER_ERROR",
+				workerCode,
+				outcome: "not_submitted",
+			});
+			expect(fixture.stats().refreshes).toBe(0);
+			expect(fixture.stats().requests).toHaveLength(1);
+		}
+	},
+);
 
 async function preservesBodyTimeoutAmbiguity(): Promise<void> {
 	let requests = 0;

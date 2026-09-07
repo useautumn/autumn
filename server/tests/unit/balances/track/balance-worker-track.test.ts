@@ -5,12 +5,14 @@ import type {
 	TrackOutcome,
 } from "@autumn/balance-engine";
 import {
+	type ApiBalanceV1,
 	ApiVersion,
 	ApiVersionClass,
 	AppEnv,
 	ErrCode,
 	InsufficientBalanceError,
 	LATEST_VERSION,
+	ResetInterval,
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -147,7 +149,7 @@ async function successContract() {
 			customer_id: "customer",
 			entity_id: undefined,
 			value: 3,
-			balance: null,
+			balance: expectedBalance({ remaining: 7, usage: 3 }),
 		});
 		expect(execution.commands.at(-1)).toEqual(
 			trackParamsToTrackCommand({ ctx, body }),
@@ -171,6 +173,11 @@ async function outcomeContract() {
 				entityId: "entity",
 				appliedValue,
 				balanceAfter: 10 - appliedValue,
+				balanceSnapshot: {
+					...trackOutcome().balanceSnapshot,
+					balance: 10 - appliedValue,
+					usage: 13 + appliedValue,
+				},
 				mutations: [],
 			},
 		};
@@ -178,7 +185,10 @@ async function outcomeContract() {
 			customer_id: "receipt-customer",
 			entity_id: "entity",
 			value: 3,
-			balance: null,
+			balance: expectedBalance({
+				remaining: 10 - appliedValue,
+				usage: 13 + appliedValue,
+			}),
 		});
 	}
 }
@@ -219,12 +229,19 @@ async function errorContract() {
 async function versionContract() {
 	const { ctx, body } = fixture();
 	ctx.apiVersion = new ApiVersionClass(ApiVersion.V2_0);
-	expect(await runBalanceWorkerTrack({ ctx, body })).toEqual({
+	expect(await runBalanceWorkerTrack({ ctx, body })).toMatchObject({
 		customer_id: "customer",
 		entity_id: undefined,
 		event_name: undefined,
 		value: 3,
-		balance: null,
+		balance: {
+			feature_id: "messages",
+			granted_balance: 100,
+			current_balance: 7,
+			usage: 3,
+			plan_id: "pro",
+			reset: { interval: "month", resets_at: 1_800_000_000_000 },
+		},
 		balances: undefined,
 	});
 	ctx.apiVersion = new ApiVersionClass(ApiVersion.V1_Beta);
@@ -281,6 +298,20 @@ function trackOutcome(): TrackOutcome {
 		reason: null,
 		balanceBefore: 10,
 		balanceAfter: 7,
+		balanceSnapshot: {
+			id: "balance",
+			externalId: "messages-grant",
+			balance: 7,
+			usage: 3,
+			granted: 100,
+			planId: "pro",
+			reset: {
+				interval: "month",
+				intervalCount: 1,
+				nextResetAt: 1_800_000_000_000,
+			},
+			expiresAt: null,
+		},
 		revisionBefore: 0,
 		revisionAfter: 1,
 		occurredAt: 1000,
@@ -292,6 +323,46 @@ function trackOutcome(): TrackOutcome {
 				balanceAfter: 7,
 				usageBefore: 0,
 				usageAfter: 3,
+			},
+		],
+	};
+}
+
+function expectedBalance({
+	remaining,
+	usage,
+}: {
+	remaining: number;
+	usage: number;
+}): ApiBalanceV1 {
+	return {
+		object: "balance",
+		feature_id: "messages",
+		granted: 100,
+		remaining,
+		usage,
+		unlimited: false,
+		overage_allowed: false,
+		max_purchase: null,
+		next_reset_at: 1_800_000_000_000,
+		breakdown: [
+			{
+				object: "balance_breakdown",
+				id: "messages-grant",
+				plan_id: "pro",
+				included_grant: 100,
+				prepaid_grant: 0,
+				remaining,
+				usage,
+				unlimited: false,
+				reset: {
+					interval: ResetInterval.Month,
+					interval_count: undefined,
+					resets_at: 1_800_000_000_000,
+				},
+				price: null,
+				expires_at: null,
+				overage: 0,
 			},
 		],
 	};

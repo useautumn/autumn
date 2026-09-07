@@ -44,6 +44,7 @@ export const computeCheck = ({
 		allowed,
 		reason: allowed ? null : "insufficient_balance",
 		balance: balance.toNumber(),
+		balanceSnapshot: structuredClone(featureState.customerEntitlements[0]),
 		requiredBalance: command.requiredBalance,
 		revision: state.revision,
 	};

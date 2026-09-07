@@ -21,7 +21,16 @@ const createState = () =>
 			messages: {
 				kind: "direct_metered_v1",
 				customerEntitlements: [
-					{ id: "messages_monthly", balance: 10, usage: 0 },
+					{
+						id: "messages_monthly",
+						balance: 10,
+						usage: 0,
+						granted: 10,
+						externalId: null,
+						planId: null,
+						reset: null,
+						expiresAt: null,
+					},
 				],
 			},
 		},
@@ -56,6 +65,7 @@ describe("check computation", () => {
 			allowed: true,
 			reason: null,
 			balance: 10,
+			balanceSnapshot: state.featureStatesById.messages.customerEntitlements[0],
 			requiredBalance: 5,
 			revision: 0,
 		});
@@ -136,8 +146,26 @@ describe("check computation", () => {
 				messages: {
 					kind: "direct_metered_v1",
 					customerEntitlements: [
-						{ id: "messages_monthly", balance: 5, usage: 0 },
-						{ id: "messages_rollover", balance: 5, usage: 0 },
+						{
+							id: "messages_monthly",
+							balance: 5,
+							usage: 0,
+							granted: 5,
+							externalId: null,
+							planId: null,
+							reset: null,
+							expiresAt: null,
+						},
+						{
+							id: "messages_rollover",
+							balance: 5,
+							usage: 0,
+							granted: 5,
+							externalId: null,
+							planId: null,
+							reset: null,
+							expiresAt: null,
+						},
 					],
 				},
 			},
