@@ -13,6 +13,7 @@ import {
 	multiplierRules,
 	nameRateRows,
 	rateRules,
+	renamedRowOrder,
 	setMatchValue,
 	toRateRows,
 	withAllowedValues,
@@ -21,6 +22,7 @@ import {
 	withRateCredits,
 	withRateMatch,
 	withRateRules,
+	withRenamedField,
 } from "./creditDimensionUtils";
 
 const row: CreditSchemaItem = {
@@ -283,5 +285,36 @@ test("pricing a lower row leaves it where it was in the table", () => {
 	expect(rebuilt.map((row) => row.match)).toEqual([
 		{ size: "small" },
 		{ size: "large" },
+	]);
+});
+
+test("renaming a dimension leaves its rate rows in place", () => {
+	const item: CreditSchemaItem = {
+		metered_feature_id: "action",
+		credit_amount: 1,
+		dimensions: {
+			size_small: { match: { size: "small" }, credit_amount: 2 },
+			size_large: { match: { size: "large" }, credit_amount: 5 },
+		},
+	};
+
+	// The table shows large first — the order a user dragged or built it into,
+	// which is not the order the rules are stored in.
+	const before = toRateRows({ rules: rateRules(item), drafts: [] });
+	const order = [...before.map((row) => row.key)].reverse();
+
+	// The rename rebuilds every rule name from the new match, so the keys the
+	// order was recorded under have to be carried across with it.
+	const renamed = withRenamedField({ item, from: "size", to: "tier" });
+	const after = toRateRows({
+		rules: rateRules(renamed),
+		drafts: [],
+		order: renamedRowOrder({ order, item, from: "size", to: "tier" }),
+	});
+
+	// Renaming size -> tier must not disturb that: large stays first.
+	expect(after.map((row) => row.match)).toEqual([
+		{ tier: "large" },
+		{ tier: "small" },
 	]);
 });

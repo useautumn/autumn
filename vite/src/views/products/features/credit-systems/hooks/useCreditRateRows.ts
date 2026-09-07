@@ -18,6 +18,7 @@ import {
 	missingCombinationCount,
 	nameRateRows,
 	rateRules,
+	renamedRowOrder,
 	savedRulesFrom,
 	toRateRows,
 	withRateCredits,
@@ -128,6 +129,11 @@ export function useCreditRateRows({
 			missingCombinationCount({ values, rows }),
 		restrictDrafts: (isAllowed: (draft: CreditRateDraft) => boolean) =>
 			setDrafts((current) => current.filter(isAllowed)),
+		// A rename rebuilds rule names, and row keys derive from them.
+		renameOrderField: ({ from, to }: { from: string; to: string }) =>
+			setRowOrder((current) =>
+				renamedRowOrder({ order: current, item, from, to }),
+			),
 		addRow: () => {
 			const draft = createRateDraft();
 			setRowOrder([...rows.map((row) => row.key), draft.key]);

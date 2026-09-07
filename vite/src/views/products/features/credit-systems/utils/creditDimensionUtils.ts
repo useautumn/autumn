@@ -294,18 +294,47 @@ export const nameRateRows = (rows: CreditRateRow[]): CreditRateRow[] => {
 	);
 };
 
+/** The key a saved rule's row is identified by, absent a claim from its draft. */
+const ruleRowKey = (name: string) => `rule:${name}`;
+
 /**
- * Saved rules and drafts are stored apart, so reassembling them alone would
- * group every saved row above every draft — typing a cost into a lower row
- * would jump it up the table. `order` restores the row order the table last
- * rendered; rows it does not name (a newly added draft) keep their place at
- * the end.
+ * Rule names derive from their match, so a rename changes every row's key.
+ * Rewriting the recorded order keeps those rows in place instead of sorting
+ * them to the bottom as unknown.
+ */
+export const renamedRowOrder = ({
+	order,
+	item,
+	from,
+	to,
+}: {
+	order: string[];
+	item: CreditSchemaItem;
+	from: string;
+	to: string;
+}): string[] => {
+	const renamedKey = new Map(
+		rateRules(item).map(({ name, dimension }) => [
+			ruleRowKey(name),
+			ruleRowKey(
+				ruleName(renameMatchKey({ match: dimension.match, from, to })),
+			),
+		]),
+	);
+	return order.map((key) => renamedKey.get(key) ?? key);
+};
+
+/**
+ * Rules and drafts are stored apart, so rebuilding alone groups every saved row
+ * above every draft — typing a cost into a lower row would jump it up the table.
+ * `order` restores what the table last rendered; rows it does not name (a newly
+ * added draft) sort to the end.
  */
 export const toRateRows = ({
 	rules,
 	drafts,
 	keysByRuleName,
-	order,
+	order = [],
 }: {
 	rules: CreditRateRule[];
 	drafts: CreditRateDraft[];
@@ -316,7 +345,7 @@ export const toRateRows = ({
 }): CreditRateRow[] => {
 	const rows: CreditRateRow[] = [
 		...rules.map(({ name, dimension }) => ({
-			key: keysByRuleName?.get(name) ?? `rule:${name}`,
+			key: keysByRuleName?.get(name) ?? ruleRowKey(name),
 			name,
 			match: dimension.match,
 			dimension,
@@ -324,14 +353,12 @@ export const toRateRows = ({
 		...drafts.map(({ key, match }) => ({ key, name: "", match })),
 	];
 
-	if (!order?.length) return rows;
-
 	const rank = new Map(order.map((key, index) => [key, index]));
-	const rankFor = (row: CreditRateRow) => rank.get(row.key) ?? order.length;
-	return rows
-		.map((row, index) => ({ row, index }))
-		.sort((a, b) => rankFor(a.row) - rankFor(b.row) || a.index - b.index)
-		.map(({ row }) => row);
+	// Sort is stable, so unranked rows keep their built order behind the rest.
+	return rows.sort(
+		(a, b) =>
+			(rank.get(a.key) ?? order.length) - (rank.get(b.key) ?? order.length),
+	);
 };
 
 export const savedRulesFrom = (rows: CreditRateRow[]): CreditRateRule[] =>
