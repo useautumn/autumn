@@ -1,9 +1,9 @@
 import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
-import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { deleteMigrationDrafts } from "./deleteMigrationDrafts.js";
 
@@ -18,7 +18,7 @@ export const resetSandbox = async ({
 }: {
 	ctx: AutumnContext;
 }): Promise<void> => {
-	const { db, org, env } = ctx;
+	const { db, org, env, logger } = ctx;
 
 	if (env !== AppEnv.Sandbox) {
 		throw new RecaseError({
@@ -50,7 +50,7 @@ export const resetSandbox = async ({
 	});
 
 	await invalidateProductsCache({ orgId: org.id, env: AppEnv.Sandbox });
-	// Workers read features through the org cache; without this they keep
-	// seeing the deleted features for up to the TTL.
-	await clearOrgWithFeaturesCache({ orgId: org.id, env: AppEnv.Sandbox });
+	// Every secret key caches the org's features beside it, so a wiped sandbox
+	// would keep answering with the old catalog until that cache expires.
+	await clearOrgCache({ db, orgId: org.id, env: AppEnv.Sandbox, logger });
 };

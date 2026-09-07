@@ -13,9 +13,9 @@ await mockModuleWithRestore(
 	}),
 );
 await mockModuleWithRestore(
-	"@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js",
+	"@/internal/orgs/orgUtils/clearOrgCache.js",
 	() => ({
-		clearOrgWithFeaturesCache: async () => {
+		clearOrgCache: async () => {
 			calls.push("cache:org");
 		},
 	}),
