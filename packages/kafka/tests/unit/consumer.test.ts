@@ -752,3 +752,159 @@ function meteringConsumerTests(): void {
 
 describe("topicConsumer", topicConsumerTests);
 describe("meteringConsumer", meteringConsumerTests);
+
+import type { Consumer } from "kafkajs";
+import {
+	KafkaPartitionAssignmentRevokedError,
+	subscribePartitionChanges,
+} from "../../src/consumer/subscribePartitionChanges.js";
+
+describe("partition allocation events", function allocationEvents() {
+	const topic = "metering-events-v1";
+
+	type PartitionRevocation = {
+		causeForPartition(position: { partition: number }): unknown;
+	};
+
+	function createBrokerEvents() {
+		const listeners = new Map<string, (event: unknown) => void>();
+		const removed: string[] = [];
+		const events = {
+			GROUP_JOIN: "consumer.group_join",
+			REBALANCING: "consumer.rebalancing",
+			CRASH: "consumer.crash",
+		} as Consumer["events"];
+		function on(name: string, listener: (event: unknown) => void) {
+			listeners.set(name, listener);
+			function unsubscribe(): void {
+				removed.push(name);
+				listeners.delete(name);
+			}
+			return unsubscribe;
+		}
+		function emitAssignment(memberAssignment: Record<string, number[]>): void {
+			listeners.get(events.GROUP_JOIN)?.({ payload: { memberAssignment } });
+		}
+		function emitRebalancing(): void {
+			listeners.get(events.REBALANCING)?.({ payload: {} });
+		}
+		function emitCrash(error: Error): void {
+			listeners.get(events.CRASH)?.({ payload: { error } });
+		}
+		return {
+			consumer: { events, on: on as Consumer["on"] },
+			removed,
+			emitAssignment,
+			emitRebalancing,
+			emitCrash,
+		};
+	}
+
+	function translatesBrokerEvents(): void {
+		const broker = createBrokerEvents();
+		const assignments: number[][] = [];
+		const revocations: unknown[] = [];
+		const crashes: unknown[] = [];
+		function onAssigned({
+			partitions,
+			causeForPartition,
+		}: PartitionRevocation & { partitions: number[] }): void {
+			assignments.push(partitions);
+			expect(causeForPartition({ partition: 2 })).toBeInstanceOf(
+				KafkaPartitionAssignmentRevokedError,
+			);
+		}
+		function onRevoked({ causeForPartition }: PartitionRevocation): void {
+			revocations.push(causeForPartition({ partition: 2 }));
+		}
+		function onCrashed({ cause }: { cause: unknown }): void {
+			crashes.push(cause);
+		}
+		function onError({ cause }: { cause: unknown }): void {
+			throw cause;
+		}
+		const unsubscribe = subscribePartitionChanges({
+			ctx: {
+				consumer: broker.consumer,
+				listeners: { onAssigned, onRevoked, onCrashed, onError },
+			},
+			topic,
+		});
+		const crash = new Error("broker disconnected");
+
+		broker.emitAssignment({ [topic]: [2, 0, 2], other: [9] });
+		broker.emitAssignment({ other: [9] });
+		broker.emitRebalancing();
+		broker.emitCrash(crash);
+
+		expect(assignments).toEqual([[0, 2], []]);
+		expect(revocations).toEqual([
+			expect.objectContaining({
+				name: "KafkaPartitionAssignmentRevokedError",
+				message: `Kafka assignment revoked for ${topic}[2]`,
+				topic,
+				partition: 2,
+			}),
+		]);
+		expect(crashes).toEqual([crash]);
+		unsubscribe();
+		unsubscribe();
+		broker.emitAssignment({ [topic]: [1] });
+		broker.emitRebalancing();
+		broker.emitCrash(crash);
+		expect(assignments).toHaveLength(2);
+		expect(revocations).toHaveLength(1);
+		expect(crashes).toHaveLength(1);
+		expect(broker.removed).toEqual([
+			"consumer.group_join",
+			"consumer.rebalancing",
+			"consumer.crash",
+		]);
+	}
+
+	function reportsInvalidAssignment(partition: number): void {
+		const broker = createBrokerEvents();
+		const assignments: number[][] = [];
+		const errors: unknown[] = [];
+		function onAssigned({ partitions }: { partitions: number[] }): void {
+			assignments.push(partitions);
+		}
+		function onRevoked(): void {}
+		function onCrashed(): void {}
+		function onError({ cause }: { cause: unknown }): void {
+			errors.push(cause);
+		}
+		const unsubscribe = subscribePartitionChanges({
+			ctx: {
+				consumer: broker.consumer,
+				listeners: { onAssigned, onRevoked, onCrashed, onError },
+			},
+			topic,
+		});
+
+		broker.emitAssignment({ [topic]: [0, partition] });
+
+		expect(assignments).toEqual([]);
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toBeInstanceOf(RangeError);
+		expect(errors[0]).toMatchObject({
+			message: `Invalid assigned Kafka partition: ${partition}`,
+		});
+		unsubscribe();
+	}
+
+	test(
+		"translates broker events without coordinating runtimes",
+		translatesBrokerEvents,
+	);
+	test.each([
+		-1,
+		0.5,
+		Number.MAX_SAFE_INTEGER + 1,
+		Number.NaN,
+		Number.POSITIVE_INFINITY,
+	])(
+		"reports invalid assigned partition %s without forwarding the assignment",
+		reportsInvalidAssignment,
+	);
+});

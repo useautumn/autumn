@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { executeTrack } from "@autumn/balance-engine";
 import type { KafkaConsumerClient } from "@autumn/kafka";
-import { serializeMeteringRecord } from "@autumn/kafka";
+import { createProgressTracker, serializeMeteringRecord } from "@autumn/kafka";
 import type {
 	Admin,
 	Batch,
+	ConsumerEndBatchProcessEvent,
 	ConsumerRunConfig,
 	EachBatchHandler,
 	EachMessageHandler,
@@ -32,6 +33,7 @@ type Commit = {
 type FakeKafkaConsumer = KafkaConsumerClient & {
 	commits: Commit[][];
 	emitGroupJoin: () => void;
+	emitEndBatchProcess(params: { batchSize: number; lastOffset: string }): void;
 	lifecycle: string[];
 	runConfig: ConsumerRunConfig | null;
 	seeks: Commit[];
@@ -75,6 +77,9 @@ const createFakeKafkaConsumer = ({
 	let eachBatch: EachBatchHandler | null = null;
 	let eachMessage: EachMessageHandler | null = null;
 	let groupJoinListener: (() => void) | null = null;
+	let endBatchProcessListener:
+		| ((event: ConsumerEndBatchProcessEvent) => void)
+		| null = null;
 	let nextCommitError: Error | null = null;
 	const commits: Commit[][] = [];
 	const seeks: Commit[] = [];
@@ -113,11 +118,16 @@ const createFakeKafkaConsumer = ({
 		runConfig: null,
 		events: {
 			GROUP_JOIN: "consumer.group_join",
+			END_BATCH_PROCESS: "consumer.end_batch_process",
 		} as KafkaConsumerClient["events"],
-		on: ((eventName: string, listener: () => void) => {
+		on: ((eventName: string, listener: never) => {
 			if (eventName === "consumer.group_join") groupJoinListener = listener;
+			if (eventName === "consumer.end_batch_process")
+				endBatchProcessListener = listener;
 			return () => {
 				if (groupJoinListener === listener) groupJoinListener = null;
+				if (endBatchProcessListener === listener)
+					endBatchProcessListener = null;
 			};
 		}) as KafkaConsumerClient["on"],
 		connect: async () => {
@@ -227,10 +237,88 @@ const createFakeKafkaConsumer = ({
 		emitGroupJoin: () => {
 			groupJoinListener?.();
 		},
+		emitEndBatchProcess: ({ batchSize, lastOffset }) => {
+			endBatchProcessListener?.({
+				id: "event_1",
+				type: "consumer.end_batch_process",
+				timestamp: Date.now(),
+				payload: {
+					topic,
+					partition,
+					highWatermark: (BigInt(lastOffset) + 1n).toString(),
+					offsetLag: "0",
+					offsetLagLow: "0",
+					batchSize,
+					firstOffset: lastOffset,
+					lastOffset,
+					duration: 1,
+				},
+			});
+		},
 	};
 };
 
 describe("Kafka track outcome consumer", () => {
+	test("publishes consumed position only after folding and committing a visible record", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const state = createState();
+			fixture.store.initializeState({ state });
+			const serialized = serializeMeteringRecord({
+				record: createOutcome({ state }),
+			});
+			const positionTracker = createProgressTracker();
+			const consumerPort = createFakeKafkaConsumer({
+				onCommit: () => {
+					expect(positionTracker.read({ topic, partition })).toBeNull();
+				},
+			});
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+					positionTracker,
+				},
+				config: { topic },
+			});
+
+			await consumer.start();
+			await consumerPort.deliver({ offset: "0", ...serialized });
+
+			expect(positionTracker.read({ topic, partition })).toBe(1n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("advances consumed position for Kafka batches containing only filtered records", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const positionTracker = createProgressTracker();
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createMeteringConsumer({
+				ctx: {
+					consumer: consumerPort,
+					partitionOffsets: createFakeKafkaPartitionOffsets(),
+					stateStore: fixture.store,
+					positionTracker,
+				},
+				config: { topic },
+			});
+
+			await consumer.start();
+			consumerPort.emitEndBatchProcess({ batchSize: 0, lastOffset: "4" });
+
+			expect(positionTracker.read({ topic, partition })).toBe(5n);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
+
+			consumerPort.emitEndBatchProcess({ batchSize: 1, lastOffset: "8" });
+			expect(positionTracker.read({ topic, partition })).toBe(5n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
 	test("applies SQLite state before committing the Kafka offset", async () => {
 		const fixture = createStoreFixture();
 		try {

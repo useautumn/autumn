@@ -1,4 +1,9 @@
 export {
+	assertConsumerGroupTimings,
+	createConsumerGroupConfig,
+} from "./client/createConsumerGroupConfig.js";
+export { createKafkaClient } from "./client/createKafkaClient.js";
+export {
 	InvalidKafkaOffsetError,
 	KafkaBatchNotCommittedError,
 	KafkaTransactionStateUnknownError,
@@ -12,8 +17,13 @@ export type {
 	KafkaProducerClient,
 	KafkaProducerFactory,
 	KafkaTransaction,
+	KafkaTransportConfig,
 } from "./client/types/kafkaClient.js";
-export type { KafkaProducerLimits } from "./client/types/kafkaLimits.js";
+export type {
+	KafkaClientLimits,
+	KafkaConsumerGroupTimings,
+	KafkaProducerLimits,
+} from "./client/types/kafkaLimits.js";
 export { KafkaPartitionOffsetsNotFoundError } from "./consumer/consumerErrors.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";
@@ -29,6 +39,10 @@ export type {
 	PartitionReaderKafka,
 	PartitionReadRange,
 } from "./consumer/reader/types/reader.js";
+export {
+	KafkaPartitionAssignmentRevokedError,
+	subscribePartitionChanges,
+} from "./consumer/subscribePartitionChanges.js";
 export type {
 	KafkaConsumerClient,
 	TopicConsumer,
@@ -39,6 +53,11 @@ export type {
 	TopicRecordResult,
 	TopicResumePosition,
 } from "./consumer/types/consumer.js";
+export type {
+	KafkaPartitionAssignment,
+	KafkaPartitionChangeListeners,
+	KafkaPartitionRevocation,
+} from "./consumer/types/partitionChanges.js";
 export type {
 	PartitionLogRange,
 	PartitionPosition,
