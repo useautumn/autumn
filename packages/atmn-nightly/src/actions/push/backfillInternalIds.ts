@@ -2,6 +2,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { COLLECTIONS, NESTED_FIXTURES } from "../../generated/emit";
 import { insertFirstProperty } from "../../surgery/insertFirstProperty";
+import {
+	fixturePropertyString,
+	patchFixtureProperty,
+} from "../../surgery/patchFixtureProperty";
 import { setFixtureProperty } from "../../surgery/setFixtureProperty";
 import { listSourceFiles } from "../pull/listSourceFiles";
 import { locateFixture } from "../pull/locateFixture";
@@ -63,7 +67,7 @@ export const backfillInternalIds = ({
 }: {
 	rows: Record<string, IdentityRow[]>;
 	configPath: string;
-}): { backfilled: string[] } => {
+}): { backfilled: string[]; slugged: string[] } => {
 	const files = new Map<string, string>();
 	files.set(configPath, readFileSync(configPath, "utf8"));
 	for (const file of listSourceFiles({ directory: dirname(configPath) })) {
@@ -71,6 +75,7 @@ export const backfillInternalIds = ({
 	}
 	const originals = new Map(files);
 	const backfilled: string[] = [];
+	const slugged: string[] = [];
 
 	for (const [collection, spec] of Object.entries(COLLECTIONS)) {
 		const collectionRows = rows[collection] ?? [];
@@ -121,6 +126,45 @@ export const backfillInternalIds = ({
 			if (updated === null) continue;
 			files.set(located.file, updated);
 			backfilled.push(row.id);
+		}
+		// The slug travels with the id: a fixture that never stated one takes the
+		// server's, so a nuke-and-repush or a sandbox-to-prod push keeps its names.
+		if (spec.historyKey) {
+			for (const row of collectionRows) {
+				if (
+					typeof row.internalId !== "string" ||
+					typeof row.versionSlug !== "string"
+				)
+					continue;
+				const located = locateFixture({
+					configPath,
+					files,
+					builder: spec.builder,
+					idField: spec.idField,
+					id: typeof row.id === "string" ? row.id : "",
+					internalId: row.internalId,
+				});
+				if (located === null) continue;
+				if (
+					fixturePropertyString({
+						call: located.node,
+						property: "versionSlug",
+					}) !== null
+				)
+					continue;
+				const updated = patchFixtureProperty({
+					source: located.source,
+					builder: spec.builder,
+					idField: located.idField,
+					id: located.id,
+					where: located.where,
+					property: "versionSlug",
+					text: JSON.stringify(row.versionSlug),
+				});
+				if (updated === null) continue;
+				files.set(located.file, updated);
+				if (typeof row.id === "string") slugged.push(row.id);
+			}
 		}
 	}
 
@@ -182,9 +226,48 @@ export const backfillInternalIds = ({
 			backfilled.push(edge.variantPlanId);
 		}
 	}
+	for (const row of rows.plans ?? []) {
+		for (const edge of row.variants ?? []) {
+			const internalId = edge.internalId ?? edge.plan?.internalId;
+			if (
+				typeof edge.variantPlanId !== "string" ||
+				typeof internalId !== "string" ||
+				typeof edge.versionSlug !== "string"
+			)
+				continue;
+			const located = locateFixture({
+				configPath,
+				files,
+				builder: variantSpec.builder,
+				idField: variantSpec.idField,
+				id: edge.variantPlanId,
+				internalId,
+			});
+			if (located === null) continue;
+			if (
+				fixturePropertyString({
+					call: located.node,
+					property: "versionSlug",
+				}) !== null
+			)
+				continue;
+			const updated = patchFixtureProperty({
+				source: located.source,
+				builder: variantSpec.builder,
+				idField: located.idField,
+				id: located.id,
+				where: located.where,
+				property: "versionSlug",
+				text: JSON.stringify(edge.versionSlug),
+			});
+			if (updated === null) continue;
+			files.set(located.file, updated);
+			slugged.push(edge.variantPlanId);
+		}
+	}
 
 	for (const [file, source] of files) {
 		if (source !== originals.get(file)) writeFileSync(file, source, "utf8");
 	}
-	return { backfilled };
+	return { backfilled, slugged };
 };

@@ -72,7 +72,7 @@ type PlanChange = PreviewChange & {
 export type CatalogPreview = {
 	features?: FeatureChange[];
 	plans?: PlanChange[];
-	migrations?: { id?: string }[];
+	migrations?: PlannedMigration[];
 };
 
 const MARKERS: Record<
@@ -362,7 +362,38 @@ const isChange = (change: PreviewChange): boolean =>
 
 const DETAIL_INDENT = "    ";
 
-/** The drafted migrations, one link per line; ids the server has not minted yet print as `?`. */
+/** A migration the preview says a push would draft: no id yet, only its targets. */
+export type PlannedMigration = {
+	id?: string;
+	plans?: { planId: string; versions?: number[] }[];
+	includeCustom?: boolean;
+};
+
+/** One line per planned migration: the plan and the versions whose customers move. */
+export const renderPlannedMigrations = ({
+	migrations,
+}: {
+	migrations: PlannedMigration[];
+}): string =>
+	[
+		chalk.bold(`Migrations this push would draft (${migrations.length})`),
+		...migrations.map((migration) => {
+			const targets = (migration.plans ?? [])
+				.map((plan) => {
+					const versions = (plan.versions ?? []).map((v) => `v${v}`);
+					return versions.length > 0
+						? `${plan.planId} ${versions.join(", ")}`
+						: plan.planId;
+				})
+				.join("; ");
+			const custom = migration.includeCustom
+				? " (customized plans included)"
+				: "";
+			return `  ${chalk.cyan(targets || "?")}${chalk.dim(" · customers move once the migration runs")}${custom}`;
+		}),
+	].join("\n");
+
+/** The drafted migrations, one link per line. */
 export const renderMigrationLinks = ({
 	migrations,
 	migrationLinkBase,
@@ -442,9 +473,9 @@ export const renderPreview = ({
 	}
 
 	if (migrations.length > 0) {
-		// Draft migrations are the server telling you customers need moving. The
-		// push still applies; these are run later, deliberately.
-		sections.push(renderMigrationLinks({ migrations, migrationLinkBase }));
+		// The server saying customers would need moving. Nothing is drafted by a
+		// preview; the applied block after --yes carries the ids and links.
+		sections.push(renderPlannedMigrations({ migrations }));
 	}
 
 	return sections.join("\n\n");

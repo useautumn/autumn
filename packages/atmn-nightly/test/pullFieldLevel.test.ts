@@ -55,8 +55,8 @@ const clientWith = ({
 
 const config = `${imports}export default atmn({
 	plans: [
-		plan({ internalId: "prod_A", planId: "free", name: "Free" }),
-		plan({ internalId: "prod_B", planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ internalId: "prod_A", planId: "free", versionSlug: "v1", name: "Free" }),
+		plan({ internalId: "prod_B", planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 49, interval: "month" } }),
 	],
 });
 `;
@@ -99,8 +99,8 @@ test("a plan renamed on the server moves only its planId", async () => {
 	expect(result.replaced).toEqual(["proNew@v1"]);
 	expect(configText()).toBe(
 		config.replace(
-			'planId: "pro", name: "Pro"',
-			'planId: "proNew", name: "Pro"',
+			'planId: "pro", versionSlug',
+			'planId: "proNew", versionSlug',
 		),
 	);
 });
@@ -158,7 +158,7 @@ test("a price change patches the price and adds a field the config never had", a
 		},
 	});
 	const text = configText();
-	expect(text).toContain('planId: "free", name: "Free" }),');
+	expect(text).toContain('planId: "free", versionSlug: "v1", name: "Free" }),');
 	expect(text).toContain("amount: 59");
 	expect(text).not.toContain("amount: 49");
 	expect(text).toContain('group: "core"');

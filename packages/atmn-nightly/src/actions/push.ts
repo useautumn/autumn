@@ -136,10 +136,7 @@ export const runPush = async ({
 	if (previewIsEmpty({ preview })) {
 		return { configPath, preview, migrationIds: [] };
 	}
-	if (dryRun) {
-		write("\nDry run — nothing applied.\n");
-		return { configPath, preview, migrationIds: [] };
-	}
+	if (dryRun) return { configPath, preview, migrationIds: [] };
 
 	const applied = (await client.update(wire as Record<string, unknown>)) as {
 		migrations?: { id?: string }[];
@@ -175,11 +172,14 @@ export const runPush = async ({
 		if (Array.isArray(catalog.plans))
 			rows.plans = catalog.plans as typeof rows.plans;
 	}
-	const { backfilled } = backfillInternalIds({ rows, configPath });
-	if (backfilled.length > 0) {
-		write(
-			`Wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}.\n`,
-		);
+	const { backfilled, slugged } = backfillInternalIds({ rows, configPath });
+	if (backfilled.length > 0 || slugged.length > 0) {
+		const written = [
+			...(backfilled.length > 0 ? ["internalId"] : []),
+			...(slugged.length > 0 ? ["versionSlug"] : []),
+		].join(" and ");
+		const count = new Set([...backfilled, ...slugged]).size;
+		write(`Wrote ${written} into ${count} fixture${count === 1 ? "" : "s"}.\n`);
 	}
 
 	return { configPath, preview, applied, migrationIds };

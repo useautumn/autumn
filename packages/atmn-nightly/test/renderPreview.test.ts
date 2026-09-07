@@ -178,3 +178,26 @@ test("prints nothing extra for a create or delete row without a plan change", ()
 	expect(out).not.toContain("Name:");
 	expect(out).not.toContain("Price:");
 });
+
+test("a preview names what a migration would move, never a placeholder id", () => {
+	const text = renderPreview({
+		preview: {
+			features: [],
+			plans: [
+				{
+					planId: "pro",
+					version: 1,
+					versionSlug: "v1",
+					active: true,
+					action: "update",
+					name: "Pro",
+					state: { hasCustomers: true },
+				},
+			],
+			migrations: [{ plans: [{ planId: "pro", versions: [1] }] }],
+		} as never,
+	});
+	expect(text).toContain("Migrations this push would draft (1)");
+	expect(text).toContain("pro v1");
+	expect(text).not.toMatch(/^\s+\?\s*$/m);
+});

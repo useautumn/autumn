@@ -90,8 +90,12 @@ export const buildProgram = (): Command => {
 					client: clientFor({ target }),
 					dryRun: !apply,
 				});
-				if (!apply && !previewIsEmpty({ preview: result.preview }))
-					process.stdout.write("Re-run with --yes to apply these changes.\n");
+				if (apply || previewIsEmpty({ preview: result.preview })) return;
+				process.stdout.write(
+					options.dryRun === true
+						? "\nDry run — nothing applied.\n"
+						: "\nNothing applied. Re-run with --yes to apply these changes.\n",
+				);
 			},
 		);
 
