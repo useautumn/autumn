@@ -75,6 +75,7 @@ type VariantChange = {
 	/** Null until the row exists, so a null id is this update minting it. */
 	internalId?: string | null;
 	version?: number;
+	active?: boolean;
 	variantAction?: string;
 	planChange?: PlanChangeLite | null;
 	siblingVersions?: VariantChange[];
@@ -504,7 +505,11 @@ const renderVariantRow = ({
 	return [
 		line({ action: "update", id, indent }),
 		...(planChange
-			? renderPlanChangeDetail({ planChange, indent: detailIndent })
+			? renderPlanChangeDetail({
+					planChange,
+					current: currentAttributes(variant),
+					indent: detailIndent,
+				})
 			: []),
 		...nested,
 	];
@@ -528,7 +533,10 @@ const renderVariantLanes = ({ plan }: { plan: PlanChange }): string[] =>
 	);
 
 /** The row's own scalars, so a previous value can complete its arrow. */
-const currentAttributes = (plan: PlanChange): Record<string, unknown> => ({
+const currentAttributes = (plan: {
+	name?: string;
+	active?: boolean;
+}): Record<string, unknown> => ({
 	...(plan.name === undefined ? {} : { name: plan.name }),
 	...(plan.active === undefined ? {} : { active: plan.active }),
 });
