@@ -2,9 +2,7 @@ import type { FullSubject } from "../../../models/cusModels/fullSubject/fullSubj
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { UsageWindowScope } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
-import type { Feature } from "../../../models/featureModels/featureModels.js";
 import { fullSubjectToCustomerEntitlements } from "../../fullSubjectUtils/fullSubjectToCustomerEntitlements.js";
-import { fullSubjectToRelevantFeatures } from "../../fullSubjectUtils/fullSubjectToRelevantFeatures.js";
 import {
 	type AnchorCandidate,
 	pickAnchorCustomerEntitlementId,
@@ -61,14 +59,12 @@ const toAnchorCandidate = (
 export const findUsageWindowAnchor = ({
 	fullSubject,
 	featureId,
-	features,
 	isCreditSystem,
 	inStatuses,
 	scopeType = "customer",
 }: {
 	fullSubject: FullSubject;
 	featureId: string;
-	features: Feature[];
 	isCreditSystem: boolean;
 	inStatuses?: CusProductStatus[];
 	scopeType?: UsageWindowScope;
@@ -76,25 +72,25 @@ export const findUsageWindowAnchor = ({
 	anchorCustomerEntitlementId: string | null;
 	anchorCustomerEntitlement?: FullCusEntWithFullCusProduct;
 } => {
-	const containingCreditSystemFeatureIds = fullSubjectToRelevantFeatures({
+	const ownEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
-		featureId,
-		features,
-	})
-		.map((feature) => feature.id)
-		.filter((relevantFeatureId) => relevantFeatureId !== featureId);
-	const ownerFeatureIdsByPreference = isCreditSystem
-		? [[featureId]]
-		: [[featureId], containingCreditSystemFeatureIds];
+		featureIds: [featureId],
+		inStatuses,
+	});
+	const fundingEntitlements = isCreditSystem
+		? []
+		: fullSubjectToCustomerEntitlements({
+				fullSubject,
+				fundsFeatureId: featureId,
+				inStatuses,
+			}).filter(
+				(customerEntitlement) =>
+					customerEntitlement.entitlement.feature.id !== featureId,
+			);
 
-	for (const ownerFeatureIds of ownerFeatureIdsByPreference) {
-		if (ownerFeatureIds.length === 0) continue;
+	for (const candidateEntitlements of [ownEntitlements, fundingEntitlements]) {
+		if (candidateEntitlements.length === 0) continue;
 
-		const candidateEntitlements = fullSubjectToCustomerEntitlements({
-			fullSubject,
-			featureIds: ownerFeatureIds,
-			inStatuses,
-		});
 		const anchorCustomerEntitlementId = pickAnchorCustomerEntitlementId({
 			candidates: candidateEntitlements.map(toAnchorCandidate),
 			scopeType,

@@ -102,6 +102,10 @@ export const buildFeatureUsageSummariesQuery = ({
 					WHERE entitlement.feature_override -> 'schema' @> json_build_array(
 						json_build_object('metered_feature_id', candidate.feature_id)
 					)::jsonb
+						AND entitlement.internal_product_id IN (
+							SELECT internal_id FROM products
+							WHERE org_id = ${orgId} AND env = ${env}
+						)
 					LIMIT ${scanLimit}
 				)
 			),

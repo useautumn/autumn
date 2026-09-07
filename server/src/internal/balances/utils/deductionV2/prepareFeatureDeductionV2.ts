@@ -6,7 +6,6 @@ import {
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	fullSubjectToOverageAllowedByFeatureId,
-	fullSubjectToRelevantFeatures,
 	fullSubjectToSpendLimitByFeatureId,
 	fullSubjectToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
@@ -107,13 +106,19 @@ export const prepareFeatureDeductionV2 = ({
 	// Resolve windows against the full relevant set (incl credit-system parents)
 	// even under set_usage, so a parent-feature cap can't be bypassed by set_usage
 	// on a member feature.
-	const windowFeatureIds = notNullish(targetBalance)
-		? fullSubjectToRelevantFeatures({
+	const fundingEntitlements = notNullish(targetBalance)
+		? fullSubjectToCustomerEntitlements({
 				fullSubject,
-				featureId: feature.id,
-				features: ctx.features,
-			}).map((candidate) => candidate.id)
-		: effectiveFeatureIds;
+				fundsFeatureId: feature.id,
+				inStatuses: orgToInStatuses({ org }),
+			})
+		: customerEntitlements;
+	const windowFeatureIds = deduplicateArray([
+		feature.id,
+		...fundingEntitlements.map(
+			(customerEntitlement) => customerEntitlement.entitlement.feature.id,
+		),
+	]);
 	const allUsageWindowLimits = resolveUsageWindowLimits({
 		ctx,
 		fullSubject,

@@ -1,5 +1,5 @@
 import {
-	customerEntitlementsToRelevantFeatures,
+	deduplicateArray,
 	type Feature,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -20,18 +20,18 @@ export const triggerAutoTopUp = async ({
 	newFullCus: FullCustomer;
 	feature: Feature;
 }) => {
-	const relevantFeatures = customerEntitlementsToRelevantFeatures({
-		customerEntitlements: fullCustomerToCustomerEntitlements({
+	const relevantFeatureIds = deduplicateArray([
+		feature.id,
+		...fullCustomerToCustomerEntitlements({
 			fullCustomer: newFullCus,
-		}),
-		featureId: feature.id,
-		features: ctx.features,
-	});
+			fundsFeatureId: feature.id,
+		}).map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
+	]);
 
-	for (const relevantFeature of relevantFeatures) {
+	for (const relevantFeatureId of relevantFeatureIds) {
 		const resolved = fullCustomerToAutoTopupObjects({
 			fullCustomer: newFullCus,
-			featureId: relevantFeature.id,
+			featureId: relevantFeatureId,
 		});
 
 		if (!resolved?.balanceBelowThreshold) continue;
@@ -46,7 +46,7 @@ export const triggerAutoTopUp = async ({
 			enqueueResult = await enqueueAutoTopupWithBurstSuppression({
 				ctx,
 				customerId,
-				featureId: relevantFeature.id,
+				featureId: relevantFeatureId,
 			});
 		} catch (error) {
 			if (!(error instanceof RedisUnavailableError)) throw error;
@@ -60,12 +60,12 @@ export const triggerAutoTopUp = async ({
 			await sendAutoTopupFailedWebhook({
 				ctx,
 				customerId,
-				featureId: relevantFeature.id,
+				featureId: relevantFeatureId,
 				reason: "redis_unavailable",
-				message: `Redis unavailable, skipping auto top-up enqueue for customer ${customerId} and feature ${relevantFeature.id}`,
+				message: `Redis unavailable, skipping auto top-up enqueue for customer ${customerId} and feature ${relevantFeatureId}`,
 				fullCustomer: newFullCus,
 				autoTopupConfig: resolved.autoTopupConfig,
-				suppressionKey: `auto_topup_failed_webhook:${ctx.org.id}:${ctx.env}:${customerId}:${relevantFeature.id}:redis_unavailable:${Math.floor(Date.now() / 3_600_000)}`,
+				suppressionKey: `auto_topup_failed_webhook:${ctx.org.id}:${ctx.env}:${customerId}:${relevantFeatureId}:redis_unavailable:${Math.floor(Date.now() / 3_600_000)}`,
 				suppressionTtlMs: 3_600_000,
 			});
 		}

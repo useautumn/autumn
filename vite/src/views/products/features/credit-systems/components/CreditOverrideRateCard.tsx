@@ -55,8 +55,8 @@ export function CreditOverrideRateCard({
 			<div className="flex flex-col gap-3">
 				{diff.changedCount > 0 && (
 					<span className="text-tertiary-foreground text-xs">
-						{diff.changedCount} of {diff.catalogCount || schema.length} rates
-						differ from the credit system
+						{diff.changedCount} of {diff.totalCount} rates differ from the
+						credit system
 					</span>
 				)}
 

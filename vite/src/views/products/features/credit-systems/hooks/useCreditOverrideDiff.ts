@@ -8,7 +8,7 @@ export type CreditOverrideDiff = {
 	statusByIndex: CreditOverrideRowStatus[];
 	missingFeatureIds: string[];
 	changedCount: number;
-	catalogCount: number;
+	totalCount: number;
 };
 
 const toMeteredFeatureIds = (schema: CreditSchemaItem[]) =>
@@ -43,14 +43,17 @@ export const useCreditOverrideDiff = ({
 		);
 		const overridden = new Set(toMeteredFeatureIds(schema));
 		const statusByIndex = schema.map((item) => classifyRow({ item, catalog }));
+		const missingFeatureIds = [...catalog.keys()].filter(
+			(featureId) => !overridden.has(featureId),
+		);
+		const changedRows = statusByIndex.filter(
+			(status) => status !== "inherited",
+		);
 
 		return {
 			statusByIndex,
-			missingFeatureIds: toMeteredFeatureIds(catalogSchema).filter(
-				(featureId) => !overridden.has(featureId),
-			),
-			changedCount: statusByIndex.filter((status) => status !== "inherited")
-				.length,
-			catalogCount: catalogSchema.length,
+			missingFeatureIds,
+			changedCount: changedRows.length + missingFeatureIds.length,
+			totalCount: new Set([...overridden, ...catalog.keys()]).size,
 		};
 	}, [schema, creditSystem]);

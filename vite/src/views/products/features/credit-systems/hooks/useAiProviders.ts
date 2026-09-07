@@ -58,7 +58,7 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 					providers[providerKey] ??
 						({
 							id: providerKey,
-							name: providerKey,
+							name: providerKey.charAt(0).toUpperCase() + providerKey.slice(1),
 							models: {},
 						} as ModelsDevProvider),
 				]),

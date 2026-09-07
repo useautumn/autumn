@@ -71,7 +71,7 @@ export function FeatureOverrideSection({
 				<div className="flex flex-col gap-1.5">
 					{schema?.map((item) => (
 						<OverrideRow
-							key={item.metered_feature_id}
+							key={`feature-${item.metered_feature_id}`}
 							label={featureDisplayName({
 								features,
 								featureId: item.metered_feature_id,
@@ -93,7 +93,7 @@ export function FeatureOverrideSection({
 					)}
 					{providerMarkups.map(([providerKey, entry]) => (
 						<OverrideRow
-							key={providerKey}
+							key={`provider-${providerKey}`}
 							label={providerKey}
 							value={`${entry?.markup ?? 0}% markup`}
 						/>

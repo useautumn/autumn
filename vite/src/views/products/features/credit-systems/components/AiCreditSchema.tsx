@@ -54,16 +54,13 @@ export function AiCreditSchema({ form }: AiCreditSchemaProps) {
 					{activeProviderKeys.map((providerKey) => {
 						const provider = resolvedProviders[providerKey];
 						const modelFullIds = providerGroups[providerKey] ?? [];
-						const providerName =
-							provider?.name ??
-							providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
 
 						return (
 							<AiCreditSchemaTable
 								key={providerKey}
 								form={form}
 								providerKey={providerKey}
-								providerName={providerName}
+								providerName={provider.name}
 								modelFullIds={modelFullIds}
 								provider={provider}
 								isLoading={isLoading}

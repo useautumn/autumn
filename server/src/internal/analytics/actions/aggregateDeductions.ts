@@ -4,15 +4,14 @@ import type {
 	DeductionBalance,
 	DeductionFeature,
 	DeductionPeriod,
+	Entitlement,
 	FeatureType,
 	FullCustomer,
-	FullCustomerEntitlement,
 	RangeEnum,
 } from "@autumn/shared";
 import {
 	type CreditSchemaItem,
 	findFeatureById,
-	fullCustomerToCustomerEntitlements,
 	hasCreditDimensionRules,
 	isAnyCreditSystem,
 	notNullish,
@@ -67,7 +66,9 @@ const toGroupColumn = (groupBy?: string): GroupColumn | undefined => {
  */
 /** What pivotRows needs to know about a balance's owning entitlement. */
 type BalanceOwner = {
-	cusEnt: Pick<CustomerEntitlement, "id" | "next_reset_at">;
+	cusEnt: Pick<CustomerEntitlement, "id" | "next_reset_at"> & {
+		entitlement?: Pick<Entitlement, "feature_override">;
+	};
 	internalEntityId: string | null;
 };
 
@@ -138,26 +139,19 @@ export const resolveCreditCost = ({
 	ctx,
 	sourceFeatureId,
 	balanceFeatureId,
-	balanceId,
-	customerEntitlements,
+	owner,
 }: {
 	ctx: AutumnContext;
 	sourceFeatureId?: string;
 	balanceFeatureId: string;
-	balanceId?: string;
-	customerEntitlements?: (Pick<FullCustomerEntitlement, "entitlement"> & {
-		id?: string;
-	})[];
+	owner?: BalanceOwner;
 }): number | null => {
 	if (!sourceFeatureId || sourceFeatureId === balanceFeatureId) return null;
 
 	const creditSystem = ctx.features.find((f) => f.id === balanceFeatureId);
 	if (!creditSystem || !isAnyCreditSystem(creditSystem.type)) return null;
 
-	const owningEntitlement = customerEntitlements?.find(
-		(customerEntitlement) => customerEntitlement.id === balanceId,
-	);
-	if (owningEntitlement?.entitlement.feature_override) return null;
+	if (owner?.cusEnt.entitlement?.feature_override) return null;
 	const sourceFeature = findFeatureById({
 		features: ctx.features,
 		featureId: sourceFeatureId,
@@ -310,9 +304,6 @@ export const aggregateDeductions = async ({
 		entityIdByInternalId,
 		cusEntById,
 		featureById,
-		customerEntitlements: fullCustomerToCustomerEntitlements({
-			fullCustomer: params.customer,
-		}),
 	});
 };
 
@@ -332,7 +323,6 @@ const pivotRows = ({
 	entityIdByInternalId,
 	cusEntById,
 	featureById,
-	customerEntitlements,
 }: {
 	rows: AggregateDeductionsPipeRow[];
 	ctx: AutumnContext;
@@ -342,7 +332,6 @@ const pivotRows = ({
 	entityIdByInternalId: Map<string, string>;
 	cusEntById: Map<string, BalanceOwner>;
 	featureById: Map<string, { id: string; type: FeatureType }>;
-	customerEntitlements: Pick<FullCustomerEntitlement, "entitlement">[];
 }): DeductionPeriod[] => {
 	const byPeriod = new Map<number, DeductionPeriod>();
 	// Balance accumulators, keyed period -> feature -> balance_id.
@@ -403,8 +392,7 @@ const pivotRows = ({
 					ctx,
 					sourceFeatureId: pinnedSource,
 					balanceFeatureId,
-					balanceId: row.balance_id,
-					customerEntitlements,
+					owner: cusEntById.get(row.balance_id),
 				}),
 				deducted: 0,
 				events: 0,
@@ -442,8 +430,7 @@ const pivotRows = ({
 							ctx,
 							sourceFeatureId: groupValue,
 							balanceFeatureId,
-							balanceId: row.balance_id,
-							customerEntitlements,
+							owner: cusEntById.get(row.balance_id),
 						}),
 					}
 				: {}),
