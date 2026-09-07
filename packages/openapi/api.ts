@@ -28,7 +28,7 @@ async function main() {
 			outputFilePath: paths.openApiStrippedOutput,
 		}),
 		// Internal only: never fed to the SDKs, never merged into the docs spec.
-		writeOpenApi_2_3_0_Internal({
+		writeLatestOpenApiInternal({
 			outputFilePath: paths.openApiInternalOutput,
 		}),
 	]);
