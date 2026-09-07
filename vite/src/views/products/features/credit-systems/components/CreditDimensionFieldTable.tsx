@@ -34,7 +34,7 @@ interface FieldCellContext {
 	table: TableInstance<FieldTableRow>;
 }
 
-const metaOf = (table: TableInstance<FieldTableRow>): FieldTableMeta =>
+const tableMeta = (table: TableInstance<FieldTableRow>): FieldTableMeta =>
 	table.options.meta as FieldTableMeta;
 
 const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
@@ -47,9 +47,12 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 				<HashIcon size={14} className="shrink-0 text-tertiary-foreground" />
 				<CreditDimensionNameInput
 					field={row.original.unnamed ? "" : row.original.field}
-					onRename={(to) => metaOf(table).onRenameField(row.original.field, to)}
+					onRename={(to) =>
+						tableMeta(table).onRenameField(row.original.field, to)
+					}
 					isTaken={(name) =>
-						name !== row.original.field && metaOf(table).fields.includes(name)
+						name !== row.original.field &&
+						tableMeta(table).fields.includes(name)
 					}
 				/>
 			</span>
@@ -65,8 +68,8 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 					aria-label={`${field} values`}
 					className="h-auto min-h-8 py-1.5 flex-wrap gap-1 !border-0 !shadow-none !bg-transparent !rounded-none !px-0.5"
 					values={values}
-					onAdd={(value) => metaOf(table).onAddValue(field, value)}
-					onRemove={(value) => metaOf(table).onRemoveValue(field, value)}
+					onAdd={(value) => tableMeta(table).onAddValue(field, value)}
+					onRemove={(value) => tableMeta(table).onRemoveValue(field, value)}
 					placeholder="big, small"
 				/>
 			);
@@ -82,7 +85,7 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 				<RemoveButton
 					className="opacity-100"
 					onClick={() => {
-						const meta = metaOf(table);
+						const meta = tableMeta(table);
 						if (row.original.unnamed) {
 							return meta.onRemoveUnnamedField(row.original.field);
 						}

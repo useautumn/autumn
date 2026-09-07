@@ -13,13 +13,13 @@ import {
 	coveringRule,
 	createRateDraft,
 	type DimensionValues,
-	draftsOf,
+	draftsFrom,
 	filledRateRows,
 	missingCombinationCount,
 	nameRateRows,
-	rateRowsOf,
 	rateRules,
-	rulesOf,
+	savedRulesFrom,
+	toRateRows,
 	withRateCredits,
 	withRateMatch,
 	withRatePriority,
@@ -48,11 +48,20 @@ export function useCreditRateRows({
 	// over by name — otherwise the row remounts on the first keystroke and the
 	// cell being typed into loses focus.
 	const keysByRuleName = useRef(new Map<string, string>());
+	// Saved rules and drafts live in separate stores, so the display order has to
+	// be remembered or a row would move as soon as it gained a cost.
+	const [rowOrder, setRowOrder] = useState<string[]>([]);
 
 	const rules = useMemo(() => rateRules(item), [item.dimensions]);
 	const rows = useMemo(
-		() => rateRowsOf({ rules, drafts, keysByRuleName: keysByRuleName.current }),
-		[rules, drafts],
+		() =>
+			toRateRows({
+				rules,
+				drafts,
+				keysByRuleName: keysByRuleName.current,
+				order: rowOrder,
+			}),
+		[rules, drafts, rowOrder],
 	);
 
 	const baseRate = item.tier_behavior === "graduated" ? undefined : item;
@@ -105,8 +114,9 @@ export function useCreditRateRows({
 		for (const { key, name, dimension } of nameRateRows(next)) {
 			if (dimension) keysByRuleName.current.set(name, key);
 		}
-		setDrafts(draftsOf(next));
-		onChange(withRateRules({ item, rules: rulesOf(next) }));
+		setRowOrder(next.map((row) => row.key));
+		setDrafts(draftsFrom(next));
+		onChange(withRateRules({ item, rules: savedRulesFrom(next) }));
 	};
 
 	return {
@@ -118,7 +128,11 @@ export function useCreditRateRows({
 			missingCombinationCount({ values, rows }),
 		restrictDrafts: (isAllowed: (draft: CreditRateDraft) => boolean) =>
 			setDrafts((current) => current.filter(isAllowed)),
-		addRow: () => setDrafts([...drafts, createRateDraft()]),
+		addRow: () => {
+			const draft = createRateDraft();
+			setRowOrder([...rows.map((row) => row.key), draft.key]);
+			setDrafts([...drafts, draft]);
+		},
 		setRowMatch: (index: number, match: CreditMatch) =>
 			setRows(
 				replaceAt(rows, index, withRateMatch({ row: rows[index], match })),

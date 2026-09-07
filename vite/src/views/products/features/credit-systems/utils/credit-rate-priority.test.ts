@@ -4,9 +4,9 @@ import {
 	findAmbiguousCreditDimensions,
 } from "@autumn/shared";
 import {
-	rateRowsOf,
 	rateRules,
-	rulesOf,
+	savedRulesFrom,
+	toRateRows,
 	withRatePriority,
 	withRateRules,
 } from "./creditDimensionUtils";
@@ -22,11 +22,14 @@ const clashing: CreditSchemaItem = {
 };
 
 const preferFirstRow = (item: CreditSchemaItem) => {
-	const rows = rateRowsOf({ rules: rateRules(item), drafts: [] });
+	const rows = toRateRows({ rules: rateRules(item), drafts: [] });
 	const [first, ...rest] = rows;
 	return withRateRules({
 		item,
-		rules: rulesOf([withRatePriority({ row: first, priority: 1 }), ...rest]),
+		rules: savedRulesFrom([
+			withRatePriority({ row: first, priority: 1 }),
+			...rest,
+		]),
 	});
 };
 
@@ -47,13 +50,13 @@ test("a priority resolves the clash and survives the save", () => {
 
 test("clearing a priority drops the field and brings the clash back", () => {
 	const saved = preferFirstRow(clashing);
-	const rows = rateRowsOf({ rules: rateRules(saved), drafts: [] });
+	const rows = toRateRows({ rules: rateRules(saved), drafts: [] });
 	const preferred = rows.find((row) => row.dimension?.priority !== undefined);
 	if (!preferred) throw new Error("expected a preferred row");
 
 	const cleared = withRateRules({
 		item: saved,
-		rules: rulesOf(
+		rules: savedRulesFrom(
 			rows.map((row) =>
 				row === preferred
 					? withRatePriority({ row, priority: undefined })
