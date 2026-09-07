@@ -9,6 +9,7 @@ export * from "./intervalUtils/intervalArithmetic";
 
 export * from "./invoicingUtils/backdateUtils/applyBackdatedLineItemAmount.js";
 export * from "./invoicingUtils/billingConstants.js";
+export * from "./invoicingUtils/descriptionUtils/fixedPriceToLineDescription.js";
 export * from "./invoicingUtils/filterUnchangedPricesFromLineItems.js";
 export * from "./invoicingUtils/lineItemBuilders/buildLineItem.js";
 export * from "./invoicingUtils/lineItemBuilders/fixedPriceToLineItem.js";
