@@ -23,6 +23,9 @@ export type FieldOverlay = {
 	/** Kept for existing catalogs only: struck through in editors, and push
 	 * warns when a config still states it. */
 	deprecated?: true;
+	/** A sentence appended to the field's JSDoc: what the server's description
+	 * leaves out and a reader (or an agent) needs to know in the config. */
+	describe?: string;
 	/** Why — this is documentation, and it is not optional. */
 	reason: string;
 };
@@ -44,6 +47,17 @@ export const OVERLAY: Overlay = {
 	exposeInternal: ["internal_id", "entity_feature_id"],
 	collections: {
 		plans: {
+			version_slug: {
+				describe:
+					'Defaults to "vN", N being the server\'s version number, which counts in creation order; state it explicitly on every history row so a nuke-and-repush or a sandbox-to-prod push keeps the same names even though the numbers may differ.',
+				reason:
+					"The number is not shown in the config, only the slug, and the default ties the two together.",
+			},
+			"variants.version_slug": {
+				describe:
+					'Defaults to "vN", N being the server\'s version number; state it explicitly on every variant history row.',
+				reason: "Same default as the base plan's versionSlug.",
+			},
 			"licenses.version_slug": {
 				hidden: true,
 				reason:
@@ -151,6 +165,16 @@ export const fixtureNameFor = ({
 	path: FieldPath;
 	recased: string;
 }): string => fieldOverlay({ overlay, collection, path })?.rename ?? recased;
+
+export const describeByOverlay = ({
+	overlay,
+	collection,
+	path,
+}: {
+	overlay: Overlay;
+	collection: string;
+	path: FieldPath;
+}): string | undefined => fieldOverlay({ overlay, collection, path })?.describe;
 
 export const isDeprecatedByOverlay = ({
 	overlay,

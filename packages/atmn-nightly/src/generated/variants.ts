@@ -8,7 +8,7 @@ export type Variant = {
 	internalId?: string;
 	/** Which version of the variant this overlay targets. At most one of `version` / `version_slug`; omit both to target latest. */
 	version?: number;
-	/** Which version of the variant this overlay targets, by slug. Same pin as `version`; omit both to target latest. */
+	/** Which version of the variant this overlay targets, by slug. Same pin as `version`; omit both to target latest. Defaults to "vN", N being the server's version number; state it explicitly on every variant history row. */
 	versionSlug?: string;
 	/** Display name when creating the variant if it does not exist. */
 	name?: string;

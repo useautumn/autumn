@@ -5,6 +5,7 @@ import {
 } from "../casing/schemaKeyCasing";
 import type { Overlay } from "../overlay/overlay";
 import {
+	describeByOverlay,
 	fieldOverlay,
 	fixtureNameFor,
 	isDeprecatedByOverlay,
@@ -104,6 +105,22 @@ export type ObjectMember = {
 	schema: JsonSchema;
 };
 
+/** The spec's description, tidied, with the overlay's note appended. */
+const describedMember = ({
+	description,
+	note,
+}: {
+	description: unknown;
+	note: string | undefined;
+}): string | undefined => {
+	const base =
+		typeof description === "string"
+			? description.replace(/\s+/g, " ").trim()
+			: undefined;
+	if (note === undefined) return base;
+	return base === undefined ? note : `${base} ${note}`;
+};
+
 export const objectMembers = ({
 	schema,
 	path,
@@ -155,10 +172,14 @@ export const objectMembers = ({
 						path: fieldPath,
 					})
 				),
-				description:
-					typeof propertySchema.description === "string"
-						? propertySchema.description.replace(/\s+/g, " ").trim()
-						: undefined,
+				description: describedMember({
+					description: propertySchema.description,
+					note: describeByOverlay({
+						overlay: context.overlay,
+						collection: context.collection,
+						path: fieldPath,
+					}),
+				}),
 				deprecated: isDeprecatedByOverlay({
 					overlay: context.overlay,
 					collection: context.collection,

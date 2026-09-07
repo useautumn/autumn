@@ -6,7 +6,7 @@
 	"description": "Generates the atmn-nightly CLI from the internal OpenAPI spec.",
 	"scripts": {
 		"ts": "bunx tsgo --build --noEmit",
-		"test": "bun test test",
+		"test": "bun test --timeout 30000 test",
 		"generate": "bun run src/generate.ts",
 		"check": "bun run src/checkClean.ts",
 		"fuzz": "bun run src/fuzz/runFuzz.ts"

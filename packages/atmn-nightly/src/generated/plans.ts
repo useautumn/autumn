@@ -379,7 +379,7 @@ export type Plan = {
 	};
 	/** Arbitrary key-value metadata shared across all versions. */
 	metadata?: Record<string, unknown>;
-	/** Target this version row by slug. At most one of `version` / `version_slug`; omit both to target the active row. */
+	/** Target this version row by slug. At most one of `version` / `version_slug`; omit both to target the active row. Defaults to "vN", N being the server's version number, which counts in creation order; state it explicitly on every history row so a nuke-and-repush or a sandbox-to-prod push keeps the same names even though the numbers may differ. */
 	versionSlug?: string;
 	/** When false, skip Stripe product/price creation on create. */
 	createInStripe?: boolean;
@@ -391,7 +391,7 @@ export type Plan = {
 		internalId?: string;
 		/** Which version of the variant this overlay targets. At most one of `version` / `version_slug`; omit both to target latest. */
 		version?: number;
-		/** Which version of the variant this overlay targets, by slug. Same pin as `version`; omit both to target latest. */
+		/** Which version of the variant this overlay targets, by slug. Same pin as `version`; omit both to target latest. Defaults to "vN", N being the server's version number; state it explicitly on every variant history row. */
 		versionSlug?: string;
 		/** Display name when creating the variant if it does not exist. */
 		name?: string;
