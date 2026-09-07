@@ -48,9 +48,10 @@ const BILLING_TOGGLES = [
 		description: "Deduct from newest balance first instead of oldest",
 	},
 	{
-		key: "include_past_due",
-		label: "Include past due",
-		description: "Include past-due subscriptions when checking entitlements",
+		key: "block_overdue_entitlements",
+		label: "Block access while overdue",
+		description:
+			"Block access when a plan is past due. Plans can override this setting.",
 	},
 	{
 		key: "invoice_memos",

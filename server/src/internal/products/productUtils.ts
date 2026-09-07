@@ -113,6 +113,7 @@ export const constructProduct = ({
 		deleted_at: null,
 		previous_version_slug: null,
 		config: {
+			...productData.config,
 			ignore_past_due: productData.config?.ignore_past_due ?? false,
 		},
 		...pickBillingControlColumns(productData.billing_controls),

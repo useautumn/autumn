@@ -44,7 +44,6 @@ const ALLOWED_DEFAULTS: Record<string, string> = {
 
 	// Gated by their parent's presence.
 	"plans.migration.draft": "gated by `migration`",
-	"plans.config.ignore_past_due": "gated by `config`",
 	"plans.free_trial.card_required": "gated by `free_trial`",
 	"plans.free_trial.duration_type": "gated by `free_trial`",
 	"plans.items.pooled": "gated by `items`",

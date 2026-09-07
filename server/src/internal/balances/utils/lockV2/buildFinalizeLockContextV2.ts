@@ -87,6 +87,7 @@ export const buildFinalizeLockContextV2 = async ({
 		deduction: {
 			feature,
 			deduction: additionalValue,
+			enforceOverdueBlock: additionalValue > 0,
 			lockReceipt: receipt,
 			unwindValue,
 			lockReceiptKey,

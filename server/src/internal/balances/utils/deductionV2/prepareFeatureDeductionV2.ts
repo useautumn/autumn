@@ -10,6 +10,7 @@ import {
 	fullSubjectToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
 	getRelevantFeatures,
+	InsufficientBalanceError,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
 	notNullish,
@@ -17,6 +18,7 @@ import {
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getCheckSubject } from "@/internal/balances/check/getCheckSubject.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -46,6 +48,11 @@ export const prepareFeatureDeductionV2 = ({
 	const { org, env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
+	const blockOverdueUsage =
+		deduction.enforceOverdueBlock && org.config.block_overdue_entitlements;
+	if (blockOverdueUsage) {
+		fullSubject = getCheckSubject({ ctx, fullSubject });
+	}
 
 	// Membership is per cusEnt (fundsFeatureId), not per catalog feature — a
 	// plan item's feature_override can add or remove the tracked feature from
@@ -59,6 +66,13 @@ export const prepareFeatureDeductionV2 = ({
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
 	});
+	const requiresEntitlement = blockOverdueUsage && deduction.deduction > 0;
+	if (requiresEntitlement && customerEntitlements.length === 0) {
+		throw new InsufficientBalanceError({
+			featureId: feature.id,
+			value: deduction.deduction,
+		});
+	}
 
 	const isUnlimitedCusEnt = (ce: FullCusEntWithFullCusProduct): boolean =>
 		ce.entitlement.allowance_type === AllowanceType.Unlimited ||
