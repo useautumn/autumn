@@ -230,7 +230,7 @@ export const buildBaseImage = (
 					"apt-get update && " +
 					`bun x playwright@${playwrightVersion} install --with-deps chromium && ` +
 					"rm -rf /var/lib/apt/lists/* && " +
-					'test -x "$(ls -d /root/.cache/ms-playwright/chromium-*/chrome-linux/chrome | head -1)"',
+					'test -n "$(find /root/.cache/ms-playwright/chromium-* -type f -name chrome -perm -111 -print -quit)"',
 			])
 			.build(app)
 	);
