@@ -1,12 +1,14 @@
 import {
 	type CustomerData,
 	type Entity,
+	type FullCusProduct,
 	type FullCustomer,
 	isFreeProduct,
 	orgDefaultAppliesToEntities,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -22,8 +24,8 @@ export const attachDefaultProductsToEntities = async ({
 	fullCustomer: FullCustomer;
 	entities: Entity[];
 	customerData?: CustomerData;
-}) => {
-	if (!orgDefaultAppliesToEntities({ ctx })) return;
+}): Promise<FullCustomer> => {
+	if (!orgDefaultAppliesToEntities({ ctx })) return fullCustomer;
 
 	const defaultProducts = await setupDefaultProductsContext({
 		ctx,
@@ -36,10 +38,12 @@ export const attachDefaultProductsToEntities = async ({
 	);
 
 	const currentEpochMs = Date.now();
+	let customerProducts = fullCustomer.customer_products;
+	const insertedCustomerProducts: FullCusProduct[] = [];
 	for (const entity of entities) {
 		const entityFullCustomer = {
 			...fullCustomer,
-			customer_products: [...fullCustomer.customer_products],
+			customer_products: [...customerProducts],
 			entity,
 		};
 		const insertCustomerProducts = freeDefaultProducts.map((product) =>
@@ -74,9 +78,15 @@ export const attachDefaultProductsToEntities = async ({
 			originalFullCustomer: entityFullCustomer,
 		});
 
-		fullCustomer.customer_products = [
-			...fullCustomer.customer_products,
-			...insertCustomerProducts,
-		];
+		customerProducts = [...customerProducts, ...insertCustomerProducts];
+		insertedCustomerProducts.push(...insertCustomerProducts);
 	}
+
+	return applyPooledBalanceCustomerProductTransitions({
+		ctx,
+		fullCustomer,
+		outgoingCustomerProducts: [],
+		incomingCustomerProducts: insertedCustomerProducts,
+		now: currentEpochMs,
+	});
 };

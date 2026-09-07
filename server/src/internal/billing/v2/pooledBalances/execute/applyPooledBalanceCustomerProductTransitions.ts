@@ -23,7 +23,7 @@ export const applyPooledBalanceCustomerProductTransitions = async ({
 	outgoingCustomerProducts: FullCusProduct[];
 	incomingCustomerProducts: FullCusProduct[];
 	now: number;
-}): Promise<void> => {
+}): Promise<FullCustomer> => {
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
 	const refreshedBeforeReset = await refreshFullCustomer({
 		ctx,
@@ -65,10 +65,10 @@ export const applyPooledBalanceCustomerProductTransitions = async ({
 		incomingCustomerProducts: refreshedIncomingCustomerProducts,
 		now,
 	});
-	if (!pooledBalancePlan) return;
+	if (!pooledBalancePlan) return refreshedFullCustomer;
 
 	await executePooledBalancePlan({ ctx, pooledBalancePlan });
-	await deleteCachedFullCustomer({
+	return refreshFullCustomer({
 		ctx,
 		customerId,
 		source: "pooled-balance-lifecycle-transition",
