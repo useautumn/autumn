@@ -1,6 +1,5 @@
 import {
 	IconButton,
-	Input,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -8,8 +7,7 @@ import {
 import { InfoIcon, X } from "lucide-react";
 import { useAiProviderTable } from "../hooks/AiProviderTableContext";
 import { useProviderMarkup } from "../hooks/useProviderMarkup";
-
-const MARKUP_INPUT_PATTERN = /^-?\d*\.?\d*$/;
+import { NumericDraftInput } from "./NumericDraftInput";
 
 export function AiProviderTableHeading({
 	providerName,
@@ -56,21 +54,11 @@ export function AiProviderTableHeading({
 				{!isCustom && (
 					<div className="flex items-center gap-1.5">
 						<span className="text-xs text-subtle">Markup %</span>
-						<Input
-							type="text"
-							inputMode="numeric"
+						<NumericDraftInput
 							aria-label={`${providerName} markup`}
-							value={providerMarkup == null ? "" : String(providerMarkup)}
-							onChange={(e) => {
-								const raw = e.target.value;
-								if (!MARKUP_INPUT_PATTERN.test(raw)) return;
-								if (raw === "") {
-									onMarkupChange(undefined);
-									return;
-								}
-								const parsed = Number(raw);
-								if (!Number.isNaN(parsed)) onMarkupChange(parsed);
-							}}
+							value={providerMarkup ?? undefined}
+							onCommit={onMarkupChange}
+							allowUndefined
 							placeholder={String(defaultMarkup)}
 							className="w-20"
 						/>

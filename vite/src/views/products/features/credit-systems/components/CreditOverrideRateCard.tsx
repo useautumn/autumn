@@ -3,26 +3,12 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CreditSchemaListProvider } from "../hooks/CreditSchemaListContext";
 import { useCreditDimensionsToggle } from "../hooks/useCreditDimensionsToggle";
-import {
-	type CreditOverrideRowStatus,
-	useCreditOverrideDiff,
-} from "../hooks/useCreditOverrideDiff";
+import { diffCreditOverride } from "../utils/diffCreditOverride";
 import { featureDisplayName } from "../utils/featureDisplayName";
 import { CreditDimensionsSection } from "./CreditDimensionsSection";
 import { CreditDimensionsSwitch } from "./CreditDimensionsSwitch";
 import { CreditRateCardList } from "./CreditRateCardList";
-
-const statusLabel: Record<CreditOverrideRowStatus, string | null> = {
-	inherited: null,
-	changed: "Changed",
-	added: "Added",
-};
-
-const RowStatus = ({ status }: { status: CreditOverrideRowStatus }) => {
-	const label = statusLabel[status];
-	if (!label) return null;
-	return <span className="text-tertiary-foreground text-xs">{label}</span>;
-};
+import { RowStatusBadge } from "./RowStatusBadge";
 
 export function CreditOverrideRateCard({
 	schema,
@@ -38,7 +24,7 @@ export function CreditOverrideRateCard({
 	const { features } = useFeaturesQuery();
 	const { isAdmin } = useAdmin();
 	const dimensions = useCreditDimensionsToggle({ schema, setSchema: onChange });
-	const diff = useCreditOverrideDiff({ schema, creditSystem });
+	const diff = diffCreditOverride({ schema, creditSystem });
 
 	const missingFeatureNames = diff.missingFeatureIds
 		.map((featureId) =>
@@ -62,7 +48,7 @@ export function CreditOverrideRateCard({
 
 				<CreditRateCardList
 					renderRowLabel={(index) => (
-						<RowStatus status={diff.statusByIndex[index]} />
+						<RowStatusBadge status={diff.statusByIndex[index]} />
 					)}
 				/>
 

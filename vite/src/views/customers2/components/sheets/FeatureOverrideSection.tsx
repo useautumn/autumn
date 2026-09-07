@@ -1,10 +1,10 @@
 import type { CreditSchemaItem, FullCustomerEntitlement } from "@autumn/shared";
 import { hasCreditDimensionRules, numberWithCommas } from "@autumn/shared";
 import { CoinsIcon } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { featureDisplayName } from "@/views/products/features/credit-systems/utils/featureDisplayName";
+import { OverrideRow } from "./OverrideRow";
 
 const countLabel = (count: number, noun: string) =>
 	`${count} ${noun}${count === 1 ? "" : "s"}`;
@@ -31,19 +31,6 @@ const dimensionedRateText = (item: CreditSchemaItem) => {
 	if (multipliers) parts.push(countLabel(multipliers, "multiplier"));
 	return `varies by event · ${parts.join(", ")}`;
 };
-
-const OverrideRow = ({
-	label,
-	value,
-}: {
-	label: ReactNode;
-	value: ReactNode;
-}) => (
-	<div className="flex items-center justify-between text-sm px-2 py-0.5 rounded-md">
-		<span className="text-foreground font-medium">{label}</span>
-		<span className="text-tertiary-foreground text-xs">{value}</span>
-	</div>
-);
 
 export function FeatureOverrideSection({
 	selectedCusEnt,

@@ -1,6 +1,5 @@
 import {
 	FormLabel,
-	Input,
 	SearchableSelect,
 	Tooltip,
 	TooltipContent,
@@ -10,6 +9,7 @@ import { InfoIcon } from "lucide-react";
 import { useAiProviders } from "../hooks/useAiProviders";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { AiCreditSchemaTable } from "./AiCreditSchemaTable";
+import { NumericDraftInput } from "./NumericDraftInput";
 
 interface AiCreditSchemaProps {
 	form: CreditSystemFormInstance;
@@ -34,17 +34,10 @@ export function AiCreditSchema({ form }: AiCreditSchemaProps) {
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-col gap-1.5">
 				<FormLabel>Default markup %</FormLabel>
-				<Input
-					type="text"
-					inputMode="numeric"
+				<NumericDraftInput
 					aria-label="Default markup"
-					value={defaultMarkup === 0 ? "" : String(defaultMarkup)}
-					onChange={(e) => {
-						const raw = e.target.value;
-						if (raw === "" || /^-?\d*\.?\d*$/.test(raw)) {
-							form.setFieldValue("defaultMarkup", raw === "" ? 0 : Number(raw));
-						}
-					}}
+					value={defaultMarkup || undefined}
+					onCommit={(next) => form.setFieldValue("defaultMarkup", next ?? 0)}
 					placeholder="0"
 				/>
 			</div>

@@ -50,20 +50,16 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 	);
 
 	// custom has no models.dev entry, so it needs a stand-in provider.
-	const resolvedProviders = useMemo(
-		() =>
-			Object.fromEntries(
-				activeProviderKeys.map((providerKey) => [
-					providerKey,
-					providers[providerKey] ??
-						({
-							id: providerKey,
-							name: providerKey.charAt(0).toUpperCase() + providerKey.slice(1),
-							models: {},
-						} as ModelsDevProvider),
-				]),
-			),
-		[providers, activeProviderKeys],
+	const resolvedProviders = Object.fromEntries(
+		activeProviderKeys.map((providerKey) => [
+			providerKey,
+			providers[providerKey] ??
+				({
+					id: providerKey,
+					name: providerKey.charAt(0).toUpperCase() + providerKey.slice(1),
+					models: {},
+				} as ModelsDevProvider),
+		]),
 	);
 
 	const availableProviders = useMemo(() => {

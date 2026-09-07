@@ -1,6 +1,5 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
 import { creditSchemaItemsAreSame } from "@autumn/shared";
-import { useMemo } from "react";
 
 export type CreditOverrideRowStatus = "inherited" | "changed" | "added";
 
@@ -28,32 +27,28 @@ const classifyRow = ({
 		: "changed";
 };
 
-export const useCreditOverrideDiff = ({
+export const diffCreditOverride = ({
 	schema,
 	creditSystem,
 }: {
 	schema: CreditSchemaItem[];
 	creditSystem?: Feature;
-}): CreditOverrideDiff =>
-	useMemo(() => {
-		const catalogSchema: CreditSchemaItem[] =
-			creditSystem?.config?.schema ?? [];
-		const catalog = new Map(
-			catalogSchema.map((item) => [item.metered_feature_id, item]),
-		);
-		const overridden = new Set(toMeteredFeatureIds(schema));
-		const statusByIndex = schema.map((item) => classifyRow({ item, catalog }));
-		const missingFeatureIds = [...catalog.keys()].filter(
-			(featureId) => !overridden.has(featureId),
-		);
-		const changedRows = statusByIndex.filter(
-			(status) => status !== "inherited",
-		);
+}): CreditOverrideDiff => {
+	const catalogSchema: CreditSchemaItem[] = creditSystem?.config?.schema ?? [];
+	const catalog = new Map(
+		catalogSchema.map((item) => [item.metered_feature_id, item]),
+	);
+	const overridden = new Set(toMeteredFeatureIds(schema));
+	const statusByIndex = schema.map((item) => classifyRow({ item, catalog }));
+	const missingFeatureIds = [...catalog.keys()].filter(
+		(featureId) => !overridden.has(featureId),
+	);
+	const changedRows = statusByIndex.filter((status) => status !== "inherited");
 
-		return {
-			statusByIndex,
-			missingFeatureIds,
-			changedCount: changedRows.length + missingFeatureIds.length,
-			totalCount: new Set([...overridden, ...catalog.keys()]).size,
-		};
-	}, [schema, creditSystem]);
+	return {
+		statusByIndex,
+		missingFeatureIds,
+		changedCount: changedRows.length + missingFeatureIds.length,
+		totalCount: new Set([...overridden, ...catalog.keys()]).size,
+	};
+};
