@@ -1,13 +1,14 @@
 import {
 	type CustomerData,
 	type Entity,
+	type FullCusProduct,
 	type FullCustomer,
 	isFreeProduct,
 	orgDefaultAppliesToEntities,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
-import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -37,6 +38,7 @@ export const attachDefaultProductsToEntities = async ({
 	);
 
 	const currentEpochMs = Date.now();
+	const insertedCustomerProducts: FullCusProduct[] = [];
 	for (const entity of entities) {
 		const entityFullCustomer = {
 			...fullCustomer,
@@ -53,19 +55,9 @@ export const attachDefaultProductsToEntities = async ({
 				},
 			}),
 		);
-		// An entity default mints its pool like any other attach; this fills the
-		// incoming products' pooled balances in place.
-		const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
-			ctx,
-			fullCustomer: entityFullCustomer,
-			incomingCustomerProducts: insertCustomerProducts,
-			now: currentEpochMs,
-		});
-
 		const autumnBillingPlan = {
 			customerId: fullCustomer.id ?? "",
 			insertCustomerProducts,
-			pooledBalancePlan,
 		};
 
 		await executeAutumnBillingPlan({
@@ -89,5 +81,17 @@ export const attachDefaultProductsToEntities = async ({
 			...fullCustomer.customer_products,
 			...insertCustomerProducts,
 		];
+		insertedCustomerProducts.push(...insertCustomerProducts);
 	}
+
+	// Entities share their customer's pools, so one transition runs over every
+	// insert once they are all committed — computing per entity from the
+	// original snapshot would plan the same pool twice.
+	await applyPooledBalanceCustomerProductTransitions({
+		ctx,
+		fullCustomer,
+		outgoingCustomerProducts: [],
+		incomingCustomerProducts: insertedCustomerProducts,
+		now: currentEpochMs,
+	});
 };

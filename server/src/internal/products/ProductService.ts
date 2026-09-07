@@ -268,7 +268,7 @@ export class ProductService {
 		inIds?: string[];
 		onlyFree?: boolean;
 	}) {
-		const prods = (await db.query.products.findMany({
+		const rows = (await db.query.products.findMany({
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
@@ -284,8 +284,11 @@ export class ProductService {
 			// A default plan is applied with initFullCustomerProduct, which reads its
 			// license links — a plan loaded without them applies with no seats.
 			with: composeProductWithLicensesQuery(),
-		})) as FullProduct[];
+		})) as ProductWithLicenseRelations[];
 
+		const prods = rows.map((product) =>
+			normalizeFullProductLicenses({ product }),
+		);
 		parseFreeTrials({ products: prods });
 
 		const activeProducts = getActiveProducts(prods);
