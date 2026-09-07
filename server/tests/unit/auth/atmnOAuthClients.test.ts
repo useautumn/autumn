@@ -70,3 +70,35 @@ test("self-heals only allowed reward scopes requested by atmn", async () => {
 		scopes: ["rewards:read", "rewards:write"],
 	});
 });
+
+// atmn v3 asks for platform:* so its minted keys can call /v1/sandboxes.*.
+test("self-heals the platform scopes the v3 CLI requests for sandboxes", async () => {
+	const db = {} as DrizzleCli;
+	const clientId = "atmn_client";
+	const client = {
+		id: "oauth_client",
+		clientId,
+		name: "atmn",
+		redirectUris: ["http://localhost:31448/"],
+		scopes: ["organisation:read"],
+		metadata: null,
+		createdAt: new Date(),
+	};
+	spyOn(oauthClientRepo, "getByClientId").mockResolvedValue(client);
+	const addScopes = spyOn(
+		oauthClientRepo,
+		"addScopesByClientId",
+	).mockResolvedValue(client);
+
+	await ensureAtmnAuthorizeScopes({
+		db,
+		clientId,
+		scope: "organisation:read platform:read platform:write migrations:write",
+	});
+
+	expect(addScopes).toHaveBeenCalledWith({
+		db,
+		clientId,
+		scopes: ["organisation:read", "platform:read", "platform:write"],
+	});
+});

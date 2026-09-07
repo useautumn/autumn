@@ -17,6 +17,8 @@ export const OAUTH_PORTS = Array.from(
 /**
  * Modern read/write scopes covering everything the CLI reads and everything the
  * minted keys are used for. The server rewrites v2's CRUDL scopes to these.
+ * platform:* is what `atmn sandbox create|delete` needs; a key minted before it
+ * was requested has to be re-minted with `atmn login`.
  */
 export const CLI_OAUTH_SCOPES = [
 	"organisation:read",
@@ -30,6 +32,8 @@ export const CLI_OAUTH_SCOPES = [
 	"rewards:write",
 	"apiKeys:read",
 	"apiKeys:write",
+	"platform:read",
+	"platform:write",
 ] as const;
 
 export const getOAuthRedirectUri = ({ port }: { port: number }): string =>
