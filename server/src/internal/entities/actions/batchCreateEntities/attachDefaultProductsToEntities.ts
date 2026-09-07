@@ -1,5 +1,4 @@
 import {
-	type AutumnBillingPlan,
 	type CustomerData,
 	type Entity,
 	type FullCusProduct,
@@ -40,11 +39,7 @@ export const attachDefaultProductsToEntities = async ({
 
 	const currentEpochMs = Date.now();
 	let customerProducts = fullCustomer.customer_products;
-	const insertedCustomerProducts: FullCusProduct[] = [];
-	const entityPlans: {
-		autumnBillingPlan: AutumnBillingPlan;
-		entityFullCustomer: FullCustomer;
-	}[] = [];
+	let pooledFullCustomer = fullCustomer;
 	for (const entity of entities) {
 		const entityFullCustomer = {
 			...fullCustomer,
@@ -72,27 +67,21 @@ export const attachDefaultProductsToEntities = async ({
 		});
 
 		customerProducts = [...customerProducts, ...insertCustomerProducts];
-		insertedCustomerProducts.push(...insertCustomerProducts);
-		entityPlans.push({ autumnBillingPlan, entityFullCustomer });
-	}
-
-	// Webhook consumers read the customer on receipt, so pools mint first.
-	const pooledFullCustomer = await applyPooledBalanceCustomerProductTransitions(
-		{
+		// Each entity is saved, pooled and announced before the next one starts.
+		pooledFullCustomer = await applyPooledBalanceCustomerProductTransitions({
 			ctx,
-			fullCustomer,
+			fullCustomer: { ...fullCustomer, customer_products: customerProducts },
 			outgoingCustomerProducts: [],
-			incomingCustomerProducts: insertedCustomerProducts,
+			incomingCustomerProducts: insertCustomerProducts,
 			now: currentEpochMs,
-		},
-	);
+		});
 
-	for (const { autumnBillingPlan, entityFullCustomer } of entityPlans) {
 		await billingPlanToSendProductsUpdated({
 			ctx,
 			autumnBillingPlan,
 			billingContext: { fullCustomer: entityFullCustomer },
 		});
+
 		void sendBillingUpdatedWebhook({
 			ctx,
 			autumnBillingPlan,
