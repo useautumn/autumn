@@ -614,6 +614,108 @@ describe("owned partition runtime", () => {
 		}
 	});
 
+	test.concurrent(
+		"rejects a waiting check after an ambiguous track commit",
+		async () => {
+			const fixture = createStoreFixture();
+			const commit = createDeferred<void>();
+			const fakeProducer = createFakeProducer({
+				appendCommitGate: commit.promise,
+				appendCommitError: new Error("commit response lost"),
+			});
+			const runtime = createRuntime({
+				store: fixture.store,
+				producer: fakeProducer.producer,
+				follower: createFollower().follower,
+			});
+
+			try {
+				await runtime.start();
+				const track = runtime
+					.process((processor) =>
+						processor.track({
+							command: createTrackCommand({ commandId: "cmd_ambiguous" }),
+						}),
+					)
+					.catch((cause: unknown) => cause);
+				const check = runtime
+					.process((processor) =>
+						processor.check({
+							command: createCheckCommand({ requestId: "req_during_commit" }),
+						}),
+					)
+					.catch((cause: unknown) => cause);
+				await waitForTurn();
+				expect(fakeProducer.lifecycle).toContain("producer:commit");
+
+				commit.resolve(undefined);
+
+				expect(await track).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				expect(await check).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				expect(runtime.getStatus()).toBe("recovery_required");
+				expect(fixture.store.readState({ identity })?.revision).toBe(0);
+			} finally {
+				commit.resolve(undefined);
+				await runtime.stop();
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
+	test.concurrent(
+		"rejects a waiting check after follower loss but replies to the committed track",
+		async () => {
+			const fixture = createStoreFixture();
+			const commit = createDeferred<void>();
+			const fakeProducer = createFakeProducer({
+				appendCommitGate: commit.promise,
+			});
+			const fakeFollower = createFollower();
+			const runtime = createRuntime({
+				store: fixture.store,
+				producer: fakeProducer.producer,
+				follower: fakeFollower.follower,
+			});
+
+			try {
+				await runtime.start();
+				const track = runtime
+					.process((processor) =>
+						processor.track({
+							command: createTrackCommand({ commandId: "cmd_follower_loss" }),
+						}),
+					)
+					.catch((cause: unknown) => cause);
+				const check = runtime
+					.process((processor) =>
+						processor.check({
+							command: createCheckCommand({ requestId: "req_before_loss" }),
+						}),
+					)
+					.catch((cause: unknown) => cause);
+				await waitForTurn();
+				expect(fakeProducer.lifecycle).toContain("producer:commit");
+
+				fakeFollower.emitUnavailable({
+					cause: new Error("outcome follower stopped"),
+				});
+				commit.resolve(undefined);
+
+				expect(await track).toMatchObject({
+					kind: "new",
+					outcome: { status: "applied", balanceAfter: 5 },
+				});
+				expect(await check).toBeInstanceOf(OwnedPartitionRecoveryRequiredError);
+				expect(runtime.getStatus()).toBe("recovery_required");
+				expect(fixture.store.readState({ identity })?.revision).toBe(1);
+			} finally {
+				commit.resolve(undefined);
+				await runtime.stop();
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
 	test("revokes readiness when the live follower becomes unavailable", async () => {
 		const fixture = createStoreFixture();
 		const fakeProducer = createFakeProducer();
@@ -893,15 +995,24 @@ describe("owned partition runtime", () => {
 
 		try {
 			await runtime.start();
-			await expect(
-				runtime.process((processor) =>
-					processor.track({
-						command: createTrackCommand({ commandId: "cmd_1" }),
-					}),
-				),
-			).rejects.toBeInstanceOf(MutationBatchAppendError);
+			const track = runtime.process((processor) =>
+				processor.track({
+					command: createTrackCommand({ commandId: "cmd_1" }),
+				}),
+			);
+			const check = runtime.process((processor) =>
+				processor.check({
+					command: createCheckCommand({ requestId: "req_during_abort" }),
+				}),
+			);
+			await expect(track).rejects.toBeInstanceOf(MutationBatchAppendError);
 
 			expect(runtime.getStatus()).toBe("ready");
+			await expect(check).resolves.toMatchObject({
+				kind: "decided",
+				balance: 10,
+				revision: 0,
+			});
 			await expect(
 				runtime.process((processor) =>
 					processor.check({
