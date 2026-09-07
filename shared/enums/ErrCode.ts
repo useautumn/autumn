@@ -1,6 +1,7 @@
 export const ErrCode = {
 	// Billing
 	PlanAlreadyAttached: "plan_already_attached",
+	PendingPlanConflict: "pending_plan_conflict",
 
 	// Idempotency
 	IdempotencyKeyAlreadyExists: "idempotency_key_already_exists",
