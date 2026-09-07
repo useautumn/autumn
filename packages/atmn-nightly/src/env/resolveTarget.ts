@@ -1,4 +1,9 @@
 import { CLI_CLIENT_ID } from "../auth/oauthConfig";
+import {
+	SANDBOX_PIN_NAME,
+	type SandboxSecretKeyName,
+	sandboxKeyName,
+} from "./sandboxKeyName";
 
 const LOCAL_HOST = "http://localhost";
 const DEFAULT_LOCAL_PORT = 8080;
@@ -16,14 +21,32 @@ export type TargetFlags = {
 	clientId?: string;
 };
 
+/** Every env var a command may authenticate with: the org's two, or a sandbox's own. */
+export type SecretKeyName =
+	| "AUTUMN_SECRET_KEY"
+	| "AUTUMN_PROD_SECRET_KEY"
+	| SandboxSecretKeyName;
+
 export type Target = {
 	/** Undefined means the generated client's default (the spec's server). */
 	baseUrl?: string;
-	secretKeyName: "AUTUMN_SECRET_KEY" | "AUTUMN_PROD_SECRET_KEY";
+	secretKeyName: SecretKeyName;
 	/** The OAuth client the CLI identifies as; flag, then env, then the registered default. */
 	clientId: string;
-	/** A named sandbox to address instead of the org's default one. Carried, not yet consumed. */
+	/** A named sandbox to address instead of the org's default one. */
 	sandboxId?: string;
+};
+
+/** A sandbox's own key when one is pinned, else the org key `--prod` selects. */
+const secretKeyNameFor = ({
+	prod,
+	sandboxId,
+}: {
+	prod: boolean;
+	sandboxId: string | undefined;
+}): SecretKeyName => {
+	if (sandboxId !== undefined) return sandboxKeyName({ sandboxId });
+	return prod ? "AUTUMN_PROD_SECRET_KEY" : "AUTUMN_SECRET_KEY";
 };
 
 /**
@@ -43,16 +66,22 @@ export const resolveTarget = ({
 	baseUrl,
 	clientId,
 }: TargetFlags): Target => {
+	if (prod === true && sandbox !== undefined) {
+		throw new Error("Pick one of --prod and --sandbox.");
+	}
+	// `--prod` overrides a pinned sandbox rather than combining with it: keeping
+	// the pin would make the flag silently address the sandbox anyway.
+	const sandboxId =
+		prod === true ? undefined : (sandbox ?? process.env[SANDBOX_PIN_NAME]);
+
 	const identity: Omit<Target, "baseUrl"> = {
-		secretKeyName: prod ? "AUTUMN_PROD_SECRET_KEY" : "AUTUMN_SECRET_KEY",
+		secretKeyName: secretKeyNameFor({ prod: prod === true, sandboxId }),
 		clientId:
 			clientId ??
 			process.env.AUTUMN_CLIENT_ID ??
 			process.env.ATMN_CLI_CLIENT_ID ??
 			CLI_CLIENT_ID,
-		...((sandbox ?? process.env.AUTUMN_SANDBOX_ID)
-			? { sandboxId: sandbox ?? process.env.AUTUMN_SANDBOX_ID }
-			: {}),
+		...(sandboxId ? { sandboxId } : {}),
 	};
 
 	if (baseUrl) return { baseUrl, ...identity };
@@ -72,12 +101,26 @@ export const resolveTarget = ({
 export const targetBaseUrl = ({ target }: { target: Target }): string =>
 	target.baseUrl ?? DEFAULT_BASE_URL;
 
+/**
+ * `sandbox list|create|delete` are organization operations: the server refuses a
+ * sandbox's own key for them, so they drop the pin and use the org key.
+ */
+export const managementTarget = ({ target }: { target: Target }): Target => {
+	if (target.sandboxId === undefined) return target;
+	return {
+		...(target.baseUrl === undefined ? {} : { baseUrl: target.baseUrl }),
+		secretKeyName: "AUTUMN_SECRET_KEY",
+		clientId: target.clientId,
+	};
+};
+
+const missingKeyMessage = ({ name }: { name: SecretKeyName }): string =>
+	name === "AUTUMN_SECRET_KEY" || name === "AUTUMN_PROD_SECRET_KEY"
+		? `${name} is not set. Put it in your .env, or export it before running.`
+		: `${name} is not set. atmn sandbox create writes it when it mints a sandbox; for one you already have, put its key in your .env.`;
+
 export const requireSecretKey = ({ target }: { target: Target }): string => {
 	const key = process.env[target.secretKeyName];
-	if (!key) {
-		throw new Error(
-			`${target.secretKeyName} is not set. Put it in your .env, or export it before running.`,
-		);
-	}
+	if (!key) throw new Error(missingKeyMessage({ name: target.secretKeyName }));
 	return key;
 };

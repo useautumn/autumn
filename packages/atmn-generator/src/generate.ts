@@ -17,6 +17,7 @@ import {
 	catalogUpdateSchema,
 	collectionItemSchema,
 	loadSpec,
+	requestBodySchema,
 	responseSchema,
 	serverBaseUrl,
 } from "./spec/loadSpec";
@@ -163,24 +164,67 @@ export const generate = async (): Promise<string[]> => {
 		}),
 	});
 
+	// `requestTypeName` marks an operation whose body is its own typed object;
+	// the catalog operations send the wire document `atmn()` already built.
 	const operations: ClientOperation[] = (
 		[
-			[
-				"previewUpdate",
-				"/v1/catalogV2.preview_update",
-				"PreviewUpdateCatalogResponse",
-			],
-			["update", "/v1/catalogV2.update", "UpdateCatalogResponse"],
-			["get", "/v1/catalogV2.get", "GetCatalogResponse"],
+			{
+				name: "previewUpdate",
+				path: "/v1/catalogV2.preview_update",
+				responseTypeName: "PreviewUpdateCatalogResponse",
+			},
+			{
+				name: "update",
+				path: "/v1/catalogV2.update",
+				responseTypeName: "UpdateCatalogResponse",
+			},
+			{
+				name: "get",
+				path: "/v1/catalogV2.get",
+				responseTypeName: "GetCatalogResponse",
+			},
+			{
+				name: "createSandbox",
+				path: "/v1/sandboxes.create",
+				responseTypeName: "CreateSandboxResponse",
+				requestTypeName: "CreateSandboxParams",
+			},
+			{
+				name: "listSandboxes",
+				path: "/v1/sandboxes.list",
+				responseTypeName: "ListSandboxesResponse",
+				requestTypeName: "ListSandboxesParams",
+			},
+			{
+				name: "deleteSandbox",
+				path: "/v1/sandboxes.delete",
+				responseTypeName: "DeleteSandboxResponse",
+				requestTypeName: "DeleteSandboxParams",
+			},
 		] as const
-	).map(([name, path, responseTypeName]) => {
+	).map(({ name, path, responseTypeName, ...rest }) => {
 		const schema = responseSchema({ spec, path });
+		const requestTypeName =
+			"requestTypeName" in rest ? rest.requestTypeName : undefined;
+		const request =
+			requestTypeName === undefined
+				? undefined
+				: requestBodySchema({ spec, path });
 		return {
 			name,
 			path,
 			responseTypeName,
 			responseSchema: schema,
 			responseHints: wirePathHints({ schema, root }),
+			...(request === undefined || requestTypeName === undefined
+				? {}
+				: {
+						request: {
+							typeName: requestTypeName,
+							schema: request,
+							hints: wirePathHints({ schema: request, root }),
+						},
+					}),
 		};
 	});
 

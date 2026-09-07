@@ -7,6 +7,7 @@ import { expect, test } from "bun:test";
 import { CLI_CLIENT_ID } from "../src/auth/oauthConfig";
 import {
 	DEFAULT_BASE_URL,
+	managementTarget,
 	requireSecretKey,
 	resolveTarget,
 	targetBaseUrl,
@@ -132,6 +133,73 @@ test("a sandbox is carried from the flag or AUTUMN_SANDBOX_ID, and absent otherw
 	withEnv({ AUTUMN_SANDBOX_ID: "sb_env" }, () => {
 		expect(resolveTarget({}).sandboxId).toBe("sb_env");
 		expect(resolveTarget({ sandbox: "sb_flag" }).sandboxId).toBe("sb_flag");
+	});
+});
+
+test("a pinned sandbox selects that sandbox's own key", () => {
+	withEnv({ AUTUMN_SANDBOX_ID: undefined }, () => {
+		expect(resolveTarget({ sandbox: "org_2n4b" })).toEqual({
+			secretKeyName: "AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY",
+			clientId: CLI_CLIENT_ID,
+			sandboxId: "org_2n4b",
+		});
+	});
+	withEnv({ AUTUMN_SANDBOX_ID: "org_env" }, () => {
+		expect(resolveTarget({}).secretKeyName).toBe(
+			"AUTUMN_SANDBOX_ORG_ENV_SECRET_KEY",
+		);
+	});
+});
+
+test("--prod and --sandbox together are refused", () => {
+	withEnv({ AUTUMN_SANDBOX_ID: undefined }, () => {
+		expect(() => resolveTarget({ prod: true, sandbox: "org_2n4b" })).toThrow(
+			/Pick one of --prod and --sandbox/,
+		);
+	});
+});
+
+test("--prod overrides a pinned sandbox rather than addressing it", () => {
+	// Silently keeping the pin would make the flag do nothing at all.
+	withEnv({ AUTUMN_SANDBOX_ID: "org_env" }, () => {
+		expect(resolveTarget({ prod: true })).toEqual({
+			secretKeyName: "AUTUMN_PROD_SECRET_KEY",
+			clientId: CLI_CLIENT_ID,
+		});
+	});
+});
+
+test("a missing sandbox key points at the command that mints one", () => {
+	withEnv(
+		{
+			AUTUMN_SANDBOX_ID: undefined,
+			AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY: undefined,
+		},
+		() => {
+			expect(() =>
+				requireSecretKey({ target: resolveTarget({ sandbox: "org_2n4b" }) }),
+			).toThrow(
+				/AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY is not set\. atmn sandbox create/,
+			);
+		},
+	);
+});
+
+test("managing sandboxes drops the pin and uses the org key", () => {
+	withEnv({ AUTUMN_SANDBOX_ID: undefined }, () => {
+		// The server refuses a sandbox's own key for sandboxes.list|create|delete.
+		expect(
+			managementTarget({
+				target: resolveTarget({ sandbox: "org_2n4b", local: true }),
+			}),
+		).toEqual({
+			baseUrl: "http://localhost:8080",
+			secretKeyName: "AUTUMN_SECRET_KEY",
+			clientId: CLI_CLIENT_ID,
+		});
+		// With no sandbox pinned there is nothing to swap, --prod included.
+		const prodTarget = resolveTarget({ prod: true });
+		expect(managementTarget({ target: prodTarget })).toBe(prodTarget);
 	});
 });
 

@@ -3,20 +3,22 @@ import { Command } from "commander";
 import { runLogin } from "./actions/login";
 import { runPull } from "./actions/pull";
 import { configSearchDirs, runPush } from "./actions/push";
+import { runSandboxCreate } from "./actions/sandbox/createSandbox";
+import { runSandboxDelete } from "./actions/sandbox/deleteSandbox";
+import { runSandboxList } from "./actions/sandbox/listSandboxes";
+import { withSandboxScopeHint } from "./actions/sandbox/withSandboxScopeHint";
 import { loadEnvFiles } from "./env/loadEnv";
 import {
+	managementTarget,
 	requireSecretKey,
 	resolveTarget,
 	type Target,
 	type TargetFlags,
 } from "./env/resolveTarget";
+import type { CreateSandboxParams } from "./generated/client";
 import { createClient } from "./generated/client";
 import { previewIsEmpty } from "./render/renderPreview";
 import { version } from "./version";
-
-const NOT_IMPLEMENTED = (step: string) => () => {
-	throw new Error(`Not implemented yet — lands in ${step}.`);
-};
 
 /**
  * Commander treats a lone `-v` as unknown, and `-V` as version. Rewriting the
@@ -51,6 +53,10 @@ const clientFor = ({ target }: { target: Target }) =>
 		secretKey: requireSecretKey({ target }),
 		...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
 	});
+
+/** `sandbox *` is an organization operation: never the sandbox's own key. */
+const sandboxClientFor = ({ target }: { target: Target }) =>
+	clientFor({ target: managementTarget({ target }) });
 
 export const buildProgram = (): Command => {
 	const program = new Command();
@@ -116,10 +122,82 @@ export const buildProgram = (): Command => {
 	const sandbox = program
 		.command("sandbox")
 		.description("manage isolated sandboxes");
+
+	sandbox
+		.command("list")
+		.description("show your sandboxes, newest first")
+		.option("--json", "print the response instead of the table")
+		.action(async (options: { json?: boolean }, command: Command) => {
+			const target = prepareTarget({ command });
+			await runSandboxList({
+				client: sandboxClientFor({ target }),
+				...(target.sandboxId === undefined
+					? {}
+					: { currentSandboxId: target.sandboxId }),
+				json: options.json === true,
+			});
+		});
+
 	sandbox
 		.command("create")
-		.description("mint a new sandbox and its key")
-		.action(NOT_IMPLEMENTED("3.0"));
+		.description("mint a sandbox and write its key to your .env")
+		.argument("<name>", "name for the sandbox")
+		.option("--color <color>", "colour the dashboard labels it with")
+		.option("--icon <icon>", "icon the dashboard labels it with")
+		.option("--use", "pin AUTUMN_SANDBOX_ID so later commands target it")
+		.option("--json", "print the response instead of the summary")
+		.action(
+			async (
+				name: string,
+				options: {
+					color?: string;
+					icon?: string;
+					use?: boolean;
+					json?: boolean;
+				},
+				command: Command,
+			) => {
+				const target = prepareTarget({ command });
+				try {
+					await runSandboxCreate({
+						client: sandboxClientFor({ target }),
+						name,
+						// The palette lives in the spec; an unknown colour is the
+						// server's error to give, not a list the CLI keeps in sync.
+						...(options.color === undefined
+							? {}
+							: { color: options.color as CreateSandboxParams["color"] }),
+						...(options.icon === undefined ? {} : { icon: options.icon }),
+						use: options.use === true,
+						json: options.json === true,
+						envDirs: configSearchDirs({ cwd: process.cwd() }),
+					});
+				} catch (error) {
+					throw withSandboxScopeHint({ error });
+				}
+			},
+		);
+
+	sandbox
+		.command("delete")
+		.description("delete a sandbox and drop its key from your .env")
+		.argument("<id>", "id of the sandbox to delete")
+		.option("-y, --yes", "delete it, catalog and customers included")
+		.action(
+			async (id: string, options: { yes?: boolean }, command: Command) => {
+				const target = prepareTarget({ command });
+				try {
+					await runSandboxDelete({
+						client: sandboxClientFor({ target }),
+						id,
+						yes: options.yes === true,
+						envDirs: configSearchDirs({ cwd: process.cwd() }),
+					});
+				} catch (error) {
+					throw withSandboxScopeHint({ error });
+				}
+			},
+		);
 
 	return program;
 };

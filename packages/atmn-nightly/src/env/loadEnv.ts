@@ -88,6 +88,55 @@ export const upsertEnvContent = ({
 	return `${lines.join("\n")}\n`;
 };
 
+/** Drops the assignments for these keys; every other line survives. */
+export const removeEnvContent = ({
+	content,
+	keys,
+}: {
+	content: string;
+	keys: string[];
+}): string => {
+	const kept = content
+		.split("\n")
+		.filter((line) => !keys.some((key) => isAssignmentFor({ line, key })));
+	// The split leaves a trailing empty segment for the final newline; rejoining
+	// without dropping it would grow a blank line on every removal.
+	const trimmed = kept[kept.length - 1] === "" ? kept.slice(0, -1) : kept;
+	return trimmed.length === 0 ? "" : `${trimmed.join("\n")}\n`;
+};
+
+/** What the env file on disk assigns — not what the process happens to carry. */
+export const readEnvFileValue = ({
+	dirs,
+	key,
+}: {
+	dirs: string[];
+	key: string;
+}): string | undefined => {
+	const path = findEnvFile({ dirs });
+	if (path === undefined) return undefined;
+	return parse(readFileSync(path, "utf8"))[key];
+};
+
+/** Removes keys from the file `loadEnvFiles` reads first; the path, when one changed. */
+export const removeEnvValues = ({
+	dirs,
+	keys,
+}: {
+	dirs: string[];
+	keys: string[];
+}): string | undefined => {
+	const path = findEnvFile({ dirs });
+	if (path === undefined) return undefined;
+
+	const content = readFileSync(path, "utf8");
+	const next = removeEnvContent({ content, keys });
+	if (next === content) return undefined;
+
+	writeFileSync(path, next);
+	return path;
+};
+
 export const writeEnvValues = ({
 	dirs,
 	values,
