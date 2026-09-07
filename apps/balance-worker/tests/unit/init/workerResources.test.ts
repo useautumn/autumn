@@ -132,7 +132,7 @@ async function retainsUnsettledRuntimeAndLeavesStoreOpen(): Promise<void> {
 		quiescence.reject(cause);
 		await expect(retirement).rejects.toBe(cause);
 		await expect(fixture.resources.settleResources()).rejects.toMatchObject({
-			message: "Worker runtimes did not settle safely",
+			message: "Worker resources did not settle safely",
 			errors: [cause],
 		});
 		expect(fixture.events).toEqual([

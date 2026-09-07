@@ -1,4 +1,3 @@
-import type { PartitionCheckpointV1 } from "../checkpoint/partitionCheckpoint.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
@@ -17,6 +16,7 @@ import type {
 	ConstructedPartitionRuntime,
 	PartitionRuntimeFactoryInput,
 } from "./types/partitionRuntimeFactory.js";
+import { createWorkerCheckpointConfig } from "./workerCheckpointConfig.js";
 import {
 	balanceWorkerEnvToRuntimeConfig,
 	createWorkerConsumerConfig,
@@ -31,12 +31,13 @@ export async function createBalanceWorker({
 	config: BalanceWorkerConfig;
 }): Promise<BalanceWorker> {
 	const { env } = config;
+	const checkpointConfig = createWorkerCheckpointConfig({ env });
 	const address = await resolveWorkerAddress({ env });
 	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: address.endpoint,
 	});
-	const resources = await openWorkerResources({ config });
+	const resources = await openWorkerResources({ config, checkpointConfig });
 	try {
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
@@ -44,7 +45,9 @@ export async function createBalanceWorker({
 				ownershipOffsets: resources.admin,
 				stateStore: resources.stateStore,
 				partitionResolver: resources.partitionResolver,
-				checkpointSource: dependencies.checkpointSource ?? { latest },
+				checkpointSource:
+					dependencies.checkpointSource ?? resources.checkpoints.source,
+				checkpointMaintenance: resources.checkpoints.maintenance,
 			},
 			config: runtimeConfig,
 		});
@@ -113,12 +116,15 @@ export async function createBalanceWorker({
 		}
 		return { start, stop };
 	} catch (cause) {
-		resources.closeStore();
-		await resources.admin.disconnect();
+		try {
+			await resources.settleResources();
+			resources.closeStore();
+		} catch (cleanupFailure) {
+			throw new AggregateError(
+				[cause, cleanupFailure],
+				"Worker construction and cleanup failed",
+			);
+		}
 		throw cause;
 	}
-}
-
-async function latest(): Promise<PartitionCheckpointV1 | null> {
-	return null;
 }

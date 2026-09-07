@@ -40,7 +40,7 @@ describe("scheduled checkpoint failures", () => {
 			});
 			expect(fixture.failures).toEqual([]);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -73,7 +73,7 @@ describe("scheduled checkpoint failures", () => {
 			expect(controller.signal.aborted).toBe(false);
 			expect(fixture.failures).toEqual([]);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -106,7 +106,7 @@ describe("scheduled checkpoint failures", () => {
 			});
 			expect(fixture.failures).toEqual([]);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -123,7 +123,7 @@ describe("scheduled checkpoint failures", () => {
 			expect(fixture.failures).toEqual([failure]);
 			expect(controller.signal.aborted).toBe(true);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 });
