@@ -54,6 +54,8 @@ type PlanChangeLite = {
 	freeTrialChange?: { previous?: TrialLite; current?: TrialLite };
 	itemChanges?: PlanItemChangeLite[];
 	licenseChanges?: PlanLicenseChangeLite[];
+	/** The edit that produces this diff; a create's name lives here. */
+	customize?: Record<string, unknown> | null;
 };
 
 // Fixture casing, not wire: the client recases every response on the way in,
@@ -63,11 +65,27 @@ type FeatureChange = PreviewChange & {
 	featureId?: string;
 	previousAttributes?: Record<string, unknown> | null;
 };
+/**
+ * A variant plan under its base. It has no `action` of its own: `variantAction`
+ * says how it resolved against the base edit, and `planChange` says whether
+ * anything actually changes.
+ */
+type VariantChange = {
+	planId?: string;
+	/** Null until the row exists, so a null id is this update minting it. */
+	internalId?: string | null;
+	version?: number;
+	variantAction?: string;
+	planChange?: PlanChangeLite | null;
+	siblingVersions?: VariantChange[];
+};
+
 type PlanChange = PreviewChange & {
 	planId?: string;
 	version?: number;
 	planChange?: PlanChangeLite | null;
 	siblingVersions?: PlanChange[];
+	variants?: VariantChange[];
 	state?: unknown;
 };
 
@@ -362,7 +380,166 @@ const renderPlanChangeDetail = ({
 const isChange = (change: PreviewChange): boolean =>
 	change.action !== undefined && APPLIED_ACTIONS.has(change.action);
 
+/** The no-op end of every action enum the preview uses. */
+const NOOP_ACTIONS = new Set(["none", "skip", "unchanged"]);
+
+/** `explicit` and `propagated` say how a variant resolved against the base
+ * edit, not that anything changes — only its own diff decides that. */
+const VARIANT_RESOLUTIONS = new Set(["explicit", "propagated"]);
+
+const statesPlanChange = (row: Record<string, unknown>): boolean =>
+	row.planChange !== null && row.planChange !== undefined;
+
+/**
+ * A nested row (a variant, a license link, a sibling version) is work when it
+ * states a changing action, when a resolution word comes with a diff, or when
+ * anything nested under it is work.
+ */
+const nestedRowHasWork = (entry: unknown): boolean => {
+	if (entry === null || typeof entry !== "object") return false;
+	const row = entry as Record<string, unknown>;
+	for (const [key, value] of Object.entries(row)) {
+		if (Array.isArray(value) && value.some(nestedRowHasWork)) return true;
+		if (!key.toLowerCase().endsWith("action") || typeof value !== "string")
+			continue;
+		if (NOOP_ACTIONS.has(value)) continue;
+		if (VARIANT_RESOLUTIONS.has(value)) {
+			if (statesPlanChange(row)) return true;
+			continue;
+		}
+		return true;
+	}
+	return false;
+};
+
+/** The one rule the gate and the renderer share: a row counts when its own
+ * action is applied, or when anything nested under it has work. */
+const rowHasWork = (row: PreviewChange): boolean =>
+	isChange(row) ||
+	Object.values(row as Record<string, unknown>).some(
+		(value) => Array.isArray(value) && value.some(nestedRowHasWork),
+	);
+
 const DETAIL_INDENT = "    ";
+const VARIANT_INDENT = DETAIL_INDENT;
+
+const planRowId = (row: { planId?: string; version?: number }): string =>
+	row.version === undefined
+		? (row.planId ?? "?")
+		: `${row.planId}@v${row.version}`;
+
+/** A row printed only to place the work nested under it: no marker, no colour. */
+const contextLine = ({
+	id,
+	label,
+	indent = "  ",
+}: {
+	id: string;
+	label?: string;
+	indent?: string;
+}): string => {
+	const suffix = label && label !== id ? chalk.dim(`  ${label}`) : "";
+	return `${indent}  ${chalk.dim(id)}${suffix}`;
+};
+
+/** A variant with no stable id yet is one this update mints. */
+const isVariantCreate = (variant: VariantChange): boolean =>
+	variant.internalId === null || variant.internalId === undefined;
+
+/** A minted row has no `name` of its own, so the edit that mints it names it. */
+const variantCreateLabel = (planChange: PlanChangeLite | undefined): string => {
+	const name = planChange?.customize?.name;
+	const price = formatPrice(planChange?.priceChange?.current);
+	return typeof name === "string" ? `${name}, ${price}` : price;
+};
+
+/**
+ * One variant under its base: a propagated row only names the change it takes,
+ * a create carries its price on the row and its items below, and an edit reads
+ * as any other plan diff.
+ */
+const renderVariantRow = ({
+	variant,
+	baseId,
+	indent,
+}: {
+	variant: VariantChange;
+	baseId: string;
+	indent: string;
+}): string[] => {
+	const id = planRowId(variant);
+	const detailIndent = `${indent}  `;
+	const planChange = variant.planChange ?? undefined;
+	const nested = (variant.siblingVersions ?? [])
+		.filter(nestedRowHasWork)
+		.flatMap((sibling) =>
+			renderVariantRow({ variant: sibling, baseId, indent: detailIndent }),
+		);
+	if (variant.variantAction === "propagated") {
+		return [
+			`${line({ action: "update", id, indent })}${chalk.dim(`  follows ${baseId}`)}`,
+			...nested,
+		];
+	}
+	if (isVariantCreate(variant)) {
+		return [
+			line({
+				action: "create",
+				id,
+				label: variantCreateLabel(planChange),
+				indent,
+			}),
+			...renderItemChanges({
+				itemChanges: planChange?.itemChanges ?? [],
+				indent: detailIndent,
+			}),
+			...nested,
+		];
+	}
+	return [
+		line({ action: "update", id, indent }),
+		...(planChange
+			? renderPlanChangeDetail({ planChange, indent: detailIndent })
+			: []),
+		...nested,
+	];
+};
+
+/** Variants hang off the edited row and off every sibling version an
+ * `all_versions` edit fans out to; each lane names its own base. */
+const renderVariantLanes = ({ plan }: { plan: PlanChange }): string[] =>
+	[
+		{ baseId: planRowId(plan), variants: plan.variants ?? [] },
+		...(plan.siblingVersions ?? []).map((sibling) => ({
+			baseId: planRowId(sibling),
+			variants: sibling.variants ?? [],
+		})),
+	].flatMap(({ baseId, variants }) =>
+		variants
+			.filter(nestedRowHasWork)
+			.flatMap((variant) =>
+				renderVariantRow({ variant, baseId, indent: VARIANT_INDENT }),
+			),
+	);
+
+/** The plan's own line — a marker when it changes, context when its variants
+ * are the only work — then its diff, then those variants. */
+const renderPlanRow = ({ plan }: { plan: PlanChange }): string[] => {
+	const id = planRowId(plan);
+	return [
+		isChange(plan)
+			? line({ action: plan.action, id, label: plan.name })
+			: contextLine({ id, label: plan.name }),
+		...(plan.planChange
+			? renderPlanChangeDetail({
+					planChange: plan.planChange,
+					current: plan.name === undefined ? {} : { name: plan.name },
+					indent: DETAIL_INDENT,
+				})
+			: []),
+		...renderVariantLanes({ plan }),
+	];
+};
 
 /** A migration the preview says a push would draft: no id yet, only its targets. */
 export type PlannedMigration = {
@@ -464,8 +641,8 @@ export const renderPreview = ({
 	/** Omitted in tests; the dashboard origin in real runs. */
 	migrationLinkBase?: string;
 }): string => {
-	const features = (preview.features ?? []).filter(isChange);
-	const plans = (preview.plans ?? []).filter(isChange);
+	const features = (preview.features ?? []).filter(rowHasWork);
+	const plans = (preview.plans ?? []).filter(rowHasWork);
 	const migrations = preview.migrations ?? [];
 
 	if (features.length === 0 && plans.length === 0) {
@@ -497,23 +674,7 @@ export const renderPreview = ({
 		sections.push(
 			[
 				chalk.bold(`Plans (${plans.length})`),
-				...plans.flatMap((plan) => [
-					line({
-						action: plan.action,
-						id:
-							plan.version === undefined
-								? (plan.planId ?? "?")
-								: `${plan.planId}@v${plan.version}`,
-						label: plan.name,
-					}),
-					...(plan.planChange
-						? renderPlanChangeDetail({
-								planChange: plan.planChange,
-								current: plan.name === undefined ? {} : { name: plan.name },
-								indent: DETAIL_INDENT,
-							})
-						: []),
-				]),
+				...plans.flatMap((plan) => renderPlanRow({ plan })),
 			].join("\n"),
 		);
 	}
@@ -525,30 +686,6 @@ export const renderPreview = ({
 	}
 
 	return sections.join("\n\n");
-};
-
-/** A row is work when its own action is, or when anything nested under it
- * (a variant, a license link, a sibling version) carries a changing action. */
-const NOOP_ACTIONS = new Set(["none", "skip", "unchanged"]);
-
-/** Nested rows speak their own vocabulary (a variant is `explicit` or
- * `propagated`), so anything but a no-op counts, at any depth. */
-const nestedRowHasWork = (entry: unknown): boolean => {
-	if (entry === null || typeof entry !== "object") return false;
-	return Object.entries(entry as Record<string, unknown>).some(
-		([key, nested]) => {
-			if (key.endsWith("ction") && typeof nested === "string")
-				return !NOOP_ACTIONS.has(nested);
-			return Array.isArray(nested) && nested.some(nestedRowHasWork);
-		},
-	);
-};
-
-const rowHasWork = (row: PreviewChange): boolean => {
-	if (isChange(row)) return true;
-	return Object.values(row as Record<string, unknown>).some(
-		(value) => Array.isArray(value) && value.some(nestedRowHasWork),
-	);
 };
 
 /** True when there is nothing to apply — lets push skip the write entirely. */

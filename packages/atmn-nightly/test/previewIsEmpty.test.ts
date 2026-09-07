@@ -35,17 +35,54 @@ test("all-none rows with all-none nesting are empty", () => {
 	expect(previewIsEmpty({ preview: preview as any })).toBe(true);
 });
 
-test("a variant marked explicit (archived or customized) is work", () => {
+test("a variant the config states, carrying a diff, is work", () => {
 	const preview = {
 		features: [],
 		plans: [
 			{
 				planId: "pro",
 				action: "none",
-				variants: [{ variantPlanId: "pro_plus", variantAction: "explicit" }],
+				variants: [
+					{
+						planId: "pro_plus",
+						internalId: "prod_plus",
+						variantAction: "explicit",
+						planChange: {
+							previousAttributes: null,
+							priceChange: {
+								previous: { amount: 200, interval: "year" },
+								current: { amount: 250, interval: "year" },
+							},
+							itemChanges: [],
+						},
+					},
+				],
 			},
 		],
 	};
 	// biome-ignore lint/suspicious/noExplicitAny: the preview shape under test
 	expect(previewIsEmpty({ preview: preview as any })).toBe(false);
+});
+
+/** `explicit` says the config named the variant, not that anything changes. */
+test("a variant the config states with no diff is not work", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				action: "none",
+				variants: [
+					{
+						planId: "pro_plus",
+						internalId: "prod_plus",
+						variantAction: "explicit",
+						planChange: null,
+					},
+				],
+			},
+		],
+	};
+	// biome-ignore lint/suspicious/noExplicitAny: the preview shape under test
+	expect(previewIsEmpty({ preview: preview as any })).toBe(true);
 });

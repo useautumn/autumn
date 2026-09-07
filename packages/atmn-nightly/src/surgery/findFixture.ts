@@ -38,7 +38,6 @@ export const findFixture = ({
 	allowDynamic?: boolean;
 }): SgNode | null => {
 	const root = parse(Lang.TypeScript, source).root();
-	const expected = JSON.stringify(id);
 	// A rule walk rather than a pattern: a pattern misses an object whose id
 	// pair follows a spread, and the fixture must be found to be refused.
 	for (const call of root.findAll({ rule: { kind: "call_expression" } })) {
@@ -46,18 +45,32 @@ export const findFixture = ({
 		const object = call.field("arguments")?.namedChildren()[0];
 		if (object === undefined || object.kind() !== "object") continue;
 		const idValue = topLevelPairValue({ object, key: idField });
-		if (
-			idValue === null ||
-			idValue.kind() !== "string" ||
-			idValue.text() !== expected
-		)
-			continue;
+		if (idValue === null || stringLiteralValue(idValue) !== id) continue;
 		if (!allowDynamic && containsDynamicValue(object)) continue;
 		if (where !== undefined && !satisfiesFixtureConstraints({ object, where }))
 			continue;
 		return call;
 	}
 	return null;
+};
+
+/**
+ * The text a string node stands for, so `'pro'` and `"pro"` name one fixture.
+ * Null for anything else — a template literal is a computed value, not an id.
+ */
+const stringLiteralValue = (node: SgNode): string | null => {
+	if (node.kind() !== "string") return null;
+	const text = node.text();
+	if (text.startsWith('"')) {
+		try {
+			return JSON.parse(text) as string;
+		} catch {
+			return null;
+		}
+	}
+	return text.startsWith("'") && text.endsWith("'") && text.length >= 2
+		? text.slice(1, -1)
+		: null;
 };
 
 /** The value of the object's own `key: value` member, ignoring nested objects. */
@@ -101,9 +114,5 @@ const satisfiesConstraint = ({
 		);
 	if (pair === undefined) return constraint.absentMeans === constraint.equals;
 	const value = pair.namedChildren()[1];
-	return (
-		value !== undefined &&
-		value.kind() === "string" &&
-		value.text() === JSON.stringify(constraint.equals)
-	);
+	return value !== undefined && stringLiteralValue(value) === constraint.equals;
 };

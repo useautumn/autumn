@@ -5,7 +5,7 @@
 
 import { expect, test } from "bun:test";
 import chalk from "chalk";
-import { renderPreview } from "../src/render/renderPreview";
+import { previewIsEmpty, renderPreview } from "../src/render/renderPreview";
 
 chalk.level = 0;
 
@@ -210,4 +210,127 @@ test("a preview names what a migration would move, never a placeholder id", () =
 	expect(text).toContain("pro v1, 12 customers");
 	expect(text).toMatch(/pro v1, 12 customers\n\s+\+ basic_support/);
 	expect(text).not.toMatch(/^\s+\?\s*$/m);
+});
+
+const variantCreateRow = {
+	planId: "pro_yearly",
+	internalId: null,
+	version: 1,
+	versionSlug: "v1",
+	active: true,
+	variantAction: "explicit",
+	planChange: {
+		previousAttributes: { name: null },
+		priceChange: {
+			previous: null,
+			current: { amount: 200, interval: "year" },
+		},
+		itemChanges: [
+			{
+				action: "created",
+				featureId: "credits",
+				item: {
+					featureId: "credits",
+					included: 200,
+					price: { amount: 0.5, interval: "month" },
+				},
+			},
+		],
+		customize: { name: "Pro Yearly" },
+	},
+};
+
+test("an unchanged plan is context for the variant it creates", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [variantCreateRow],
+			},
+		],
+	};
+	const out = render(preview);
+	expect(out).not.toContain("No changes");
+	expect(out).toContain("Plans (1)");
+	// Context only: the plan itself is untouched, so it takes no marker.
+	expect(out).toContain("    pro@v1  Pro");
+	expect(out).not.toContain("~ pro@v1");
+	expect(out).toContain("+ pro_yearly@v1  Pro Yearly, $200 per year");
+	expect(out).toContain("+ credits  200 credits ($0.50 per month)");
+	expect(previewIsEmpty({ preview: preview as never })).toBe(false);
+});
+
+test("a variant that resolved explicit with no diff is not work", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [
+					{
+						planId: "pro_yearly",
+						internalId: "prod_456",
+						version: 1,
+						variantAction: "explicit",
+						planChange: null,
+					},
+				],
+			},
+		],
+	};
+	expect(render(preview)).toBe("No changes. Your catalog matches your config.");
+	expect(previewIsEmpty({ preview: preview as never })).toBe(true);
+});
+
+test("a propagated variant says whose change it takes, in one line", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 2,
+				action: "update",
+				name: "Pro",
+				planChange: {
+					previousAttributes: null,
+					priceChange: {
+						previous: { amount: 20, interval: "month" },
+						current: { amount: 25, interval: "month" },
+					},
+					itemChanges: [],
+				},
+				variants: [
+					{
+						planId: "pro_yearly",
+						internalId: "prod_456",
+						version: 2,
+						variantAction: "propagated",
+						planChange: {
+							previousAttributes: null,
+							priceChange: {
+								previous: { amount: 200, interval: "year" },
+								current: { amount: 250, interval: "year" },
+							},
+							itemChanges: [],
+						},
+					},
+				],
+			},
+		],
+	};
+	const out = render(preview);
+	expect(out).toContain("~ pro@v2  Pro");
+	expect(out).toContain("~ Price: $20 per month -> $25 per month");
+	expect(out).toContain("~ pro_yearly@v2  follows pro@v2");
+	expect(out).not.toContain("$250 per year");
+	expect(previewIsEmpty({ preview: preview as never })).toBe(false);
 });

@@ -16,7 +16,16 @@ export const insertFirstProperty = ({
 	where?: FixtureConstraint[];
 	property: string;
 }): string | null => {
-	const call = findFixture({ source, builder, idField, id, where });
+	// A splice keeps every other byte, so a literal the pull rewriter refuses
+	// (it names another fixture) still takes one new property.
+	const call = findFixture({
+		source,
+		builder,
+		idField,
+		id,
+		where,
+		allowDynamic: true,
+	});
 	if (call === null) return null;
 	const object = call.find({ rule: { kind: "object" } });
 	if (object === null) return null;

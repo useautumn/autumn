@@ -15,13 +15,23 @@ export type IdentityRow = {
 	internalId?: string | null;
 	versionSlug?: string | null;
 	/** A plan's variant edges as `get` returns them: the resolved plan carries the stable id. */
-	variants?: {
-		variantPlanId?: string;
-		versionSlug?: string | null;
-		internalId?: string | null;
-		plan?: { internalId?: string | null } | null;
-	}[];
+	variants?: VariantEdge[];
 };
+
+type VariantEdge = {
+	variantPlanId?: string;
+	versionSlug?: string | null;
+	internalId?: string | null;
+	plan?: { internalId?: string | null; versionSlug?: string | null } | null;
+};
+
+/** The edge states the identity only on a bare link; otherwise the resolved
+ * plan carries it. */
+const variantInternalId = (edge: VariantEdge): string | null | undefined =>
+	edge.internalId ?? edge.plan?.internalId;
+
+const variantVersionSlug = (edge: VariantEdge): string | null | undefined =>
+	edge.versionSlug ?? edge.plan?.versionSlug;
 
 /** Push: created features from `results`, every direct plan row in full. */
 export const identityRowsFromApplied = ({
@@ -53,7 +63,7 @@ export const identityRowsFromCatalog = ({
 		}),
 	);
 
-const INTERNAL_ID_VALUE = /\binternalId\s*:\s*"([^"]*)"/;
+const INTERNAL_ID_VALUE = /\binternalId\s*:\s*["']([^"']*)["']/;
 
 /**
  * Every row's stable id is written into its fixture when the fixture lacks one,
@@ -97,8 +107,9 @@ export const backfillInternalIds = ({
 							},
 						]
 					: undefined,
+				allowDynamic: true,
 			});
-			// Not a plain literal: the row still matches by public id next push.
+			// No literal to write into: the row still matches by public id next push.
 			if (located === null) continue;
 			const stated = INTERNAL_ID_VALUE.exec(located.node.text())?.[1];
 			if (stated === row.internalId) continue;
@@ -143,6 +154,7 @@ export const backfillInternalIds = ({
 					idField: spec.idField,
 					id: typeof row.id === "string" ? row.id : "",
 					internalId: row.internalId,
+					allowDynamic: true,
 				});
 				if (located === null) continue;
 				if (
@@ -173,7 +185,8 @@ export const backfillInternalIds = ({
 	const variantSpec = NESTED_FIXTURES.variants;
 	for (const row of rows.plans ?? []) {
 		for (const edge of row.variants ?? []) {
-			const internalId = edge.internalId ?? edge.plan?.internalId;
+			const internalId = variantInternalId(edge);
+			const versionSlug = variantVersionSlug(edge);
 			if (
 				typeof edge.variantPlanId !== "string" ||
 				typeof internalId !== "string"
@@ -187,17 +200,18 @@ export const backfillInternalIds = ({
 				id: edge.variantPlanId,
 				// Versions of one variant share the id; the slug tells them apart
 				// whenever the catalog states one.
-				...(typeof edge.versionSlug === "string"
+				...(typeof versionSlug === "string"
 					? {
 							where: [
 								{
 									field: "versionSlug",
-									equals: edge.versionSlug,
+									equals: versionSlug,
 									absentMeans: "v1",
 								},
 							],
 						}
 					: {}),
+				allowDynamic: true,
 			});
 			if (located === null) continue;
 			const stated = INTERNAL_ID_VALUE.exec(located.node.text())?.[1];
@@ -228,11 +242,12 @@ export const backfillInternalIds = ({
 	}
 	for (const row of rows.plans ?? []) {
 		for (const edge of row.variants ?? []) {
-			const internalId = edge.internalId ?? edge.plan?.internalId;
+			const internalId = variantInternalId(edge);
+			const versionSlug = variantVersionSlug(edge);
 			if (
 				typeof edge.variantPlanId !== "string" ||
 				typeof internalId !== "string" ||
-				typeof edge.versionSlug !== "string"
+				typeof versionSlug !== "string"
 			)
 				continue;
 			const located = locateFixture({
@@ -242,6 +257,7 @@ export const backfillInternalIds = ({
 				idField: variantSpec.idField,
 				id: edge.variantPlanId,
 				internalId,
+				allowDynamic: true,
 			});
 			if (located === null) continue;
 			if (
@@ -258,7 +274,7 @@ export const backfillInternalIds = ({
 				id: located.id,
 				where: located.where,
 				property: "versionSlug",
-				text: JSON.stringify(edge.versionSlug),
+				text: JSON.stringify(versionSlug),
 			});
 			if (updated === null) continue;
 			files.set(located.file, updated);
