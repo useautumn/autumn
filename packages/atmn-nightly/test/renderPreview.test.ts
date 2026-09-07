@@ -191,13 +191,23 @@ test("a preview names what a migration would move, never a placeholder id", () =
 					active: true,
 					action: "update",
 					name: "Pro",
-					state: { hasCustomers: true },
+					state: { hasCustomers: true, usage: { customers: { count: 12 } } },
+					planChange: {
+						itemChanges: [
+							{
+								action: "created",
+								featureId: "basic_support",
+								item: { featureId: "basic_support" },
+							},
+						],
+					},
 				},
 			],
 			migrations: [{ plans: [{ planId: "pro", versions: [1] }] }],
 		} as never,
 	});
-	expect(text).toContain("Migrations this push would draft (1)");
-	expect(text).toContain("pro v1");
+	expect(text).toContain("Migrations (1)");
+	expect(text).toContain("pro v1, 12 customers");
+	expect(text).toMatch(/pro v1, 12 customers\n\s+\+ basic_support/);
 	expect(text).not.toMatch(/^\s+\?\s*$/m);
 });

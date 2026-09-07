@@ -67,6 +67,8 @@ type PlanChange = PreviewChange & {
 	planId?: string;
 	version?: number;
 	planChange?: PlanChangeLite | null;
+	siblingVersions?: PlanChange[];
+	state?: unknown;
 };
 
 export type CatalogPreview = {
@@ -369,28 +371,72 @@ export type PlannedMigration = {
 	includeCustom?: boolean;
 };
 
-/** One line per planned migration: the plan and the versions whose customers move. */
+/** The plan row a migration target names: the row itself, or the sibling version it lists. */
+const planRowForTarget = ({
+	plans,
+	planId,
+	version,
+}: {
+	plans: PlanChange[];
+	planId: string;
+	version: number;
+}): PlanChange | undefined => {
+	const row = plans.find((plan) => plan.planId === planId);
+	if (row === undefined) return undefined;
+	if (row.version === version) return row;
+	const sibling = (row.siblingVersions ?? []).find(
+		(candidate) => candidate.version === version,
+	);
+	return sibling !== undefined ? { ...row, ...sibling } : row;
+};
+
+const customerCount = ({ row }: { row: PlanChange | undefined }): string => {
+	const customers = (
+		row?.state as
+			| { usage?: { customers?: { count?: number; countCapped?: boolean } } }
+			| undefined
+	)?.usage?.customers;
+	if (customers?.count === undefined) return "";
+	const count = `${customers.count}${customers.countCapped ? "+" : ""}`;
+	return `, ${count} customer${customers.count === 1 && !customers.countCapped ? "" : "s"}`;
+};
+
+/**
+ * What each migration is: the plan version whose customers it moves, how many
+ * of them, and the changes those customers receive — the target row's own diff.
+ */
 export const renderPlannedMigrations = ({
 	migrations,
+	plans,
 }: {
 	migrations: PlannedMigration[];
+	plans: PlanChange[];
 }): string =>
 	[
-		chalk.bold(`Migrations this push would draft (${migrations.length})`),
-		...migrations.map((migration) => {
-			const targets = (migration.plans ?? [])
-				.map((plan) => {
-					const versions = (plan.versions ?? []).map((v) => `v${v}`);
-					return versions.length > 0
-						? `${plan.planId} ${versions.join(", ")}`
-						: plan.planId;
-				})
-				.join("; ");
-			const custom = migration.includeCustom
-				? " (customized plans included)"
-				: "";
-			return `  ${chalk.cyan(targets || "?")}${chalk.dim(" · customers move once the migration runs")}${custom}`;
-		}),
+		chalk.bold(`Migrations (${migrations.length})`),
+		...migrations.flatMap((migration) =>
+			(migration.plans ?? []).flatMap((target) =>
+				(target.versions ?? []).flatMap((version) => {
+					const row = planRowForTarget({
+						plans,
+						planId: target.planId,
+						version,
+					});
+					const custom = migration.includeCustom
+						? ", customized plans too"
+						: "";
+					return [
+						`  ${chalk.cyan(`${target.planId} v${version}`)}${customerCount({ row })}${custom}`,
+						...(row?.planChange
+							? renderPlanChangeDetail({
+									planChange: row.planChange,
+									indent: DETAIL_INDENT,
+								})
+							: []),
+					];
+				}),
+			),
+		),
 	].join("\n");
 
 /** The drafted migrations, one link per line. */
@@ -475,7 +521,7 @@ export const renderPreview = ({
 	if (migrations.length > 0) {
 		// The server saying customers would need moving. Nothing is drafted by a
 		// preview; the applied block after --yes carries the ids and links.
-		sections.push(renderPlannedMigrations({ migrations }));
+		sections.push(renderPlannedMigrations({ migrations, plans }));
 	}
 
 	return sections.join("\n\n");
