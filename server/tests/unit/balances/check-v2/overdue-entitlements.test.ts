@@ -242,6 +242,38 @@ test("overdue access: denied send-event and lock preserve the visible balance an
 	expect(track).not.toHaveBeenCalled();
 });
 
+test("overdue access: zero usage without an entitlement is unchanged", async () => {
+	for (const blocked of [false, true]) {
+		const { ctx, feature, fullSubject } = setup({ blocked });
+		fullSubject.customer_products = [];
+		const checkData = await getCheckDataV2({
+			ctx,
+			body: { customer_id: "cus_test", feature_id: "messages" },
+			requiredBalance: 0,
+		});
+		expect(
+			await runCheckWithTrackV2({
+				ctx,
+				checkData,
+				requiredBalance: 0,
+				body: {
+					customer_id: "cus_test",
+					feature_id: "messages",
+					send_event: true,
+				},
+			}),
+		).toMatchObject({ allowed: true });
+		expect(() =>
+			prepareFeatureDeductionV2({
+				ctx,
+				fullSubject,
+				deduction: { feature, deduction: 0, enforceOverdueBlock: true },
+			}),
+		).not.toThrow();
+	}
+	track.mockClear();
+});
+
 test("overdue access: credit fallback and tracked responses select eligible funding", async () => {
 	const activePlan = createPlan({
 		id: "active",

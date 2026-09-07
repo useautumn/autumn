@@ -68,7 +68,7 @@ export const runCheckWithTrackV2 = async ({
 	// which would incorrectly surface as allowed: true.
 	if (
 		!checkData.evaluationApiBalance &&
-		(requiredBalance > 0 || ctx.org.config.block_overdue_entitlements)
+		(requiredBalance > 0 || checkData.apiBalance)
 	) {
 		return getCheckResponseV2({
 			ctx,

@@ -32,6 +32,11 @@ test("org config handler: overdue flags stay inverted across old and new writes"
 
 	try {
 		for (const [updates, blocked] of cases) {
+			if (updates.automatic_tax !== undefined) {
+				await autumn.patch("/organization/config", {
+					block_overdue_entitlements: blocked,
+				});
+			}
 			const response = (await autumn.patch(
 				"/organization/config",
 				updates,

@@ -7,6 +7,7 @@ import {
 	customerProducts,
 	organizations,
 } from "@autumn/shared";
+import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -76,10 +77,48 @@ test("overdue entitlements: visible balances, plan exemption, mixed deductions a
 		});
 
 	try {
+		await deleteLock({ ctx, lockId: customerId });
+		for (const blocked of [false, true]) {
+			await autumn.patch("/organization/config", {
+				block_overdue_entitlements: blocked,
+			});
+			expect(
+				await autumn.check<CheckResponseV3>({
+					customer_id: customerId,
+					feature_id: TestFeature.Words,
+					required_balance: 0,
+					send_event: true,
+				}),
+			).toMatchObject({ allowed: true });
+		}
+		expect(
+			await autumn.check<CheckResponseV3>({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				required_balance: 10,
+				lock: { enabled: true, lock_id: customerId },
+			}),
+		).toMatchObject({ allowed: true, balance: { remaining: 90 } });
+		await setStatus(CusProductStatus.PastDue);
+		await autumn.patch("/organization/config", {
+			block_overdue_entitlements: true,
+		});
+		for (const skipCache of [false, true]) {
+			await expect(
+				autumn.balances.finalize(
+					{ lock_id: customerId, action: "confirm", override_value: 15 },
+					{ skipCache },
+				),
+			).rejects.toMatchObject({ code: "insufficient_balance" });
+		}
+		expect(await checkMessages()).toMatchObject({
+			allowed: false,
+			balance: { remaining: 90 },
+		});
+		await autumn.balances.finalize({ lock_id: customerId, action: "release" });
 		await autumn.patch("/organization/config", {
 			block_overdue_entitlements: false,
 		});
-		await setStatus(CusProductStatus.PastDue);
 		expect(await checkMessages()).toMatchObject({
 			allowed: true,
 			balance: { remaining: 100 },
@@ -162,6 +201,7 @@ test("overdue entitlements: visible balances, plan exemption, mixed deductions a
 			balance: { remaining: 100 },
 		});
 	} finally {
+		await deleteLock({ ctx, lockId: customerId });
 		await ctx.db
 			.update(organizations)
 			.set({ config: ctx.org.config })

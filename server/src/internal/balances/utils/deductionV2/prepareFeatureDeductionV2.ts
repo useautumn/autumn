@@ -66,6 +66,7 @@ export const prepareFeatureDeductionV2 = ({
 	});
 	if (
 		deduction.enforceOverdueBlock &&
+		deduction.deduction > 0 &&
 		ctx.org.config.block_overdue_entitlements &&
 		customerEntitlements.length === 0
 	) {

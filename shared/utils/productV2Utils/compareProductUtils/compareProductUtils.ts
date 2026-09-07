@@ -112,7 +112,7 @@ export const compareConfig = ({
 }) => {
 	const checks = {
 		ignore_past_due: {
-			condition: newConfig?.ignore_past_due === curConfig?.ignore_past_due,
+			condition: !!newConfig?.ignore_past_due === !!curConfig?.ignore_past_due,
 			message: `Ignore past due different: ${newConfig?.ignore_past_due} !== ${curConfig?.ignore_past_due}`,
 		},
 		allow_overdue_entitlements: {

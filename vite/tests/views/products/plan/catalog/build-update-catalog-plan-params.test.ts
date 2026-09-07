@@ -130,6 +130,24 @@ describe("buildUpdateCatalogPlanParams", () => {
 		expect(() => UpdateCatalogPlanParamsSchema.parse(body)).not.toThrow();
 	});
 
+	test("reverting the overdue access toggle restores an unchanged legacy config", () => {
+		expect(
+			compareConfig({
+				curConfig: undefined,
+				newConfig: {
+					ignore_past_due: false,
+					allow_overdue_entitlements: false,
+				},
+			}),
+		).toBe(true);
+		expect(
+			compareConfig({
+				curConfig: undefined,
+				newConfig: { ignore_past_due: false, allow_overdue_entitlements: true },
+			}),
+		).toBe(false);
+	});
+
 	test("overdue access override is detected and saved independently of cancellation protection", () => {
 		const current = { ...baseProduct, config: { ignore_past_due: true } };
 		const edited = {
