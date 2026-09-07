@@ -2,7 +2,11 @@ import {
 	type OwnedPartitionHealth,
 	ownedPartitionHealthOf,
 } from "../health/ownedPartitionHealth.js";
-import type { PartitionRuntimeScope } from "./types/partitionRuntimeState.js";
+import { OwnedPartitionNotReadyError } from "./runtimeErrors.js";
+import type {
+	PartitionRuntimeScope,
+	PartitionRuntimeState,
+} from "./types/partitionRuntimeState.js";
 
 export function getRuntimeHealth({
 	ctx,
@@ -17,4 +21,14 @@ export function getRuntimeHealth({
 		...ctx.follower.readProgress({ topic, partition }),
 		failureReason: state.failureReason,
 	});
+}
+
+export function assertRuntimeReady({
+	state,
+}: {
+	state: PartitionRuntimeState;
+}): void {
+	if (state.terminalError) throw state.terminalError;
+	if (state.status !== "ready")
+		throw new OwnedPartitionNotReadyError({ status: state.status });
 }

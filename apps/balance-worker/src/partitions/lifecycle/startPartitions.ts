@@ -11,7 +11,9 @@ export async function startPartitions({
 	state,
 	allocationGeneration,
 	partitions,
-}: AllocationScope & { partitions: number[] }): Promise<void> {
+}: AllocationScope & {
+	partitions: number[];
+}): Promise<void> {
 	if (!isCurrentAllocation({ state, allocationGeneration })) return;
 	const entries = createPartitionEntries({
 		ctx,
@@ -20,13 +22,16 @@ export async function startPartitions({
 		partitions,
 	});
 	const startups: Promise<void>[] = [];
-	for (const entry of entries) startups.push(startPartition({ entry }));
+	for (const entry of entries) {
+		entry.startup = startPartition({ state, entry, allocationGeneration });
+		startups.push(entry.startup);
+	}
 	const results = await Promise.allSettled(startups);
 	reportPartitionStartupFailures({
 		ctx,
 		state,
-		allocationGeneration,
 		entries,
 		results,
+		allocationGeneration,
 	});
 }

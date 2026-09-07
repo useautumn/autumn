@@ -25,8 +25,8 @@ export function enterRuntimeRecovery({
 	});
 	state.terminalError = recoveryError;
 	state.failureReason = ownedPartitionFailureReasonOf({ cause });
-	state.startupAbortController.abort(recoveryError);
 	state.status = "recovery_required";
+	state.startupAbortController.abort(recoveryError);
 	state.recoveryPromise = finishRuntimeRecovery({
 		ctx,
 		state,

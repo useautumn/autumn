@@ -10,12 +10,14 @@ import { markReplayUnavailable, stopReplay } from "./stopReplay.js";
 
 export function createPartitionReplay({
 	ctx,
+	position,
 }: {
 	ctx: PartitionReplayContext;
+	position: PartitionPosition;
 }): PartitionReplay {
 	const state: PartitionReplayState = {
 		status: "created",
-		position: null,
+		position,
 		onUnavailable: null,
 		abortController: null,
 		startPromise: null,

@@ -1,12 +1,15 @@
 import type { OwnedPartitionRecoveryRequiredError } from "../runtimeErrors.js";
 
 import type {
+	PartitionOutcomeFollowerPort,
 	PartitionRuntimeContext,
 	RuntimeUnavailableListener,
 } from "./partitionRuntime.js";
 
 export type PartitionRuntimeStatus =
 	| "created"
+	| "preparing"
+	| "prepared"
 	| "fencing"
 	| "bootstrapping"
 	| "catching_up"
@@ -21,11 +24,12 @@ export type PartitionRuntimeScope = {
 };
 
 export type PartitionRuntimeState = {
+	preparationFollower: PartitionOutcomeFollowerPort | null;
+	preparationStopPromise: Promise<void> | null;
 	drainPromise: Promise<void> | null;
-	failureReason: string | null;
-	startupAbortController: AbortController;
 	status: PartitionRuntimeStatus;
 	terminalError: OwnedPartitionRecoveryRequiredError | null;
+	failureReason: string | null;
 	producerConnectionAttempted: boolean;
 	followerStartAttempted: boolean;
 	startPromise: Promise<void> | null;
@@ -33,5 +37,6 @@ export type PartitionRuntimeState = {
 	stopFollowerPromise: Promise<void> | null;
 	disconnectProducerPromise: Promise<void> | null;
 	recoveryPromise: Promise<OwnedPartitionRecoveryRequiredError> | null;
+	startupAbortController: AbortController;
 	unavailableListeners: Set<RuntimeUnavailableListener>;
 };

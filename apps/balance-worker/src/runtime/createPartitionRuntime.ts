@@ -4,6 +4,7 @@ import type {
 	TrackCommand,
 	TrackDecision,
 } from "@autumn/balance-engine";
+import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import { createPartitionTrackWriter } from "../writer/partitionTrackWriter.js";
 import {
 	checkRuntimeBalance,
@@ -11,13 +12,18 @@ import {
 } from "./commands/balanceCommands.js";
 import { createRequestTracker } from "./createRequestTracker.js";
 import { getRuntimeHealth } from "./getRuntimeHealth.js";
-import { startRuntime } from "./lifecycle/startRuntime.js";
+import {
+	activateRuntime,
+	prepareRuntime,
+	startRuntime,
+} from "./lifecycle/startRuntime.js";
 import {
 	drainRuntime,
 	stopRuntime,
 	waitForRuntimeQuiescence,
 } from "./lifecycle/stopRuntime.js";
 import type {
+	PartitionOutcomeFollowerPort,
 	PartitionRuntime,
 	PartitionRuntimeConfig,
 	PartitionRuntimeContext,
@@ -56,6 +62,18 @@ export function createPartitionRuntime({
 		return startRuntime({ ctx, state });
 	}
 
+	function prepare({
+		follower,
+	}: {
+		follower: PartitionOutcomeFollowerPort;
+	}): Promise<void> {
+		return prepareRuntime({ ctx, state, follower });
+	}
+
+	function activate(): Promise<void> {
+		return activateRuntime({ ctx, state });
+	}
+
 	function drain(): Promise<void> {
 		return drainRuntime({ ctx, state });
 	}
@@ -84,12 +102,12 @@ export function createPartitionRuntime({
 		return checkRuntimeBalance({ ctx, state, command });
 	}
 
-	function getHealth() {
-		return getRuntimeHealth({ ctx, state });
-	}
-
 	function getStatus(): PartitionRuntimeStatus {
 		return state.status;
+	}
+
+	function getHealth(): OwnedPartitionHealth {
+		return getRuntimeHealth({ ctx, state });
 	}
 
 	function subscribeUnavailable(
@@ -104,6 +122,8 @@ export function createPartitionRuntime({
 
 	return {
 		start,
+		prepare,
+		activate,
 		drain,
 		stop,
 		waitForQuiescence,
@@ -133,11 +153,12 @@ function validateRuntimeConfig(config: PartitionRuntimeConfig): void {
 
 function createRuntimeState(): PartitionRuntimeState {
 	return {
+		preparationFollower: null,
+		preparationStopPromise: null,
 		drainPromise: null,
-		failureReason: null,
-		startupAbortController: new AbortController(),
 		status: "created",
 		terminalError: null,
+		failureReason: null,
 		producerConnectionAttempted: false,
 		followerStartAttempted: false,
 		startPromise: null,
@@ -145,6 +166,7 @@ function createRuntimeState(): PartitionRuntimeState {
 		stopFollowerPromise: null,
 		disconnectProducerPromise: null,
 		recoveryPromise: null,
+		startupAbortController: new AbortController(),
 		unavailableListeners: new Set(),
 	};
 }

@@ -23,6 +23,7 @@
 			"packages/env",
 			"packages/logging",
 			"packages/balance-engine",
+			"packages/balance-worker-protocol",
 			"packages/kafka",
 			"packages/mcp",
 			"packages/sdk",

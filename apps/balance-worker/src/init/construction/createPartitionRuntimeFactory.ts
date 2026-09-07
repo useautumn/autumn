@@ -1,4 +1,5 @@
 import { createProducerSession } from "@autumn/kafka";
+import { createOwnershipPublisher } from "../../kafka/createOwnershipPublisher.js";
 import { createTrackOutcomePublisher } from "../../kafka/createTrackOutcomePublisher.js";
 import {
 	createWorkerProducer,
@@ -7,7 +8,8 @@ import {
 import { createPartitionBootstrapper } from "../../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
 import type {
-	PartitionRuntimeFactory,
+	ConstructedPartitionRuntime,
+	KafkaOwnedPartitionRuntimeFactory,
 	PartitionRuntimeFactoryConfig,
 	PartitionRuntimeFactoryContext,
 	PartitionRuntimeFactoryInput,
@@ -20,8 +22,11 @@ export function createPartitionRuntimeFactory({
 }: {
 	ctx: PartitionRuntimeFactoryContext;
 	config: PartitionRuntimeFactoryConfig;
-}): PartitionRuntimeFactory {
+}): KafkaOwnedPartitionRuntimeFactory {
 	assertKafkaBalanceWorkerTimings({ timings: config.timings });
+	if (!config.ownership.topic.trim() || !config.ownership.endpoint.trim()) {
+		throw new Error("Ownership topic and advertised endpoint are required");
+	}
 	if (
 		!Number.isSafeInteger(config.trackReceiptRetentionMs) ||
 		config.trackReceiptRetentionMs <= 0
@@ -41,7 +46,7 @@ export function createPartitionRuntimeFactory({
 		topic,
 		partition,
 		follower,
-	}: PartitionRuntimeFactoryInput) {
+	}: PartitionRuntimeFactoryInput): ConstructedPartitionRuntime {
 		const session = createProducerSession({
 			ctx: { kafka: ctx.kafka },
 			config: createWorkerProducerConfig({
@@ -55,19 +60,25 @@ export function createPartitionRuntimeFactory({
 			ctx: { session },
 			config: { topic, partition },
 		});
-		const appender = createTrackOutcomePublisher({ ctx: { producer } });
-		return createPartitionRuntime({
+		const publication = createOwnershipPublisher({
+			ctx: { session: producer, partitionOffsets: ctx.ownershipOffsets },
+			config: { ...config.ownership, partition },
+		});
+		const appender = createTrackOutcomePublisher({
+			ctx: { producer },
+		});
+		const runtime = createPartitionRuntime({
 			ctx: {
+				stateStore: ctx.stateStore,
 				bootstrapper,
+				follower,
+				producer,
+				appender,
+				partitionResolver: ctx.partitionResolver,
 				trackReceiptPolicy: {
 					retentionMs: config.trackReceiptRetentionMs,
 					now: Date.now,
 				},
-				stateStore: ctx.stateStore,
-				partitionResolver: ctx.partitionResolver,
-				follower,
-				producer,
-				appender,
 			},
 			config: {
 				topic,
@@ -76,6 +87,7 @@ export function createPartitionRuntimeFactory({
 				recoveryDrainTimeoutMs: config.timings.recoveryDrainTimeoutMs,
 			},
 		});
+		return { runtime, publication };
 	}
 	return createRuntime;
 }

@@ -1,3 +1,5 @@
+import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
+import { createRuntimeDirectory } from "./directory/createRuntimeDirectory.js";
 import { listPartitionHealth } from "./health/partitionHealth.js";
 import {
 	startPartitionService,
@@ -8,6 +10,7 @@ import type {
 	Partitions,
 	PartitionsConfig,
 	PartitionsDependencies,
+	ResolvedPartitionsConfig,
 } from "./types/partitions.js";
 
 export function createPartitions({
@@ -17,50 +20,61 @@ export function createPartitions({
 	ctx: PartitionsDependencies;
 	config: PartitionsConfig;
 }): Partitions {
-	if (!config.topic.trim()) throw new Error("Kafka topic cannot be empty");
-	if (
-		!Number.isSafeInteger(config.healthRefreshIntervalMs) ||
-		config.healthRefreshIntervalMs <= 0
-	)
-		throw new RangeError(
-			"healthRefreshIntervalMs must be a positive safe integer",
-		);
-	const partitionBootstrapRetryIntervalMs =
-		config.partitionBootstrapRetryIntervalMs ?? 30_000;
-	if (
-		!Number.isSafeInteger(partitionBootstrapRetryIntervalMs) ||
-		partitionBootstrapRetryIntervalMs <= 0
-	)
-		throw new RangeError(
-			"partitionBootstrapRetryIntervalMs must be a positive safe integer",
-		);
-	const ctx = {
-		...dependencies,
-		config: { ...config, partitionBootstrapRetryIntervalMs },
+	const ctx = { ...dependencies, config: resolvePartitionConfig(config) };
+	const state = createPartitionState();
+	const { findRuntime } = state.directory;
+
+	function start(): Promise<void> {
+		return startPartitionService({ ctx, state });
+	}
+
+	function stop(): Promise<void> {
+		return stopPartitionService({ ctx, state });
+	}
+
+	function partitions(): OwnedPartitionHealth[] {
+		return listPartitionHealth({ state });
+	}
+
+	return { start, stop, partitions, findRuntime };
+}
+
+function resolvePartitionConfig(
+	config: PartitionsConfig,
+): ResolvedPartitionsConfig {
+	if (config.topic.trim().length === 0)
+		throw new Error("Kafka topic cannot be empty");
+	const options = {
+		...config,
+		partitionBootstrapRetryIntervalMs:
+			config.partitionBootstrapRetryIntervalMs ?? 30_000,
 	};
-	const state: PartitionsState = {
+	for (const name of [
+		"healthRefreshIntervalMs",
+		"partitionBootstrapRetryIntervalMs",
+	] as const) {
+		if (!Number.isSafeInteger(options[name]) || options[name] <= 0) {
+			throw new RangeError(`${name} must be a positive safe integer`);
+		}
+	}
+	return options;
+}
+
+function createPartitionState(): PartitionsState {
+	return {
+		directory: createRuntimeDirectory(),
 		entries: new Map(),
 		retiringEntries: new Map(),
 		terminalHealthByPartition: new Map(),
 		partitionRetryTimers: new Map(),
-		healthRefreshTimer: null,
-		healthRefreshPromise: null,
 		status: "created",
-		generation: 0,
 		retirementFailed: false,
+		generation: 0,
 		lifecycle: Promise.resolve(),
 		stopPromise: null,
 		offsetsConnected: false,
+		healthRefreshTimer: null,
+		healthRefreshPromise: null,
 		unsubscribePartitionChanges: null,
 	};
-	function start(): Promise<void> {
-		return startPartitionService({ ctx, state });
-	}
-	function stop(): Promise<void> {
-		return stopPartitionService({ ctx, state });
-	}
-	function partitions() {
-		return listPartitionHealth({ state });
-	}
-	return { start, stop, partitions };
 }

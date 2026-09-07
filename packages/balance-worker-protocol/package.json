@@ -1,0 +1,26 @@
+{
+	"name": "@autumn/balance-worker-protocol",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/protocol.ts",
+			"import": "./src/protocol.ts",
+			"default": "./src/protocol.ts"
+		}
+	},
+	"scripts": {
+		"test": "bun test --config ./bunfig.toml tests",
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@autumn/balance-engine": "workspace:*",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@types/bun": "1.3.14",
+		"typescript": "~5.8.3"
+	}
+}

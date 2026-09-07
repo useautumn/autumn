@@ -4,16 +4,17 @@ import {
 	detachPartitions,
 	withdrawPartitions,
 } from "../lifecycle/stopPartitions.js";
-import { stopPartitionService } from "../partitionService.js";
+import { stopPartitionServiceSafely } from "../partitionService.js";
 import { reportPartitionError } from "../reportPartitionError.js";
 import type {
 	AllocationScope,
 	PartitionEntry,
+	PartitionsContext,
 	PartitionsScope,
 	PartitionsState,
 } from "../types/partitionState.js";
 import type {
-	PartitionAllocation,
+	PartitionAssignment,
 	PartitionFailure,
 	PartitionRevocation,
 } from "../types/partitions.js";
@@ -22,18 +23,23 @@ export function subscribePartitionAllocations({
 	ctx,
 	state,
 }: PartitionsScope): void {
-	function onAssigned(change: PartitionAllocation): void {
-		applyAllocation({ ctx, state, change });
+	function onAssigned(change: PartitionAssignment): void {
+		applyPartitionAllocation({ ctx, state, change });
 	}
+
 	function onRevoked(revocation: PartitionRevocation): void {
-		revokeAllocation({ ctx, state, revocation });
+		revokePartitionAllocation({ ctx, state, revocation });
 	}
+
 	function onCrashed(failure: PartitionFailure): void {
-		crashAllocation({ ctx, state, failure });
+		crashPartitionAllocation({ ctx, state, failure });
 	}
-	function onError({ cause }: PartitionFailure): void {
-		if (state.status === "running") reportPartitionError({ ctx, cause });
+
+	function onError(failure: PartitionFailure): void {
+		if (state.status !== "running") return;
+		reportPartitionError({ ctx, cause: failure.cause });
 	}
+
 	state.unsubscribePartitionChanges = ctx.subscribePartitionChanges({
 		onAssigned,
 		onRevoked,
@@ -41,39 +47,30 @@ export function subscribePartitionAllocations({
 		onError,
 	});
 }
-function applyAllocation({
+
+function applyPartitionAllocation({
 	ctx,
 	state,
 	change,
-}: PartitionsScope & { change: PartitionAllocation }): void {
+}: PartitionsScope & { change: PartitionAssignment }): void {
 	if (state.status !== "running") return;
-	if (change.partitions.length) {
-		try {
-			ctx.consumer.pause({
-				topic: ctx.config.topic,
-				partitions: change.partitions,
-			});
-		} catch (cause) {
-			reportPartitionError({ ctx, cause });
-		}
-	}
-	for (const partition of state.terminalHealthByPartition.keys()) {
-		if (!change.partitions.includes(partition))
-			state.terminalHealthByPartition.delete(partition);
-	}
+	const { partitions } = change;
+	discardUnallocatedHealth({ state, partitions });
+	pauseAllocatedPartitions({ ctx, partitions });
 	clearPartitionRetries({ state });
 	const allocationGeneration = ++state.generation;
 	const entriesToStop = detachPartitions({ state, revocation: change });
 	const retirement = retireAllocation({ ctx, state, entriesToStop });
-	state.lifecycle = startAfterRetirement({
+	state.lifecycle = startAllocationAfterRetirement({
 		ctx,
 		state,
+		partitions,
 		allocationGeneration,
-		partitions: change.partitions,
 		retirement,
 	});
 }
-function revokeAllocation({
+
+function revokePartitionAllocation({
 	ctx,
 	state,
 	revocation,
@@ -84,7 +81,8 @@ function revokeAllocation({
 	const entriesToStop = detachPartitions({ state, revocation });
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
 }
-function crashAllocation({
+
+function crashPartitionAllocation({
 	ctx,
 	state,
 	failure,
@@ -95,53 +93,6 @@ function crashAllocation({
 	const entriesToStop = detachPartitions({ state, failure });
 	reportPartitionError({ ctx, cause: failure.cause });
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
-}
-async function startAfterRetirement({
-	ctx,
-	state,
-	allocationGeneration,
-	partitions,
-	retirement,
-}: AllocationScope & {
-	partitions: number[];
-	retirement: Promise<void>;
-}): Promise<void> {
-	try {
-		await retirement;
-		if (isCurrentAllocation({ state, allocationGeneration }))
-			state.retiringEntries.clear();
-		await startPartitions({ ctx, state, allocationGeneration, partitions });
-	} catch (cause) {
-		reportPartitionError({ ctx, cause });
-	}
-}
-async function retireAllocation({
-	ctx,
-	state,
-	entriesToStop,
-}: PartitionsScope & {
-	entriesToStop: PartitionEntry[];
-}): Promise<void> {
-	try {
-		await withdrawPartitions({
-			previousLifecycle: state.lifecycle,
-			entriesToStop,
-		});
-	} catch (cause) {
-		state.retirementFailed = true;
-		reportPartitionError({ ctx, cause });
-		function stopAfterFailure(): void {
-			void stopSafely();
-		}
-		async function stopSafely(): Promise<void> {
-			try {
-				await stopPartitionService({ ctx, state });
-			} catch (failure) {
-				reportPartitionError({ ctx, cause: failure });
-			}
-		}
-		queueMicrotask(stopAfterFailure);
-	}
 }
 
 export function isCurrentAllocation({
@@ -156,4 +107,80 @@ export function isCurrentAllocation({
 		!state.retirementFailed &&
 		state.generation === allocationGeneration
 	);
+}
+
+async function retireAllocation({
+	ctx,
+	state,
+	entriesToStop,
+}: PartitionsScope & {
+	entriesToStop: PartitionEntry[];
+}): Promise<void> {
+	try {
+		await withdrawPartitions({
+			ctx,
+			previousLifecycle: state.lifecycle,
+			entriesToStop,
+		});
+	} catch (cause) {
+		state.retirementFailed = true;
+		reportPartitionError({ ctx, cause });
+		function stopAfterRetirementFailure(): void {
+			void stopPartitionServiceSafely({ ctx, state });
+		}
+		queueMicrotask(stopAfterRetirementFailure);
+	}
+}
+
+function discardUnallocatedHealth({
+	state,
+	partitions,
+}: {
+	state: PartitionsState;
+	partitions: number[];
+}): void {
+	for (const partition of state.terminalHealthByPartition.keys()) {
+		if (!partitions.includes(partition))
+			state.terminalHealthByPartition.delete(partition);
+	}
+}
+
+function pauseAllocatedPartitions({
+	ctx,
+	partitions,
+}: {
+	ctx: PartitionsContext;
+	partitions: number[];
+}): void {
+	if (partitions.length === 0) return;
+	try {
+		ctx.consumer.pause({ topic: ctx.config.topic, partitions });
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
+	}
+}
+
+async function startAllocationAfterRetirement({
+	ctx,
+	state,
+	partitions,
+	allocationGeneration,
+	retirement,
+}: AllocationScope & {
+	partitions: number[];
+	retirement: Promise<void>;
+}): Promise<void> {
+	try {
+		await retirement;
+		if (isCurrentAllocation({ state, allocationGeneration }))
+			state.retiringEntries.clear();
+		await startPartitions({
+			ctx,
+			state,
+			allocationGeneration,
+			partitions,
+		});
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
+	}
 }
