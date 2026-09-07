@@ -7,6 +7,10 @@ import { findFullProductByInternalId } from "@/internal/catalogV2/actions/update
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { rowHasVersionableCustomers } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/rowHasVersionableCustomers";
 import {
+	mintedVariantPins,
+	variantPinKey,
+} from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantEntryMintsRow";
+import {
 	propagateTargetIsPinned,
 	variantRowForPropagateTarget,
 } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantRowForPropagateTarget";
@@ -219,9 +223,26 @@ export const handleVariantErrors = ({
 		}
 	}
 
+	const mintedPins = mintedVariantPins({
+		variants: declaredVariants,
+		productStatesContext,
+	});
+
 	for (const target of propagateTargets) {
 		if (target.plan_id === upsert.row.planId) {
 			rejectInvalidPropagationTarget({ planId: target.plan_id });
+		}
+		// The pin names a row this same push writes, so there is nothing to follow yet.
+		if (
+			mintedPins.has(
+				variantPinKey({
+					planId: target.plan_id,
+					version: target.version,
+					versionSlug: target.version_slug,
+				}),
+			)
+		) {
+			continue;
 		}
 		if (mintSource && propagateTargetIsPinned({ target })) {
 			throw new RecaseError({
