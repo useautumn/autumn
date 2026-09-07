@@ -29,14 +29,17 @@ export const createPartitionCheckpointScheduler = ({
 		SqliteBalanceStateStore,
 		"readNextOffset" | "pruneExpiredTrackReceipts"
 	>;
-	exporter: PartitionCheckpointExporter;
+	exporter?: PartitionCheckpointExporter;
 	clock?: PartitionCheckpointSchedulerClock;
 	config?: PartitionCheckpointSchedulerConfig;
-}): PartitionCheckpointMaintenance & { stop(): void } => {
+}): PartitionCheckpointMaintenance & { stop(): Promise<void> } => {
 	assertPartitionCheckpointSchedulerConfig({ config });
 	const entries = new Map<number, PartitionCheckpointEntry>();
 	let nextGeneration = 0;
 	let stopped = false;
+	let stopping: Promise<void> | null = null;
+	let exportJob: Promise<void> | null = null;
+	let cleanupJob: Promise<void> | null = null;
 	let exportInFlight = false;
 	let cleanupInFlight = false;
 	let cancelTick: (() => void) | null = null;
@@ -50,6 +53,7 @@ export const createPartitionCheckpointScheduler = ({
 		entry.removeAbortListener();
 		entry.abortExport?.();
 		entry.health.status = "stopped";
+		entry.health.cleanup.nextAttemptAt = null;
 		if (entries.size === 0) {
 			cancelTick?.();
 			cancelTick = null;
@@ -68,6 +72,7 @@ export const createPartitionCheckpointScheduler = ({
 	};
 	const refresh = (entry: PartitionCheckpointEntry): boolean => {
 		if (!isCurrent(entry)) return false;
+		if (!exporter) return true;
 		try {
 			const local = stateStore.readNextOffset({
 				topic: entry.topic,
@@ -117,38 +122,48 @@ export const createPartitionCheckpointScheduler = ({
 				nextAttemptAt: entry.nextAttemptAt,
 			})),
 		});
-		if (plan.kind === "export") {
+		if (exporter && plan.kind === "export") {
 			const entry = entries.get(plan.generation);
 			if (entry && isCurrent(entry)) {
 				exportInFlight = true;
-				void executePartitionCheckpointExport({
-					entry,
-					exporter,
-					clock,
-					config,
-					isCurrent,
-					refresh,
-					onStateFailure,
-				}).finally(() => {
-					exportInFlight = false;
-					cancelTick?.();
-					cancelTick = null;
-					arm({ delayMs: 0 });
-				});
+				// Register the job before callbacks can re-enter shutdown.
+				exportJob = Promise.resolve()
+					.then(async () => {
+						if (!isCurrent(entry)) return;
+						await executePartitionCheckpointExport({
+							entry,
+							exporter,
+							clock,
+							config,
+							isCurrent,
+							refresh,
+							onStateFailure,
+						});
+					})
+					.finally(() => {
+						exportInFlight = false;
+						cancelTick?.();
+						cancelTick = null;
+						arm({ delayMs: 0 });
+					});
 			}
 		}
 		if (!cleanupInFlight) {
 			cleanupInFlight = true;
-			void prunePartitionCheckpointReceipts({
-				entries: current,
-				stateStore,
-				clock,
-				config,
-				isCurrent,
-				onStateFailure,
-			}).finally(() => {
-				cleanupInFlight = false;
-			});
+			cleanupJob = Promise.resolve()
+				.then(() =>
+					prunePartitionCheckpointReceipts({
+						entries: current,
+						stateStore,
+						clock,
+						config,
+						isCurrent,
+						onStateFailure,
+					}),
+				)
+				.finally(() => {
+					cleanupInFlight = false;
+				});
 		}
 		arm();
 	};
@@ -186,12 +201,18 @@ export const createPartitionCheckpointScheduler = ({
 			nextCleanupAt: now + config.cleanupIntervalMs,
 			health: initialCheckpointHealth({ now }),
 			attempt: 0,
+			cleanupAttempts: 0,
 			inFlightNextOffset: null,
 			changesDuringExportSince: null,
 			abortExport: null,
 			removeAbortListener: () =>
 				assignment.signal.removeEventListener("abort", abort),
 		};
+		entry.health.cleanup.nextAttemptAt = entry.nextCleanupAt;
+		if (!exporter) {
+			entry.health.status = "disabled";
+			entry.health.dirtySince = null;
+		}
 		const abort = (): void => remove(entry);
 		if (assignment.signal.aborted) entry.health.status = "stopped";
 		else {
@@ -222,10 +243,25 @@ export const createPartitionCheckpointScheduler = ({
 	return {
 		start,
 		stop: () => {
+			if (stopping) return stopping;
 			stopped = true;
 			for (const entry of entries.values()) remove(entry);
 			cancelTick?.();
 			cancelTick = null;
+			stopping = settleJobs();
+			return stopping;
 		},
 	};
+
+	async function settleJobs(): Promise<void> {
+		const results = await Promise.allSettled([exportJob, cleanupJob]);
+		const errors = results.flatMap((result) =>
+			result.status === "rejected" ? [result.reason] : [],
+		);
+		if (errors.length > 0)
+			throw new AggregateError(
+				errors,
+				"Checkpoint maintenance did not settle safely",
+			);
+	}
 };

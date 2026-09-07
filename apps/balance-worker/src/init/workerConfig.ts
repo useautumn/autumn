@@ -10,6 +10,7 @@ import type {
 	KafkaBalanceWorkerTimings,
 	PartitionRuntimeFactoryConfig,
 } from "./types/partitionRuntimeFactory.js";
+import { workerCheckpointLimits } from "./workerCheckpointConfig.js";
 
 export function assertKafkaBalanceWorkerTimings({
 	timings,
@@ -81,11 +82,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 			topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
 			endpoint,
 		},
-		checkpointRestoreLimits: {
-			maxSerializedBytes: 64 * 1024 * 1024,
-			maxStates: 100000,
-			maxReceipts: 1000000,
-		},
+		checkpointRestoreLimits: workerCheckpointLimits,
 		checkpointRetryPolicy: {
 			maxAttempts: 3,
 			initialBackoffMs: 100,

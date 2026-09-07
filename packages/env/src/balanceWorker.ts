@@ -45,6 +45,26 @@ const workerEnvironmentBaseSchema = z.object({
 		.default(".data/balance-worker.sqlite"),
 	BALANCE_WORKER_MAX_REQUEST_BYTES: positiveInteger.default(1048576),
 	BALANCE_WORKER_RECEIPT_RETENTION_MS: positiveInteger.default(86400000),
+	BALANCE_WORKER_CHECKPOINT_MODE: z
+		.enum(["off", "restore_only", "enabled"])
+		.default("off"),
+	BALANCE_WORKER_CHECKPOINT_BUCKET: z.string().trim().min(1).optional(),
+	BALANCE_WORKER_CHECKPOINT_REGION: z.string().trim().min(1).optional(),
+	BALANCE_WORKER_CHECKPOINT_PREFIX: z
+		.string()
+		.trim()
+		.refine(hasCheckpointPrefix)
+		.default("balance-checkpoints"),
+	BALANCE_WORKER_CHECKPOINT_ENDPOINT: z
+		.string()
+		.url()
+		.regex(/^https?:\/\//)
+		.optional(),
+	BALANCE_WORKER_CHECKPOINT_FORCE_PATH_STYLE: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform(isTrue),
+	BALANCE_WORKER_CHECKPOINT_INTERVAL_MS: positiveInteger.default(60000),
 });
 
 const workerEnvironmentSchema = workerEnvironmentBaseSchema.superRefine(
@@ -55,6 +75,25 @@ function validateWorkerEnvironment(
 	env: z.infer<typeof workerEnvironmentBaseSchema>,
 	context: z.RefinementCtx,
 ): void {
+	if (env.BALANCE_WORKER_CHECKPOINT_MODE !== "off") {
+		for (const name of [
+			"BALANCE_WORKER_CHECKPOINT_BUCKET",
+			"BALANCE_WORKER_CHECKPOINT_REGION",
+		] as const) {
+			if (!env[name])
+				context.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: [name],
+					message: "is required when checkpoint mode is not off",
+				});
+		}
+		if (env.BALANCE_WORKER_SQLITE_PATH === ":memory:")
+			context.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["BALANCE_WORKER_SQLITE_PATH"],
+				message: "S3 checkpoints require a file-backed SQLite database",
+			});
+	}
 	if (env.BALANCE_WORKER_METERING_TOPIC === env.BALANCE_WORKER_OWNERSHIP_TOPIC)
 		context.addIssue({
 			code: z.ZodIssueCode.custom,
@@ -108,6 +147,12 @@ export function getBalanceWorkerEnv(): BalanceWorkerEnv {
 
 function isTopicName(value: string): boolean {
 	return value !== "." && value !== "..";
+}
+function isTrue(value: string): boolean {
+	return value === "true";
+}
+function hasCheckpointPrefix(value: string): boolean {
+	return value.replace(/^\/+|\/+$/g, "").trim().length > 0;
 }
 function parseBrokers(value: string): string[] {
 	const brokers: string[] = [];
