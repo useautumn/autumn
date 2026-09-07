@@ -1,5 +1,6 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan.js";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct.js";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
 
@@ -27,7 +28,20 @@ export const computeCreateCustomerPlan = ({
 		}),
 	);
 
+	// A default plan mints pools like any other attach. Runs before the products
+	// are handed to the customer, since it fills their pooled balances in place.
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer,
+		incomingCustomerProducts: insertCustomerProducts,
+		now: currentEpochMs,
+	});
+
 	context.fullCustomer.customer_products = insertCustomerProducts;
 
-	return { customerId: fullCustomer?.id ?? "", insertCustomerProducts };
+	return {
+		customerId: fullCustomer?.id ?? "",
+		insertCustomerProducts,
+		pooledBalancePlan,
+	};
 };

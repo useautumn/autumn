@@ -96,7 +96,7 @@ const createEntities = async ({
 
 	newEntities.push(...insertedEntities);
 
-	await attachDefaultProductsToEntities({
+	const fullCusWithDefaults = await attachDefaultProductsToEntities({
 		ctx,
 		fullCustomer: fullCus,
 		entities: newEntities,
@@ -106,7 +106,7 @@ const createEntities = async ({
 	// Get api entity for each entity...
 	const apiEntities = [];
 	for (const entity of newEntities) {
-		const clonedFullCus = structuredClone(fullCus);
+		const clonedFullCus = structuredClone(fullCusWithDefaults);
 		clonedFullCus.entity = entity;
 
 		const apiEntity = await getApiEntity({

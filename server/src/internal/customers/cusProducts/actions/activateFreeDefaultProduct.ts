@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { productActions } from "@/internal/products/actions";
 
@@ -68,12 +69,23 @@ export const activateFreeDefaultProduct = async ({
 		},
 	});
 
+	// A default carrying pooled items mints its pool like any other transition,
+	// and the expiring product's contributions are torn down with it.
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer,
+		outgoingCustomerProducts: [customerProduct],
+		incomingCustomerProducts: [newCustomerProduct],
+		now: Date.now(),
+	});
+
 	// 3. Execute autumn billing plan
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
 			customerId: fullCustomer?.id ?? "",
 			insertCustomerProducts: [newCustomerProduct],
+			pooledBalancePlan,
 		},
 	});
 
