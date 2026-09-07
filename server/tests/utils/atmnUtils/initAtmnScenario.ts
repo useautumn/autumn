@@ -274,7 +274,7 @@ export const initAtmnScenario = async ({
 		push: async ({ dryRun = false } = {}) => {
 			const output = runCli({
 				cwd,
-				args: ["push", ...(dryRun ? ["--dry-run"] : [])],
+				args: ["push", dryRun ? "--dry-run" : "--yes"],
 				secretKey: scenario.ctx.orgSecretKey,
 				baseUrl,
 			});

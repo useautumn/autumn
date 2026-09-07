@@ -10,6 +10,7 @@ import {
 	type TargetFlags,
 } from "./env/resolveTarget";
 import { createClient } from "./generated/client";
+import { previewIsEmpty } from "./render/renderPreview";
 import { version } from "./version";
 
 const NOT_IMPLEMENTED = (step: string) => () => {
@@ -51,9 +52,11 @@ export const buildProgram = (): Command => {
 	withEnvironmentFlags(
 		program
 			.command("push")
-			.description("apply autumn.config.ts to your catalog")
-			.option("-y, --yes", "skip confirmation prompts")
-			.option("-d, --dry-run", "preview without applying"),
+			.description(
+				"preview autumn.config.ts against your catalog; --yes applies it",
+			)
+			.option("-y, --yes", "apply the changes the preview shows")
+			.option("-d, --dry-run", "preview only, even with --yes"),
 	).action(
 		async (options: TargetFlags & { dryRun?: boolean; yes?: boolean }) => {
 			// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
@@ -62,17 +65,18 @@ export const buildProgram = (): Command => {
 			loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
 
 			const target = resolveTarget(options);
-			// A person at a terminal sees the preview and says yes; `--yes` skips the
-			// question; a script (no TTY) applies straight away, deletions included.
-			const interactive = process.stdin.isTTY === true && options.yes !== true;
-			await runPush({
+			// Nothing is applied unless asked: a plain push is the preview, and the
+			// same command with --yes is the write. Deletions ride the same gate.
+			const apply = options.yes === true && options.dryRun !== true;
+			const result = await runPush({
 				client: createClient({
 					secretKey: requireSecretKey({ target }),
 					...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
 				}),
-				dryRun: options.dryRun === true,
-				...(interactive ? { confirm: confirmApply } : {}),
+				dryRun: !apply,
 			});
+			if (!apply && !previewIsEmpty({ preview: result.preview }))
+				process.stdout.write("Re-run with --yes to apply these changes.\n");
 		},
 	);
 
@@ -109,18 +113,6 @@ export const buildProgram = (): Command => {
 		.action(NOT_IMPLEMENTED("3.0"));
 
 	return program;
-};
-
-/** One question on the terminal: apply what the preview showed? */
-const confirmApply = async (): Promise<boolean> => {
-	const { createInterface } = await import("node:readline/promises");
-	const rl = createInterface({ input: process.stdin, output: process.stdout });
-	try {
-		const answer = await rl.question("\nApply these changes? [y/N] ");
-		return /^y(es)?$/i.test(answer.trim());
-	} finally {
-		rl.close();
-	}
 };
 
 export const run = async ({ argv }: { argv: string[] }): Promise<void> => {

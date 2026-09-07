@@ -33,8 +33,66 @@ export type PushOptions = {
 	/** Where to write progress. Injected so tests can capture it. */
 	write?: (text: string) => void;
 	migrationLinkBase?: string;
-	/** Asked after the preview, before anything is applied; false aborts. */
-	confirm?: () => Promise<boolean>;
+};
+
+type WireLike = {
+	features?: { feature_id?: string; internal_id?: string }[];
+	plans?: { plan_id?: string; internal_id?: string }[];
+};
+
+/**
+ * A rename the config cannot express shows up as a delete beside a create
+ * with no internalId. The push may be right, so this is a note, not a refusal.
+ */
+export const possibleRenameHint = ({
+	preview,
+	wire,
+}: {
+	preview: CatalogPreview;
+	wire: WireLike;
+}): string | null => {
+	const lanes: {
+		rows: { action?: string; featureId?: string; planId?: string }[];
+		idOf: (row: { featureId?: string; planId?: string }) => string | undefined;
+		stated: Set<string>;
+		noun: string;
+	}[] = [
+		{
+			rows: preview.features ?? [],
+			idOf: (row) => row.featureId,
+			stated: new Set(
+				(wire.features ?? [])
+					.filter((row) => row.internal_id === undefined)
+					.map((row) => row.feature_id ?? ""),
+			),
+			noun: "feature",
+		},
+		{
+			rows: preview.plans ?? [],
+			idOf: (row) => row.planId,
+			stated: new Set(
+				(wire.plans ?? [])
+					.filter((row) => row.internal_id === undefined)
+					.map((row) => row.plan_id ?? ""),
+			),
+			noun: "plan",
+		},
+	];
+	const notes: string[] = [];
+	for (const lane of lanes) {
+		const deleted = lane.rows
+			.filter((row) => row.action === "delete")
+			.map((row) => lane.idOf(row) ?? "?");
+		const createdWithoutId = lane.rows
+			.filter((row) => row.action === "create")
+			.map((row) => lane.idOf(row) ?? "?")
+			.filter((id) => lane.stated.has(id));
+		if (deleted.length === 0 || createdWithoutId.length === 0) continue;
+		notes.push(
+			`Note: this push removes ${lane.noun} ${deleted.join(", ")} and creates ${createdWithoutId.join(", ")} without an internalId. If that is a rename, pull first so the fixture carries its id, or it will be treated as delete + create.`,
+		);
+	}
+	return notes.length > 0 ? notes.join("\n") : null;
 };
 
 /** The directories a config may live in, nearest first. */
@@ -54,7 +112,6 @@ export const runPush = async ({
 	dryRun = false,
 	write = (text) => process.stdout.write(text),
 	migrationLinkBase,
-	confirm,
 }: PushOptions): Promise<PushResult> => {
 	const dirs = configSearchDirs({ cwd });
 	loadEnvFiles({ dirs });
@@ -73,15 +130,14 @@ export const runPush = async ({
 
 	write(`${renderPreview({ preview, migrationLinkBase })}\n`);
 
+	const renameHint = possibleRenameHint({ preview, wire: wire as WireLike });
+	if (renameHint !== null) write(`${renameHint}\n\n`);
+
 	if (previewIsEmpty({ preview })) {
 		return { configPath, preview, migrationIds: [] };
 	}
 	if (dryRun) {
 		write("\nDry run — nothing applied.\n");
-		return { configPath, preview, migrationIds: [] };
-	}
-	if (confirm !== undefined && !(await confirm())) {
-		write("\nNothing applied.\n");
 		return { configPath, preview, migrationIds: [] };
 	}
 
