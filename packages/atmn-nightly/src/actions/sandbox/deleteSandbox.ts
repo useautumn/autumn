@@ -1,6 +1,7 @@
-import { readEnvFileValue, removeEnvValues } from "../../env/loadEnv";
+import { removeEnvValues, removeEnvValueWhen } from "../../env/loadEnv";
 import { SANDBOX_PIN_NAME, sandboxKeyName } from "../../env/sandboxKeyName";
 import type { SandboxRow } from "../../render/renderSandboxes";
+import { stripTerminalControls } from "../../render/stripTerminalControls";
 import type { SandboxClient, WriteLine } from "./types/sandboxClient";
 
 export type SandboxDeleteOptions = {
@@ -11,28 +12,37 @@ export type SandboxDeleteOptions = {
 	/** Where to look for the .env the sandbox's key is scrubbed from. */
 	envDirs: string[];
 	write?: WriteLine;
+	writeError?: WriteLine;
 };
 
 export type SandboxDeleteResult = {
 	deleted: boolean;
 	sandbox: SandboxRow;
-	/** The .env that changed, when the sandbox had a key or the pin there. */
-	envPath?: string;
+	/** Every .env that changed; empty when the sandbox had no key or pin on disk. */
+	envPaths: string[];
 };
 
-/** The pin only goes when it pointed here; another sandbox may own it. */
-const scrubbedKeys = ({
+/** The key goes from every file holding it; the pin only where it pointed
+ * here, since another sandbox may own it in another file. */
+const scrubSandboxFromEnv = ({
 	sandboxId,
 	envDirs,
 }: {
 	sandboxId: string;
 	envDirs: string[];
 }): string[] => {
-	const pinnedId = readEnvFileValue({ dirs: envDirs, key: SANDBOX_PIN_NAME });
-	return [
-		sandboxKeyName({ sandboxId }),
-		...(pinnedId === sandboxId ? [SANDBOX_PIN_NAME] : []),
+	const scrubbed = [
+		...removeEnvValues({
+			dirs: envDirs,
+			keys: [sandboxKeyName({ sandboxId })],
+		}),
+		...removeEnvValueWhen({
+			dirs: envDirs,
+			key: SANDBOX_PIN_NAME,
+			equals: sandboxId,
+		}),
 	];
+	return [...new Set(scrubbed)];
 };
 
 export const runSandboxDelete = async ({
@@ -41,6 +51,7 @@ export const runSandboxDelete = async ({
 	yes = false,
 	envDirs,
 	write = (text) => process.stdout.write(text),
+	writeError = (text) => process.stderr.write(text),
 }: SandboxDeleteOptions): Promise<SandboxDeleteResult> => {
 	// Listing first names the sandbox in the copy, and turns a typo into an
 	// error instead of a request the server has to refuse.
@@ -52,22 +63,29 @@ export const runSandboxDelete = async ({
 
 	if (!yes) {
 		write(
-			`This deletes sandbox ${sandbox.name} (${sandbox.id}) and everything in it. Re-run with --yes to delete.\n`,
+			`This deletes sandbox ${stripTerminalControls(sandbox.name)} (${sandbox.id}) and everything in it. Re-run with --yes to delete.\n`,
 		);
-		return { deleted: false, sandbox };
+		return { deleted: false, sandbox, envPaths: [] };
 	}
 
 	await client.deleteSandbox({ id: sandbox.id });
-	const envPath = removeEnvValues({
-		dirs: envDirs,
-		keys: scrubbedKeys({ sandboxId: sandbox.id, envDirs }),
-	});
+	// The remote delete is done and cannot be undone: say so before anything
+	// local can fail, so a .env error never reads as a failed deletion.
+	write(
+		`Deleted sandbox ${stripTerminalControls(sandbox.name)} (${sandbox.id}).\n`,
+	);
 
-	write(`Deleted sandbox ${sandbox.name} (${sandbox.id}).\n`);
-	if (envPath !== undefined) write(`Dropped its key from ${envPath}.\n`);
-	return {
-		deleted: true,
-		sandbox,
-		...(envPath === undefined ? {} : { envPath }),
-	};
+	let envPaths: string[];
+	try {
+		envPaths = scrubSandboxFromEnv({ sandboxId: sandbox.id, envDirs });
+	} catch (error) {
+		writeError(
+			`Sandbox ${sandbox.id} is gone, but its .env could not be rewritten. Remove the line ${sandboxKeyName({ sandboxId: sandbox.id })}=... by hand, and ${SANDBOX_PIN_NAME}=${sandbox.id} if it is there.\n`,
+		);
+		throw error;
+	}
+
+	if (envPaths.length > 0)
+		write(`Dropped its key from ${envPaths.join(", ")}.\n`);
+	return { deleted: true, sandbox, envPaths };
 };

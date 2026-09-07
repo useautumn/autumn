@@ -172,7 +172,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -1286,7 +1286,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -2067,7 +2067,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -3177,7 +3177,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -3960,7 +3960,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -5044,7 +5044,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -5809,7 +5809,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -6797,7 +6797,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -7472,7 +7472,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -8556,7 +8556,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -9319,7 +9319,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -10307,7 +10307,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -10990,7 +10990,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -12100,7 +12100,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -12897,7 +12897,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -13981,7 +13981,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -14736,7 +14736,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -15846,7 +15846,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -16641,7 +16641,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;
@@ -17725,7 +17725,7 @@ ignorePastDue?: boolean;
 /** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
 allowOverdueEntitlements?: boolean;
 } | null;
-/** Previous active pointer when it changed. True on the version this update demotes. */
+/** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
 archived?: boolean | null;
 metadata?: Record<string, unknown> | null;

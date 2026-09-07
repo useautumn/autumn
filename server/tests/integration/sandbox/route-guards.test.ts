@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { AppEnv, apiKeys, organizations } from "@autumn/shared";
+import { AppEnv, apiKeys } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
@@ -55,11 +55,11 @@ afterAll(async () => {
 			.catch(() => {});
 	}
 	if (!createdSandboxId) return;
-	await postStatus("/sandboxes.delete", { id: createdSandboxId });
-	await db
-		.delete(organizations)
-		.where(eq(organizations.id, createdSandboxId))
-		.catch(() => {});
+	// The route runs the dependent teardown a direct row delete would skip, so a
+	// regression in it has to fail here rather than leak a sandbox against the cap.
+	expect(await postStatus("/sandboxes.delete", { id: createdSandboxId })).toBe(
+		200,
+	);
 });
 
 describe("sandbox route guards (zod + actor wiring on the request path)", () => {

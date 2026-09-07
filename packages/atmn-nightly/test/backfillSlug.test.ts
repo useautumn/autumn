@@ -5,7 +5,7 @@
 
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { runPush } from "../src/actions/push";
+import { backfillSummary, runPush } from "../src/actions/push";
 
 const dir = `${import.meta.dir}/.tmp/backfill-slug`;
 
@@ -61,10 +61,24 @@ test("a first push writes internalId and versionSlug into the fixture, once", as
 		'plan({ internalId: "prod_1", planId: "pro", name: "Pro", price: { amount: 49, interval: "month" }, versionSlug: "v1" })',
 	);
 	expect(printed.join("")).toContain(
-		"Wrote internalId and versionSlug into 1 fixture.",
+		"Wrote internalId into 1 fixture and versionSlug into 1 fixture.",
 	);
 
 	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	await runPush({ client: client as any, cwd: dir, write: () => {} });
 	expect(readFileSync(`${dir}/autumn.config.ts`, "utf8")).toBe(after);
+});
+
+/** The two sets overlap only sometimes: one fixture may take just the slug and
+ * another just the id, and the summary must not imply both got both. */
+test("the summary counts each field separately", () => {
+	expect(backfillSummary({ backfilled: ["pro"], slugged: ["free"] })).toBe(
+		"Wrote internalId into 1 fixture and versionSlug into 1 fixture.\n",
+	);
+	expect(backfillSummary({ backfilled: ["pro", "free"], slugged: [] })).toBe(
+		"Wrote internalId into 2 fixtures.\n",
+	);
+	expect(backfillSummary({ backfilled: [], slugged: ["pro"] })).toBe(
+		"Wrote versionSlug into 1 fixture.\n",
+	);
 });

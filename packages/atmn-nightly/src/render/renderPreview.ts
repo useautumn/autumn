@@ -350,28 +350,41 @@ const renderLicenseChanges = ({
 		];
 	});
 
+/** Lines a caller already put on the row itself, so the detail block does not
+ * print them twice. */
+type CoveredDetail = "name" | "price" | "items";
+
 /** Every field-level line the server's plan diff carries, nested under a row. */
 const renderPlanChangeDetail = ({
 	planChange,
 	current = {},
 	indent,
+	covered = [],
 }: {
 	planChange: PlanChangeLite;
 	current?: Record<string, unknown>;
 	indent: string;
+	covered?: readonly CoveredDetail[];
 }): string[] => [
 	...renderPreviousAttributes({
 		attributes: planChange.previousAttributes,
-		skip: planChange.freeTrialChange === undefined ? [] : ["freeTrial"],
+		skip: [
+			...(planChange.freeTrialChange === undefined ? [] : ["freeTrial"]),
+			...(covered.includes("name") ? ["name"] : []),
+		],
 		indent,
 		current,
 	}),
-	...renderPriceChange({ priceChange: planChange.priceChange, indent }),
+	...(covered.includes("price")
+		? []
+		: renderPriceChange({ priceChange: planChange.priceChange, indent })),
 	...renderFreeTrialChange({
 		freeTrialChange: planChange.freeTrialChange,
 		indent,
 	}),
-	...renderItemChanges({ itemChanges: planChange.itemChanges ?? [], indent }),
+	...(covered.includes("items")
+		? []
+		: renderItemChanges({ itemChanges: planChange.itemChanges ?? [], indent })),
 	...renderLicenseChanges({
 		licenseChanges: planChange.licenseChanges ?? [],
 		indent,
@@ -499,6 +512,15 @@ const renderVariantRow = ({
 				itemChanges: planChange?.itemChanges ?? [],
 				indent: detailIndent,
 			}),
+			// The row's label carries the name and the price, and the items are
+			// already out; everything else the server sent still belongs here.
+			...(planChange
+				? renderPlanChangeDetail({
+						planChange,
+						indent: detailIndent,
+						covered: ["name", "price", "items"],
+					})
+				: []),
 			...nested,
 		];
 	}
@@ -567,7 +589,11 @@ export type PlannedMigration = {
 	includeCustom?: boolean;
 };
 
-/** The plan row a migration target names: the row itself, or the sibling version it lists. */
+/**
+ * The plan row a migration target names: the top-level row for that version,
+ * else the sibling version one of them lists. Undefined when nothing matches —
+ * another version's customer count and diff would describe the wrong move.
+ */
 const planRowForTarget = ({
 	plans,
 	planId,
@@ -577,13 +603,16 @@ const planRowForTarget = ({
 	planId: string;
 	version: number;
 }): PlanChange | undefined => {
-	const row = plans.find((plan) => plan.planId === planId);
-	if (row === undefined) return undefined;
-	if (row.version === version) return row;
-	const sibling = (row.siblingVersions ?? []).find(
-		(candidate) => candidate.version === version,
-	);
-	return sibling !== undefined ? { ...row, ...sibling } : row;
+	const rows = plans.filter((plan) => plan.planId === planId);
+	const direct = rows.find((row) => row.version === version);
+	if (direct !== undefined) return direct;
+	for (const row of rows) {
+		const sibling = (row.siblingVersions ?? []).find(
+			(candidate) => candidate.version === version,
+		);
+		if (sibling !== undefined) return { ...row, ...sibling };
+	}
+	return undefined;
 };
 
 const customerCount = ({ row }: { row: PlanChange | undefined }): string => {

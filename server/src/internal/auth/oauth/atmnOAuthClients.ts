@@ -28,6 +28,9 @@ const ATMN_OAUTH_SCOPES = new Set<string>([
 	"apiKeys:read",
 	"rewards:read",
 	"rewards:write",
+	// atmn v3 `reset` clears the sandbox's migration drafts alongside its catalog.
+	"migrations:read",
+	"migrations:write",
 	// atmn v3 `sandbox create|delete` mint and drop sub-orgs through /v1/sandboxes.*
 	"platform:read",
 	"platform:write",

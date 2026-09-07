@@ -54,6 +54,50 @@ export const findFixture = ({
 	return null;
 };
 
+const SIMPLE_ESCAPES: Record<string, string> = {
+	n: "\n",
+	t: "\t",
+	r: "\r",
+	b: "\b",
+	f: "\f",
+	v: "\v",
+	"0": "\0",
+};
+
+const CODE_POINT_ESCAPE = /^u\{([0-9a-fA-F]{1,6})\}/;
+const CODE_UNIT_ESCAPE = /^u([0-9a-fA-F]{4})/;
+const HEX_ESCAPE = /^x([0-9a-fA-F]{2})/;
+
+/** A quoted string's body as the runtime reads it, so `'a\\'b'` and `"a'b"`
+ * name one fixture. */
+const decodeStringBody = (body: string): string => {
+	let decoded = "";
+	let index = 0;
+	while (index < body.length) {
+		const char = body[index] ?? "";
+		if (char !== "\\") {
+			decoded += char;
+			index += 1;
+			continue;
+		}
+		const rest = body.slice(index + 1);
+		const numeric =
+			CODE_POINT_ESCAPE.exec(rest) ??
+			CODE_UNIT_ESCAPE.exec(rest) ??
+			HEX_ESCAPE.exec(rest);
+		if (numeric !== null) {
+			decoded += String.fromCodePoint(Number.parseInt(numeric[1] ?? "0", 16));
+			index += 1 + numeric[0].length;
+			continue;
+		}
+		const escaped = rest[0];
+		if (escaped === undefined) return decoded;
+		decoded += SIMPLE_ESCAPES[escaped] ?? escaped;
+		index += 2;
+	}
+	return decoded;
+};
+
 /**
  * The text a string node stands for, so `'pro'` and `"pro"` name one fixture.
  * Null for anything else — a template literal is a computed value, not an id.
@@ -61,16 +105,10 @@ export const findFixture = ({
 const stringLiteralValue = (node: SgNode): string | null => {
 	if (node.kind() !== "string") return null;
 	const text = node.text();
-	if (text.startsWith('"')) {
-		try {
-			return JSON.parse(text) as string;
-		} catch {
-			return null;
-		}
-	}
-	return text.startsWith("'") && text.endsWith("'") && text.length >= 2
-		? text.slice(1, -1)
-		: null;
+	const quote = text[0];
+	if (quote !== '"' && quote !== "'") return null;
+	if (text.length < 2 || !text.endsWith(quote)) return null;
+	return decodeStringBody(text.slice(1, -1));
 };
 
 /** The value of the object's own `key: value` member, ignoring nested objects. */

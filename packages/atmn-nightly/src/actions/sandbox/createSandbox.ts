@@ -4,6 +4,7 @@ import type {
 	CreateSandboxParams,
 	CreateSandboxResponse,
 } from "../../generated/client";
+import { stripTerminalControls } from "../../render/stripTerminalControls";
 import type { SandboxClient, WriteLine } from "./types/sandboxClient";
 
 export type SandboxCreateOptions = {
@@ -17,6 +18,7 @@ export type SandboxCreateOptions = {
 	/** Where to look for the .env the key is written to. */
 	envDirs: string[];
 	write?: WriteLine;
+	writeError?: WriteLine;
 };
 
 export type SandboxCreateResult = {
@@ -34,6 +36,7 @@ export const runSandboxCreate = async ({
 	json = false,
 	envDirs,
 	write = (text) => process.stdout.write(text),
+	writeError = (text) => process.stderr.write(text),
 }: SandboxCreateOptions): Promise<SandboxCreateResult> => {
 	const sandbox = await client.createSandbox({
 		name,
@@ -54,8 +57,9 @@ export const runSandboxCreate = async ({
 			},
 		});
 	} catch (error) {
-		// The key exists nowhere else: show it before the failure takes it.
-		write(
+		// The key exists nowhere else: show it before the failure takes it, on
+		// stderr under --json so stdout stays parseable.
+		(json ? writeError : write)(
 			`Could not write your .env. Save this key yourself:\n${keyName}=${sandbox.secretKey}\n`,
 		);
 		throw error;
@@ -67,7 +71,7 @@ export const runSandboxCreate = async ({
 	}
 
 	write(
-		`Created sandbox ${sandbox.name} (${sandbox.id}).\nSaved its key to ${envPath} as ${keyName}.\n`,
+		`Created sandbox ${stripTerminalControls(sandbox.name)} (${sandbox.id}).\nSaved its key to ${envPath} as ${keyName}.\n`,
 	);
 	if (use) {
 		write(

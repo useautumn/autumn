@@ -34,7 +34,7 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 		config: ApiPlanV1Schema.shape.config.nullable().optional(),
 		active: ApiPlanV1Schema.shape.active.nullable().optional().meta({
 			description:
-				"Previous active pointer when it changed. True on the version this update demotes.",
+				"The `active` flag before this update; true on the version being demoted.",
 		}),
 		archived: ApiPlanV1Schema.shape.archived.nullable().optional(),
 		metadata: ApiPlanV1Schema.shape.metadata.nullable().optional(),

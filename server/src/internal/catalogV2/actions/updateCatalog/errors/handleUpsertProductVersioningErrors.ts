@@ -1,6 +1,7 @@
 import {
 	type CatalogPlanVersioningStrategy,
 	type CatalogPropagateTargetParams,
+	type CatalogVariantParams,
 	ErrCode,
 	type FullProduct,
 	RecaseError,
@@ -10,10 +11,8 @@ import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCa
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
-import {
-	mintedVariantPins,
-	variantPinKey,
-} from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantEntryMintsRow";
+import { mintedVariantPins } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/mintedVariantPins";
+import { variantPinKey } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantEntryMintsRow";
 import { versionForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/versionForSlug";
 
 const rejectStrategyPlusExplicitVersion = ({
@@ -111,6 +110,42 @@ const rejectNewVersionOnMissingPlan = ({
 			statusCode: 400,
 		});
 	}
+};
+
+/**
+ * A numeric pin on a variants[] entry only addresses a row; version numbers are
+ * contiguous, so one naming no row is refused rather than remapped to the tip.
+ */
+const rejectUnknownVariantVersion = ({
+	variant,
+	productStatesContext,
+}: {
+	variant: CatalogVariantParams;
+	productStatesContext: ProductStatesContext;
+}): void => {
+	if (variant.version === undefined) return;
+	if (
+		fullProductForPlanParams({
+			planParams: {
+				plan_id: variant.variant_plan_id,
+				version: variant.version,
+			},
+			productStatesContext,
+		}) !== null
+	) {
+		return;
+	}
+
+	const nextVersion =
+		maxVersionForPlan({
+			planId: variant.variant_plan_id,
+			productStatesContext,
+		}) + 1;
+	throw new RecaseError({
+		message: `Unknown version ${variant.version} for plan_id=${variant.variant_plan_id}. The next version is ${nextVersion}; name it with version_slug to mint it.`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
 };
 
 /**
@@ -214,6 +249,10 @@ export const handleUpsertProductVersioningErrors = ({
 			version: planParams.version,
 			versionSlug: planParams.version_slug,
 		});
+
+		for (const variant of planParams.variants ?? []) {
+			rejectUnknownVariantVersion({ variant, productStatesContext });
+		}
 
 		const existingVersions =
 			productStatesContext.versionsByPlanId[planParams.plan_id] ?? [];

@@ -15,6 +15,9 @@ export const CreateSandboxParamsSchema = z.object({
 		.trim()
 		.min(1)
 		.max(100)
+		// The server trims before validating, which no client can see; the pattern
+		// states the same rule for generated SDKs.
+		.regex(/\S/, "Name must include a non-whitespace character")
 		.describe("A name for the sandbox, unique within your organization."),
 	color: SandboxColorSchema.optional().describe(
 		"Colour the dashboard uses to label the sandbox. Defaults to `gray`.",
@@ -44,7 +47,10 @@ export const CreateSandboxResponseSchema = SandboxSchema.extend({
 		.string()
 		.describe(
 			"The sandbox's own secret key. Shown once, here — store it before you discard the response.",
-		),
+		)
+		// The one-time key is response-only; `.readonly()` is what the OpenAPI
+		// converter turns into `readOnly: true` (a `meta` key is dropped).
+		.readonly(),
 });
 
 export const ListSandboxesParamsSchema = z

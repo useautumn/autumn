@@ -328,3 +328,107 @@ test("an id no sandbox has is an error, not a request", async () => {
 	).rejects.toThrow("No sandbox with id org_typo. Run atmn sandbox list.");
 	expect(calls.deleted).toEqual([]);
 });
+
+test("create --json keeps stdout parseable when the .env write fails", async () => {
+	// A directory where the .env should be makes the write fail after minting.
+	const dir = makeProjectDir();
+	mkdirSync(join(dir, ".env"));
+	const output = capture();
+	const errors = capture();
+
+	await expect(
+		runSandboxCreate({
+			client: fakeClient(),
+			name: "staging",
+			json: true,
+			envDirs: [dir],
+			write: output.write,
+			writeError: errors.write,
+		}),
+	).rejects.toThrow();
+	expect(output.text()).toBe("");
+	expect(errors.text()).toBe(
+		"Could not write your .env. Save this key yourself:\nAUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY=am_sk_test_minted\n",
+	);
+});
+
+test("a failed .env scrub never reads as a failed deletion", async () => {
+	const dir = makeProjectDir();
+	mkdirSync(join(dir, ".env"));
+	const output = capture();
+	const errors = capture();
+	const calls: Calls = { created: [], deleted: [] };
+
+	await expect(
+		runSandboxDelete({
+			client: fakeClient({
+				list: [sandbox({ id: "org_2n4b", name: "staging" })],
+				calls,
+			}),
+			id: "org_2n4b",
+			yes: true,
+			envDirs: [dir],
+			write: output.write,
+			writeError: errors.write,
+		}),
+	).rejects.toThrow();
+
+	expect(calls.deleted).toEqual([{ id: "org_2n4b" }]);
+	expect(output.text()).toBe("Deleted sandbox staging (org_2n4b).\n");
+	expect(errors.text()).toContain(
+		"Remove the line AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY=... by hand",
+	);
+	expect(errors.text()).toContain("AUTUMN_SANDBOX_ID=org_2n4b");
+});
+
+test("delete scrubs the key from a lower-precedence .env too", async () => {
+	// .env.local exists but holds nothing of this sandbox's; the effective key
+	// and pin live in .env, and both have to go.
+	const dir = makeProjectDir({
+		env: "AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY=am_sk_test_minted\nAUTUMN_SANDBOX_ID=org_2n4b\n",
+	});
+	writeFileSync(join(dir, ".env.local"), "AUTUMN_SECRET_KEY=am_sk_test_org\n");
+
+	const result = await runSandboxDelete({
+		client: fakeClient({
+			list: [sandbox({ id: "org_2n4b", name: "staging" })],
+		}),
+		id: "org_2n4b",
+		yes: true,
+		envDirs: [dir],
+		write: () => undefined,
+	});
+
+	expect(result.envPaths).toEqual([join(dir, ".env")]);
+	expect(envText({ dir })).toBe("");
+	expect(readFileSync(join(dir, ".env.local"), "utf8")).toBe(
+		"AUTUMN_SECRET_KEY=am_sk_test_org\n",
+	);
+});
+
+test("delete scrubs every file that holds the key", async () => {
+	const dir = makeProjectDir({
+		env: "AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY=am_sk_stale\nKEEP=1\n",
+	});
+	writeFileSync(
+		join(dir, ".env.local"),
+		"AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY=am_sk_test_minted\nAUTUMN_SANDBOX_ID=org_other\n",
+	);
+
+	const result = await runSandboxDelete({
+		client: fakeClient({
+			list: [sandbox({ id: "org_2n4b", name: "staging" })],
+		}),
+		id: "org_2n4b",
+		yes: true,
+		envDirs: [dir],
+		write: () => undefined,
+	});
+
+	expect(result.envPaths).toEqual([join(dir, ".env.local"), join(dir, ".env")]);
+	expect(envText({ dir })).toBe("KEEP=1\n");
+	// The pin names another sandbox: it stays.
+	expect(readFileSync(join(dir, ".env.local"), "utf8")).toBe(
+		"AUTUMN_SANDBOX_ID=org_other\n",
+	);
+});

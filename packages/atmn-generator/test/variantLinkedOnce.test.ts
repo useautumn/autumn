@@ -119,3 +119,71 @@ test("a variant pinned by version number is named by that pin", () => {
 		"pro_yearly v1 is linked from pro v2 and pro v1.",
 	);
 });
+
+test("a numeric pin and a slug pin are different rows, not one link twice", () => {
+	// A variant version with a custom slug makes `version: 1` and
+	// `versionSlug: "v1"` name different rows; conflating them invents an error.
+	expect(
+		issuesFor(
+			stated({
+				plans: [
+					{
+						planId: "pro",
+						versionSlug: "v2",
+						variants: [{ variantPlanId: "pro_yearly", version: 1 }],
+					},
+				],
+				planVersions: [
+					{
+						planId: "pro",
+						versionSlug: "v1",
+						variants: [{ variantPlanId: "pro_yearly", versionSlug: "v1" }],
+					},
+				],
+			}),
+		),
+	).toEqual([]);
+});
+
+test("one plan listing the same variant pin twice is refused", () => {
+	const issues = issuesFor(
+		stated({
+			plans: [
+				{
+					planId: "pro",
+					versionSlug: "v2",
+					variants: [
+						{ variantPlanId: "pro_yearly", versionSlug: "v1" },
+						{ variantPlanId: "pro_yearly", versionSlug: "v1" },
+					],
+				},
+			],
+			planVersions: [],
+		}),
+	);
+
+	expect(issues[0]?.message).toStartWith(
+		"pro_yearly v1 is linked twice from pro v2.",
+	);
+});
+
+test("one plan listing the same unpinned variant twice is refused", () => {
+	const issues = issuesFor(
+		stated({
+			plans: [
+				{
+					planId: "pro",
+					variants: [
+						{ variantPlanId: "pro_yearly" },
+						{ variantPlanId: "pro_yearly" },
+					],
+				},
+			],
+			planVersions: [],
+		}),
+	);
+
+	expect(issues[0]?.message).toStartWith(
+		"pro_yearly is linked twice from pro v1.",
+	);
+});

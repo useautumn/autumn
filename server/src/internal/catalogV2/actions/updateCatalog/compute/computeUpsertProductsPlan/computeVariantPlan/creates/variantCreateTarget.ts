@@ -1,17 +1,18 @@
 import type { CatalogVariantParams, FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
-import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { variantEntryMintsRow } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantEntryMintsRow";
 
 /** The row a variants[] entry asks this push to write, and what it inherits. */
 export type VariantCreateTarget = {
 	version: number;
-	/** Latest row of the variant plan; null when the plan is new here. */
+	/** Highest-numbered row of the variant plan; null when the plan is new here. */
 	previous: FullProduct | null;
 	newVersionSlug?: string;
 };
 
+// By version, not by `active`: a minted row succeeds the tip of the plan, and
+// the tip can be an inactive row the pointer has not moved to yet.
 const latestRowForPlan = ({
 	planId,
 	productStatesContext,
@@ -19,7 +20,6 @@ const latestRowForPlan = ({
 	planId: string;
 	productStatesContext: ProductStatesContext;
 }): FullProduct | null =>
-	activeFullProductForPlan({ planId, productStatesContext }) ??
 	(
 		productStatesContext.versionsByPlanId[planId] ?? []
 	).reduce<FullProduct | null>(
@@ -46,9 +46,9 @@ export const variantCreateTarget = ({
 		planId: variant.variant_plan_id,
 		productStatesContext,
 	});
-	// A brand-new variant plan has no name to inherit, so the entry must state one.
+	// A brand-new variant plan has no name to inherit; a nameless entry is a 400
+	// from handleVariantErrors, and the create path falls back to the plan id.
 	if (maxVersion === 0) {
-		if (!variant.name) return null;
 		return {
 			version: 1,
 			previous: null,

@@ -133,3 +133,35 @@ describe("patchFixtureProperty", () => {
 ];`);
 	});
 });
+
+test("an appended property lands after a trailing spread", () => {
+	const source = `export const pro = plan({ planId: "pro", ...base });\n`;
+	expect(
+		patchFixtureProperty({
+			source,
+			builder: "plan",
+			idField: "planId",
+			id: "pro",
+			property: "versionSlug",
+			text: '"v2"',
+		}),
+	).toBe(
+		`export const pro = plan({ planId: "pro", ...base, versionSlug: "v2" });\n`,
+	);
+});
+
+test("a leading spread still appends at the end", () => {
+	const source = `export const pro = plan({ ...base, planId: "pro" });\n`;
+	expect(
+		patchFixtureProperty({
+			source,
+			builder: "plan",
+			idField: "planId",
+			id: "pro",
+			property: "versionSlug",
+			text: '"v2"',
+		}),
+	).toBe(
+		`export const pro = plan({ ...base, planId: "pro", versionSlug: "v2" });\n`,
+	);
+});

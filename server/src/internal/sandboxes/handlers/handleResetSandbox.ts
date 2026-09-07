@@ -9,6 +9,7 @@ export const handleResetSandbox = createRoute({
 			Scopes.Plans.Write,
 			Scopes.Features.Write,
 			Scopes.Customers.Write,
+			Scopes.Migrations.Write,
 		],
 	},
 	body: ResetSandboxParamsSchema,

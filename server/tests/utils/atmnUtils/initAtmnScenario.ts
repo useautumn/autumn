@@ -180,8 +180,13 @@ export type AtmnScenario = {
 		planId: string;
 		customerId?: string;
 	}) => Promise<void>;
-	/** A customer on one plan version, DB only, no Stripe — cheap, counts migrations. */
-	seedCustomer: (params: { planId: string; version?: number }) => Promise<void>;
+	/** A customer on one plan version, DB only, no Stripe — cheap, counts migrations.
+	 *  Returns the seeded ids: `cleanup()` does not know about them. */
+	seedCustomer: (params: { planId: string; version?: number }) => Promise<{
+		customerId: string;
+		internalCustomerId: string;
+		cusProductId: string;
+	}>;
 	cleanup: () => void;
 };
 
@@ -306,9 +311,8 @@ export const initAtmnScenario = async ({
 				plan_id: planId,
 			});
 		},
-		seedCustomer: async ({ planId, version }) => {
-			await seedVersionableCustomer({ ctx: scenario.ctx, planId, version });
-		},
+		seedCustomer: async ({ planId, version }) =>
+			await seedVersionableCustomer({ ctx: scenario.ctx, planId, version }),
 		cleanup: () => {
 			rmSync(cwd, { recursive: true, force: true });
 			// The scenario provisioned a customer; best effort, never awaited by tests.

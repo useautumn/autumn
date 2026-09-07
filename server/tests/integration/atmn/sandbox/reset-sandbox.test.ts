@@ -144,8 +144,13 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 		await scenario.push();
 		expect(await liveCatalog({ client: sandboxClient })).toEqual(populated);
 	} finally {
-		if (sandboxId !== undefined)
-			atmn(["sandbox", "delete", sandboxId, "--yes"]);
+		if (sandboxId !== undefined) {
+			try {
+				atmn(["sandbox", "delete", sandboxId, "--yes"]);
+			} catch (error) {
+				console.warn(`reset-sandbox cleanup: delete failed — ${error}`);
+			}
+		}
 		scenario.cleanup();
 	}
 }, 600_000);

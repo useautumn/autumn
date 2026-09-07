@@ -43,3 +43,17 @@ test("requests modern read/write scopes and forces the org picker", () => {
 	]);
 	expect(url.searchParams.get("prompt")).toBe("consent");
 });
+
+test("asks for the scopes the sandbox commands and reset need", () => {
+	// A key without these is refused by the server, and only a re-login mints
+	// one that has them — so the list, not the flow, is what breaks.
+	const scopes = new Set<string>(CLI_OAUTH_SCOPES);
+	for (const scope of [
+		"platform:read",
+		"platform:write",
+		"migrations:read",
+		"migrations:write",
+	]) {
+		expect(scopes).toContain(scope);
+	}
+});

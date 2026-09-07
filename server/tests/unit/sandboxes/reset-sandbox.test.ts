@@ -31,9 +31,17 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const draft = ({ id }: { id: string }): Migration => ({ id }) as Migration;
 
+/** The reset runs its deletes in one transaction; the stub just runs the body. */
 const contextFor = ({ env }: { env: AppEnv }): AutumnContext =>
 	({
-		db: {},
+		db: {
+			transaction: async <T>(run: (tx: unknown) => Promise<T>): Promise<T> => {
+				calls.push("tx:begin");
+				const result = await run({});
+				calls.push("tx:commit");
+				return result;
+			},
+		},
 		org: { id: "org_sandbox" },
 		env,
 		logger: { info: () => {}, warn: () => {}, error: () => {} },
@@ -57,6 +65,10 @@ const stubDeletes = ({
 		spyOn(migrationRepo, "delete").mockImplementation(async ({ id }) => {
 			if (refuses.includes(id)) throw runHistoryRefusal({ id });
 			calls.push(`migration:${id}`);
+			return draft({ id });
+		}),
+		spyOn(migrationRepo, "update").mockImplementation(async ({ id }) => {
+			calls.push(`archived:${id}`);
 			return draft({ id });
 		}),
 		spyOn(CusService, "safeDeleteByOrgId").mockImplementation(async () => {
@@ -99,17 +111,19 @@ describe("resetSandbox (sandbox-only, drafts before the catalog)", () => {
 		await resetSandbox({ ctx: contextFor({ env: AppEnv.Sandbox }) });
 
 		expect(calls).toEqual([
+			"tx:begin",
 			"migration:mig_1",
 			"migration:mig_2",
 			"customers",
 			"products",
 			"features",
+			"tx:commit",
 			"cache:products",
 			"cache:org",
 		]);
 	});
 
-	test("skips a draft with customer run history and finishes the rest", async () => {
+	test("archives a draft with customer run history and finishes the rest", async () => {
 		stubDeletes({
 			drafts: [
 				draft({ id: "mig_1" }),
@@ -122,11 +136,42 @@ describe("resetSandbox (sandbox-only, drafts before the catalog)", () => {
 		await resetSandbox({ ctx: contextFor({ env: AppEnv.Sandbox }) });
 
 		expect(calls).toEqual([
+			"tx:begin",
 			"migration:mig_1",
+			"archived:mig_ran",
 			"migration:mig_2",
 			"customers",
 			"products",
 			"features",
+			"tx:commit",
+			"cache:products",
+			"cache:org",
+		]);
+		expect(migrationRepo.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				id: "mig_ran",
+				updates: { archived: true },
+			}),
+		);
+	});
+
+	test("a failed delete still drops the caches the wipe would have staled", async () => {
+		stubDeletes({ drafts: [] });
+		spies.push(
+			spyOn(ProductService, "safeDeleteByOrgId").mockImplementation(
+				async () => {
+					throw new Error("products delete failed");
+				},
+			),
+		);
+
+		await expect(
+			resetSandbox({ ctx: contextFor({ env: AppEnv.Sandbox }) }),
+		).rejects.toThrow("products delete failed");
+
+		expect(calls).toEqual([
+			"tx:begin",
+			"customers",
 			"cache:products",
 			"cache:org",
 		]);

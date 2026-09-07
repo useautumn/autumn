@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import type { ListSandboxesResponse } from "../generated/client";
+import { stripTerminalControls } from "./stripTerminalControls";
 
 /**
  * Headless rendering, like the preview: a table a terminal or a CI log can
@@ -70,7 +71,7 @@ export const renderSandboxes = ({
 
 	const rows = sandboxes.map((sandbox) => [
 		sandbox.id,
-		sandbox.name,
+		stripTerminalControls(sandbox.name),
 		relativeAge({ createdAt: sandbox.createdAt, now }),
 	]);
 	const widths = columnWidths({ rows });

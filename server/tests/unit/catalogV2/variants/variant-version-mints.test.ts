@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { BillingInterval, type UpdateCatalogParams } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";
 import { deriveVariantIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveVariantIntents";
+import { handleVariantErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleVariantErrors";
 import { handleUpsertProductVersioningErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersioningErrors";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
@@ -135,33 +136,70 @@ describe("variants[] naming a version the catalog does not have", () => {
 		expect(intents[0]?.planParams.active).toBe(false);
 	});
 
-	test("a slug that names an existing row is an edit, not a mint", () => {
+	const upsertOnTeamV1 = ({
+		declaredVariants,
+	}: {
+		declaredVariants: UpsertProductPlan["declaredVariants"];
+	}): UpsertProductPlan =>
+		({
+			row: {
+				planId: "team",
+				version: 1,
+				op: "none",
+				source: "direct",
+				versioning: "existing",
+				currentFullProduct: teamV1,
+				baseFullProduct: null,
+				nextFullProduct: teamV1,
+			},
+			declaredVariants,
+			state: { hasCustomers: false, planHadLiveVersions: true },
+		}) as UpsertProductPlan;
+
+	test("a slug that names an existing row edits that row, and mints nothing", () => {
 		const intents = deriveVariantIntents({
 			intent: {
 				productKey: { planId: "team", version: 1 },
 				planParams: { plan_id: "team", version: 1 },
 				source: "direct",
 			},
-			upsert: {
-				row: {
-					planId: "team",
-					version: 1,
-					op: "none",
-					source: "direct",
-					versioning: "existing",
-					currentFullProduct: teamV1,
-					baseFullProduct: null,
-					nextFullProduct: teamV1,
-				},
-				declaredVariants: [{ variant_plan_id: "team-eu", version_slug: "v1" }],
-				state: { hasCustomers: false, planHadLiveVersions: true },
-			} as UpsertProductPlan,
+			upsert: upsertOnTeamV1({
+				declaredVariants: [
+					{
+						variant_plan_id: "team-eu",
+						version_slug: "v1",
+						customize: {
+							price: { amount: 250, interval: BillingInterval.Year },
+						},
+					},
+				],
+			}),
 			projectedProductStatesContext: statesWithTeamEu(),
 		});
 
 		expect(
 			intents.filter((intent) => intent.source === "variant_link"),
 		).toHaveLength(0);
+		const edit = intents.find(
+			(intent) => intent.source === "variant_propagation",
+		);
+		expect(edit?.productKey).toEqual({ planId: "team-eu", version: 1 });
+	});
+
+	test("a bare slug on an existing row is a no-op: no mint and no edit", () => {
+		const intents = deriveVariantIntents({
+			intent: {
+				productKey: { planId: "team", version: 1 },
+				planParams: { plan_id: "team", version: 1 },
+				source: "direct",
+			},
+			upsert: upsertOnTeamV1({
+				declaredVariants: [{ variant_plan_id: "team-eu", version_slug: "v1" }],
+			}),
+			projectedProductStatesContext: statesWithTeamEu(),
+		});
+
+		expect(intents).toHaveLength(0);
 	});
 
 	test("a plan with no rows still creates v1, under the stated slug", () => {
@@ -248,4 +286,122 @@ describe("propagate.variants pinning a slug this push mints", () => {
 			}),
 		).toThrow(/Unknown version_slug "v9" for plan_id=team-eu/);
 	});
+});
+
+describe("a variants[] entry naming a row nothing can mint", () => {
+	const paramsWithVariant = ({
+		variant,
+		propagate,
+	}: {
+		variant: Record<string, unknown>;
+		propagate?: Record<string, unknown>[];
+	}): UpdateCatalogParams =>
+		({
+			plans: [
+				{
+					plan_id: "team",
+					version: 2,
+					variants: [variant],
+					...(propagate ? { propagate: { variants: propagate } } : {}),
+				},
+			],
+		}) as UpdateCatalogParams;
+
+	test("a numeric version pin naming no row is refused, and names the next one", () => {
+		expect(() =>
+			handleUpsertProductVersioningErrors({
+				params: paramsWithVariant({
+					variant: { variant_plan_id: "team-eu", version: 5 },
+				}),
+				productStatesContext: statesWithTeamEu(),
+			}),
+		).toThrow(/Unknown version 5 for plan_id=team-eu\. The next version is 2/);
+	});
+
+	test('an explicit "latest" target is not the pin an unpinned entry mints', () => {
+		expect(() =>
+			handleUpsertProductVersioningErrors({
+				params: paramsWithVariant({
+					variant: { variant_plan_id: "team-fr", name: "Team FR" },
+					propagate: [{ plan_id: "team-fr", version_slug: "latest" }],
+				}),
+				productStatesContext: statesWithTeamEu(),
+			}),
+		).toThrow(/Unknown version_slug "latest" for plan_id=team-fr/);
+	});
+});
+
+describe("propagate.variants naming a row this push mints by another identity", () => {
+	const upsertMintingTeamEuV2 = ({
+		propagate,
+	}: {
+		propagate: { plan_id: string; version?: number; version_slug?: string }[];
+	}): UpsertProductPlan =>
+		({
+			row: {
+				planId: "team",
+				version: 2,
+				op: "update",
+				source: "direct",
+				versioning: "existing",
+				currentFullProduct: teamV2,
+				baseFullProduct: null,
+				nextFullProduct: teamV2,
+			},
+			declaredVariants: [{ variant_plan_id: "team-eu", version_slug: "v2" }],
+			propagate: { variants: propagate },
+			state: { hasCustomers: false, planHadLiveVersions: true },
+		}) as UpsertProductPlan;
+
+	const runVariantErrors = ({ upsert }: { upsert: UpsertProductPlan }) =>
+		handleVariantErrors({
+			upsert,
+			productStatesContext: statesWithTeamEu(),
+			directPlanIds: new Set(["team"]),
+			editedSourceInternalIds: new Set([teamV2.internal_id]),
+		});
+
+	test("the version number the slug mint will take is accepted", () => {
+		expect(() =>
+			runVariantErrors({
+				upsert: upsertMintingTeamEuV2({
+					propagate: [{ plan_id: "team-eu", version: 2 }],
+				}),
+			}),
+		).not.toThrow();
+	});
+
+	test("a version number nothing in the push mints is still rejected", () => {
+		expect(() =>
+			runVariantErrors({
+				upsert: upsertMintingTeamEuV2({
+					propagate: [{ plan_id: "team-eu", version: 7 }],
+				}),
+			}),
+		).toThrow(/Invalid propagation target: team-eu/);
+	});
+});
+
+test("a brand-new variant plan without a name is a 400, not a silent skip", () => {
+	expect(() =>
+		handleVariantErrors({
+			upsert: {
+				row: {
+					planId: "team",
+					version: 2,
+					op: "update",
+					source: "direct",
+					versioning: "existing",
+					currentFullProduct: teamV2,
+					baseFullProduct: null,
+					nextFullProduct: teamV2,
+				},
+				declaredVariants: [{ variant_plan_id: "team-fr" }],
+				state: { hasCustomers: false, planHadLiveVersions: true },
+			} as UpsertProductPlan,
+			productStatesContext: statesWithTeamEu(),
+			directPlanIds: new Set(["team"]),
+			editedSourceInternalIds: new Set([teamV2.internal_id]),
+		}),
+	).toThrow(/name is required when creating plan_id=team-fr/);
 });

@@ -10,6 +10,7 @@ export const PREVIOUS_ATTRIBUTE_LABELS: Readonly<Record<string, string>> = {
 	auto_enable: "Default plan",
 	free_trial: "Free trial",
 	config: "Config",
+	active: "Active version",
 	billing_controls: "Billing controls",
 	processors: "Processor mappings",
 	id: "ID",

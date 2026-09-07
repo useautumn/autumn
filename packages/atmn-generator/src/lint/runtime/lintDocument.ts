@@ -511,6 +511,11 @@ const checkUnique = ({
 	}
 };
 
+/** A pin's identity and how it reads: `version: 1` and `versionSlug: "v1"`
+ * both display as `v1` but can name different rows, so the field is part of
+ * what the link is keyed by. */
+type Pin = { key: string; display: string };
+
 /** The first pin an entry states — what names the row it addresses. */
 const pinOf = ({
 	entry,
@@ -518,11 +523,13 @@ const pinOf = ({
 }: {
 	entry: Entry;
 	pins: readonly string[];
-}): string | undefined => {
+}): Pin | undefined => {
 	for (const pin of pins) {
 		const value = entry[pin];
-		if (typeof value === "string") return value;
-		if (typeof value === "number") return `v${value}`;
+		if (typeof value === "string")
+			return { key: `${pin}:${value}`, display: value };
+		if (typeof value === "number")
+			return { key: `${pin}:${value}`, display: `v${value}` };
 	}
 	return undefined;
 };
@@ -535,30 +542,42 @@ const checkLinkedOnce = ({
 	trail,
 	issues,
 }: CollectionCheck<"linkedOnce">): void => {
-	const ownerByLink = new Map<string, string>();
+	const ownerByLink = new Map<string, { owner: string; index: number }>();
 	for (const [index, entry] of entries.entries()) {
 		if (!isEntry(entry)) continue;
 		const group = entry[rule.groupBy];
 		const links = entry[rule.collection];
 		if (typeof group !== "string" || !Array.isArray(links)) continue;
-		const owner = pinOf({ entry, pins: [rule.namedBy] }) ?? rule.absentMeans;
+		const owner =
+			pinOf({ entry, pins: [rule.namedBy] })?.display ?? rule.absentMeans;
 
 		for (const link of links) {
 			if (!isEntry(link)) continue;
 			const id = link[rule.identity];
 			if (typeof id !== "string") continue;
 			const pin = pinOf({ entry: link, pins: rule.pins });
-			const composite = `${group} ${id} ${pin ?? "latest"}`;
+			const label = pin === undefined ? id : `${id} ${pin.display}`;
+			const composite = `${group} ${id} ${pin?.key ?? "latest"}`;
 			const previous = ownerByLink.get(composite);
 			if (previous === undefined) {
-				ownerByLink.set(composite, owner);
+				ownerByLink.set(composite, { owner, index });
+				continue;
+			}
+			const at = render([...trail, crumbFor({ node, key, entry, index })]);
+			// Nested collections have no unique rule of their own, so one entry
+			// naming a row twice is this rule's to report.
+			if (previous.index === index) {
+				issues.push({
+					path: at,
+					message: `${label} is linked twice from ${group} ${owner}. ${rule.because}`,
+				});
 				continue;
 			}
 			// Two entries naming one version is the unique rule's error, not this one.
-			if (previous === owner) continue;
+			if (previous.owner === owner) continue;
 			issues.push({
-				path: render([...trail, crumbFor({ node, key, entry, index })]),
-				message: `${pin === undefined ? id : `${id} ${pin}`} is linked from ${group} ${previous} and ${group} ${owner}. ${rule.because}`,
+				path: at,
+				message: `${label} is linked from ${group} ${previous.owner} and ${group} ${owner}. ${rule.because}`,
 			});
 		}
 	}

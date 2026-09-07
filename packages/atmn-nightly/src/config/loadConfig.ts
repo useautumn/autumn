@@ -141,25 +141,41 @@ export const loadConfig = async ({
  * arrays, or named `feature()`/`product()` results — never a wire document,
  * which always carries `skip_deletions`.
  */
+/** Fields only a v2 product carries. `items` is optional — an empty plan
+ * states none — so the settings have to name the row on their own. */
+const V2_PRODUCT_FIELDS = [
+	"items",
+	"is_add_on",
+	"is_default",
+	"free_trial",
+	"group",
+] as const;
+
+/** A v2 fixture: a public `id` beside a feature's `type` or a product's own settings. */
+const isV2Row = (value: unknown): boolean => {
+	if (typeof value !== "object" || value === null) return false;
+	const row = value as Record<string, unknown>;
+	if (!("id" in row)) return false;
+	return "type" in row || V2_PRODUCT_FIELDS.some((field) => field in row);
+};
+
 export const looksLikeV2Config = ({
 	module,
 }: {
 	module: Record<string, unknown>;
 }): boolean => {
-	const isRow = (value: unknown): boolean =>
-		typeof value === "object" &&
-		value !== null &&
-		"id" in value &&
-		("type" in value || "items" in value);
 	const defaults = module.default;
 	if (typeof defaults === "object" && defaults !== null) {
 		const bag = defaults as Record<string, unknown>;
 		if ("skip_deletions" in bag) return false;
-		return ["products", "features", "plans"].some((key) =>
-			Array.isArray(bag[key]),
-		);
+		if (
+			["products", "features", "plans"].some((key) => Array.isArray(bag[key]))
+		)
+			return true;
 	}
+	// A v2 default object proves nothing on its own: the named fixtures beside
+	// it still do, so the check runs whatever the default export holds.
 	return Object.entries(module).some(
-		([name, value]) => name !== "default" && isRow(value),
+		([name, value]) => name !== "default" && isV2Row(value),
 	);
 };

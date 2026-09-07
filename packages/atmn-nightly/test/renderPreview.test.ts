@@ -353,3 +353,160 @@ test("names the field a demoted version hands over", () => {
 	expect(out).toContain("~ pro@v1");
 	expect(out).toContain("~ active: true -> false");
 });
+
+test("a demoted variant names the field it hands over", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [
+					{
+						planId: "pro_yearly",
+						internalId: "prod_456",
+						version: 1,
+						active: false,
+						variantAction: "explicit",
+						planChange: {
+							previousAttributes: { active: true },
+							itemChanges: [],
+						},
+					},
+				],
+			},
+		],
+	});
+
+	expect(out).toContain("~ pro_yearly@v1");
+	expect(out).toContain("~ active: true -> false");
+});
+
+/** Archiving is a plan-definition change, so the server sends it as
+ * `previousAttributes.archived` — the variant row carries no state of its own. */
+test("a variant that only archives counts as work and says so", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [
+					{
+						planId: "pro_yearly",
+						internalId: "prod_456",
+						version: 1,
+						variantAction: "explicit",
+						planChange: {
+							previousAttributes: { archived: false },
+							itemChanges: [],
+						},
+					},
+				],
+			},
+		],
+	};
+
+	expect(previewIsEmpty({ preview: preview as never })).toBe(false);
+	const out = render(preview);
+	expect(out).toContain("~ pro_yearly@v1");
+	// No field carries the new state, so the line reports the one it left.
+	expect(out).toContain("~ Archived: was false");
+});
+
+test("a created variant still shows its trial and licenses, once", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [
+					{
+						...variantCreateRow,
+						planChange: {
+							...variantCreateRow.planChange,
+							freeTrialChange: {
+								previous: null,
+								current: { durationLength: 14, durationType: "day" },
+							},
+							licenseChanges: [
+								{
+									action: "created",
+									licensePlanId: "seat",
+									version: 1,
+									previousAttributes: null,
+								},
+							],
+						},
+					},
+				],
+			},
+		],
+	});
+
+	expect(out).toContain("+ pro_yearly@v1  Pro Yearly, $200 per year");
+	expect(out).toContain("~ Free trial: none -> 14 day trial");
+	expect(out).toContain("+ seat@v1");
+	// The row label carries the price and the items are already out above.
+	expect(out.match(/\+ credits/g)).toHaveLength(1);
+	expect(out).not.toContain("Price: Free -> $200 per year");
+	expect(out).not.toContain("Name: added");
+});
+
+const versionRow = ({
+	version,
+	count,
+	previousName,
+}: {
+	version: number;
+	count: number;
+	previousName: string;
+}) => ({
+	planId: "pro",
+	version,
+	action: "update",
+	name: `Pro v${version}`,
+	state: { usage: { customers: { count } } },
+	planChange: {
+		previousAttributes: { name: previousName },
+		itemChanges: [],
+	},
+});
+
+test("a migration target matches its own version among the top-level rows", () => {
+	const out = render({
+		features: [],
+		plans: [
+			versionRow({ version: 2, count: 99, previousName: "Pro two" }),
+			versionRow({ version: 1, count: 7, previousName: "Pro one" }),
+		],
+		migrations: [{ plans: [{ planId: "pro", versions: [1] }] }],
+	});
+
+	expect(out).toContain("pro v1, 7 customers");
+	expect(out).not.toContain("pro v1, 99 customers");
+	expect(out).toMatch(/pro v1, 7 customers\n\s+~ Name: was "Pro one"/);
+});
+
+test("a migration target with no row of its own renders without details", () => {
+	const out = render({
+		features: [],
+		plans: [versionRow({ version: 2, count: 99, previousName: "Pro two" })],
+		migrations: [{ plans: [{ planId: "pro", versions: [1] }] }],
+	});
+
+	expect(out).toContain("Migrations (1)");
+	expect(out).toContain("pro v1");
+	expect(out).not.toContain("pro v1, 99 customers");
+	expect(out).not.toContain('Name: was "Pro two"');
+});

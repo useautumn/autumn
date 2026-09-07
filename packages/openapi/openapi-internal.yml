@@ -74115,6 +74115,7 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 100
+                  pattern: \S
                   description: A name for the sandbox, unique within your organization.
                 color:
                   enum:
@@ -74177,6 +74178,7 @@ paths:
                     type: string
                     description: The sandbox's own secret key. Shown once, here — store it before
                       you discard the response.
+                    readOnly: true
                 required:
                   - id
                   - name
@@ -86430,8 +86432,8 @@ paths:
                                               description: Whether this is the active version of the plan. At most one version
                                                 is active.
                                             - type: "null"
-                                          description: Previous active pointer when it changed. True on the version this
-                                            update demotes.
+                                          description: The `active` flag before this update; true on the version being
+                                            demoted.
                                         archived:
                                           anyOf:
                                             - type: boolean
@@ -90186,8 +90188,8 @@ paths:
                                                             description: Whether this is the active version of the plan. At most one version
                                                               is active.
                                                           - type: "null"
-                                                        description: Previous active pointer when it changed. True on the version this
-                                                          update demotes.
+                                                        description: The `active` flag before this update; true on the version being
+                                                          demoted.
                                                       archived:
                                                         anyOf:
                                                           - type: boolean
@@ -92851,8 +92853,8 @@ paths:
                                                     description: Whether this is the active version of the plan. At most one version
                                                       is active.
                                                   - type: "null"
-                                                description: Previous active pointer when it changed. True on the version this
-                                                  update demotes.
+                                                description: The `active` flag before this update; true on the version being
+                                                  demoted.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -96615,8 +96617,8 @@ paths:
                                                                   description: Whether this is the active version of the plan. At most one version
                                                                     is active.
                                                                 - type: "null"
-                                                              description: Previous active pointer when it changed. True on the version this
-                                                                update demotes.
+                                                              description: The `active` flag before this update; true on the version being
+                                                                demoted.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -99265,8 +99267,8 @@ paths:
                                                           description: Whether this is the active version of the plan. At most one version
                                                             is active.
                                                         - type: "null"
-                                                      description: Previous active pointer when it changed. True on the version this
-                                                        update demotes.
+                                                      description: The `active` flag before this update; true on the version being
+                                                        demoted.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -102920,8 +102922,8 @@ paths:
                                                                         description: Whether this is the active version of the plan. At most one version
                                                                           is active.
                                                                       - type: "null"
-                                                                    description: Previous active pointer when it changed. True on the version this
-                                                                      update demotes.
+                                                                    description: The `active` flag before this update; true on the version being
+                                                                      demoted.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -105429,8 +105431,8 @@ paths:
                                                                 description: Whether this is the active version of the plan. At most one version
                                                                   is active.
                                                               - type: "null"
-                                                            description: Previous active pointer when it changed. True on the version this
-                                                              update demotes.
+                                                            description: The `active` flag before this update; true on the version being
+                                                              demoted.
                                                           archived:
                                                             anyOf:
                                                               - type: boolean
@@ -108786,8 +108788,8 @@ paths:
                                                                               description: Whether this is the active version of the plan. At most one version
                                                                                 is active.
                                                                             - type: "null"
-                                                                          description: Previous active pointer when it changed. True on the version this
-                                                                            update demotes.
+                                                                          description: The `active` flag before this update; true on the version being
+                                                                            demoted.
                                                                         archived:
                                                                           anyOf:
                                                                             - type: boolean
@@ -111077,8 +111079,8 @@ paths:
                                                           description: Whether this is the active version of the plan. At most one version
                                                             is active.
                                                         - type: "null"
-                                                      description: Previous active pointer when it changed. True on the version this
-                                                        update demotes.
+                                                      description: The `active` flag before this update; true on the version being
+                                                        demoted.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -114732,8 +114734,8 @@ paths:
                                                                         description: Whether this is the active version of the plan. At most one version
                                                                           is active.
                                                                       - type: "null"
-                                                                    description: Previous active pointer when it changed. True on the version this
-                                                                      update demotes.
+                                                                    description: The `active` flag before this update; true on the version being
+                                                                      demoted.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -117237,8 +117239,8 @@ paths:
                                                                 description: Whether this is the active version of the plan. At most one version
                                                                   is active.
                                                               - type: "null"
-                                                            description: Previous active pointer when it changed. True on the version this
-                                                              update demotes.
+                                                            description: The `active` flag before this update; true on the version being
+                                                              demoted.
                                                           archived:
                                                             anyOf:
                                                               - type: boolean
@@ -120594,8 +120596,8 @@ paths:
                                                                               description: Whether this is the active version of the plan. At most one version
                                                                                 is active.
                                                                             - type: "null"
-                                                                          description: Previous active pointer when it changed. True on the version this
-                                                                            update demotes.
+                                                                          description: The `active` flag before this update; true on the version being
+                                                                            demoted.
                                                                         archived:
                                                                           anyOf:
                                                                             - type: boolean
@@ -122906,8 +122908,8 @@ paths:
                                                     description: Whether this is the active version of the plan. At most one version
                                                       is active.
                                                   - type: "null"
-                                                description: Previous active pointer when it changed. True on the version this
-                                                  update demotes.
+                                                description: The `active` flag before this update; true on the version being
+                                                  demoted.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -126670,8 +126672,8 @@ paths:
                                                                   description: Whether this is the active version of the plan. At most one version
                                                                     is active.
                                                                 - type: "null"
-                                                              description: Previous active pointer when it changed. True on the version this
-                                                                update demotes.
+                                                              description: The `active` flag before this update; true on the version being
+                                                                demoted.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -129369,8 +129371,8 @@ paths:
                                                           description: Whether this is the active version of the plan. At most one version
                                                             is active.
                                                         - type: "null"
-                                                      description: Previous active pointer when it changed. True on the version this
-                                                        update demotes.
+                                                      description: The `active` flag before this update; true on the version being
+                                                        demoted.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -133024,8 +133026,8 @@ paths:
                                                                         description: Whether this is the active version of the plan. At most one version
                                                                           is active.
                                                                       - type: "null"
-                                                                    description: Previous active pointer when it changed. True on the version this
-                                                                      update demotes.
+                                                                    description: The `active` flag before this update; true on the version being
+                                                                      demoted.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -135506,8 +135508,8 @@ paths:
                                                     description: Whether this is the active version of the plan. At most one version
                                                       is active.
                                                   - type: "null"
-                                                description: Previous active pointer when it changed. True on the version this
-                                                  update demotes.
+                                                description: The `active` flag before this update; true on the version being
+                                                  demoted.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -139270,8 +139272,8 @@ paths:
                                                                   description: Whether this is the active version of the plan. At most one version
                                                                     is active.
                                                                 - type: "null"
-                                                              description: Previous active pointer when it changed. True on the version this
-                                                                update demotes.
+                                                              description: The `active` flag before this update; true on the version being
+                                                                demoted.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -141966,8 +141968,8 @@ paths:
                                                           description: Whether this is the active version of the plan. At most one version
                                                             is active.
                                                         - type: "null"
-                                                      description: Previous active pointer when it changed. True on the version this
-                                                        update demotes.
+                                                      description: The `active` flag before this update; true on the version being
+                                                        demoted.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -145621,8 +145623,8 @@ paths:
                                                                         description: Whether this is the active version of the plan. At most one version
                                                                           is active.
                                                                       - type: "null"
-                                                                    description: Previous active pointer when it changed. True on the version this
-                                                                      update demotes.
+                                                                    description: The `active` flag before this update; true on the version being
+                                                                      demoted.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean

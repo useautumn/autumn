@@ -1,3 +1,4 @@
+import { appendPropertyEdit, holdsSpread } from "./appendPropertyEdit";
 import { type FixtureConstraint, findFixture } from "./findFixture";
 import { lineStartOf } from "./fixtureEdit";
 
@@ -29,6 +30,14 @@ export const insertFirstProperty = ({
 	if (call === null) return null;
 	const object = call.find({ rule: { kind: "object" } });
 	if (object === null) return null;
+	// A spread later in the literal overrides an earlier key, so a literal built
+	// from one takes the property at the end instead — where it still applies.
+	if (holdsSpread({ object })) {
+		return call
+			.getRoot()
+			.root()
+			.commitEdits([appendPropertyEdit({ source, object, pair: property })]);
+	}
 	const first = object.namedChildren()[0];
 	if (first === undefined) return null;
 	const insertAt = first.range().start.index;

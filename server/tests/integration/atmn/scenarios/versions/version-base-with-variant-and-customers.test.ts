@@ -10,6 +10,7 @@ import { expect, test } from "bun:test";
 import {
 	CusProductStatus,
 	customerProducts,
+	customers,
 	type FullProduct,
 	isFixedPrice,
 } from "@autumn/shared";
@@ -66,6 +67,25 @@ const activeCustomerCount = async ({
 			),
 		);
 	return rows.length;
+};
+
+type SeededCustomer = { internalCustomerId: string; cusProductId: string };
+
+const deleteSeededCustomers = async ({
+	ctx,
+	seeded,
+}: {
+	ctx: AutumnContext;
+	seeded: SeededCustomer[];
+}): Promise<void> => {
+	for (const { internalCustomerId, cusProductId } of seeded) {
+		await ctx.db
+			.delete(customerProducts)
+			.where(eq(customerProducts.id, cusProductId));
+		await ctx.db
+			.delete(customers)
+			.where(eq(customers.internal_id, internalCustomerId));
+	}
 };
 
 const basePriceOf = ({
@@ -158,11 +178,14 @@ test.concurrent(
 			],
 			config: v1OnlyConfig,
 		});
+		const seeded: SeededCustomer[] = [];
 
 		try {
 			await scenario.push();
-			await scenario.seedCustomer({ planId: "pro", version: 1 });
-			await scenario.seedCustomer({ planId: "proYearly", version: 1 });
+			seeded.push(await scenario.seedCustomer({ planId: "pro", version: 1 }));
+			seeded.push(
+				await scenario.seedCustomer({ planId: "proYearly", version: 1 }),
+			);
 
 			const proV1 = await productAt({
 				ctx: scenario.ctx,
@@ -269,6 +292,9 @@ test.concurrent(
 			const settled = await scenario.push({ dryRun: true });
 			expect(settled.output).toContain("No changes");
 		} finally {
+			// seedCustomer writes straight to the DB; scenario.cleanup() only knows
+			// about the customer the scenario itself provisioned.
+			await deleteSeededCustomers({ ctx: scenario.ctx, seeded });
 			scenario.cleanup();
 		}
 	},

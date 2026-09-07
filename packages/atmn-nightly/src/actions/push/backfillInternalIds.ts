@@ -1,9 +1,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import type { SgNode } from "@ast-grep/napi";
 import { COLLECTIONS, NESTED_FIXTURES } from "../../generated/emit";
 import { insertFirstProperty } from "../../surgery/insertFirstProperty";
 import {
 	fixturePropertyString,
+	fixtureStatesProperty,
 	patchFixtureProperty,
 } from "../../surgery/patchFixtureProperty";
 import { setFixtureProperty } from "../../surgery/setFixtureProperty";
@@ -63,7 +65,24 @@ export const identityRowsFromCatalog = ({
 		}),
 	);
 
-const INTERNAL_ID_VALUE = /\binternalId\s*:\s*["']([^"']*)["']/;
+/** A property the fixture already states: its literal, or the fact that it is
+ * an expression this rewriter must not double up on. */
+type StatedProperty =
+	| { kind: "absent" }
+	| { kind: "dynamic" }
+	| { kind: "literal"; value: string };
+
+const statedProperty = ({
+	call,
+	property,
+}: {
+	call: SgNode;
+	property: string;
+}): StatedProperty => {
+	if (!fixtureStatesProperty({ call, property })) return { kind: "absent" };
+	const value = fixturePropertyString({ call, property });
+	return value === null ? { kind: "dynamic" } : { kind: "literal", value };
+};
 
 /**
  * Every row's stable id is written into its fixture when the fixture lacks one,
@@ -111,12 +130,18 @@ export const backfillInternalIds = ({
 			});
 			// No literal to write into: the row still matches by public id next push.
 			if (located === null) continue;
-			const stated = INTERNAL_ID_VALUE.exec(located.node.text())?.[1];
-			if (stated === row.internalId) continue;
+			const stated = statedProperty({
+				call: located.node,
+				property: "internalId",
+			});
+			// An expression the fixture computes would override an inserted pair.
+			if (stated.kind === "dynamic") continue;
+			if (stated.kind === "literal" && stated.value === row.internalId)
+				continue;
 			// A stated id the server did not know was ignored and the row minted
 			// fresh, so the fixture takes the real id in place of the guess.
 			const updated =
-				stated === undefined
+				stated.kind === "absent"
 					? insertFirstProperty({
 							source: located.source,
 							builder: spec.builder,
@@ -157,11 +182,12 @@ export const backfillInternalIds = ({
 					allowDynamic: true,
 				});
 				if (located === null) continue;
+				// A slug the fixture already states, literal or computed, is its own.
 				if (
-					fixturePropertyString({
+					fixtureStatesProperty({
 						call: located.node,
 						property: "versionSlug",
-					}) !== null
+					})
 				)
 					continue;
 				const updated = patchFixtureProperty({
@@ -214,10 +240,14 @@ export const backfillInternalIds = ({
 				allowDynamic: true,
 			});
 			if (located === null) continue;
-			const stated = INTERNAL_ID_VALUE.exec(located.node.text())?.[1];
-			if (stated === internalId) continue;
+			const stated = statedProperty({
+				call: located.node,
+				property: "internalId",
+			});
+			if (stated.kind === "dynamic") continue;
+			if (stated.kind === "literal" && stated.value === internalId) continue;
 			const updated =
-				stated === undefined
+				stated.kind === "absent"
 					? insertFirstProperty({
 							source: located.source,
 							builder: variantSpec.builder,
@@ -261,10 +291,10 @@ export const backfillInternalIds = ({
 			});
 			if (located === null) continue;
 			if (
-				fixturePropertyString({
+				fixtureStatesProperty({
 					call: located.node,
 					property: "versionSlug",
-				}) !== null
+				})
 			)
 				continue;
 			const updated = patchFixtureProperty({
