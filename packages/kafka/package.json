@@ -1,16 +1,24 @@
 {
-	"name": "@autumn/balance-worker",
+	"name": "@autumn/kafka",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/kafka.ts",
+			"import": "./src/kafka.ts",
+			"default": "./src/kafka.ts"
+		}
+	},
 	"scripts": {
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
+		"test:kafka": "bun test --config ./bunfig.toml tests/integration",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
-		"@autumn/kafka": "workspace:*",
 		"kafkajs": "^2.2.4"
 	},
 	"devDependencies": {

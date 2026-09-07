@@ -22,6 +22,7 @@ supabase.sh
 tests/
 !server/tests
 !packages/balance-engine/tests
+!packages/kafka/tests
 !apps/balance-worker/tests
 !packages/mcp/tests
 !packages/gateway/tests
