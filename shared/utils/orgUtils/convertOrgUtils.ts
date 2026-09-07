@@ -3,7 +3,7 @@ import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.
 import type { Organization } from "../../models/orgModels/orgTable.js";
 
 export const orgToInStatuses = ({ org }: { org: Organization }) => {
-	if (org.config.include_past_due) {
+	if (org.config.include_past_due || org.config.block_overdue_entitlements) {
 		return [CusProductStatus.Active, CusProductStatus.PastDue];
 	}
 	return [CusProductStatus.Active];

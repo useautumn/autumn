@@ -49,6 +49,7 @@ export const OrgConfigSchema = z.object({
 	reverse_deduction_order: z.boolean().default(false),
 
 	include_past_due: z.boolean().default(true),
+	block_overdue_entitlements: z.boolean().default(false),
 
 	sync_status: z.boolean().default(true),
 	merge_billing_cycles: z.boolean().default(true),

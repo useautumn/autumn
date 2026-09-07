@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 export const ProductConfigSchema = z.object({
 	ignore_past_due: z.boolean().default(false).meta({
 		description:
-			"If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.",
+			"If true, this plan's entitlements remain usable and reset on schedule while past due, overriding the organization's overdue entitlement block.",
 	}),
 });
 

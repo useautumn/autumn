@@ -46,6 +46,7 @@ test.concurrent(
 		expect(parsed.cancel_on_past_due).toBe(true);
 		expect(parsed.automatic_tax).toBe(true);
 		expect(parsed.include_past_due).toBe(true); // default
+		expect(parsed.block_overdue_entitlements).toBe(false);
 
 		// Restore
 		await db

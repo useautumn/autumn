@@ -16,6 +16,7 @@ export type TokenDeduction = {
 export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
+	enforceOverdueBlock?: boolean;
 	targetBalance?: number;
 	/** Present only for track_tokens deductions; standard deductions omit it. */
 	tokens?: TokenDeduction;

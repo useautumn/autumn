@@ -15,6 +15,48 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
+
+test("org config handler: overdue flags stay inverted across old and new writes", async () => {
+	const { ctx } = await initScenario({ setup: [], actions: [] });
+	const { db, org } = ctx;
+	const autumn = new AutumnInt({ secretKey: ctx.orgSecretKey });
+	const cases: [Partial<OrgConfig>, boolean][] = [
+		[{ include_past_due: false }, true],
+		[{ include_past_due: true }, false],
+		[{ block_overdue_entitlements: true }, true],
+		[{ automatic_tax: true }, true],
+		[{ block_overdue_entitlements: false }, false],
+		[{ block_overdue_entitlements: true, include_past_due: true }, true],
+	];
+
+	try {
+		for (const [updates, blocked] of cases) {
+			const response = (await autumn.patch(
+				"/organization/config",
+				updates,
+			)) as {
+				config: OrgConfig;
+			};
+			const [persisted] = await db
+				.select({ config: organizations.config })
+				.from(organizations)
+				.where(eq(organizations.id, org.id));
+			for (const config of [response.config, persisted?.config]) {
+				expect(config).toMatchObject({
+					block_overdue_entitlements: blocked,
+					include_past_due: !blocked,
+				});
+			}
+		}
+	} finally {
+		await db
+			.update(organizations)
+			.set({ config: org.config })
+			.where(eq(organizations.id, org.id));
+		await clearOrgCache({ db, orgId: org.id });
+	}
+});
 
 test(`${chalk.yellowBright("org config handler: second save preserves first save")}`, async () => {
 	const { ctx } = await initScenario({ setup: [], actions: [] });

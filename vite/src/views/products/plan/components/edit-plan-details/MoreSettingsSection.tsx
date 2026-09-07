@@ -102,7 +102,7 @@ export const MoreSettingsSection = () => {
 
 					<ConfigRow
 						title="Ignore past due"
-						description="Exclude this plan from any auto-cancellation behavior"
+						description="Keep entitlements usable and resetting while overdue, and exclude this plan from auto-cancellation"
 						action={
 							<Switch
 								checked={!!product.config?.ignore_past_due}

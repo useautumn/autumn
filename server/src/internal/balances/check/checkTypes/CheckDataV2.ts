@@ -9,6 +9,7 @@ import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
 
 export interface CheckDataV2 extends CheckData {
 	fullSubject: FullSubject;
+	evaluationFullSubject: FullSubject;
 	evaluationApiSubject: ApiCustomerV5 | ApiEntityV2;
 	evaluationApiBalance?: ApiBalanceV1;
 	evaluationApiFlag?: ApiFlagV0;

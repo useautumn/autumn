@@ -36,7 +36,7 @@ export const getCheckResponseV2 = async ({
 		featureToUse.id !== originalFeature.id
 	) {
 		requiredBalance = getCreditRateRequiredBalance({
-			fullSubject: checkData.fullSubject,
+			fullSubject: checkData.evaluationFullSubject,
 			sourceFeature: originalFeature,
 			creditSystem: featureToUse,
 			amount: requiredBalance,

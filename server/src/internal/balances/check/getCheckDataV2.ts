@@ -19,6 +19,7 @@ import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/ge
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import { buildEvaluationSubject } from "./buildEvaluationSubject.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
+import { getCheckSubject } from "./getCheckSubject.js";
 
 /** Deadline for check's cache-miss DB hydration — check's ~50ms latency SLO can't wait out the 15s pool clocks. */
 export const CHECK_DB_HYDRATION_BUDGET_MS = 2_000;
@@ -97,16 +98,17 @@ export const getCheckDataV2 = async ({
 		fullSubject,
 		includeAggregations: true,
 	});
+	const evaluationFullSubject = getCheckSubject({ ctx, fullSubject });
 	const evaluationApiSubject = await buildEvaluationSubject({
 		ctx,
-		fullSubject,
+		fullSubject: evaluationFullSubject,
 		entityId: entity_id,
 	});
 
 	// Candidates from the subject's effective schemas (feature_override aware),
 	// now that the entitlement rows are loaded.
 	const creditSystems = fullSubjectToCreditSystems({
-		fullSubject,
+		fullSubject: evaluationFullSubject,
 		featureId: feature_id,
 		features: ctx.features,
 	});
@@ -142,6 +144,7 @@ export const getCheckDataV2 = async ({
 		originalFeature: feature,
 		featureToUse,
 		fullSubject,
+		evaluationFullSubject,
 		evaluationApiSubject,
 		evaluationApiBalance: evaluationApiSubject.balances?.[featureToUse.id],
 		evaluationApiFlag: evaluationApiSubject.flags?.[featureToUse.id],
