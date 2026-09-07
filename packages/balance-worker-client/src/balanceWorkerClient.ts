@@ -7,6 +7,8 @@ export type {
 	BalanceWorkerClient,
 	BalanceWorkerClientConfig,
 	BalanceWorkerClientDependencies,
+	CheckParams,
+	InitializeParams,
 	TrackParams,
 } from "./types/balanceWorkerClient.js";
 export type {

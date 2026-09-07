@@ -1,14 +1,16 @@
 import type {
 	CheckCommand,
 	CheckDecision,
+	InitializationDecision,
+	InitializeCommand,
 	TrackCommand,
 	TrackDecision,
 } from "@autumn/balance-engine";
-import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
 import type { TrackReceiptPolicy } from "../commands/track.js";
 import type {
 	CommittedOutcomeAppender,
 	PartitionWriter,
+	PartitionWriterContext,
 	PartitionWriterLimits,
 } from "../writer/types/partitionWriter.js";
 
@@ -16,15 +18,15 @@ import type {
 export type PartitionProcessor = {
 	track(params: { command: TrackCommand }): Promise<TrackDecision>;
 	check(params: { command: CheckCommand }): Promise<CheckDecision>;
+	initialize(params: {
+		command: InitializeCommand;
+	}): Promise<InitializationDecision>;
 	/** Settles every accepted command; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };
 
 export type PartitionProcessorDependencies = {
-	stateStore: Pick<
-		SqliteBalanceStateStore,
-		"readState" | "readTrackReceipt" | "applyDurableMutations"
-	>;
+	stateStore: PartitionWriterContext["stateStore"];
 	appender: CommittedOutcomeAppender;
 	trackReceiptPolicy: TrackReceiptPolicy;
 	assertCanRead(): void;

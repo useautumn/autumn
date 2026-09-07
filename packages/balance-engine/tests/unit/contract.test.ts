@@ -33,7 +33,18 @@ const createState = ({ balance = 10 }: { balance?: number } = {}) =>
 		featureStatesById: {
 			messages: {
 				kind: "direct_metered_v1",
-				customerEntitlements: [{ id: "messages_monthly", balance, usage: 0 }],
+				customerEntitlements: [
+					{
+						id: "messages_monthly",
+						balance,
+						usage: 0,
+						granted: balance,
+						externalId: null,
+						planId: null,
+						reset: null,
+						expiresAt: null,
+					},
+				],
 			},
 		},
 	});
@@ -169,8 +180,26 @@ describe("balance engine contract boundaries", () => {
 				messages: {
 					kind: "direct_metered_v1",
 					customerEntitlements: [
-						{ id: "messages_monthly", balance: 10, usage: 0 },
-						{ id: "messages_rollover", balance: 5, usage: 2 },
+						{
+							id: "messages_monthly",
+							balance: 10,
+							usage: 0,
+							granted: 10,
+							externalId: null,
+							planId: null,
+							reset: null,
+							expiresAt: null,
+						},
+						{
+							id: "messages_rollover",
+							balance: 5,
+							usage: 2,
+							granted: 7,
+							externalId: null,
+							planId: null,
+							reset: null,
+							expiresAt: null,
+						},
 					],
 				},
 			},
@@ -276,7 +305,16 @@ describe("balance engine contract boundaries", () => {
 						messages: {
 							kind: "direct_metered_v1",
 							customerEntitlements: [
-								{ id: "messages_monthly", balance: 10, usage: 0 },
+								{
+									id: "messages_monthly",
+									balance: 10,
+									usage: 0,
+									granted: 10,
+									externalId: null,
+									planId: null,
+									reset: null,
+									expiresAt: null,
+								},
 							],
 						},
 					},
@@ -290,7 +328,16 @@ describe("balance engine contract boundaries", () => {
 					featureStatesById: {
 						messages: {
 							customerEntitlements: [
-								{ id: "messages_monthly", balance: 10, usage: 0 },
+								{
+									id: "messages_monthly",
+									balance: 10,
+									usage: 0,
+									granted: 10,
+									externalId: null,
+									planId: null,
+									reset: null,
+									expiresAt: null,
+								},
 							],
 						},
 					},

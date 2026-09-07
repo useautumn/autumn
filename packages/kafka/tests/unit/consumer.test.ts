@@ -583,7 +583,18 @@ function createMeteringRecords() {
 		featureStatesById: {
 			messages: {
 				kind: "direct_metered_v1",
-				customerEntitlements: [{ id: "balance", balance: 10, usage: 0 }],
+				customerEntitlements: [
+					{
+						id: "balance",
+						balance: 10,
+						usage: 0,
+						granted: 10,
+						externalId: null,
+						planId: null,
+						reset: null,
+						expiresAt: null,
+					},
+				],
 			},
 		},
 	});

@@ -24,7 +24,16 @@ const createFixture = ({
 			messages: {
 				kind: "direct_metered_v1",
 				customerEntitlements: [
-					{ id: "messages_monthly", balance: 10, usage: 0 },
+					{
+						id: "messages_monthly",
+						balance: 10,
+						usage: 0,
+						granted: 10,
+						externalId: null,
+						planId: null,
+						reset: null,
+						expiresAt: null,
+					},
 				],
 			},
 		},
@@ -148,7 +157,16 @@ describe("track receipt replay", () => {
 					messages: {
 						...state.featureStatesById.messages,
 						customerEntitlements: [
-							{ id: "messages_monthly", balance: 4, usage: 6 },
+							{
+								id: "messages_monthly",
+								balance: 4,
+								usage: 6,
+								granted: 10,
+								externalId: null,
+								planId: null,
+								reset: null,
+								expiresAt: null,
+							},
 						],
 					},
 				},

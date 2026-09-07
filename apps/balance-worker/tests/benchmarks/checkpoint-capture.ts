@@ -107,7 +107,16 @@ for (const customers of sizes) {
 					messages: {
 						kind: "direct_metered_v1",
 						customerEntitlements: [
-							{ id: `entitlement_${index}`, balance: 100, usage: 0 },
+							{
+								id: `entitlement_${index}`,
+								balance: 100,
+								usage: 0,
+								granted: 100,
+								externalId: null,
+								planId: null,
+								reset: null,
+								expiresAt: null,
+							},
 						],
 					},
 				},
@@ -186,7 +195,16 @@ for (const customers of sizes) {
 					messages: {
 						kind: "direct_metered_v1",
 						customerEntitlements: [
-							{ id: "hot_entitlement", balance: 1_000_000, usage: 0 },
+							{
+								id: "hot_entitlement",
+								balance: 1_000_000,
+								usage: 0,
+								granted: 1000000,
+								externalId: null,
+								planId: null,
+								reset: null,
+								expiresAt: null,
+							},
 						],
 					},
 				},
