@@ -68,6 +68,7 @@ export function createPartitionRuntimeFactory({
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: ctx.stateStore,
+				checkpointMaintenance: ctx.checkpointMaintenance,
 				bootstrapper,
 				follower,
 				producer,

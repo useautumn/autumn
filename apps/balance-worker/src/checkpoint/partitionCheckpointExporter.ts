@@ -1,5 +1,8 @@
-import type { PartitionCheckpointV1 } from "./partitionCheckpoint.js";
-import type { PartitionCheckpointLimits } from "./partitionCheckpointLimits.js";
+import type { PreparedPartitionCheckpoint } from "./partitionCheckpoint.js";
+import {
+	PartitionCheckpointLimitExceededError,
+	type PartitionCheckpointLimits,
+} from "./partitionCheckpointLimits.js";
 import type {
 	PartitionCheckpointPublisher,
 	PartitionCheckpointPublishResult,
@@ -11,17 +14,27 @@ export type PartitionCheckpointCapture = {
 		partition,
 		createdAt,
 		limits,
+		consumedNextOffset,
 	}: {
 		topic: string;
 		partition: number;
 		createdAt: number;
 		limits: PartitionCheckpointLimits;
-	}): PartitionCheckpointV1;
+		/** Only the current follower's fully applied read-committed position is safe here. */
+		consumedNextOffset?: bigint | null;
+	}): PreparedPartitionCheckpoint;
 };
 
 export type PartitionCheckpointClock = {
 	now(): number;
 };
+
+export class PartitionCheckpointCaptureError extends Error {
+	constructor({ cause }: { cause: unknown }) {
+		super("Unable to capture local partition checkpoint", { cause });
+		this.name = "PartitionCheckpointCaptureError";
+	}
+}
 
 export type PartitionCheckpointExportResult =
 	PartitionCheckpointPublishResult & {
@@ -29,6 +42,7 @@ export type PartitionCheckpointExportResult =
 		nextOffset: bigint;
 		stateCount: number;
 		receiptCount: number;
+		serializedBytes: number;
 	};
 
 const throwIfAborted = ({ signal }: { signal: AbortSignal }): void => {
@@ -51,29 +65,44 @@ export const createPartitionCheckpointExporter = ({
 		topic,
 		partition,
 		signal,
+		consumedNextOffset,
 	}: {
 		topic: string;
 		partition: number;
 		signal: AbortSignal;
+		consumedNextOffset?: bigint | null;
 	}): Promise<PartitionCheckpointExportResult>;
 } => ({
-	export: async ({ topic, partition, signal }) => {
+	export: async ({ topic, partition, signal, consumedNextOffset = null }) => {
 		throwIfAborted({ signal });
 		const createdAt = clock.now();
-		const checkpoint = stateStore.capturePartitionCheckpoint({
-			topic,
-			partition,
-			createdAt,
-			limits,
-		});
+		let checkpoint: PreparedPartitionCheckpoint;
+		try {
+			checkpoint = stateStore.capturePartitionCheckpoint({
+				topic,
+				partition,
+				createdAt,
+				limits,
+				consumedNextOffset,
+			});
+		} catch (cause) {
+			if (cause instanceof PartitionCheckpointLimitExceededError) throw cause;
+			throw new PartitionCheckpointCaptureError({ cause });
+		}
 		throwIfAborted({ signal });
 		const result = await publisher.publish({ checkpoint, signal });
+		throwIfAborted({ signal });
 		return {
 			...result,
 			createdAt,
 			nextOffset: checkpoint.nextOffset,
-			stateCount: checkpoint.states.length,
-			receiptCount: checkpoint.receipts.length,
+			stateCount: checkpoint.stateCount,
+			receiptCount: checkpoint.receiptCount,
+			serializedBytes: checkpoint.serializedBytes,
 		};
 	},
 });
+
+export type PartitionCheckpointExporter = ReturnType<
+	typeof createPartitionCheckpointExporter
+>;

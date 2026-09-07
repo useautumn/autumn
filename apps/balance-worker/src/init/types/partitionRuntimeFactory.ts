@@ -5,6 +5,7 @@ import type {
 } from "@autumn/kafka";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
+import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
 import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
 import type { PartitionBootstrapRetryPolicy } from "../../runtime/bootstrap/types/partitionBootstrap.js";
@@ -41,6 +42,7 @@ export type PartitionRuntimeFactoryContext = {
 	ownershipOffsets: Pick<Admin, "fetchTopicOffsets">;
 	stateStore: SqliteBalanceStateStore;
 	checkpointSource: PartitionCheckpointSource;
+	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;
 };
 

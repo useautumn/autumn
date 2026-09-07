@@ -1,8 +1,7 @@
 import type { Database } from "bun:sqlite";
 import {
-	createPartitionCheckpoint,
-	type PartitionCheckpointV1,
-	serializePartitionCheckpoint,
+	type PreparedPartitionCheckpoint,
+	preparePartitionCheckpoint,
 } from "../../checkpoint/partitionCheckpoint.js";
 import {
 	assertPartitionCheckpointLimits,
@@ -27,17 +26,22 @@ export const capturePartitionCheckpoint = ({
 	partition,
 	createdAt,
 	limits,
+	consumedNextOffset = null,
 }: {
 	database: Database;
 	topic: string;
 	partition: number;
 	createdAt: number;
 	limits: PartitionCheckpointCaptureLimits;
-}): PartitionCheckpointV1 => {
+	consumedNextOffset?: bigint | null;
+}): PreparedPartitionCheckpoint => {
 	if (!Number.isSafeInteger(createdAt) || createdAt < 0) {
 		throw new RangeError("createdAt must be a non-negative safe integer");
 	}
 	assertPartitionCheckpointLimits({ limits });
+	if (consumedNextOffset !== null && consumedNextOffset < 0n) {
+		throw new RangeError("Consumed next offset cannot be negative");
+	}
 
 	const cut = database
 		.transaction(() => {
@@ -71,34 +75,36 @@ export const capturePartitionCheckpoint = ({
 			return { nextOffset, states, receipts };
 		})
 		.deferred();
-	const checkpoint = createPartitionCheckpoint({
-		engineSchemaVersion: 1,
-		createdAt,
-		topic,
-		partition,
-		nextOffset: cut.nextOffset,
-		states: cut.states.map(
-			({
-				partitionKey,
-				initializationId,
-				initializationFingerprint,
-				state,
-			}) => ({
-				partitionKey,
-				initializationId,
-				initializationFingerprint,
-				state,
-			}),
-		),
-		receipts: cut.receipts,
+	const checkpoint = preparePartitionCheckpoint({
+		checkpoint: {
+			engineSchemaVersion: 1,
+			createdAt,
+			topic,
+			partition,
+			nextOffset:
+				consumedNextOffset !== null && consumedNextOffset > cut.nextOffset
+					? consumedNextOffset
+					: cut.nextOffset,
+			states: cut.states.map(
+				({
+					partitionKey,
+					initializationId,
+					initializationFingerprint,
+					state,
+				}) => ({
+					partitionKey,
+					initializationId,
+					initializationFingerprint,
+					state,
+				}),
+			),
+			receipts: cut.receipts,
+		},
 	});
 	assertPartitionCheckpointWithinLimit({
 		limitName: "serialized_bytes",
 		limit: limits.maxSerializedBytes,
-		observed: Buffer.byteLength(
-			serializePartitionCheckpoint({ checkpoint }),
-			"utf8",
-		),
+		observed: checkpoint.serializedBytes,
 	});
 	return checkpoint;
 };
