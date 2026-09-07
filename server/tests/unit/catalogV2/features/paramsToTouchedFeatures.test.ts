@@ -8,6 +8,7 @@
  *   B2  a feature named in remove_features is touched
  *   B3  a feature dropped by omission under full state is touched
  *   B4  a feature nobody mentions when the payload has no opinion on features is not touched
+ *   B5  a feature renamed through internal_id is touched under its current id
  */
 
 import { expect, test } from "bun:test";
@@ -74,4 +75,21 @@ test("B4 a feature is untouched when the payload has no opinion on features", ()
 		params: baseParams({ features: undefined }),
 	});
 	expect(touched).toEqual([]);
+});
+
+test("B5 a feature renamed through internal_id is touched under its current id", () => {
+	const touched = paramsToTouchedFeatures({
+		ctx: ctxWith([feature({ id: "seats", internalId: "fe_1" })]),
+		params: baseParams({
+			features: [
+				{
+					feature_id: "seatsRenamed",
+					internal_id: "fe_1",
+					name: "Seats",
+					type: "boolean",
+				},
+			] as never,
+		}),
+	});
+	expect(touched.map((f) => f.id)).toEqual(["seats"]);
 });
