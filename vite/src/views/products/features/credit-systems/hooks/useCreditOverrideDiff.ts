@@ -28,8 +28,6 @@ const classifyRow = ({
 		: "changed";
 };
 
-/** Rows match by metered_feature_id — the schema is a keyed set, so reordering
- * is not a change. */
 export const useCreditOverrideDiff = ({
 	schema,
 	creditSystem,

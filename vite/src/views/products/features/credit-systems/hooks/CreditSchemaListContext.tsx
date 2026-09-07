@@ -10,8 +10,6 @@ const CreditSchemaListContext = createContext<CreditSchemaListValue | null>(
 	null,
 );
 
-/** Owns the rate card's list state so the card, its rows and the dimensions
- * editor read one source rather than threading props. */
 export function CreditSchemaListProvider({
 	schema,
 	onChange,
@@ -20,7 +18,6 @@ export function CreditSchemaListProvider({
 }: {
 	schema: CreditSchemaItem[];
 	onChange: (schema: CreditSchemaItem[]) => void;
-	/** Called instead of onChange when removing the only remaining item. */
 	onRemoveLast?: () => void;
 	children: ReactNode;
 }) {

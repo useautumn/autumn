@@ -3,7 +3,6 @@ import { useFeatureOverride } from "@/views/products/features/credit-systems/hoo
 import { useMarkupsOverrideForm } from "@/views/products/features/credit-systems/hooks/useMarkupsOverrideForm";
 import { FeatureOverrideArea } from "./FeatureOverrideArea";
 
-/** Runs the same form and editor as the feature-level markup chain. */
 export function AiMarkupsOverride() {
 	const { creditSystem, markups, hasOverride, setMarkups, seedMarkups, clear } =
 		useFeatureOverride();

@@ -5,8 +5,7 @@ type ValuesStore<TValues> = {
 	subscribe: (listener: () => void) => { unsubscribe: () => void };
 };
 
-/** Notifies on form value changes without re-rendering the form's owner —
- * `useStore` here would remount the editor and drop input focus on keystroke. */
+// Subscribes outside render: useStore here would drop input focus on every keystroke.
 export const useFormValuesListener = <TValues>({
 	store,
 	onChange,

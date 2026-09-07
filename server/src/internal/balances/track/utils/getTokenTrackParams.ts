@@ -45,8 +45,6 @@ const isMissingSubject = (error: unknown) =>
 	error instanceof CustomerNotFoundError ||
 	error instanceof EntityNotFoundError;
 
-/** Each resolved through its own entitlement, so a plan's markup override is
- * priced rather than the catalog's. */
 const resolveAiCreditFeaturesFromEntitlements = async ({
 	ctx,
 	customerId,
@@ -88,8 +86,6 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 	return [...byFeatureId.values()];
 };
 
-/** The customer's own entitlement supplies the effective markups; the catalog
- * feature is the fallback for one they hold no balance on yet. */
 const resolveAiCreditFeature = async ({
 	ctx,
 	input,

@@ -14,9 +14,6 @@ import {
 	validateCreditSystemSchemaReferences,
 } from "./featureUtils.js";
 
-/** An item's feature_override is keyed like the feature config; each present
- * key fully replaces the feature's value for customers on the plan, and the
- * same feature-level validation rules apply, scoped to the item. */
 export const validateItemFeatureOverride = ({
 	item,
 	feature,
@@ -41,7 +38,6 @@ export const validateItemFeatureOverride = ({
 		invalid("feature_override is only supported on credit system items");
 		return;
 	}
-	// A rate card only exists on a classic credit system, markups only on an AI one.
 	if (featureOverride.schema && feature.type !== FeatureType.CreditSystem) {
 		invalid(
 			"feature_override.credit_schema is not supported on AI credit system items",
@@ -55,8 +51,6 @@ export const validateItemFeatureOverride = ({
 
 	if (!featureOverride.schema) return;
 
-	// No selfFeatureId: an override targets an existing system, so self-reference
-	// is nesting and is rejected.
 	const config = {
 		schema: featureOverride.schema,
 		usage_type: FeatureUsageType.Single,

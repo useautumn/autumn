@@ -11,7 +11,6 @@ import { useProviderMarkup } from "../hooks/useProviderMarkup";
 
 const MARKUP_INPUT_PATTERN = /^-?\d*\.?\d*$/;
 
-/** Provider name, its markup, and the control to drop the whole section. */
 export function AiProviderTableHeading({
 	providerName,
 	onRemoveProvider,

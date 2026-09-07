@@ -5,18 +5,11 @@ import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCreditSchemaListContext } from "../hooks/CreditSchemaListContext";
 import { CreditRateCardRow } from "./CreditRateCardRow";
 
-/**
- * The rate card editor: a row per metered feature plus the control to add one.
- *
- * Shared by the feature-level schema and the plan-item override, which differ
- * only in the annotation each row carries.
- */
 export function CreditRateCardList({
 	addLabel = "Add feature",
 	renderRowLabel,
 }: {
 	addLabel?: string;
-	/** Optional per-row annotation, rendered above the row. */
 	renderRowLabel?: (index: number) => ReactNode;
 }) {
 	const { isAdmin } = useAdmin();

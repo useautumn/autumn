@@ -14,8 +14,6 @@ type AiProviderTableValue = {
 
 const AiProviderTableContext = createContext<AiProviderTableValue | null>(null);
 
-/** Read by the rate table's cells so the column defs can be constants —
- * closing over props rebuilds them on every keystroke and drops focus. */
 export function AiProviderTableProvider({
 	value,
 	children,

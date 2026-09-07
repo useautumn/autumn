@@ -3,8 +3,6 @@ import type { Feature } from "../../../../models/featureModels/featureModels.js"
 import type { EntitlementWithFeature } from "../../../../models/productModels/entModels/entModels.js";
 import { isAnyCreditSystem } from "../../../featureUtils/classifyFeature/isAnyCreditSystem.js";
 
-/** A custom model's input_cost/output_cost define the model, so the catalog
- * keeps supplying them; only the markup is per-plan. */
 const mergeModelMarkups = ({
 	catalog,
 	override,
@@ -24,12 +22,7 @@ const mergeModelMarkups = ({
 	return merged;
 };
 
-/**
- * The effective credit system for an entitlement — the one place a plan item's
- * feature_override is applied, so everything downstream keeps consuming a plain
- * Feature. An override replaces what it covers: an unset markup level means no
- * markup, not the feature's.
- */
+/** The one place a plan item's feature_override is applied. */
 export const entitlementToCreditSystem = ({
 	entitlement,
 }: {

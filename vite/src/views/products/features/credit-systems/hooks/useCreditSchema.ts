@@ -2,7 +2,6 @@ import type { CreditSchemaItem } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import type { CreditSystemFormInstance } from "./useCreditSystemForm";
 
-/** The credit system's schema and invoice flag, bound to its form config. */
 export function useCreditSchema(form: CreditSystemFormInstance) {
 	const config = useStore(form.store, (s) => s.values.config);
 	const schema: CreditSchemaItem[] = config?.schema || [];

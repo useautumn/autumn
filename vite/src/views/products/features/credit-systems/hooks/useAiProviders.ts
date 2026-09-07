@@ -35,9 +35,7 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 		() => groupByProvider(modelMarkups),
 		[modelMarkups],
 	);
-	// A provider is "active" if it has model overrides OR a provider-level markup.
-	// Custom is the exception: its models set their own rates and its section
-	// shows no provider markup input, so only its models can summon it.
+	// Custom has no provider markup input, so only its models make it active.
 	const activeProviderKeys = useMemo(
 		() =>
 			Array.from(
@@ -51,9 +49,7 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 		[providerGroups, providerMarkups],
 	);
 
-	// A provider with no models.dev entry (custom) still needs a provider object.
-	// It must be referentially stable: consumers memoize table columns on it, and
-	// a fresh literal each render remounts the cells and drops input focus.
+	// custom has no models.dev entry, so it needs a stand-in provider.
 	const resolvedProviders = useMemo(
 		() =>
 			Object.fromEntries(

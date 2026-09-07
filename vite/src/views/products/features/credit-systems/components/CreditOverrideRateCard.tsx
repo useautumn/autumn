@@ -1,21 +1,29 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
-import { getFeatureName } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CreditSchemaListProvider } from "../hooks/CreditSchemaListContext";
 import { useCreditDimensionsToggle } from "../hooks/useCreditDimensionsToggle";
-import { useCreditOverrideDiff } from "../hooks/useCreditOverrideDiff";
+import {
+	type CreditOverrideRowStatus,
+	useCreditOverrideDiff,
+} from "../hooks/useCreditOverrideDiff";
+import { featureDisplayName } from "../utils/featureDisplayName";
 import { CreditDimensionsSection } from "./CreditDimensionsSection";
 import { CreditDimensionsSwitch } from "./CreditDimensionsSwitch";
 import { CreditRateCardList } from "./CreditRateCardList";
 
-const statusLabel = {
+const statusLabel: Record<CreditOverrideRowStatus, string | null> = {
 	inherited: null,
 	changed: "Changed",
 	added: "Added",
-} as const;
+};
 
-/** The rate card as a diff against the credit system it overrides. */
+const RowStatus = ({ status }: { status: CreditOverrideRowStatus }) => {
+	const label = statusLabel[status];
+	if (!label) return null;
+	return <span className="text-tertiary-foreground text-xs">{label}</span>;
+};
+
 export function CreditOverrideRateCard({
 	schema,
 	creditSystem,
@@ -33,14 +41,8 @@ export function CreditOverrideRateCard({
 	const diff = useCreditOverrideDiff({ schema, creditSystem });
 
 	const missingFeatureNames = diff.missingFeatureIds
-		.map(
-			(featureId) =>
-				getFeatureName({
-					feature: features.find(
-						(feature: Feature) => feature.id === featureId,
-					),
-					plural: true,
-				}) || featureId,
+		.map((featureId) =>
+			featureDisplayName({ features, featureId, plural: true }),
 		)
 		.join(", ");
 
@@ -59,17 +61,11 @@ export function CreditOverrideRateCard({
 				)}
 
 				<CreditRateCardList
-					renderRowLabel={(index) => {
-						const label = statusLabel[diff.statusByIndex[index]];
-						if (!label) return null;
-						return (
-							<span className="text-tertiary-foreground text-xs">{label}</span>
-						);
-					}}
+					renderRowLabel={(index) => (
+						<RowStatus status={diff.statusByIndex[index]} />
+					)}
 				/>
 
-				{/* The override is a snapshot, so a feature added to the credit system
-				    afterwards will not reach customers on this plan. */}
 				{missingFeatureNames && (
 					<span className="text-tertiary-foreground text-xs">
 						Not in this override: {missingFeatureNames}
@@ -77,12 +73,14 @@ export function CreditOverrideRateCard({
 				)}
 
 				{isAdmin && (
-					<CreditDimensionsSwitch
-						checked={dimensions.enabled}
-						onCheckedChange={dimensions.setEnabled}
-					/>
+					<>
+						<CreditDimensionsSwitch
+							checked={dimensions.enabled}
+							onCheckedChange={dimensions.setEnabled}
+						/>
+						{dimensions.enabled && <CreditDimensionsSection />}
+					</>
 				)}
-				{isAdmin && dimensions.enabled && <CreditDimensionsSection />}
 			</div>
 		</CreditSchemaListProvider>
 	);

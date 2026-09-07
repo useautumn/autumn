@@ -4,8 +4,6 @@ import {
 	useCreditSystemForm,
 } from "./useCreditSystemForm";
 
-/** Binds the feature-level AI editor to a plan item's markup override by
- * presenting the override as the feature it overrides. */
 export const useMarkupsOverrideForm = ({
 	creditSystem,
 	markups,

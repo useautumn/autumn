@@ -4,12 +4,7 @@ import { isAnyCreditSystem } from "../../featureUtils/classifyFeature/isAnyCredi
 import { creditSystemContainsFeature } from "../../featureUtils/creditSystemUtils.js";
 import { customerEntitlementFundsFeature } from "./customerEntitlementFundsFeature.js";
 
-/**
- * The feature plus every credit system that can fund it — the override-aware
- * twin of the catalog-only getRelevantFeatures. A credit system the customer
- * holds is judged by its EFFECTIVE schema; one they hold no balance for keeps
- * catalog membership so responses still resolve it.
- */
+/** The override-aware twin of getRelevantFeatures. */
 export const customerEntitlementsToRelevantFeatures = ({
 	customerEntitlements,
 	featureId,

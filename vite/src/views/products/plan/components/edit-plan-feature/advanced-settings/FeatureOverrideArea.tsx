@@ -1,7 +1,6 @@
 import { AreaCheckbox } from "@autumn/ui";
 import type { ReactNode } from "react";
 
-/** The enable/clear shell both override kinds share. */
 export function FeatureOverrideArea({
 	title,
 	description,

@@ -32,8 +32,6 @@ const rolloversAreSame = ({
 	);
 };
 
-/** Same rate for the same metered feature. Tiers ARE ordered (usage
- * boundaries), so they stay index-compared. */
 export const creditSchemaItemsAreSame = ({
 	left,
 	right,
@@ -77,7 +75,6 @@ const creditSchemasAreSame = ({
 type MarkupEntry = Record<string, number | null | undefined>;
 const MARKUP_FIELDS = ["markup", "input_cost", "output_cost"] as const;
 
-/** Keyed by model/provider, so ordering is not semantic — compare as sets. */
 const markupRecordsAreSame = (
 	left: Record<string, MarkupEntry> | null | undefined,
 	right: Record<string, MarkupEntry> | null | undefined,

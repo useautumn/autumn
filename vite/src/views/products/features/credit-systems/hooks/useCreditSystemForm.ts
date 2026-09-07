@@ -11,9 +11,7 @@ export interface CreditSystemFormValues {
 	config: Record<string, unknown>;
 	event_names: string[];
 	model_markups: NonNullable<ModelMarkups>;
-	/** Global default markup for the AI credit system (persisted to config.default_markup). */
 	defaultMarkup: number;
-	/** Per-provider default markups (persisted to config.provider_markups). */
 	provider_markups: Record<string, { markup: number }>;
 	stripe_product_id: string | null;
 }

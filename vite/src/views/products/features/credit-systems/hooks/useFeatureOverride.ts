@@ -8,8 +8,6 @@ import { isAiCreditSystem } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
-/** The one owner of a plan item's feature_override. Seeding copies the
- * feature's values, since an override replaces what it covers. */
 export const useFeatureOverride = () => {
 	const { item, setItem } = useProductItemContext();
 	const { features } = useFeaturesQuery();

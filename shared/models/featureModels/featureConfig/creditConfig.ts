@@ -130,11 +130,7 @@ export const ModelMarkupsSchema = z
 	)
 	.nullish();
 
-/**
- * A plan item's partial override, stored on the entitlement row. `markups` is
- * one unit: its three levels resolve as a single precedence chain, so letting a
- * plan override one and inherit another makes the effective markup unreadable.
- */
+// markups replaces as one unit: its three levels are a single precedence chain.
 export const FeatureMarkupsOverrideSchema = z.strictObject({
 	default_markup: z.number().min(-100).optional(),
 	provider_markups: ProviderMarkupsSchema,

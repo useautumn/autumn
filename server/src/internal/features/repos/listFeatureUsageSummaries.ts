@@ -96,9 +96,7 @@ export const buildFeatureUsageSummariesQuery = ({
 				)
 				UNION ALL
 				(
-					-- A plan item's feature_override rate card can reference a
-					-- feature the catalog credit system does not, so deleting it
-					-- would orphan the override (which fails closed at track time).
+					-- Override rate cards can reference features the catalog does not.
 					SELECT 'override' AS arm, entitlement.internal_product_id
 					FROM entitlements entitlement
 					WHERE entitlement.feature_override -> 'schema' @> json_build_array(

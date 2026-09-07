@@ -156,7 +156,6 @@ export function CreditRateCardRow({
 						</>
 					) : (
 						!isMultiTier && (
-							// Wraps so the controls stay usable in the narrower plan sheet.
 							<div className="flex flex-wrap items-center gap-2">
 								<CreditNumberInput
 									ariaLabel="Credit cost"

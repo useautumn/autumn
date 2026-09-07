@@ -154,7 +154,6 @@ export const resolveCreditCost = ({
 	const creditSystem = ctx.features.find((f) => f.id === balanceFeatureId);
 	if (!creditSystem || !isAnyCreditSystem(creditSystem.type)) return null;
 
-	// Only THIS balance's override matters; a sibling's must not blank its rate.
 	const owningEntitlement = customerEntitlements?.find(
 		(customerEntitlement) => customerEntitlement.id === balanceId,
 	);

@@ -27,7 +27,6 @@ interface AiCreditSchemaTableProps {
 	renameKey: (oldKey: string, newKey: string) => void;
 }
 
-/** The rate table for one provider: its models, their costs and markups. */
 export function AiCreditSchemaTable({
 	form,
 	providerKey,

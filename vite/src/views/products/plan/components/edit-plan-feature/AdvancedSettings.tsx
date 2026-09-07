@@ -39,8 +39,6 @@ export function AdvancedSettings() {
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	// Admin-only, matching the feature-level editor. AI credit systems override
-	// their markup chain rather than a rate card.
 	const showFeatureOverride =
 		isAdmin &&
 		isAnyCreditSystem(

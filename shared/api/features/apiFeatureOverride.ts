@@ -18,8 +18,6 @@ const ApiFeatureMarkupsOverrideSchema = z.strictObject({
 	}),
 });
 
-/** Keyed like ApiFeatureV1: "these feature fields, for customers on this plan".
- * Strict — a key is admitted only once every runtime reader honors it. */
 export const ApiFeatureOverrideSchema = z.strictObject({
 	credit_schema: z.array(ApiCreditSchemaItemSchema).optional().meta({
 		description:

@@ -23,8 +23,7 @@ const isFlatCreditRate = (
 	item.tier_behavior !== "graduated" &&
 	!hasCreditDimensionRules(item);
 
-/** Remaining usage-window headroom in the EVALUATED feature's units, covering
- * both its own cap and a credit-system member's, converted at its rate. */
+/** Usage-window headroom in the evaluated feature's units. */
 export const apiSubjectToUsageLimitHeadroom = ({
 	apiSubject,
 	feature,

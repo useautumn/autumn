@@ -3,9 +3,6 @@ import { useFeatureOverride } from "@/views/products/features/credit-systems/hoo
 import { AiMarkupsOverride } from "./AiMarkupsOverride";
 import { FeatureOverrideArea } from "./FeatureOverrideArea";
 
-/** Plan-item feature_override: replaces the credit system's rate card (classic)
- * or markup chain (AI) for customers on this plan. Visibility is controlled by
- * parent AdvancedSettings. */
 export function FeatureOverrideConfig() {
 	const {
 		item,

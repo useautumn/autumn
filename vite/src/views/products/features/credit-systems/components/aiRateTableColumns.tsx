@@ -99,32 +99,28 @@ function RemoveCell({ row }: { row: Row<ModelRow> }) {
 	);
 }
 
-/** Headers differ between the custom and models.dev tables; nothing else does. */
-const CustomModelHeader = () => {
+const CostHeader = ({
+	custom,
+	standard,
+}: {
+	custom: string;
+	standard: string;
+}) => {
 	const { isCustom } = useAiProviderTable();
-	return <>{isCustom ? "In $/M" : "Input"}</>;
+	return <>{isCustom ? custom : standard}</>;
 };
 
-const OutputHeader = () => {
-	const { isCustom } = useAiProviderTable();
-	return <>{isCustom ? "Out $/M" : "Output"}</>;
-};
-
-/**
- * Constant column definitions. Every cell reads the table's context rather than
- * closing over props, so this array never has to be rebuilt — which is what
- * keeps focus in the inputs while typing.
- */
+// Cells read context, not props, so this never rebuilds and inputs keep focus.
 export const AI_RATE_TABLE_COLUMNS: ColumnDef<ModelRow, unknown>[] = [
 	{ header: "Model", accessorKey: "modelKey", size: 200, cell: ModelCell },
 	{
-		header: CustomModelHeader,
+		header: () => <CostHeader custom="In $/M" standard="Input" />,
 		id: "inputCost",
 		size: 80,
 		cell: ({ row }) => <CostCell row={row} field="input_cost" />,
 	},
 	{
-		header: OutputHeader,
+		header: () => <CostHeader custom="Out $/M" standard="Output" />,
 		id: "outputCost",
 		size: 80,
 		cell: ({ row }) => <CostCell row={row} field="output_cost" />,
