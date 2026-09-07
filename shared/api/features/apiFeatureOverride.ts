@@ -18,13 +18,8 @@ const ApiFeatureMarkupsOverrideSchema = z.strictObject({
 	}),
 });
 
-/**
- * A plan item's partial override of its feature, keyed like ApiFeatureV1 so
- * the override reads as "these feature fields, for customers on this plan".
- * Strict: a key is only admitted once every runtime reader of that field
- * honors the override (invoice_credit still has readers outside the resolved
- * feature path).
- */
+/** Keyed like ApiFeatureV1: "these feature fields, for customers on this plan".
+ * Strict — a key is admitted only once every runtime reader honors it. */
 export const ApiFeatureOverrideSchema = z.strictObject({
 	credit_schema: z.array(ApiCreditSchemaItemSchema).optional().meta({
 		description:

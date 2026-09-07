@@ -55,8 +55,8 @@ export const validateItemFeatureOverride = ({
 
 	if (!featureOverride.schema) return;
 
-	// Same bar as the feature-level schema, and referenced features must be
-	// leaves — no selfFeatureId, so a self-reference is nesting and is rejected.
+	// No selfFeatureId: an override targets an existing system, so self-reference
+	// is nesting and is rejected.
 	const config = {
 		schema: featureOverride.schema,
 		usage_type: FeatureUsageType.Single,

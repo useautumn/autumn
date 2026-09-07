@@ -3,13 +3,7 @@ import { useFeatureOverride } from "@/views/products/features/credit-systems/hoo
 import { useMarkupsOverrideForm } from "@/views/products/features/credit-systems/hooks/useMarkupsOverrideForm";
 import { FeatureOverrideArea } from "./FeatureOverrideArea";
 
-/**
- * Plan-item override of an AI credit system's markup chain, running the same
- * form and editor as the feature-level one.
- *
- * Callers key this on the credit system so a different item gets a fresh form
- * — useCreditSystemForm seeds its values once.
- */
+/** Runs the same form and editor as the feature-level markup chain. */
 export function AiMarkupsOverride() {
 	const { creditSystem, markups, hasOverride, setMarkups, seedMarkups, clear } =
 		useFeatureOverride();
@@ -17,7 +11,7 @@ export function AiMarkupsOverride() {
 	const form = useMarkupsOverrideForm({
 		creditSystem,
 		markups,
-		// Seeding the form must not itself write an override the user never enabled.
+		// Seeding must not itself write an override the user never enabled.
 		onChange: (next) => hasOverride && setMarkups(next),
 	});
 

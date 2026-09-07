@@ -1,10 +1,7 @@
 import { AreaCheckbox } from "@autumn/ui";
 import type { ReactNode } from "react";
 
-/**
- * The enable/clear shell both override kinds share. Turning it on seeds from
- * the feature; turning it off drops the override entirely.
- */
+/** The enable/clear shell both override kinds share. */
 export function FeatureOverrideArea({
 	title,
 	description,

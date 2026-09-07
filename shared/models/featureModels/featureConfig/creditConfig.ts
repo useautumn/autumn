@@ -118,7 +118,10 @@ export const ModelMarkupsSchema = z
 	.record(
 		z
 			.string()
-			.regex(/.+\/.+/, 'Model keys are "<provider>/<model>", e.g. "openai/gpt-4o" or "custom/my-model".'),
+			.regex(
+				/.+\/.+/,
+				'Model keys are "<provider>/<model>", e.g. "openai/gpt-4o" or "custom/my-model".',
+			),
 		MarkupEntrySchema.extend({
 			markup: z.number().min(-100).optional(), // Omit to inherit provider/global markup
 			input_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
@@ -128,13 +131,9 @@ export const ModelMarkupsSchema = z
 	.nullish();
 
 /**
- * A plan item's partial override of its feature, stored on the entitlement
- * row. `schema` is keyed like the feature config so applying it is a config
- * spread; `markups` is one unit because its three parts resolve as a single
- * precedence chain (model → provider → default), and letting a plan override
- * one link while inheriting another makes the effective markup unreadable.
- * Strict: a key is only admitted once every runtime reader honors the
- * override — invoice_credit still has readers outside the resolved feature.
+ * A plan item's partial override, stored on the entitlement row. `markups` is
+ * one unit: its three levels resolve as a single precedence chain, so letting a
+ * plan override one and inherit another makes the effective markup unreadable.
  */
 export const FeatureMarkupsOverrideSchema = z.strictObject({
 	default_markup: z.number().min(-100).optional(),

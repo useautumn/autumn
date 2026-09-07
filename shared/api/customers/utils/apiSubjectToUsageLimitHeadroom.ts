@@ -13,6 +13,9 @@ type CreditRateLookup = {
 	multipliers?: Record<string, unknown> | null;
 };
 
+const capHeadroom = (cap: { limit: number; usage?: number | null }) =>
+	Decimal.max(0, new Decimal(cap.limit).sub(cap.usage ?? 0));
+
 const isFlatCreditRate = (
 	item: CreditRateLookup,
 ): item is CreditRateLookup & { credit_amount: number } =>
@@ -20,14 +23,8 @@ const isFlatCreditRate = (
 	item.tier_behavior !== "graduated" &&
 	!hasCreditDimensionRules(item);
 
-/**
- * Remaining usage-window headroom for a check, in the EVALUATED feature's
- * units (credits when the evaluated feature is a credit system). Considers
- * both the cap on the evaluated feature itself and -- when checking a
- * credit-system member -- the metered cap on the original feature, converted
- * via its credit cost. Filtered caps only apply when the check's `properties`
- * match. Null when no armed cap applies.
- */
+/** Remaining usage-window headroom in the EVALUATED feature's units, covering
+ * both its own cap and a credit-system member's, converted at its rate. */
 export const apiSubjectToUsageLimitHeadroom = ({
 	apiSubject,
 	feature,
@@ -61,36 +58,24 @@ export const apiSubjectToUsageLimitHeadroom = ({
 				}),
 		);
 
-	for (const capOnEvaluated of applicableCaps(feature.id)) {
+	headrooms.push(...applicableCaps(feature.id).map(capHeadroom));
+
+	const memberRate =
+		originalFeature && originalFeature.id !== feature.id
+			? feature.config?.schema?.find(
+					(item: { metered_feature_id: string }) =>
+						item.metered_feature_id === originalFeature.id,
+				)
+			: undefined;
+
+	if (originalFeature && memberRate && isFlatCreditRate(memberRate)) {
 		headrooms.push(
-			Decimal.max(
-				0,
-				new Decimal(capOnEvaluated.limit).sub(capOnEvaluated.usage ?? 0),
+			...applicableCaps(originalFeature.id).map((cap) =>
+				capHeadroom(cap)
+					.mul(memberRate.credit_amount)
+					.div(memberRate.feature_amount ?? 1),
 			),
 		);
-	}
-
-	if (originalFeature && originalFeature.id !== feature.id) {
-		const schemaItem = feature.config?.schema?.find(
-			(item: { metered_feature_id: string }) =>
-				item.metered_feature_id === originalFeature.id,
-		);
-		// Only a flat rate converts to a scalar. A graduated or dimensioned rate
-		// depends on usage and event properties that aren't in scope here, and
-		// treating it as 1 credit/unit silently under-reports the cap.
-		if (schemaItem && isFlatCreditRate(schemaItem)) {
-			for (const capOnOriginal of applicableCaps(originalFeature.id)) {
-				const headroomUnits = Decimal.max(
-					0,
-					new Decimal(capOnOriginal.limit).sub(capOnOriginal.usage ?? 0),
-				);
-				headrooms.push(
-					headroomUnits
-						.mul(schemaItem.credit_amount)
-						.div(schemaItem.feature_amount ?? 1),
-				);
-			}
-		}
 	}
 
 	if (headrooms.length === 0) return null;
