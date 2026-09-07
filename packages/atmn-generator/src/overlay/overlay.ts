@@ -78,6 +78,11 @@ export const OVERLAY: Overlay = {
 				reason:
 					"A push-time input. A changed versionSlug beside internalId is the rename.",
 			},
+			"variants.name": {
+				required: true,
+				reason:
+					"A variant fixture states the whole row like a plan does; the server only demands the name on create because a declared entry doubles as a follow reference.",
+			},
 			"variants.new_plan_id": {
 				hidden: true,
 				reason:

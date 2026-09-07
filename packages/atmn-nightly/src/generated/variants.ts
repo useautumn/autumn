@@ -11,7 +11,7 @@ export type Variant = {
 	/** Which version of the variant this overlay targets, by slug. Same pin as `version`; omit both to target latest. Defaults to "vN", N being the server's version number; state it explicitly on every variant history row. */
 	versionSlug?: string;
 	/** Display name when creating the variant if it does not exist. */
-	name?: string;
+	name: string;
 	/** Archive or unarchive this variant. Omit to leave archived state unchanged. */
 	archived?: boolean;
 	/** Slug for the row this variant mints. Omit to inherit the base's `new_version_slug`, then `v{n}`. Ignored when this entry resolves to an existing row. */
