@@ -118,7 +118,7 @@ export const MoreSettingsSection = () => {
 
 					<ConfigRow
 						title="Allow access while overdue"
-						description="Override the organization's overdue access block for this plan. Cancellation and balance resets are unchanged."
+						description="Allow access when this plan is past due."
 						action={
 							<Switch
 								aria-label="Allow access while overdue"
