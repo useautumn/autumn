@@ -136,8 +136,6 @@ describe("entity default products", () => {
 		});
 	});
 
-	// Entities share their customer's pools; a transition per entity from the
-	// original snapshot would plan the same pool twice.
 	test("runs one pooled transition across every entity's inserts", async () => {
 		const fullCustomer = {
 			id: "customer_1",
@@ -157,7 +155,7 @@ describe("entity default products", () => {
 		const byName = (name: string) => calls.filter((call) => call.name === name);
 		expect(byName("execute")).toHaveLength(2);
 		expect(byName("pooled")).toHaveLength(1);
-		expect(calls.at(-1)?.name).toBe("pooled");
+		expect(calls[calls.length - 1]?.name).toBe("pooled");
 		expect(byName("pooled")[0]?.args).toMatchObject({
 			incomingCustomerProducts: [customerProduct, customerProduct],
 		});

@@ -84,9 +84,6 @@ export const attachDefaultProductsToEntities = async ({
 		insertedCustomerProducts.push(...insertCustomerProducts);
 	}
 
-	// Entities share their customer's pools, so one transition runs over every
-	// insert once they are all committed — computing per entity from the
-	// original snapshot would plan the same pool twice.
 	await applyPooledBalanceCustomerProductTransitions({
 		ctx,
 		fullCustomer,
