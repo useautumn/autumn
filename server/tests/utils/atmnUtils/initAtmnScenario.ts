@@ -309,6 +309,13 @@ export const initAtmnScenario = async ({
 		seedCustomer: async ({ planId, version }) => {
 			await seedVersionableCustomer({ ctx: scenario.ctx, planId, version });
 		},
-		cleanup: () => rmSync(cwd, { recursive: true, force: true }),
+		cleanup: () => {
+			rmSync(cwd, { recursive: true, force: true });
+			// The scenario provisioned a customer; best effort, never awaited by tests.
+			if (scenario.customerId !== undefined)
+				void scenario.autumnV2_3.customers
+					.delete(scenario.customerId)
+					.catch(() => undefined);
+		},
 	};
 };
