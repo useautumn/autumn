@@ -41,6 +41,19 @@ export function buildCreateScheduleRequestBody({
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
 	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
 
+	const toApiPlan = (plan: SchedulePlan) =>
+		buildBillingPlan({
+			productId: plan.productId,
+			prepaidOptions: plan.prepaidOptions,
+			items: plan.items,
+			addLicenses: plan.addLicenses,
+			version: plan.version,
+			isCustom: plan.isCustom,
+			entityId: plan.entityId ?? null,
+			product: products.find((product) => product.id === plan.productId),
+			features,
+		});
+
 	const apiPhases = phases.map((phase, index) => {
 		let startsAt = phase.startsAt;
 		if (index === 0) {
@@ -56,22 +69,7 @@ export function buildCreateScheduleRequestBody({
 		if (startsAt === null) return null;
 
 		const plans = phase.plans.flatMap((plan) =>
-			plan.productId
-				? [
-						buildBillingPlan({
-							productId: plan.productId,
-							prepaidOptions: plan.prepaidOptions,
-							items: plan.items,
-							version: plan.version,
-							isCustom: plan.isCustom,
-							entityId: plan.entityId ?? null,
-							product: products.find(
-								(product) => product.id === plan.productId,
-							),
-							features,
-						}),
-					]
-				: [],
+			plan.productId ? [toApiPlan(plan)] : [],
 		);
 
 		if (plans.length === 0) return null;
@@ -97,20 +95,7 @@ export function buildCreateScheduleRequestBody({
 	}));
 
 	const apiUnscheduledPlans = unscheduledPlans.flatMap((plan) =>
-		plan.productId
-			? [
-					buildBillingPlan({
-						productId: plan.productId,
-						prepaidOptions: plan.prepaidOptions,
-						items: plan.items,
-						version: plan.version,
-						isCustom: plan.isCustom,
-						entityId: plan.entityId ?? null,
-						product: products.find((product) => product.id === plan.productId),
-						features,
-					}),
-				]
-			: [],
+		plan.productId ? [toApiPlan(plan)] : [],
 	);
 
 	const body: Record<string, unknown> = {

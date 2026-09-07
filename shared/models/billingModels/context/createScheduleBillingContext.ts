@@ -2,6 +2,7 @@ import type {
 	Entitlement,
 	Entity,
 	FeatureOptions,
+	InsertPlanLicenseSpec,
 	Price,
 } from "@autumn/shared";
 import type {
@@ -16,6 +17,7 @@ export interface ScheduledProductContext {
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
 	featureQuantities: FeatureOptions[];
+	insertPlanLicenses?: InsertPlanLicenseSpec[];
 	/** User-provided subscription ID for this scheduled product. */
 	externalId?: string;
 	/**

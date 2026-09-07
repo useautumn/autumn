@@ -1,4 +1,5 @@
 import type {
+	CustomizePlanLicense,
 	FrontendProduct,
 	FullCustomer,
 	FullCustomerSchedule,
@@ -311,7 +312,10 @@ function CreateScheduleSheetBody() {
 		});
 	}, [editingPlanValue, products]);
 
-	const handleInlineSave = (draftProduct: FrontendProduct) => {
+	const handleInlineSave = (
+		draftProduct: FrontendProduct,
+		addLicenses?: CustomizePlanLicense[],
+	) => {
 		if (!(editingPlanValue && planEditorProduct)) return setEditingPlan(null);
 
 		const patch = getSupportedPlanFormPatchFromDraftProduct({
@@ -326,6 +330,7 @@ function CreateScheduleSheetBody() {
 					isCustom: true,
 				}),
 				...("version" in patch && { version: patch.version }),
+				...(addLicenses !== undefined && { addLicenses }),
 			},
 		});
 	};
@@ -348,6 +353,8 @@ function CreateScheduleSheetBody() {
 					onSave={handleInlineSave}
 					onCancel={() => setEditingPlan(null)}
 					isOpen={!!editingPlan}
+					enableLicenseEditing
+					initialAddLicenses={editingPlanValue?.addLicenses}
 				/>
 			)}
 		</>
