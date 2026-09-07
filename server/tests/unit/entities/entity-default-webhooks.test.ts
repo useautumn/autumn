@@ -109,9 +109,9 @@ describe("entity default products", () => {
 
 		expect(calls.map(({ name }) => name)).toEqual([
 			"execute",
+			"pooled",
 			"customer.products.updated",
 			"billing.updated",
-			"pooled",
 		]);
 
 		const autumnBillingPlan = {
@@ -125,17 +125,17 @@ describe("entity default products", () => {
 			entity,
 		};
 		expect(calls[0]?.args.autumnBillingPlan).toEqual(autumnBillingPlan);
-		expect(calls[1]?.args).toMatchObject({
+		expect(calls[2]?.args).toMatchObject({
 			autumnBillingPlan,
 			billingContext: { fullCustomer: webhookCustomer },
 		});
-		expect(calls[2]?.args).toMatchObject({
+		expect(calls[3]?.args).toMatchObject({
 			autumnBillingPlan,
 			originalFullCustomer: webhookCustomer,
 		});
 		expect(
 			(
-				calls[2]?.args.originalFullCustomer as {
+				calls[3]?.args.originalFullCustomer as {
 					customer_products: unknown[];
 				}
 			).customer_products,
@@ -145,7 +145,7 @@ describe("entity default products", () => {
 		expect(withDefaults.pooled_customer_entitlements).toEqual(
 			pooledEntitlements,
 		);
-		expect(calls[3]?.args).toMatchObject({
+		expect(calls[1]?.args).toMatchObject({
 			outgoingCustomerProducts: [],
 			incomingCustomerProducts: [customerProduct],
 		});
@@ -168,9 +168,15 @@ describe("entity default products", () => {
 		})) as unknown as MockedCustomer;
 
 		const byName = (name: string) => calls.filter((call) => call.name === name);
-		expect(byName("execute")).toHaveLength(2);
-		expect(byName("pooled")).toHaveLength(1);
-		expect(calls[calls.length - 1]?.name).toBe("pooled");
+		expect(calls.map(({ name }) => name)).toEqual([
+			"execute",
+			"execute",
+			"pooled",
+			"customer.products.updated",
+			"billing.updated",
+			"customer.products.updated",
+			"billing.updated",
+		]);
 		expect(byName("pooled")[0]?.args).toMatchObject({
 			incomingCustomerProducts: [customerProduct, customerProduct],
 		});
