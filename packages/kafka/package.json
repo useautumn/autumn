@@ -14,7 +14,7 @@
 	"scripts": {
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
-		"test:kafka": "bun test --config ./bunfig.toml tests/integration",
+		"test:kafka": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {

@@ -3,6 +3,13 @@
 # Public URLs are a host ngrok tunnel to the path proxy, not compose services.
 
 services:
+  kafka:
+    extends:
+      file: ../../docker/kafka.compose.yml
+      service: kafka
+    container_name: ${COMPOSE_PROJECT_NAME}-kafka
+    restart: unless-stopped
+
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly
     container_name: ${COMPOSE_PROJECT_NAME}-dragonfly
@@ -29,3 +36,6 @@ services:
       - "${DYNAMODB_PORT}:8000"
     command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
     restart: unless-stopped
+
+volumes:
+  kafka-data:

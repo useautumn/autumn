@@ -28,6 +28,14 @@ export function dynamoDbPortFor(worktreeNum: number): number {
 	return 8000 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
+export function kafkaPortFor(worktreeNum: number): number {
+	return 19092 + (composeSlot(worktreeNum) - 1) * 100;
+}
+
+export function balanceWorkerPortFor(worktreeNum: number): number {
+	return 8082 + (worktreeNum - 1) * 100;
+}
+
 export function serverPortFor(worktreeNum: number): number {
 	return 8080 + (worktreeNum - 1) * 100;
 }
@@ -132,11 +140,7 @@ export function killOwnPorts(worktreeNum: number): void {
 		...new Set(
 			listeners.flatMap((pid) => {
 				const ppid = parentPidOf(pid);
-				if (
-					ppid === undefined ||
-					ppid === process.pid ||
-					!isNodemonPid(ppid)
-				) {
+				if (ppid === undefined || ppid === process.pid || !isNodemonPid(ppid)) {
 					return [];
 				}
 				return [ppid];

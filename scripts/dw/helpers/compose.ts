@@ -1,26 +1,15 @@
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
-import { getCanonicalWorktree } from "./git.ts";
 import {
 	composeProjectName,
 	dragonflyPortFor,
 	dynamoDbPortFor,
 	elasticMqPortFor,
+	kafkaPortFor,
 } from "./ports.ts";
 import { log, sh } from "./shell.ts";
 
-function getComposeFilePath(): string {
-	const canonicalPath = join(
-		getCanonicalWorktree(),
-		"scripts/setup/dw.compose.yml",
-	);
-	if (existsSync(canonicalPath)) return canonicalPath;
-
-	return join(PROJECT_ROOT, "scripts/setup/dw.compose.yml");
-}
-
-const composeFilePath = getComposeFilePath();
+const composeFilePath = join(PROJECT_ROOT, "scripts/setup/dw.compose.yml");
 
 export function dockerComposeAvailable(): boolean {
 	const res = sh("docker", ["compose", "version"]);
@@ -34,6 +23,7 @@ function composeEnv(worktreeNum: number): Record<string, string> {
 		DRAGONFLY_PORT: String(dragonflyPortFor(worktreeNum)),
 		ELASTICMQ_PORT: String(elasticMqPortFor(worktreeNum)),
 		DYNAMODB_PORT: String(dynamoDbPortFor(worktreeNum)),
+		KAFKA_PORT: String(kafkaPortFor(worktreeNum)),
 	};
 }
 
@@ -50,32 +40,46 @@ export function ensureComposeStack(
 	const env = composeEnv(worktreeNum);
 	const up = sh(
 		"docker",
-		["compose", "-f", composeFilePath, "-p", project, "up", "-d"],
+		[
+			"compose",
+			"-f",
+			composeFilePath,
+			"-p",
+			project,
+			"up",
+			"-d",
+			"--wait",
+			"--wait-timeout",
+			"90",
+		],
 		{ env },
 	);
 	if (up.code === 0) {
 		log(
-			`compose stack ${project} up (dragonfly :${env.DRAGONFLY_PORT}, elasticmq :${env.ELASTICMQ_PORT}, dynamodb :${env.DYNAMODB_PORT})`,
+			`compose stack ${project} up (dragonfly :${env.DRAGONFLY_PORT}, elasticmq :${env.ELASTICMQ_PORT}, dynamodb :${env.DYNAMODB_PORT}, kafka :${env.KAFKA_PORT})`,
 		);
 	} else {
-		console.error(
-			`[dw] failed to start compose stack ${project}: ${up.stderr}`,
-		);
+		throw new Error(`Failed to start compose stack ${project}: ${up.stderr}`);
 	}
 }
 
 function composeDown(project: string, extra: string[] = []): number {
-	return sh("docker", [
-		"compose",
-		"-f",
-		composeFilePath,
-		"-p",
-		project,
-		"--profile",
-		"ngrok",
-		"down",
-		...extra,
-	]).code;
+	const worktreeNum = Number(project.replace("autumn-wt-", ""));
+	return sh(
+		"docker",
+		[
+			"compose",
+			"-f",
+			composeFilePath,
+			"-p",
+			project,
+			"--profile",
+			"ngrok",
+			"down",
+			...extra,
+		],
+		{ env: composeEnv(worktreeNum) },
+	).code;
 }
 
 export function removeComposeStack(
