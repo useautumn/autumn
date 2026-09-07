@@ -1,29 +1,16 @@
 import type { ApiSubjectV0 } from "@api/customers/apiSubjectV0";
 import { usageLimitFilterMatchesProperties } from "@models/cusModels/billingControls/usageLimit";
 import type { Feature } from "@models/featureModels/featureModels";
-import { hasCreditDimensionRules } from "@utils/featureUtils/classifyFeature/hasCreditDimensionRules";
 import { Decimal } from "decimal.js";
 
-type CreditRateLookup = {
-	metered_feature_id: string;
-	credit_amount?: number;
-	feature_amount?: number;
-	tier_behavior?: string;
-	dimensions?: Record<string, unknown> | null;
-	multipliers?: Record<string, unknown> | null;
-};
-
-const capHeadroom = (cap: { limit: number; usage?: number | null }) =>
-	Decimal.max(0, new Decimal(cap.limit).sub(cap.usage ?? 0));
-
-const isFlatCreditRate = (
-	item: CreditRateLookup,
-): item is CreditRateLookup & { credit_amount: number } =>
-	item.credit_amount != null &&
-	item.tier_behavior !== "graduated" &&
-	!hasCreditDimensionRules(item);
-
-/** Usage-window headroom in the evaluated feature's units. */
+/**
+ * Remaining usage-window headroom for a check, in the EVALUATED feature's
+ * units (credits when the evaluated feature is a credit system). Considers
+ * both the cap on the evaluated feature itself and -- when checking a
+ * credit-system member -- the metered cap on the original feature, converted
+ * via its credit cost. Filtered caps only apply when the check's `properties`
+ * match. Null when no armed cap applies.
+ */
 export const apiSubjectToUsageLimitHeadroom = ({
 	apiSubject,
 	feature,
@@ -57,24 +44,33 @@ export const apiSubjectToUsageLimitHeadroom = ({
 				}),
 		);
 
-	headrooms.push(...applicableCaps(feature.id).map(capHeadroom));
-
-	const memberRate =
-		originalFeature && originalFeature.id !== feature.id
-			? feature.config?.schema?.find(
-					(item: { metered_feature_id: string }) =>
-						item.metered_feature_id === originalFeature.id,
-				)
-			: undefined;
-
-	if (originalFeature && memberRate && isFlatCreditRate(memberRate)) {
+	for (const capOnEvaluated of applicableCaps(feature.id)) {
 		headrooms.push(
-			...applicableCaps(originalFeature.id).map((cap) =>
-				capHeadroom(cap)
-					.mul(memberRate.credit_amount)
-					.div(memberRate.feature_amount ?? 1),
+			Decimal.max(
+				0,
+				new Decimal(capOnEvaluated.limit).sub(capOnEvaluated.usage ?? 0),
 			),
 		);
+	}
+
+	if (originalFeature && originalFeature.id !== feature.id) {
+		const schemaItem = feature.config?.schema?.find(
+			(item: { metered_feature_id: string }) =>
+				item.metered_feature_id === originalFeature.id,
+		);
+		if (schemaItem) {
+			for (const capOnOriginal of applicableCaps(originalFeature.id)) {
+				const headroomUnits = Decimal.max(
+					0,
+					new Decimal(capOnOriginal.limit).sub(capOnOriginal.usage ?? 0),
+				);
+				headrooms.push(
+					headroomUnits
+						.mul(schemaItem.credit_amount ?? 1)
+						.div(schemaItem.feature_amount ?? 1),
+				);
+			}
+		}
 	}
 
 	if (headrooms.length === 0) return null;
