@@ -2,6 +2,7 @@ import type {
 	PartitionCheckpointFailure,
 	PartitionCheckpointHealth,
 } from "../../health/partitionCheckpointHealth.js";
+import { PartitionCheckpointThreadError } from "../background/checkpointThreadFailure.js";
 import { PartitionCheckpointBodyLimitExceededError } from "../partitionCheckpointEncoding.js";
 import { PartitionCheckpointLimitExceededError } from "../partitionCheckpointLimits.js";
 import { PartitionCheckpointPublisherError } from "../partitionCheckpointPublisher.js";
@@ -43,7 +44,8 @@ export const checkpointFailureOf = ({
 		retriable:
 			cause instanceof PartitionCheckpointPublisherError
 				? cause.retriable
-				: cause instanceof PartitionCheckpointExportTimeoutError,
+				: cause instanceof PartitionCheckpointExportTimeoutError ||
+					cause instanceof PartitionCheckpointThreadError,
 	};
 	if (
 		cause instanceof PartitionCheckpointLimitExceededError ||
