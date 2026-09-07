@@ -177,3 +177,64 @@ test("featureOverride is only honoured on classic credit-system features", () =>
 		}),
 	).not.toThrow();
 });
+
+test("a variant linked from two versions of its base is refused", () => {
+	const proYearly = { variantPlanId: "pro_yearly", name: "Pro Yearly" };
+	const issues = issuesOf(() =>
+		atmn({
+			plans: [
+				plan({
+					planId: "pro",
+					name: "Pro",
+					versionSlug: "v2",
+					variants: [proYearly],
+				}),
+			],
+			planVersions: [
+				plan({
+					planId: "pro",
+					name: "Pro",
+					versionSlug: "v1",
+					variants: [proYearly],
+				}),
+			],
+		}),
+	);
+
+	expect(issues).toEqual([
+		{
+			path: 'plan "pro"',
+			message:
+				"pro_yearly is linked from pro v2 and pro v1. When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
+		},
+	]);
+});
+
+test("versioning the variant alongside its base lints clean", () => {
+	const proYearly = (versionSlug: string) => ({
+		variantPlanId: "pro_yearly",
+		name: "Pro Yearly",
+		versionSlug,
+	});
+
+	expect(() =>
+		atmn({
+			plans: [
+				plan({
+					planId: "pro",
+					name: "Pro",
+					versionSlug: "v2",
+					variants: [proYearly("v2")],
+				}),
+			],
+			planVersions: [
+				plan({
+					planId: "pro",
+					name: "Pro",
+					versionSlug: "v1",
+					variants: [proYearly("v1")],
+				}),
+			],
+		}),
+	).not.toThrow();
+});

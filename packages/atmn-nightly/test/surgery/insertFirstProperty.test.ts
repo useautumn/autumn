@@ -107,3 +107,57 @@ test("fixture not found returns null", () => {
 		}),
 	).toBeNull();
 });
+
+/** A later spread overrides an earlier key at runtime, so a pair inserted
+ * before one is silently discarded and the backfill never takes effect. */
+test("a leading spread pushes the new property after it", () => {
+	const source = `export const pro = plan({ ...base, planId: "pro" });\n`;
+	expect(
+		insertFirstProperty({
+			source,
+			builder: "plan",
+			idField: "planId",
+			id: "pro",
+			property: 'internalId: "prod_123"',
+		}),
+	).toBe(
+		`export const pro = plan({ ...base, planId: "pro", internalId: "prod_123" });\n`,
+	);
+});
+
+test("a trailing spread pushes the new property after it too", () => {
+	const source = `export const pro = plan({ planId: "pro", ...base });\n`;
+	expect(
+		insertFirstProperty({
+			source,
+			builder: "plan",
+			idField: "planId",
+			id: "pro",
+			property: 'internalId: "prod_123"',
+		}),
+	).toBe(
+		`export const pro = plan({ planId: "pro", ...base, internalId: "prod_123" });\n`,
+	);
+});
+
+test("a multiline literal with a trailing spread keeps its layout", () => {
+	const source = `export const pro = plan({
+	planId: "pro",
+	...base,
+});
+`;
+	expect(
+		insertFirstProperty({
+			source,
+			builder: "plan",
+			idField: "planId",
+			id: "pro",
+			property: 'internalId: "prod_123"',
+		}),
+	).toBe(`export const pro = plan({
+	planId: "pro",
+	...base,
+	internalId: "prod_123",
+});
+`);
+});

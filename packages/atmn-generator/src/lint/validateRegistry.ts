@@ -23,6 +23,8 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return rule.alongside === undefined
 				? [rule.field]
 				: [rule.field, rule.alongside];
+		case "linkedOnce":
+			return [rule.groupBy, rule.namedBy, rule.collection];
 		case "exists":
 			return [rule.field];
 		case "compare":
@@ -89,6 +91,27 @@ export const validateRegistry = ({
 					problems.push(
 						`"${path}": exists rule matches on "${rule.in}.${rule.matching}", which is not a field there.`,
 					);
+				}
+			}
+			if (rule.kind === "linkedOnce") {
+				const linkPath = `${path}.${rule.collection}`;
+				const linkFields = fieldsAtPath({
+					schema,
+					root,
+					path: linkPath,
+					overlay,
+				});
+				if (!linkFields) {
+					problems.push(
+						`"${path}": linkedOnce rule links "${linkPath}", which is not a path in the catalog.`,
+					);
+					continue;
+				}
+				for (const field of [rule.identity, ...rule.pins]) {
+					if (!linkFields.has(field))
+						problems.push(
+							`"${path}": linkedOnce rule names "${linkPath}.${field}", which is not a field there.`,
+						);
 				}
 			}
 			if (rule.kind === "targetHas") {

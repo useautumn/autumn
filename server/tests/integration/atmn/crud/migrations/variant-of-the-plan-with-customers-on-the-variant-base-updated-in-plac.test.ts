@@ -124,7 +124,8 @@ test.concurrent(
 				version: 1,
 			});
 
-			// Mint pro v2; v1 (and the variant hanging off it) becomes history.
+			// Mint pro v2 with its own pro_plus v2; v1 and pro_plus v1 become history.
+			// One variant row may hang off one base version, so each version pins its own.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -136,7 +137,7 @@ test.concurrent(
 			price: { amount: 59, interval: "month" },
 			items: [{ featureId: "seats", included: 5 }],
 			variants: [
-				{ variantPlanId: "pro_plus", name: "Pro Plus" },
+				{ variantPlanId: "pro_plus", name: "Pro Plus", versionSlug: "v2" },
 			],
 		}),
 	],
@@ -148,7 +149,7 @@ test.concurrent(
 			price: { amount: 49, interval: "month" },
 			items: [{ featureId: "seats", included: 5 }],
 			variants: [
-				{ variantPlanId: "pro_plus", name: "Pro Plus" },
+				{ variantPlanId: "pro_plus", name: "Pro Plus", versionSlug: "v1" },
 			],
 		}),
 	],

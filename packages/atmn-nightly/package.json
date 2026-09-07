@@ -4,14 +4,16 @@
 	"license": "MIT",
 	"description": "Autumn CLI \u2014 nightly. Renamed to `atmn` at 3.0.0.",
 	"bin": {
-		"atmn-nightly": "dist/cli.js"
+		"atmn-nightly": "dist/bin.js"
 	},
-	"main": "src/index.ts",
+	"main": "dist/index.js",
 	"types": "src/index.ts",
 	"exports": {
 		".": {
 			"types": "./src/index.ts",
-			"default": "./src/index.ts"
+			"bun": "./src/index.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
 		}
 	},
 	"repository": {
@@ -27,10 +29,12 @@
 	"scripts": {
 		"ts": "bunx tsgo --build --noEmit",
 		"build": "bun run bun.config.ts",
-		"test": "bun test test"
+		"test": "bun test test",
+		"prepack": "bun run build"
 	},
 	"files": [
 		"dist",
+		"src",
 		"package.json",
 		"README.md"
 	],
@@ -40,6 +44,7 @@
 		"chalk": "5.6.2",
 		"commander": "14.0.3",
 		"dotenv": "16.6.1",
+		"jiti": "2.7.0",
 		"open": "10.2.0",
 		"yaml": "2.9.0"
 	},

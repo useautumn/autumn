@@ -1,3 +1,4 @@
+import { appendPropertyEdit, holdsSpread } from "./appendPropertyEdit";
 import { type FixtureConstraint, findFixture } from "./findFixture";
 import { lineStartOf } from "./fixtureEdit";
 
@@ -16,10 +17,27 @@ export const insertFirstProperty = ({
 	where?: FixtureConstraint[];
 	property: string;
 }): string | null => {
-	const call = findFixture({ source, builder, idField, id, where });
+	// A splice keeps every other byte, so a literal the pull rewriter refuses
+	// (it names another fixture) still takes one new property.
+	const call = findFixture({
+		source,
+		builder,
+		idField,
+		id,
+		where,
+		allowDynamic: true,
+	});
 	if (call === null) return null;
 	const object = call.find({ rule: { kind: "object" } });
 	if (object === null) return null;
+	// A spread later in the literal overrides an earlier key, so a literal built
+	// from one takes the property at the end instead — where it still applies.
+	if (holdsSpread({ object })) {
+		return call
+			.getRoot()
+			.root()
+			.commitEdits([appendPropertyEdit({ source, object, pair: property })]);
+	}
 	const first = object.namedChildren()[0];
 	if (first === undefined) return null;
 	const insertAt = first.range().start.index;

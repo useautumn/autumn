@@ -1,33 +1,30 @@
 import {
+	CreateSandboxParamsSchema,
 	DEFAULT_SANDBOX_COLOR,
 	DEFAULT_SANDBOX_ICON,
-	SandboxColorSchema,
-	SandboxIconSchema,
 	Scopes,
 } from "@autumn/shared";
-import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
-	assertDashboardActor,
 	assertNotSandboxContext,
 	createSandboxForOrg,
 } from "../createSandbox.js";
-
-const CreateSandboxSchema = z.object({
-	name: z.string().trim().min(1).max(100),
-	color: SandboxColorSchema.optional(),
-	icon: SandboxIconSchema.optional(),
-});
+import { resolveSandboxActor } from "../resolveSandboxActor.js";
 
 export const handleCreateSandbox = createRoute({
 	scopes: [Scopes.Platform.Write],
-	body: CreateSandboxSchema,
+	body: CreateSandboxParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org: masterOrg, user, authType } = ctx;
 
 		assertNotSandboxContext(masterOrg);
-		const actorUser = assertDashboardActor({ authType, user });
+		const actorUser = await resolveSandboxActor({
+			db,
+			org: masterOrg,
+			user,
+			authType,
+		});
 		const { name, color, icon } = c.req.valid("json");
 
 		const { org, secret_key } = await createSandboxForOrg({
@@ -43,6 +40,7 @@ export const handleCreateSandbox = createRoute({
 			id: org.id,
 			name: org.name,
 			slug: org.slug,
+			created_at: org.createdAt.getTime(),
 			color: org.sandbox_color ?? DEFAULT_SANDBOX_COLOR,
 			icon: org.sandbox_icon ?? DEFAULT_SANDBOX_ICON,
 			secret_key,

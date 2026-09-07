@@ -18,6 +18,8 @@ const previousAttributeKeys = [
 	"free_trial",
 	"config",
 	"billing_controls",
+	// A demotion changes nothing else, so without this the row reads as a no-op.
+	"active",
 	"archived",
 	"metadata",
 	"processors",

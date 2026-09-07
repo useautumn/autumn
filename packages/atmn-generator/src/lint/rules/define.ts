@@ -38,6 +38,12 @@ export const unique = (rule: RuleOf<"unique">): LintRule => ({
 	...rule,
 });
 
+/** No two entries of one group may link the same child row. */
+export const linkedOnce = (rule: RuleOf<"linkedOnce">): LintRule => ({
+	kind: "linkedOnce",
+	...rule,
+});
+
 /** The field names an entry of another top-level collection. */
 export const exists = (rule: RuleOf<"exists">): LintRule => ({
 	kind: "exists",

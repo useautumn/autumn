@@ -238,3 +238,53 @@ export default atmn({
 		}),
 	).toBeNull();
 });
+
+test("a single-quoted id with escapes is matched by its runtime value", () => {
+	const source = [
+		'import { feature } from "atmn";',
+		"",
+		"export const odd = feature({",
+		"\tfeatureId: 'it\\'s\\ta\\\\b\\u0041',",
+		"\tname: 'Odd',",
+		"});",
+		"",
+	].join("\n");
+
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "it's\ta\\bA",
+		}),
+	).not.toBeNull();
+	// The source spelling is not the value: matching it would be the bug.
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "it\\'s\\ta\\\\b\\u0041",
+		}),
+	).toBeNull();
+});
+
+test("a double-quoted id with escapes decodes the same way", () => {
+	const source = [
+		'import { feature } from "atmn";',
+		"",
+		"export const odd = feature({",
+		'\tfeatureId: "line\\nbreak",',
+		"});",
+		"",
+	].join("\n");
+
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "line\nbreak",
+		}),
+	).not.toBeNull();
+});

@@ -2742,10 +2742,16 @@ components:
           properties:
             ignore_past_due:
               type: boolean
-              default: false
               description: If true, entitlements attached to this plan will still reset on
                 schedule even when the customer's product is in a past_due
                 state.
+              default: false
+            allow_overdue_entitlements:
+              type: boolean
+              description: If true, this plan's entitlements remain usable while past due,
+                overriding the organization's overdue entitlement block without
+                changing cancellation or reset behavior.
+              default: false
           description: Miscellaneous plan-level configuration flags.
         billing_controls:
           type: object
@@ -12238,10 +12244,14 @@ paths:
                   properties:
                     ignore_past_due:
                       type: boolean
-                      default: false
                       description: If true, entitlements attached to this plan will still reset on
                         schedule even when the customer's product is in a
                         past_due state.
+                    allow_overdue_entitlements:
+                      type: boolean
+                      description: If true, this plan's entitlements remain usable while past due,
+                        overriding the organization's overdue entitlement block
+                        without changing cancellation or reset behavior.
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -13382,10 +13392,16 @@ paths:
                     properties:
                       ignore_past_due:
                         type: boolean
-                        default: false
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                        default: false
+                      allow_overdue_entitlements:
+                        type: boolean
+                        description: If true, this plan's entitlements remain usable while past due,
+                          overriding the organization's overdue entitlement
+                          block without changing cancellation or reset behavior.
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -16336,10 +16352,16 @@ paths:
                     properties:
                       ignore_past_due:
                         type: boolean
-                        default: false
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                        default: false
+                      allow_overdue_entitlements:
+                        type: boolean
+                        description: If true, this plan's entitlements remain usable while past due,
+                          overriding the organization's overdue entitlement
+                          block without changing cancellation or reset behavior.
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -19274,10 +19296,17 @@ paths:
                           properties:
                             ignore_past_due:
                               type: boolean
-                              default: false
                               description: If true, entitlements attached to this plan will still reset on
                                 schedule even when the customer's product is in
                                 a past_due state.
+                              default: false
+                            allow_overdue_entitlements:
+                              type: boolean
+                              description: If true, this plan's entitlements remain usable while past due,
+                                overriding the organization's overdue
+                                entitlement block without changing cancellation
+                                or reset behavior.
+                              default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
                           type: object
@@ -24502,10 +24531,17 @@ paths:
                                     properties:
                                       ignore_past_due:
                                         type: boolean
-                                        default: false
                                         description: If true, entitlements attached to this plan will still reset on
                                           schedule even when the customer's
                                           product is in a past_due state.
+                                        default: false
+                                      allow_overdue_entitlements:
+                                        type: boolean
+                                        description: If true, this plan's entitlements remain usable while past due,
+                                          overriding the organization's overdue
+                                          entitlement block without changing
+                                          cancellation or reset behavior.
+                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -26296,10 +26332,14 @@ paths:
                   properties:
                     ignore_past_due:
                       type: boolean
-                      default: false
                       description: If true, entitlements attached to this plan will still reset on
                         schedule even when the customer's product is in a
                         past_due state.
+                    allow_overdue_entitlements:
+                      type: boolean
+                      description: If true, this plan's entitlements remain usable while past due,
+                        overriding the organization's overdue entitlement block
+                        without changing cancellation or reset behavior.
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -28540,10 +28580,16 @@ paths:
                     properties:
                       ignore_past_due:
                         type: boolean
-                        default: false
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
+                        default: false
+                      allow_overdue_entitlements:
+                        type: boolean
+                        description: If true, this plan's entitlements remain usable while past due,
+                          overriding the organization's overdue entitlement
+                          block without changing cancellation or reset behavior.
+                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -74048,6 +74094,273 @@ paths:
       x-speakeasy-name-override: revoke
       parameters:
         - *a1
+  /v1/sandboxes.create:
+    post:
+      operationId: createSandbox
+      description: "Creates a sandbox: an isolated copy of your organization with its
+        own catalog, customers and secret key. Returns the sandbox's secret key
+        once, in this response — store it, it cannot be read back. Authenticated
+        with your organization's secret key (a sandbox's own key cannot create
+        sandboxes)."
+      tags:
+        - sandboxes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  pattern: \S
+                  description: A name for the sandbox, unique within your organization.
+                color:
+                  enum:
+                    - gray
+                    - blue
+                    - green
+                    - amber
+                    - red
+                    - pink
+                  type: string
+                  description: Colour the dashboard uses to label the sandbox. Defaults to `gray`.
+                icon:
+                  type: string
+                  minLength: 1
+                  maxLength: 64
+                  description: Icon the dashboard uses to label the sandbox. Defaults to `Flask`.
+              required:
+                - name
+              title: CreateSandboxParams
+              examples:
+                - name: staging
+                  color: blue
+                  icon: Flask
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The sandbox's organization ID.
+                  name:
+                    type: string
+                    description: The sandbox's name.
+                  slug:
+                    type: string
+                    description: The sandbox's slug, derived from its name.
+                  created_at:
+                    type: number
+                    description: When the sandbox was created, ms since epoch.
+                  color:
+                    enum:
+                      - gray
+                      - blue
+                      - green
+                      - amber
+                      - red
+                      - pink
+                    type: string
+                    description: Colour the dashboard uses to label the sandbox.
+                  icon:
+                    type: string
+                    minLength: 1
+                    maxLength: 64
+                    description: Icon the dashboard uses to label the sandbox.
+                  secret_key:
+                    type: string
+                    description: The sandbox's own secret key. Shown once, here — store it before
+                      you discard the response.
+                    readOnly: true
+                required:
+                  - id
+                  - name
+                  - slug
+                  - created_at
+                  - color
+                  - icon
+                  - secret_key
+                title: CreateSandboxResponse
+                examples:
+                  - id: org_123
+                    name: staging
+                    slug: staging-abc123|org_456
+                    created_at: 1781113864000
+                    color: blue
+                    icon: Flask
+                    secret_key: am_sk_test_abc123
+      x-speakeasy-name-override: create
+      parameters:
+        - *a1
+  /v1/sandboxes.list:
+    post:
+      operationId: listSandboxes
+      description: Lists every sandbox belonging to your organization, newest first.
+        Secret keys are never returned here — only `sandboxes.create` shows one.
+      tags:
+        - sandboxes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ListSandboxesParams
+              description: No body. Lists every sandbox belonging to your organization.
+              examples:
+                - {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The sandbox's organization ID.
+                        name:
+                          type: string
+                          description: The sandbox's name.
+                        slug:
+                          type: string
+                          description: The sandbox's slug, derived from its name.
+                        created_at:
+                          type: number
+                          description: When the sandbox was created, ms since epoch.
+                        color:
+                          enum:
+                            - gray
+                            - blue
+                            - green
+                            - amber
+                            - red
+                            - pink
+                          type: string
+                          description: Colour the dashboard uses to label the sandbox.
+                        icon:
+                          type: string
+                          minLength: 1
+                          maxLength: 64
+                          description: Icon the dashboard uses to label the sandbox.
+                      required:
+                        - id
+                        - name
+                        - slug
+                        - created_at
+                        - color
+                        - icon
+                    description: Your organization's sandboxes, newest first.
+                required:
+                  - list
+                title: ListSandboxesResponse
+                examples:
+                  - list:
+                      - id: org_123
+                        name: staging
+                        slug: staging-abc123|org_456
+                        created_at: 1781113864000
+                        color: blue
+                        icon: Flask
+      x-speakeasy-name-override: list
+      parameters:
+        - *a1
+  /v1/sandboxes.delete:
+    post:
+      operationId: deleteSandbox
+      description: "Permanently deletes a sandbox and everything inside it: its
+        catalog, customers and secret key. Cannot be undone."
+      tags:
+        - sandboxes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  description: The ID of the sandbox to delete.
+              required:
+                - id
+              title: DeleteSandboxParams
+              examples:
+                - id: org_123
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                    description: Always true when the sandbox was deleted.
+                required:
+                  - success
+                title: DeleteSandboxResponse
+                examples:
+                  - success: true
+      x-speakeasy-name-override: delete
+      parameters:
+        - *a1
+  /v1/sandboxes.reset:
+    post:
+      operationId: resetSandbox
+      description: "Wipes every customer, plan, feature and migration draft in the
+        sandbox the calling key belongs to, leaving the sandbox itself, its
+        secret keys and its settings in place. There is no id to pass: a
+        sandbox's own key resets that sandbox, and an organization's test-mode
+        key resets its default sandbox environment. Refused for live keys — only
+        sandboxes can be reset. Cannot be undone."
+      tags:
+        - sandboxes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ResetSandboxParams
+              description: No body. Resets the sandbox the calling key belongs to — there is
+                no id to pass.
+              examples:
+                - {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                    description: Always true when the sandbox was reset.
+                required:
+                  - success
+                title: ResetSandboxResponse
+                examples:
+                  - success: true
+      x-speakeasy-name-override: reset
+      parameters:
+        - *a1
   /v1/catalogV2.get:
     post:
       operationId: getCatalogV2
@@ -75473,10 +75786,17 @@ paths:
                           properties:
                             ignore_past_due:
                               type: boolean
-                              default: false
                               description: If true, entitlements attached to this plan will still reset on
                                 schedule even when the customer's product is in
                                 a past_due state.
+                              default: false
+                            allow_overdue_entitlements:
+                              type: boolean
+                              description: If true, this plan's entitlements remain usable while past due,
+                                overriding the organization's overdue
+                                entitlement block without changing cancellation
+                                or reset behavior.
+                              default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
                           type: object
@@ -80701,10 +81021,17 @@ paths:
                                     properties:
                                       ignore_past_due:
                                         type: boolean
-                                        default: false
                                         description: If true, entitlements attached to this plan will still reset on
                                           schedule even when the customer's
                                           product is in a past_due state.
+                                        default: false
+                                      allow_overdue_entitlements:
+                                        type: boolean
+                                        description: If true, this plan's entitlements remain usable while past due,
+                                          overriding the organization's overdue
+                                          entitlement block without changing
+                                          cancellation or reset behavior.
+                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -82272,10 +82599,15 @@ paths:
                         properties:
                           ignore_past_due:
                             type: boolean
-                            default: false
                             description: If true, entitlements attached to this plan will still reset on
                               schedule even when the customer's product is in a
                               past_due state.
+                          allow_overdue_entitlements:
+                            type: boolean
+                            description: If true, this plan's entitlements remain usable while past due,
+                              overriding the organization's overdue entitlement
+                              block without changing cancellation or reset
+                              behavior.
                         description: Miscellaneous plan-level configuration flags.
                       billing_controls:
                         type: object
@@ -86078,13 +86410,30 @@ paths:
                                               properties:
                                                 ignore_past_due:
                                                   type: boolean
-                                                  default: false
                                                   description: If true, entitlements attached to this plan will still reset on
                                                     schedule even when the
                                                     customer's product is in a
                                                     past_due state.
+                                                  default: false
+                                                allow_overdue_entitlements:
+                                                  type: boolean
+                                                  description: If true, this plan's entitlements remain usable while past due,
+                                                    overriding the
+                                                    organization's overdue
+                                                    entitlement block without
+                                                    changing cancellation or
+                                                    reset behavior.
+                                                  default: false
                                               description: Miscellaneous plan-level configuration flags.
                                             - type: "null"
+                                        active:
+                                          anyOf:
+                                            - type: boolean
+                                              description: Whether this is the active version of the plan. At most one version
+                                                is active.
+                                            - type: "null"
+                                          description: The `active` flag before this update; true on the version being
+                                            demoted.
                                         archived:
                                           anyOf:
                                             - type: boolean
@@ -89814,14 +90163,33 @@ paths:
                                                             properties:
                                                               ignore_past_due:
                                                                 type: boolean
-                                                                default: false
                                                                 description: If true, entitlements attached to this plan will still reset on
                                                                   schedule even when
                                                                   the customer's
                                                                   product is in a
                                                                   past_due state.
+                                                                default: false
+                                                              allow_overdue_entitlements:
+                                                                type: boolean
+                                                                description: If true, this plan's entitlements remain usable while past due,
+                                                                  overriding the
+                                                                  organization's
+                                                                  overdue entitlement
+                                                                  block without
+                                                                  changing
+                                                                  cancellation or
+                                                                  reset behavior.
+                                                                default: false
                                                             description: Miscellaneous plan-level configuration flags.
                                                           - type: "null"
+                                                      active:
+                                                        anyOf:
+                                                          - type: boolean
+                                                            description: Whether this is the active version of the plan. At most one version
+                                                              is active.
+                                                          - type: "null"
+                                                        description: The `active` flag before this update; true on the version being
+                                                          demoted.
                                                       archived:
                                                         anyOf:
                                                           - type: boolean
@@ -92462,13 +92830,31 @@ paths:
                                                     properties:
                                                       ignore_past_due:
                                                         type: boolean
-                                                        default: false
                                                         description: If true, entitlements attached to this plan will still reset on
                                                           schedule even when the
                                                           customer's product is
                                                           in a past_due state.
+                                                        default: false
+                                                      allow_overdue_entitlements:
+                                                        type: boolean
+                                                        description: If true, this plan's entitlements remain usable while past due,
+                                                          overriding the
+                                                          organization's overdue
+                                                          entitlement block
+                                                          without changing
+                                                          cancellation or reset
+                                                          behavior.
+                                                        default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
+                                              active:
+                                                anyOf:
+                                                  - type: boolean
+                                                    description: Whether this is the active version of the plan. At most one version
+                                                      is active.
+                                                  - type: "null"
+                                                description: The `active` flag before this update; true on the version being
+                                                  demoted.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -96206,14 +96592,33 @@ paths:
                                                                   properties:
                                                                     ignore_past_due:
                                                                       type: boolean
-                                                                      default: false
                                                                       description: If true, entitlements attached to this plan will still reset on
                                                                         schedule even when
                                                                         the customer's
                                                                         product is in a
                                                                         past_due state.
+                                                                      default: false
+                                                                    allow_overdue_entitlements:
+                                                                      type: boolean
+                                                                      description: If true, this plan's entitlements remain usable while past due,
+                                                                        overriding the
+                                                                        organization's
+                                                                        overdue entitlement
+                                                                        block without
+                                                                        changing
+                                                                        cancellation or
+                                                                        reset behavior.
+                                                                      default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
+                                                            active:
+                                                              anyOf:
+                                                                - type: boolean
+                                                                  description: Whether this is the active version of the plan. At most one version
+                                                                    is active.
+                                                                - type: "null"
+                                                              description: The `active` flag before this update; true on the version being
+                                                                demoted.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -98837,14 +99242,33 @@ paths:
                                                           properties:
                                                             ignore_past_due:
                                                               type: boolean
-                                                              default: false
                                                               description: If true, entitlements attached to this plan will still reset on
                                                                 schedule even when
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
+                                                              default: false
+                                                            allow_overdue_entitlements:
+                                                              type: boolean
+                                                              description: If true, this plan's entitlements remain usable while past due,
+                                                                overriding the
+                                                                organization's
+                                                                overdue entitlement
+                                                                block without
+                                                                changing
+                                                                cancellation or
+                                                                reset behavior.
+                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
+                                                    active:
+                                                      anyOf:
+                                                        - type: boolean
+                                                          description: Whether this is the active version of the plan. At most one version
+                                                            is active.
+                                                        - type: "null"
+                                                      description: The `active` flag before this update; true on the version being
+                                                        demoted.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -102473,14 +102897,33 @@ paths:
                                                                         properties:
                                                                           ignore_past_due:
                                                                             type: boolean
-                                                                            default: false
                                                                             description: If true, entitlements attached to this plan will still reset on
                                                                               schedule even when
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
+                                                                            default: false
+                                                                          allow_overdue_entitlements:
+                                                                            type: boolean
+                                                                            description: If true, this plan's entitlements remain usable while past due,
+                                                                              overriding the
+                                                                              organization's
+                                                                              overdue entitlement
+                                                                              block without
+                                                                              changing
+                                                                              cancellation or
+                                                                              reset behavior.
+                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
+                                                                  active:
+                                                                    anyOf:
+                                                                      - type: boolean
+                                                                        description: Whether this is the active version of the plan. At most one version
+                                                                          is active.
+                                                                      - type: "null"
+                                                                    description: The `active` flag before this update; true on the version being
+                                                                      demoted.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -104963,14 +105406,33 @@ paths:
                                                                 properties:
                                                                   ignore_past_due:
                                                                     type: boolean
-                                                                    default: false
                                                                     description: If true, entitlements attached to this plan will still reset on
                                                                       schedule even when
                                                                       the customer's
                                                                       product is in a
                                                                       past_due state.
+                                                                    default: false
+                                                                  allow_overdue_entitlements:
+                                                                    type: boolean
+                                                                    description: If true, this plan's entitlements remain usable while past due,
+                                                                      overriding the
+                                                                      organization's
+                                                                      overdue entitlement
+                                                                      block without
+                                                                      changing
+                                                                      cancellation or
+                                                                      reset behavior.
+                                                                    default: false
                                                                 description: Miscellaneous plan-level configuration flags.
                                                               - type: "null"
+                                                          active:
+                                                            anyOf:
+                                                              - type: boolean
+                                                                description: Whether this is the active version of the plan. At most one version
+                                                                  is active.
+                                                              - type: "null"
+                                                            description: The `active` flag before this update; true on the version being
+                                                              demoted.
                                                           archived:
                                                             anyOf:
                                                               - type: boolean
@@ -108301,14 +108763,33 @@ paths:
                                                                               properties:
                                                                                 ignore_past_due:
                                                                                   type: boolean
-                                                                                  default: false
                                                                                   description: If true, entitlements attached to this plan will still reset on
                                                                                     schedule even when
                                                                                     the customer's
                                                                                     product is in a
                                                                                     past_due state.
+                                                                                  default: false
+                                                                                allow_overdue_entitlements:
+                                                                                  type: boolean
+                                                                                  description: If true, this plan's entitlements remain usable while past due,
+                                                                                    overriding the
+                                                                                    organization's
+                                                                                    overdue entitlement
+                                                                                    block without
+                                                                                    changing
+                                                                                    cancellation or
+                                                                                    reset behavior.
+                                                                                  default: false
                                                                               description: Miscellaneous plan-level configuration flags.
                                                                             - type: "null"
+                                                                        active:
+                                                                          anyOf:
+                                                                            - type: boolean
+                                                                              description: Whether this is the active version of the plan. At most one version
+                                                                                is active.
+                                                                            - type: "null"
+                                                                          description: The `active` flag before this update; true on the version being
+                                                                            demoted.
                                                                         archived:
                                                                           anyOf:
                                                                             - type: boolean
@@ -110573,14 +111054,33 @@ paths:
                                                           properties:
                                                             ignore_past_due:
                                                               type: boolean
-                                                              default: false
                                                               description: If true, entitlements attached to this plan will still reset on
                                                                 schedule even when
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
+                                                              default: false
+                                                            allow_overdue_entitlements:
+                                                              type: boolean
+                                                              description: If true, this plan's entitlements remain usable while past due,
+                                                                overriding the
+                                                                organization's
+                                                                overdue entitlement
+                                                                block without
+                                                                changing
+                                                                cancellation or
+                                                                reset behavior.
+                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
+                                                    active:
+                                                      anyOf:
+                                                        - type: boolean
+                                                          description: Whether this is the active version of the plan. At most one version
+                                                            is active.
+                                                        - type: "null"
+                                                      description: The `active` flag before this update; true on the version being
+                                                        demoted.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -114209,14 +114709,33 @@ paths:
                                                                         properties:
                                                                           ignore_past_due:
                                                                             type: boolean
-                                                                            default: false
                                                                             description: If true, entitlements attached to this plan will still reset on
                                                                               schedule even when
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
+                                                                            default: false
+                                                                          allow_overdue_entitlements:
+                                                                            type: boolean
+                                                                            description: If true, this plan's entitlements remain usable while past due,
+                                                                              overriding the
+                                                                              organization's
+                                                                              overdue entitlement
+                                                                              block without
+                                                                              changing
+                                                                              cancellation or
+                                                                              reset behavior.
+                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
+                                                                  active:
+                                                                    anyOf:
+                                                                      - type: boolean
+                                                                        description: Whether this is the active version of the plan. At most one version
+                                                                          is active.
+                                                                      - type: "null"
+                                                                    description: The `active` flag before this update; true on the version being
+                                                                      demoted.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -116695,14 +117214,33 @@ paths:
                                                                 properties:
                                                                   ignore_past_due:
                                                                     type: boolean
-                                                                    default: false
                                                                     description: If true, entitlements attached to this plan will still reset on
                                                                       schedule even when
                                                                       the customer's
                                                                       product is in a
                                                                       past_due state.
+                                                                    default: false
+                                                                  allow_overdue_entitlements:
+                                                                    type: boolean
+                                                                    description: If true, this plan's entitlements remain usable while past due,
+                                                                      overriding the
+                                                                      organization's
+                                                                      overdue entitlement
+                                                                      block without
+                                                                      changing
+                                                                      cancellation or
+                                                                      reset behavior.
+                                                                    default: false
                                                                 description: Miscellaneous plan-level configuration flags.
                                                               - type: "null"
+                                                          active:
+                                                            anyOf:
+                                                              - type: boolean
+                                                                description: Whether this is the active version of the plan. At most one version
+                                                                  is active.
+                                                              - type: "null"
+                                                            description: The `active` flag before this update; true on the version being
+                                                              demoted.
                                                           archived:
                                                             anyOf:
                                                               - type: boolean
@@ -120033,14 +120571,33 @@ paths:
                                                                               properties:
                                                                                 ignore_past_due:
                                                                                   type: boolean
-                                                                                  default: false
                                                                                   description: If true, entitlements attached to this plan will still reset on
                                                                                     schedule even when
                                                                                     the customer's
                                                                                     product is in a
                                                                                     past_due state.
+                                                                                  default: false
+                                                                                allow_overdue_entitlements:
+                                                                                  type: boolean
+                                                                                  description: If true, this plan's entitlements remain usable while past due,
+                                                                                    overriding the
+                                                                                    organization's
+                                                                                    overdue entitlement
+                                                                                    block without
+                                                                                    changing
+                                                                                    cancellation or
+                                                                                    reset behavior.
+                                                                                  default: false
                                                                               description: Miscellaneous plan-level configuration flags.
                                                                             - type: "null"
+                                                                        active:
+                                                                          anyOf:
+                                                                            - type: boolean
+                                                                              description: Whether this is the active version of the plan. At most one version
+                                                                                is active.
+                                                                            - type: "null"
+                                                                          description: The `active` flag before this update; true on the version being
+                                                                            demoted.
                                                                         archived:
                                                                           anyOf:
                                                                             - type: boolean
@@ -122328,13 +122885,31 @@ paths:
                                                     properties:
                                                       ignore_past_due:
                                                         type: boolean
-                                                        default: false
                                                         description: If true, entitlements attached to this plan will still reset on
                                                           schedule even when the
                                                           customer's product is
                                                           in a past_due state.
+                                                        default: false
+                                                      allow_overdue_entitlements:
+                                                        type: boolean
+                                                        description: If true, this plan's entitlements remain usable while past due,
+                                                          overriding the
+                                                          organization's overdue
+                                                          entitlement block
+                                                          without changing
+                                                          cancellation or reset
+                                                          behavior.
+                                                        default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
+                                              active:
+                                                anyOf:
+                                                  - type: boolean
+                                                    description: Whether this is the active version of the plan. At most one version
+                                                      is active.
+                                                  - type: "null"
+                                                description: The `active` flag before this update; true on the version being
+                                                  demoted.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -126072,14 +126647,33 @@ paths:
                                                                   properties:
                                                                     ignore_past_due:
                                                                       type: boolean
-                                                                      default: false
                                                                       description: If true, entitlements attached to this plan will still reset on
                                                                         schedule even when
                                                                         the customer's
                                                                         product is in a
                                                                         past_due state.
+                                                                      default: false
+                                                                    allow_overdue_entitlements:
+                                                                      type: boolean
+                                                                      description: If true, this plan's entitlements remain usable while past due,
+                                                                        overriding the
+                                                                        organization's
+                                                                        overdue entitlement
+                                                                        block without
+                                                                        changing
+                                                                        cancellation or
+                                                                        reset behavior.
+                                                                      default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
+                                                            active:
+                                                              anyOf:
+                                                                - type: boolean
+                                                                  description: Whether this is the active version of the plan. At most one version
+                                                                    is active.
+                                                                - type: "null"
+                                                              description: The `active` flag before this update; true on the version being
+                                                                demoted.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -128752,14 +129346,33 @@ paths:
                                                           properties:
                                                             ignore_past_due:
                                                               type: boolean
-                                                              default: false
                                                               description: If true, entitlements attached to this plan will still reset on
                                                                 schedule even when
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
+                                                              default: false
+                                                            allow_overdue_entitlements:
+                                                              type: boolean
+                                                              description: If true, this plan's entitlements remain usable while past due,
+                                                                overriding the
+                                                                organization's
+                                                                overdue entitlement
+                                                                block without
+                                                                changing
+                                                                cancellation or
+                                                                reset behavior.
+                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
+                                                    active:
+                                                      anyOf:
+                                                        - type: boolean
+                                                          description: Whether this is the active version of the plan. At most one version
+                                                            is active.
+                                                        - type: "null"
+                                                      description: The `active` flag before this update; true on the version being
+                                                        demoted.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -132388,14 +133001,33 @@ paths:
                                                                         properties:
                                                                           ignore_past_due:
                                                                             type: boolean
-                                                                            default: false
                                                                             description: If true, entitlements attached to this plan will still reset on
                                                                               schedule even when
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
+                                                                            default: false
+                                                                          allow_overdue_entitlements:
+                                                                            type: boolean
+                                                                            description: If true, this plan's entitlements remain usable while past due,
+                                                                              overriding the
+                                                                              organization's
+                                                                              overdue entitlement
+                                                                              block without
+                                                                              changing
+                                                                              cancellation or
+                                                                              reset behavior.
+                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
+                                                                  active:
+                                                                    anyOf:
+                                                                      - type: boolean
+                                                                        description: Whether this is the active version of the plan. At most one version
+                                                                          is active.
+                                                                      - type: "null"
+                                                                    description: The `active` flag before this update; true on the version being
+                                                                      demoted.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -134853,13 +135485,31 @@ paths:
                                                     properties:
                                                       ignore_past_due:
                                                         type: boolean
-                                                        default: false
                                                         description: If true, entitlements attached to this plan will still reset on
                                                           schedule even when the
                                                           customer's product is
                                                           in a past_due state.
+                                                        default: false
+                                                      allow_overdue_entitlements:
+                                                        type: boolean
+                                                        description: If true, this plan's entitlements remain usable while past due,
+                                                          overriding the
+                                                          organization's overdue
+                                                          entitlement block
+                                                          without changing
+                                                          cancellation or reset
+                                                          behavior.
+                                                        default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
+                                              active:
+                                                anyOf:
+                                                  - type: boolean
+                                                    description: Whether this is the active version of the plan. At most one version
+                                                      is active.
+                                                  - type: "null"
+                                                description: The `active` flag before this update; true on the version being
+                                                  demoted.
                                               archived:
                                                 anyOf:
                                                   - type: boolean
@@ -138597,14 +139247,33 @@ paths:
                                                                   properties:
                                                                     ignore_past_due:
                                                                       type: boolean
-                                                                      default: false
                                                                       description: If true, entitlements attached to this plan will still reset on
                                                                         schedule even when
                                                                         the customer's
                                                                         product is in a
                                                                         past_due state.
+                                                                      default: false
+                                                                    allow_overdue_entitlements:
+                                                                      type: boolean
+                                                                      description: If true, this plan's entitlements remain usable while past due,
+                                                                        overriding the
+                                                                        organization's
+                                                                        overdue entitlement
+                                                                        block without
+                                                                        changing
+                                                                        cancellation or
+                                                                        reset behavior.
+                                                                      default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
+                                                            active:
+                                                              anyOf:
+                                                                - type: boolean
+                                                                  description: Whether this is the active version of the plan. At most one version
+                                                                    is active.
+                                                                - type: "null"
+                                                              description: The `active` flag before this update; true on the version being
+                                                                demoted.
                                                             archived:
                                                               anyOf:
                                                                 - type: boolean
@@ -141274,14 +141943,33 @@ paths:
                                                           properties:
                                                             ignore_past_due:
                                                               type: boolean
-                                                              default: false
                                                               description: If true, entitlements attached to this plan will still reset on
                                                                 schedule even when
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
+                                                              default: false
+                                                            allow_overdue_entitlements:
+                                                              type: boolean
+                                                              description: If true, this plan's entitlements remain usable while past due,
+                                                                overriding the
+                                                                organization's
+                                                                overdue entitlement
+                                                                block without
+                                                                changing
+                                                                cancellation or
+                                                                reset behavior.
+                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
+                                                    active:
+                                                      anyOf:
+                                                        - type: boolean
+                                                          description: Whether this is the active version of the plan. At most one version
+                                                            is active.
+                                                        - type: "null"
+                                                      description: The `active` flag before this update; true on the version being
+                                                        demoted.
                                                     archived:
                                                       anyOf:
                                                         - type: boolean
@@ -144910,14 +145598,33 @@ paths:
                                                                         properties:
                                                                           ignore_past_due:
                                                                             type: boolean
-                                                                            default: false
                                                                             description: If true, entitlements attached to this plan will still reset on
                                                                               schedule even when
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
+                                                                            default: false
+                                                                          allow_overdue_entitlements:
+                                                                            type: boolean
+                                                                            description: If true, this plan's entitlements remain usable while past due,
+                                                                              overriding the
+                                                                              organization's
+                                                                              overdue entitlement
+                                                                              block without
+                                                                              changing
+                                                                              cancellation or
+                                                                              reset behavior.
+                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
+                                                                  active:
+                                                                    anyOf:
+                                                                      - type: boolean
+                                                                        description: Whether this is the active version of the plan. At most one version
+                                                                          is active.
+                                                                      - type: "null"
+                                                                    description: The `active` flag before this update; true on the version being
+                                                                      demoted.
                                                                   archived:
                                                                     anyOf:
                                                                       - type: boolean
@@ -155572,10 +156279,15 @@ paths:
                         properties:
                           ignore_past_due:
                             type: boolean
-                            default: false
                             description: If true, entitlements attached to this plan will still reset on
                               schedule even when the customer's product is in a
                               past_due state.
+                          allow_overdue_entitlements:
+                            type: boolean
+                            description: If true, this plan's entitlements remain usable while past due,
+                              overriding the organization's overdue entitlement
+                              block without changing cancellation or reset
+                              behavior.
                         description: Miscellaneous plan-level configuration flags.
                       billing_controls:
                         type: object

@@ -6,6 +6,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { runPush } from "../src/actions/push";
+import { backfillInternalIds } from "../src/actions/push/backfillInternalIds";
 
 const dir = `${import.meta.dir}/.tmp/backfill`;
 
@@ -79,4 +80,70 @@ test("a push writes the minted internalId into each created fixture, once", asyn
 	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	await runPush({ client: client as any, cwd: dir, write: () => {} });
 	expect(readFileSync(`${dir}/features.ts`, "utf8")).toBe(before);
+});
+
+/** A dynamic value is the fixture's own choice, and it wins at runtime: a
+ * second pair beside it would be dead text that hides the mismatch. */
+test("a fixture whose internalId is an expression is left alone", () => {
+	const dynamicDir = `${import.meta.dir}/.tmp/backfill-dynamic`;
+	rmSync(dynamicDir, { recursive: true, force: true });
+	mkdirSync(dynamicDir, { recursive: true });
+	writeFileSync(
+		`${dynamicDir}/autumn.config.ts`,
+		[
+			'import { feature } from "../../../src/generated/features";',
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			'const ids = { messages: "fi_from_env" };',
+			"",
+			"export default atmn({",
+			"\tfeatures: [",
+			'\t\tfeature({ internalId: ids.messages, featureId: "messages", name: "Messages" }),',
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	);
+	const before = readFileSync(`${dynamicDir}/autumn.config.ts`, "utf8");
+
+	const { backfilled } = backfillInternalIds({
+		rows: { features: [{ id: "messages", internalId: "fi_server" }] },
+		configPath: `${dynamicDir}/autumn.config.ts`,
+	});
+
+	expect(backfilled).toEqual([]);
+	const after = readFileSync(`${dynamicDir}/autumn.config.ts`, "utf8");
+	expect(after).toBe(before);
+	expect(after).not.toContain("fi_server");
+});
+
+test("a fixture whose versionSlug is an expression keeps it", () => {
+	const dynamicDir = `${import.meta.dir}/.tmp/backfill-dynamic-slug`;
+	rmSync(dynamicDir, { recursive: true, force: true });
+	mkdirSync(dynamicDir, { recursive: true });
+	writeFileSync(
+		`${dynamicDir}/autumn.config.ts`,
+		[
+			'import { plan } from "../../../src/generated/plans";',
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			'const slug = "release-7";',
+			"",
+			"export default atmn({",
+			'\tplans: [plan({ internalId: "prod_1", planId: "pro", versionSlug: slug })],',
+			"});",
+			"",
+		].join("\n"),
+	);
+	const before = readFileSync(`${dynamicDir}/autumn.config.ts`, "utf8");
+
+	const { slugged } = backfillInternalIds({
+		rows: {
+			plans: [{ id: "pro", internalId: "prod_1", versionSlug: "v1" }],
+		},
+		configPath: `${dynamicDir}/autumn.config.ts`,
+	});
+
+	expect(slugged).toEqual([]);
+	expect(readFileSync(`${dynamicDir}/autumn.config.ts`, "utf8")).toBe(before);
 });

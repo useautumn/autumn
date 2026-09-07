@@ -95,6 +95,12 @@ import {
 	rewardsRedeemCodeContract,
 	rewardsUpdateContract,
 } from "./referralsContract.js";
+import {
+	createSandboxContract,
+	deleteSandboxContract,
+	listSandboxesContract,
+	resetSandboxContract,
+} from "./sandboxesContract.js";
 
 export const v2_3ContractRouter = oc.router({
 	// Customers
@@ -189,6 +195,12 @@ export const v2_3ContractRouter = oc.router({
 	keysMint: keysMintContract,
 	keysRefresh: keysRefreshContract,
 	keysRevoke: keysRevokeContract,
+
+	// Sandboxes (isolated sub-orgs)
+	sandboxesCreate: createSandboxContract,
+	sandboxesList: listSandboxesContract,
+	sandboxesDelete: deleteSandboxContract,
+	sandboxesReset: resetSandboxContract,
 });
 
 /**

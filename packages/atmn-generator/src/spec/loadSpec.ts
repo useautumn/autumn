@@ -82,6 +82,21 @@ export const collectionItemSchema = ({
 	return item;
 };
 
+/** The JSON request body schema for an operation. */
+export const requestBodySchema = ({
+	spec,
+	path,
+}: {
+	spec: OpenApiDocument;
+	path: string;
+}): JsonSchema => {
+	const schema = operationAt({ spec, path }).requestBody?.content[
+		"application/json"
+	]?.schema;
+	if (!schema) throw new Error(`${path} has no JSON request body`);
+	return schema;
+};
+
 /** The 200 response body schema for an operation. */
 export const responseSchema = ({
 	spec,

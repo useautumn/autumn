@@ -83,6 +83,21 @@ const withFixtureLocations = ({
  * existed for non-TS producers is gone; this function is the seam a future
  * `--config-json` would slot into.
  */
+/** Bun runs TypeScript natively; the published node binary needs jiti for it. */
+const importConfigModule = async ({
+	path,
+}: {
+	path: string;
+}): Promise<Record<string, unknown> & { default?: WireDocument }> => {
+	if (typeof Bun !== "undefined") {
+		return import(`${path}?v=${Date.now()}`);
+	}
+	const { createJiti } = await import("jiti");
+	return createJiti(import.meta.url, { moduleCache: false }).import(
+		path,
+	) as Promise<Record<string, unknown> & { default?: WireDocument }>;
+};
+
 export const loadConfig = async ({
 	dirs,
 }: {
@@ -96,9 +111,9 @@ export const loadConfig = async ({
 	// for anything that pushes twice (tests today, a watch mode later).
 	// The query goes on the plain path: appended to a file:// href Bun
 	// normalises it away and serves the cached module.
-	let module: { default?: WireDocument };
+	let module: Record<string, unknown> & { default?: WireDocument };
 	try {
-		module = await import(`${path}?v=${Date.now()}`);
+		module = await importConfigModule({ path });
 	} catch (error) {
 		if (error instanceof ConfigError) {
 			throw withFixtureLocations({ error, configPath: path });
@@ -107,6 +122,11 @@ export const loadConfig = async ({
 	}
 	const wire = module.default;
 
+	if (looksLikeV2Config({ module })) {
+		throw new Error(
+			`${path} is an atmn v2 config. v3 writes its own from your catalog: move this file aside, then run \`atmn pull\` to generate the v3 autumn.config.ts.`,
+		);
+	}
 	if (wire === undefined) {
 		throw new Error(
 			`${path} has no default export. It should end with \`export default atmn({ ... })\`.`,
@@ -114,4 +134,48 @@ export const loadConfig = async ({
 	}
 
 	return { path, wire };
+};
+
+/**
+ * v2 exported plain fixtures — a default object with `products`/`features`
+ * arrays, or named `feature()`/`product()` results — never a wire document,
+ * which always carries `skip_deletions`.
+ */
+/** Fields only a v2 product carries. `items` is optional — an empty plan
+ * states none — so the settings have to name the row on their own. */
+const V2_PRODUCT_FIELDS = [
+	"items",
+	"is_add_on",
+	"is_default",
+	"free_trial",
+	"group",
+] as const;
+
+/** A v2 fixture: a public `id` beside a feature's `type` or a product's own settings. */
+const isV2Row = (value: unknown): boolean => {
+	if (typeof value !== "object" || value === null) return false;
+	const row = value as Record<string, unknown>;
+	if (!("id" in row)) return false;
+	return "type" in row || V2_PRODUCT_FIELDS.some((field) => field in row);
+};
+
+export const looksLikeV2Config = ({
+	module,
+}: {
+	module: Record<string, unknown>;
+}): boolean => {
+	const defaults = module.default;
+	if (typeof defaults === "object" && defaults !== null) {
+		const bag = defaults as Record<string, unknown>;
+		if ("skip_deletions" in bag) return false;
+		if (
+			["products", "features", "plans"].some((key) => Array.isArray(bag[key]))
+		)
+			return true;
+	}
+	// A v2 default object proves nothing on its own: the named fixtures beside
+	// it still do, so the check runs whatever the default export holds.
+	return Object.entries(module).some(
+		([name, value]) => name !== "default" && isV2Row(value),
+	);
 };

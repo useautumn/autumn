@@ -40,6 +40,27 @@ type WireLike = {
 	plans?: { plan_id?: string; internal_id?: string }[];
 };
 
+const fixtureCount = (count: number): string =>
+	`${count} fixture${count === 1 ? "" : "s"}`;
+
+/** One count per field: the two sets overlap only sometimes, and a fixture
+ * that took just one of them must not read as having taken both. */
+export const backfillSummary = ({
+	backfilled,
+	slugged,
+}: {
+	backfilled: string[];
+	slugged: string[];
+}): string =>
+	`Wrote ${[
+		...(backfilled.length > 0
+			? [`internalId into ${fixtureCount(backfilled.length)}`]
+			: []),
+		...(slugged.length > 0
+			? [`versionSlug into ${fixtureCount(slugged.length)}`]
+			: []),
+	].join(" and ")}.\n`;
+
 /**
  * A rename the config cannot express shows up as a delete beside a create
  * with no internalId. The push may be right, so this is a note, not a refusal.
@@ -136,10 +157,7 @@ export const runPush = async ({
 	if (previewIsEmpty({ preview })) {
 		return { configPath, preview, migrationIds: [] };
 	}
-	if (dryRun) {
-		write("\nDry run — nothing applied.\n");
-		return { configPath, preview, migrationIds: [] };
-	}
+	if (dryRun) return { configPath, preview, migrationIds: [] };
 
 	const applied = (await client.update(wire as Record<string, unknown>)) as {
 		migrations?: { id?: string }[];
@@ -175,11 +193,9 @@ export const runPush = async ({
 		if (Array.isArray(catalog.plans))
 			rows.plans = catalog.plans as typeof rows.plans;
 	}
-	const { backfilled } = backfillInternalIds({ rows, configPath });
-	if (backfilled.length > 0) {
-		write(
-			`Wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}.\n`,
-		);
+	const { backfilled, slugged } = backfillInternalIds({ rows, configPath });
+	if (backfilled.length > 0 || slugged.length > 0) {
+		write(backfillSummary({ backfilled, slugged }));
 	}
 
 	return { configPath, preview, applied, migrationIds };

@@ -148,6 +148,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"billingControls.usageLimits.interval",
 			"billingControls.usageLimits.limit",
 			"config",
+			"config.allowOverdueEntitlements",
 			"config.ignorePastDue",
 			"createInStripe",
 			"description",

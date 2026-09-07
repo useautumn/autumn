@@ -1,11 +1,7 @@
 import { type Edit, Lang, parse, type SgNode } from "@ast-grep/napi";
+import { appendPropertyEdit } from "./appendPropertyEdit";
 import { type FixtureConstraint, findFixture } from "./findFixture";
-import {
-	leadingIndentOfLine,
-	lineEndInclusive,
-	lineEndOf,
-	lineStartOf,
-} from "./fixtureEdit";
+import { lineEndInclusive, lineEndOf, lineStartOf } from "./fixtureEdit";
 
 const pairFor = ({
 	object,
@@ -21,6 +17,20 @@ const pairFor = ({
 		if (name === property) return member;
 	}
 	return null;
+};
+
+/** Whether the fixture states this top-level property at all. A dynamic value
+ * counts: it still wins over a pair inserted beside it. */
+export const fixtureStatesProperty = ({
+	call,
+	property,
+}: {
+	call: SgNode;
+	property: string;
+}): boolean => {
+	const object = call.field("arguments")?.namedChildren()[0];
+	if (object === undefined || object.kind() !== "object") return false;
+	return pairFor({ object, property }) !== null;
 };
 
 /** The string a fixture call states for one top-level property, or null. */
@@ -79,64 +89,6 @@ const removePairEdit = ({
 	};
 };
 
-/** Append a pair after the object's last one, matching the object's own layout. */
-const insertPairEdit = ({
-	source,
-	object,
-	property,
-	text,
-}: {
-	source: string;
-	object: SgNode;
-	property: string;
-	text: string;
-}): Edit => {
-	const pairs = object.children().filter((child) => child.kind() === "pair");
-	const closing = object.range().end.index - 1;
-	const multiline = source
-		.slice(object.range().start.index, closing)
-		.includes("\n");
-	const last = pairs[pairs.length - 1];
-	if (last === undefined) {
-		return multiline
-			? {
-					startPos: lineStartOf(source, closing),
-					endPos: lineStartOf(source, closing),
-					insertedText: `${leadingIndentOfLine(source, object.range().start.index)}\t${property}: ${text},\n`,
-				}
-			: {
-					startPos: object.range().start.index + 1,
-					endPos: closing,
-					insertedText: ` ${property}: ${text} `,
-				};
-	}
-	const lastEnd = last.range().end.index;
-	const between = source.slice(lastEnd, closing);
-	const trailingComma = between.trimStart().startsWith(",");
-	const afterComma = trailingComma
-		? lastEnd + between.indexOf(",") + 1
-		: lastEnd;
-	if (multiline) {
-		// Anchored to the last pair itself, so a value whose closing brace shares
-		// the object's closing line can never push the insert outside the literal.
-		const indent = leadingIndentOfLine(source, last.range().start.index);
-		return {
-			startPos: afterComma,
-			endPos: afterComma,
-			insertedText: trailingComma
-				? `\n${indent}${property}: ${text},`
-				: `,\n${indent}${property}: ${text},`,
-		};
-	}
-	return {
-		startPos: afterComma,
-		endPos: afterComma,
-		insertedText: trailingComma
-			? ` ${property}: ${text},`
-			: `, ${property}: ${text}`,
-	};
-};
-
 /**
  * Set one top-level property of a fixture literal to raw source text: overwrite
  * it where it stands, append it when absent, remove it when `text` is null.
@@ -159,7 +111,16 @@ export const patchFixtureProperty = ({
 	property: string;
 	text: string | null;
 }): string | null => {
-	const call = findFixture({ source, builder, idField, id, where });
+	// A splice keeps every other byte, so a literal the pull rewriter refuses
+	// (it names another fixture) still takes the new value.
+	const call = findFixture({
+		source,
+		builder,
+		idField,
+		id,
+		where,
+		allowDynamic: true,
+	});
 	if (call === null) return null;
 	const object = call.field("arguments")?.namedChildren()[0];
 	if (object === undefined || object.kind() !== "object") return null;
@@ -171,7 +132,7 @@ export const patchFixtureProperty = ({
 	}
 	if (pair === null) {
 		return root.commitEdits([
-			insertPairEdit({ source, object, property, text }),
+			appendPropertyEdit({ source, object, pair: `${property}: ${text}` }),
 		]);
 	}
 	const [, current] = pair.namedChildren();

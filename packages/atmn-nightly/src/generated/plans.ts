@@ -289,6 +289,8 @@ export type Plan = {
 	config?: {
 		/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 		ignorePastDue?: boolean;
+		/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+		allowOverdueEntitlements?: boolean;
 	};
 	/** Plan-level billing controls used as customer defaults. */
 	billingControls?: {
@@ -394,7 +396,7 @@ export type Plan = {
 		/** Which version of the variant this overlay targets, by slug. Same pin as `version`; omit both to target latest. Defaults to "vN", N being the server's version number; state it explicitly on every variant history row. */
 		versionSlug?: string;
 		/** Display name when creating the variant if it does not exist. */
-		name?: string;
+		name: string;
 		/** Archive or unarchive this variant. Omit to leave archived state unchanged. */
 		archived?: boolean;
 		/** Slug for the row this variant mints. Omit to inherit the base's `new_version_slug`, then `v{n}`. Ignored when this entry resolves to an existing row. */

@@ -5,7 +5,7 @@
 
 import { expect, test } from "bun:test";
 import chalk from "chalk";
-import { renderPreview } from "../src/render/renderPreview";
+import { previewIsEmpty, renderPreview } from "../src/render/renderPreview";
 
 chalk.level = 0;
 
@@ -177,4 +177,336 @@ test("prints nothing extra for a create or delete row without a plan change", ()
 	expect(out).toContain("- legacy@v1  Legacy Plan");
 	expect(out).not.toContain("Name:");
 	expect(out).not.toContain("Price:");
+});
+
+test("a preview names what a migration would move, never a placeholder id", () => {
+	const text = renderPreview({
+		preview: {
+			features: [],
+			plans: [
+				{
+					planId: "pro",
+					version: 1,
+					versionSlug: "v1",
+					active: true,
+					action: "update",
+					name: "Pro",
+					state: { hasCustomers: true, usage: { customers: { count: 12 } } },
+					planChange: {
+						itemChanges: [
+							{
+								action: "created",
+								featureId: "basic_support",
+								item: { featureId: "basic_support" },
+							},
+						],
+					},
+				},
+			],
+			migrations: [{ plans: [{ planId: "pro", versions: [1] }] }],
+		} as never,
+	});
+	expect(text).toContain("Migrations (1)");
+	expect(text).toContain("pro v1, 12 customers");
+	expect(text).toMatch(/pro v1, 12 customers\n\s+\+ basic_support/);
+	expect(text).not.toMatch(/^\s+\?\s*$/m);
+});
+
+const variantCreateRow = {
+	planId: "pro_yearly",
+	internalId: null,
+	version: 1,
+	versionSlug: "v1",
+	active: true,
+	variantAction: "explicit",
+	planChange: {
+		previousAttributes: { name: null },
+		priceChange: {
+			previous: null,
+			current: { amount: 200, interval: "year" },
+		},
+		itemChanges: [
+			{
+				action: "created",
+				featureId: "credits",
+				item: {
+					featureId: "credits",
+					included: 200,
+					price: { amount: 0.5, interval: "month" },
+				},
+			},
+		],
+		customize: { name: "Pro Yearly" },
+	},
+};
+
+test("an unchanged plan is context for the variant it creates", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [variantCreateRow],
+			},
+		],
+	};
+	const out = render(preview);
+	expect(out).not.toContain("No changes");
+	expect(out).toContain("Plans (1)");
+	// Context only: the plan itself is untouched, so it takes no marker.
+	expect(out).toContain("    pro@v1  Pro");
+	expect(out).not.toContain("~ pro@v1");
+	expect(out).toContain("+ pro_yearly@v1  Pro Yearly, $200 per year");
+	expect(out).toContain("+ credits  200 credits ($0.50 per month)");
+	expect(previewIsEmpty({ preview: preview as never })).toBe(false);
+});
+
+test("a variant that resolved explicit with no diff is not work", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [
+					{
+						planId: "pro_yearly",
+						internalId: "prod_456",
+						version: 1,
+						variantAction: "explicit",
+						planChange: null,
+					},
+				],
+			},
+		],
+	};
+	expect(render(preview)).toBe("No changes. Your catalog matches your config.");
+	expect(previewIsEmpty({ preview: preview as never })).toBe(true);
+});
+
+test("a propagated variant says whose change it takes, in one line", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 2,
+				action: "update",
+				name: "Pro",
+				planChange: {
+					previousAttributes: null,
+					priceChange: {
+						previous: { amount: 20, interval: "month" },
+						current: { amount: 25, interval: "month" },
+					},
+					itemChanges: [],
+				},
+				variants: [
+					{
+						planId: "pro_yearly",
+						internalId: "prod_456",
+						version: 2,
+						variantAction: "propagated",
+						planChange: {
+							previousAttributes: null,
+							priceChange: {
+								previous: { amount: 200, interval: "year" },
+								current: { amount: 250, interval: "year" },
+							},
+							itemChanges: [],
+						},
+					},
+				],
+			},
+		],
+	};
+	const out = render(preview);
+	expect(out).toContain("~ pro@v2  Pro");
+	expect(out).toContain("~ Price: $20 per month -> $25 per month");
+	expect(out).toContain("~ pro_yearly@v2  follows pro@v2");
+	expect(out).not.toContain("$250 per year");
+	expect(previewIsEmpty({ preview: preview as never })).toBe(false);
+});
+
+test("names the field a demoted version hands over", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 1,
+				active: false,
+				action: "update",
+				name: "Pro",
+				planChange: { previousAttributes: { active: true }, itemChanges: [] },
+			},
+		],
+	});
+
+	expect(out).toContain("~ pro@v1");
+	expect(out).toContain("~ active: true -> false");
+});
+
+test("a demoted variant names the field it hands over", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [
+					{
+						planId: "pro_yearly",
+						internalId: "prod_456",
+						version: 1,
+						active: false,
+						variantAction: "explicit",
+						planChange: {
+							previousAttributes: { active: true },
+							itemChanges: [],
+						},
+					},
+				],
+			},
+		],
+	});
+
+	expect(out).toContain("~ pro_yearly@v1");
+	expect(out).toContain("~ active: true -> false");
+});
+
+/** Archiving is a plan-definition change, so the server sends it as
+ * `previousAttributes.archived` — the variant row carries no state of its own. */
+test("a variant that only archives counts as work and says so", () => {
+	const preview = {
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [
+					{
+						planId: "pro_yearly",
+						internalId: "prod_456",
+						version: 1,
+						variantAction: "explicit",
+						planChange: {
+							previousAttributes: { archived: false },
+							itemChanges: [],
+						},
+					},
+				],
+			},
+		],
+	};
+
+	expect(previewIsEmpty({ preview: preview as never })).toBe(false);
+	const out = render(preview);
+	expect(out).toContain("~ pro_yearly@v1");
+	// No field carries the new state, so the line reports the one it left.
+	expect(out).toContain("~ Archived: was false");
+});
+
+test("a created variant still shows its trial and licenses, once", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				internalId: "prod_123",
+				version: 1,
+				action: "none",
+				name: "Pro",
+				variants: [
+					{
+						...variantCreateRow,
+						planChange: {
+							...variantCreateRow.planChange,
+							freeTrialChange: {
+								previous: null,
+								current: { durationLength: 14, durationType: "day" },
+							},
+							licenseChanges: [
+								{
+									action: "created",
+									licensePlanId: "seat",
+									version: 1,
+									previousAttributes: null,
+								},
+							],
+						},
+					},
+				],
+			},
+		],
+	});
+
+	expect(out).toContain("+ pro_yearly@v1  Pro Yearly, $200 per year");
+	expect(out).toContain("~ Free trial: none -> 14 day trial");
+	expect(out).toContain("+ seat@v1");
+	// The row label carries the price and the items are already out above.
+	expect(out.match(/\+ credits/g)).toHaveLength(1);
+	expect(out).not.toContain("Price: Free -> $200 per year");
+	expect(out).not.toContain("Name: added");
+});
+
+const versionRow = ({
+	version,
+	count,
+	previousName,
+}: {
+	version: number;
+	count: number;
+	previousName: string;
+}) => ({
+	planId: "pro",
+	version,
+	action: "update",
+	name: `Pro v${version}`,
+	state: { usage: { customers: { count } } },
+	planChange: {
+		previousAttributes: { name: previousName },
+		itemChanges: [],
+	},
+});
+
+test("a migration target matches its own version among the top-level rows", () => {
+	const out = render({
+		features: [],
+		plans: [
+			versionRow({ version: 2, count: 99, previousName: "Pro two" }),
+			versionRow({ version: 1, count: 7, previousName: "Pro one" }),
+		],
+		migrations: [{ plans: [{ planId: "pro", versions: [1] }] }],
+	});
+
+	expect(out).toContain("pro v1, 7 customers");
+	expect(out).not.toContain("pro v1, 99 customers");
+	expect(out).toMatch(/pro v1, 7 customers\n\s+~ Name: was "Pro one"/);
+});
+
+test("a migration target with no row of its own renders without details", () => {
+	const out = render({
+		features: [],
+		plans: [versionRow({ version: 2, count: 99, previousName: "Pro two" })],
+		migrations: [{ plans: [{ planId: "pro", versions: [1] }] }],
+	});
+
+	expect(out).toContain("Migrations (1)");
+	expect(out).toContain("pro v1");
+	expect(out).not.toContain("pro v1, 99 customers");
+	expect(out).not.toContain('Name: was "Pro two"');
 });

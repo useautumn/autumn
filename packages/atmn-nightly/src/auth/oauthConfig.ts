@@ -1,10 +1,9 @@
-const DEFAULT_BACKEND_URL = "https://api.useautumn.com";
-
 /**
  * The registered Better Auth client for the atmn CLI, carried over from v2 so
- * existing consent records keep working.
+ * existing consent records keep working. `resolveTarget` lets `--client-id`
+ * or `AUTUMN_CLIENT_ID` replace it.
  */
-const CLI_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr";
+export const CLI_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr";
 
 const OAUTH_PORT_BASE = 31448;
 const OAUTH_PORT_RANGE = 5;
@@ -18,6 +17,9 @@ export const OAUTH_PORTS = Array.from(
 /**
  * Modern read/write scopes covering everything the CLI reads and everything the
  * minted keys are used for. The server rewrites v2's CRUDL scopes to these.
+ * platform:* is what `atmn sandbox create|delete` needs and migrations:write
+ * what `atmn reset` needs; a key minted before either was requested has to be
+ * re-minted with `atmn login`.
  */
 export const CLI_OAUTH_SCOPES = [
 	"organisation:read",
@@ -27,17 +29,15 @@ export const CLI_OAUTH_SCOPES = [
 	"features:write",
 	"plans:read",
 	"plans:write",
+	"migrations:read",
+	"migrations:write",
 	"rewards:read",
 	"rewards:write",
 	"apiKeys:read",
 	"apiKeys:write",
+	"platform:read",
+	"platform:write",
 ] as const;
-
-export const getBackendUrl = (): string =>
-	process.env.ATMN_BACKEND_URL ?? DEFAULT_BACKEND_URL;
-
-export const getCliClientId = (): string =>
-	process.env.ATMN_CLI_CLIENT_ID ?? CLI_CLIENT_ID;
 
 export const getOAuthRedirectUri = ({ port }: { port: number }): string =>
 	`http://localhost:${port}/`;

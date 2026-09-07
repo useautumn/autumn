@@ -45,20 +45,21 @@ export const readAutumnKeys = (): AutumnKeys => ({
 	prodKey: process.env.AUTUMN_PROD_SECRET_KEY,
 });
 
-/** The file `loadEnvFiles` reads first, so writes land where reads look. */
-export const findEnvFile = ({
-	dirs,
-}: {
-	dirs: string[];
-}): string | undefined => {
+/** Every env file the search set holds, in the order `loadEnvFiles` reads them. */
+export const findEnvFiles = ({ dirs }: { dirs: string[] }): string[] => {
+	const paths: string[] = [];
 	for (const dir of dirs) {
 		for (const file of FILES_IN_PRECEDENCE_ORDER) {
 			const path = join(dir, file);
-			if (existsSync(path)) return path;
+			if (existsSync(path)) paths.push(path);
 		}
 	}
-	return undefined;
+	return paths;
 };
+
+/** The file `loadEnvFiles` reads first, so writes land where reads look. */
+export const findEnvFile = ({ dirs }: { dirs: string[] }): string | undefined =>
+	findEnvFiles({ dirs })[0];
 
 const isAssignmentFor = ({
 	line,
@@ -86,6 +87,86 @@ export const upsertEnvContent = ({
 	}
 
 	return `${lines.join("\n")}\n`;
+};
+
+/** Drops the assignments for these keys; every other line survives. */
+export const removeEnvContent = ({
+	content,
+	keys,
+}: {
+	content: string;
+	keys: string[];
+}): string => {
+	const kept = content
+		.split("\n")
+		.filter((line) => !keys.some((key) => isAssignmentFor({ line, key })));
+	// The split leaves a trailing empty segment for the final newline; rejoining
+	// without dropping it would grow a blank line on every removal.
+	const trimmed = kept[kept.length - 1] === "" ? kept.slice(0, -1) : kept;
+	return trimmed.length === 0 ? "" : `${trimmed.join("\n")}\n`;
+};
+
+/** What the env file on disk assigns — not what the process happens to carry. */
+export const readEnvFileValue = ({
+	dirs,
+	key,
+}: {
+	dirs: string[];
+	key: string;
+}): string | undefined => {
+	const path = findEnvFile({ dirs });
+	if (path === undefined) return undefined;
+	return parse(readFileSync(path, "utf8"))[key];
+};
+
+/**
+ * Removes keys from every env file that assigns one — a key left in a
+ * lower-precedence file would come back the moment the higher one loses it.
+ * The paths that changed.
+ */
+export const removeEnvValues = ({
+	dirs,
+	keys,
+}: {
+	dirs: string[];
+	keys: string[];
+}): string[] => removeWhere({ dirs, keys, keep: () => false });
+
+/** Removes a key only from the files assigning it this exact value. */
+export const removeEnvValueWhen = ({
+	dirs,
+	key,
+	equals,
+}: {
+	dirs: string[];
+	key: string;
+	equals: string;
+}): string[] =>
+	removeWhere({
+		dirs,
+		keys: [key],
+		keep: ({ content }) => parse(content)[key] !== equals,
+	});
+
+const removeWhere = ({
+	dirs,
+	keys,
+	keep,
+}: {
+	dirs: string[];
+	keys: string[];
+	keep: (params: { content: string }) => boolean;
+}): string[] => {
+	const changed: string[] = [];
+	for (const path of findEnvFiles({ dirs })) {
+		const content = readFileSync(path, "utf8");
+		if (keep({ content })) continue;
+		const next = removeEnvContent({ content, keys });
+		if (next === content) continue;
+		writeFileSync(path, next);
+		changed.push(path);
+	}
+	return changed;
 };
 
 export const writeEnvValues = ({
