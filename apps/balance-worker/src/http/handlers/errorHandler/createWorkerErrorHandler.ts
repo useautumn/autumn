@@ -6,13 +6,13 @@ import type { Context, ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod/v4";
 import {
+	PartitionWriterCapacityError,
+	PartitionWriterStateNotFoundError,
+} from "../../../processor/writer/writerErrors.js";
+import {
 	OwnedPartitionMismatchError,
 	OwnedPartitionNotReadyError,
 } from "../../../runtime/runtimeErrors.js";
-import {
-	PartitionTrackStateNotFoundError,
-	PartitionTrackWriterCapacityError,
-} from "../../../writer/partitionTrackWriter.js";
 import {
 	PartitionRouteMismatchError,
 	PartitionRouteNotOwnedError,
@@ -46,8 +46,8 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			};
 		} else if (
 			cause instanceof OwnedPartitionNotReadyError ||
-			cause instanceof PartitionTrackWriterCapacityError ||
-			cause instanceof PartitionTrackStateNotFoundError
+			cause instanceof PartitionWriterCapacityError ||
+			cause instanceof PartitionWriterStateNotFoundError
 		) {
 			status = 503;
 			error = {

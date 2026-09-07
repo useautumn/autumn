@@ -5,7 +5,7 @@ import type {
 	TrackDecision,
 } from "@autumn/balance-engine";
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
-import { createPartitionTrackWriter } from "../writer/partitionTrackWriter.js";
+import { createPartitionWriter } from "../processor/writer/createPartitionWriter.js";
 import {
 	checkRuntimeBalance,
 	submitRuntimeTrack,
@@ -46,13 +46,16 @@ export function createPartitionRuntime({
 	const ctx: PartitionRuntimeContext = {
 		...dependencies,
 		config,
-		writer: createPartitionTrackWriter({
-			topic: config.topic,
-			partition: config.partition,
-			stateStore: dependencies.stateStore,
-			appender: dependencies.appender,
-			limits: config.writerLimits,
-			receiptPolicy: dependencies.trackReceiptPolicy,
+		writer: createPartitionWriter({
+			ctx: {
+				stateStore: dependencies.stateStore,
+				appender: dependencies.appender,
+			},
+			config: {
+				topic: config.topic,
+				partition: config.partition,
+				limits: config.writerLimits,
+			},
 		}),
 		requestTracker: createRequestTracker(),
 	};

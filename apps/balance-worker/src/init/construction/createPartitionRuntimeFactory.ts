@@ -1,6 +1,6 @@
 import { createProducerSession } from "@autumn/kafka";
+import { createMutationPublisher } from "../../kafka/createMutationPublisher.js";
 import { createOwnershipPublisher } from "../../kafka/createOwnershipPublisher.js";
-import { createTrackOutcomePublisher } from "../../kafka/createTrackOutcomePublisher.js";
 import { createWorkerProducer } from "../../kafka/createWorkerProducer.js";
 import { createPartitionBootstrapper } from "../../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
@@ -64,9 +64,7 @@ export function createPartitionRuntimeFactory({
 			ctx: { session: producer, partitionOffsets: ctx.ownershipOffsets },
 			config: { ...config.ownership, partition },
 		});
-		const appender = createTrackOutcomePublisher({
-			ctx: { producer },
-		});
+		const appender = createMutationPublisher({ ctx: { producer } });
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: ctx.stateStore,

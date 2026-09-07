@@ -6,8 +6,8 @@ import {
 	parseMeteringTrackOutcome,
 } from "@autumn/kafka";
 import type { ProducerRecord, RecordMetadata } from "kafkajs";
-import { createTrackOutcomePublisher } from "../../../src/kafka/createTrackOutcomePublisher.js";
-import { TrackOutcomeBatchNotCommittedError } from "../../../src/writer/committedTrackOutcomeAppender.js";
+import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
+import { MutationBatchNotCommittedError } from "../../../src/processor/writer/writerErrors.js";
 import {
 	createOutcome,
 	createState,
@@ -88,7 +88,7 @@ describe("Kafka committed track outcome appender", () => {
 			commandId: "cmd_2",
 		});
 		const fake = createFakeProducer();
-		const appender = createTrackOutcomePublisher({
+		const appender = createMutationPublisher({
 			ctx: { producer: fake.producer },
 		});
 
@@ -124,7 +124,7 @@ describe("Kafka committed track outcome appender", () => {
 			releaseCommit = resolve;
 		});
 		const fake = createFakeProducer({ commitGate });
-		const appender = createTrackOutcomePublisher({
+		const appender = createMutationPublisher({
 			ctx: { producer: fake.producer },
 		});
 		let settled = false;
@@ -151,7 +151,7 @@ describe("Kafka committed track outcome appender", () => {
 		const fake = createFakeProducer({
 			transactionError: new Error("producer unavailable"),
 		});
-		const appender = createTrackOutcomePublisher({
+		const appender = createMutationPublisher({
 			ctx: { producer: fake.producer },
 		});
 
@@ -161,13 +161,13 @@ describe("Kafka committed track outcome appender", () => {
 				partition,
 				outcomes: [createOutcome({ state: createState() })],
 			}),
-		).rejects.toBeInstanceOf(TrackOutcomeBatchNotCommittedError);
+		).rejects.toBeInstanceOf(MutationBatchNotCommittedError);
 		expect(fake.lifecycle).toEqual(["transaction"]);
 	});
 
 	test("aborts a failed send before declaring the batch not committed", async () => {
 		const fake = createFakeProducer({ sendError: new Error("send failed") });
-		const appender = createTrackOutcomePublisher({
+		const appender = createMutationPublisher({
 			ctx: { producer: fake.producer },
 		});
 
@@ -177,7 +177,7 @@ describe("Kafka committed track outcome appender", () => {
 				partition,
 				outcomes: [createOutcome({ state: createState() })],
 			}),
-		).rejects.toBeInstanceOf(TrackOutcomeBatchNotCommittedError);
+		).rejects.toBeInstanceOf(MutationBatchNotCommittedError);
 		expect(fake.lifecycle).toEqual(["transaction", "send", "abort"]);
 	});
 
@@ -187,7 +187,7 @@ describe("Kafka committed track outcome appender", () => {
 			sendError: new Error("send failed"),
 			abortError,
 		});
-		const appender = createTrackOutcomePublisher({
+		const appender = createMutationPublisher({
 			ctx: { producer: fake.producer },
 		});
 
@@ -200,7 +200,7 @@ describe("Kafka committed track outcome appender", () => {
 			.catch((cause: unknown) => cause);
 
 		expect(error).toBeInstanceOf(KafkaTransactionStateUnknownError);
-		expect(error).not.toBeInstanceOf(TrackOutcomeBatchNotCommittedError);
+		expect(error).not.toBeInstanceOf(MutationBatchNotCommittedError);
 		expect(error).toMatchObject({
 			failureStage: "abort",
 			abortCause: abortError,
@@ -211,7 +211,7 @@ describe("Kafka committed track outcome appender", () => {
 	test("parks on commit failure without claiming the transaction was aborted", async () => {
 		const commitError = new Error("commit response lost");
 		const fake = createFakeProducer({ commitError });
-		const appender = createTrackOutcomePublisher({
+		const appender = createMutationPublisher({
 			ctx: { producer: fake.producer },
 		});
 
@@ -224,14 +224,14 @@ describe("Kafka committed track outcome appender", () => {
 			.catch((cause: unknown) => cause);
 
 		expect(error).toBeInstanceOf(KafkaTransactionStateUnknownError);
-		expect(error).not.toBeInstanceOf(TrackOutcomeBatchNotCommittedError);
+		expect(error).not.toBeInstanceOf(MutationBatchNotCommittedError);
 		expect(error).toMatchObject({ failureStage: "commit", cause: commitError });
 		expect(fake.lifecycle).toEqual(["transaction", "send", "commit"]);
 	});
 
 	test("aborts when Kafka does not return usable metadata for the batch", async () => {
 		const fake = createFakeProducer({ metadata: [] });
-		const appender = createTrackOutcomePublisher({
+		const appender = createMutationPublisher({
 			ctx: { producer: fake.producer },
 		});
 
@@ -241,13 +241,13 @@ describe("Kafka committed track outcome appender", () => {
 				partition,
 				outcomes: [createOutcome({ state: createState() })],
 			}),
-		).rejects.toBeInstanceOf(TrackOutcomeBatchNotCommittedError);
+		).rejects.toBeInstanceOf(MutationBatchNotCommittedError);
 		expect(fake.lifecycle).toEqual(["transaction", "send", "abort"]);
 	});
 
 	test("rejects an empty batch before opening a transaction", async () => {
 		const fake = createFakeProducer();
-		const appender = createTrackOutcomePublisher({
+		const appender = createMutationPublisher({
 			ctx: { producer: fake.producer },
 		});
 

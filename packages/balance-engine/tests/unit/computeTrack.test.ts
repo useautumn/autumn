@@ -217,47 +217,6 @@ describe("track computation and execution", () => {
 		});
 	});
 
-	test.concurrent("returns the stored outcome for a duplicate command", () => {
-		const command = createCommand();
-		const initialState = createState();
-		const outcome = requireNewOutcome(
-			computeTrack({ state: initialState, command }),
-		);
-		const state = executeTrack({ state: initialState, outcome }).state;
-
-		const duplicate = computeTrack({
-			state,
-			command,
-			existingReceipt: outcome,
-		});
-
-		expect(duplicate).toEqual({ kind: "duplicate", outcome });
-		expect(executeTrack({ state, outcome, existingReceipt: outcome })).toEqual({
-			kind: "duplicate",
-			state,
-			receipt: outcome,
-		});
-	});
-
-	test.concurrent("rejects a reused command id with different input", () => {
-		const initialState = createState();
-		const outcome = requireNewOutcome(
-			computeTrack({ state: initialState, command: createCommand() }),
-		);
-		const state = executeTrack({ state: initialState, outcome }).state;
-
-		expect(
-			computeTrack({
-				state,
-				command: createCommand({ value: 4 }),
-				existingReceipt: outcome,
-			}),
-		).toEqual({
-			kind: "unsupported",
-			reason: "command_conflict",
-		});
-	});
-
 	test.concurrent(
 		"names inputs that are outside the first supported path",
 		() => {
