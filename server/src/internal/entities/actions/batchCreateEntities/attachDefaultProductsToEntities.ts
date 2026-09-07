@@ -24,8 +24,8 @@ export const attachDefaultProductsToEntities = async ({
 	fullCustomer: FullCustomer;
 	entities: Entity[];
 	customerData?: CustomerData;
-}) => {
-	if (!orgDefaultAppliesToEntities({ ctx })) return;
+}): Promise<FullCustomer> => {
+	if (!orgDefaultAppliesToEntities({ ctx })) return fullCustomer;
 
 	const defaultProducts = await setupDefaultProductsContext({
 		ctx,
@@ -38,11 +38,12 @@ export const attachDefaultProductsToEntities = async ({
 	);
 
 	const currentEpochMs = Date.now();
+	let customerProducts = fullCustomer.customer_products;
 	const insertedCustomerProducts: FullCusProduct[] = [];
 	for (const entity of entities) {
 		const entityFullCustomer = {
 			...fullCustomer,
-			customer_products: [...fullCustomer.customer_products],
+			customer_products: [...customerProducts],
 			entity,
 		};
 		const insertCustomerProducts = freeDefaultProducts.map((product) =>
@@ -77,23 +78,15 @@ export const attachDefaultProductsToEntities = async ({
 			originalFullCustomer: entityFullCustomer,
 		});
 
-		fullCustomer.customer_products = [
-			...fullCustomer.customer_products,
-			...insertCustomerProducts,
-		];
+		customerProducts = [...customerProducts, ...insertCustomerProducts];
 		insertedCustomerProducts.push(...insertCustomerProducts);
 	}
 
-	const pooledFullCustomer = await applyPooledBalanceCustomerProductTransitions(
-		{
-			ctx,
-			fullCustomer,
-			outgoingCustomerProducts: [],
-			incomingCustomerProducts: insertedCustomerProducts,
-			now: currentEpochMs,
-		},
-	);
-	fullCustomer.customer_products = pooledFullCustomer.customer_products;
-	fullCustomer.pooled_customer_entitlements =
-		pooledFullCustomer.pooled_customer_entitlements;
+	return applyPooledBalanceCustomerProductTransitions({
+		ctx,
+		fullCustomer,
+		outgoingCustomerProducts: [],
+		incomingCustomerProducts: insertedCustomerProducts,
+		now: currentEpochMs,
+	});
 };

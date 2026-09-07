@@ -22,6 +22,12 @@ const realDefaults = { ...(await import(defaultsModulePath)) };
 const realPooled = { ...(await import(pooledModulePath)) };
 
 const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+const pooledEntitlements = [{ id: "cus_ent_pooled" }];
+/** The mocks return plain shapes, so the result is read through them. */
+type MockedCustomer = {
+	customer_products: unknown[];
+	pooled_customer_entitlements: unknown[];
+};
 const hobby = { id: "hobby", name: "Hobby", prices: [] };
 const customerProduct = {
 	id: "cus_prod_hobby",
@@ -61,6 +67,7 @@ mock.module(pooledModulePath, () => ({
 		return {
 			...(args.fullCustomer as Record<string, unknown>),
 			customer_products: args.incomingCustomerProducts,
+			pooled_customer_entitlements: pooledEntitlements,
 		};
 	},
 }));
@@ -94,11 +101,11 @@ describe("entity default products", () => {
 			org: { config: { default_applies_to_entities: true } },
 		} as AutumnContext;
 
-		await attachDefaultProductsToEntities({
+		const withDefaults = (await attachDefaultProductsToEntities({
 			ctx,
 			fullCustomer: fullCustomer as never,
 			entities: [entity as never],
-		});
+		})) as unknown as MockedCustomer;
 
 		expect(calls.map(({ name }) => name)).toEqual([
 			"execute",
@@ -133,7 +140,11 @@ describe("entity default products", () => {
 				}
 			).customer_products,
 		).toEqual([]);
-		expect(fullCustomer.customer_products).toEqual([customerProduct]);
+		expect(fullCustomer.customer_products).toEqual([]);
+		expect(withDefaults.customer_products).toEqual([customerProduct]);
+		expect(withDefaults.pooled_customer_entitlements).toEqual(
+			pooledEntitlements,
+		);
 		expect(calls[3]?.args).toMatchObject({
 			outgoingCustomerProducts: [],
 			incomingCustomerProducts: [customerProduct],
@@ -150,11 +161,11 @@ describe("entity default products", () => {
 			org: { config: { default_applies_to_entities: true } },
 		} as AutumnContext;
 
-		await attachDefaultProductsToEntities({
+		const withDefaults = (await attachDefaultProductsToEntities({
 			ctx,
 			fullCustomer: fullCustomer as never,
 			entities: [{ id: "entity_1" }, { id: "entity_2" }] as never,
-		});
+		})) as unknown as MockedCustomer;
 
 		const byName = (name: string) => calls.filter((call) => call.name === name);
 		expect(byName("execute")).toHaveLength(2);
@@ -163,9 +174,13 @@ describe("entity default products", () => {
 		expect(byName("pooled")[0]?.args).toMatchObject({
 			incomingCustomerProducts: [customerProduct, customerProduct],
 		});
-		expect(fullCustomer.customer_products).toEqual([
+		expect(fullCustomer.customer_products).toEqual([]);
+		expect(withDefaults.customer_products).toEqual([
 			customerProduct,
 			customerProduct,
 		]);
+		expect(withDefaults.pooled_customer_entitlements).toEqual(
+			pooledEntitlements,
+		);
 	});
 });
