@@ -68,12 +68,11 @@ export const applyPooledBalanceCustomerProductTransitions = async ({
 	if (!pooledBalancePlan) return refreshedFullCustomer;
 
 	await executePooledBalancePlan({ ctx, pooledBalancePlan });
-	await deleteCachedFullCustomer({
+	return refreshFullCustomer({
 		ctx,
 		customerId,
 		source: "pooled-balance-lifecycle-transition",
 	});
-	return refreshedFullCustomer;
 };
 
 const refreshFullCustomer = async ({
