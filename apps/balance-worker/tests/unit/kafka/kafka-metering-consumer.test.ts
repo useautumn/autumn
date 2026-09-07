@@ -408,6 +408,10 @@ describe("Kafka metering consumer", () => {
 
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 			expect(positionTracker.read({ topic, partition })).toBe(3n);
+			expect(positionTracker.readProgress({ topic, partition })).toEqual({
+				consumedNextOffset: 3n,
+				highWatermark: 10_000n,
+			});
 		} finally {
 			closeStoreFixture(fixture);
 		}
@@ -469,6 +473,10 @@ describe("Kafka metering consumer", () => {
 			consumerPort.emitEndBatchProcess({ batchSize: 0, lastOffset: "4" });
 
 			expect(positionTracker.read({ topic, partition })).toBe(5n);
+			expect(positionTracker.readProgress({ topic, partition })).toEqual({
+				consumedNextOffset: 5n,
+				highWatermark: 5n,
+			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
 
 			consumerPort.emitEndBatchProcess({ batchSize: 1, lastOffset: "8" });

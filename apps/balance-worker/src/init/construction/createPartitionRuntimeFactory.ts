@@ -4,6 +4,7 @@ import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
 } from "../../kafka/createWorkerProducer.js";
+import { createPartitionBootstrapper } from "../../runtime/bootstrap/createPartitionBootstrapper.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
 import type {
 	PartitionRuntimeFactory,
@@ -29,6 +30,13 @@ export function createPartitionRuntimeFactory({
 			"trackReceiptRetentionMs must be a positive safe integer",
 		);
 	}
+	const bootstrapper = createPartitionBootstrapper({
+		stateStore: ctx.stateStore,
+		checkpointSource: ctx.checkpointSource,
+		partitionResolver: ctx.partitionResolver,
+		restoreLimits: config.checkpointRestoreLimits,
+		retryPolicy: config.checkpointRetryPolicy,
+	});
 	function createRuntime({
 		topic,
 		partition,
@@ -50,6 +58,7 @@ export function createPartitionRuntimeFactory({
 		const appender = createTrackOutcomePublisher({ ctx: { producer } });
 		return createPartitionRuntime({
 			ctx: {
+				bootstrapper,
 				trackReceiptPolicy: {
 					retentionMs: config.trackReceiptRetentionMs,
 					now: Date.now,

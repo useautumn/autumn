@@ -1,3 +1,4 @@
+import { createProgressTracker } from "@autumn/kafka";
 import { createPartitionReplay } from "../../../src/kafka/meteringConsumer/replay/createPartitionReplay.js";
 
 async function coordinatesReplayWithoutMutatingConsumer(): Promise<void> {
@@ -59,6 +60,7 @@ async function coordinatesReplayWithoutMutatingConsumer(): Promise<void> {
 	const starting = metering.startAndCatchUp({
 		topic: "metering-events-v1",
 		partition: 2,
+		targetNextOffset: 0n,
 		onUnavailable,
 	});
 	await starting;
@@ -81,11 +83,9 @@ test(
 );
 
 import { describe, expect, test } from "bun:test";
-import { createProgressTracker } from "@autumn/kafka";
 import {
 	KafkaPartitionFollowerStoppedError,
 	StateAheadOfKafkaLogEndError,
-	StateBehindKafkaLogStartError,
 } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { PartitionProgressNotFoundError } from "../../../src/state/sqliteBalanceStateErrors.js";
 import {
@@ -121,9 +121,18 @@ const createPartitionOffsets = ({
 }: {
 	low: string;
 	high: string;
-}) => ({
-	fetchTopicOffsets: async () => [{ partition, offset: high, low, high }],
-});
+}) => {
+	const calls: string[] = [];
+	return {
+		calls,
+		fetchTopicOffsets: async (requestedTopic: string) => {
+			calls.push(requestedTopic);
+			return [{ partition, offset: high, low, high }];
+		},
+	};
+};
+
+const activeSignal = (): AbortSignal => new AbortController().signal;
 
 describe("Kafka partition outcome follower", () => {
 	test("waits for the consumed position captured after ownership fencing", async () => {
@@ -131,15 +140,31 @@ describe("Kafka partition outcome follower", () => {
 		try {
 			const consumer = createPartitionControl();
 			const positionTracker = createProgressTracker();
+			const partitionOffsets = createPartitionOffsets({ low: "0", high: "5" });
 			const follower = createKafkaPartitionOutcomeFollower({
 				consumer,
-				partitionOffsets: createPartitionOffsets({ low: "0", high: "5" }),
+				partitionOffsets,
 				stateStore: fixture.store,
 				positionTracker,
 			});
+			const logRange = await follower.readLogRange({
+				topic,
+				partition,
+				signal: activeSignal(),
+			});
+			expect(logRange).toEqual({ logStartOffset: 0n, logEndOffset: 5n });
+			expect(positionTracker.readProgress({ topic, partition })).toEqual({
+				consumedNextOffset: null,
+				highWatermark: 5n,
+			});
 			let caughtUp = false;
 			const catchUp = follower
-				.startAndCatchUp({ topic, partition, onUnavailable: () => undefined })
+				.startAndCatchUp({
+					topic,
+					partition,
+					targetNextOffset: logRange.logEndOffset,
+					onUnavailable: () => undefined,
+				})
 				.then(() => {
 					caughtUp = true;
 				});
@@ -155,6 +180,7 @@ describe("Kafka partition outcome follower", () => {
 			positionTracker.advance({ topic, partition, nextOffset: 5n });
 			await catchUp;
 			expect(caughtUp).toBe(true);
+			expect(partitionOffsets.calls).toEqual([topic]);
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
 		} finally {
 			closeStoreFixture(fixture);
@@ -175,6 +201,7 @@ describe("Kafka partition outcome follower", () => {
 			await follower.startAndCatchUp({
 				topic,
 				partition,
+				targetNextOffset: 0n,
 				onUnavailable: () => undefined,
 			});
 
@@ -185,16 +212,9 @@ describe("Kafka partition outcome follower", () => {
 		}
 	});
 
-	test("refuses state that is outside the retained Kafka range", async () => {
-		const behindFixture = createStoreFixture({ nextOffset: 4n });
+	test("refuses state ahead of the supplied catch-up target", async () => {
 		const aheadFixture = createStoreFixture({ nextOffset: 12n });
 		try {
-			const behindFollower = createKafkaPartitionOutcomeFollower({
-				consumer: createPartitionControl(),
-				partitionOffsets: createPartitionOffsets({ low: "5", high: "10" }),
-				stateStore: behindFixture.store,
-				positionTracker: createProgressTracker(),
-			});
 			const aheadFollower = createKafkaPartitionOutcomeFollower({
 				consumer: createPartitionControl(),
 				partitionOffsets: createPartitionOffsets({ low: "5", high: "10" }),
@@ -203,21 +223,14 @@ describe("Kafka partition outcome follower", () => {
 			});
 
 			await expect(
-				behindFollower.startAndCatchUp({
-					topic,
-					partition,
-					onUnavailable: () => undefined,
-				}),
-			).rejects.toBeInstanceOf(StateBehindKafkaLogStartError);
-			await expect(
 				aheadFollower.startAndCatchUp({
 					topic,
 					partition,
+					targetNextOffset: 10n,
 					onUnavailable: () => undefined,
 				}),
 			).rejects.toBeInstanceOf(StateAheadOfKafkaLogEndError);
 		} finally {
-			closeStoreFixture(behindFixture);
 			closeStoreFixture(aheadFixture);
 		}
 	});
@@ -236,6 +249,7 @@ describe("Kafka partition outcome follower", () => {
 				follower.startAndCatchUp({
 					topic,
 					partition: 1,
+					targetNextOffset: 0n,
 					onUnavailable: () => undefined,
 				}),
 			).rejects.toBeInstanceOf(PartitionProgressNotFoundError);
@@ -257,6 +271,7 @@ describe("Kafka partition outcome follower", () => {
 			const catchUp = follower.startAndCatchUp({
 				topic,
 				partition,
+				targetNextOffset: 5n,
 				onUnavailable: () => undefined,
 			});
 			await Promise.resolve();
@@ -285,6 +300,7 @@ describe("Kafka partition outcome follower", () => {
 			await follower.startAndCatchUp({
 				topic,
 				partition,
+				targetNextOffset: 0n,
 				onUnavailable: ({ cause }) => failures.push(cause),
 			});
 			const failure = new Error("consumer crashed");
@@ -311,6 +327,7 @@ describe("Kafka partition outcome follower", () => {
 			const catchUp = follower.startAndCatchUp({
 				topic,
 				partition,
+				targetNextOffset: 5n,
 				onUnavailable: ({ cause }) => failures.push(cause),
 			});
 			await Promise.resolve();

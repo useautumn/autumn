@@ -69,6 +69,15 @@ function createTestRuntime({
 	// Replay is covered separately; this test isolates real producer epochs and runtime disposal.
 	async function startAndCatchUp(): Promise<void> {}
 	async function stop(): Promise<void> {}
+	async function readLogRange() {
+		return { logStartOffset: 0n, logEndOffset: 0n };
+	}
+	function readProgress() {
+		return { consumedNextOffset: 0n, highWatermark: 0n };
+	}
+	async function bootstrap() {
+		return { kind: "continued" as const, nextOffset: 0n };
+	}
 	function partitionForIdentity(): number {
 		return partition;
 	}
@@ -78,7 +87,8 @@ function createTestRuntime({
 			trackReceiptPolicy: { retentionMs: 86_400_000, now: Date.now },
 			producer,
 			appender: createTrackOutcomePublisher({ ctx: { producer } }),
-			follower: { startAndCatchUp, stop },
+			follower: { readLogRange, readProgress, startAndCatchUp, stop },
+			bootstrapper: { bootstrap },
 			partitionResolver: { partitionForIdentity },
 		},
 		config: {

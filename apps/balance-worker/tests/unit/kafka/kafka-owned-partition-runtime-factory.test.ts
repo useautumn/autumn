@@ -12,11 +12,26 @@ import {
 
 const timings = {
 	fetchMaxWaitTimeMs: 250,
+	healthRefreshIntervalMs: 5_000,
 	heartbeatIntervalMs: 3_000,
 	recoveryDrainTimeoutMs: 5_000,
 	rebalanceTimeoutMs: 60_000,
 	sessionTimeoutMs: 30_000,
 } satisfies KafkaBalanceWorkerTimings;
+
+const checkpointConfiguration = {
+	checkpointSource: { latest: async () => null },
+	checkpointRestoreLimits: {
+		maxSerializedBytes: 1_000_000,
+		maxStates: 1_000,
+		maxReceipts: 10_000,
+	},
+	checkpointRetryPolicy: {
+		maxAttempts: 3,
+		initialBackoffMs: 10,
+		maxBackoffMs: 100,
+	},
+};
 
 describe("Kafka owned partition runtime factory", () => {
 	test("rejects invalid receipt retention before accepting assignments", () => {
@@ -27,6 +42,7 @@ describe("Kafka owned partition runtime factory", () => {
 					kafka: { producer: () => ({}) as OwnedPartitionProducerPort },
 					deploymentEnvironment: "staging",
 					stateStore: fixture.store,
+					...checkpointConfiguration,
 					partitionResolver: { partitionForIdentity: () => 0 },
 					writerLimits: {
 						maxBatchSize: 100,
@@ -62,6 +78,7 @@ describe("Kafka owned partition runtime factory", () => {
 				},
 				deploymentEnvironment: "staging",
 				stateStore: fixture.store,
+				...checkpointConfiguration,
 				partitionResolver: { partitionForIdentity: () => 0 },
 				writerLimits: {
 					maxBatchSize: 100,

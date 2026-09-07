@@ -1,9 +1,21 @@
-import { subscribePartitionAllocations } from "./allocation/partitionAllocation.js";
+import {
+	isCurrentAllocation,
+	subscribePartitionAllocations,
+} from "./allocation/partitionAllocation.js";
+import {
+	startHealthRefresh,
+	stopHealthRefresh,
+} from "./health/partitionHealth.js";
+import { clearPartitionRetries } from "./lifecycle/retryPartition.js";
 import {
 	detachPartitions,
 	stopPartitions,
 } from "./lifecycle/stopPartitions.js";
-import type { PartitionsScope } from "./types/partitionState.js";
+import { reportPartitionError } from "./reportPartitionError.js";
+import type {
+	AllocationScope,
+	PartitionsScope,
+} from "./types/partitionState.js";
 
 export async function startPartitionService({
 	ctx,
@@ -19,8 +31,10 @@ export async function startPartitionService({
 		await ctx.partitionOffsets.connect();
 		state.offsetsConnected = true;
 		await ctx.consumer.start();
+		startHealthRefresh({ ctx, state });
 	} catch (cause) {
 		state.status = "stopped";
+		stopHealthRefresh({ state });
 		state.unsubscribePartitionChanges?.();
 		state.unsubscribePartitionChanges = null;
 		if (state.offsetsConnected) {
@@ -45,6 +59,8 @@ export function stopPartitionService({
 		return Promise.resolve();
 	}
 	state.status = "stopping";
+	stopHealthRefresh({ state });
+	clearPartitionRetries({ state });
 	state.generation += 1;
 	state.unsubscribePartitionChanges?.();
 	state.unsubscribePartitionChanges = null;
@@ -63,7 +79,11 @@ async function finishStop({
 	previousLifecycle: Promise<void>;
 	stopping: Promise<void>;
 }): Promise<void> {
-	const results = await Promise.allSettled([previousLifecycle, stopping]);
+	const results = await Promise.allSettled([
+		previousLifecycle,
+		stopping,
+		state.healthRefreshPromise,
+	]);
 	const errors: unknown[] = [];
 	for (const result of results)
 		if (result.status === "rejected") errors.push(result.reason);
@@ -87,4 +107,19 @@ async function finishStop({
 			errors,
 			"Failed to stop Kafka owned partition group",
 		);
+}
+
+export function requestPartitionServiceStop(scope: AllocationScope): void {
+	queueMicrotask(stopIfCurrent);
+	function stopIfCurrent(): void {
+		void stopSafely();
+	}
+	async function stopSafely(): Promise<void> {
+		if (!isCurrentAllocation(scope)) return;
+		try {
+			await stopPartitionService(scope);
+		} catch (cause) {
+			reportPartitionError({ ctx: scope.ctx, cause });
+		}
+	}
 }

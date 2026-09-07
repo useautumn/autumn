@@ -1,4 +1,14 @@
 import type {
+	OwnedPartitionFollowerProgress,
+	OwnedPartitionHealth,
+} from "../../health/ownedPartitionHealth.js";
+import type {
+	PartitionBootstrapper,
+	PartitionLogRange,
+} from "../bootstrap/types/partitionBootstrap.js";
+export type OwnedPartitionBootstrapPort = PartitionBootstrapper;
+
+import type {
 	CheckCommand,
 	CheckDecision,
 	MeteringIdentity,
@@ -20,10 +30,20 @@ export type OwnedPartitionProducer = {
 };
 
 export type PartitionOutcomeFollowerPort = {
+	readLogRange(params: {
+		topic: string;
+		partition: number;
+		signal: AbortSignal;
+	}): Promise<PartitionLogRange>;
+	readProgress(params: {
+		topic: string;
+		partition: number;
+	}): OwnedPartitionFollowerProgress;
 	// Resolve after replay reaches a freshly captured watermark; continue live following until stopped.
 	startAndCatchUp(params: {
 		topic: string;
 		partition: number;
+		targetNextOffset: bigint;
 		onUnavailable: RuntimeUnavailableListener;
 	}): Promise<void>;
 	// Stopping must settle pending catch-up and in-flight replay callbacks.
@@ -35,6 +55,7 @@ export type MeteringPartitionResolver = {
 };
 
 export type PartitionRuntimeDependencies = {
+	bootstrapper: PartitionBootstrapper;
 	trackReceiptPolicy: PartitionTrackWriterReceiptPolicy;
 	stateStore: SqliteBalanceStateStore;
 	producer: OwnedPartitionProducer;
@@ -77,6 +98,7 @@ export type PartitionRuntime = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
 	getStatus(): PartitionRuntimeStatus;
+	getHealth(): OwnedPartitionHealth;
 	subscribeUnavailable(listener: RuntimeUnavailableListener): () => void;
 	submitTrack(params: { command: TrackCommand }): Promise<TrackDecision>;
 	check(params: { command: CheckCommand }): Promise<CheckDecision>;

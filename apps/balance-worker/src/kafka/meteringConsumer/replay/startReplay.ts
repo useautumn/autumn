@@ -1,35 +1,62 @@
-import { readPartitionLogRange } from "@autumn/kafka";
+import { type PartitionPosition, readPartitionLogRange } from "@autumn/kafka";
+import type { PartitionLogRange } from "../../../runtime/bootstrap/types/partitionBootstrap.js";
 import type { RuntimeUnavailableListener } from "../../../runtime/types/partitionRuntime.js";
 import { PartitionProgressNotFoundError } from "../../../state/sqliteBalanceStateErrors.js";
-import {
-	StateAheadOfKafkaLogEndError,
-	StateBehindKafkaLogStartError,
-} from "../meteringErrors.js";
+import { StateAheadOfKafkaLogEndError } from "../meteringErrors.js";
 import type {
 	PartitionReplayContext,
 	PartitionReplayState,
 } from "../types/partitionReplay.js";
+
+export async function readReplayLogRange({
+	ctx,
+	topic,
+	partition,
+	signal,
+}: {
+	ctx: PartitionReplayContext;
+	topic: string;
+	partition: number;
+	signal: AbortSignal;
+}): Promise<PartitionLogRange> {
+	validateReplayPosition({ topic, partition });
+	if (signal.aborted) throw signal.reason;
+	const range = await readPartitionLogRange({
+		ctx: { partitionOffsets: ctx.partitionOffsets },
+		topic,
+		partition,
+	});
+	if (signal.aborted) throw signal.reason;
+	ctx.positionTracker.observeHighWatermark({
+		topic,
+		partition,
+		highWatermark: range.logEndOffset,
+	});
+	return range;
+}
 
 export async function startReplay({
 	ctx,
 	state,
 	topic,
 	partition,
+	targetNextOffset,
 	onUnavailable,
 }: {
 	ctx: PartitionReplayContext;
 	state: PartitionReplayState;
 	topic: string;
 	partition: number;
+	targetNextOffset: bigint;
 	onUnavailable: RuntimeUnavailableListener;
 }): Promise<void> {
 	if (state.status !== "created")
 		throw new Error(
 			`Kafka partition follower cannot start while ${state.status}`,
 		);
-	if (!topic.trim()) throw new Error("Kafka topic cannot be empty");
-	if (!Number.isSafeInteger(partition) || partition < 0)
-		throw new RangeError(`Invalid Kafka partition: ${partition}`);
+	validateReplayPosition({ topic, partition });
+	if (targetNextOffset < 0n)
+		throw new RangeError(`Invalid target next offset: ${targetNextOffset}`);
 	state.status = "starting";
 	state.position = { topic, partition };
 	state.onUnavailable = onUnavailable;
@@ -37,48 +64,34 @@ export async function startReplay({
 	state.startPromise = catchUpPartition({
 		ctx,
 		state,
-		topic,
-		partition,
+		targetNextOffset,
 		signal: state.abortController.signal,
 	});
 	return state.startPromise;
 }
+
 async function catchUpPartition({
 	ctx,
 	state,
-	topic,
-	partition,
+	targetNextOffset,
 	signal,
 }: {
 	ctx: PartitionReplayContext;
 	state: PartitionReplayState;
-	topic: string;
-	partition: number;
+	targetNextOffset: bigint;
 	signal: AbortSignal;
 }): Promise<void> {
+	if (!state.position) throw new Error("Replay has no assigned partition");
+	const { topic, partition } = state.position;
 	const storedNextOffset = ctx.stateStore.readNextOffset({ topic, partition });
 	if (storedNextOffset === null)
 		throw new PartitionProgressNotFoundError({ topic, partition });
-	const { logStartOffset, logEndOffset } = await readPartitionLogRange({
-		ctx,
-		topic,
-		partition,
-	});
-	if (signal.aborted) throw signal.reason;
-	if (storedNextOffset < logStartOffset) {
-		throw new StateBehindKafkaLogStartError({
-			topic,
-			partition,
-			storedNextOffset,
-			logStartOffset,
-		});
-	}
-	if (storedNextOffset > logEndOffset) {
+	if (storedNextOffset > targetNextOffset) {
 		throw new StateAheadOfKafkaLogEndError({
 			topic,
 			partition,
 			storedNextOffset,
-			logEndOffset,
+			logEndOffset: targetNextOffset,
 		});
 	}
 	ctx.positionTracker.advance({
@@ -92,9 +105,15 @@ async function catchUpPartition({
 	await ctx.positionTracker.waitUntil({
 		topic,
 		partition,
-		nextOffset: logEndOffset,
+		nextOffset: targetNextOffset,
 		signal,
 	});
 	if (signal.aborted) throw signal.reason;
 	state.status = "following";
+}
+
+function validateReplayPosition({ topic, partition }: PartitionPosition): void {
+	if (topic.trim().length === 0) throw new Error("Kafka topic cannot be empty");
+	if (!Number.isSafeInteger(partition) || partition < 0)
+		throw new RangeError(`Invalid Kafka partition: ${partition}`);
 }

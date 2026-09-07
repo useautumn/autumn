@@ -34,6 +34,27 @@ describe("Kafka partition position tracker", () => {
 		expect(tracker.read({ topic, partition })).toBe(8n);
 	});
 
+	test("tracks consumed position and the latest observed high watermark", () => {
+		const tracker = createProgressTracker();
+
+		tracker.advance({ topic, partition, nextOffset: 8n });
+		tracker.observeHighWatermark({ topic, partition, highWatermark: 12n });
+
+		expect(tracker.readProgress({ topic, partition })).toEqual({
+			consumedNextOffset: 8n,
+			highWatermark: 12n,
+		});
+	});
+
+	test("never moves an observed high watermark backwards", () => {
+		const tracker = createProgressTracker();
+
+		tracker.observeHighWatermark({ topic, partition, highWatermark: 12n });
+		tracker.observeHighWatermark({ topic, partition, highWatermark: 9n });
+
+		expect(tracker.readProgress({ topic, partition }).highWatermark).toBe(12n);
+	});
+
 	test("cancels a pending catch-up wait", async () => {
 		const tracker = createProgressTracker();
 		const controller = new AbortController();
