@@ -4,7 +4,6 @@ import {
 	type Feature,
 	FeatureNotFoundError,
 	FeatureType,
-	findFeatureById,
 	fullSubjectToCreditSystems,
 	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
@@ -113,34 +112,30 @@ export const getCheckDataV2 = async ({
 		features: ctx.features,
 	});
 
-	let featureToUseMin = getFeatureToUseForCheck({
+	const evaluationFeature = getFeatureToUseForCheck({
 		creditSystems,
 		feature,
 		apiSubject: evaluationApiSubject,
 		requiredBalance,
 	});
-	if (
-		ctx.org.config.block_overdue_entitlements &&
-		!evaluationApiSubject.balances?.[featureToUseMin.id] &&
-		!evaluationApiSubject.flags?.[featureToUseMin.id]
-	) {
-		featureToUseMin = getFeatureToUseForCheck({
-			creditSystems: fullSubjectToCreditSystems({
-				fullSubject,
-				featureId: feature_id,
-				features: ctx.features,
-			}),
-			feature,
-			apiSubject,
-			requiredBalance,
-		});
-	}
-
-	const featureToUse = findFeatureById({
-		features: ctx.features,
-		featureId: featureToUseMin.id,
-		errorOnNotFound: true,
-	});
+	const hasEvaluationGrant = Boolean(
+		evaluationApiSubject.balances?.[evaluationFeature.id] ||
+			evaluationApiSubject.flags?.[evaluationFeature.id],
+	);
+	const useDisplayFallback =
+		ctx.org.config.block_overdue_entitlements && !hasEvaluationGrant;
+	const featureToUse = useDisplayFallback
+		? getFeatureToUseForCheck({
+				creditSystems: fullSubjectToCreditSystems({
+					fullSubject,
+					featureId: feature_id,
+					features: ctx.features,
+				}),
+				feature,
+				apiSubject,
+				requiredBalance,
+			})
+		: evaluationFeature;
 
 	// Trigger auto top-up
 	triggerAutoTopUp({
@@ -159,9 +154,7 @@ export const getCheckDataV2 = async ({
 		apiSubject,
 		originalFeature: feature,
 		featureToUse,
-		fullSubject: evaluationApiSubject.balances?.[featureToUse.id]
-			? evaluationFullSubject
-			: fullSubject,
+		fullSubject: useDisplayFallback ? fullSubject : evaluationFullSubject,
 		evaluationApiSubject,
 		evaluationApiBalance: evaluationApiSubject.balances?.[featureToUse.id],
 		evaluationApiFlag: evaluationApiSubject.flags?.[featureToUse.id],
