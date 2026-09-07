@@ -83,6 +83,21 @@ const withFixtureLocations = ({
  * existed for non-TS producers is gone; this function is the seam a future
  * `--config-json` would slot into.
  */
+/** Bun runs TypeScript natively; the published node binary needs jiti for it. */
+const importConfigModule = async ({
+	path,
+}: {
+	path: string;
+}): Promise<Record<string, unknown> & { default?: WireDocument }> => {
+	if (typeof Bun !== "undefined") {
+		return import(`${path}?v=${Date.now()}`);
+	}
+	const { createJiti } = await import("jiti");
+	return createJiti(import.meta.url, { moduleCache: false }).import(
+		path,
+	) as Promise<Record<string, unknown> & { default?: WireDocument }>;
+};
+
 export const loadConfig = async ({
 	dirs,
 }: {
@@ -98,7 +113,7 @@ export const loadConfig = async ({
 	// normalises it away and serves the cached module.
 	let module: Record<string, unknown> & { default?: WireDocument };
 	try {
-		module = await import(`${path}?v=${Date.now()}`);
+		module = await importConfigModule({ path });
 	} catch (error) {
 		if (error instanceof ConfigError) {
 			throw withFixtureLocations({ error, configPath: path });
