@@ -26,3 +26,15 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
+
+  s3:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    ports:
+      - "19000:9000"
+      - "19001:9001"
+    environment:
+      MINIO_ROOT_USER: autumn-test
+      MINIO_ROOT_PASSWORD: autumn-test-secret
+    command: server /data --console-address ":9001"
+    tmpfs:
+      - /data

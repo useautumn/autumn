@@ -40,6 +40,7 @@
       "dependencies": {
         "@autumn/balance-engine": "workspace:*",
         "@autumn/kafka": "workspace:*",
+        "@aws-sdk/client-s3": "^3.1017.0",
         "kafkajs": "^2.2.4",
       },
       "devDependencies": {

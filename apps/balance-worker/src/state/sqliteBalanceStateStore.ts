@@ -15,6 +15,11 @@ import type {
 	PartitionCheckpointV1,
 } from "../checkpoint/partitionCheckpoint.js";
 import {
+	capturePartitionCheckpoint as captureCheckpoint,
+	type PartitionCheckpointCaptureLimits,
+} from "./checkpoint/capturePartitionCheckpoint.js";
+import { pruneExpiredTrackReceipts as pruneReceipts } from "./checkpoint/pruneExpiredTrackReceipts.js";
+import {
 	type PartitionCheckpointRestoreLimits,
 	type PartitionCheckpointRestoreMode,
 	restorePartitionCheckpoint as restoreCheckpoint,
@@ -163,6 +168,50 @@ export class SqliteBalanceStateStore {
 			mode,
 			limits,
 			partitionResolver,
+		});
+	}
+
+	capturePartitionCheckpoint({
+		topic,
+		partition,
+		createdAt,
+		limits,
+	}: {
+		topic: string;
+		partition: number;
+		createdAt: number;
+		limits: PartitionCheckpointCaptureLimits;
+	}): PartitionCheckpointV1 {
+		assertTopic({ topic });
+		assertPartition({ partition });
+		return captureCheckpoint({
+			database: this.database,
+			topic,
+			partition,
+			createdAt,
+			limits,
+		});
+	}
+
+	pruneExpiredTrackReceipts({
+		topic,
+		partition,
+		expiresAtOrBefore,
+		limit,
+	}: {
+		topic: string;
+		partition: number;
+		expiresAtOrBefore: number;
+		limit: number;
+	}): { deletedCount: number } {
+		assertTopic({ topic });
+		assertPartition({ partition });
+		return pruneReceipts({
+			database: this.database,
+			topic,
+			partition,
+			expiresAtOrBefore,
+			limit,
 		});
 	}
 

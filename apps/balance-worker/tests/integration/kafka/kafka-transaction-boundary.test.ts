@@ -5,18 +5,27 @@ import { join } from "node:path";
 import {
 	createCustomerMeteringState,
 	executeTrack,
-	meteringPartitionKeyOf,
 	parseTrackCommand,
-	stateInitializationFingerprintOf,
 } from "@autumn/balance-engine";
 import { createKafkaClient as balanceWorkerKafkaConfigOf } from "@autumn/kafka";
+import {
+	CreateBucketCommand,
+	DeleteBucketCommand,
+	DeleteObjectCommand,
+	S3Client,
+} from "@aws-sdk/client-s3";
 import { Kafka, logLevel, type RecordMetadata } from "kafkajs";
-import { createPartitionCheckpoint } from "../../../src/checkpoint/partitionCheckpoint.js";
+import { createPartitionCheckpointExporter } from "../../../src/checkpoint/partitionCheckpointExporter.js";
 import type { PartitionCheckpointSource } from "../../../src/checkpoint/partitionCheckpointSource.js";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
 import { createWorkerConsumerConfig as balanceWorkerConsumerConfigOf } from "../../../src/init/workerConfig.js";
 import { OwnedPartitionProducerFencedError } from "../../../src/runtime/runtimeErrors.js";
 import type { PartitionOutcomeFollowerPort } from "../../../src/runtime/types/partitionRuntime.js";
+import { createS3CheckpointObjectClient } from "../../../src/s3/s3CheckpointObjectClient.js";
+import {
+	createS3PartitionCheckpointStorage,
+	partitionCheckpointObjectKeyOf,
+} from "../../../src/s3/s3PartitionCheckpointStorage.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
@@ -34,6 +43,7 @@ import {
 } from "../../unit/kafka/kafka-test-fixtures.js";
 
 const brokers = (process.env.KAFKA_BROKERS ?? "127.0.0.1:19092").split(",");
+const s3Endpoint = process.env.S3_ENDPOINT ?? "http://127.0.0.1:19000";
 const partition = 0;
 const timings = {
 	fetchMaxWaitTimeMs: 250,
@@ -76,6 +86,40 @@ const createKafka = ({ clientId }: { clientId: string }): Kafka =>
 			},
 		}),
 	);
+
+const createS3 = (): S3Client =>
+	new S3Client({
+		region: "us-east-1",
+		endpoint: s3Endpoint,
+		forcePathStyle: true,
+		credentials: {
+			accessKeyId: "autumn-test",
+			secretAccessKey: "autumn-test-secret",
+		},
+		maxAttempts: 1,
+		requestChecksumCalculation: "WHEN_REQUIRED",
+		responseChecksumValidation: "WHEN_REQUIRED",
+	});
+
+const createS3Bucket = async ({
+	client,
+	bucket,
+}: {
+	client: S3Client;
+	bucket: string;
+}): Promise<void> => {
+	let lastError: unknown;
+	for (let attempt = 1; attempt <= 100; attempt += 1) {
+		try {
+			await client.send(new CreateBucketCommand({ Bucket: bucket }));
+			return;
+		} catch (error) {
+			lastError = error;
+			await new Promise<void>((resolve) => setTimeout(resolve, 100));
+		}
+	}
+	throw lastError;
+};
 
 const createTopic = async ({ kafka }: { kafka: Kafka }) => {
 	const admin = kafka.admin();
@@ -234,12 +278,19 @@ const createTestRuntimeFactory = ({
 	});
 
 describe("Kafka transaction boundary", () => {
-	test("restores a checkpoint, replays its tail, and deduplicates the retried tail command", async () => {
+	test("exports to S3, restores, replays the tail, and deduplicates its retry", async () => {
 		const kafka = createKafka({
 			clientId: uniqueName({ prefix: "checkpoint-restore" }),
 		});
+		const s3 = createS3();
+		const checkpointBucket = uniqueName({ prefix: "checkpoint-restore" });
 		const topicFixture = await createTopic({ kafka });
 		const storeFixture = createStore({
+			topic: topicFixture.topic,
+			initializeCustomer: false,
+			initializePartition: false,
+		});
+		const oldOwnerStoreFixture = createStore({
 			topic: topicFixture.topic,
 			initializeCustomer: false,
 			initializePartition: false,
@@ -277,23 +328,34 @@ describe("Kafka transaction boundary", () => {
 		let runtime: ReturnType<typeof createOwnedPartitionRuntime> | null = null;
 		const errors: unknown[] = [];
 		let group: ReturnType<typeof createKafkaOwnedPartitionGroup> | null = null;
+		const checkpointStorage = createS3PartitionCheckpointStorage({
+			client: createS3CheckpointObjectClient({ client: s3 }),
+			bucket: checkpointBucket,
+			keyPrefix: "checkpoints",
+			deploymentEnvironment: "staging",
+			limits: {
+				maxCompressedBytes: 1_000_000,
+				maxSerializedBytes: 1_000_000,
+				maxPublishAttempts: 3,
+			},
+		});
 		try {
+			await createS3Bucket({ client: s3, bucket: checkpointBucket });
 			await seedProducer.connect();
+			const initialization = {
+				schemaVersion: 1,
+				type: "state_initialized",
+				initializationId: "init_1",
+				initializedAt: 1_700_000_000_000,
+				state: initialState,
+			} as const;
 			const seedTransaction = await seedProducer.transaction();
 			const seedMetadata = await seedTransaction.send({
 				topic: topicFixture.topic,
 				acks: -1,
 				messages: [
 					{
-						...serializeKafkaStateInitializedRecord({
-							initialization: {
-								schemaVersion: 1,
-								type: "state_initialized",
-								initializationId: "init_1",
-								initializedAt: 1_700_000_000_000,
-								state: initialState,
-							},
-						}),
+						...serializeKafkaStateInitializedRecord({ initialization }),
 						partition,
 					},
 					{
@@ -312,44 +374,43 @@ describe("Kafka transaction boundary", () => {
 				partition,
 				outcomes: [tailOutcome],
 			});
-			const partitionKey = meteringPartitionKeyOf({
-				identity: initialState.identity,
-			});
-			const checkpoint = createPartitionCheckpoint({
-				engineSchemaVersion: 1,
-				createdAt: 1_700_000_000_000,
+			oldOwnerStoreFixture.store.initializePartition({
 				topic: topicFixture.topic,
 				partition,
-				nextOffset: seedBaseOffset + 2n,
-				states: [
-					{
-						partitionKey,
-						initializationId: "init_1",
-						initializationFingerprint: stateInitializationFingerprintOf({
-							initialization: {
-								schemaVersion: 1,
-								type: "state_initialized",
-								initializationId: "init_1",
-								initializedAt: 1_700_000_000_000,
-								state: initialState,
-							},
-						}),
-						state: firstExecution.state,
-					},
-				],
-				receipts: [
-					{
-						partitionKey,
-						recordOffset: seedBaseOffset + 1n,
-						outcome: firstOutcome,
-					},
-				],
+				nextOffset: seedBaseOffset,
+			});
+			oldOwnerStoreFixture.store.applyDurableStateInitialization({
+				position: {
+					topic: topicFixture.topic,
+					partition,
+					offset: seedBaseOffset,
+				},
+				initialization,
+			});
+			oldOwnerStoreFixture.store.applyDurableTrackOutcome({
+				position: {
+					topic: topicFixture.topic,
+					partition,
+					offset: seedBaseOffset + 1n,
+				},
+				outcome: firstOutcome,
+			});
+			const exporter = createPartitionCheckpointExporter({
+				stateStore: oldOwnerStoreFixture.store,
+				publisher: checkpointStorage,
+				clock: { now: () => 1_700_000_000_000 },
+				limits: checkpointConfiguration.checkpointRestoreLimits,
+			});
+			await exporter.export({
+				topic: topicFixture.topic,
+				partition,
+				signal: new AbortController().signal,
 			});
 			const createRuntime = createTestRuntimeFactory({
 				kafka,
 				deploymentPrefix: "checkpoint-owner",
 				stateStore: storeFixture.store,
-				checkpointSource: { latest: async () => checkpoint },
+				checkpointSource: checkpointStorage,
 			});
 			group = createKafkaOwnedPartitionGroup({
 				consumer,
@@ -416,7 +477,25 @@ describe("Kafka transaction boundary", () => {
 			await seedProducer.disconnect().catch(() => undefined);
 			await group?.stop().catch(() => undefined);
 			storeFixture.cleanup();
+			oldOwnerStoreFixture.cleanup();
 			await topicFixture.cleanup();
+			await s3
+				.send(
+					new DeleteObjectCommand({
+						Bucket: checkpointBucket,
+						Key: partitionCheckpointObjectKeyOf({
+							keyPrefix: "checkpoints",
+							deploymentEnvironment: "staging",
+							topic: topicFixture.topic,
+							partition,
+						}),
+					}),
+				)
+				.catch(() => undefined);
+			await s3
+				.send(new DeleteBucketCommand({ Bucket: checkpointBucket }))
+				.catch(() => undefined);
+			s3.destroy();
 		}
 	});
 
