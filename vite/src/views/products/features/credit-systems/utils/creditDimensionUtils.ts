@@ -23,9 +23,13 @@ export type CreditMultiplierRule = {
 };
 export type DimensionValues = Record<string, string[]>;
 
-type Matched = { match: CreditMatch };
+/** Rates and multipliers alike; both are keyed by the match they apply to. */
+type MatchableRule = { match: CreditMatch };
 
-const matchesOf = (item: CreditSchemaItem): CreditMatch[] =>
+/** Rates and multipliers both match on dimensions, so both are read here. */
+const matchesFromRatesAndMultipliers = (
+	item: CreditSchemaItem,
+): CreditMatch[] =>
 	[
 		...Object.values(item.dimensions ?? {}),
 		...Object.values(item.multipliers ?? {}),
@@ -36,7 +40,7 @@ const unique = (values: string[]) => Array.from(new Set(values));
 /** Every field and value referenced by a rate or multiplier, in first-seen order. */
 export const dimensionValues = (item: CreditSchemaItem): DimensionValues => {
 	const values: DimensionValues = {};
-	for (const match of matchesOf(item)) {
+	for (const match of matchesFromRatesAndMultipliers(item)) {
 		for (const [field, value] of Object.entries(match)) {
 			values[field] = unique([...(values[field] ?? []), value]);
 		}
@@ -92,7 +96,9 @@ const uniqueName = (name: string, taken: Set<string>) => {
 	return candidate;
 };
 
-const namedByMatch = <T extends Matched>(rules: T[]): Record<string, T> => {
+const namedByMatch = <T extends MatchableRule>(
+	rules: T[],
+): Record<string, T> => {
 	const taken = new Set<string>();
 	return Object.fromEntries(
 		rules.map((rule) => [uniqueName(ruleName(rule.match), taken), rule]),
@@ -134,7 +140,7 @@ export const isMatchAllowed = (match: CreditMatch, allowed: DimensionValues) =>
 		allowed[field]?.includes(value),
 	);
 
-const onlyAllowed = <T extends Matched>(
+const onlyAllowed = <T extends MatchableRule>(
 	rules: Record<string, T> | undefined,
 	allowed: DimensionValues,
 ): Record<string, T> =>
@@ -198,7 +204,9 @@ export const withRenamedField = ({
 	from: string;
 	to: string;
 }): CreditSchemaItem => {
-	const rename = <T extends Matched>(rules: Record<string, T> | undefined) =>
+	const rename = <T extends MatchableRule>(
+		rules: Record<string, T> | undefined,
+	) =>
 		mapRecordValues({
 			record: rules ?? {},
 			mapValue: (rule) => ({
@@ -253,11 +261,10 @@ export const setMatchValue = ({
 	return value === undefined ? others : { ...others, [field]: value };
 };
 
-/** A row of the rates table: a saved rule, or a draft that only has its match so far. */
 /**
- * A row in the rates table. `key` is its identity for React and the table: rows
- * are reassembled from the item on every render, and every content-derived id
- * (index, name, match) collides or changes as the row is edited.
+ * A row of the rates table: a saved rule, or a draft that only has its match so
+ * far. `key` is its identity — rows are rebuilt from the item on every render,
+ * and every content-derived id (index, name, match) collides or changes mid-edit.
  */
 export type CreditRateRow = {
 	key: string;
@@ -287,31 +294,79 @@ export const nameRateRows = (rows: CreditRateRow[]): CreditRateRow[] => {
 	);
 };
 
-export const rateRowsOf = ({
+/** The key a saved rule's row is identified by, absent a claim from its draft. */
+const ruleRowKey = (name: string) => `rule:${name}`;
+
+/**
+ * Rule names derive from their match, so a rename changes every row's key.
+ * Rewriting the recorded order keeps those rows in place instead of sorting
+ * them to the bottom as unknown.
+ */
+export const renamedRowOrder = ({
+	order,
+	item,
+	from,
+	to,
+}: {
+	order: string[];
+	item: CreditSchemaItem;
+	from: string;
+	to: string;
+}): string[] => {
+	const renamedKey = new Map(
+		rateRules(item).map(({ name, dimension }) => [
+			ruleRowKey(name),
+			ruleRowKey(
+				ruleName(renameMatchKey({ match: dimension.match, from, to })),
+			),
+		]),
+	);
+	return order.map((key) => renamedKey.get(key) ?? key);
+};
+
+/**
+ * Rules and drafts are stored apart, so rebuilding alone groups every saved row
+ * above every draft — typing a cost into a lower row would jump it up the table.
+ * `order` restores what the table last rendered; rows it does not name (a newly
+ * added draft) sort to the end.
+ */
+export const toRateRows = ({
 	rules,
 	drafts,
 	keysByRuleName,
+	order = [],
 }: {
 	rules: CreditRateRule[];
 	drafts: CreditRateDraft[];
 	/** Keys claimed by a row before it was saved, so it keeps its identity. */
 	keysByRuleName?: Map<string, string>;
-}): CreditRateRow[] => [
-	...rules.map(({ name, dimension }) => ({
-		key: keysByRuleName?.get(name) ?? `rule:${name}`,
-		name,
-		match: dimension.match,
-		dimension,
-	})),
-	...drafts.map(({ key, match }) => ({ key, name: "", match })),
-];
+	/** Row keys in display order. */
+	order?: string[];
+}): CreditRateRow[] => {
+	const rows: CreditRateRow[] = [
+		...rules.map(({ name, dimension }) => ({
+			key: keysByRuleName?.get(name) ?? ruleRowKey(name),
+			name,
+			match: dimension.match,
+			dimension,
+		})),
+		...drafts.map(({ key, match }) => ({ key, name: "", match })),
+	];
 
-export const rulesOf = (rows: CreditRateRow[]): CreditRateRule[] =>
+	const rank = new Map(order.map((key, index) => [key, index]));
+	// Sort is stable, so unranked rows keep their built order behind the rest.
+	return rows.sort(
+		(a, b) =>
+			(rank.get(a.key) ?? order.length) - (rank.get(b.key) ?? order.length),
+	);
+};
+
+export const savedRulesFrom = (rows: CreditRateRow[]): CreditRateRule[] =>
 	rows.flatMap((row) =>
 		row.dimension ? [{ name: row.name, dimension: row.dimension }] : [],
 	);
 
-export const draftsOf = (rows: CreditRateRow[]): CreditRateDraft[] =>
+export const draftsFrom = (rows: CreditRateRow[]): CreditRateDraft[] =>
 	rows.flatMap((row) =>
 		row.dimension ? [] : [{ key: row.key, match: row.match }],
 	);
@@ -448,7 +503,7 @@ export const filledRateRows = ({
 	values: DimensionValues;
 	rows: CreditRateRow[];
 }): CreditRateRow[] => {
-	const rules = rulesOf(rows);
+	const rules = savedRulesFrom(rows);
 	return fullCombinations(values).map((match) => {
 		const exact = rows.find((row) => sameMatch(row.match, match));
 		if (exact) return exact;

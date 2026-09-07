@@ -15,8 +15,8 @@ import {
 	type MatchRow,
 	type MatchTableMeta,
 	matchColumns,
-	metaOf,
 	removeColumn,
+	tableMeta,
 } from "./creditMatchColumns";
 
 interface MultiplierRow extends MatchRow {
@@ -42,22 +42,20 @@ const factorColumn: ColumnDef<MultiplierRow, unknown> = {
 				placeholder="1"
 				value={rule.multiplier.factor}
 				onClear={() =>
-					metaOf<MultiplierTableMeta, MultiplierRow>(table).onMultiplierChange(
-						index,
-						{
-							...rule,
-							multiplier: { ...rule.multiplier, factor: undefined },
-						},
-					)
+					tableMeta<MultiplierTableMeta, MultiplierRow>(
+						table,
+					).onMultiplierChange(index, {
+						...rule,
+						multiplier: { ...rule.multiplier, factor: undefined },
+					})
 				}
 				onValueChange={(factor) =>
-					metaOf<MultiplierTableMeta, MultiplierRow>(table).onMultiplierChange(
-						index,
-						{
-							...rule,
-							multiplier: { ...rule.multiplier, factor },
-						},
-					)
+					tableMeta<MultiplierTableMeta, MultiplierRow>(
+						table,
+					).onMultiplierChange(index, {
+						...rule,
+						multiplier: { ...rule.multiplier, factor },
+					})
 				}
 				className="text-sm"
 			/>

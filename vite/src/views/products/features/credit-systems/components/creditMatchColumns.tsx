@@ -39,7 +39,7 @@ export interface MatchCellContext<T extends MatchRow> {
 	table: TableInstance<T>;
 }
 
-export const metaOf = <M extends MatchTableMeta, T extends MatchRow>(
+export const tableMeta = <M extends MatchTableMeta, T extends MatchRow>(
 	table: TableInstance<T>,
 ): M => table.options.meta as M;
 
@@ -54,10 +54,10 @@ export const matchColumns = <T extends MatchRow>(
 			return (
 				<CreditDimensionValueSelect
 					ariaLabel={`${label} ${field}`}
-					values={metaOf(table).values[field] ?? []}
+					values={tableMeta(table).values[field] ?? []}
 					value={match[field]}
 					onValueChange={(value) =>
-						metaOf(table).onMatchChange(
+						tableMeta(table).onMatchChange(
 							index,
 							setMatchValue({ match, field, value }),
 						)
@@ -96,7 +96,7 @@ export const removeColumn = <T extends MatchRow>(): ColumnDef<T, unknown> => ({
 				variant="skeleton"
 				iconOrientation="center"
 				icon={<X className="h-3.5 w-3.5" />}
-				onClick={() => metaOf(table).onRemove(row.original.index)}
+				onClick={() => tableMeta(table).onRemove(row.original.index)}
 				className="!text-subtle hover:!text-foreground rounded-md p-1"
 			/>
 		</div>

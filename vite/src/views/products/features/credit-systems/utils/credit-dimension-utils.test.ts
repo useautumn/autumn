@@ -6,21 +6,23 @@ import {
 import {
 	createRateDraft,
 	dimensionValues,
-	draftsOf,
+	draftsFrom,
 	filledRateRows,
 	mergeDimensionValues,
 	missingCombinationCount,
 	multiplierRules,
 	nameRateRows,
-	rateRowsOf,
 	rateRules,
+	renamedRowOrder,
 	setMatchValue,
+	toRateRows,
 	withAllowedValues,
 	withMultiplierRules,
 	withoutDimensions,
 	withRateCredits,
 	withRateMatch,
 	withRateRules,
+	withRenamedField,
 } from "./creditDimensionUtils";
 
 const row: CreditSchemaItem = {
@@ -154,7 +156,7 @@ test("missing combinations count the full grid minus rows already there", () => 
 	expect(
 		missingCombinationCount({
 			values: { size: ["small", "large"], region: ["eu", "us"], tier: [] },
-			rows: rateRowsOf({ rules: rateRules(row), drafts: [] }),
+			rows: toRateRows({ rules: rateRules(row), drafts: [] }),
 		}),
 	).toBe(3);
 	expect(missingCombinationCount({ values: { size: [] }, rows: [] })).toBe(0);
@@ -163,7 +165,7 @@ test("missing combinations count the full grid minus rows already there", () => 
 test("filling keeps exact rows, inherits from covering rules, drafts the rest, and folds partial rows away", () => {
 	const filled = filledRateRows({
 		values: { size: ["small", "large"], region: ["eu", "us"] },
-		rows: rateRowsOf({
+		rows: toRateRows({
 			rules: rateRules(row),
 			drafts: [createRateDraft({ size: "small" })],
 		}),
@@ -222,7 +224,7 @@ test("collision suffixes keep names within the API limit", () => {
 });
 
 test("two rows with the same match stay independently addressable", () => {
-	const rows = rateRowsOf({
+	const rows = toRateRows({
 		rules: [],
 		drafts: [createRateDraft(), createRateDraft()],
 	});
@@ -235,7 +237,7 @@ test("two rows with the same match stay independently addressable", () => {
 		withRateMatch({ row: rows[0], match: { size: "large" } }),
 		rows[1],
 	];
-	expect(draftsOf(edited).map((draft) => draft.match)).toEqual([
+	expect(draftsFrom(edited).map((draft) => draft.match)).toEqual([
 		{ size: "large" },
 		{},
 	]);
@@ -243,7 +245,7 @@ test("two rows with the same match stay independently addressable", () => {
 
 test("a draft keeps its key once it is saved as a rule", () => {
 	const draft = createRateDraft({ size: "large" });
-	const [row] = rateRowsOf({ rules: [], drafts: [draft] });
+	const [row] = toRateRows({ rules: [], drafts: [draft] });
 
 	// Typing a cost turns the draft into a rule, which the item is rebuilt from.
 	const priced = withRateCredits({ row, credits: 5 });
@@ -251,11 +253,68 @@ test("a draft keeps its key once it is saved as a rule", () => {
 	const keysByRuleName = new Map([[named.name, named.key]]);
 
 	const dimension = named.dimension ?? { match: {}, credit_amount: 0 };
-	const [rebuilt] = rateRowsOf({
+	const [rebuilt] = toRateRows({
 		rules: [{ name: named.name, dimension }],
 		drafts: [],
 		keysByRuleName,
 	});
 
 	expect(rebuilt.key).toBe(draft.key);
+});
+
+test("pricing a lower row leaves it where it was in the table", () => {
+	const first = createRateDraft({ size: "small" });
+	const second = createRateDraft({ size: "large" });
+	const rows = toRateRows({ rules: [], drafts: [first, second] });
+	const order = rows.map((row) => row.key);
+
+	// The second row gains a cost, so it becomes a saved rule while the first
+	// stays a draft — the split that used to float it to the top.
+	const priced = withRateCredits({ row: rows[1], credits: 5 });
+	const [named] = nameRateRows([priced]);
+	const dimension = named.dimension ?? { match: {}, credit_amount: 0 };
+
+	const rebuilt = toRateRows({
+		rules: [{ name: named.name, dimension }],
+		drafts: [{ key: first.key, match: first.match }],
+		keysByRuleName: new Map([[named.name, named.key]]),
+		order,
+	});
+
+	expect(rebuilt.map((row) => row.key)).toEqual(order);
+	expect(rebuilt.map((row) => row.match)).toEqual([
+		{ size: "small" },
+		{ size: "large" },
+	]);
+});
+
+test("renaming a dimension leaves its rate rows in place", () => {
+	const item: CreditSchemaItem = {
+		metered_feature_id: "action",
+		credit_amount: 1,
+		dimensions: {
+			size_small: { match: { size: "small" }, credit_amount: 2 },
+			size_large: { match: { size: "large" }, credit_amount: 5 },
+		},
+	};
+
+	// The table shows large first — the order a user dragged or built it into,
+	// which is not the order the rules are stored in.
+	const before = toRateRows({ rules: rateRules(item), drafts: [] });
+	const order = [...before.map((row) => row.key)].reverse();
+
+	// The rename rebuilds every rule name from the new match, so the keys the
+	// order was recorded under have to be carried across with it.
+	const renamed = withRenamedField({ item, from: "size", to: "tier" });
+	const after = toRateRows({
+		rules: rateRules(renamed),
+		drafts: [],
+		order: renamedRowOrder({ order, item, from: "size", to: "tier" }),
+	});
+
+	// Renaming size -> tier must not disturb that: large stays first.
+	expect(after.map((row) => row.match)).toEqual([
+		{ tier: "large" },
+		{ tier: "small" },
+	]);
 });

@@ -23,6 +23,7 @@ export function useCreditDimensionEditor({
 		item,
 		onChange,
 		onRestrictDrafts: rates.restrictDrafts,
+		onRenameField: rates.renameOrderField,
 	});
 	const multipliers = useCreditMultipliers({ item, onChange });
 
