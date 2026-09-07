@@ -27,6 +27,7 @@ export type PartitionProcessorDependencies = {
 	>;
 	appender: CommittedOutcomeAppender;
 	trackReceiptPolicy: TrackReceiptPolicy;
+	assertCanRead(): void;
 };
 
 export type PartitionProcessorConfig = {

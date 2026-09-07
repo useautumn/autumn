@@ -271,6 +271,7 @@ const createPartitionTrackWriter = ({
 			stateStore,
 			appender,
 			trackReceiptPolicy: receiptPolicy,
+			assertCanRead: () => undefined,
 			config: { topic, partition, writerLimits: limits },
 			writer,
 		},

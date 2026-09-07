@@ -22,6 +22,7 @@ export async function check({
 
 	// Only outcomes pending at this moment; a track arriving later is not "earlier" for this check.
 	await ctx.writer.waitForPendingCommits({ customerKey });
+	ctx.assertCanRead();
 
 	const state = ctx.stateStore.readState({ identity: parsed.identity });
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
