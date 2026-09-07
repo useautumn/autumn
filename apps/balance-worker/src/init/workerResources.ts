@@ -53,6 +53,7 @@ export async function openWorkerResources({
 	}
 	const partitionResolver = { partitionForIdentity };
 	let stateStore: SqliteBalanceStateStore | undefined;
+	let checkpoints: WorkerCheckpointResources | undefined;
 	try {
 		await admin.connect();
 		await validateBalanceWorkerTopics({ admin, env });
@@ -60,7 +61,7 @@ export async function openWorkerResources({
 		stateStore = openSqliteBalanceStateStore({
 			databasePath: env.BALANCE_WORKER_SQLITE_PATH,
 		});
-		const checkpoints = await createWorkerCheckpointResources({
+		checkpoints = await createWorkerCheckpointResources({
 			ctx: { stateStore },
 			config: checkpointConfig,
 		});
@@ -69,10 +70,42 @@ export async function openWorkerResources({
 		});
 		return { ...resources, checkpoints };
 	} catch (cause) {
-		stateStore?.close();
-		await admin.disconnect();
-		throw cause;
+		return await closeFailedWorkerResources({
+			ctx: { stateStore, checkpoints, admin },
+			cause,
+		});
 	}
+}
+
+export async function closeFailedWorkerResources({
+	ctx,
+	cause,
+}: {
+	ctx: {
+		stateStore?: Pick<SqliteBalanceStateStore, "close">;
+		checkpoints?: Pick<WorkerCheckpointResources, "stop">;
+		admin: Pick<WorkerResourcesContext["admin"], "disconnect">;
+	};
+	cause: unknown;
+}): Promise<never> {
+	const errors: unknown[] = [cause];
+	try {
+		await ctx.checkpoints?.stop();
+		ctx.stateStore?.close();
+	} catch (cleanupFailure) {
+		errors.push(cleanupFailure);
+	}
+	try {
+		await ctx.admin.disconnect();
+	} catch (disconnectFailure) {
+		errors.push(disconnectFailure);
+	}
+	if (errors.length > 1)
+		throw new AggregateError(
+			errors,
+			"Worker resource opening and cleanup failed",
+		);
+	throw cause;
 }
 
 export function createWorkerResources({
