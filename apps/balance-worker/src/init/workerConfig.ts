@@ -70,14 +70,16 @@ export function createWorkerProducerConfig({
 
 export function balanceWorkerEnvToRuntimeConfig({
 	env,
+	endpoint,
 }: {
 	env: BalanceWorkerEnv;
+	endpoint: string;
 }): PartitionRuntimeFactoryConfig {
 	return {
 		deploymentEnvironment: env.BALANCE_WORKER_DEPLOYMENT,
 		ownership: {
 			topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
-			endpoint: env.BALANCE_WORKER_ENDPOINT,
+			endpoint,
 		},
 		checkpointRestoreLimits: {
 			maxSerializedBytes: 64 * 1024 * 1024,

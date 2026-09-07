@@ -7,7 +7,6 @@ import {
 	parseTrackCommand,
 } from "@autumn/balance-engine";
 import {
-	createKafkaOwnershipLog,
 	createOwnershipConsumer,
 	createProducerSession,
 	type PartitionOwner,
@@ -168,11 +167,10 @@ describe("Real ownership admission", () => {
 				healthRefreshIntervalMs: 5_000,
 			},
 		});
-		const log = createKafkaOwnershipLog({
+		const routing = createOwnershipConsumer({
 			ctx: { kafka },
 			config: { topic: owners },
 		});
-		const routing = createOwnershipConsumer({ ctx: { log } });
 		let owner: PartitionOwner | undefined;
 		try {
 			await worker.start();
@@ -222,7 +220,6 @@ describe("Real ownership admission", () => {
 		} finally {
 			await worker.stop();
 			await routing.stop();
-			await log.disconnect?.();
 			store.close();
 			rmSync(directory, { recursive: true, force: true });
 			await admin.deleteTopics({ topics: [topic, owners] });
@@ -277,11 +274,10 @@ describe("Real ownership admission", () => {
 			});
 		const old = publication(first, "http://old.test");
 		const successor = publication(second, "http://new.test");
-		const log = createKafkaOwnershipLog({
+		const routing = createOwnershipConsumer({
 			ctx: { kafka },
 			config: { topic: owners },
 		});
-		const routing = createOwnershipConsumer({ ctx: { log } });
 		try {
 			await first.connect();
 			await first.fence();
@@ -306,7 +302,6 @@ describe("Real ownership admission", () => {
 			await first.disconnect();
 			await second.disconnect();
 			await routing.stop();
-			await log.disconnect?.();
 			await admin.deleteTopics({ topics: [topic, owners] });
 			await admin.disconnect();
 		}

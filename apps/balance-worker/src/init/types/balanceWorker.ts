@@ -1,4 +1,5 @@
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import type { AutumnLogger } from "@autumn/logging";
 import type { Admin, Kafka } from "kafkajs";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
@@ -12,10 +13,17 @@ export type BalanceWorker = {
 
 export type BalanceWorkerDependencies = {
 	checkpointSource?: PartitionCheckpointSource;
+	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	onError(failure: { cause: unknown }): void;
 };
 
 export type BalanceWorkerConfig = { env: BalanceWorkerEnv };
+
+export type WorkerAddress = { hostname: string; endpoint: string };
+
+export type EcsContainerMetadata = {
+	Networks?: { NetworkMode: string; IPv4Addresses?: string[] }[];
+};
 
 export type WorkerListener = { stop(): Promise<void> | void };
 

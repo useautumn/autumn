@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import inquirer from "inquirer";
+import { ensureBalanceWorkerTopics } from "./ensureBalanceWorkerTopics.ts";
 
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const composeFile = join(rootDir, "docker", "dev-services.compose.yml");
@@ -399,6 +400,10 @@ const up = async () => {
 	});
 	dockerCompose({
 		args: ["up", "-d", "--wait", "--wait-timeout", "90", "--remove-orphans"],
+	});
+	ensureBalanceWorkerTopics({
+		kafkaPort: localConfig.kafkaPort,
+		runtimeEnv: composeEnv,
 	});
 
 	await Promise.all([
