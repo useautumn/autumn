@@ -12,7 +12,7 @@ export type SandboxSummary = {
 	id: string;
 	name: string;
 	slug: string;
-	created_at: string;
+	created_at: number;
 	color: string;
 	icon: string;
 };
@@ -111,7 +111,7 @@ export const useCreateSandbox = () => {
 							slug: created.slug,
 							color: created.color,
 							icon: created.icon,
-							created_at: new Date().toISOString(),
+							created_at: Date.now(),
 						},
 						...(old?.list ?? []),
 					],

@@ -22,8 +22,8 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionSubOrg } from "@/internal/orgs/orgUtils/provisionSubOrg.js";
 
 /**
- * Sandbox creation is a dashboard action: it needs the acting user (for Stripe
- * provisioning) and is never reachable via an API key (which carries no user).
+ * Dashboard-only gate for the sandbox routes that stayed private (update, copy).
+ * The public create/list/delete routes use `resolveSandboxActor` instead.
  */
 export const assertDashboardActor = ({
 	authType,
