@@ -1,16 +1,5 @@
-import type {
-	CheckCommand,
-	CheckDecision,
-	TrackCommand,
-	TrackDecision,
-} from "@autumn/balance-engine";
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
-import { createPartitionWriter } from "../processor/writer/createPartitionWriter.js";
-import {
-	checkRuntimeBalance,
-	submitRuntimeTrack,
-} from "./commands/balanceCommands.js";
-import { createRequestTracker } from "./createRequestTracker.js";
+import { createPartitionProcessor } from "../processor/createPartitionProcessor.js";
 import { getRuntimeHealth } from "./getRuntimeHealth.js";
 import {
 	activateRuntime,
@@ -22,6 +11,7 @@ import {
 	stopRuntime,
 	waitForRuntimeQuiescence,
 } from "./lifecycle/stopRuntime.js";
+import { type ProcessorRun, processCommand } from "./processCommand.js";
 import type {
 	PartitionOutcomeFollowerPort,
 	PartitionRuntime,
@@ -43,23 +33,28 @@ export function createPartitionRuntime({
 	config: PartitionRuntimeConfig;
 }): PartitionRuntime {
 	validateRuntimeConfig(config);
+	const state = createRuntimeState();
 	const ctx: PartitionRuntimeContext = {
 		...dependencies,
 		config,
-		writer: createPartitionWriter({
+		processor: createPartitionProcessor({
 			ctx: {
 				stateStore: dependencies.stateStore,
 				appender: dependencies.appender,
+				trackReceiptPolicy: dependencies.trackReceiptPolicy,
+				assertCanRead,
 			},
 			config: {
 				topic: config.topic,
 				partition: config.partition,
-				limits: config.writerLimits,
+				writerLimits: config.writerLimits,
 			},
 		}),
-		requestTracker: createRequestTracker(),
 	};
-	const state = createRuntimeState();
+
+	function assertCanRead(): void {
+		if (state.terminalError) throw state.terminalError;
+	}
 
 	function start(): Promise<void> {
 		return startRuntime({ ctx, state });
@@ -89,20 +84,8 @@ export function createPartitionRuntime({
 		return waitForRuntimeQuiescence({ ctx, state });
 	}
 
-	function submitTrack({
-		command,
-	}: {
-		command: TrackCommand;
-	}): Promise<TrackDecision> {
-		return submitRuntimeTrack({ ctx, state, command });
-	}
-
-	function check({
-		command,
-	}: {
-		command: CheckCommand;
-	}): Promise<CheckDecision> {
-		return checkRuntimeBalance({ ctx, state, command });
+	function process<Decision>(run: ProcessorRun<Decision>): Promise<Decision> {
+		return processCommand({ ctx, state, run });
 	}
 
 	function getStatus(): PartitionRuntimeStatus {
@@ -130,8 +113,7 @@ export function createPartitionRuntime({
 		drain,
 		stop,
 		waitForQuiescence,
-		submitTrack,
-		check,
+		process,
 		getStatus,
 		getHealth,
 		subscribeUnavailable,

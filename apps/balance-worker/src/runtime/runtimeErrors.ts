@@ -10,30 +10,6 @@ export class OwnedPartitionNotReadyError extends Error {
 	}
 }
 
-export class OwnedPartitionMismatchError extends Error {
-	constructor({
-		customerKey,
-		expectedPartition,
-		actualPartition,
-	}: {
-		customerKey: string;
-		expectedPartition: number;
-		actualPartition: number;
-	}) {
-		super(
-			`${customerKey} does not belong to owned partition ${expectedPartition}; resolved to ${actualPartition}`,
-		);
-		this.name = "OwnedPartitionMismatchError";
-	}
-}
-
-export class OwnedPartitionStateNotFoundError extends Error {
-	constructor({ customerKey }: { customerKey: string }) {
-		super(`Owned partition state not found: ${customerKey}`);
-		this.name = "OwnedPartitionStateNotFoundError";
-	}
-}
-
 export class OwnedPartitionRecoveryRequiredError extends Error {
 	constructor({
 		topic,

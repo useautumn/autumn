@@ -1,16 +1,17 @@
 import {
 	computeTrack,
 	executeTrack,
+	parseTrackCommand,
 	type TrackCommand,
 	type TrackDecision,
 	trackCommandFingerprintOf,
 } from "@autumn/balance-engine";
+import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type {
 	CommittedMutation,
 	MutateParams,
 	MutationResult,
 } from "../writer/types/mutation.js";
-import type { PartitionWriter } from "../writer/types/partitionWriter.js";
 
 export type TrackReceiptPolicy = {
 	retentionMs: number;
@@ -18,25 +19,25 @@ export type TrackReceiptPolicy = {
 };
 
 /** Decide now, reply once committed. */
-export async function submitTrack({
-	writer,
+export async function track({
+	scope,
 	command,
-	receiptPolicy,
 }: {
-	writer: PartitionWriter;
+	scope: PartitionProcessorScope;
 	command: TrackCommand;
-	receiptPolicy: TrackReceiptPolicy;
 }): Promise<TrackDecision> {
+	const { ctx } = scope;
+	const parsed = parseTrackCommand({ input: command });
 	const deduplicationExpiresAt =
-		receiptPolicy.now() + receiptPolicy.retentionMs;
+		ctx.trackReceiptPolicy.now() + ctx.trackReceiptPolicy.retentionMs;
 
 	// Synchronous: `mutate` runs against the freshest state and the outcome is enqueued before this returns.
-	const decided = writer.decide({
-		identity: command.identity,
-		commandId: command.commandId,
-		fingerprint: trackCommandFingerprintOf({ command }),
+	const decided = ctx.writer.decide({
+		identity: parsed.identity,
+		commandId: parsed.commandId,
+		fingerprint: trackCommandFingerprintOf({ command: parsed }),
 		mutate: ({ state }) =>
-			decideTrack({ state, command, deduplicationExpiresAt }),
+			decideTrack({ state, command: parsed, deduplicationExpiresAt }),
 	});
 
 	// Asynchronous: Kafka commit, then SQLite apply.

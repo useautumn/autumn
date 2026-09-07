@@ -190,18 +190,14 @@ export function createKafkaOwnedPartitionGroup(
 			return { routeEpoch: "0" };
 		}
 		async function release(): Promise<void> {}
-		async function submitTrack(): Promise<never> {
-			throw new Error("Not used by group fixture");
-		}
-		async function check(): Promise<never> {
+		async function process(): Promise<never> {
 			throw new Error("Not used by group fixture");
 		}
 		return {
 			runtime: {
 				drain,
 				subscribeUnavailable,
-				submitTrack,
-				check,
+				process,
 				...runtime,
 				waitForQuiescence,
 				getHealth,
@@ -386,11 +382,8 @@ export const createTestRuntimeResources = ({
 	const subscribeUnavailable: PartitionRuntimePort["subscribeUnavailable"] =
 		() => () =>
 			undefined;
-	const submitTrack: PartitionRuntimePort["submitTrack"] = async () => {
-		throw new Error("Lifecycle fixture cannot execute tracks");
-	};
-	const check: PartitionRuntimePort["check"] = async () => {
-		throw new Error("Lifecycle fixture cannot execute checks");
+	const process: PartitionRuntimePort["process"] = async () => {
+		throw new Error("Lifecycle fixture cannot execute commands");
 	};
 	const claim = async () => ({ routeEpoch: "1" });
 	const release = async (): Promise<void> => undefined;
@@ -400,8 +393,7 @@ export const createTestRuntimeResources = ({
 			drain,
 			waitForQuiescence: drain,
 			subscribeUnavailable,
-			submitTrack,
-			check,
+			process,
 		},
 		publication: { claim, release },
 		markUnavailable,
