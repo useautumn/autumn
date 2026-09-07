@@ -36,7 +36,7 @@ COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
 COPY packages/autumn-js/package.json packages/autumn-js/
 COPY packages/balance-engine/package.json packages/balance-engine/
-COPY packages/balance-worker-protocol/package.json packages/balance-worker-protocol/
+COPY packages/balance-worker-client/package.json packages/balance-worker-client/
 COPY packages/kafka/package.json packages/kafka/
 COPY apps/balance-worker/package.json apps/balance-worker/
 COPY packages/env/package.json packages/env/

@@ -1,4 +1,4 @@
-import { parseWorkerRequest } from "@autumn/balance-worker-protocol";
+import { parseWorkerRequest } from "@autumn/balance-worker-client/protocol";
 import type { Context, Next } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
