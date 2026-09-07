@@ -169,7 +169,7 @@ const createOwner = ({
 			return runtime;
 		},
 		close: async () => {
-			scheduler.stop();
+			await scheduler.stop();
 			await group.stop();
 			await exporter.close();
 			store.close();
@@ -314,7 +314,7 @@ describe("automatic checkpoint recovery", () => {
 						(first.group.partitions()[0]?.checkpoint?.lastConfirmedNextOffset ??
 							0n) >= seedEnd,
 				});
-				first.scheduler.stop();
+				await first.scheduler.stop();
 				const checkpoint = await storage.latest({
 					topic,
 					partition: 0,

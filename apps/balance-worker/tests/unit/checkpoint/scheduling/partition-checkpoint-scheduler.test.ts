@@ -19,7 +19,7 @@ describe("partition checkpoint scheduler", () => {
 			await fixture.clock.advance(100);
 			expect(publications).toEqual([0, 1, 2]);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -46,7 +46,7 @@ describe("partition checkpoint scheduler", () => {
 			await fixture.clock.advance(300);
 			expect(publications).toBe(1);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -81,7 +81,8 @@ describe("partition checkpoint scheduler", () => {
 			expect(offsets).toEqual([1n, 1n, 2n]);
 			expect(lease.getHealth().lastConfirmedNextOffset).toBe(2n);
 		} finally {
-			fixture.close();
+			first.resolve({ kind: "published", etag: "cleanup" });
+			await fixture.close();
 		}
 	});
 
@@ -104,7 +105,7 @@ describe("partition checkpoint scheduler", () => {
 				status: "up_to_date",
 			});
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -128,7 +129,7 @@ describe("partition checkpoint scheduler", () => {
 				fixture.store.readNextOffset({ topic: fixture.topic, partition: 0 }),
 			).toBe(1n);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 });

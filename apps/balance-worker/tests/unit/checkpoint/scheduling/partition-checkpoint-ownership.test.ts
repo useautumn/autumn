@@ -19,7 +19,7 @@ describe("checkpoint assignment ownership", () => {
 			expect(lease.getHealth().status).toBe("stopped");
 			expect(fixture.clock.pendingTimers).toBe(0);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -50,7 +50,8 @@ describe("checkpoint assignment ownership", () => {
 			expect(signals).toHaveLength(2);
 			expect(replacement.lease.getHealth().lastConfirmedNextOffset).toBe(1n);
 		} finally {
-			fixture.close();
+			upload.resolve({ kind: "published", etag: "cleanup" });
+			await fixture.close();
 		}
 	});
 
@@ -75,7 +76,7 @@ describe("checkpoint assignment ownership", () => {
 			await fixture.clock.advance(40);
 			expect(partitions).toEqual([0, 1]);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 });

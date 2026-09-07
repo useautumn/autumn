@@ -144,8 +144,8 @@ export const createSchedulerFixture = ({
 		failures,
 		initialize,
 		start,
-		close: () => {
-			scheduler.stop();
+		close: async () => {
+			await scheduler.stop();
 			store.close();
 		},
 	};

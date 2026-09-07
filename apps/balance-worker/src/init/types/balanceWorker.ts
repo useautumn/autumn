@@ -5,6 +5,7 @@ import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckp
 import type { Partitions } from "../../partitions/types/partitions.js";
 import type { MeteringPartitionResolver } from "../../runtime/types/partitionRuntime.js";
 import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
+import type { WorkerCheckpointResources } from "./workerCheckpointResources.js";
 
 export type BalanceWorker = {
 	start(): Promise<void>;
@@ -39,6 +40,7 @@ export type WorkerResourcesContext = {
 	admin: Pick<Admin, "disconnect" | "fetchTopicOffsets">;
 	stateStore: SqliteBalanceStateStore;
 	partitionResolver: MeteringPartitionResolver;
+	checkpoints?: WorkerCheckpointResources;
 };
 
 export type WorkerRuntimeResource = {

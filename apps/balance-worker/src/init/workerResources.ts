@@ -7,19 +7,24 @@ import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
 } from "../state/sqliteBalanceStateStore.js";
+import { createWorkerCheckpointResources } from "./construction/createWorkerCheckpointResources.js";
 import type {
 	BalanceWorkerConfig,
 	WorkerResources,
 	WorkerResourcesContext,
 	WorkerRuntimeResource,
 } from "./types/balanceWorker.js";
+import type { WorkerCheckpointResources } from "./types/workerCheckpointResources.js";
+import type { WorkerCheckpointConfig } from "./workerCheckpointConfig.js";
 import { validateBalanceWorkerTopics } from "./workerConfig.js";
 
 export async function openWorkerResources({
 	config,
+	checkpointConfig,
 }: {
 	config: BalanceWorkerConfig;
-}): Promise<WorkerResources> {
+	checkpointConfig: WorkerCheckpointConfig;
+}): Promise<WorkerResources & { checkpoints: WorkerCheckpointResources }> {
 	const { env } = config;
 	const kafka = new Kafka(
 		createKafkaClient({
@@ -55,9 +60,14 @@ export async function openWorkerResources({
 		stateStore = openSqliteBalanceStateStore({
 			databasePath: env.BALANCE_WORKER_SQLITE_PATH,
 		});
-		return createWorkerResources({
-			ctx: { kafka, admin, stateStore, partitionResolver },
+		const checkpoints = await createWorkerCheckpointResources({
+			ctx: { stateStore },
+			config: checkpointConfig,
 		});
+		const resources = createWorkerResources({
+			ctx: { kafka, admin, stateStore, partitionResolver, checkpoints },
+		});
+		return { ...resources, checkpoints };
 	} catch (cause) {
 		stateStore?.close();
 		await admin.disconnect();
@@ -95,6 +105,7 @@ export function createWorkerResources({
 	async function settleResources(): Promise<void> {
 		const pending: Promise<void>[] = [];
 		for (const runtime of [...runtimes]) pending.push(settleRuntime(runtime));
+		if (ctx.checkpoints) pending.push(ctx.checkpoints.stop());
 		const results = await Promise.allSettled(pending);
 		await ctx.admin.disconnect();
 		const errors: unknown[] = [];
@@ -102,7 +113,10 @@ export function createWorkerResources({
 			if (result.status === "rejected") errors.push(result.reason);
 		}
 		if (errors.length > 0)
-			throw new AggregateError(errors, "Worker runtimes did not settle safely");
+			throw new AggregateError(
+				errors,
+				"Worker resources did not settle safely",
+			);
 	}
 
 	function closeStore(): void {

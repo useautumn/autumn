@@ -8,7 +8,13 @@ export type PartitionCheckpointFailure = {
 };
 
 export type PartitionCheckpointHealth = {
-	status: "waiting" | "up_to_date" | "exporting" | "degraded" | "stopped";
+	status:
+		| "disabled"
+		| "waiting"
+		| "up_to_date"
+		| "exporting"
+		| "degraded"
+		| "stopped";
 	lastConfirmedNextOffset: bigint | null;
 	lastPublishedAt: number | null;
 	lastAttemptAt: number | null;
@@ -18,6 +24,9 @@ export type PartitionCheckpointHealth = {
 	uncheckpointedAgeMs: number;
 	failure: PartitionCheckpointFailure | null;
 	cleanup: {
+		status: "waiting" | "healthy" | "degraded";
+		lastAttemptAt: number | null;
+		nextAttemptAt: number | null;
 		lastPrunedAt: number | null;
 		deletedReceipts: number;
 		lastDurationMs: number | null;
