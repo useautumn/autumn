@@ -29,7 +29,6 @@ export const usageLimitToUsageWindowLimit = ({
 	fullSubject,
 	usageLimit,
 	feature,
-	features,
 	now,
 	inStatuses,
 	entityScope = null,
@@ -37,7 +36,6 @@ export const usageLimitToUsageWindowLimit = ({
 	fullSubject: FullSubject;
 	usageLimit: DbUsageLimit;
 	feature: Feature;
-	features: Feature[];
 	now: number;
 	inStatuses?: CusProductStatus[];
 	entityScope?: UsageWindowEntityScope | null;
@@ -64,7 +62,6 @@ export const usageLimitToUsageWindowLimit = ({
 			: findUsageWindowAnchor({
 					fullSubject,
 					featureId: feature.id,
-					features,
 					isCreditSystem: dimensionType === "balance",
 					inStatuses,
 					scopeType,

@@ -1,5 +1,8 @@
 import {
+	CustomerNotFoundError,
+	EntityNotFoundError,
 	ErrCode,
+	entitlementToCreditSystem,
 	type Feature,
 	fullCustomerToCustomerEntitlements,
 	fullSubjectToFullCustomer,
@@ -11,7 +14,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { getModelCreditCostBreakdown } from "@/internal/features/aiCreditSystemUtils.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
 const resolveAiCreditFeatureById = ({
@@ -39,52 +41,80 @@ const resolveAiCreditFeatureById = ({
 	return candidate;
 };
 
-const resolveAiCreditFeatureFromEntitlements = async ({
+const isMissingSubject = (error: unknown) =>
+	error instanceof CustomerNotFoundError ||
+	error instanceof EntityNotFoundError;
+
+const resolveHeldAiCreditFeatures = async ({
 	ctx,
-	customerId,
-	entityId,
+	input,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
-	entityId?: string;
+	input: TrackTokensParams;
+}): Promise<Feature[]> => {
+	try {
+		const fullCustomer = fullSubjectToFullCustomer({
+			fullSubject: await getOrSetCachedFullSubject({
+				ctx,
+				customerId: input.customer_id,
+				entityId: input.entity_id,
+				source: "resolveAiCreditFeature",
+			}),
+		});
+		const entity = input.entity_id
+			? fullCustomer.entities?.find((e) => e.id === input.entity_id)
+			: undefined;
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			entity,
+		});
+
+		// Deduction order: the first entitlement drains, so it sets the markup.
+		const byFeatureId = new Map<string, Feature>();
+		for (const ce of cusEnts) {
+			const { feature } = ce.entitlement;
+			if (!isAiCreditSystem(feature.type) || byFeatureId.has(feature.id))
+				continue;
+			byFeatureId.set(
+				feature.id,
+				entitlementToCreditSystem({ entitlement: ce.entitlement }),
+			);
+		}
+		return [...byFeatureId.values()];
+	} catch (error) {
+		// A named feature must not block the create-customer-on-track path.
+		if (input.feature_id && isMissingSubject(error)) return [];
+		throw error;
+	}
+};
+
+const resolveAiCreditFeature = async ({
+	ctx,
+	input,
+}: {
+	ctx: AutumnContext;
+	input: TrackTokensParams;
 }): Promise<Feature> => {
-	if (isFullSubjectRolloutEnabled({ ctx })) {
+	const held = await resolveHeldAiCreditFeatures({ ctx, input });
+
+	if (input.feature_id) {
+		return (
+			held.find((feature) => feature.id === input.feature_id) ??
+			resolveAiCreditFeatureById({
+				features: ctx.features,
+				featureId: input.feature_id,
+			})
+		);
 	}
 
-	const fullCustomer = fullSubjectToFullCustomer({
-		fullSubject: await getOrSetCachedFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			source: "resolveAiCreditFeature",
-		}),
-	});
-
-	const entity = entityId
-		? fullCustomer.entities?.find((e) => e.id === entityId)
-		: undefined;
-
-	const cusEnts = fullCustomerToCustomerEntitlements({
-		fullCustomer,
-		entity,
-	});
-
-	const aiCreditFeatures = [
-		...new Map(
-			cusEnts
-				.filter((ce) => isAiCreditSystem(ce.entitlement.feature.type))
-				.map((ce) => [ce.entitlement.feature.id, ce.entitlement.feature]),
-		).values(),
-	];
-
-	if (aiCreditFeatures.length === 0) {
+	if (held.length === 0) {
 		throw new RecaseError({
 			message: "No AI credit system feature found for this customer",
 			code: ErrCode.FeatureNotFound,
 			statusCode: 404,
 		});
 	}
-	if (aiCreditFeatures.length > 1) {
+	if (held.length > 1) {
 		throw new RecaseError({
 			message:
 				"Multiple AI credit system features found for this customer. Please specify a feature_id to disambiguate.",
@@ -92,7 +122,7 @@ const resolveAiCreditFeatureFromEntitlements = async ({
 			statusCode: 400,
 		});
 	}
-	return aiCreditFeatures[0];
+	return held[0];
 };
 
 export const getTokenTrackParams = async ({
@@ -102,16 +132,7 @@ export const getTokenTrackParams = async ({
 	ctx: AutumnContext;
 	input: TrackTokensParams;
 }): Promise<{ body: TrackParams; featureDeductions: FeatureDeduction[] }> => {
-	const aiCreditFeature = input.feature_id
-		? resolveAiCreditFeatureById({
-				features: ctx.features,
-				featureId: input.feature_id,
-			})
-		: await resolveAiCreditFeatureFromEntitlements({
-				ctx,
-				customerId: input.customer_id,
-				entityId: input.entity_id,
-			});
+	const aiCreditFeature = await resolveAiCreditFeature({ ctx, input });
 
 	const pricing = await getModelCreditCostBreakdown({
 		modelName: input.model_id,

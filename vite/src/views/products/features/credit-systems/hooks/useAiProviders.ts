@@ -1,4 +1,5 @@
 import {
+	CUSTOM_PROVIDER,
 	joinModelId,
 	type ModelsDevProvider,
 	splitModelId,
@@ -34,25 +35,40 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 		() => groupByProvider(modelMarkups),
 		[modelMarkups],
 	);
-	// A provider is "active" if it has model overrides OR a provider-level markup.
+	// Custom has no provider markup input, so only its models make it active.
 	const activeProviderKeys = useMemo(
 		() =>
 			Array.from(
 				new Set([
 					...Object.keys(providerGroups),
-					...Object.keys(providerMarkups),
+					...Object.keys(providerMarkups).filter(
+						(providerKey) => providerKey !== CUSTOM_PROVIDER,
+					),
 				]),
 			),
 		[providerGroups, providerMarkups],
+	);
+
+	// custom has no models.dev entry, so it needs a stand-in provider.
+	const resolvedProviders = Object.fromEntries(
+		activeProviderKeys.map((providerKey) => [
+			providerKey,
+			providers[providerKey] ??
+				({
+					id: providerKey,
+					name: providerKey.charAt(0).toUpperCase() + providerKey.slice(1),
+					models: {},
+				} as ModelsDevProvider),
+		]),
 	);
 
 	const availableProviders = useMemo(() => {
 		const filtered = Object.values(providers).filter(
 			(p) => !activeProviderKeys.includes(p.id),
 		);
-		if (!activeProviderKeys.includes("custom")) {
+		if (!activeProviderKeys.includes(CUSTOM_PROVIDER)) {
 			filtered.push({
-				id: "custom",
+				id: CUSTOM_PROVIDER,
 				name: "Custom",
 				models: {},
 			} as ModelsDevProvider);
@@ -62,7 +78,7 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 
 	const addProvider = (providerKey: string) => {
 		form.setFieldValue("model_markups", (prev) => {
-			if (providerKey === "custom") {
+			if (providerKey === CUSTOM_PROVIDER) {
 				return addCustomModelMarkup(prev);
 			}
 			const provider = providers[providerKey];
@@ -115,6 +131,7 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 
 	return {
 		providers,
+		resolvedProviders,
 		isLoading,
 		defaultMarkup,
 		providerMarkups,

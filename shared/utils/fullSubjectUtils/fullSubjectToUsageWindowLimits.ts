@@ -74,7 +74,6 @@ export const fullSubjectToUsageWindowLimits = ({
 				fullSubject,
 				usageLimit,
 				feature,
-				features,
 				now,
 				inStatuses,
 				entityScope:

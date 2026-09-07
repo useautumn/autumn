@@ -1,6 +1,5 @@
 import {
 	FormLabel,
-	Input,
 	SearchableSelect,
 	Tooltip,
 	TooltipContent,
@@ -10,6 +9,7 @@ import { InfoIcon } from "lucide-react";
 import { useAiProviders } from "../hooks/useAiProviders";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { AiCreditSchemaTable } from "./AiCreditSchemaTable";
+import { NumericDraftInput } from "./NumericDraftInput";
 
 interface AiCreditSchemaProps {
 	form: CreditSystemFormInstance;
@@ -17,7 +17,7 @@ interface AiCreditSchemaProps {
 
 export function AiCreditSchema({ form }: AiCreditSchemaProps) {
 	const {
-		providers,
+		resolvedProviders,
 		isLoading,
 		defaultMarkup,
 		providerGroups,
@@ -33,17 +33,11 @@ export function AiCreditSchema({ form }: AiCreditSchemaProps) {
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-col gap-1.5">
-				<FormLabel>Default Markup %</FormLabel>
-				<Input
-					type="text"
-					inputMode="numeric"
-					value={defaultMarkup === 0 ? "" : String(defaultMarkup)}
-					onChange={(e) => {
-						const raw = e.target.value;
-						if (raw === "" || /^-?\d*\.?\d*$/.test(raw)) {
-							form.setFieldValue("defaultMarkup", raw === "" ? 0 : Number(raw));
-						}
-					}}
+				<FormLabel>Default markup %</FormLabel>
+				<NumericDraftInput
+					aria-label="Default markup"
+					value={defaultMarkup || undefined}
+					onCommit={(next) => form.setFieldValue("defaultMarkup", next ?? 0)}
 					placeholder="0"
 				/>
 			</div>
@@ -51,22 +45,17 @@ export function AiCreditSchema({ form }: AiCreditSchemaProps) {
 			{activeProviderKeys.length > 0 && (
 				<div className="flex flex-col gap-3">
 					{activeProviderKeys.map((providerKey) => {
-						const provider = providers[providerKey];
+						const provider = resolvedProviders[providerKey];
 						const modelFullIds = providerGroups[providerKey] ?? [];
-						const providerName =
-							provider?.name ??
-							providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
 
 						return (
 							<AiCreditSchemaTable
 								key={providerKey}
 								form={form}
 								providerKey={providerKey}
-								providerName={providerName}
+								providerName={provider.name}
 								modelFullIds={modelFullIds}
-								provider={
-									provider ?? { id: providerKey, name: providerKey, models: {} }
-								}
+								provider={provider}
 								isLoading={isLoading}
 								removeKeys={removeKeys}
 								removeProvider={removeProvider}
@@ -83,7 +72,7 @@ export function AiCreditSchema({ form }: AiCreditSchemaProps) {
 				onWheel={(e) => e.stopPropagation()}
 			>
 				<FormLabel className="flex items-center gap-1.5">
-					Add Provider Override
+					Add provider override
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<InfoIcon className="size-3.5 cursor-help text-tertiary-foreground" />

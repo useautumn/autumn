@@ -179,6 +179,7 @@ export const apiFeatureOverrideToDb = (
 	...(override.credit_schema
 		? { schema: override.credit_schema.map(apiCreditSchemaItemToDb) }
 		: {}),
+	...(override.markups ? { markups: override.markups } : {}),
 });
 
 export const dbFeatureOverrideToApi = (
@@ -187,6 +188,7 @@ export const dbFeatureOverrideToApi = (
 	...(override.schema
 		? { credit_schema: override.schema.map(dbCreditSchemaItemToApi) }
 		: {}),
+	...(override.markups ? { markups: override.markups } : {}),
 });
 
 export const dbCreditSchemaItemToApi = (

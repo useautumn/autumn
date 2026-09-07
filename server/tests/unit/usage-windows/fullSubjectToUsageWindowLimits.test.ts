@@ -48,10 +48,12 @@ const credits2ContainingAction1 = {
 const looseEntitlement = ({
 	id,
 	featureId,
+	feature,
 	interval = EntInterval.Month,
 }: {
 	id: string;
 	featureId: string;
+	feature?: Feature;
 	interval?: EntInterval | null;
 }) =>
 	({
@@ -68,7 +70,7 @@ const looseEntitlement = ({
 			id: `ent_${id}`,
 			feature_id: featureId,
 			interval,
-			feature: { id: featureId, internal_id: featureId },
+			feature: feature ?? { id: featureId, internal_id: featureId },
 		},
 		rollovers: [],
 		replaceables: [],
@@ -463,7 +465,11 @@ describe("fullSubjectToUsageWindowLimits", () => {
 					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
 				],
 				looseEntitlements: [
-					looseEntitlement({ id: "ce_credits", featureId: "credits" }),
+					looseEntitlement({
+						id: "ce_credits",
+						featureId: "credits",
+						feature: creditsContainingAction1,
+					}),
 				],
 			}),
 			featureIds: ["action1"],
@@ -631,8 +637,16 @@ describe("fullSubjectToUsageWindowLimits", () => {
 					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
 				],
 				looseEntitlements: [
-					looseEntitlement({ id: "ce_credits", featureId: "credits" }),
-					looseEntitlement({ id: "ce_credits2", featureId: "credits2" }),
+					looseEntitlement({
+						id: "ce_credits",
+						featureId: "credits",
+						feature: creditsContainingAction1,
+					}),
+					looseEntitlement({
+						id: "ce_credits2",
+						featureId: "credits2",
+						feature: credits2ContainingAction1,
+					}),
 				],
 			}),
 			featureIds: ["action1"],

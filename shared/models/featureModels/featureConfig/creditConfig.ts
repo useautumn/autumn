@@ -107,17 +107,6 @@ export const CreditSystemConfigSchema = z.object({
 });
 
 /**
- * A plan item's partial override of its feature's config, stored on the
- * entitlement row under the config's own keys so resolving the effective
- * feature is a config spread. Strict: a key is only admitted once every
- * runtime reader of that key honors the override (schema is the only one so
- * far — invoice_credit and markups have readers outside the schema path).
- */
-export const FeatureConfigOverrideSchema = z.strictObject({
-	schema: z.array(CreditSchemaItemSchema).optional(),
-});
-
-/**
  * `<provider>/<model>`, split on the FIRST slash so `openrouter/openai/gpt-4o`
  * keeps its inner one. Rejecting a bare key here only moves an existing failure
  * earlier: `resolveModel` already throws "not found in models.dev pricing data"
@@ -129,7 +118,10 @@ export const ModelMarkupsSchema = z
 	.record(
 		z
 			.string()
-			.regex(/.+\/.+/, 'Model keys are "<provider>/<model>", e.g. "openai/gpt-4o" or "custom/my-model".'),
+			.regex(
+				/.+\/.+/,
+				'Model keys are "<provider>/<model>", e.g. "openai/gpt-4o" or "custom/my-model".',
+			),
 		MarkupEntrySchema.extend({
 			markup: z.number().min(-100).optional(), // Omit to inherit provider/global markup
 			input_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
@@ -138,7 +130,22 @@ export const ModelMarkupsSchema = z
 	)
 	.nullish();
 
+// markups replaces as one unit: its three levels are a single precedence chain.
+export const FeatureMarkupsOverrideSchema = z.strictObject({
+	default_markup: z.number().min(-100).optional(),
+	provider_markups: ProviderMarkupsSchema,
+	model_markups: ModelMarkupsSchema,
+});
+
+export const FeatureConfigOverrideSchema = z.strictObject({
+	schema: z.array(CreditSchemaItemSchema).optional(),
+	markups: FeatureMarkupsOverrideSchema.optional(),
+});
+
 export type CreditSystemConfig = z.infer<typeof CreditSystemConfigSchema>;
+export type FeatureMarkupsOverride = z.infer<
+	typeof FeatureMarkupsOverrideSchema
+>;
 export type FeatureConfigOverride = z.infer<typeof FeatureConfigOverrideSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
 export type CreditDimension = z.infer<typeof CreditDimensionSchema>;

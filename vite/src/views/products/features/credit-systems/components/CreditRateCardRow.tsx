@@ -156,10 +156,10 @@ export function CreditRateCardRow({
 						</>
 					) : (
 						!isMultiTier && (
-							<div className="flex items-center gap-2">
+							<div className="flex flex-wrap items-center gap-2">
 								<CreditNumberInput
 									ariaLabel="Credit cost"
-									className="min-w-32 flex-1"
+									className="min-w-24 flex-1"
 									placeholder="eg. 1"
 									value={singleTierCost}
 									onValueChange={setSingleTierCost}
