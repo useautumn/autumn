@@ -1,8 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { organizations } from "@autumn/shared";
+import { AppEnv, apiKeys, organizations } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import {
+	ApiKeyPrefix,
+	createKey,
+	hashApiKey,
+} from "@/internal/dev/apiKeys/apiKeyUtils.js";
 
 // Exercises the createRoute request path (zod validation + actor guards) over
 // real HTTP, which the *_ForOrg unit/integration tests bypass. Requires `bun dw`.
@@ -13,15 +18,26 @@ const { db } = initDrizzle();
 const apiBase = `${(process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "")}/v1`;
 const masterKey = defaultCtx.orgSecretKey;
 
-const post = async (path: string, body: unknown) =>
+const postAs = async ({
+	path,
+	body,
+	key,
+}: {
+	path: string;
+	body: unknown;
+	key: string;
+}) =>
 	await fetch(`${apiBase}${path}`, {
 		method: "POST",
 		headers: {
-			Authorization: `Bearer ${masterKey}`,
+			Authorization: `Bearer ${key}`,
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(body),
 	});
+
+const post = async (path: string, body: unknown) =>
+	await postAs({ path, body, key: masterKey });
 
 const postStatus = async (path: string, body: unknown) =>
 	(await post(path, body)).status;
@@ -29,7 +45,15 @@ const postStatus = async (path: string, body: unknown) =>
 const createdSandboxName = `Route Guard Sandbox ${crypto.randomUUID()}`;
 let createdSandboxId: string | undefined;
 
+let liveKey: string | undefined;
+
 afterAll(async () => {
+	if (liveKey) {
+		await db
+			.delete(apiKeys)
+			.where(eq(apiKeys.hashed_key, hashApiKey(liveKey)))
+			.catch(() => {});
+	}
 	if (!createdSandboxId) return;
 	await postStatus("/sandboxes.delete", { id: createdSandboxId });
 	await db
@@ -79,5 +103,28 @@ describe("sandbox route guards (zod + actor wiring on the request path)", () => 
 			toSandboxId: "sandbox_does_not_exist",
 		});
 		expect(status).toBe(401);
+	});
+
+	// A live key resolves to AppEnv.Live, and reset is refused there before it
+	// deletes anything — the only reset case safe to drive against a real org.
+	test("reset from a live-mode key is refused (400)", async () => {
+		liveKey = await createKey({
+			db,
+			env: AppEnv.Live,
+			name: "Route Guard Live Key",
+			orgId: defaultCtx.org.id,
+			prefix: ApiKeyPrefix.Live,
+			meta: {},
+		});
+
+		const res = await postAs({
+			path: "/sandboxes.reset",
+			body: {},
+			key: liveKey,
+		});
+		expect(res.status).toBe(400);
+
+		const { message } = (await res.json()) as { message?: string };
+		expect(message).toBe("Only sandboxes can be reset");
 	});
 });

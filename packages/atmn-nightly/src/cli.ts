@@ -3,10 +3,12 @@ import { Command } from "commander";
 import { runLogin } from "./actions/login";
 import { runPull } from "./actions/pull";
 import { configSearchDirs, runPush } from "./actions/push";
+import { runReset } from "./actions/reset/runReset";
 import { runSandboxCreate } from "./actions/sandbox/createSandbox";
 import { runSandboxDelete } from "./actions/sandbox/deleteSandbox";
 import { runSandboxList } from "./actions/sandbox/listSandboxes";
 import { withSandboxScopeHint } from "./actions/sandbox/withSandboxScopeHint";
+import { assertSandboxTarget } from "./env/assertSandboxTarget";
 import { loadEnvFiles } from "./env/loadEnv";
 import {
 	managementTarget,
@@ -118,6 +120,26 @@ export const buildProgram = (): Command => {
 				});
 			},
 		);
+
+	program
+		.command("reset")
+		.description("wipe this sandbox's catalog and customers; --yes applies it")
+		.option("-y, --yes", "wipe it")
+		.action(async (options: { yes?: boolean }, command: Command) => {
+			const target = prepareTarget({ command });
+			// Ahead of the client: --prod would otherwise fail on a missing prod
+			// key rather than on the refusal that matters.
+			assertSandboxTarget({ target });
+			try {
+				await runReset({
+					client: clientFor({ target }),
+					target,
+					yes: options.yes === true,
+				});
+			} catch (error) {
+				throw withSandboxScopeHint({ error });
+			}
+		});
 
 	const sandbox = program
 		.command("sandbox")

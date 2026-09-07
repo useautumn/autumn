@@ -99,6 +99,7 @@ import {
 	createSandboxContract,
 	deleteSandboxContract,
 	listSandboxesContract,
+	resetSandboxContract,
 } from "./sandboxesContract.js";
 
 export const v2_3ContractRouter = oc.router({
@@ -199,6 +200,7 @@ export const v2_3ContractRouter = oc.router({
 	sandboxesCreate: createSandboxContract,
 	sandboxesList: listSandboxesContract,
 	sandboxesDelete: deleteSandboxContract,
+	sandboxesReset: resetSandboxContract,
 });
 
 /**

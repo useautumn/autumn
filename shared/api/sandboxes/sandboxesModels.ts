@@ -67,8 +67,19 @@ export const DeleteSandboxResponseSchema = z.object({
 		.describe("Always true when the sandbox was deleted."),
 });
 
+export const ResetSandboxParamsSchema = z
+	.object({})
+	.describe(
+		"No body. Resets the sandbox the calling key belongs to — there is no id to pass.",
+	);
+
+export const ResetSandboxResponseSchema = z.object({
+	success: z.literal(true).describe("Always true when the sandbox was reset."),
+});
+
 export type CreateSandboxParams = z.infer<typeof CreateSandboxParamsSchema>;
 export type CreateSandboxResponse = z.infer<typeof CreateSandboxResponseSchema>;
 export type Sandbox = z.infer<typeof SandboxSchema>;
 export type ListSandboxesResponse = z.infer<typeof ListSandboxesResponseSchema>;
 export type DeleteSandboxParams = z.infer<typeof DeleteSandboxParamsSchema>;
+export type ResetSandboxParams = z.infer<typeof ResetSandboxParamsSchema>;

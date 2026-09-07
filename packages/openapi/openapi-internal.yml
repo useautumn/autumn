@@ -74318,6 +74318,47 @@ paths:
       x-speakeasy-name-override: delete
       parameters:
         - *a1
+  /v1/sandboxes.reset:
+    post:
+      operationId: resetSandbox
+      description: "Wipes every customer, plan, feature and migration draft in the
+        sandbox the calling key belongs to, leaving the sandbox itself, its
+        secret keys and its settings in place. There is no id to pass: a
+        sandbox's own key resets that sandbox, and an organization's test-mode
+        key resets its default sandbox environment. Refused for live keys — only
+        sandboxes can be reset. Cannot be undone."
+      tags:
+        - sandboxes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ResetSandboxParams
+              description: No body. Resets the sandbox the calling key belongs to — there is
+                no id to pass.
+              examples:
+                - {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                    description: Always true when the sandbox was reset.
+                required:
+                  - success
+                title: ResetSandboxResponse
+                examples:
+                  - success: true
+      x-speakeasy-name-override: reset
+      parameters:
+        - *a1
   /v1/catalogV2.get:
     post:
       operationId: getCatalogV2

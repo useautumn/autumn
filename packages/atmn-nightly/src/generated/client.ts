@@ -80,6 +80,9 @@ export type DeleteSandboxParams = {
 /** The ID of the sandbox to delete. */
 id: string;
 };
+export type ResetSandboxParams = {
+
+};
 export type PreviewUpdateCatalogResponse = {
 plans: Array<{
 planId: string;
@@ -24909,6 +24912,10 @@ export type DeleteSandboxResponse = {
 /** Always true when the sandbox was deleted. */
 success: true;
 };
+export type ResetSandboxResponse = {
+/** Always true when the sandbox was reset. */
+success: true;
+};
 const CREATESANDBOX_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
@@ -24918,6 +24925,10 @@ const LISTSANDBOXES_REQUEST_HINTS = hintsOf({
 	frozenPaths: [],
 });
 const DELETESANDBOX_REQUEST_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+});
+const RESETSANDBOX_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
 });
@@ -24942,6 +24953,10 @@ const LISTSANDBOXES_RESPONSE_HINTS = hintsOf({
 	frozenPaths: [],
 });
 const DELETESANDBOX_RESPONSE_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+});
+const RESETSANDBOX_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
 });
@@ -24995,6 +25010,14 @@ export const createClient = (options: ClientOptions) => ({
 			path: "",
 			hints: DELETESANDBOX_RESPONSE_HINTS,
 		}) as DeleteSandboxResponse,
+	resetSandbox: async (
+		body: ResetSandboxParams,
+	): Promise<ResetSandboxResponse> =>
+		toFixture({
+			value: await post({ options, path: "/v1/sandboxes.reset", body: toWire({ value: body, path: "", hints: RESETSANDBOX_REQUEST_HINTS }) }),
+			path: "",
+			hints: RESETSANDBOX_RESPONSE_HINTS,
+		}) as ResetSandboxResponse,
 });
 
 export type AutumnClient = ReturnType<typeof createClient>;

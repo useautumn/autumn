@@ -11,10 +11,12 @@ export const getMigration = async ({
 	ctx,
 	id,
 	internalId,
+	archived,
 }: {
 	ctx: RepoContext;
 	id?: string;
 	internalId?: string;
+	archived?: boolean;
 }): Promise<Migration[]> => {
 	const where: SQL[] = [
 		eq(migrations.org_id, ctx.org.id),
@@ -23,6 +25,7 @@ export const getMigration = async ({
 	if (id !== undefined) where.push(eq(migrations.id, id));
 	if (internalId !== undefined)
 		where.push(eq(migrations.internal_id, internalId));
+	if (archived !== undefined) where.push(eq(migrations.archived, archived));
 
 	return ctx.db
 		.select()

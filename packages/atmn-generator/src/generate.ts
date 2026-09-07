@@ -201,6 +201,12 @@ export const generate = async (): Promise<string[]> => {
 				responseTypeName: "DeleteSandboxResponse",
 				requestTypeName: "DeleteSandboxParams",
 			},
+			{
+				name: "resetSandbox",
+				path: "/v1/sandboxes.reset",
+				responseTypeName: "ResetSandboxResponse",
+				requestTypeName: "ResetSandboxParams",
+			},
 		] as const
 	).map(({ name, path, responseTypeName, ...rest }) => {
 		const schema = responseSchema({ spec, path });

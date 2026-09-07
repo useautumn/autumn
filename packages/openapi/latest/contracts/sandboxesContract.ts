@@ -5,12 +5,15 @@ import {
 	DeleteSandboxResponseSchema,
 	ListSandboxesParamsSchema,
 	ListSandboxesResponseSchema,
+	ResetSandboxParamsSchema,
+	ResetSandboxResponseSchema,
 } from "@api/sandboxes/sandboxesModels.js";
 import { oc } from "@orpc/contract";
 import {
 	createSandboxJsDoc,
 	deleteSandboxJsDoc,
 	listSandboxesJsDoc,
+	resetSandboxJsDoc,
 } from "../jsDocs/sandboxesJsDocs";
 
 const sandboxExample = {
@@ -93,6 +96,31 @@ export const deleteSandboxContract = oc
 	.output(
 		DeleteSandboxResponseSchema.meta({
 			title: "DeleteSandboxResponse",
+			examples: [{ success: true }],
+		}),
+	);
+
+export const resetSandboxContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/sandboxes.reset",
+		operationId: "resetSandbox",
+		tags: ["sandboxes"],
+		description: resetSandboxJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "reset",
+		}),
+	})
+	.input(
+		ResetSandboxParamsSchema.meta({
+			title: "ResetSandboxParams",
+			examples: [{}],
+		}),
+	)
+	.output(
+		ResetSandboxResponseSchema.meta({
+			title: "ResetSandboxResponse",
 			examples: [{ success: true }],
 		}),
 	);
