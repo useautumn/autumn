@@ -271,7 +271,6 @@ test("overdue access: zero usage without an entitlement is unchanged", async () 
 			}),
 		).not.toThrow();
 	}
-	track.mockClear();
 });
 
 test("overdue access: credit fallback and tracked responses select eligible funding", async () => {
@@ -356,6 +355,35 @@ test("overdue access: credit fallback and tracked responses select eligible fund
 		required_balance: 1,
 		balance: { feature_id: "messages", remaining: 2 },
 	});
+	activePlan.customer_entitlements = [];
+	creditEntitlement.entitlement.feature_override = {
+		schema: [{ metered_feature_id: "messages", credit_amount: 7 }],
+	};
+	const overriddenCreditCheck = await getCheckDataV2({
+		ctx,
+		body,
+		requiredBalance: 4,
+	});
+	for (const response of [
+		await getCheckResponseV2({
+			ctx,
+			checkData: overriddenCreditCheck,
+			requiredBalance: 4,
+		}),
+		await runCheckWithTrackV2({
+			ctx,
+			checkData: overriddenCreditCheck,
+			requiredBalance: 4,
+			body: { ...body, send_event: true },
+		}),
+	]) {
+		expect(response).toMatchObject({
+			allowed: false,
+			required_balance: 28,
+			balance: { feature_id: "credits", remaining: 100 },
+		});
+	}
+	creditEntitlement.entitlement.feature_override = null;
 	creditPlan.product.config.allow_overdue_entitlements = true;
 	const exemptCreditCheck = await getCheckDataV2({
 		ctx,
@@ -409,4 +437,66 @@ test("overdue access: subject refresh rechecks eligibility before retrying a ded
 		}),
 	).rejects.toBeInstanceOf(InsufficientBalanceError);
 	expect(deduct).toHaveBeenCalledTimes(1);
+});
+
+test("overdue access: rejected lock deductions release the claim; unknown failures retain it", async () => {
+	const { ctx } = setup();
+	await mockModuleWithRestore(
+		"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
+		() => ({ getOrSetCachedFullSubject: async () => cachedSubject }),
+	);
+	const releaseClaim = mock(async () => {});
+	await mockModuleWithRestore(
+		"@/internal/balances/utils/lockV2/releaseLockClaimMarker.js",
+		() => ({ releaseLockClaimMarker: releaseClaim }),
+	);
+	const { RedisDeductionError, RedisDeductionErrorCode } = await import(
+		"@/internal/balances/utils/types/redisDeductionError.js"
+	);
+	const { runFinalizeLockV2 } = await import(
+		"@/internal/balances/finalizeLock/runFinalizeLockV2.js"
+	);
+	let deductionError: Error;
+	await mockModuleWithRestore(
+		"@/internal/balances/finalizeLock/runRedisFinalizeLockV2.js",
+		() => ({
+			runRedisFinalizeLockV2: async () => {
+				throw deductionError;
+			},
+		}),
+	);
+	for (const [error, releases] of [
+		[new InsufficientBalanceError({ featureId: "messages", value: 5 }), true],
+		[
+			new RedisDeductionError({
+				code: RedisDeductionErrorCode.InsufficientBalance,
+				message: "Redis deduction failed: INSUFFICIENT_BALANCE",
+			}),
+			true,
+		],
+		[
+			new Error("INSUFFICIENT_BALANCE|featureId:messages|value:5|remaining:0"),
+			true,
+		],
+		[new Error("unexpected failure"), false],
+	] as const) {
+		releaseClaim.mockClear();
+		deductionError = error;
+		await expect(
+			runFinalizeLockV2({
+				ctx,
+				params: { lock_id: "lock_test", action: "confirm", override_value: 15 },
+				receipt: {
+					customer_id: "cus_test",
+					feature_id: "messages",
+					overrideLockValue: 10,
+					items: [],
+				},
+				lockReceiptKey: "lock_test",
+				claimed: true,
+				lockRedisInstance: new Redis({ lazyConnect: true }),
+			}),
+		).rejects.toBe(error);
+		expect(releaseClaim).toHaveBeenCalledTimes(releases ? 1 : 0);
+	}
 });

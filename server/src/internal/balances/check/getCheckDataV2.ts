@@ -159,7 +159,9 @@ export const getCheckDataV2 = async ({
 		apiSubject,
 		originalFeature: feature,
 		featureToUse,
-		fullSubject: evaluationFullSubject,
+		fullSubject: evaluationApiSubject.balances?.[featureToUse.id]
+			? evaluationFullSubject
+			: fullSubject,
 		evaluationApiSubject,
 		evaluationApiBalance: evaluationApiSubject.balances?.[featureToUse.id],
 		evaluationApiFlag: evaluationApiSubject.flags?.[featureToUse.id],

@@ -13,6 +13,10 @@ import type { LockReceipt } from "@/internal/balances/utils/lock/fetchLockReceip
 import { buildFinalizeLockContextV2 } from "@/internal/balances/utils/lockV2/buildFinalizeLockContextV2.js";
 import { deleteLockReceiptV2 } from "@/internal/balances/utils/lockV2/deleteLockReceiptV2.js";
 import { releaseLockClaimMarker } from "@/internal/balances/utils/lockV2/releaseLockClaimMarker.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "@/internal/balances/utils/types/redisDeductionError.js";
 import { runRedisFinalizeLockV2 } from "./runRedisFinalizeLockV2.js";
 
 /**
@@ -58,7 +62,13 @@ export const runFinalizeLockV2 = async ({
 		try {
 			await runRedisFinalizeLockV2({ ctx, finalizeLockContext });
 		} catch (error) {
-			if (error instanceof InsufficientBalanceError) {
+			if (
+				error instanceof InsufficientBalanceError ||
+				(error instanceof RedisDeductionError &&
+					error.code === RedisDeductionErrorCode.InsufficientBalance) ||
+				(error instanceof Error &&
+					error.message.startsWith("INSUFFICIENT_BALANCE|"))
+			) {
 				await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
 			}
 			throw error;
