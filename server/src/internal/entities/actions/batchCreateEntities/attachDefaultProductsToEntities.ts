@@ -1,7 +1,6 @@
 import {
 	type CustomerData,
 	type Entity,
-	type FullCusProduct,
 	type FullCustomer,
 	isFreeProduct,
 	orgDefaultAppliesToEntities,
