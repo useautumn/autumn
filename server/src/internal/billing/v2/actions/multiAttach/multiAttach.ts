@@ -52,10 +52,11 @@ export async function multiAttach({
 
 	// 2. Errors
 	await handleMultiAttachErrors({
-		db: ctx.db,
+		ctx,
 		billingContext,
 		redirectMode: params.redirect_mode,
 		params,
+		preview,
 	});
 
 	handleMultiAttachCurrencyErrors({ ctx, billingContext, params });

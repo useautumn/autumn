@@ -11,7 +11,6 @@ import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/actions/attac
 import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
 import { handleEndDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleEndDateErrors";
 import { handleNewBillingSubscriptionErrors } from "@/internal/billing/v2/actions/attach/errors/handleNewBillingSubscriptionErrors";
-import { handlePendingPlanConflictErrors } from "@/internal/billing/v2/actions/attach/errors/handlePendingPlanConflictErrors";
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
 import { handleStartDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleStartDateErrors";
 import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach/errors/handleStripeCheckoutErrors";
@@ -21,6 +20,7 @@ import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors
 import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleLicenseAttachTargetErrors } from "@/internal/billing/v2/common/errors/handleLicenseAttachTargetErrors";
+import { handlePendingPlanConflictErrors } from "@/internal/billing/v2/common/errors/handlePendingPlanConflictErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
@@ -70,7 +70,12 @@ export const handleAttachV2Errors = async ({
 	// 2. Current customer product errors (same product)
 	handleCurrentCustomerProductErrors({ billingContext });
 
-	await handlePendingPlanConflictErrors({ ctx, billingContext, preview });
+	await handlePendingPlanConflictErrors({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+		attachProduct: billingContext.attachProduct,
+		preview,
+	});
 
 	// 3. new_billing_subscription validation errors
 	handleNewBillingSubscriptionErrors({ billingContext, params });

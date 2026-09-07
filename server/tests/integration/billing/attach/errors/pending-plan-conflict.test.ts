@@ -18,6 +18,7 @@ import { payOpenInvoice } from "@tests/utils/stripeUtils/payOpenInvoice";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { DEFAULT_CUS_PRODUCT_LIMIT } from "@/internal/misc/edgeConfig/orgLimitsStore";
 
 test.concurrent(
 	`${chalk.yellowBright("pending-plan-conflict 1: retrying a payment-failed upgrade is rejected until the invoice settles")}`,
@@ -170,5 +171,118 @@ test.concurrent(
 			plan_id: premium.id,
 		});
 		expect(upgrade.required_action?.code).toBe("payment_failed");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending-plan-conflict 3: retrying through multi_attach is rejected too")}`,
+	async () => {
+		const customerId = "pending-plan-conflict-multi";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			id: "premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { autumnV2_4, ctx, customer } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.attachPaymentMethod({ type: "fail" }),
+			],
+		});
+
+		const first = await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: premium.id,
+		});
+		expect(first.required_action?.code).toBe("payment_failed");
+
+		await autumnV2_4.billing.previewMultiAttach({
+			customer_id: customerId,
+			plans: [{ plan_id: premium.id }],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.PendingPlanConflict,
+			func: () =>
+				autumnV2_4.billing.multiAttach({
+					customer_id: customerId,
+					plans: [{ plan_id: premium.id }],
+				}),
+		});
+
+		const openInvoices = await ctx.stripeCli.invoices.list({
+			customer: customer?.processor?.id ?? "",
+			status: "open",
+			limit: 100,
+		});
+		expect(openInvoices.has_more).toBe(false);
+		expect(openInvoices.data).toHaveLength(1);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending-plan-conflict 4: a pending plan beyond the customer snapshot cap still blocks")}`,
+	async () => {
+		const customerId = "pending-plan-conflict-capped";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			id: "premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const addOns = Array.from({ length: DEFAULT_CUS_PRODUCT_LIMIT }, (_, i) =>
+			products.base({
+				id: `free-addon-${i}`,
+				isAddOn: true,
+				items: [items.monthlyCredits({ includedUsage: 1 })],
+			}),
+		);
+
+		const { autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium, ...addOns] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.attachPaymentMethod({ type: "fail" }),
+			],
+		});
+
+		const first = await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: premium.id,
+		});
+		expect(first.required_action?.code).toBe("payment_failed");
+
+		for (const addOn of addOns) {
+			await autumnV2_4.billing.attach<AttachParamsV1Input>(
+				{ customer_id: customerId, plan_id: addOn.id },
+				{ timeout: 0 },
+			);
+		}
+
+		await expectAutumnError({
+			errCode: ErrCode.PendingPlanConflict,
+			func: () =>
+				autumnV2_4.billing.attach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: premium.id,
+				}),
+		});
 	},
 );

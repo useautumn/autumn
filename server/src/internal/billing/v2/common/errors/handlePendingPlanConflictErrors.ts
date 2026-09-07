@@ -1,34 +1,42 @@
 import {
-	type AttachBillingContext,
 	CusProductStatus,
 	cp,
 	ErrCode,
+	type FullCustomer,
+	type FullProduct,
 	isOneOffProduct,
 	MetadataType,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
 /** A second deferred attach for the same transition would mint a second payable invoice. */
 export const handlePendingPlanConflictErrors = async ({
 	ctx,
-	billingContext,
+	fullCustomer,
+	attachProduct,
 	preview = false,
 }: {
 	ctx: AutumnContext;
-	billingContext: AttachBillingContext;
+	fullCustomer: FullCustomer;
+	attachProduct: FullProduct;
 	preview?: boolean;
 }) => {
 	if (preview) return;
-
-	const { attachProduct, fullCustomer } = billingContext;
 	if (attachProduct.is_add_on || isOneOffProduct({ product: attachProduct }))
 		return;
 
-	for (const customerProduct of fullCustomer.customer_products) {
-		if (customerProduct.status !== CusProductStatus.Pending) continue;
+	// fullCustomer.customer_products is capped and orders pending rows last.
+	const pendingCustomerProducts = await CusProductService.list({
+		db: ctx.db,
+		internalCustomerId: fullCustomer.internal_id,
+		inStatuses: [CusProductStatus.Pending],
+	});
+
+	for (const customerProduct of pendingCustomerProducts) {
 		if (!customerProduct.metadata_id) continue;
 
 		const inScope = cp(customerProduct)
