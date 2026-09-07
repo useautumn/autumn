@@ -19,6 +19,7 @@ export type PartitionRuntimeFactoryContext = {
 	partitionResolver: MeteringPartitionResolver;
 };
 export type PartitionRuntimeFactoryConfig = {
+	trackReceiptRetentionMs: number;
 	deploymentEnvironment: string;
 	writerLimits: PartitionTrackWriterLimits;
 	producerLimits: KafkaProducerLimits;

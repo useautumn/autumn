@@ -10,6 +10,7 @@ export { executeTrack } from "./actions/track/executeTrack.js";
 export {
 	parseCheckCommand,
 	parseCustomerMeteringState,
+	parseStateInitializedEvent,
 	parseTrackCommand,
 	parseTrackOutcome,
 } from "./common/parsers.js";
@@ -27,9 +28,13 @@ export type {
 	JsonValue,
 	LeanCustomerEntitlement,
 	MeteringIdentity,
+	StateInitializedEvent,
 	TrackCommand,
 	TrackDecision,
 	TrackOutcome,
 	UnsupportedDecisionReason,
 } from "./contracts.js";
-export { trackCommandFingerprintOf } from "./contracts.js";
+export {
+	stateInitializationFingerprintOf,
+	trackCommandFingerprintOf,
+} from "./contracts.js";

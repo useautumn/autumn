@@ -45,6 +45,7 @@ export function createPartitionRuntime({
 			stateStore: dependencies.stateStore,
 			appender: dependencies.appender,
 			limits: config.writerLimits,
+			receiptPolicy: dependencies.trackReceiptPolicy,
 		}),
 		requestTracker: createRequestTracker(),
 	};

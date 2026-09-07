@@ -75,6 +75,7 @@ function createTestRuntime({
 	return createPartitionRuntime({
 		ctx: {
 			stateStore,
+			trackReceiptPolicy: { retentionMs: 86_400_000, now: Date.now },
 			producer,
 			appender: createTrackOutcomePublisher({ ctx: { producer } }),
 			follower: { startAndCatchUp, stop },
@@ -115,7 +116,12 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 			});
 			stores.push(store);
 			store.initializePartition({ topic, partition, nextOffset: 0n });
-			store.initializeState({ state: createState() });
+			store.restoreState({
+				topic,
+				partition,
+				initializationId: "init_1",
+				state: createState(),
+			});
 			runtimes.push(createTestRuntime({ kafka, topic, stateStore: store }));
 		}
 		const [previous, replacement] = runtimes;

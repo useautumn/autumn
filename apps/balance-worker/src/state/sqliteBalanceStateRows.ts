@@ -10,11 +10,24 @@ import {
 import { CorruptBalanceStateError } from "./sqliteBalanceStateErrors.js";
 
 type StateRow = {
+	topic: string;
+	partition: bigint;
+	initializationId: string;
+	initializationFingerprint: string;
 	revision: bigint;
 	stateJson: string;
 };
 
+export type StoredMeteringState = {
+	topic: string;
+	partition: number;
+	initializationId: string;
+	initializationFingerprint: string;
+	state: CustomerMeteringState;
+};
+
 type ReceiptRow = {
+	deduplicationExpiresAt: bigint;
 	outcomeJson: string;
 };
 
@@ -22,17 +35,23 @@ type PartitionProgressRow = {
 	nextOffset: bigint;
 };
 
-export const readState = ({
+export const readStoredState = ({
 	database,
 	identity,
 }: {
 	database: Database;
 	identity: MeteringIdentity;
-}): CustomerMeteringState | null => {
+}): StoredMeteringState | null => {
 	const partitionKey = meteringPartitionKeyOf({ identity });
 	const row = database
 		.query<StateRow, { partitionKey: string }>(`
-			SELECT revision, state_json AS stateJson
+			SELECT
+				topic,
+				partition_id AS partition,
+				initialization_id AS initializationId,
+				initialization_fingerprint AS initializationFingerprint,
+				revision,
+				state_json AS stateJson
 			FROM customer_states
 			WHERE partition_key = $partitionKey
 		`)
@@ -44,12 +63,32 @@ export const readState = ({
 	});
 	if (
 		BigInt(state.revision) !== row.revision ||
-		meteringPartitionKeyOf({ identity: state.identity }) !== partitionKey
+		meteringPartitionKeyOf({ identity: state.identity }) !== partitionKey ||
+		row.topic.trim().length === 0 ||
+		row.partition < 0n ||
+		row.partition > BigInt(Number.MAX_SAFE_INTEGER) ||
+		row.initializationId.length === 0 ||
+		row.initializationFingerprint.length === 0
 	) {
 		throw new CorruptBalanceStateError({ partitionKey });
 	}
-	return state;
+	return {
+		topic: row.topic,
+		partition: Number(row.partition),
+		initializationId: row.initializationId,
+		initializationFingerprint: row.initializationFingerprint,
+		state,
+	};
 };
+
+export const readState = ({
+	database,
+	identity,
+}: {
+	database: Database;
+	identity: MeteringIdentity;
+}): CustomerMeteringState | null =>
+	readStoredState({ database, identity })?.state ?? null;
 
 export const readTrackReceipt = ({
 	database,
@@ -63,7 +102,9 @@ export const readTrackReceipt = ({
 	const partitionKey = meteringPartitionKeyOf({ identity });
 	const row = database
 		.query<ReceiptRow, { partitionKey: string; commandId: string }>(`
-			SELECT outcome_json AS outcomeJson
+			SELECT
+				deduplication_expires_at AS deduplicationExpiresAt,
+				outcome_json AS outcomeJson
 			FROM track_receipts
 			WHERE partition_key = $partitionKey AND command_id = $commandId
 		`)
@@ -73,7 +114,8 @@ export const readTrackReceipt = ({
 	const outcome = parseTrackOutcome({ input: JSON.parse(row.outcomeJson) });
 	if (
 		outcome.commandId !== commandId ||
-		meteringPartitionKeyOf({ identity: outcome.identity }) !== partitionKey
+		meteringPartitionKeyOf({ identity: outcome.identity }) !== partitionKey ||
+		BigInt(outcome.deduplicationExpiresAt) !== row.deduplicationExpiresAt
 	) {
 		throw new CorruptBalanceStateError({ partitionKey });
 	}
@@ -121,22 +163,58 @@ export const insertPartitionProgress = ({
 export const insertState = ({
 	database,
 	partitionKey,
+	topic,
+	partition,
+	initializationId,
+	initializationFingerprint,
 	state,
 }: {
 	database: Database;
 	partitionKey: string;
+	topic: string;
+	partition: number;
+	initializationId: string;
+	initializationFingerprint: string;
 	state: CustomerMeteringState;
 }) => {
 	database
 		.query<
 			never,
-			{ partitionKey: string; revision: bigint; stateJson: string }
+			{
+				partitionKey: string;
+				topic: string;
+				partition: number;
+				initializationId: string;
+				initializationFingerprint: string;
+				revision: bigint;
+				stateJson: string;
+			}
 		>(`
-			INSERT INTO customer_states (partition_key, revision, state_json)
-			VALUES ($partitionKey, $revision, $stateJson)
+			INSERT INTO customer_states (
+				partition_key,
+				topic,
+				partition_id,
+				initialization_id,
+				initialization_fingerprint,
+				revision,
+				state_json
+			)
+			VALUES (
+				$partitionKey,
+				$topic,
+				$partition,
+				$initializationId,
+				$initializationFingerprint,
+				$revision,
+				$stateJson
+			)
 		`)
 		.run({
 			partitionKey,
+			topic,
+			partition,
+			initializationId,
+			initializationFingerprint,
 			revision: BigInt(state.revision),
 			stateJson: JSON.stringify(state),
 		});
@@ -194,6 +272,7 @@ export const insertTrackReceipt = ({
 				topic: string;
 				partition: number;
 				offset: bigint;
+				deduplicationExpiresAt: bigint;
 				outcomeJson: string;
 			}
 		>(`
@@ -203,6 +282,7 @@ export const insertTrackReceipt = ({
 				topic,
 				partition_id,
 				record_offset,
+				deduplication_expires_at,
 				outcome_json
 			)
 			VALUES (
@@ -211,6 +291,7 @@ export const insertTrackReceipt = ({
 				$topic,
 				$partition,
 				$offset,
+				$deduplicationExpiresAt,
 				$outcomeJson
 			)
 		`)
@@ -220,6 +301,7 @@ export const insertTrackReceipt = ({
 			topic: position.topic,
 			partition: position.partition,
 			offset: position.offset,
+			deduplicationExpiresAt: BigInt(receipt.deduplicationExpiresAt),
 			outcomeJson: JSON.stringify(receipt),
 		});
 };
