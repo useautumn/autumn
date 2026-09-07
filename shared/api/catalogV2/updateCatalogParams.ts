@@ -8,6 +8,11 @@ import { UpdateCatalogPlanParamsSchema } from "./planUpdate/params/catalogPlanPa
 export const UpdateCatalogFeatureParamsSchema = z.intersection(
 	CreateFeatureV2ParamsSchema,
 	z.object({
+		internal_id: z.string().nonempty().optional().meta({
+			description:
+				"Address an existing feature by its stable id. Omit when creating — the server generates one. A differing feature_id alongside it is a rename.",
+			internal: true,
+		}),
 		new_feature_id: z.string().optional().meta({
 			description: "Rename the feature to this id.",
 		}),
@@ -77,6 +82,10 @@ export const UpdateCatalogParamsSchema = z.object({
 	skip_deletions: z.boolean().optional().default(true).meta({
 		description:
 			"When false the payload is the complete desired catalog: plans missing from it are removed. Defaults true, which leaves anything unmentioned alone.",
+	}),
+	skip_version_deletions: z.boolean().optional().default(true).meta({
+		description:
+			"When false, a stated plan's versions the payload does not state are removed: archived while any customer holds them, hidden otherwise. Defaults true, which leaves unstated versions alone.",
 	}),
 	skip_plan_ids: z.array(z.string()).optional().default([]).meta({
 		description:

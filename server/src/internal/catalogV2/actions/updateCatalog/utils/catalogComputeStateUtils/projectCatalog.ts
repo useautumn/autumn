@@ -41,8 +41,23 @@ export const projectCatalog = ({
 	const removedFeatureInternalIds = new Set(
 		plan.removeFeatures.flatMap((removeFeaturePlan) =>
 			removeFeaturePlan.current?.internal_id &&
+			!removeFeaturePlan.willArchive &&
 			!upsertedFeatureIds.has(removeFeaturePlan.featureId)
 				? [removeFeaturePlan.current.internal_id]
+				: [],
+		),
+	);
+	// Archived (not hard-deleted) features stay in the projection, same as
+	// archived plans below — other rows keep referencing them after this batch.
+	const archivedFeatureByInternalId = new Map(
+		plan.removeFeatures.flatMap((removeFeaturePlan) =>
+			removeFeaturePlan.current?.internal_id && removeFeaturePlan.willArchive
+				? [
+						[
+							removeFeaturePlan.current.internal_id,
+							{ ...removeFeaturePlan.current, archived: true },
+						] as const,
+					]
 				: [],
 		),
 	);
@@ -59,14 +74,18 @@ export const projectCatalog = ({
 		.filter((upsertProductPlan) => upsertProductPlan.row.op === "create")
 		.map((upsertProductPlan) => upsertProductPlan.row.nextFullProduct);
 
-	const upsertedPlanIds = new Set(
-		plan.upsertProducts.map((upsert) => upsert.row.planId),
+	// Keyed by row, not plan: removing one version beside an upsert of a
+	// sibling version must still drop the removed row from the projection.
+	const upsertedRows = new Set(
+		plan.upsertProducts.map(
+			(upsert) => `${upsert.row.planId}@${upsert.row.version}`,
+		),
 	);
 	const hardDeletedInternalIds = new Set(
 		plan.removePlans.flatMap((removePlan) =>
 			removePlan.current &&
 			!removePlan.willArchive &&
-			!upsertedPlanIds.has(removePlan.planId)
+			!upsertedRows.has(`${removePlan.planId}@${removePlan.version}`)
 				? [removePlan.current.internal_id]
 				: [],
 		),
@@ -95,16 +114,15 @@ export const projectCatalog = ({
 				.map(
 					(feature) =>
 						(feature.internal_id &&
-							nextFeatureByInternalId.get(feature.internal_id)) ||
+							(nextFeatureByInternalId.get(feature.internal_id) ??
+								archivedFeatureByInternalId.get(feature.internal_id))) ||
 						feature,
 				),
 			...plan.insertFeatures,
 		],
 		products: [
 			...originalProducts
-				.filter(
-					(product) => !hardDeletedInternalIds.has(product.internal_id),
-				)
+				.filter((product) => !hardDeletedInternalIds.has(product.internal_id))
 				.map(
 					(product) =>
 						nextProductByInternalId.get(product.internal_id) ??

@@ -54,7 +54,8 @@ const resolvePinnedVersion = ({
 	internalIdRefs: InternalIdRefs;
 }): number | undefined => {
 	if (planParams.internal_id !== undefined) {
-		return internalIdRefs.get(planParams.internal_id)?.version;
+		const ref = internalIdRefs.get(planParams.internal_id);
+		if (ref !== undefined) return ref.version;
 	}
 	if (planParams.version !== undefined) return planParams.version;
 	if (planParams.version_slug === undefined) return undefined;

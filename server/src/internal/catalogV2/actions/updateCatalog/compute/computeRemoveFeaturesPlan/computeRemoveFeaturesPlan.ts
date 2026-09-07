@@ -4,10 +4,58 @@ import type {
 	CatalogComputeStep,
 	ProjectedCatalog,
 } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
-import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type {
+	ProductStatesContext,
+	UpdateCatalogContext,
+} from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { RemoveFeaturePlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import { resolveAbsenteeFeatureIds } from "./resolveAbsenteeFeatureIds";
+
+/** Plan ids whose CURRENT (pre-push) items still name this feature. Computed
+ * from the original catalog, not `projected` — feature removal runs before
+ * plan upserts fold in, so `projected.products` cannot see this push's own
+ * item edits yet. */
+const planIdsCurrentlyReferencingFeature = ({
+	internalFeatureId,
+	productStatesContext,
+}: {
+	internalFeatureId: string;
+	productStatesContext: ProductStatesContext;
+}): string[] =>
+	Object.entries(productStatesContext.versionsByPlanId).flatMap(
+		([planId, products]) =>
+			products.some((product) =>
+				product.entitlements.some(
+					(entitlement) =>
+						entitlement.internal_feature_id === internalFeatureId,
+				),
+			)
+				? [planId]
+				: [],
+	);
+
+/** True when a plan this push states still lists an item on the feature. */
+const statedItemNamesFeature = ({
+	featureId,
+	params,
+}: {
+	featureId: string;
+	params: UpdateCatalogParams;
+}): boolean =>
+	(params.plans ?? []).some((plan) =>
+		(plan.items ?? []).some((item) => item.feature_id === featureId),
+	);
+
+/** True when this same push also names the plan — trusted to have reconciled
+ * its own items, so a stale entitlement there is cleanup, not a forgotten ref. */
+const planIsPartOfThisPush = ({
+	planId,
+	params,
+}: {
+	planId: string;
+	params: UpdateCatalogParams;
+}): boolean => (params.plans ?? []).some((plan) => plan.plan_id === planId);
 
 /**
  * Remove intents with willArchive stamped against the post-upsert projection
@@ -45,6 +93,7 @@ export const computeRemoveFeaturesPlan = ({
 				willArchive: false,
 				byOmission: absentees.has(featureId),
 				hasCustomerEntitlements: state?.has_customers ?? false,
+				hasSurvivingCatalogReference: false,
 			};
 		},
 	);
@@ -64,20 +113,51 @@ export const computeRemoveFeaturesPlan = ({
 
 			const state =
 				catalogContext.featureStatesContext[removeFeaturePlan.featureId];
-			const hasSurvivingReferences = Boolean(
-				state?.has_customers ||
+			const referencingPlanIds = planIdsCurrentlyReferencingFeature({
+				internalFeatureId: removeFeaturePlan.current.internal_id,
+				productStatesContext: catalogContext.productStatesContext,
+			});
+			// Under full state every plan is in the push, stated or removed, so the
+			// only reference that survives is an item the push itself still states;
+			// a partial push can also leave a plan outside itself.
+			const fullState = params.skip_deletions === false;
+			const skippedPlanIds = new Set(params.skip_plan_ids ?? []);
+			const hasUnclearedPlanItem = fullState
+				? statedItemNamesFeature({
+						featureId: removeFeaturePlan.featureId,
+						params,
+					}) ||
+					// A plan the push exempts is kept as it is, items included.
+					referencingPlanIds.some((planId) => skippedPlanIds.has(planId))
+				: referencingPlanIds.some(
+						(planId) => !planIsPartOfThisPush({ planId, params }),
+					);
+			const hasSurvivingCreditSystem =
+				getCreditSystemsFromFeature({
+					featureId: removeFeaturePlan.featureId,
+					features: survivingFeatures,
+				}).length > 0;
+			const hasSurvivingCatalogReference =
+				hasUnclearedPlanItem || hasSurvivingCreditSystem;
+			// The DB flags see the whole catalog; the states context only holds the
+			// plans this push names, so a partial push still archives a referenced feature.
+			const hasAnyCatalogReference = Boolean(
+				referencingPlanIds.length > 0 ||
 					state?.has_entitlements ||
 					state?.has_loose_entitlements ||
 					state?.has_entity_feature_entitlements ||
 					state?.has_loose_entity_feature_entitlements ||
-					state?.has_prices ||
-					getCreditSystemsFromFeature({
-						featureId: removeFeaturePlan.featureId,
-						features: survivingFeatures,
-					}).length,
+					state?.has_prices,
 			);
 
-			return { ...removeFeaturePlan, willArchive: hasSurvivingReferences };
+			return {
+				...removeFeaturePlan,
+				willArchive:
+					removeFeaturePlan.hasCustomerEntitlements ||
+					hasSurvivingCatalogReference ||
+					hasAnyCatalogReference,
+				hasSurvivingCatalogReference,
+			};
 		}),
 	};
 };

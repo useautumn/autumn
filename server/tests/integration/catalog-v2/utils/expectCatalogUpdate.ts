@@ -161,7 +161,10 @@ export const expectCatalogPreviewCorrect = ({
 			const entry = preview.plans.find(
 				(candidate) => candidate.plan_id === expected.planId,
 			);
-			expect(entry, `missing preview entry for ${expected.planId}`).toBeDefined();
+			expect(
+				entry,
+				`missing preview entry for ${expected.planId}`,
+			).toBeDefined();
 			expect(entry?.action).toBe(expected.action);
 			if (expected.version !== undefined) {
 				expect(entry?.version).toBe(expected.version);
@@ -206,7 +209,10 @@ export const expectCatalogResultsCorrect = ({
 	returnedPlanIds?: string[];
 }) => {
 	if (features !== undefined) {
-		expect(response.results.features).toEqual(features);
+		// Identity and action only: result rows also carry internal_id.
+		expect(
+			response.results.features.map(({ id, action }) => ({ id, action })),
+		).toEqual(features);
 	}
 	if (plans !== undefined) {
 		for (const expected of plans) {

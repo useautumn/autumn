@@ -97,6 +97,7 @@ export const productV2ToApiPlanV1 = ({
 
 	const plan = ApiPlanV1Schema.parse({
 		id: product.id,
+		internal_id: product.internal_id,
 		name: product.name || "",
 		description: product.description || null,
 		group: product.group || null,

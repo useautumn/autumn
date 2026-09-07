@@ -13,6 +13,9 @@ export type RemoveFeaturePlan = {
 	/** Absent from a full-state config rather than named in remove_features. */
 	byOmission?: boolean;
 	hasCustomerEntitlements: boolean;
+	/** A reference this push leaves standing: a plan outside the push, or a
+	 * credit system that survives it — unlike customer history, clearable here. */
+	hasSurvivingCatalogReference: boolean;
 };
 
 export type RemovePlanPlan = {

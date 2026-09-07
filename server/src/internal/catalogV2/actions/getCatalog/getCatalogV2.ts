@@ -21,13 +21,14 @@ export const getCatalogV2 = async ({
 	ctx: AutumnContext;
 	params: GetCatalogParams;
 }): Promise<GetCatalogResponse> => {
-	const { include_archived = false } = params ?? {};
+	const { include_archived = false, include_versions = false } = params ?? {};
 
 	const products = await ProductService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,
 		archived: include_archived ? undefined : false,
+		returnAll: include_versions,
 	});
 
 	// Variants surface only nested under their base plan, never top-level.
@@ -69,13 +70,15 @@ export const getCatalogV2 = async ({
 		),
 	);
 
-	const features = ctx.features.map((feature) =>
-		dbToApiFeatureV1({
-			ctx,
-			dbFeature: feature,
-			targetVersion: FEATURE_TARGET_VERSION,
-		}),
-	);
+	const features = ctx.features
+		.filter((feature) => include_archived || !feature.archived)
+		.map((feature) =>
+			dbToApiFeatureV1({
+				ctx,
+				dbFeature: feature,
+				targetVersion: FEATURE_TARGET_VERSION,
+			}),
+		);
 
 	return { features, plans };
 };

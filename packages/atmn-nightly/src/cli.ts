@@ -1,0 +1,128 @@
+#!/usr/bin/env node
+import { Command } from "commander";
+import { runLogin } from "./actions/login";
+import { runPull } from "./actions/pull";
+import { configSearchDirs, runPush } from "./actions/push";
+import { loadEnvFiles } from "./env/loadEnv";
+import {
+	requireSecretKey,
+	resolveTarget,
+	type TargetFlags,
+} from "./env/resolveTarget";
+import { createClient } from "./generated/client";
+import { previewIsEmpty } from "./render/renderPreview";
+import { version } from "./version";
+
+const NOT_IMPLEMENTED = (step: string) => () => {
+	throw new Error(`Not implemented yet — lands in ${step}.`);
+};
+
+/**
+ * Commander treats a lone `-v` as unknown, and `-V` as version. Rewriting the
+ * token keeps `-v`, `-V` and `--version` identical without a custom parser.
+ */
+const normalizeVersionFlag = ({ argv }: { argv: string[] }): string[] =>
+	argv.map((token) => (token === "-v" ? "--version" : token));
+
+const withEnvironmentFlags = (command: Command): Command =>
+	command
+		.option("-p, --prod", "target production instead of sandbox")
+		.option("--sandbox <sandboxId>", "target a specific sandbox")
+		.option("-l, --local", "target a local server (default port 8080)")
+		// Long-only: -p is prod.
+		.option("--port <port>", "port of a local server (implies --local)")
+		.option("-b, --base-url <url>", "send to this URL instead");
+
+export const buildProgram = (): Command => {
+	const program = new Command();
+
+	program
+		.name("atmn-nightly")
+		.description("Autumn CLI — nightly")
+		.version(`atmn-nightly v${version}`, "-V, --version", "print the version")
+		.showHelpAfterError();
+
+	program
+		.command("login")
+		.description("authenticate and write org keys to your .env")
+		.action(async () => {
+			await runLogin();
+		});
+
+	withEnvironmentFlags(
+		program
+			.command("push")
+			.description(
+				"preview autumn.config.ts against your catalog; --yes applies it",
+			)
+			.option("-y, --yes", "apply the changes the preview shows")
+			.option("-d, --dry-run", "preview only, even with --yes"),
+	).action(
+		async (options: TargetFlags & { dryRun?: boolean; yes?: boolean }) => {
+			// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
+			// the config, so reading them after building the client would never see
+			// them — which is what the "put it in your .env" error message promises.
+			loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+
+			const target = resolveTarget(options);
+			// Nothing is applied unless asked: a plain push is the preview, and the
+			// same command with --yes is the write. Deletions ride the same gate.
+			const apply = options.yes === true && options.dryRun !== true;
+			const result = await runPush({
+				client: createClient({
+					secretKey: requireSecretKey({ target }),
+					...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+				}),
+				dryRun: !apply,
+			});
+			if (!apply && !previewIsEmpty({ preview: result.preview }))
+				process.stdout.write("Re-run with --yes to apply these changes.\n");
+		},
+	);
+
+	withEnvironmentFlags(
+		program
+			.command("pull")
+			.description("write your remote catalog back into autumn.config.ts")
+			.option(
+				"--include-mappings",
+				"keep processor mappings in pulled fixtures",
+			),
+	).action(async (options: TargetFlags & { includeMappings?: boolean }) => {
+		// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
+		// the config, so reading them after building the client would never see
+		// them — which is what the "put it in your .env" error message promises.
+		loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+
+		const target = resolveTarget(options);
+		await runPull({
+			client: createClient({
+				secretKey: requireSecretKey({ target }),
+				...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+			}),
+			includeMappings: options.includeMappings === true,
+		});
+	});
+
+	const sandbox = program
+		.command("sandbox")
+		.description("manage isolated sandboxes");
+	sandbox
+		.command("create")
+		.description("mint a new sandbox and its key")
+		.action(NOT_IMPLEMENTED("3.0"));
+
+	return program;
+};
+
+export const run = async ({ argv }: { argv: string[] }): Promise<void> => {
+	await buildProgram().parseAsync(normalizeVersionFlag({ argv }));
+};
+
+if (import.meta.main) {
+	run({ argv: process.argv }).catch((error: unknown) => {
+		const message = error instanceof Error ? error.message : String(error);
+		process.stderr.write(`${message}\n`);
+		process.exit(1);
+	});
+}

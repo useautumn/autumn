@@ -3,9 +3,9 @@ import {
 	type ApiPlanItemV1,
 	type ApiPlanV1,
 	BillingInterval,
+	FreeTrialDuration,
 	type FullPlanLicense,
 	type FullProduct,
-	FreeTrialDuration,
 	ResetInterval,
 } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";
@@ -222,11 +222,8 @@ test("buildPlanItemChangesFromLists assembles explicit created/deleted", () => {
 	]);
 });
 
-const parentProduct = ({
-	name = "Pro",
-}: {
-	name?: string;
-} = {}): FullProduct => products.createFull({ id: "pro", name });
+const parentProduct = ({ name = "Pro" }: { name?: string } = {}): FullProduct =>
+	products.createFull({ id: "pro", name });
 
 const seatProduct = ({
 	version = 1,
@@ -371,7 +368,9 @@ test("identical FullProducts including licenses is a no-op", () => {
 	const licenses = [planLicense({ parent, licenseProduct: seat, included: 3 })];
 	const product = withLicenses({ parent, licenses });
 
-	expect(buildPlanChange({ from: product, to: { ...product } })).toBeUndefined();
+	expect(
+		buildPlanChange({ from: product, to: { ...product } }),
+	).toBeUndefined();
 });
 
 test("content + license compose onto one plan_change", () => {
@@ -397,7 +396,9 @@ test("license product content change: nested core plan_change", () => {
 	const change = buildPlanChange({
 		from: withLicenses({
 			parent,
-			licenses: [planLicense({ parent, licenseProduct: fromSeat, included: 3 })],
+			licenses: [
+				planLicense({ parent, licenseProduct: fromSeat, included: 3 }),
+			],
 		}),
 		to: withLicenses({
 			parent,

@@ -12,6 +12,7 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 import { validateFeature } from "@/internal/features/utils/validateFeature.js";
 import { generateId } from "@/utils/genUtils.js";
+import { resolveCurrentFeature } from "../../utils/featureUpdateUtils/resolveCurrentFeature";
 
 /** Credit systems last so schema refs see metered/boolean rows from this batch. */
 const sortFeaturesForInsert = <T extends { type: string }>(
@@ -37,13 +38,15 @@ export const computeInsertFeaturesPlan = ({
 	params: UpdateCatalogParams;
 	projected: ProjectedCatalog;
 }): CatalogComputeStep => {
-	const originalById = new Map(
-		ctx.features.map((feature) => [feature.id, feature]),
-	);
-
+	// An entry no current row answers to is a create; an unknown internal_id
+	// falls back to feature_id and inserts too.
 	const entries = sortFeaturesForInsert(
 		(params.features ?? []).filter(
-			(featureParams) => !originalById.has(featureParams.feature_id),
+			(featureParams) =>
+				resolveCurrentFeature({
+					features: ctx.features,
+					entry: featureParams,
+				}) === null,
 		),
 	);
 
@@ -51,8 +54,9 @@ export const computeInsertFeaturesPlan = ({
 	let workingFeatures = [...projected.features];
 
 	for (const featureParams of entries) {
+		const { internal_id: _statedInternalId, ...apiFeature } = featureParams;
 		const dbFeature = featureV1ToDbFeature({
-			apiFeature: { id: featureParams.feature_id, ...featureParams },
+			apiFeature: { id: featureParams.feature_id, ...apiFeature },
 		});
 		const parsedFeature = validateFeature({
 			data: dbFeature,

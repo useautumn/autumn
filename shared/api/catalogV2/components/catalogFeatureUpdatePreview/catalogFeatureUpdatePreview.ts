@@ -13,6 +13,11 @@ export const CatalogFeatureUpdatePreviewReasonSchema = z.object({
 
 export const CatalogFeatureUpdatePreviewSchema = z.object({
 	feature_id: z.string(),
+	internal_id: z.string().nullable().meta({
+		description:
+			"Stable id of the row this preview is about. Null on create — the applied result carries the id the row received.",
+		internal: true,
+	}),
 	name: z.string().optional(),
 	action: CatalogActionSchema,
 	state: z.object({

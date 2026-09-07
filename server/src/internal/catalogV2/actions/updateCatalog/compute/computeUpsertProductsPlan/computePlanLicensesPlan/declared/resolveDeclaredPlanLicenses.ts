@@ -1,14 +1,25 @@
 import { isDeepStrictEqual } from "node:util";
-import type {
-	FullPlanLicense,
-	FullProduct,
-	PlanLicenseParams,
+import {
+	type FullPlanLicense,
+	type FullProduct,
+	licenseCustomizesAreSame,
+	type PlanLicenseParams,
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { PlanLicensePlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { fullProductForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForSlug";
+import { licensePlanCustomize } from "@/internal/licenses/licenseLinkCustomize";
+
+/** The link's actual current overlay vs. its base version — undefined when stock. */
+const currentLinkCustomize = (currentPlanLicense: FullPlanLicense) =>
+	currentPlanLicense.customized && currentPlanLicense.base_product
+		? licensePlanCustomize({
+				product: currentPlanLicense.product,
+				baseProduct: currentPlanLicense.base_product,
+			})
+		: undefined;
 
 const declaredLinkChanged = ({
 	currentPlanLicense,
@@ -19,8 +30,15 @@ const declaredLinkChanged = ({
 	params: PlanLicenseParams;
 	licenseProduct: FullProduct | null;
 }): boolean => {
-	if (params.customize) return true;
-	if (params.customize === null && currentPlanLicense.customized) return true;
+	if (
+		params.customize !== undefined &&
+		!licenseCustomizesAreSame({
+			left: params.customize,
+			right: currentLinkCustomize(currentPlanLicense),
+		})
+	) {
+		return true;
+	}
 	if ((params.included ?? 0) !== currentPlanLicense.included) return true;
 	if ((params.prepaid_only ?? true) !== currentPlanLicense.prepaid_only)
 		return true;
