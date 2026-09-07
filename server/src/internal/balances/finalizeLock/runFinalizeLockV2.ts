@@ -19,6 +19,16 @@ import {
 } from "@/internal/balances/utils/types/redisDeductionError.js";
 import { runRedisFinalizeLockV2 } from "./runRedisFinalizeLockV2.js";
 
+const isBalanceRejection = (error: unknown): boolean => {
+	if (error instanceof InsufficientBalanceError) return true;
+	if (error instanceof RedisDeductionError) {
+		return error.code === RedisDeductionErrorCode.InsufficientBalance;
+	}
+	return (
+		error instanceof Error && error.message.startsWith("INSUFFICIENT_BALANCE|")
+	);
+};
+
 /**
  * V2 finalize. Receives the receipt + claim outcome from the dispatcher
  * (`fetchAndClaimLockReceiptV2` runs pipelined GET + SET NX alongside the
@@ -58,21 +68,16 @@ export const runFinalizeLockV2 = async ({
 	});
 	const { redisInstance, finalValue, lockValue } = finalizeLockContext;
 
-	if (!new Decimal(finalValue).equals(lockValue)) {
-		try {
+	const balanceChanged = !new Decimal(finalValue).equals(lockValue);
+	try {
+		if (balanceChanged) {
 			await runRedisFinalizeLockV2({ ctx, finalizeLockContext });
-		} catch (error) {
-			if (
-				error instanceof InsufficientBalanceError ||
-				(error instanceof RedisDeductionError &&
-					error.code === RedisDeductionErrorCode.InsufficientBalance) ||
-				(error instanceof Error &&
-					error.message.startsWith("INSUFFICIENT_BALANCE|"))
-			) {
-				await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
-			}
-			throw error;
 		}
+	} catch (error) {
+		if (isBalanceRejection(error)) {
+			await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
+		}
+		throw error;
 	}
 
 	try {

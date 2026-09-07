@@ -48,7 +48,9 @@ export const prepareFeatureDeductionV2 = ({
 	const { org, env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
-	if (deduction.enforceOverdueBlock) {
+	const blockOverdueUsage =
+		deduction.enforceOverdueBlock && org.config.block_overdue_entitlements;
+	if (blockOverdueUsage) {
 		fullSubject = getCheckSubject({ ctx, fullSubject });
 	}
 
@@ -64,12 +66,8 @@ export const prepareFeatureDeductionV2 = ({
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
 	});
-	if (
-		deduction.enforceOverdueBlock &&
-		deduction.deduction > 0 &&
-		ctx.org.config.block_overdue_entitlements &&
-		customerEntitlements.length === 0
-	) {
+	const requiresEntitlement = blockOverdueUsage && deduction.deduction > 0;
+	if (requiresEntitlement && customerEntitlements.length === 0) {
 		throw new InsufficientBalanceError({
 			featureId: feature.id,
 			value: deduction.deduction,
