@@ -54,21 +54,27 @@ export const buildProgram = (): Command => {
 			.description("apply autumn.config.ts to your catalog")
 			.option("-y, --yes", "skip confirmation prompts")
 			.option("-d, --dry-run", "preview without applying"),
-	).action(async (options: TargetFlags & { dryRun?: boolean }) => {
-		// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
-		// the config, so reading them after building the client would never see
-		// them — which is what the "put it in your .env" error message promises.
-		loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+	).action(
+		async (options: TargetFlags & { dryRun?: boolean; yes?: boolean }) => {
+			// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
+			// the config, so reading them after building the client would never see
+			// them — which is what the "put it in your .env" error message promises.
+			loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
 
-		const target = resolveTarget(options);
-		await runPush({
-			client: createClient({
-				secretKey: requireSecretKey({ target }),
-				...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
-			}),
-			dryRun: options.dryRun === true,
-		});
-	});
+			const target = resolveTarget(options);
+			// A person at a terminal sees the preview and says yes; `--yes` skips the
+			// question; a script (no TTY) applies straight away, deletions included.
+			const interactive = process.stdin.isTTY === true && options.yes !== true;
+			await runPush({
+				client: createClient({
+					secretKey: requireSecretKey({ target }),
+					...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
+				}),
+				dryRun: options.dryRun === true,
+				...(interactive ? { confirm: confirmApply } : {}),
+			});
+		},
+	);
 
 	withEnvironmentFlags(
 		program
@@ -103,6 +109,18 @@ export const buildProgram = (): Command => {
 		.action(NOT_IMPLEMENTED("3.0"));
 
 	return program;
+};
+
+/** One question on the terminal: apply what the preview showed? */
+const confirmApply = async (): Promise<boolean> => {
+	const { createInterface } = await import("node:readline/promises");
+	const rl = createInterface({ input: process.stdin, output: process.stdout });
+	try {
+		const answer = await rl.question("\nApply these changes? [y/N] ");
+		return /^y(es)?$/i.test(answer.trim());
+	} finally {
+		rl.close();
+	}
 };
 
 export const run = async ({ argv }: { argv: string[] }): Promise<void> => {

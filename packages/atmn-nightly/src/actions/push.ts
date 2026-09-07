@@ -33,6 +33,8 @@ export type PushOptions = {
 	/** Where to write progress. Injected so tests can capture it. */
 	write?: (text: string) => void;
 	migrationLinkBase?: string;
+	/** Asked after the preview, before anything is applied; false aborts. */
+	confirm?: () => Promise<boolean>;
 };
 
 /** The directories a config may live in, nearest first. */
@@ -52,6 +54,7 @@ export const runPush = async ({
 	dryRun = false,
 	write = (text) => process.stdout.write(text),
 	migrationLinkBase,
+	confirm,
 }: PushOptions): Promise<PushResult> => {
 	const dirs = configSearchDirs({ cwd });
 	loadEnvFiles({ dirs });
@@ -75,6 +78,10 @@ export const runPush = async ({
 	}
 	if (dryRun) {
 		write("\nDry run — nothing applied.\n");
+		return { configPath, preview, migrationIds: [] };
+	}
+	if (confirm !== undefined && !(await confirm())) {
+		write("\nNothing applied.\n");
 		return { configPath, preview, migrationIds: [] };
 	}
 
