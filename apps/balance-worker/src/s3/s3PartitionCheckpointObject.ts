@@ -127,7 +127,10 @@ export const checkpointObjectMetadataFor = ({
 	checkpoint,
 	serializedBytes,
 }: {
-	checkpoint: PartitionCheckpointV1;
+	checkpoint: Pick<
+		PartitionCheckpointV1,
+		"schemaVersion" | "contentHash" | "engineSchemaVersion" | "nextOffset"
+	>;
 	serializedBytes: number;
 }): Record<string, string> => ({
 	[metadataKeys.checkpointSchemaVersion]: checkpoint.schemaVersion.toString(),

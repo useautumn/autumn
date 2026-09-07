@@ -57,6 +57,17 @@ export async function completeRuntimeStartup({
 		});
 		assertStartupContinues({ state });
 		state.status = "ready";
+		function readConsumedNextOffset(): bigint | null {
+			return ctx.follower.readProgress({ topic, partition }).consumedNextOffset;
+		}
+		state.checkpointLease =
+			ctx.checkpointMaintenance?.start({
+				topic,
+				partition,
+				signal,
+				readConsumedNextOffset,
+				onStateFailure: onUnavailable,
+			}) ?? null;
 	} catch (cause) {
 		if (state.terminalError) throw state.terminalError;
 		if (state.status === "draining")

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { createPartitionCheckpoint } from "../../../src/checkpoint/partitionCheckpoint.js";
+import {
+	createPartitionCheckpoint,
+	PartitionCheckpointContentHashMismatchError,
+	preparePartitionCheckpoint,
+} from "../../../src/checkpoint/partitionCheckpoint.js";
 import {
 	decodePartitionCheckpoint,
 	encodePartitionCheckpoint,
@@ -22,6 +26,42 @@ const limits = {
 };
 
 describe("partition checkpoint encoding", () => {
+	test("reuses a frozen prepared payload without rereading its original state", async () => {
+		const original = { ...checkpoint };
+		const prepared = preparePartitionCheckpoint({ checkpoint: original });
+		Object.defineProperty(original, "states", {
+			get: () => {
+				throw new Error("Original state must not be read during upload");
+			},
+		});
+
+		const encoded = await encodePartitionCheckpoint({
+			checkpoint: prepared,
+			limits,
+		});
+
+		expect(Object.isFrozen(prepared)).toBe(true);
+		expect(encoded.serializedBytes).toBe(prepared.serializedBytes);
+		await expect(
+			decodePartitionCheckpoint({ body: encoded.body, limits }),
+		).resolves.toEqual(checkpoint);
+		await expect(
+			encodePartitionCheckpoint({
+				checkpoint: prepared,
+				limits: { ...limits, maxSerializedBytes: 10 },
+			}),
+		).rejects.toMatchObject({ limitName: "serialized_bytes" });
+	});
+
+	test("still validates the hash when given an unprepared checkpoint", async () => {
+		await expect(
+			encodePartitionCheckpoint({
+				checkpoint: { ...checkpoint, nextOffset: 43n },
+				limits,
+			}),
+		).rejects.toBeInstanceOf(PartitionCheckpointContentHashMismatchError);
+	});
+
 	test("round-trips the canonical checkpoint through gzip", async () => {
 		const encoded = await encodePartitionCheckpoint({ checkpoint, limits });
 

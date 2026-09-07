@@ -1,4 +1,5 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
+import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type {
 	OwnedPartitionFollowerProgress,
 	OwnedPartitionHealth,
@@ -53,6 +54,7 @@ export type PartitionRuntimeDependencies = {
 	bootstrapper: PartitionBootstrapper;
 	partitionResolver: MeteringPartitionResolver;
 	trackReceiptPolicy: TrackReceiptPolicy;
+	checkpointMaintenance?: PartitionCheckpointMaintenance;
 };
 
 export type PartitionRuntimeConfig = {

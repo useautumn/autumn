@@ -10,6 +10,7 @@
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:kafka": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/kafka",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
+		"benchmark:checkpoint": "bun --config=./bunfig.toml tests/benchmarks/checkpoint-capture.ts",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {

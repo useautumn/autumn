@@ -1,4 +1,5 @@
 import type { PartitionRuntimeStatus } from "../runtime/types/partitionRuntimeState.js";
+import type { PartitionCheckpointHealth } from "./partitionCheckpointHealth.js";
 
 export type OwnedPartitionHealth = {
 	topic: string;
@@ -9,6 +10,7 @@ export type OwnedPartitionHealth = {
 	highWatermark: bigint | null;
 	lag: bigint | null;
 	failureReason: string | null;
+	checkpoint?: PartitionCheckpointHealth;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<
