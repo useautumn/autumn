@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -52,9 +53,19 @@ export const attachDefaultProductsToEntities = async ({
 				},
 			}),
 		);
+		// An entity default mints its pool like any other attach; this fills the
+		// incoming products' pooled balances in place.
+		const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+			ctx,
+			fullCustomer: entityFullCustomer,
+			incomingCustomerProducts: insertCustomerProducts,
+			now: currentEpochMs,
+		});
+
 		const autumnBillingPlan = {
 			customerId: fullCustomer.id ?? "",
 			insertCustomerProducts,
+			pooledBalancePlan,
 		};
 
 		await executeAutumnBillingPlan({

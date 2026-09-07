@@ -281,16 +281,9 @@ export class ProductService {
 						: undefined,
 				inIds ? inArray(products.id, inIds) : undefined,
 			),
-			with: {
-				entitlements: {
-					with: {
-						feature: true,
-					},
-					where: eq(entitlements.is_custom, false),
-				},
-				prices: { where: eq(prices.is_custom, false) },
-				free_trials: { where: eq(freeTrials.is_custom, false) },
-			},
+			// A default plan is applied with initFullCustomerProduct, which reads its
+			// license links — a plan loaded without them applies with no seats.
+			with: composeProductWithLicensesQuery(),
 		})) as FullProduct[];
 
 		parseFreeTrials({ products: prods });
