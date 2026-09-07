@@ -1,9 +1,11 @@
 import { gunzip, gzip } from "node:zlib";
 import {
 	InvalidPartitionCheckpointError,
+	isPreparedPartitionCheckpoint,
 	type PartitionCheckpointV1,
+	type PreparedPartitionCheckpoint,
 	parsePartitionCheckpoint,
-	serializePartitionCheckpoint,
+	preparePartitionCheckpoint,
 } from "./partitionCheckpoint.js";
 
 export type PartitionCheckpointBodyLimits = {
@@ -98,7 +100,7 @@ export const encodePartitionCheckpoint = async ({
 	checkpoint,
 	limits,
 }: {
-	checkpoint: PartitionCheckpointV1;
+	checkpoint: PartitionCheckpointV1 | PreparedPartitionCheckpoint;
 	limits: PartitionCheckpointBodyLimits;
 }): Promise<{
 	body: Uint8Array;
@@ -106,8 +108,10 @@ export const encodePartitionCheckpoint = async ({
 	serializedBytes: number;
 }> => {
 	assertPartitionCheckpointBodyLimits({ limits });
-	const serialized = serializePartitionCheckpoint({ checkpoint });
-	const serializedBody = Buffer.from(serialized, "utf8");
+	const prepared = isPreparedPartitionCheckpoint(checkpoint)
+		? checkpoint
+		: preparePartitionCheckpoint({ checkpoint });
+	const serializedBody = Buffer.from(prepared.serialized, "utf8");
 	assertWithinLimit({
 		limitName: "serialized_bytes",
 		limit: limits.maxSerializedBytes,

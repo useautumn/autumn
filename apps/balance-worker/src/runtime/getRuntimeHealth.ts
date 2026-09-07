@@ -13,7 +13,7 @@ export function getRuntimeHealth({
 	state,
 }: PartitionRuntimeScope): OwnedPartitionHealth {
 	const { topic, partition } = ctx.config;
-	return ownedPartitionHealthOf({
+	const health = ownedPartitionHealthOf({
 		topic,
 		partition,
 		status: state.status,
@@ -21,6 +21,9 @@ export function getRuntimeHealth({
 		...ctx.follower.readProgress({ topic, partition }),
 		failureReason: state.failureReason,
 	});
+	return state.checkpointLease
+		? { ...health, checkpoint: state.checkpointLease.getHealth() }
+		: health;
 }
 
 export function assertRuntimeReady({

@@ -152,6 +152,7 @@ function createRuntimeState(): PartitionRuntimeState {
 		disconnectProducerPromise: null,
 		recoveryPromise: null,
 		startupAbortController: new AbortController(),
+		checkpointLease: null,
 		unavailableListeners: new Set(),
 	};
 }
