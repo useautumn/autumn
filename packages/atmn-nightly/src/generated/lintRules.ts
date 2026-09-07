@@ -78,6 +78,71 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"features.creditSchema.dimensions": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
+	},
+	"features.creditSchema.dimensions.*": {
+		variants: {
+			on: "tierBehavior",
+			byValue: {
+				graduated: {
+					required: ["match", "tierBehavior", "tiers"],
+					fields: {
+						priority: {
+							minimum: -9007199254740991,
+							maximum: 9007199254740991,
+						},
+						tierBehavior: {
+							enum: ["graduated"],
+						},
+						tiers: {
+							minItems: 1,
+						},
+					},
+				},
+			},
+			fallback: {
+				required: ["creditCost", "match"],
+				fields: {
+					priority: {
+						minimum: -9007199254740991,
+						maximum: 9007199254740991,
+					},
+					creditCost: {
+						minimum: 0,
+					},
+				},
+			},
+		},
+	},
+	"features.creditSchema.dimensions.*.tiers": {
+		required: ["creditCost", "to"],
+		fields: {
+			to: {
+				exclusiveMinimum: 0,
+			},
+			creditCost: {
+				minimum: 0,
+			},
+		},
+	},
+	"features.creditSchema.multipliers": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
+	},
+	"features.creditSchema.multipliers.*": {
+		required: ["match"],
+		fields: {
+			factor: {
+				exclusiveMinimum: 0,
+			},
+		},
+	},
 	"features.creditSchema.tiers": {
 		required: ["creditCost", "to"],
 		fields: {
@@ -226,6 +291,18 @@ export const LINT_RULES: LintRules = {
 					"remaining_percentage",
 				],
 			},
+			basis: {
+				enum: ["balance", "included", "recurring", "usage_limit"],
+			},
+		},
+	},
+	"plans.billingControls.usageAlerts.filter": {
+		required: ["properties"],
+	},
+	"plans.billingControls.usageAlerts.filter.properties": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
 		},
 	},
 	"plans.billingControls.usageLimits": {
@@ -343,6 +420,82 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.items.featureOverride.creditSchema.dimensions": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
+	},
+	"plans.items.featureOverride.creditSchema.dimensions.*": {
+		variants: {
+			on: "tierBehavior",
+			byValue: {
+				graduated: {
+					required: ["match", "tierBehavior", "tiers"],
+					fields: {
+						priority: {
+							minimum: -9007199254740991,
+							maximum: 9007199254740991,
+						},
+						tierBehavior: {
+							enum: ["graduated"],
+						},
+						tiers: {
+							minItems: 1,
+						},
+					},
+				},
+			},
+			fallback: {
+				required: ["creditCost", "match"],
+				fields: {
+					priority: {
+						minimum: -9007199254740991,
+						maximum: 9007199254740991,
+					},
+					creditCost: {
+						minimum: 0,
+					},
+				},
+			},
+		},
+	},
+	"plans.items.featureOverride.creditSchema.dimensions.*.tiers": {
+		required: ["creditCost", "to"],
+		fields: {
+			to: {
+				exclusiveMinimum: 0,
+			},
+			creditCost: {
+				minimum: 0,
+			},
+		},
+	},
+	"plans.items.featureOverride.creditSchema.multipliers": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
+	},
+	"plans.items.featureOverride.creditSchema.multipliers.*": {
+		required: ["match"],
+		fields: {
+			factor: {
+				exclusiveMinimum: 0,
+			},
+		},
+	},
+	"plans.items.featureOverride.creditSchema.tiers": {
+		required: ["creditCost", "to"],
+		fields: {
+			to: {
+				exclusiveMinimum: 0,
+			},
+			creditCost: {
+				minimum: 0,
+			},
+		},
+	},
 	"plans.items.price": {
 		label: "price",
 		required: ["billingMethod", "interval"],
@@ -447,6 +600,124 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.licenses.customize.addItems.featureOverride.creditSchema": {
+		variants: {
+			on: "tierBehavior",
+			byValue: {
+				graduated: {
+					required: ["meteredFeatureId", "tierBehavior", "tiers"],
+					fields: {
+						meteredFeatureId: {
+							minLength: 1,
+						},
+						billingUnits: {
+							exclusiveMinimum: 0,
+						},
+						tierBehavior: {
+							enum: ["graduated"],
+						},
+						tiers: {
+							minItems: 1,
+						},
+					},
+				},
+			},
+			fallback: {
+				required: ["creditCost", "meteredFeatureId"],
+				fields: {
+					meteredFeatureId: {
+						minLength: 1,
+					},
+					billingUnits: {
+						exclusiveMinimum: 0,
+					},
+					creditCost: {
+						minimum: 0,
+					},
+				},
+			},
+		},
+	},
+	"plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
+	},
+	"plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*":
+		{
+			variants: {
+				on: "tierBehavior",
+				byValue: {
+					graduated: {
+						required: ["match", "tierBehavior", "tiers"],
+						fields: {
+							priority: {
+								minimum: -9007199254740991,
+								maximum: 9007199254740991,
+							},
+							tierBehavior: {
+								enum: ["graduated"],
+							},
+							tiers: {
+								minItems: 1,
+							},
+						},
+					},
+				},
+				fallback: {
+					required: ["creditCost", "match"],
+					fields: {
+						priority: {
+							minimum: -9007199254740991,
+							maximum: 9007199254740991,
+						},
+						creditCost: {
+							minimum: 0,
+						},
+					},
+				},
+			},
+		},
+	"plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.tiers":
+		{
+			required: ["creditCost", "to"],
+			fields: {
+				to: {
+					exclusiveMinimum: 0,
+				},
+				creditCost: {
+					minimum: 0,
+				},
+			},
+		},
+	"plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers":
+		{
+			keys: {
+				minLength: 1,
+				maxLength: 64,
+			},
+		},
+	"plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*":
+		{
+			required: ["match"],
+			fields: {
+				factor: {
+					exclusiveMinimum: 0,
+				},
+			},
+		},
+	"plans.licenses.customize.addItems.featureOverride.creditSchema.tiers": {
+		required: ["creditCost", "to"],
+		fields: {
+			to: {
+				exclusiveMinimum: 0,
+			},
+			creditCost: {
+				minimum: 0,
+			},
+		},
+	},
 	"plans.licenses.customize.addItems.price": {
 		required: ["billingMethod", "interval"],
 		fields: {
@@ -460,6 +731,15 @@ export const LINT_RULES: LintRules = {
 				enum: ["prepaid", "usage_based"],
 			},
 		},
+	},
+	"plans.licenses.customize.addItems.price.additionalCurrencies": {
+		required: ["amount", "currency"],
+	},
+	"plans.licenses.customize.addItems.price.tiers": {
+		required: ["to"],
+	},
+	"plans.licenses.customize.addItems.price.tiers.additionalCurrencies": {
+		required: ["currency"],
 	},
 	"plans.licenses.customize.addItems.proration": {
 		required: ["onDecrease", "onIncrease"],
@@ -664,6 +944,124 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.addItems.featureOverride.creditSchema": {
+		variants: {
+			on: "tierBehavior",
+			byValue: {
+				graduated: {
+					required: ["meteredFeatureId", "tierBehavior", "tiers"],
+					fields: {
+						meteredFeatureId: {
+							minLength: 1,
+						},
+						billingUnits: {
+							exclusiveMinimum: 0,
+						},
+						tierBehavior: {
+							enum: ["graduated"],
+						},
+						tiers: {
+							minItems: 1,
+						},
+					},
+				},
+			},
+			fallback: {
+				required: ["creditCost", "meteredFeatureId"],
+				fields: {
+					meteredFeatureId: {
+						minLength: 1,
+					},
+					billingUnits: {
+						exclusiveMinimum: 0,
+					},
+					creditCost: {
+						minimum: 0,
+					},
+				},
+			},
+		},
+	},
+	"plans.variants.customize.addItems.featureOverride.creditSchema.dimensions": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
+	},
+	"plans.variants.customize.addItems.featureOverride.creditSchema.dimensions.*":
+		{
+			variants: {
+				on: "tierBehavior",
+				byValue: {
+					graduated: {
+						required: ["match", "tierBehavior", "tiers"],
+						fields: {
+							priority: {
+								minimum: -9007199254740991,
+								maximum: 9007199254740991,
+							},
+							tierBehavior: {
+								enum: ["graduated"],
+							},
+							tiers: {
+								minItems: 1,
+							},
+						},
+					},
+				},
+				fallback: {
+					required: ["creditCost", "match"],
+					fields: {
+						priority: {
+							minimum: -9007199254740991,
+							maximum: 9007199254740991,
+						},
+						creditCost: {
+							minimum: 0,
+						},
+					},
+				},
+			},
+		},
+	"plans.variants.customize.addItems.featureOverride.creditSchema.dimensions.*.tiers":
+		{
+			required: ["creditCost", "to"],
+			fields: {
+				to: {
+					exclusiveMinimum: 0,
+				},
+				creditCost: {
+					minimum: 0,
+				},
+			},
+		},
+	"plans.variants.customize.addItems.featureOverride.creditSchema.multipliers":
+		{
+			keys: {
+				minLength: 1,
+				maxLength: 64,
+			},
+		},
+	"plans.variants.customize.addItems.featureOverride.creditSchema.multipliers.*":
+		{
+			required: ["match"],
+			fields: {
+				factor: {
+					exclusiveMinimum: 0,
+				},
+			},
+		},
+	"plans.variants.customize.addItems.featureOverride.creditSchema.tiers": {
+		required: ["creditCost", "to"],
+		fields: {
+			to: {
+				exclusiveMinimum: 0,
+			},
+			creditCost: {
+				minimum: 0,
+			},
+		},
+	},
 	"plans.variants.customize.addItems.price": {
 		required: ["billingMethod", "interval"],
 		fields: {
@@ -677,6 +1075,15 @@ export const LINT_RULES: LintRules = {
 				enum: ["prepaid", "usage_based"],
 			},
 		},
+	},
+	"plans.variants.customize.addItems.price.additionalCurrencies": {
+		required: ["amount", "currency"],
+	},
+	"plans.variants.customize.addItems.price.tiers": {
+		required: ["to"],
+	},
+	"plans.variants.customize.addItems.price.tiers.additionalCurrencies": {
+		required: ["currency"],
 	},
 	"plans.variants.customize.addItems.proration": {
 		required: ["onDecrease", "onIncrease"],
@@ -778,6 +1185,18 @@ export const LINT_RULES: LintRules = {
 					"remaining_percentage",
 				],
 			},
+			basis: {
+				enum: ["balance", "included", "recurring", "usage_limit"],
+			},
+		},
+	},
+	"plans.variants.customize.billingControls.usageAlerts.filter": {
+		required: ["properties"],
+	},
+	"plans.variants.customize.billingControls.usageAlerts.filter.properties": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
 		},
 	},
 	"plans.variants.customize.billingControls.usageLimits": {
@@ -796,6 +1215,12 @@ export const LINT_RULES: LintRules = {
 	},
 	"plans.variants.customize.billingControls.usageLimits.filter": {
 		required: ["properties"],
+	},
+	"plans.variants.customize.billingControls.usageLimits.filter.properties": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
 	},
 	"plans.variants.customize.freeTrial": {
 		required: ["durationLength"],
@@ -816,6 +1241,121 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.items.featureOverride.creditSchema": {
+		variants: {
+			on: "tierBehavior",
+			byValue: {
+				graduated: {
+					required: ["meteredFeatureId", "tierBehavior", "tiers"],
+					fields: {
+						meteredFeatureId: {
+							minLength: 1,
+						},
+						billingUnits: {
+							exclusiveMinimum: 0,
+						},
+						tierBehavior: {
+							enum: ["graduated"],
+						},
+						tiers: {
+							minItems: 1,
+						},
+					},
+				},
+			},
+			fallback: {
+				required: ["creditCost", "meteredFeatureId"],
+				fields: {
+					meteredFeatureId: {
+						minLength: 1,
+					},
+					billingUnits: {
+						exclusiveMinimum: 0,
+					},
+					creditCost: {
+						minimum: 0,
+					},
+				},
+			},
+		},
+	},
+	"plans.variants.customize.items.featureOverride.creditSchema.dimensions": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
+	},
+	"plans.variants.customize.items.featureOverride.creditSchema.dimensions.*": {
+		variants: {
+			on: "tierBehavior",
+			byValue: {
+				graduated: {
+					required: ["match", "tierBehavior", "tiers"],
+					fields: {
+						priority: {
+							minimum: -9007199254740991,
+							maximum: 9007199254740991,
+						},
+						tierBehavior: {
+							enum: ["graduated"],
+						},
+						tiers: {
+							minItems: 1,
+						},
+					},
+				},
+			},
+			fallback: {
+				required: ["creditCost", "match"],
+				fields: {
+					priority: {
+						minimum: -9007199254740991,
+						maximum: 9007199254740991,
+					},
+					creditCost: {
+						minimum: 0,
+					},
+				},
+			},
+		},
+	},
+	"plans.variants.customize.items.featureOverride.creditSchema.dimensions.*.tiers":
+		{
+			required: ["creditCost", "to"],
+			fields: {
+				to: {
+					exclusiveMinimum: 0,
+				},
+				creditCost: {
+					minimum: 0,
+				},
+			},
+		},
+	"plans.variants.customize.items.featureOverride.creditSchema.multipliers": {
+		keys: {
+			minLength: 1,
+			maxLength: 64,
+		},
+	},
+	"plans.variants.customize.items.featureOverride.creditSchema.multipliers.*": {
+		required: ["match"],
+		fields: {
+			factor: {
+				exclusiveMinimum: 0,
+			},
+		},
+	},
+	"plans.variants.customize.items.featureOverride.creditSchema.tiers": {
+		required: ["creditCost", "to"],
+		fields: {
+			to: {
+				exclusiveMinimum: 0,
+			},
+			creditCost: {
+				minimum: 0,
+			},
+		},
+	},
 	"plans.variants.customize.items.price": {
 		required: ["billingMethod", "interval"],
 		fields: {
@@ -829,6 +1369,15 @@ export const LINT_RULES: LintRules = {
 				enum: ["prepaid", "usage_based"],
 			},
 		},
+	},
+	"plans.variants.customize.items.price.additionalCurrencies": {
+		required: ["amount", "currency"],
+	},
+	"plans.variants.customize.items.price.tiers": {
+		required: ["to"],
+	},
+	"plans.variants.customize.items.price.tiers.additionalCurrencies": {
+		required: ["currency"],
 	},
 	"plans.variants.customize.items.proration": {
 		required: ["onDecrease", "onIncrease"],
@@ -929,6 +1478,205 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.upsertLicenses.customize.addItems": {
+		required: ["featureId"],
+		fields: {
+			included: {
+				maximum: 10000000000000,
+			},
+		},
+	},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema":
+		{
+			variants: {
+				on: "tierBehavior",
+				byValue: {
+					graduated: {
+						required: ["meteredFeatureId", "tierBehavior", "tiers"],
+						fields: {
+							meteredFeatureId: {
+								minLength: 1,
+							},
+							billingUnits: {
+								exclusiveMinimum: 0,
+							},
+							tierBehavior: {
+								enum: ["graduated"],
+							},
+							tiers: {
+								minItems: 1,
+							},
+						},
+					},
+				},
+				fallback: {
+					required: ["creditCost", "meteredFeatureId"],
+					fields: {
+						meteredFeatureId: {
+							minLength: 1,
+						},
+						billingUnits: {
+							exclusiveMinimum: 0,
+						},
+						creditCost: {
+							minimum: 0,
+						},
+					},
+				},
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions":
+		{
+			keys: {
+				minLength: 1,
+				maxLength: 64,
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*":
+		{
+			variants: {
+				on: "tierBehavior",
+				byValue: {
+					graduated: {
+						required: ["match", "tierBehavior", "tiers"],
+						fields: {
+							priority: {
+								minimum: -9007199254740991,
+								maximum: 9007199254740991,
+							},
+							tierBehavior: {
+								enum: ["graduated"],
+							},
+							tiers: {
+								minItems: 1,
+							},
+						},
+					},
+				},
+				fallback: {
+					required: ["creditCost", "match"],
+					fields: {
+						priority: {
+							minimum: -9007199254740991,
+							maximum: 9007199254740991,
+						},
+						creditCost: {
+							minimum: 0,
+						},
+					},
+				},
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.tiers":
+		{
+			required: ["creditCost"],
+			fields: {
+				creditCost: {
+					minimum: 0,
+				},
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers":
+		{
+			keys: {
+				minLength: 1,
+				maxLength: 64,
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*":
+		{
+			required: ["match"],
+			fields: {
+				factor: {
+					exclusiveMinimum: 0,
+				},
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.tiers":
+		{
+			required: ["creditCost", "to"],
+			fields: {
+				to: {
+					exclusiveMinimum: 0,
+				},
+				creditCost: {
+					minimum: 0,
+				},
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.price": {
+		required: ["billingMethod", "interval"],
+		fields: {
+			tierBehavior: {
+				enum: ["graduated", "volume"],
+			},
+			interval: {
+				enum: ["one_off", "week", "month", "quarter", "semi_annual", "year"],
+			},
+			billingMethod: {
+				enum: ["prepaid", "usage_based"],
+			},
+		},
+	},
+	"plans.variants.customize.upsertLicenses.customize.addItems.price.additionalCurrencies":
+		{
+			required: ["amount", "currency"],
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.price.tiers": {
+		required: ["to"],
+	},
+	"plans.variants.customize.upsertLicenses.customize.addItems.price.tiers.additionalCurrencies":
+		{
+			required: ["currency"],
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.proration": {
+		required: ["onDecrease", "onIncrease"],
+		fields: {
+			onIncrease: {
+				enum: [
+					"bill_immediately",
+					"prorate_immediately",
+					"prorate_next_cycle",
+					"bill_next_cycle",
+				],
+			},
+			onDecrease: {
+				enum: [
+					"prorate",
+					"prorate_immediately",
+					"prorate_next_cycle",
+					"none",
+					"no_prorations",
+				],
+			},
+		},
+	},
+	"plans.variants.customize.upsertLicenses.customize.addItems.reset": {
+		required: ["interval"],
+		fields: {
+			interval: {
+				enum: [
+					"one_off",
+					"minute",
+					"hour",
+					"day",
+					"week",
+					"month",
+					"quarter",
+					"semi_annual",
+					"year",
+				],
+			},
+		},
+	},
+	"plans.variants.customize.upsertLicenses.customize.addItems.rollover": {
+		required: ["expiryDurationType"],
+		fields: {
+			expiryDurationType: {
+				enum: ["month", "forever"],
+			},
+		},
+	},
 	"plans.variants.customize.upsertLicenses.customize.price": {
 		required: ["amount", "interval"],
 		fields: {
@@ -937,11 +1685,51 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.upsertLicenses.customize.price.additionalCurrencies":
+		{
+			required: ["amount", "currency"],
+		},
+	"plans.variants.customize.upsertLicenses.customize.removeItems": {
+		fields: {
+			billingMethod: {
+				enum: ["prepaid", "usage_based"],
+			},
+			interval: {
+				enum: [
+					"one_off",
+					"week",
+					"month",
+					"quarter",
+					"semi_annual",
+					"year",
+					"minute",
+					"hour",
+					"day",
+				],
+			},
+			intervalCount: {
+				minimum: -9007199254740991,
+				maximum: 9007199254740991,
+				exclusiveMinimum: 0,
+			},
+			included: {
+				maximum: 10000000000000,
+			},
+		},
+	},
 	"plans.variants.processors.revenuecat": {
 		required: ["products"],
 	},
 	"plans.variants.processors.revenuecat.products": {
 		required: ["productId"],
+	},
+	"plans.variants.processors.revenuecat.products.featureQuantities": {
+		required: ["featureId"],
+		fields: {
+			quantity: {
+				minimum: 0,
+			},
+		},
 	},
 	"plans.variants.processors.stripe": {
 		required: ["productId"],

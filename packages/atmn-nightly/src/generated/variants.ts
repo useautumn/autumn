@@ -31,8 +31,8 @@ export type Variant = {
 				productId: string;
 				/** Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units. */
 				featureQuantities?: Array<{
-					featureId?: unknown;
-					quantity?: unknown;
+					featureId: string;
+					quantity?: number;
 				}>;
 			}>;
 		} | null;
@@ -95,15 +95,25 @@ export type Variant = {
 				amount?: number;
 				/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
 				additionalCurrencies?: Array<{
-					currency?: unknown;
-					amount?: unknown;
+					/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+					currency: string;
+					/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
+					amount: number;
 				}>;
 				/** Tiered pricing. Either 'amount' or 'tiers' is required. */
 				tiers?: Array<{
-					to?: unknown;
-					amount?: unknown;
-					flatAmount?: unknown;
-					additionalCurrencies?: unknown;
+					to: number | "inf";
+					amount?: number;
+					flatAmount?: number;
+					/** Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies. */
+					additionalCurrencies?: Array<{
+						/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+						currency: string;
+						/** Per-unit amount for this tier in this currency. */
+						amount?: number;
+						/** Flat amount for this tier in this currency, if the tier uses one. */
+						flatAmount?: number;
+					}>;
 				}>;
 				tierBehavior?: "graduated" | "volume";
 				/** Billing interval. For consumable features, should match reset.interval. */
@@ -153,7 +163,103 @@ export type Variant = {
 			/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 			featureOverride?: {
 				/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
-				creditSchema?: Array<unknown>;
+				creditSchema?: Array<
+					| {
+							/** ID of the metered feature that draws from this credit system. */
+							meteredFeatureId: string;
+							/** Number of metered-feature units priced together. Defaults to one when omitted. */
+							billingUnits?: number;
+							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
+							dimensions?: Record<
+								string,
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										tierBehavior: "graduated";
+										tiers: Array<{
+											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+											to: number | "inf";
+											/** Credits consumed per billing-unit group within this tier. */
+											creditCost: number;
+										}>;
+								  }
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										/** Credits consumed per billing-unit group when this dimension matches. */
+										creditCost: number;
+								  }
+							>;
+							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
+							multipliers?: Record<
+								string,
+								{
+									/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+									match: Record<string, string | number | boolean>;
+									/** Multiplies the matched rate. All matching multipliers stack. */
+									factor?: number;
+									/** Added to the rate after every factor is applied, in credits per billing-unit group. */
+									add?: number;
+								}
+							>;
+							tierBehavior: "graduated";
+							tiers: Array<{
+								/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+								to: number | "inf";
+								/** Credits consumed per billing-unit group within this tier. */
+								creditCost: number;
+							}>;
+					  }
+					| {
+							/** ID of the metered feature that draws from this credit system. */
+							meteredFeatureId: string;
+							/** Number of metered-feature units priced together. Defaults to one when omitted. */
+							billingUnits?: number;
+							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
+							dimensions?: Record<
+								string,
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										tierBehavior: "graduated";
+										tiers: Array<{
+											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+											to: number | "inf";
+											/** Credits consumed per billing-unit group within this tier. */
+											creditCost: number;
+										}>;
+								  }
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										/** Credits consumed per billing-unit group when this dimension matches. */
+										creditCost: number;
+								  }
+							>;
+							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
+							multipliers?: Record<
+								string,
+								{
+									/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+									match: Record<string, string | number | boolean>;
+									/** Multiplies the matched rate. All matching multipliers stack. */
+									factor?: number;
+									/** Added to the rate after every factor is applied, in credits per billing-unit group. */
+									add?: number;
+								}
+							>;
+							/** Credits consumed per billing-unit group. */
+							creditCost: number;
+					  }
+				>;
 			};
 			entityFeatureId?: string;
 		}>;
@@ -189,15 +295,25 @@ export type Variant = {
 				amount?: number;
 				/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
 				additionalCurrencies?: Array<{
-					currency?: unknown;
-					amount?: unknown;
+					/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+					currency: string;
+					/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
+					amount: number;
 				}>;
 				/** Tiered pricing. Either 'amount' or 'tiers' is required. */
 				tiers?: Array<{
-					to?: unknown;
-					amount?: unknown;
-					flatAmount?: unknown;
-					additionalCurrencies?: unknown;
+					to: number | "inf";
+					amount?: number;
+					flatAmount?: number;
+					/** Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies. */
+					additionalCurrencies?: Array<{
+						/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+						currency: string;
+						/** Per-unit amount for this tier in this currency. */
+						amount?: number;
+						/** Flat amount for this tier in this currency, if the tier uses one. */
+						flatAmount?: number;
+					}>;
 				}>;
 				tierBehavior?: "graduated" | "volume";
 				/** Billing interval. For consumable features, should match reset.interval. */
@@ -247,7 +363,103 @@ export type Variant = {
 			/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 			featureOverride?: {
 				/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
-				creditSchema?: Array<unknown>;
+				creditSchema?: Array<
+					| {
+							/** ID of the metered feature that draws from this credit system. */
+							meteredFeatureId: string;
+							/** Number of metered-feature units priced together. Defaults to one when omitted. */
+							billingUnits?: number;
+							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
+							dimensions?: Record<
+								string,
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										tierBehavior: "graduated";
+										tiers: Array<{
+											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+											to: number | "inf";
+											/** Credits consumed per billing-unit group within this tier. */
+											creditCost: number;
+										}>;
+								  }
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										/** Credits consumed per billing-unit group when this dimension matches. */
+										creditCost: number;
+								  }
+							>;
+							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
+							multipliers?: Record<
+								string,
+								{
+									/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+									match: Record<string, string | number | boolean>;
+									/** Multiplies the matched rate. All matching multipliers stack. */
+									factor?: number;
+									/** Added to the rate after every factor is applied, in credits per billing-unit group. */
+									add?: number;
+								}
+							>;
+							tierBehavior: "graduated";
+							tiers: Array<{
+								/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+								to: number | "inf";
+								/** Credits consumed per billing-unit group within this tier. */
+								creditCost: number;
+							}>;
+					  }
+					| {
+							/** ID of the metered feature that draws from this credit system. */
+							meteredFeatureId: string;
+							/** Number of metered-feature units priced together. Defaults to one when omitted. */
+							billingUnits?: number;
+							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
+							dimensions?: Record<
+								string,
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										tierBehavior: "graduated";
+										tiers: Array<{
+											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+											to: number | "inf";
+											/** Credits consumed per billing-unit group within this tier. */
+											creditCost: number;
+										}>;
+								  }
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										/** Credits consumed per billing-unit group when this dimension matches. */
+										creditCost: number;
+								  }
+							>;
+							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
+							multipliers?: Record<
+								string,
+								{
+									/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+									match: Record<string, string | number | boolean>;
+									/** Multiplies the matched rate. All matching multipliers stack. */
+									factor?: number;
+									/** Added to the rate after every factor is applied, in credits per billing-unit group. */
+									add?: number;
+								}
+							>;
+							/** Credits consumed per billing-unit group. */
+							creditCost: number;
+					  }
+				>;
 			};
 			entityFeatureId?: string;
 		}>;
@@ -343,7 +555,7 @@ export type Variant = {
 				anchor?: "billing_cycle" | "utc";
 				/** When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature. */
 				filter?: {
-					properties: Record<string, unknown>;
+					properties: Record<string, string | number | boolean>;
 				};
 			}>;
 			/** List of usage alert configurations per feature. */
@@ -360,6 +572,12 @@ export type Variant = {
 					| "usage_percentage"
 					| "remaining"
 					| "remaining_percentage";
+				/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+				basis?: "balance" | "included" | "recurring" | "usage_limit";
+				/** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
+				filter?: {
+					properties: Record<string, string | number | boolean>;
+				};
 				/** Optional user-defined label to distinguish multiple alerts on the same feature. */
 				name?: string;
 			}>;
@@ -392,28 +610,238 @@ export type Variant = {
 					/** Number of intervals per billing cycle. Defaults to 1. */
 					intervalCount?: number;
 					/** Base price amounts in additional currencies. The base 'amount' is in the org's default currency. */
-					additionalCurrencies?: Array<unknown>;
+					additionalCurrencies?: Array<{
+						/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+						currency: string;
+						/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
+						amount: number;
+					}>;
 				} | null;
 				addItems?: Array<{
-					featureId?: unknown;
-					included?: unknown;
-					unlimited?: unknown;
-					pooled?: unknown;
-					reset?: unknown;
-					price?: unknown;
-					proration?: unknown;
-					rollover?: unknown;
-					featureOverride?: unknown;
-					entityFeatureId?: unknown;
-					entitlementId?: unknown;
-					priceId?: unknown;
+					/** The ID of the feature to configure. */
+					featureId: string;
+					/** Number of free units included. Balance resets to this each interval for consumable features. */
+					included?: number;
+					/** If true, customer has unlimited access to this feature. */
+					unlimited?: boolean;
+					/** Whether entity-level grants contribute to a shared customer balance. */
+					pooled?: boolean;
+					/** Reset configuration for consumable features. Omit for non-consumable features like seats. */
+					reset?: {
+						/** Interval at which balance resets (e.g. 'month', 'year'). For consumable features only. */
+						interval:
+							| "one_off"
+							| "minute"
+							| "hour"
+							| "day"
+							| "week"
+							| "month"
+							| "quarter"
+							| "semi_annual"
+							| "year";
+						/** Number of intervals between resets. Defaults to 1. */
+						intervalCount?: number;
+					};
+					/** Pricing for usage beyond included units. Omit for free features. */
+					price?: {
+						/** Price per billing_units after included usage. Either 'amount' or 'tiers' is required. */
+						amount?: number;
+						/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
+						additionalCurrencies?: Array<{
+							/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+							currency: string;
+							/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
+							amount: number;
+						}>;
+						/** Tiered pricing. Either 'amount' or 'tiers' is required. */
+						tiers?: Array<{
+							to: number | "inf";
+							amount?: number;
+							flatAmount?: number;
+							/** Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies. */
+							additionalCurrencies?: Array<{
+								/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+								currency: string;
+								/** Per-unit amount for this tier in this currency. */
+								amount?: number;
+								/** Flat amount for this tier in this currency, if the tier uses one. */
+								flatAmount?: number;
+							}>;
+						}>;
+						tierBehavior?: "graduated" | "volume";
+						/** Billing interval. For consumable features, should match reset.interval. */
+						interval:
+							| "one_off"
+							| "week"
+							| "month"
+							| "quarter"
+							| "semi_annual"
+							| "year";
+						/** Number of intervals per billing cycle. Defaults to 1. */
+						intervalCount?: number;
+						/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+						billingUnits?: number;
+						/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
+						billingMethod: "prepaid" | "usage_based";
+						/** Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit. */
+						maxPurchase?: number | null;
+					};
+					/** Proration settings for prepaid features. Controls mid-cycle quantity change billing. */
+					proration?: {
+						/** Billing behavior when quantity increases mid-cycle. */
+						onIncrease:
+							| "bill_immediately"
+							| "prorate_immediately"
+							| "prorate_next_cycle"
+							| "bill_next_cycle";
+						/** Credit behavior when quantity decreases mid-cycle. */
+						onDecrease:
+							| "prorate"
+							| "prorate_immediately"
+							| "prorate_next_cycle"
+							| "none"
+							| "no_prorations";
+					};
+					/** Rollover config for unused units. If set, unused included units carry over. */
+					rollover?: {
+						/** Max rollover units. Omit for unlimited rollover. */
+						max?: number;
+						/** Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max. */
+						maxPercentage?: number;
+						/** When rolled over units expire. */
+						expiryDurationType: "month" | "forever";
+						/** Number of periods before expiry. */
+						expiryDurationLength?: number;
+					};
+					/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
+					featureOverride?: {
+						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
+						creditSchema?: Array<
+							| {
+									/** ID of the metered feature that draws from this credit system. */
+									meteredFeatureId: string;
+									/** Number of metered-feature units priced together. Defaults to one when omitted. */
+									billingUnits?: number;
+									/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
+									dimensions?: Record<
+										string,
+										| {
+												/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+												match: Record<string, string | number | boolean>;
+												/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+												priority?: number;
+												tierBehavior: "graduated";
+												tiers: Array<{
+													/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+													to?: unknown;
+													/** Credits consumed per billing-unit group within this tier. */
+													creditCost: number;
+												}>;
+										  }
+										| {
+												/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+												match: Record<string, string | number | boolean>;
+												/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+												priority?: number;
+												/** Credits consumed per billing-unit group when this dimension matches. */
+												creditCost: number;
+										  }
+									>;
+									/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
+									multipliers?: Record<
+										string,
+										{
+											/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+											match: Record<string, string | number | boolean>;
+											/** Multiplies the matched rate. All matching multipliers stack. */
+											factor?: number;
+											/** Added to the rate after every factor is applied, in credits per billing-unit group. */
+											add?: number;
+										}
+									>;
+									tierBehavior: "graduated";
+									tiers: Array<{
+										/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+										to: number | "inf";
+										/** Credits consumed per billing-unit group within this tier. */
+										creditCost: number;
+									}>;
+							  }
+							| {
+									/** ID of the metered feature that draws from this credit system. */
+									meteredFeatureId: string;
+									/** Number of metered-feature units priced together. Defaults to one when omitted. */
+									billingUnits?: number;
+									/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
+									dimensions?: Record<
+										string,
+										| {
+												/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+												match: Record<string, string | number | boolean>;
+												/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+												priority?: number;
+												tierBehavior: "graduated";
+												tiers: Array<{
+													/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+													to?: unknown;
+													/** Credits consumed per billing-unit group within this tier. */
+													creditCost: number;
+												}>;
+										  }
+										| {
+												/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+												match: Record<string, string | number | boolean>;
+												/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+												priority?: number;
+												/** Credits consumed per billing-unit group when this dimension matches. */
+												creditCost: number;
+										  }
+									>;
+									/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
+									multipliers?: Record<
+										string,
+										{
+											/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+											match: Record<string, string | number | boolean>;
+											/** Multiplies the matched rate. All matching multipliers stack. */
+											factor?: number;
+											/** Added to the rate after every factor is applied, in credits per billing-unit group. */
+											add?: number;
+										}
+									>;
+									/** Credits consumed per billing-unit group. */
+									creditCost: number;
+							  }
+						>;
+					};
+					entityFeatureId?: string;
 				}>;
 				removeItems?: Array<{
-					featureId?: unknown;
-					billingMethod?: unknown;
-					interval?: unknown;
-					intervalCount?: unknown;
-					included?: unknown;
+					/** Match items linked to this feature. */
+					featureId?: string;
+					/** Match items with this billing method (prepaid or usage_based). */
+					billingMethod?: "prepaid" | "usage_based";
+					/** Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated. */
+					interval?:
+						| "one_off"
+						| "week"
+						| "month"
+						| "quarter"
+						| "semi_annual"
+						| "year"
+						| "one_off"
+						| "minute"
+						| "hour"
+						| "day"
+						| "week"
+						| "month"
+						| "quarter"
+						| "semi_annual"
+						| "year";
+					/** Match items with this interval_count. Disambiguates between items that share an interval but differ in count. */
+					intervalCount?: number;
+					/** Match items whose grant equals this included usage. Omitted is a wildcard. */
+					included?: number;
 				}>;
 			} | null;
 			metadata?: Record<string, unknown>;

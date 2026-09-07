@@ -58,15 +58,25 @@ export type License = {
 				amount?: number;
 				/** Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'. */
 				additionalCurrencies?: Array<{
-					currency?: unknown;
-					amount?: unknown;
+					/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+					currency: string;
+					/** Price amount in this currency. Set explicitly per currency, not converted from the base amount. */
+					amount: number;
 				}>;
 				/** Tiered pricing. Either 'amount' or 'tiers' is required. */
 				tiers?: Array<{
-					to?: unknown;
-					amount?: unknown;
-					flatAmount?: unknown;
-					additionalCurrencies?: unknown;
+					to: number | "inf";
+					amount?: number;
+					flatAmount?: number;
+					/** Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies. */
+					additionalCurrencies?: Array<{
+						/** Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp'). */
+						currency: string;
+						/** Per-unit amount for this tier in this currency. */
+						amount?: number;
+						/** Flat amount for this tier in this currency, if the tier uses one. */
+						flatAmount?: number;
+					}>;
 				}>;
 				tierBehavior?: "graduated" | "volume";
 				/** Billing interval. For consumable features, should match reset.interval. */
@@ -116,7 +126,103 @@ export type License = {
 			/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 			featureOverride?: {
 				/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
-				creditSchema?: Array<unknown>;
+				creditSchema?: Array<
+					| {
+							/** ID of the metered feature that draws from this credit system. */
+							meteredFeatureId: string;
+							/** Number of metered-feature units priced together. Defaults to one when omitted. */
+							billingUnits?: number;
+							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
+							dimensions?: Record<
+								string,
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										tierBehavior: "graduated";
+										tiers: Array<{
+											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+											to: number | "inf";
+											/** Credits consumed per billing-unit group within this tier. */
+											creditCost: number;
+										}>;
+								  }
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										/** Credits consumed per billing-unit group when this dimension matches. */
+										creditCost: number;
+								  }
+							>;
+							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
+							multipliers?: Record<
+								string,
+								{
+									/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+									match: Record<string, string | number | boolean>;
+									/** Multiplies the matched rate. All matching multipliers stack. */
+									factor?: number;
+									/** Added to the rate after every factor is applied, in credits per billing-unit group. */
+									add?: number;
+								}
+							>;
+							tierBehavior: "graduated";
+							tiers: Array<{
+								/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+								to: number | "inf";
+								/** Credits consumed per billing-unit group within this tier. */
+								creditCost: number;
+							}>;
+					  }
+					| {
+							/** ID of the metered feature that draws from this credit system. */
+							meteredFeatureId: string;
+							/** Number of metered-feature units priced together. Defaults to one when omitted. */
+							billingUnits?: number;
+							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
+							dimensions?: Record<
+								string,
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										tierBehavior: "graduated";
+										tiers: Array<{
+											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
+											to: number | "inf";
+											/** Credits consumed per billing-unit group within this tier. */
+											creditCost: number;
+										}>;
+								  }
+								| {
+										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+										match: Record<string, string | number | boolean>;
+										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
+										priority?: number;
+										/** Credits consumed per billing-unit group when this dimension matches. */
+										creditCost: number;
+								  }
+							>;
+							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
+							multipliers?: Record<
+								string,
+								{
+									/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
+									match: Record<string, string | number | boolean>;
+									/** Multiplies the matched rate. All matching multipliers stack. */
+									factor?: number;
+									/** Added to the rate after every factor is applied, in credits per billing-unit group. */
+									add?: number;
+								}
+							>;
+							/** Credits consumed per billing-unit group. */
+							creditCost: number;
+					  }
+				>;
 			};
 			entityFeatureId?: string;
 		}>;
