@@ -84,11 +84,16 @@ export const attachDefaultProductsToEntities = async ({
 		insertedCustomerProducts.push(...insertCustomerProducts);
 	}
 
-	await applyPooledBalanceCustomerProductTransitions({
-		ctx,
-		fullCustomer,
-		outgoingCustomerProducts: [],
-		incomingCustomerProducts: insertedCustomerProducts,
-		now: currentEpochMs,
-	});
+	const pooledFullCustomer = await applyPooledBalanceCustomerProductTransitions(
+		{
+			ctx,
+			fullCustomer,
+			outgoingCustomerProducts: [],
+			incomingCustomerProducts: insertedCustomerProducts,
+			now: currentEpochMs,
+		},
+	);
+	fullCustomer.customer_products = pooledFullCustomer.customer_products;
+	fullCustomer.pooled_customer_entitlements =
+		pooledFullCustomer.pooled_customer_entitlements;
 };

@@ -58,6 +58,10 @@ mock.module(pooledModulePath, () => ({
 		args: Record<string, unknown>,
 	) => {
 		calls.push({ name: "pooled", args });
+		return {
+			...(args.fullCustomer as Record<string, unknown>),
+			customer_products: args.incomingCustomerProducts,
+		};
 	},
 }));
 
@@ -159,5 +163,9 @@ describe("entity default products", () => {
 		expect(byName("pooled")[0]?.args).toMatchObject({
 			incomingCustomerProducts: [customerProduct, customerProduct],
 		});
+		expect(fullCustomer.customer_products).toEqual([
+			customerProduct,
+			customerProduct,
+		]);
 	});
 });
