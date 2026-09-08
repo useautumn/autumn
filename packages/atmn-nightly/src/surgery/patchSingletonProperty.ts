@@ -32,6 +32,12 @@ const pairFor = ({
 	return null;
 };
 
+/** A block built from a spread cannot be edited by pairs: a later spread
+ * overrides them, and dropping the block would drop what the spread holds. */
+const isPlainObject = (node: SgNode): boolean =>
+	node.kind() === "object" &&
+	!node.children().some((child) => child.kind() === "spread_element");
+
 const blockObject = ({
 	root,
 	block,
@@ -39,13 +45,30 @@ const blockObject = ({
 	root: SgNode;
 	block: SingletonBlock;
 }): SgNode | null => {
-	if (block.kind === "binding")
-		return findLiteralBinding({ root, name: block.name, kind: "object" });
+	const object =
+		block.kind === "binding"
+			? findLiteralBinding({ root, name: block.name, kind: "object" })
+			: atmnObjectPairValue({ root, key: block.singleton });
+	return object !== null && isPlainObject(object) ? object : null;
+};
+
+const atmnObjectPairValue = ({
+	root,
+	key,
+}: {
+	root: SgNode;
+	key: string;
+}): SgNode | null => {
 	const object = atmnObject(root);
 	if (object === null) return null;
-	const value = pairFor({ object, key: block.singleton })?.namedChildren()[1];
-	return value !== undefined && value.kind() === "object" ? value : null;
+	return pairFor({ object, key })?.namedChildren()[1] ?? null;
 };
+
+const isTrivia = (text: string): boolean =>
+	text
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		.replace(/\/\/.*$/, "")
+		.trim() === "";
 
 /** Remove a pair with its line when it stands alone, else with one adjacent comma. */
 const removePairEdit = ({
@@ -62,10 +85,11 @@ const removePairEdit = ({
 	const lineEnd = newline === -1 ? source.length : newline;
 	const after = source.slice(end, lineEnd);
 	const commaIndex = after.indexOf(",");
+	// Only whitespace and comments may sit between the pair and its comma.
 	const hasTrailingComma =
-		commaIndex !== -1 && after.slice(0, commaIndex).trim() === "";
+		commaIndex !== -1 && isTrivia(after.slice(0, commaIndex));
 	const rest = hasTrailingComma ? after.slice(commaIndex + 1) : after;
-	if (source.slice(lineStart, start).trim() === "" && rest.trim() === "") {
+	if (source.slice(lineStart, start).trim() === "" && isTrivia(rest)) {
 		return {
 			startPos: lineStart,
 			endPos: newline === -1 ? source.length : newline + 1,
@@ -143,15 +167,35 @@ export const insertSingleton = ({
 	source: string;
 	singleton: string;
 }): string | null => {
+	const root = parse(Lang.TypeScript, source).root();
+	const object = atmnObject(root);
+	if (object === null) return null;
+	// Already stated, quoted or not: nothing to seed.
+	if (pairFor({ object, key: singleton }) !== null) return source;
+	if (
+		object
+			.children()
+			.some(
+				(child) =>
+					child.kind() === "shorthand_property_identifier" &&
+					child.text() === singleton,
+			)
+	)
+		return source;
+	// A root spread may already hold the key, and a pair inserted beside it
+	// would silently win or lose to it depending on order.
+	if (object.children().some((child) => child.kind() === "spread_element"))
+		return null;
 	const withArray = insertCollection({ source, collection: singleton });
 	if (withArray === null || withArray === source) return withArray;
 	// insertCollection seeds `key: []`; a singleton is an object.
-	const root = parse(Lang.TypeScript, withArray).root();
-	const object = atmnObject(root);
-	const pair = object === null ? null : pairFor({ object, key: singleton });
+	const seededRoot = parse(Lang.TypeScript, withArray).root();
+	const seeded = atmnObject(seededRoot);
+	const pair =
+		seeded === null ? null : pairFor({ object: seeded, key: singleton });
 	const value = pair?.namedChildren()[1];
 	if (value === undefined || value.kind() !== "array") return null;
-	return root.commitEdits([
+	return seededRoot.commitEdits([
 		{
 			startPos: value.range().start.index,
 			endPos: value.range().end.index,

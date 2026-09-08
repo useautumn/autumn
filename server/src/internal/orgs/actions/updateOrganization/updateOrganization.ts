@@ -1,25 +1,24 @@
 import {
 	ORG_SETTING_KEYS,
 	type OrgConfig,
-	OrgConfigSchema,
 	type OrgSettingsParams,
 	organizations,
 } from "@autumn/shared";
 import { eq, sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "../../orgUtils/clearOrgCache.js";
+import { currentValueOf } from "./computeOrgSettingChanges.js";
 
-/** Every settable flag as the org holds it, defaults filled. */
+/** Every settable flag as the org holds it, defaults filled, read as the
+ * runtime reads it (the overdue twins collapse to one flag). */
 export const orgSettingsOf = ({
 	config,
 }: {
 	config: OrgConfig;
-}): Required<OrgSettingsParams> => {
-	const parsed = OrgConfigSchema.parse(config);
-	return Object.fromEntries(
-		ORG_SETTING_KEYS.map((key) => [key, parsed[key]]),
+}): Required<OrgSettingsParams> =>
+	Object.fromEntries(
+		ORG_SETTING_KEYS.map((key) => [key, currentValueOf({ config, key })]),
 	) as Required<OrgSettingsParams>;
-};
 
 /**
  * Writes only the flags stated, merged into the jsonb column, so an omitted

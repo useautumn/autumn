@@ -62,3 +62,30 @@ test("changes come out in the settable set's order, updates and unmanaged mixed"
 		"multi_currency:update",
 	]);
 });
+
+test("the deprecated include_past_due twin counts as blocking when it alone is set", () => {
+	// A legacy row: include_past_due false, block_overdue_entitlements never written.
+	const legacy = { ...config(), include_past_due: false };
+	expect(computeOrgSettingChanges({ config: legacy, stated: {} })).toEqual([
+		{
+			key: "block_overdue_entitlements",
+			action: "unmanaged",
+			previous: true,
+			current: null,
+		},
+	]);
+	// Stating false is then a real update, not a no-op.
+	expect(
+		computeOrgSettingChanges({
+			config: legacy,
+			stated: { block_overdue_entitlements: false },
+		}),
+	).toEqual([
+		{
+			key: "block_overdue_entitlements",
+			action: "update",
+			previous: true,
+			current: false,
+		},
+	]);
+});

@@ -6,14 +6,23 @@ import {
 	type OrgSettingsParams,
 } from "@autumn/shared";
 
-/** The flag's value as the org holds it, defaults filled where it never set one. */
-const currentValueOf = ({
+/**
+ * The flag's value as the org holds it, defaults filled where it never set
+ * one. `block_overdue_entitlements` is read the way the runtime reads it: its
+ * deprecated twin `include_past_due` still blocks when it alone is set.
+ */
+export const currentValueOf = ({
 	config,
 	key,
 }: {
 	config: OrgConfig;
 	key: (typeof ORG_SETTING_KEYS)[number];
-}): boolean => OrgConfigSchema.parse(config)[key];
+}): boolean => {
+	const parsed = OrgConfigSchema.parse(config);
+	if (key === "block_overdue_entitlements")
+		return parsed.block_overdue_entitlements || !parsed.include_past_due;
+	return parsed[key];
+};
 
 const defaultValueOf = ({
 	key,

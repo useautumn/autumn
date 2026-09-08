@@ -155,6 +155,55 @@ export default atmn({
 `);
 });
 
+test("a block holding a spread is refused: a later spread would win over any pair set", () => {
+	const source = config({
+		body: "\tfeatures: [],\n\tsettings: { cancelOnPastDue: true, ...shared },",
+	});
+	expect(
+		patchSingletonProperty({
+			source,
+			block: inline,
+			edit: { key: "cancelOnPastDue", text: "false" },
+		}),
+	).toBeNull();
+	expect(
+		patchSingletonProperty({
+			source,
+			block: inline,
+			edit: { key: "cancelOnPastDue", text: null },
+		}),
+	).toBeNull();
+});
+
+test("a root spread refuses seeding: the spread may already hold the key", () => {
+	const source = config({ body: "\t...shared," });
+	expect(insertSingleton({ source, singleton: "settings" })).toBeNull();
+});
+
+test("a quoted settings key is found, not seeded twice", () => {
+	const source = config({
+		body: '\tfeatures: [],\n\t"settings": { a: true },',
+	});
+	expect(insertSingleton({ source, singleton: "settings" })).toBe(source);
+});
+
+test("a comment before the comma is trivia when the pair is removed", () => {
+	const source = config({
+		body: "\tfeatures: [],\n\tsettings: {\n\t\tcancelOnPastDue: true /* why */,\n\t\tmultiCurrency: true,\n\t},",
+	});
+	expect(
+		patchSingletonProperty({
+			source,
+			block: inline,
+			edit: { key: "cancelOnPastDue", text: null },
+		}),
+	).toBe(
+		config({
+			body: "\tfeatures: [],\n\tsettings: {\n\t\tmultiCurrency: true,\n\t},",
+		}),
+	);
+});
+
 test("a settings value that is not an object literal is refused", () => {
 	const source = config({ body: "\tfeatures: [],\n\tsettings: shared()," });
 	expect(
