@@ -13,6 +13,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { expectQuantityLineItemPairCorrect } from "@tests/integration/licenses/utils/expectLicenseBillingPreviewCorrect";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import chalk from "chalk";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 
@@ -39,10 +40,22 @@ test.concurrent(
 				proration_behavior: "prorate_immediately",
 			});
 
-		const latestStripeInvoiceId = async () => {
-			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-			const stripeId = customer.invoices?.[0]?.stripe_id;
+		const latestStripeInvoiceId = async ({
+			previous,
+		}: {
+			previous?: string;
+		} = {}) => {
+			const stripeId = await pollUntil({
+				fetch: async () => {
+					const customer =
+						await autumnV1.customers.get<ApiCustomerV3>(customerId);
+					return customer.invoices?.[0]?.stripe_id;
+				},
+				until: (id) => id !== undefined && id !== previous,
+				timeoutMs: 30_000,
+			});
 			expect(stripeId).toBeDefined();
+			expect(stripeId).not.toEqual(previous);
 			return stripeId as string;
 		};
 		const storedRowsFor = (stripeInvoiceId: string) =>
@@ -57,8 +70,9 @@ test.concurrent(
 
 		await updateTo(3);
 
-		const secondInvoiceId = await latestStripeInvoiceId();
-		expect(secondInvoiceId).not.toEqual(firstInvoiceId);
+		const secondInvoiceId = await latestStripeInvoiceId({
+			previous: firstInvoiceId,
+		});
 		const secondRows = await waitForInvoiceLineItems({
 			stripeInvoiceId: secondInvoiceId,
 			timeoutMs: 30_000,
