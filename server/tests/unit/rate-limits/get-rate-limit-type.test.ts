@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { Context } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
+	getOrgAggregateType,
 	getRateLimitType,
 	RATE_LIMIT_CONFIGS,
 	RateLimitScope,
@@ -37,6 +38,28 @@ describe("getRateLimitType", () => {
 				createContext({ method: "POST", path: "/v1/customers.list" }),
 			),
 		).toBe(RateLimitType.ListCustomers);
+	});
+
+	test("classifies entities.list into its dedicated bucket", () => {
+		expect(
+			getRateLimitType(
+				createContext({ method: "POST", path: "/v1/entities.list" }),
+			),
+		).toBe(RateLimitType.EntitiesList);
+	});
+
+	test("limits entities.list to 10 requests per customer per second", () => {
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.EntitiesList]).toMatchObject({
+			limit: 10,
+			windowMs: 1000,
+			scope: RateLimitScope.Customer,
+		});
+	});
+
+	test("retains the org list cap around entities.list", () => {
+		expect(getOrgAggregateType(RateLimitType.EntitiesList)).toBe(
+			RateLimitType.ListCustomers,
+		);
 	});
 
 	test("classifies track endpoints into the track bucket", () => {
