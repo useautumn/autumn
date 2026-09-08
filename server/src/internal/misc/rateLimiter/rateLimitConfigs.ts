@@ -11,6 +11,7 @@ export enum RateLimitType {
 	Events = "events",
 	Attach = "attach",
 	ListCustomers = "list_customers",
+	EntitiesList = "entities_list",
 	CustomerEntitiesGet = "customer_entities_get",
 	Logs = "logs",
 	TrackOrg = "track_org",
@@ -23,6 +24,7 @@ export enum RateLimitType {
 const ORG_AGGREGATE_TYPES: Partial<Record<RateLimitType, RateLimitType>> = {
 	[RateLimitType.Track]: RateLimitType.TrackOrg,
 	[RateLimitType.Check]: RateLimitType.CheckOrg,
+	[RateLimitType.EntitiesList]: RateLimitType.ListCustomers,
 	[RateLimitType.CustomerEntitiesGet]: RateLimitType.EntitiesGetOrg,
 };
 
@@ -77,8 +79,11 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "GET", url: "/v1/customers" }),
 			route({ method: "POST", url: "/v1/customers/list" }),
 			route({ method: "POST", url: "/v1/customers.list" }),
-			route({ method: "POST", url: "/v1/entities.list" }),
 		],
+	},
+	{
+		type: RateLimitType.EntitiesList,
+		patterns: [route({ method: "POST", url: "/v1/entities.list" })],
 	},
 	{
 		type: RateLimitType.Events,
@@ -279,6 +284,13 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Org,
+	},
+	[RateLimitType.EntitiesList]: {
+		name: "entities_list",
+		limit: 10,
+		windowMs: 1000,
+		notInRedis: false,
+		scope: RateLimitScope.Customer,
 	},
 	[RateLimitType.CustomerEntitiesGet]: {
 		name: "customer_entities_get",
