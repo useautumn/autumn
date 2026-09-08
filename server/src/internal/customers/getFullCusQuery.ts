@@ -426,9 +426,8 @@ const buildExtraEntitlementsCTE = ({
             AND ce.customer_product_id IS NULL
             AND ce.pooled_balance_id IS NULL
             AND ce.pooled_contribution_id IS NULL
-            AND ce.expires_at IS NOT NULL
-            AND ce.expires_at <= EXTRACT(EPOCH FROM now()) * 1000
-            AND ${looseEntitlementIsLiveSql()}
+            AND (ce.expires_at <= EXTRACT(EPOCH FROM now()) * 1000 OR (ce.expires_at IS NULL AND ce.balance = 0 AND ce.unlimited IS NOT TRUE))
+            AND (${looseEntitlementIsLiveSql()} OR (ce.balance = 0 AND ce.unlimited IS NOT TRUE))
           ORDER BY ce.id DESC
           LIMIT ${EXPIRED_EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
         ) expired_ce`
