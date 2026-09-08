@@ -169,8 +169,7 @@ export function BillingUsageLimitSheet() {
 			anchorUtc,
 			filter,
 		});
-		const parsedUsage =
-			usage.trim() === "" ? undefined : Number.parseFloat(usage);
+		const parsedUsage = usage.trim() === "" ? undefined : Number(usage);
 		if (
 			parsedUsage !== undefined &&
 			(!Number.isFinite(parsedUsage) || parsedUsage < 0)

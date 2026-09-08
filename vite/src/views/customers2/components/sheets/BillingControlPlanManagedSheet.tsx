@@ -73,14 +73,11 @@ export function BillingControlPlanManagedSheet() {
 		const value = Number(usage);
 		const customerId = customer?.id ?? customer?.internal_id;
 		const featureId = usageLimitItem?.feature_id;
-		if (
-			!customerId ||
-			!featureId ||
-			!Number.isFinite(value) ||
-			value < 0 ||
-			controlKey !== "usage_limits"
-		)
+		if (!customerId || !featureId || controlKey !== "usage_limits") return;
+		if (!Number.isFinite(value) || value < 0) {
+			toast.error("Please enter a valid current usage");
 			return;
+		}
 		setIsSavingUsage(true);
 		try {
 			await CusService.updateCustomer({
