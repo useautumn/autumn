@@ -611,7 +611,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.upsertLicenses.licensePlanId",
 			"variants.customize.upsertLicenses.metadata",
 			"variants.customize.upsertLicenses.prepaidOnly",
-			"variants.customize.upsertLicenses.versionSlug",
 			"variants.internalId",
 			"variants.name",
 			"variants.newVersionSlug",

@@ -63,6 +63,11 @@ export const OVERLAY: Overlay = {
 				reason:
 					"A link always follows the child's active version (wire/07_licenses); pinning it from config is a change the server reports forever.",
 			},
+			"variants.customize.upsert_licenses.version_slug": {
+				hidden: true,
+				reason:
+					"Same as licenses.version_slug: a variant's license link follows the child's active version too.",
+			},
 			name: {
 				required: true,
 				reason:
