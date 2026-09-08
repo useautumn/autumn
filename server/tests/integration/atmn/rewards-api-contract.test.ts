@@ -11,12 +11,16 @@
  *        after features and plans have already written
  *  - S3  repointing a program to a new reward deletes the old one first and 4xx's
  *  - S4  a coupon naming a plan the catalog lacks fails inside execute
+ *  - S5  a created reward reports no stable id, so push cannot pin its fixture
+ *  - S6  a rewards-only payload rejects a coupon naming a plan the org holds
  *
  * Green (after):
  *  - S1  403 before any reward row is read
  *  - S2  400 in the errors phase, nothing written
  *  - S3  the program is repointed, then the old reward removed
  *  - S4  400 in the errors phase, nothing written
+ *  - S5  the applied result carries the id the row received
+ *  - S6  a plan the payload leaves untouched still counts as present
  */
 
 import { expect, test } from "bun:test";
@@ -133,6 +137,7 @@ test.concurrent(
 		const refer = uniqueTestId("atmn_refer");
 		const renamedPlan = uniqueTestId("atmn_renamed");
 		const ghostPlan = uniqueTestId("atmn_ghost");
+		const freshSale = uniqueTestId("atmn_fresh");
 
 		const scenario = await initAtmnScenario({
 			setup: [
@@ -180,6 +185,24 @@ test.concurrent(
 					rewards: [couponParams({ id: sale, planIds: [ghostPlan] })],
 				} as never),
 			).rejects.toThrow(ghostPlan);
+
+			// S6: a payload that never mentions plans leaves them untouched, so a
+			// coupon may still name one the org holds.
+			const partial = await scenario.client.update({
+				rewards: [
+					couponParams({ id: sale, planIds: [pro] }),
+					couponParams({ id: freshSale, planIds: [pro] }),
+				],
+				referral_programs: base.referral_programs,
+			} as never);
+
+			// S5: a created row reports the stable id it received, which is what
+			// pins the fixture on the next push.
+			const created = (partial.results.rewards ?? []).find(
+				(applied) => applied.id === freshSale,
+			);
+			expect(created?.action).toBe("create");
+			expect(typeof created?.internalId).toBe("string");
 		} finally {
 			scenario.cleanup();
 		}

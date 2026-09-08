@@ -192,10 +192,17 @@ const assertRemovedRewardsAreUnlinked = ({
  * the catalog this push will leave behind.
  */
 const assertRewardReferencesResolve = ({
+	params,
 	updateCatalogPlan,
 }: {
+	params: UpdateCatalogParams;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
+	// Features are always fully loaded, so a grant can be checked either way.
+	// Plans are not: the projection holds only what a partial payload manages,
+	// and a coupon may name one it deliberately leaves alone. Under full state
+	// the projection IS the catalog, so there the check is exact.
+	const checkPlans = params.skip_deletions === false;
 	const planIds = new Set(
 		updateCatalogPlan.projected.products.map((product) => product.id),
 	);
@@ -206,6 +213,7 @@ const assertRewardReferencesResolve = ({
 	for (const upsert of updateCatalogPlan.upsertRewards) {
 		const branch = rewardBranchOf(upsert.params);
 		if (branch.kind === "coupon") {
+			if (!checkPlans) continue;
 			for (const planId of branch.body.plan_ids ?? []) {
 				if (planIds.has(planId)) continue;
 				invalid(
@@ -238,5 +246,5 @@ export const handleRewardErrors = ({
 	assertBranchUnchanged({ updateCatalogPlan, catalogContext });
 	assertProgramRewardsResolve({ catalogContext, updateCatalogPlan });
 	assertRemovedRewardsAreUnlinked({ catalogContext, updateCatalogPlan });
-	assertRewardReferencesResolve({ updateCatalogPlan });
+	assertRewardReferencesResolve({ params, updateCatalogPlan });
 };
