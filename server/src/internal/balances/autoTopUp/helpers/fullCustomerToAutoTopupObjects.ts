@@ -2,6 +2,7 @@ import {
 	type AutoTopup,
 	cusEntsToBalance,
 	cusEntToCusPrice,
+	cusEntToInvoiceOverage,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -10,6 +11,7 @@ import {
 	isPrepaidPrice,
 	isVolumeBasedCusEnt,
 	resolveBillingControlWithProduct,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 
 /** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
@@ -32,8 +34,7 @@ export const fullCustomerToAutoTopupObjects = ({
 		matches: (config) => config.feature_id === featureId,
 	});
 
-	const autoTopupConfig = resolved?.control;
-	if (!autoTopupConfig?.enabled) return null;
+	let autoTopupConfig = resolved?.control;
 
 	// 2. Find cusEnts for this feature
 	const cusEnts = fullCustomerToCustomerEntitlements({
@@ -42,9 +43,31 @@ export const fullCustomerToAutoTopupObjects = ({
 	});
 
 	if (cusEnts.length === 0) return null;
+	if (!autoTopupConfig) {
+		const thresholdEntitlement = cusEnts.find((cusEnt) => {
+			const price = cusEntToCusPrice({ cusEnt });
+			return Boolean(
+				price && (price.price.config as UsagePriceConfig).threshold_billing,
+			);
+		});
+		const threshold = thresholdEntitlement
+			? ((
+					cusEntToCusPrice({ cusEnt: thresholdEntitlement })!.price
+						.config as UsagePriceConfig
+				).threshold_billing?.threshold ?? 0)
+			: 0;
+		if (!thresholdEntitlement || threshold <= 0) return null;
+		autoTopupConfig = {
+			feature_id: featureId,
+			enabled: true,
+			threshold: -threshold,
+			quantity: threshold,
+		};
+	}
 
 	// 3. Find the one-off prepaid cusEnt whose price the top-up charges.
-	const sourceProductInternalId = resolved?.customerProduct?.internal_product_id;
+	const sourceProductInternalId =
+		resolved?.customerProduct?.internal_product_id;
 	const isOneOffPrepaid = (ce: FullCusEntWithFullCusProduct) => {
 		const cp = cusEntToCusPrice({ cusEnt: ce });
 		return (
@@ -61,8 +84,8 @@ export const fullCustomerToAutoTopupObjects = ({
 		// plan's price for the same feature, and no fallback if that plan lacks one.
 		customerEntitlement = cusEnts.find(
 			(ce) =>
-				ce.customer_product?.internal_product_id ===
-					sourceProductInternalId && isOneOffPrepaid(ce),
+				ce.customer_product?.internal_product_id === sourceProductInternalId &&
+				isOneOffPrepaid(ce),
 		);
 	} else {
 		// Customer-level config has no source plan, so charge the MOST RECENTLY
@@ -77,12 +100,29 @@ export const fullCustomerToAutoTopupObjects = ({
 	}
 
 	if (!customerEntitlement || !customerEntitlement.customer_product) {
-		return null;
+		const thresholdCustomerEntitlement = cusEnts.find((cusEnt) => {
+			const price = cusEntToCusPrice({ cusEnt });
+			return Boolean(
+				price && (price.price.config as UsagePriceConfig).threshold_billing,
+			);
+		});
+		if (thresholdCustomerEntitlement?.customer_product) {
+			customerEntitlement = thresholdCustomerEntitlement;
+		} else {
+			return null;
+		}
 	}
 
 	// 4. Check balance against threshold
+	const thresholdPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
+	const thresholdBilling = thresholdPrice
+		? (thresholdPrice.price.config as UsagePriceConfig).threshold_billing
+		: undefined;
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
-	const balanceBelowThreshold = remainingBalance <= autoTopupConfig.threshold;
+	const balanceBelowThreshold = thresholdBilling
+		? cusEntToInvoiceOverage({ cusEnt: customerEntitlement }) >=
+			thresholdBilling.threshold
+		: remainingBalance <= autoTopupConfig.threshold;
 
 	return { autoTopupConfig, customerEntitlement, balanceBelowThreshold };
 };

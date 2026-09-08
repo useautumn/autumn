@@ -1,4 +1,4 @@
-import { AppEnv, ms } from "@autumn/shared";
+import { AppEnv, cusEntToCusPrice, ms } from "@autumn/shared";
 import {
 	clearAutoTopupPendingKey,
 	keepAutoTopupPendingKey,
@@ -11,6 +11,7 @@ import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/log
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
 import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions/index.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "./autoTopupContext.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
@@ -142,12 +143,55 @@ export const autoTopup = async ({
 			autoTopupContext,
 			billingResult,
 		});
+		const thresholdBilling = Boolean(
+			(
+				cusEntToCusPrice({ cusEnt: autoTopupContext.customerEntitlement })
+					?.price.config as { threshold_billing?: unknown }
+			)?.threshold_billing,
+		);
+		if (
+			thresholdBilling &&
+			billingResult.stripe?.requiredAction?.code === "payment_failed" &&
+			autoTopupContext.customerEntitlement.customer_product &&
+			!autoTopupContext.customerEntitlement.customer_product.product.config
+				?.ignore_past_due
+		) {
+			await customerProductActions.markPastDue({
+				ctx,
+				customerProduct: autoTopupContext.customerEntitlement.customer_product,
+				fullCustomer: autoTopupContext.fullCustomer,
+			});
+		}
+		if (billingResult.stripe?.deferred) {
+			pendingTtlMs = AUTO_TOPUP_RETRY_SUPPRESSION_MS;
+			return;
+		}
 
 		const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
 		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
 		const isCustomPm = autoTopupContext.paymentMethod?.type === "custom";
+		const isPaymentProcessing =
+			billingResult.stripe?.requiredAction?.code === "payment_processing";
 
-		if (!isInvoiceMode && !isCustomPm && invoiceStatus !== "paid") {
+		if (
+			!isInvoiceMode &&
+			!isCustomPm &&
+			invoiceStatus !== "paid" &&
+			!isPaymentProcessing
+		) {
+			if (
+				thresholdBilling &&
+				autoTopupContext.customerEntitlement.customer_product &&
+				!autoTopupContext.customerEntitlement.customer_product.product.config
+					?.ignore_past_due
+			) {
+				await customerProductActions.markPastDue({
+					ctx,
+					customerProduct:
+						autoTopupContext.customerEntitlement.customer_product,
+					fullCustomer: autoTopupContext.fullCustomer,
+				});
+			}
 			try {
 				await voidStripeInvoiceIfOpen({
 					ctx,
