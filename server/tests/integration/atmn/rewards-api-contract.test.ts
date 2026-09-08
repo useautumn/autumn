@@ -13,6 +13,8 @@
  *  - S4  a coupon naming a plan the catalog lacks fails inside execute
  *  - S5  a created reward reports no stable id, so push cannot pin its fixture
  *  - S6  a rewards-only payload rejects a coupon naming a plan the org holds
+ *  - S7  a coupon naming a missing plan is rejected only in the reward phase,
+ *        after the plan rename in the same payload has committed
  *
  * Green (after):
  *  - S1  403 before any reward row is read
@@ -21,6 +23,7 @@
  *  - S4  400 in the errors phase, nothing written
  *  - S5  the applied result carries the id the row received
  *  - S6  a plan the payload leaves untouched still counts as present
+ *  - S7  refused in the errors phase, so the rename does not land
  */
 
 import { expect, test } from "bun:test";
@@ -203,6 +206,20 @@ test.concurrent(
 			);
 			expect(created?.action).toBe("create");
 			expect(typeof created?.internalId).toBe("string");
+			expect(created?.internalId?.length ?? 0).toBeGreaterThan(0);
+
+			// S7: a bad plan reference is caught before the rest of the payload
+			// runs. The reward writer rejects it too, but only after the rename
+			// beside it has already committed.
+			const ghostCoupon = uniqueTestId("atmn_ghost_coupon");
+			await expect(
+				scenario.client.update({
+					plans: [{ plan_id: pro, new_plan_id: renamedPlan, name: "Pro" }],
+					rewards: [couponParams({ id: ghostCoupon, planIds: [ghostPlan] })],
+				} as never),
+			).rejects.toThrow(ghostPlan);
+			const afterGhost = await scenario.client.get({});
+			expect(afterGhost.plans.map((plan) => plan.id)).toContain(pro);
 		} finally {
 			scenario.cleanup();
 		}

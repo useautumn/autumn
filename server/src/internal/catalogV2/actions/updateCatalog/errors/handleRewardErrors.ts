@@ -1,7 +1,9 @@
 import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { rewardBranchOf } from "@/internal/catalogV2/actions/updateCatalog/utils/rewardUpdateUtils/rewardBranch";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 const invalid = (message: string): never => {
 	throw new RecaseError({
@@ -191,35 +193,28 @@ const assertRemovedRewardsAreUnlinked = ({
  * resolve those only mid-phase, so a dangling reference is caught here against
  * the catalog this push will leave behind.
  */
-const assertRewardReferencesResolve = ({
-	params,
+const assertRewardReferencesResolve = async ({
+	ctx,
 	updateCatalogPlan,
 }: {
-	params: UpdateCatalogParams;
+	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
-	// Features are always fully loaded, so a grant can be checked either way.
-	// Plans are not: the projection holds only what a partial payload manages,
-	// and a coupon may name one it deliberately leaves alone. Under full state
-	// the projection IS the catalog, so there the check is exact.
-	const checkPlans = params.skip_deletions === false;
-	const planIds = new Set(
-		updateCatalogPlan.projected.products.map((product) => product.id),
-	);
+	// Features are always fully loaded, so the projection speaks for them.
 	const featureIds = new Set(
 		updateCatalogPlan.projected.features.map((feature) => feature.id),
 	);
+	// Plans are not: a partial payload projects only what it manages, so an id
+	// the projection cannot vouch for is looked up before it is called missing.
+	const projectedPlanIds = new Set(
+		updateCatalogPlan.projected.products.map((product) => product.id),
+	);
 
+	const couponPlans = new Map<string, string[]>();
 	for (const upsert of updateCatalogPlan.upsertRewards) {
 		const branch = rewardBranchOf(upsert.params);
 		if (branch.kind === "coupon") {
-			if (!checkPlans) continue;
-			for (const planId of branch.body.plan_ids ?? []) {
-				if (planIds.has(planId)) continue;
-				invalid(
-					`Reward ${upsert.rewardId} applies to plan ${planId}, which this catalog does not have.`,
-				);
-			}
+			couponPlans.set(upsert.rewardId, branch.body.plan_ids ?? []);
 			continue;
 		}
 		for (const grant of branch.body.grants) {
@@ -229,13 +224,42 @@ const assertRewardReferencesResolve = ({
 			);
 		}
 	}
+
+	const unresolved = [
+		...new Set(
+			[...couponPlans.values()]
+				.flat()
+				.filter((planId) => !projectedPlanIds.has(planId)),
+		),
+	];
+	// Nothing outside the projection is referenced, so nothing to look up.
+	if (unresolved.length === 0) return;
+
+	const persisted = await ProductService.listFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		inIds: unresolved,
+	});
+	const known = new Set(persisted.map((plan) => plan.id));
+
+	for (const [rewardId, planIds] of couponPlans) {
+		for (const planId of planIds) {
+			if (projectedPlanIds.has(planId) || known.has(planId)) continue;
+			invalid(
+				`Reward ${rewardId} applies to plan ${planId}, which this catalog does not have.`,
+			);
+		}
+	}
 };
 
-export const handleRewardErrors = ({
+export const handleRewardErrors = async ({
+	ctx,
 	params,
 	catalogContext,
 	updateCatalogPlan,
 }: {
+	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 	catalogContext: UpdateCatalogContext;
 	updateCatalogPlan: UpdateCatalogPlan;
@@ -246,5 +270,5 @@ export const handleRewardErrors = ({
 	assertBranchUnchanged({ updateCatalogPlan, catalogContext });
 	assertProgramRewardsResolve({ catalogContext, updateCatalogPlan });
 	assertRemovedRewardsAreUnlinked({ catalogContext, updateCatalogPlan });
-	assertRewardReferencesResolve({ params, updateCatalogPlan });
+	await assertRewardReferencesResolve({ ctx, updateCatalogPlan });
 };

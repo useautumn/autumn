@@ -190,5 +190,5 @@ export const handleUpdateCatalogErrors = async ({
 		productStatesContext: catalogContext.productStatesContext,
 	});
 	handleLicenseAnchorLifecycleErrors({ updateCatalogPlan });
-	handleRewardErrors({ params, catalogContext, updateCatalogPlan });
+	await handleRewardErrors({ ctx, params, catalogContext, updateCatalogPlan });
 };

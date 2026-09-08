@@ -17,7 +17,9 @@ const latestOrPinned = ({
 	if (version !== undefined) {
 		return versions.find((product) => product.version === version);
 	}
-	return activeFullProductForPlan({ planId, productStatesContext }) ?? undefined;
+	return (
+		activeFullProductForPlan({ planId, productStatesContext }) ?? undefined
+	);
 };
 
 const rejectArchivedPropagateTarget = ({
