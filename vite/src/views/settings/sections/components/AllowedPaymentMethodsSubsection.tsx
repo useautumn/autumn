@@ -11,6 +11,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { SettingsRow } from "../../SettingsRow";
 
 const PAYMENT_METHOD_OPTIONS = [
 	{ value: "card", label: "Card" },
@@ -60,15 +61,14 @@ export const AllowedPaymentMethodsSubsection = () => {
 	};
 
 	return (
-		<div className="flex items-center justify-between gap-4">
-			<div className="flex flex-col gap-0.5">
-				<span className="text-sm font-medium">Payment methods</span>
-				<span className="text-xs text-muted-foreground">
-					{allowedMethods === null
-						? "Unset — invoices use your Stripe account's default payment methods"
-						: "Only these payment methods are offered on invoices Autumn creates"}
-				</span>
-			</div>
+		<SettingsRow
+			label="Payment methods"
+			description={
+				allowedMethods === null
+					? "Unset — invoices use your Stripe account's default payment methods"
+					: "Only these payment methods are offered on invoices Autumn creates"
+			}
+		>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<IconButton
@@ -98,6 +98,6 @@ export const AllowedPaymentMethodsSubsection = () => {
 					))}
 				</DropdownMenuContent>
 			</DropdownMenu>
-		</div>
+		</SettingsRow>
 	);
 };
