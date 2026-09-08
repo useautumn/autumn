@@ -17,6 +17,7 @@ import {
 } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { hasMaterializedCustomerProducts } from "@/internal/billing/v2/execute/hasMaterializedCustomerProducts";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/promotePendingCustomerProducts";
 import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -132,12 +133,25 @@ const executeCheckoutSessionMetadataV2 = async ({
 		deferredData: dataWithOptionalItems,
 	});
 
-	// 3. Modify Stripe subscription to include other interval prices / 0 quantity prices
-	await modifyStripeSubscriptionFromCheckout({
+	// 3. Modify Stripe subscription to include other interval prices / 0 quantity prices.
+	// Skipped on a webhook retry: the first attempt already applied the plan to Stripe,
+	// and the customer may have moved to another plan since.
+	const alreadyMaterialized = await hasMaterializedCustomerProducts({
 		ctx,
-		checkoutContext,
-		deferredData: updatedDeferredData,
+		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 	});
+
+	if (alreadyMaterialized) {
+		ctx.logger.warn(
+			`[checkout.completed] Metadata ${metadata.id} already materialized, skipping Stripe subscription update`,
+		);
+	} else {
+		await modifyStripeSubscriptionFromCheckout({
+			ctx,
+			checkoutContext,
+			deferredData: updatedDeferredData,
+		});
+	}
 
 	const stripeScheduleId = await createStripeScheduleFromCheckout({
 		ctx,
@@ -170,7 +184,6 @@ const executeCheckoutSessionMetadataV2 = async ({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
-		metadataId: metadata.id,
 	});
 
 	// Execute autumn billing plan (includes customer products, upsertSubscription, upsertInvoice)
