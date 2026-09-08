@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { UsageLimitUpdateSchema } from "../../../models/cusModels/billingControls/usageLimit.js";
 import { ApiEntityBillingControlsParamsSchema } from "../../billingControls/entityBillingControls.js";
+import { UsageLimitUpdateSchema } from "../../billingControls/usageLimit.js";
 
 const UpdateEntityBillingControlsSchema =
 	ApiEntityBillingControlsParamsSchema.extend({

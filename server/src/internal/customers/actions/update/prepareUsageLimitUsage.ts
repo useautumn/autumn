@@ -52,20 +52,13 @@ export const prepareUsageLimitUsage = async ({
 		readFrom: "primary",
 	});
 	if (!fullSubject) return [];
-	const updatedSubject = { ...fullSubject };
-	if (configUsageLimits !== undefined && fullSubject.entity)
-		updatedSubject.entity = {
-			...fullSubject.entity,
-			usage_limits: configUsageLimits,
-		};
-	if (configUsageLimits !== undefined && !fullSubject.entity)
-		updatedSubject.customer = {
-			...fullSubject.customer,
-			usage_limits: configUsageLimits,
-		};
+	if (configUsageLimits !== undefined) {
+		const subject = fullSubject.entity ?? fullSubject.customer;
+		subject.usage_limits = configUsageLimits;
+	}
 
 	const limits = fullSubjectToUsageWindowLimits({
-		fullSubject: updatedSubject,
+		fullSubject,
 		featureIds: usageUpdates.map((entry) => entry.feature_id),
 		features: ctx.features,
 		now: ctx.timestamp,
@@ -100,24 +93,24 @@ export const prepareUsageLimitUsage = async ({
 						(window.internal_entity_id ?? null) === internalEntityId &&
 						(window.filter_key || "") === filterKey,
 				);
-		if (!existing && entry.usage === 0) continue;
-		if (!existing && limit) {
-			windows.push({
-				id: generateId("uw"),
-				internal_customer_id: limit.internal_customer_id,
-				internal_entity_id: limit.internal_entity_id,
-				feature_id: limit.feature_id,
-				internal_feature_id: limit.internal_feature_id,
-				filter_key: limit.filter_key,
-				anchor_customer_entitlement_id: limit.anchor_customer_entitlement_id,
-				window_start_at: limit.window_start_at,
-				window_end_at: limit.window_end_at,
-				usage: entry.usage,
-				updated_at: ctx.timestamp,
-			});
+		if (existing) {
+			windows.push({ ...existing, usage: entry.usage });
 			continue;
 		}
-		if (existing) windows.push({ ...existing, usage: entry.usage });
+		if (!limit || entry.usage === 0) continue;
+		windows.push({
+			id: generateId("uw"),
+			internal_customer_id: limit.internal_customer_id,
+			internal_entity_id: limit.internal_entity_id,
+			feature_id: limit.feature_id,
+			internal_feature_id: limit.internal_feature_id,
+			filter_key: limit.filter_key,
+			anchor_customer_entitlement_id: limit.anchor_customer_entitlement_id,
+			window_start_at: limit.window_start_at,
+			window_end_at: limit.window_end_at,
+			usage: entry.usage,
+			updated_at: ctx.timestamp,
+		});
 	}
 
 	return windows;

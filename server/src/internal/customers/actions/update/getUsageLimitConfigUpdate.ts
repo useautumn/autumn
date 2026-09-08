@@ -11,7 +11,7 @@ export const getUsageLimitConfigUpdate = ({
 }): DbUsageLimit[] | undefined => {
 	if (usageLimits === undefined) return undefined;
 	const config = usageLimits.flatMap((entry) =>
-		entry.source !== "plan" && entry.limit !== undefined
+		entry.source !== "plan" && "limit" in entry
 			? [DbUsageLimitSchema.parse(entry)]
 			: [],
 	);

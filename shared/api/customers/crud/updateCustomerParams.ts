@@ -1,7 +1,7 @@
+import { UsageLimitUpdateSchema } from "@api/billingControls/usageLimit";
 import { CustomerDataSchema } from "@api/common/customerData";
 import { CustomerIdSchema } from "@api/common/customerId";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls";
-import { UsageLimitUpdateSchema } from "@models/cusModels/billingControls/usageLimit";
 import { z } from "zod/v4";
 
 export const UpdateCustomerParamsV0Schema = z
