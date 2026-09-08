@@ -219,6 +219,7 @@ export const productItemsToPlanItemsV1 = ({
 			included: included,
 			unlimited: item.included_usage === Infinite,
 			pooled: item.pooled ?? false,
+			threshold_billing: item.config?.threshold_billing,
 
 			reset,
 			price, // V1: price can be null (no need for conditional spread)

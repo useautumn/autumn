@@ -81,6 +81,13 @@ export const PLAN_ITEM_PRICE_DESCRIPTION =
  * checks through `planItemParamsIssues`.
  */
 export const PlanItemParamsObjectSchema = z.object({
+	threshold_billing: z
+		.object({ threshold: z.number().finite().positive() })
+		.nullish()
+		.meta({
+			description:
+				"Bills this many feature units when outstanding overage reaches it.",
+		}),
 	feature_id: z.string().meta({
 		description: "The ID of the feature to configure.",
 	}),
@@ -204,8 +211,29 @@ export const planItemParamsIssues = (
 	}
 
 	// At a minimum, if price is present, at least amount OR tiers must be defined, and not both
+	if (value.threshold_billing && (!value.price || value.unlimited)) {
+		issues.push({
+			message: "threshold_billing requires a finite usage-based price",
+			input: value.threshold_billing,
+		});
+	}
 	if (value.price) {
+		if (
+			value.threshold_billing &&
+			value.price.billing_method !== BillingMethod.UsageBased
+		) {
+			issues.push({
+				message: "threshold_billing requires a finite usage-based price",
+				input: value.threshold_billing,
+			});
+		}
 		const { amount, tiers } = value.price;
+		if (value.threshold_billing && tiers?.length) {
+			issues.push({
+				message: "threshold_billing currently requires a flat usage price",
+				input: value.threshold_billing,
+			});
+		}
 
 		if (
 			value.proration &&

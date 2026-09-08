@@ -57,6 +57,13 @@ export const API_PLAN_ITEM_PREPAID_EXAMPLE = {
 
 export const ApiPlanItemV1Schema = z
 	.object({
+		threshold_billing: z
+			.object({ threshold: z.number().finite().positive() })
+			.nullish()
+			.meta({
+				description:
+					"Bills this many feature units when outstanding overage reaches it.",
+			}),
 		feature_id: z.string().meta({
 			description: "The ID of the feature this item configures.",
 		}),

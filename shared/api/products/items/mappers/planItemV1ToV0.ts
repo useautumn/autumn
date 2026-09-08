@@ -49,6 +49,7 @@ export function planItemV1ToV0({
 
 	return {
 		...restItem,
+		threshold_billing: item.threshold_billing,
 		unlimited: item.unlimited ?? false,
 		granted_balance: included,
 		reset: item.reset

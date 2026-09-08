@@ -304,6 +304,7 @@ const toFeatureAndPrice = ({
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
 		stripe_price_id: null,
+		threshold_billing: item.config?.threshold_billing,
 	};
 
 	const currencies = buildUsagePriceCurrencies({
