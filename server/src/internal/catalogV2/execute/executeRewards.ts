@@ -1,6 +1,7 @@
 import type {
 	CatalogAppliedResult,
 	CreateRewardParams,
+	CreateRewardResponse,
 	UpdateRewardParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -20,10 +21,7 @@ import {
 	deleteApiReward,
 	updateApiReward,
 } from "@/internal/rewards/actions/rewardCrud/index.js";
-import {
-	rewardProgramRepo,
-	rewardRepo,
-} from "@/internal/rewards/repos/index.js";
+import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 export type CatalogRewardResults = {
 	rewards: CatalogAppliedResult[];
@@ -73,25 +71,39 @@ const programUpdateParamsFor = ({
 	exclude_trial: upsert.desired.exclude_trial,
 });
 
-const internalIdOfReward = async ({
+/** The created row carries its own stable id; no read-back needed. */
+const internalIdOfCreated = ({
+	created,
+}: {
+	created: CreateRewardResponse;
+}): string | null => {
+	const body = created.coupon ?? created.feature_grant;
+	const internalId = (body as { internal_id?: string } | undefined)
+		?.internal_id;
+	return internalId ?? null;
+};
+
+const internalIdOfProgram = async ({
 	ctx,
-	rewardId,
+	referralProgramId,
 }: {
 	ctx: AutumnContext;
-	rewardId: string;
+	referralProgramId: string;
 }): Promise<string | null> => {
-	const reward = await rewardRepo.get({
+	const program = await rewardProgramRepo.get({
 		db: ctx.db,
-		idOrInternalId: rewardId,
+		idOrInternalId: referralProgramId,
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-	return reward?.internal_id ?? null;
+	return program?.internal_id ?? null;
 };
 
 /**
- * Programs go before rewards on the way out and after them on the way in: a
- * program cannot outlive the reward it points at, and cannot precede it either.
+ * Order is dictated by the link: a program must stop pointing at a reward
+ * before that reward can be deleted, and must not point at one that does not
+ * exist yet. So programs leave first, rewards arrive, programs are repointed,
+ * and only then do the rewards they left behind go.
  */
 export const executeRewards = async ({
 	ctx,
@@ -106,20 +118,17 @@ export const executeRewards = async ({
 			params: { referral_program_id: remove.referralProgramId },
 		});
 	}
-	for (const remove of updateCatalogPlan.removeRewards) {
-		await deleteApiReward({ ctx, params: { reward_id: remove.rewardId } });
-	}
 
 	const rewards: CatalogAppliedResult[] = [];
 	for (const upsert of updateCatalogPlan.upsertRewards) {
 		if (upsert.internalId === null) {
-			await createApiReward({ ctx, params: createParamsFor({ upsert }) });
+			const created = await createApiReward({
+				ctx,
+				params: createParamsFor({ upsert }),
+			});
 			rewards.push({
 				id: upsert.rewardId,
-				internal_id: await internalIdOfReward({
-					ctx,
-					rewardId: upsert.rewardId,
-				}),
+				internal_id: internalIdOfCreated({ created }),
 				action: "create",
 			});
 			continue;
@@ -137,7 +146,7 @@ export const executeRewards = async ({
 	const referralPrograms: CatalogAppliedResult[] = [];
 	for (const upsert of updateCatalogPlan.upsertReferralPrograms) {
 		if (upsert.internalId === null) {
-			await createApiReferralProgram({
+			const created = await createApiReferralProgram({
 				ctx,
 				params: {
 					id: upsert.referralProgramId,
@@ -149,15 +158,12 @@ export const executeRewards = async ({
 					exclude_trial: upsert.desired.exclude_trial,
 				},
 			});
-			const created = await rewardProgramRepo.get({
-				db: ctx.db,
-				idOrInternalId: upsert.referralProgramId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			});
 			referralPrograms.push({
-				id: upsert.referralProgramId,
-				internal_id: created?.internal_id ?? null,
+				id: created.id,
+				internal_id: await internalIdOfProgram({
+					ctx,
+					referralProgramId: upsert.referralProgramId,
+				}),
 				action: "create",
 			});
 			continue;
@@ -173,6 +179,11 @@ export const executeRewards = async ({
 			internal_id: upsert.internalId,
 			action: upsert.previousAttributes ? "update" : "none",
 		});
+	}
+
+	// Last: every link that pointed here has been moved or deleted above.
+	for (const remove of updateCatalogPlan.removeRewards) {
+		await deleteApiReward({ ctx, params: { reward_id: remove.rewardId } });
 	}
 
 	return {
