@@ -1,10 +1,16 @@
 import { Lang, parse, type SgNode } from "@ast-grep/napi";
 import { appendPropertyEdit } from "./appendPropertyEdit";
+import { findLiteralBinding } from "./arrayBinding";
 import { lineStartOf } from "./fixtureEdit";
 import { insertCollection } from "./insertCollection";
 
 /** One key of a singleton block, and the literal it should hold — or nothing. */
 export type SingletonEdit = { key: string; text: string | null };
+
+/** Where the block's object literal lives: inline under the key, or a const. */
+export type SingletonBlock =
+	| { kind: "inline"; singleton: string }
+	| { kind: "binding"; name: string };
 
 const atmnObject = (root: SgNode): SgNode | null => {
 	const object = root.find("atmn($ARG)")?.getMatch("ARG") ?? null;
@@ -24,6 +30,21 @@ const pairFor = ({
 		if (name?.text().replace(/^["']|["']$/g, "") === key) return member;
 	}
 	return null;
+};
+
+const blockObject = ({
+	root,
+	block,
+}: {
+	root: SgNode;
+	block: SingletonBlock;
+}): SgNode | null => {
+	if (block.kind === "binding")
+		return findLiteralBinding({ root, name: block.name, kind: "object" });
+	const object = atmnObject(root);
+	if (object === null) return null;
+	const value = pairFor({ object, key: block.singleton })?.namedChildren()[1];
+	return value !== undefined && value.kind() === "object" ? value : null;
 };
 
 /** Remove a pair with its line when it stands alone, else with one adjacent comma. */
@@ -65,56 +86,42 @@ const removePairEdit = ({
 };
 
 /**
- * One edit to the `<singleton>: { ... }` block of the `atmn()` object: set a
- * key's literal where it stands, append it when absent, drop it when `text`
- * is null. The block is seeded as `{}` when the config has no such key.
- * Null when the block is not a plain object literal this can edit.
+ * One edit to a singleton's object literal: set a key's literal where it
+ * stands, append it when absent, drop it when `text` is null. Null when the
+ * block is not a plain object literal this can edit.
  */
 export const patchSingletonProperty = ({
 	source,
-	singleton,
+	block,
 	edit,
 }: {
 	source: string;
-	singleton: string;
+	block: SingletonBlock;
 	edit: SingletonEdit;
 }): string | null => {
-	// A removal from a block the config never had is nothing to do; seeding
-	// the block for it would state `settings: {}`, which manages nothing.
-	const seeded =
-		edit.text === null ? source : insertSingleton({ source, singleton });
-	if (seeded === null) return null;
-	const root = parse(Lang.TypeScript, seeded).root();
-	const object = atmnObject(root);
+	const root = parse(Lang.TypeScript, source).root();
+	const object = blockObject({ root, block });
 	if (object === null) return null;
-	const pair = pairFor({ object, key: singleton });
-	if (pair === null) return edit.text === null ? seeded : null;
-	const block = pair.namedChildren()[1];
-	if (block === undefined || block.kind() !== "object") return null;
 
-	const existing = pairFor({ object: block, key: edit.key });
+	const existing = pairFor({ object, key: edit.key });
 	if (edit.text === null) {
-		if (existing === null) return seeded;
+		if (existing === null) return source;
 		// The last pair out leaves `{}`, never `{ }` or a dangling comma.
 		const onlyPair =
-			block.children().filter((child) => child.kind() === "pair").length === 1;
+			object.children().filter((child) => child.kind() === "pair").length === 1;
 		return root.commitEdits([
 			onlyPair
 				? {
-						startPos: block.range().start.index,
-						endPos: block.range().end.index,
+						startPos: object.range().start.index,
+						endPos: object.range().end.index,
 						insertedText: "{}",
 					}
-				: removePairEdit({ source: seeded, pair: existing }),
+				: removePairEdit({ source, pair: existing }),
 		]);
 	}
 	if (existing === null) {
 		return root.commitEdits([
-			appendPropertyEdit({
-				source: seeded,
-				object: block,
-				pair: `${edit.key}: ${edit.text}`,
-			}),
+			appendPropertyEdit({ source, object, pair: `${edit.key}: ${edit.text}` }),
 		]);
 	}
 	const [, current] = existing.namedChildren();
@@ -129,7 +136,7 @@ export const patchSingletonProperty = ({
 };
 
 /** `settings: {}` beside the collections, when the config has no such key. */
-const insertSingleton = ({
+export const insertSingleton = ({
 	source,
 	singleton,
 }: {
@@ -156,17 +163,15 @@ const insertSingleton = ({
 /** The literal text a singleton block states for one key, or null. */
 export const singletonPropertyText = ({
 	source,
-	singleton,
+	block,
 	key,
 }: {
 	source: string;
-	singleton: string;
+	block: SingletonBlock;
 	key: string;
 }): string | null => {
 	const root = parse(Lang.TypeScript, source).root();
-	const object = atmnObject(root);
+	const object = blockObject({ root, block });
 	if (object === null) return null;
-	const block = pairFor({ object, key: singleton })?.namedChildren()[1];
-	if (block === undefined || block.kind() !== "object") return null;
-	return pairFor({ object: block, key })?.namedChildren()[1]?.text() ?? null;
+	return pairFor({ object, key })?.namedChildren()[1]?.text() ?? null;
 };

@@ -55,8 +55,10 @@ test("an overlay rename becomes a wire hint rooted at the config key", () => {
 	expect(
 		renamedPaths({ overlay: OVERLAY, roots: { settings: "settings" } }),
 	).toEqual({ "settings.paydownOverages": "persist_free_overage" });
-	// Rooted elsewhere for a response that echoes the object under its wire key.
-	expect(
-		renamedPaths({ overlay: OVERLAY, roots: { settings: "config" } }),
-	).toEqual({ "config.paydownOverages": "persist_free_overage" });
+});
+
+test("responses are recased, never renamed: the type and the runtime agree", async () => {
+	const source = readFileSync(join(generated, "client.ts"), "utf8");
+	expect(source).toContain("persistFreeOverage: boolean;");
+	expect(source).not.toContain('"config.paydownOverages"');
 });

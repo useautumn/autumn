@@ -26238,7 +26238,7 @@ const PREVIEWUPDATEORGANIZATION_RESPONSE_HINTS = hintsOf({
 const UPDATEORGANIZATION_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
-	renamedPaths: {"config.paydownOverages":"persist_free_overage"},
+	renamedPaths: {},
 });
 const CREATESANDBOX_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],

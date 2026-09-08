@@ -1,11 +1,13 @@
 /**
- * The settings block is edited where it stands, key by key: seeded when the
- * config has none, a pair appended when the key is new, its literal replaced
- * when wrong, and the pair removed when the server's value is the default.
+ * The settings block is edited where it stands, key by key: a pair appended
+ * when the key is new, its literal replaced when wrong, the pair removed when
+ * the server's value is the default. The block may be inline under the key or
+ * a const the key names — the same shapes a collection's array may take.
  */
 
 import { expect, test } from "bun:test";
 import {
+	insertSingleton,
 	patchSingletonProperty,
 	singletonPropertyText,
 } from "../../src/surgery/patchSingletonProperty";
@@ -18,17 +20,30 @@ ${body}
 });
 `;
 
-test("no settings key: the block is seeded beside the collections", () => {
+const inline = { kind: "inline", singleton: "settings" } as const;
+
+test("no settings key: insertSingleton seeds an empty block beside the collections", () => {
 	const source = config({ body: "\tfeatures: [],\n\tplans: []," });
-	const updated = patchSingletonProperty({
-		source,
-		singleton: "settings",
-		edit: { key: "multiCurrency", text: "true" },
-	});
-	expect(updated).toBe(
-		config({
-			body: "\tfeatures: [],\n\tplans: [],\n\tsettings: { multiCurrency: true },",
+	expect(insertSingleton({ source, singleton: "settings" })).toBe(
+		config({ body: "\tfeatures: [],\n\tplans: [],\n\tsettings: {}," }),
+	);
+	// Already there: untouched.
+	const stated = config({ body: "\tfeatures: [],\n\tsettings: { a: true }," });
+	expect(insertSingleton({ source: stated, singleton: "settings" })).toBe(
+		stated,
+	);
+});
+
+test("an empty block takes its first pair inline", () => {
+	const source = config({ body: "\tfeatures: [],\n\tsettings: {}," });
+	expect(
+		patchSingletonProperty({
+			source,
+			block: inline,
+			edit: { key: "multiCurrency", text: "true" },
 		}),
+	).toBe(
+		config({ body: "\tfeatures: [],\n\tsettings: { multiCurrency: true }," }),
 	);
 });
 
@@ -36,12 +51,13 @@ test("settings stated, key absent: the pair is appended", () => {
 	const source = config({
 		body: "\tfeatures: [],\n\tsettings: {\n\t\tcancelOnPastDue: true,\n\t},",
 	});
-	const updated = patchSingletonProperty({
-		source,
-		singleton: "settings",
-		edit: { key: "multiCurrency", text: "true" },
-	});
-	expect(updated).toBe(
+	expect(
+		patchSingletonProperty({
+			source,
+			block: inline,
+			edit: { key: "multiCurrency", text: "true" },
+		}),
+	).toBe(
 		config({
 			body: "\tfeatures: [],\n\tsettings: {\n\t\tcancelOnPastDue: true,\n\t\tmultiCurrency: true,\n\t},",
 		}),
@@ -52,12 +68,13 @@ test("key stated wrongly: only its literal moves", () => {
 	const source = config({
 		body: "\tfeatures: [],\n\tsettings: { cancelOnPastDue: false, multiCurrency: true },",
 	});
-	const updated = patchSingletonProperty({
-		source,
-		singleton: "settings",
-		edit: { key: "cancelOnPastDue", text: "true" },
-	});
-	expect(updated).toBe(
+	expect(
+		patchSingletonProperty({
+			source,
+			block: inline,
+			edit: { key: "cancelOnPastDue", text: "true" },
+		}),
+	).toBe(
 		config({
 			body: "\tfeatures: [],\n\tsettings: { cancelOnPastDue: true, multiCurrency: true },",
 		}),
@@ -71,7 +88,7 @@ test("a value back at its default removes the pair, on its own line or inline", 
 	expect(
 		patchSingletonProperty({
 			source: multiline,
-			singleton: "settings",
+			block: inline,
 			edit: { key: "cancelOnPastDue", text: null },
 		}),
 	).toBe(
@@ -80,37 +97,70 @@ test("a value back at its default removes the pair, on its own line or inline", 
 		}),
 	);
 
-	const inline = config({
+	const oneLine = config({
 		body: "\tfeatures: [],\n\tsettings: { cancelOnPastDue: true, multiCurrency: true },",
 	});
 	expect(
 		patchSingletonProperty({
-			source: inline,
-			singleton: "settings",
+			source: oneLine,
+			block: inline,
 			edit: { key: "cancelOnPastDue", text: null },
 		}),
 	).toBe(
 		config({ body: "\tfeatures: [],\n\tsettings: { multiCurrency: true }," }),
 	);
+
+	// The last pair out collapses to `{}`.
+	const last = config({
+		body: "\tfeatures: [],\n\tsettings: { cancelOnPastDue: true },",
+	});
+	expect(
+		patchSingletonProperty({
+			source: last,
+			block: inline,
+			edit: { key: "cancelOnPastDue", text: null },
+		}),
+	).toBe(config({ body: "\tfeatures: [],\n\tsettings: {}," }));
 });
 
-test("a removal with no settings block seeds nothing", () => {
-	const source = config({ body: "\tfeatures: []," });
+test("a const the key names is edited through its binding", () => {
+	const source = `import { atmn } from "atmn-nightly";
+
+const settings = {
+	cancelOnPastDue: true,
+};
+
+export default atmn({
+	features: [],
+	settings,
+});
+`;
 	expect(
 		patchSingletonProperty({
 			source,
-			singleton: "settings",
-			edit: { key: "cancelOnPastDue", text: null },
+			block: { kind: "binding", name: "settings" },
+			edit: { key: "multiCurrency", text: "true" },
 		}),
-	).toBe(source);
+	).toBe(`import { atmn } from "atmn-nightly";
+
+const settings = {
+	cancelOnPastDue: true,
+	multiCurrency: true,
+};
+
+export default atmn({
+	features: [],
+	settings,
+});
+`);
 });
 
 test("a settings value that is not an object literal is refused", () => {
-	const source = config({ body: "\tfeatures: [],\n\tsettings: shared," });
+	const source = config({ body: "\tfeatures: [],\n\tsettings: shared()," });
 	expect(
 		patchSingletonProperty({
 			source,
-			singleton: "settings",
+			block: inline,
 			edit: { key: "multiCurrency", text: "true" },
 		}),
 	).toBeNull();
@@ -121,17 +171,9 @@ test("singletonPropertyText reads the literal a key holds", () => {
 		body: "\tfeatures: [],\n\tsettings: { multiCurrency: true },",
 	});
 	expect(
-		singletonPropertyText({
-			source,
-			singleton: "settings",
-			key: "multiCurrency",
-		}),
+		singletonPropertyText({ source, block: inline, key: "multiCurrency" }),
 	).toBe("true");
 	expect(
-		singletonPropertyText({
-			source,
-			singleton: "settings",
-			key: "cancelOnPastDue",
-		}),
+		singletonPropertyText({ source, block: inline, key: "cancelOnPastDue" }),
 	).toBeNull();
 });

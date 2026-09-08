@@ -1,12 +1,40 @@
 import type { SingletonSpec } from "../../generated/emitRuntime";
 import type { SettingChange } from "../../render/renderPreview";
-import { patchSingletonProperty } from "../../surgery/patchSingletonProperty";
+import {
+	insertSingleton,
+	patchSingletonProperty,
+	type SingletonBlock,
+} from "../../surgery/patchSingletonProperty";
+import { resolveCollectionTarget } from "./resolveCollectionTarget";
 
 export type ApplySettingsResult = {
 	/** One printed line per key changed, in the order applied. */
 	lines: string[];
 	/** Keys the config could not take an edit for. */
 	unlocated: string[];
+};
+
+/** The file and literal the block lives in: inline, a local const, or an
+ * imported one — like a collection's array. Null when it is none of these. */
+const locateBlock = ({
+	singleton,
+	configPath,
+	files,
+}: {
+	singleton: string;
+	configPath: string;
+	files: Map<string, string>;
+}): { file: string; block: SingletonBlock } | null => {
+	const target = resolveCollectionTarget({
+		configPath,
+		files,
+		collection: singleton,
+		kind: "object",
+	});
+	if (target === null) return null;
+	return target.kind === "inline"
+		? { file: target.file, block: { kind: "inline", singleton } }
+		: { file: target.file, block: { kind: "binding", name: target.name } };
 };
 
 /**
@@ -43,24 +71,44 @@ export const applySettingsPreview = ({
 		if (!serverValueOf.has(wireKey)) serverValueOf.set(wireKey, value);
 	}
 
-	for (const field of spec.fields) {
-		if (!serverValueOf.has(field.wireKey)) continue;
+	const edits = spec.fields.flatMap((field) => {
+		if (!serverValueOf.has(field.wireKey)) return [];
 		const serverValue = serverValueOf.get(field.wireKey);
 		const text =
 			serverValue === field.default ? null : JSON.stringify(serverValue);
-		const source = files.get(configPath) ?? "";
+		return [{ key: field.key, text }];
+	});
+	// A block the config never had is seeded only when there is a value to
+	// put in it: `settings: {}` manages nothing.
+	if (edits.some((edit) => edit.text !== null)) {
+		const seeded = insertSingleton({
+			source: files.get(configPath) ?? "",
+			singleton,
+		});
+		if (seeded !== null) files.set(configPath, seeded);
+	}
+
+	for (const edit of edits) {
+		const located = locateBlock({ singleton, configPath, files });
+		if (located === null) {
+			// A value to write needs a literal to land in; a removal from a block
+			// that cannot be found is a flag already stated by other means.
+			if (edit.text !== null) result.unlocated.push(edit.key);
+			continue;
+		}
+		const source = files.get(located.file) ?? "";
 		const updated = patchSingletonProperty({
 			source,
-			singleton,
-			edit: { key: field.key, text },
+			block: located.block,
+			edit,
 		});
 		if (updated === null) {
-			result.unlocated.push(field.key);
+			result.unlocated.push(edit.key);
 			continue;
 		}
 		if (updated === source) continue;
-		files.set(configPath, updated);
-		result.lines.push(`~ ${singleton}.${field.key}`);
+		files.set(located.file, updated);
+		result.lines.push(`~ ${singleton}.${edit.key}`);
 	}
 	return result;
 };

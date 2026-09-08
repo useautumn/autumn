@@ -85,18 +85,21 @@ test("push sends only the settings body to organization.update, and only when a 
 		write: (t) => (output += t),
 	});
 
+	// Settings are previewed and applied BEFORE the catalog is previewed: a flag
+	// like multi_currency changes what the catalog accepts.
 	const settingsCalls = calls.filter((call) => call.method !== "get");
 	expect(settingsCalls.map((call) => call.method)).toEqual([
-		"previewUpdate",
 		"previewUpdateOrganization",
 		"updateOrganization",
+		"previewUpdate",
 	]);
 	// The catalog body never carries settings; the settings body carries only the stated, renamed flags.
-	expect("settings" in (settingsCalls[0].body as object)).toBe(false);
-	expect(settingsCalls[2].body).toEqual({
+	expect("settings" in (settingsCalls[2].body as object)).toBe(false);
+	expect(settingsCalls[1].body).toEqual({
 		config: { multi_currency: true, persist_free_overage: true },
 	});
 	expect(output).toContain("~ Multi-currency: false -> true");
+	expect(output).toContain("Applied settings.");
 });
 
 test("push with no settings block never calls the organization operations", async () => {
@@ -262,8 +265,123 @@ test("catalog work with settings in sync applies the catalog only", async () => 
 	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	await runPush({ client: client as any, cwd: dir, write: () => {} });
 	expect(calls.map((call) => call.method)).toEqual([
-		"previewUpdate",
 		"previewUpdateOrganization",
+		"previewUpdate",
 		"update",
 	]);
+});
+
+test("a dry run previews settings and catalog without writing either", async () => {
+	const dir = tempDir({ name: "push-dry" });
+	writeFileSync(
+		join(dir, "autumn.config.ts"),
+		configWith({
+			body: "\tfeatures: [],\n\tsettings: { multiCurrency: true },",
+		}),
+	);
+	const { calls, client } = fakeClient({
+		settingsChanges: [
+			{
+				key: "multi_currency",
+				action: "update",
+				previous: false,
+				current: true,
+			},
+		],
+		catalogPreview: {
+			features: [{ featureId: "gone", action: "delete" }],
+			plans: [],
+		},
+	});
+	let output = "";
+	await runPush({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		dryRun: true,
+		write: (t) => (output += t),
+	});
+	expect(calls.map((call) => call.method)).toEqual([
+		"previewUpdateOrganization",
+		"previewUpdate",
+	]);
+	expect(output).toContain("~ Multi-currency: false -> true");
+	expect(output).toContain("- gone");
+	expect(output).not.toContain("Applied");
+});
+
+test("pull edits a settings block the config names as a const, local or imported", async () => {
+	const dir = tempDir({ name: "pull-binding" });
+	const path = join(dir, "autumn.config.ts");
+	writeFileSync(
+		join(dir, "settings.ts"),
+		"export const settings = {\n\tcancelOnPastDue: true,\n};\n",
+	);
+	writeFileSync(
+		path,
+		[
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { settings } from "./settings";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"\tsettings,",
+			"});",
+			"",
+		].join("\n"),
+	);
+	const { client } = fakeClient({
+		settingsChanges: [
+			{
+				key: "multi_currency",
+				action: "unmanaged",
+				previous: true,
+				current: null,
+			},
+		],
+	});
+	let output = "";
+	// biome-ignore lint/suspicious/noExplicitAny: a fake client
+	await runPull({
+		client: client as any,
+		cwd: dir,
+		write: (t) => (output += t),
+	});
+
+	expect(readFileSync(join(dir, "settings.ts"), "utf8")).toBe(
+		"export const settings = {\n\tcancelOnPastDue: true,\n\tmultiCurrency: true,\n};\n",
+	);
+	expect(output).toBe("~ settings.multiCurrency\nPulled.\n");
+});
+
+test("pull refuses a settings value it cannot edit, naming the key", async () => {
+	const dir = tempDir({ name: "pull-dynamic" });
+	writeFileSync(
+		join(dir, "autumn.config.ts"),
+		[
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			"const shared = () => ({ multiCurrency: false });",
+			"",
+			"export default atmn({",
+			"\tfeatures: [],",
+			"\tsettings: shared(),",
+			"});",
+			"",
+		].join("\n"),
+	);
+	const { client } = fakeClient({
+		settingsChanges: [
+			{
+				key: "multi_currency",
+				action: "unmanaged",
+				previous: true,
+				current: null,
+			},
+		],
+	});
+	await expect(
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		runPull({ client: client as any, cwd: dir, write: () => {} }),
+	).rejects.toThrow(/settings "multiCurrency"/);
 });

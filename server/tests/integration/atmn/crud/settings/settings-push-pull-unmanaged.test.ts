@@ -97,7 +97,7 @@ test.concurrent("settings: push, pull, unmanaged", async () => {
 		);
 		const applied = await scenario.push();
 		expect(applied.output).toContain("~ Pay down overages: true -> false");
-		expect(applied.output).toContain("Applied.");
+		expect(applied.output).toContain("Applied settings.");
 		const after = (await scenario.client.previewUpdateOrganization({
 			config: {},
 		})) as SettingsPreview;

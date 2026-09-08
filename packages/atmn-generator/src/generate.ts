@@ -281,16 +281,6 @@ export const generate = async (): Promise<string[]> => {
 		] as const
 	).map(({ name, path, responseTypeName, ...rest }) => {
 		const schema = responseSchema({ spec, path });
-		// A singleton's response echoes the object under its wire key, so the
-		// overlay's renames apply there too — rooted at that key, not the config's.
-		const singletonRenames = renamedPaths({
-			overlay: OVERLAY,
-			roots: Object.fromEntries(
-				Object.entries(SINGLETONS)
-					.filter(([, meta]) => meta.operationPath === path)
-					.map(([singleton, meta]) => [singleton, meta.wireKey]),
-			),
-		});
 		const requestTypeName =
 			"requestTypeName" in rest ? rest.requestTypeName : undefined;
 		const request =
@@ -301,11 +291,10 @@ export const generate = async (): Promise<string[]> => {
 			name,
 			path,
 			responseTypeName,
+			// Renames are a fixture-side concept: a response is typed as the spec
+			// names it, so it is recased and nothing more.
 			responseSchema: schema,
-			responseHints: withRenames({
-				hints: wirePathHints({ schema, root }),
-				renames: singletonRenames,
-			}),
+			responseHints: wirePathHints({ schema, root }),
 			...(request === undefined || requestTypeName === undefined
 				? {}
 				: {

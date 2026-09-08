@@ -201,38 +201,48 @@ export const runPush = async ({
 	if (deprecated.length > 0)
 		write(`${renderDeprecatedUses({ uses: deprecated })}\n\n`);
 
-	const [catalogPreview, settings] = await Promise.all([
-		client.previewUpdate(wire) as Promise<CatalogPreview>,
-		previewSettings({ client, body: singletons.settings }),
-	]);
-	const preview: CatalogPreview = { ...catalogPreview, settings };
+	// Settings go first, on their own: a flag like multi_currency changes what
+	// the catalog accepts, so the catalog is previewed against the settings as
+	// they will be, and a settings write can never fail on the catalog's account.
+	const settingsBody = singletons.settings;
+	const settings = await previewSettings({ client, body: settingsBody });
+	const settingsWork =
+		settingsBody !== undefined && settingsHaveWork({ settings });
+	if (settingsWork) {
+		write(`${renderPreview({ preview: { settings } })}\n`);
+		if (!dryRun) {
+			try {
+				await client.updateOrganization(settingsBody);
+			} catch (error) {
+				throw withSettingsScopeHint({ error });
+			}
+			write("\nApplied settings.\n\n");
+		}
+	}
+
+	const catalogPreview = (await client.previewUpdate(wire)) as CatalogPreview;
+	// The settings lane is already printed when it applied; the unmanaged
+	// notes still belong beside the catalog's own rows.
+	const preview: CatalogPreview = {
+		...catalogPreview,
+		...(settingsWork ? {} : { settings }),
+	};
 
 	write(`${renderPreview({ preview, migrationLinkBase })}\n`);
 
 	const renameHint = possibleRenameHint({ preview, wire: wire as WireLike });
 	if (renameHint !== null) write(`${renameHint}\n\n`);
 
-	if (previewIsEmpty({ preview })) {
-		return { configPath, preview, migrationIds: [] };
+	const fullPreview: CatalogPreview = { ...catalogPreview, settings };
+	if (previewIsEmpty({ preview: catalogPreview })) {
+		return { configPath, preview: fullPreview, migrationIds: [] };
 	}
-	if (dryRun) return { configPath, preview, migrationIds: [] };
+	if (dryRun) return { configPath, preview: fullPreview, migrationIds: [] };
 
-	// Settings first: a flag like multi_currency changes what the catalog
-	// accepts, and the settings write cannot fail on the catalog's account.
-	if (singletons.settings !== undefined && settingsHaveWork({ settings })) {
-		try {
-			await client.updateOrganization(singletons.settings);
-		} catch (error) {
-			throw withSettingsScopeHint({ error });
-		}
-	}
-
-	const applied = previewIsEmpty({ preview: catalogPreview })
-		? {}
-		: ((await client.update(wire)) as {
-				migrations?: { id?: string }[];
-				results?: Record<string, unknown>;
-			});
+	const applied = (await client.update(wire)) as {
+		migrations?: { id?: string }[];
+		results?: Record<string, unknown>;
+	};
 
 	const migrationIds = (applied.migrations ?? [])
 		.map((migration) => migration.id)
@@ -268,5 +278,5 @@ export const runPush = async ({
 		write(backfillSummary({ backfilled, slugged }));
 	}
 
-	return { configPath, preview, applied, migrationIds };
+	return { configPath, preview: fullPreview, applied, migrationIds };
 };
