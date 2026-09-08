@@ -11,8 +11,23 @@ import {
 	isPrepaidPrice,
 	isVolumeBasedCusEnt,
 	resolveBillingControlWithProduct,
-	type UsagePriceConfig,
 } from "@autumn/shared";
+
+const getThreshold = (cusEnt: FullCusEntWithFullCusProduct) =>
+	cusEntToCusPrice({ cusEnt })?.price.config.threshold_billing?.threshold;
+
+const isThresholdEntitlement = (cusEnt: FullCusEntWithFullCusProduct) =>
+	getThreshold(cusEnt) !== undefined;
+
+const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
+	const customerPrice = cusEntToCusPrice({ cusEnt });
+	return Boolean(
+		customerPrice &&
+			isOneOffPrice(customerPrice.price) &&
+			isPrepaidPrice(customerPrice.price) &&
+			!isVolumeBasedCusEnt(cusEnt),
+	);
+};
 
 /** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
 export const fullCustomerToAutoTopupObjects = ({
@@ -44,17 +59,9 @@ export const fullCustomerToAutoTopupObjects = ({
 
 	if (cusEnts.length === 0) return null;
 	if (!autoTopupConfig) {
-		const thresholdEntitlement = cusEnts.find((cusEnt) => {
-			const price = cusEntToCusPrice({ cusEnt });
-			return Boolean(
-				price && (price.price.config as UsagePriceConfig).threshold_billing,
-			);
-		});
+		const thresholdEntitlement = cusEnts.find(isThresholdEntitlement);
 		const threshold = thresholdEntitlement
-			? ((
-					cusEntToCusPrice({ cusEnt: thresholdEntitlement })!.price
-						.config as UsagePriceConfig
-				).threshold_billing?.threshold ?? 0)
+			? (getThreshold(thresholdEntitlement) ?? 0)
 			: 0;
 		if (!thresholdEntitlement || threshold <= 0) return null;
 		autoTopupConfig = {
@@ -68,16 +75,6 @@ export const fullCustomerToAutoTopupObjects = ({
 	// 3. Find the one-off prepaid cusEnt whose price the top-up charges.
 	const sourceProductInternalId =
 		resolved?.customerProduct?.internal_product_id;
-	const isOneOffPrepaid = (ce: FullCusEntWithFullCusProduct) => {
-		const cp = cusEntToCusPrice({ cusEnt: ce });
-		return (
-			cp &&
-			isOneOffPrice(cp.price) &&
-			isPrepaidPrice(cp.price) &&
-			!isVolumeBasedCusEnt(ce)
-		);
-	};
-
 	let customerEntitlement: FullCusEntWithFullCusProduct | undefined;
 	if (sourceProductInternalId) {
 		// Plan-scoped config charges ONLY its own plan's price — never another
@@ -100,12 +97,7 @@ export const fullCustomerToAutoTopupObjects = ({
 	}
 
 	if (!customerEntitlement || !customerEntitlement.customer_product) {
-		const thresholdCustomerEntitlement = cusEnts.find((cusEnt) => {
-			const price = cusEntToCusPrice({ cusEnt });
-			return Boolean(
-				price && (price.price.config as UsagePriceConfig).threshold_billing,
-			);
-		});
+		const thresholdCustomerEntitlement = cusEnts.find(isThresholdEntitlement);
 		if (thresholdCustomerEntitlement?.customer_product) {
 			customerEntitlement = thresholdCustomerEntitlement;
 		} else {
@@ -115,9 +107,7 @@ export const fullCustomerToAutoTopupObjects = ({
 
 	// 4. Check balance against threshold
 	const thresholdPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
-	const thresholdBilling = thresholdPrice
-		? (thresholdPrice.price.config as UsagePriceConfig).threshold_billing
-		: undefined;
+	const thresholdBilling = thresholdPrice?.price.config.threshold_billing;
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
 	const balanceBelowThreshold = thresholdBilling
 		? cusEntToInvoiceOverage({ cusEnt: customerEntitlement }) >=
