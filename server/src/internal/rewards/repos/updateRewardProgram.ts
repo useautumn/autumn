@@ -19,7 +19,14 @@ export const updateRewardProgram = async ({
 	idOrInternalId: string;
 	orgId: string;
 	env: string;
-	data: Partial<RewardProgram>;
+	/** Nullable columns take an explicit null to clear; undefined leaves them. */
+	data: Partial<
+		Omit<RewardProgram, "product_ids" | "max_redemptions" | "exclude_trial">
+	> & {
+		product_ids?: string[] | null;
+		max_redemptions?: number | null;
+		exclude_trial?: boolean | null;
+	};
 }) => {
 	const result = await db
 		.update(rewardPrograms)

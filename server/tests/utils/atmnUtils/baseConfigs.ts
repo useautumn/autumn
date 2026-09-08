@@ -144,15 +144,22 @@ export const configBody = ({
 	features,
 	plans,
 	planVersions,
+	rewards,
+	referralPrograms,
 }: {
 	features?: string;
 	plans?: string;
 	planVersions?: string;
+	rewards?: string;
+	referralPrograms?: string;
 }): string => {
 	const lines: string[] = [];
 	if (features !== undefined) lines.push(`\tfeatures: [${features}\n\t],`);
 	if (plans !== undefined) lines.push(`\tplans: [${plans}\n\t],`);
 	if (planVersions !== undefined)
 		lines.push(`\tplanVersions: [${planVersions}\n\t],`);
+	if (rewards !== undefined) lines.push(`\trewards: [${rewards}\n\t],`);
+	if (referralPrograms !== undefined)
+		lines.push(`\treferralPrograms: [${referralPrograms}\n\t],`);
 	return `{\n${lines.join("\n")}\n}`;
 };
