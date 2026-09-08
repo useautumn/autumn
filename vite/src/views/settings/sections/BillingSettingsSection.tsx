@@ -163,6 +163,17 @@ export const BillingSettingsSection = () => {
 	const handleSave = () => {
 		if (!isDirty || isPending) return;
 
+		const attemptLimit = pending.auto_topup_attempt_limit;
+		if (
+			attemptLimit != null &&
+			(!Number.isInteger(attemptLimit) || attemptLimit < 1)
+		) {
+			toast.error(
+				"Auto top-up attempt limit must be a whole number of at least 1",
+			);
+			return;
+		}
+
 		if (isTtlDirty && pendingTtl) {
 			const ttlHours = toHours(pendingTtl);
 			if (
