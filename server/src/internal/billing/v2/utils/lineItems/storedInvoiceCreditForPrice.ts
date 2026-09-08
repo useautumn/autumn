@@ -108,11 +108,11 @@ export const storedInvoiceCreditForPrice = ({
 			now: effectiveNow,
 			alreadyRefunded,
 		});
-		if (creditAmount === 0) continue;
-
 		coveredSeats +=
 			(chargeRow.paid_quantity ?? 0) /
 			Math.max(chargeRow.customer_product_ids.length, 1);
+		if (creditAmount === 0) continue;
+
 		lineItems.push(
 			chargeRowToRefundLineItem({
 				chargeRow,
