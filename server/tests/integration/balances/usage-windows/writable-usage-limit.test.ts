@@ -49,7 +49,9 @@ test.concurrent(
 				usage_limits: [{ feature_id: TestFeature.Messages, usage: 9 }],
 			} as never,
 		});
-		const customer = (await autumn.customers.get(customerId)) as {
+		const customer = (await autumn.customers.get(customerId, {
+			skip_cache: "true",
+		})) as {
 			billing_controls: {
 				usage_limits: Array<{
 					feature_id: string;
@@ -69,7 +71,9 @@ test.concurrent(
 				usage_limits: [{ feature_id: TestFeature.Messages, usage: 0 }],
 			} as never,
 		});
-		const resetCustomer = (await autumn.customers.get(customerId)) as {
+		const resetCustomer = (await autumn.customers.get(customerId, {
+			skip_cache: "true",
+		})) as {
 			billing_controls: { usage_limits: Array<{ usage?: number }> };
 		};
 		expect(resetCustomer.billing_controls.usage_limits[0].usage).toBe(0);
@@ -115,7 +119,9 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 3,
 		});
-		const trackedEntity = (await autumn.entities.get(customerId, entityId)) as {
+		const trackedEntity = (await autumn.entities.get(customerId, entityId, {
+			skip_cache: "true",
+		})) as {
 			billing_controls?: { usage_limits?: Array<{ usage?: number }> };
 		};
 		expect(trackedEntity.billing_controls?.usage_limits?.[0]?.usage).toBe(3);
@@ -124,7 +130,9 @@ test.concurrent(
 				usage_limits: [{ feature_id: TestFeature.Messages, usage: 0 }],
 			} as never,
 		});
-		const entity = (await autumn.entities.get(customerId, entityId)) as {
+		const entity = (await autumn.entities.get(customerId, entityId, {
+			skip_cache: "true",
+		})) as {
 			billing_controls?: { usage_limits?: Array<{ usage?: number }> };
 		};
 		expect(entity.billing_controls?.usage_limits?.[0]?.usage).toBe(0);
