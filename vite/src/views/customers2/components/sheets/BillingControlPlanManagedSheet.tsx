@@ -69,6 +69,7 @@ export function BillingControlPlanManagedSheet() {
 	};
 
 	const handleSaveUsage = async () => {
+		if (!usage.trim()) return;
 		const value = Number(usage);
 		const customerId = customer?.id ?? customer?.internal_id;
 		if (
