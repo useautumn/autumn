@@ -14,6 +14,8 @@ import {
 	getRedisTrackFeatureIdempotencyKey,
 	TRACK_V3_IDEMPOTENCY_TTL_MS,
 } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
+import { handoffBalanceObservation } from "@/internal/balances/shadow/handoffBalanceObservation.js";
+import { prepareBalanceObservation } from "@/internal/balances/shadow/prepareBalanceObservation.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
@@ -174,7 +176,15 @@ export const executeRedisDeductionV2 = async ({
 				}).redisKey
 			: null;
 
-		const { keys, balanceKeyIndexByFeatureId } =
+		const observation = prepareBalanceObservation({
+			ctx,
+			fullSubject,
+			entityId,
+			deduction,
+			options,
+			customerEntitlements,
+		});
+		const { keys, balanceKeyIndexByFeatureId, observationKeyIndex } =
 			buildDeductFromSubjectBalancesKeys({
 				orgId: org.id,
 				env,
@@ -185,6 +195,7 @@ export const executeRedisDeductionV2 = async ({
 				customerEntitlementDeductions,
 				fallbackFeatureId: feature.id,
 				usageWindowFeatureIds,
+				observationMetadataKey: observation?.metadataKey,
 			});
 
 		// Usage windows are enforced/incremented only for real positive
@@ -227,6 +238,9 @@ export const executeRedisDeductionV2 = async ({
 				: null,
 			unwind_value: unwindValue ?? null,
 			debug: process.env.NODE_ENV !== "production",
+			observation: observation
+				? { ...observation.params, metadata_key_index: observationKeyIndex }
+				: undefined,
 		};
 
 		const targetRedis = redisInstance ?? ctx.redisV2;
@@ -249,6 +263,12 @@ export const executeRedisDeductionV2 = async ({
 		}
 
 		const resultJson = JSON.parse(result) as LuaDeductionResult;
+		if (observation)
+			handoffBalanceObservation({
+				capture: observation.capture,
+				context: observation.context,
+				result: resultJson,
+			});
 
 		if (resultJson.logs && resultJson.logs.length > 0) {
 			ctx.logger.debug(
