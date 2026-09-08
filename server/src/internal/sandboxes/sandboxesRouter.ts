@@ -4,6 +4,7 @@ import { handleCopySandbox } from "./handlers/handleCopySandbox.js";
 import { handleCreateSandbox } from "./handlers/handleCreateSandbox.js";
 import { handleDeleteSandbox } from "./handlers/handleDeleteSandbox.js";
 import { handleListSandboxes } from "./handlers/handleListSandboxes.js";
+import { handleResetSandbox } from "./handlers/handleResetSandbox.js";
 import { handleUpdateSandbox } from "./handlers/handleUpdateSandbox.js";
 
 export const sandboxesRpcRouter = new Hono<HonoEnv>();
@@ -13,3 +14,4 @@ sandboxesRpcRouter.post("/sandboxes.list", ...handleListSandboxes);
 sandboxesRpcRouter.post("/sandboxes.delete", ...handleDeleteSandbox);
 sandboxesRpcRouter.post("/sandboxes.update", ...handleUpdateSandbox);
 sandboxesRpcRouter.post("/sandboxes.copy", ...handleCopySandbox);
+sandboxesRpcRouter.post("/sandboxes.reset", ...handleResetSandbox);

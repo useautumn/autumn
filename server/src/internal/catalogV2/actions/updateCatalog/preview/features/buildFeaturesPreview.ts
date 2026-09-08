@@ -27,6 +27,8 @@ export const buildFeaturesPreview = ({
 			});
 			return {
 				feature_id: feature.id,
+				// Minted per computation: a preview's id would not be the applied one.
+				internal_id: null,
 				name: feature.name,
 				action: "create" as const,
 				state: {
@@ -50,6 +52,7 @@ export const buildFeaturesPreview = ({
 			});
 			return {
 				feature_id: updateFeaturePlan.next.id,
+				internal_id: updateFeaturePlan.current.internal_id,
 				name: updateFeaturePlan.next.name,
 				action: updateFeaturePlan.previousAttributes
 					? ("update" as const)
@@ -71,6 +74,7 @@ export const buildFeaturesPreview = ({
 			});
 			return {
 				feature_id: removeFeaturePlan.featureId,
+				internal_id: removeFeaturePlan.current?.internal_id ?? null,
 				name: removeFeaturePlan.current?.name,
 				action: "delete" as const,
 				state: {

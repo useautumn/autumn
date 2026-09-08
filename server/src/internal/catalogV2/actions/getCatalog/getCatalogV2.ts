@@ -8,6 +8,10 @@ import {
 } from "@autumn/shared";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	loadReferralProgramStates,
+	loadRewardStates,
+} from "@/internal/catalogV2/actions/updateCatalog/setup/loadRewardStates.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -21,13 +25,14 @@ export const getCatalogV2 = async ({
 	ctx: AutumnContext;
 	params: GetCatalogParams;
 }): Promise<GetCatalogResponse> => {
-	const { include_archived = false } = params ?? {};
+	const { include_archived = false, include_versions = false } = params ?? {};
 
 	const products = await ProductService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,
 		archived: include_archived ? undefined : false,
+		returnAll: include_versions,
 	});
 
 	// Variants surface only nested under their base plan, never top-level.
@@ -69,13 +74,38 @@ export const getCatalogV2 = async ({
 		),
 	);
 
-	const features = ctx.features.map((feature) =>
-		dbToApiFeatureV1({
-			ctx,
-			dbFeature: feature,
-			targetVersion: FEATURE_TARGET_VERSION,
-		}),
-	);
+	const features = ctx.features
+		.filter((feature) => include_archived || !feature.archived)
+		.map((feature) =>
+			dbToApiFeatureV1({
+				ctx,
+				dbFeature: feature,
+				targetVersion: FEATURE_TARGET_VERSION,
+			}),
+		);
 
-	return { features, plans };
+	const loadedRewards = await loadRewardStates({ ctx });
+	const programs = await loadReferralProgramStates({
+		ctx,
+		idByInternalId: loadedRewards.idByInternalId,
+	});
+
+	return {
+		features,
+		plans,
+		rewards: loadedRewards.rewards.map((reward) =>
+			reward.kind === "coupon"
+				? { coupon: { ...reward.coupon, internal_id: reward.internalId } }
+				: {
+						feature_grant: {
+							...reward.featureGrant,
+							internal_id: reward.internalId,
+						},
+					},
+		),
+		referral_programs: programs.map((state) => ({
+			...state.program,
+			internal_id: state.internalId,
+		})),
+	};
 };

@@ -27,6 +27,10 @@ export * from "./catalogV2/planUpdate/preview/catalogVariantPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogVersioningPreview.js";
 export * from "./catalogV2/planUpdate/preview/planAliasReplacement.js";
 export * from "./catalogV2/planUpdate/versioning.js";
+export * from "./catalogV2/rewardUpdate/components/catalogRewardV1.js";
+export * from "./catalogV2/rewardUpdate/params/catalogReferralProgramParams.js";
+export * from "./catalogV2/rewardUpdate/params/catalogRewardParams.js";
+export * from "./catalogV2/rewardUpdate/preview/catalogRewardPreview.js";
 export * from "./catalogV2/previewUpdateCatalogParams.js";
 export * from "./catalogV2/previewUpdateCatalogResponse.js";
 export * from "./catalogV2/updateCatalogParams.js";
@@ -54,6 +58,9 @@ export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
 // Licenses
 export * from "./licenses/index.js";
+// Organization (internal: the CLI's `settings` block)
+export * from "./organization/updateOrganizationParams.js";
+export * from "./organization/updateOrganizationResponse.js";
 // Others
 export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";

@@ -12,12 +12,14 @@ import { handleDeclaredVariantAnchorErrors } from "@/internal/catalogV2/actions/
 import { handleLicenseAnchorLifecycleErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleLicenseAnchorLifecycleErrors";
 import { handleRemoveFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemoveFeatureErrors/handleRemoveFeatureErrors";
 import { handleRemovePlanErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemovePlanErrors/handleRemovePlanErrors";
+import { handleRewardErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRewardErrors";
 import { handleUpdateFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateFeatureErrors/handleUpdateFeatureErrors";
 import { handleUpsertProductActiveErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductActiveErrors";
 import { handleUpsertProductErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleUpsertProductErrors";
 import { handleUpsertProductRenameErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductRenameErrors";
 import { handleUpsertProductVersioningErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersioningErrors";
 import { handleUpsertProductVersionSlugErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersionSlugErrors";
+import { handleVariantSharedAcrossVersionsErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleVariantSharedAcrossVersionsErrors";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import {
@@ -170,6 +172,10 @@ export const handleUpdateCatalogErrors = async ({
 		params,
 		productStatesContext: catalogContext.productStatesContext,
 	});
+	handleVariantSharedAcrossVersionsErrors({
+		params,
+		productStatesContext: catalogContext.productStatesContext,
+	});
 	await handleUpsertProductRenameErrors({
 		ctx,
 		params,
@@ -184,4 +190,5 @@ export const handleUpdateCatalogErrors = async ({
 		productStatesContext: catalogContext.productStatesContext,
 	});
 	handleLicenseAnchorLifecycleErrors({ updateCatalogPlan });
+	handleRewardErrors({ params, catalogContext, updateCatalogPlan });
 };

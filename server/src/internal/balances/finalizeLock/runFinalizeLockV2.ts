@@ -1,6 +1,7 @@
 import {
 	ErrCode,
 	type FinalizeLockParamsV0,
+	InsufficientBalanceError,
 	notNullish,
 	RecaseError,
 } from "@autumn/shared";
@@ -11,7 +12,22 @@ import { cancelLockExpiry } from "@/internal/balances/utils/lock/cancelLockExpir
 import type { LockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import { buildFinalizeLockContextV2 } from "@/internal/balances/utils/lockV2/buildFinalizeLockContextV2.js";
 import { deleteLockReceiptV2 } from "@/internal/balances/utils/lockV2/deleteLockReceiptV2.js";
+import { releaseLockClaimMarker } from "@/internal/balances/utils/lockV2/releaseLockClaimMarker.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "@/internal/balances/utils/types/redisDeductionError.js";
 import { runRedisFinalizeLockV2 } from "./runRedisFinalizeLockV2.js";
+
+const isBalanceRejection = (error: unknown): boolean => {
+	if (error instanceof InsufficientBalanceError) return true;
+	if (error instanceof RedisDeductionError) {
+		return error.code === RedisDeductionErrorCode.InsufficientBalance;
+	}
+	return (
+		error instanceof Error && error.message.startsWith("INSUFFICIENT_BALANCE|")
+	);
+};
 
 /**
  * V2 finalize. Receives the receipt + claim outcome from the dispatcher
@@ -52,6 +68,18 @@ export const runFinalizeLockV2 = async ({
 	});
 	const { redisInstance, finalValue, lockValue } = finalizeLockContext;
 
+	const balanceChanged = !new Decimal(finalValue).equals(lockValue);
+	try {
+		if (balanceChanged) {
+			await runRedisFinalizeLockV2({ ctx, finalizeLockContext });
+		}
+	} catch (error) {
+		if (isBalanceRejection(error)) {
+			await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
+		}
+		throw error;
+	}
+
 	try {
 		if (notNullish(receipt.expires_at)) {
 			await cancelLockExpiry({
@@ -64,12 +92,6 @@ export const runFinalizeLockV2 = async ({
 		ctx.logger.error(`Failed to cancel lock expiry: ${error}`);
 	}
 
-	if (new Decimal(finalValue).equals(lockValue)) {
-		await deleteLockReceiptV2({ lockReceiptKey, redisInstance });
-		return { success: true };
-	}
-
-	await runRedisFinalizeLockV2({ ctx, finalizeLockContext });
 	await deleteLockReceiptV2({ lockReceiptKey, redisInstance });
 
 	return { success: true };

@@ -6,10 +6,16 @@ import { CatalogMigrationSchema } from "./components/catalogMigration.js";
 
 const CatalogAppliedResultSchema = z.object({
 	id: z.string(),
+	internal_id: z.string().nullable().optional().meta({
+		description: "Stable id of the row this result is about (features today).",
+		internal: true,
+	}),
 	action: CatalogActionSchema.meta({
 		description: "What was actually applied, including 'skip' and 'none'.",
 	}),
 });
+
+export type CatalogAppliedResult = z.infer<typeof CatalogAppliedResultSchema>;
 
 /** Resolved post-update state plus what was actually done per requested entry. */
 export const UpdateCatalogResponseSchema = z.object({
@@ -18,14 +24,16 @@ export const UpdateCatalogResponseSchema = z.object({
 	results: z.object({
 		plans: z.array(CatalogAppliedResultSchema),
 		features: z.array(CatalogAppliedResultSchema),
+		rewards: z.array(CatalogAppliedResultSchema).optional().default([]),
+		referral_programs: z
+			.array(CatalogAppliedResultSchema)
+			.optional()
+			.default([]),
 	}),
-	migrations: z
-		.array(CatalogMigrationSchema)
-		.optional()
-		.meta({
-			description:
-				"Migration drafts created for in-place / all_versions plan updates that requested `migration.draft`.",
-		}),
+	migrations: z.array(CatalogMigrationSchema).optional().meta({
+		description:
+			"Migration drafts created for in-place / all_versions plan updates that requested `migration.draft`.",
+	}),
 });
 
 export type UpdateCatalogResponse = z.infer<typeof UpdateCatalogResponseSchema>;

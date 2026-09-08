@@ -8,6 +8,14 @@ import { computeMigrationDraftPlans } from "@/internal/catalogV2/actions/updateC
 import { computeRemoveFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveFeaturesPlan/computeRemoveFeaturesPlan";
 import { computeRemoveProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveProductsPlan/computeRemoveProductsPlan";
 import { computeRenameProductIdsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRenameProductIdsPlan/computeRenameProductIdsPlan";
+import {
+	computeRemoveReferralProgramsPlan,
+	computeUpsertReferralProgramsPlan,
+} from "@/internal/catalogV2/actions/updateCatalog/compute/computeRewardsPlan/computeReferralProgramsPlan";
+import {
+	computeRemoveRewardsPlan,
+	computeUpsertRewardsPlan,
+} from "@/internal/catalogV2/actions/updateCatalog/compute/computeRewardsPlan/computeRewardsPlan";
 import { computeUpdateFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateFeaturesPlan/computeUpdateFeaturesPlan";
 import { computeUpsertProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductsPlan";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -42,9 +50,12 @@ export const computeUpdateCatalogPlan = ({
 		originalProducts,
 	});
 
-	compute.advance({
-		step: computeUpdateFeaturesPlan({ ctx, catalogContext, params }),
+	const updateFeaturesStep = computeUpdateFeaturesPlan({
+		ctx,
+		catalogContext,
+		params,
 	});
+	compute.advance({ step: updateFeaturesStep });
 
 	compute.advance({
 		step: computeInsertFeaturesPlan({
@@ -54,19 +65,38 @@ export const computeUpdateCatalogPlan = ({
 		}),
 	});
 
-	compute.advance({
-		step: computeRemoveFeaturesPlan({
-			ctx,
-			catalogContext,
-			params,
-			projected: compute.projected,
-		}),
+	const removeFeaturesStep = computeRemoveFeaturesPlan({
+		ctx,
+		catalogContext,
+		params,
+		projected: compute.projected,
 	});
+	compute.advance({ step: removeFeaturesStep });
 
 	// Plan items resolve against post-feature-ops features (same-call creates/renames).
+	// A feature this call removes stays projected when it archives, so existing
+	// rows still render; a stated item may not name that row. One the call also
+	// updates stays resolvable, so the errors phase reports that contradiction.
+	const updatedInternalFeatureIds = new Set(
+		(updateFeaturesStep.updateFeatures ?? []).map(
+			(plan) => plan.current.internal_id,
+		),
+	);
+	const removedInternalFeatureIds = new Set(
+		(removeFeaturesStep.removeFeatures ?? []).flatMap((plan) =>
+			plan.current && !updatedInternalFeatureIds.has(plan.current.internal_id)
+				? [plan.current.internal_id]
+				: [],
+		),
+	);
 	compute.advance({
 		step: computeUpsertProductsPlan({
-			ctx: enrichCtxWithFeatures({ ctx, features: compute.projected.features }),
+			ctx: enrichCtxWithFeatures({
+				ctx,
+				features: compute.projected.features.filter(
+					(feature) => !removedInternalFeatureIds.has(feature.internal_id),
+				),
+			}),
 			catalogContext,
 			params,
 		}),
@@ -81,8 +111,19 @@ export const computeUpdateCatalogPlan = ({
 	});
 
 	const plan = compute.toPlan();
+	const { rewardStatesContext } = catalogContext;
 	return {
 		...plan,
+		upsertRewards: computeUpsertRewardsPlan({ params, rewardStatesContext }),
+		removeRewards: computeRemoveRewardsPlan({ params, rewardStatesContext }),
+		upsertReferralPrograms: computeUpsertReferralProgramsPlan({
+			params,
+			rewardStatesContext,
+		}),
+		removeReferralPrograms: computeRemoveReferralProgramsPlan({
+			params,
+			rewardStatesContext,
+		}),
 		renamePlans: computeRenameProductIdsPlan({
 			params,
 			productStatesContext: catalogContext.productStatesContext,

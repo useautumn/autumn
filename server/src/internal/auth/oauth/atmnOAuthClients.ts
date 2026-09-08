@@ -9,6 +9,8 @@ const ATMN_OAUTH_CLIENT_NAMES = new Set(["atmn", "autumn cli"]);
 // unauthenticated /authorize requests cannot widen the reserved client.
 const ATMN_OAUTH_SCOPES = new Set<string>([
 	"organisation:read",
+	// atmn v3 `settings` block writes org config through /v1/organization.update
+	"organisation:write",
 	"customers:create",
 	"customers:read",
 	"customers:list",
@@ -28,6 +30,12 @@ const ATMN_OAUTH_SCOPES = new Set<string>([
 	"apiKeys:read",
 	"rewards:read",
 	"rewards:write",
+	// atmn v3 `reset` clears the sandbox's migration drafts alongside its catalog.
+	"migrations:read",
+	"migrations:write",
+	// atmn v3 `sandbox create|delete` mint and drop sub-orgs through /v1/sandboxes.*
+	"platform:read",
+	"platform:write",
 ]);
 
 const metadataMarksAtmn = (metadata: unknown) => {

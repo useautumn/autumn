@@ -9,7 +9,7 @@ import {
 	fullSubjectToSpendLimitByFeatureId,
 	fullSubjectToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
-	getRelevantFeatures,
+	InsufficientBalanceError,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
 	notNullish,
@@ -17,6 +17,7 @@ import {
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getCheckSubject } from "@/internal/balances/check/getCheckSubject.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -46,6 +47,11 @@ export const prepareFeatureDeductionV2 = ({
 	const { org, env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
+	const blockOverdueUsage =
+		deduction.enforceOverdueBlock && org.config.block_overdue_entitlements;
+	if (blockOverdueUsage) {
+		fullSubject = getCheckSubject({ ctx, fullSubject });
+	}
 
 	// Membership is per cusEnt (fundsFeatureId), not per catalog feature — a
 	// plan item's feature_override can add or remove the tracked feature from
@@ -59,6 +65,13 @@ export const prepareFeatureDeductionV2 = ({
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
 	});
+	const requiresEntitlement = blockOverdueUsage && deduction.deduction > 0;
+	if (requiresEntitlement && customerEntitlements.length === 0) {
+		throw new InsufficientBalanceError({
+			featureId: feature.id,
+			value: deduction.deduction,
+		});
+	}
 
 	const isUnlimitedCusEnt = (ce: FullCusEntWithFullCusProduct): boolean =>
 		ce.entitlement.allowance_type === AllowanceType.Unlimited ||
@@ -93,12 +106,19 @@ export const prepareFeatureDeductionV2 = ({
 	// Resolve windows against the full relevant set (incl credit-system parents)
 	// even under set_usage, so a parent-feature cap can't be bypassed by set_usage
 	// on a member feature.
-	const windowFeatureIds = notNullish(targetBalance)
-		? getRelevantFeatures({
-				features: ctx.features,
-				featureId: feature.id,
-			}).map((candidate) => candidate.id)
-		: effectiveFeatureIds;
+	const fundingEntitlements = notNullish(targetBalance)
+		? fullSubjectToCustomerEntitlements({
+				fullSubject,
+				fundsFeatureId: feature.id,
+				inStatuses: orgToInStatuses({ org }),
+			})
+		: customerEntitlements;
+	const windowFeatureIds = deduplicateArray([
+		feature.id,
+		...fundingEntitlements.map(
+			(customerEntitlement) => customerEntitlement.entitlement.feature.id,
+		),
+	]);
 	const allUsageWindowLimits = resolveUsageWindowLimits({
 		ctx,
 		fullSubject,

@@ -109,6 +109,16 @@ await mockModuleWithRestore(
 	}),
 );
 
+await mockModuleWithRestore(
+	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
+	() => ({
+		getOrSetCachedFullSubject: async () => ({
+			customer: { id: "cus_123" },
+			customer_products: [],
+		}),
+	}),
+);
+
 import { handleTrackTokens } from "@/internal/balances/handlers/handleTrackTokens.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";

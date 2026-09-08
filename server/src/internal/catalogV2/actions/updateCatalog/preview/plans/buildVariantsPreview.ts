@@ -8,19 +8,20 @@ import type {
 } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { variantRowsAnchoredTo } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/variantPlanUtils";
-import { variantRowForPropagateTarget } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantRowForPropagateTarget";
+import { aliasReplacementForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/aliasReplacementForPlan";
 import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { withVariantConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withVariantConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import { computeVersioningOptionsForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/versioningOptions/computeVersioningOptionsForPlan";
+import type { RenameProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/renameProductPlan";
 import type {
 	PreviewCatalogContext,
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
-import type { RenameProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/renameProductPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { aliasReplacementForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/aliasReplacementForPlan";
+import { editedBaseInternalIds } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/editedBaseInternalIds";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
+import { variantRowForPropagateTarget } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantRowForPropagateTarget";
 
 const byPlanThenVersion = (
 	left: CatalogVariantPreview,
@@ -258,21 +259,6 @@ const siblingVersionsForVariant = ({
 		})
 		.sort(byVersionAscending);
 
-/** Base rows this upsert edits — what anchored variant rows must point at. */
-const editedBaseInternalIds = ({
-	upsert,
-}: {
-	upsert: UpsertProductPlan;
-}): Set<string> =>
-	new Set(
-		[
-			upsert.row.currentFullProduct?.internal_id,
-			upsert.row.baseFullProduct?.internal_id,
-			upsert.row.nextFullProduct.internal_id,
-			upsert.previousActiveInternalId,
-		].filter((internalId): internalId is string => internalId !== undefined),
-	);
-
 /** Anchored rows per variant plan: [representative, ...other anchored rows]. */
 const anchoredRowsByVariantPlan = ({
 	upsert,
@@ -302,6 +288,61 @@ const anchoredRowsByVariantPlan = ({
 	return byPlan;
 };
 
+/** Declared variants that do not exist yet: `variant_link` creates anchored to this base row. */
+const variantCreatesForBase = ({
+	directUpsert,
+	upsertProducts,
+}: {
+	directUpsert: UpsertProductPlan;
+	upsertProducts: UpsertProductPlan[];
+}): UpsertProductPlan[] => {
+	const anchors = new Set(editedBaseInternalIds({ upsert: directUpsert }));
+	return upsertProducts.filter((upsert) => {
+		const baseInternalId = upsert.row.nextFullProduct.base_internal_product_id;
+		return (
+			upsert.row.source === "variant_link" &&
+			upsert.row.op === "create" &&
+			typeof baseInternalId === "string" &&
+			anchors.has(baseInternalId)
+		);
+	});
+};
+
+/** A variant the config declares that the catalog does not have yet. */
+const variantCreatePreview = ({
+	createUpsert,
+	previewContext,
+	renamePlans,
+}: {
+	createUpsert: UpsertProductPlan;
+	previewContext: PreviewCatalogContext | undefined;
+	renamePlans: RenameProductPlan[];
+}): CatalogVariantPreview => {
+	const { planId, version, nextFullProduct } = createUpsert.row;
+	const planChange = variantPlanChange({ variantUpsert: createUpsert });
+	const aliasReplacement = aliasReplacementForPlan({
+		planId,
+		upsert: createUpsert,
+		renamePlans,
+	});
+	return {
+		...catalogRowIdentity({
+			planId,
+			version,
+			current: null,
+			next: nextFullProduct,
+		}),
+		state: {
+			has_customers: false,
+			will_archive: false,
+			usage: customerUsageForPreview({ planId, version, previewContext }),
+		},
+		variant_action: "explicit",
+		...(planChange ? { plan_change: planChange } : {}),
+		...(aliasReplacement ? { alias_replacement: aliasReplacement } : {}),
+	};
+};
+
 /** Variant rows anchored to THIS base row. Empty → omit the lane. */
 export const buildVariantsPreview = ({
 	directUpsert,
@@ -320,13 +361,17 @@ export const buildVariantsPreview = ({
 		upsert: directUpsert,
 		productStatesContext,
 	});
-	if (anchoredByPlan.size === 0) return [];
+	const creates = variantCreatesForBase({ directUpsert, upsertProducts });
+	if (anchoredByPlan.size === 0 && creates.length === 0) return [];
 
 	const editedCurrent = directUpsert.row.currentFullProduct;
 	const editedNext = directUpsert.row.nextFullProduct;
 
-	return [...anchoredByPlan.values()]
-		.map(([variant, ...anchoredSiblings]) => {
+	const createPreviews = creates.map((createUpsert) =>
+		variantCreatePreview({ createUpsert, previewContext, renamePlans }),
+	);
+	const existingPreviews = [...anchoredByPlan.values()].map(
+		([variant, ...anchoredSiblings]) => {
 			const mintUpsert = findVariantMintUpsert({
 				upsertProducts,
 				planId: variant.id,
@@ -397,6 +442,7 @@ export const buildVariantsPreview = ({
 				// Pre-edit variant. Follow's next already applied the diff.
 				relative: variant,
 			});
-		})
-		.sort(byPlanThenVersion);
+		},
+	);
+	return [...existingPreviews, ...createPreviews].sort(byPlanThenVersion);
 };

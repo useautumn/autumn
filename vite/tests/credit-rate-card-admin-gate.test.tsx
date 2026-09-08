@@ -6,7 +6,7 @@ import {
 	FeatureUsageType,
 } from "@autumn/shared";
 import { renderToStaticMarkup } from "react-dom/server";
-import { CreditDimensionsSection } from "../src/views/products/features/credit-systems/components/CreditDimensionsSection";
+import { CreditDimensionPriceList } from "../src/views/products/features/credit-systems/components/CreditDimensionPriceList";
 import { CreditRateCardRow } from "../src/views/products/features/credit-systems/components/CreditRateCardRow";
 
 const feature = {
@@ -94,26 +94,22 @@ test("collapsed rows summarize the rate without exposing controls", () => {
 
 test("the dimensions section lists each field's values and a rate table with a select per field", () => {
 	const html = renderToStaticMarkup(
-		<CreditDimensionsSection
-			schemaKeys={["row-1"]}
-			schema={[
-				{
-					metered_feature_id: feature.id,
-					credit_amount: 1,
-					dimensions: {
-						size_large: { match: { size: "large" }, credit_amount: 16 },
-						size_large_region_eu: {
-							match: { size: "large", region: "eu" },
-							credit_amount: 20,
-						},
-					},
-					multipliers: {
-						region_eu: { match: { region: "eu" }, factor: 1.2 },
+		<CreditDimensionPriceList
+			item={{
+				metered_feature_id: feature.id,
+				credit_amount: 1,
+				dimensions: {
+					size_large: { match: { size: "large" }, credit_amount: 16 },
+					size_large_region_eu: {
+						match: { size: "large", region: "eu" },
+						credit_amount: 20,
 					},
 				},
-			]}
-			allFeatures={[feature]}
-			onItemChange={() => {}}
+				multipliers: {
+					region_eu: { match: { region: "eu" }, factor: 1.2 },
+				},
+			}}
+			onChange={() => {}}
 		/>,
 	);
 

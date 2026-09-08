@@ -6,6 +6,7 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { featureUpdateCanRewriteReferences } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/featureUpdateCanRewriteReferences";
 import { paramsToTouchedFeatures } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/paramsToTouchedFeatures";
+import { resolveCurrentFeature } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/resolveCurrentFeature";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import { listFeatureStates } from "@/internal/features/repos/listFeatureStates.js";
 
@@ -43,13 +44,14 @@ export const setupFeatureStatesContext = async ({
 	params: UpdateCatalogParams;
 }): Promise<UpdateCatalogContext["featureStatesContext"]> => {
 	const { db, org, env, features } = ctx;
-	const touchedFeatures = paramsToTouchedFeatures({
-		features: ctx.features,
-		params,
-	});
+	const touchedFeatures = paramsToTouchedFeatures({ ctx, params });
 
+	// Keyed by the CURRENT id: an internal_id rename states the new id.
 	const entryByFeatureId = new Map(
-		(params.features ?? []).map((entry) => [entry.feature_id, entry]),
+		(params.features ?? []).map((entry) => [
+			resolveCurrentFeature({ features, entry })?.id ?? entry.feature_id,
+			entry,
+		]),
 	);
 
 	const stateRows = await listFeatureStates({

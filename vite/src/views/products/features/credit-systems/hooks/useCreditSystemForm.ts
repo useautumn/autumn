@@ -1,8 +1,7 @@
 import type { Feature, ModelMarkups } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
-import { useStore } from "@tanstack/react-form";
-import { useEffect, useRef } from "react";
 import { useAppForm } from "@/hooks/form/form";
+import { useFormValuesListener } from "@/hooks/form/useFormValuesListener";
 import { createSchemaItem } from "../utils/creditSchemaUtils";
 
 export interface CreditSystemFormValues {
@@ -12,9 +11,7 @@ export interface CreditSystemFormValues {
 	config: Record<string, unknown>;
 	event_names: string[];
 	model_markups: NonNullable<ModelMarkups>;
-	/** Global default markup for the AI credit system (persisted to config.default_markup). */
 	defaultMarkup: number;
-	/** Per-provider default markups (persisted to config.provider_markups). */
 	provider_markups: Record<string, { markup: number }>;
 	stripe_product_id: string | null;
 }
@@ -49,16 +46,7 @@ export function useCreditSystemForm({
 		onSubmit: onSubmit ? ({ value }) => onSubmit(value) : undefined,
 	});
 
-	// Form-level `listeners.onChange` only fires when a FieldApi instance is
-	// registered for the changed field (see form-core FormApi.setFieldValue).
-	// None of these fields are mounted via <form.Field>, so we subscribe to the
-	// store directly and push value changes out to the caller.
-	const values = useStore(form.store, (s) => s.values);
-	const onChangeRef = useRef(onChange);
-	onChangeRef.current = onChange;
-	useEffect(() => {
-		onChangeRef.current?.(values);
-	}, [values]);
+	useFormValuesListener({ store: form.store, onChange });
 
 	return form;
 }

@@ -1,13 +1,18 @@
 import {
 	type CatalogPlanVersioningStrategy,
+	type CatalogPropagateTargetParams,
+	type CatalogVariantParams,
 	ErrCode,
 	type FullProduct,
 	RecaseError,
 	type UpdateCatalogParams,
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
+import { mintedVariantPins } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/mintedVariantPins";
+import { variantPinKey } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantEntryMintsRow";
 import { versionForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/versionForSlug";
 
 const rejectStrategyPlusExplicitVersion = ({
@@ -107,6 +112,83 @@ const rejectNewVersionOnMissingPlan = ({
 	}
 };
 
+/**
+ * A numeric pin on a variants[] entry only addresses a row; version numbers are
+ * contiguous, so one naming no row is refused rather than remapped to the tip.
+ */
+const rejectUnknownVariantVersion = ({
+	variant,
+	productStatesContext,
+}: {
+	variant: CatalogVariantParams;
+	productStatesContext: ProductStatesContext;
+}): void => {
+	if (variant.version === undefined) return;
+	if (
+		fullProductForPlanParams({
+			planParams: {
+				plan_id: variant.variant_plan_id,
+				version: variant.version,
+			},
+			productStatesContext,
+		}) !== null
+	) {
+		return;
+	}
+
+	const nextVersion =
+		maxVersionForPlan({
+			planId: variant.variant_plan_id,
+			productStatesContext,
+		}) + 1;
+	throw new RecaseError({
+		message: `Unknown version ${variant.version} for plan_id=${variant.variant_plan_id}. The next version is ${nextVersion}; name it with version_slug to mint it.`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
+
+/**
+ * A slug pin naming no row is an error, unless a variants[] entry in this same
+ * push mints that row — the follow then travels with the row it creates.
+ */
+const rejectUnknownTargetSlug = ({
+	target,
+	mintedPins,
+	productStatesContext,
+}: {
+	target: CatalogPropagateTargetParams;
+	mintedPins?: Set<string>;
+	productStatesContext: ProductStatesContext;
+}): void => {
+	if (target.version_slug === undefined || target.version !== undefined) return;
+	if (
+		versionForSlug({
+			planId: target.plan_id,
+			versionSlug: target.version_slug,
+			productStatesContext,
+		}) !== undefined
+	) {
+		return;
+	}
+	if (
+		mintedPins?.has(
+			variantPinKey({
+				planId: target.plan_id,
+				versionSlug: target.version_slug,
+			}),
+		)
+	) {
+		return;
+	}
+
+	throw new RecaseError({
+		message: `Unknown version_slug "${target.version_slug}" for plan_id=${target.plan_id}`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
+
 /** Reject unsupported versioning and invalid batch planParams shape. */
 export const handleUpsertProductVersioningErrors = ({
 	params,
@@ -119,6 +201,12 @@ export const handleUpsertProductVersioningErrors = ({
 	const seenSlugs = new Set<string>();
 	const unpinnedPlanIds = new Set<string>();
 	const mintedVersionsByPlanId = new Map<string, number>();
+	const mintedPins = mintedVariantPins({
+		variants: (params.plans ?? []).flatMap(
+			(planParams) => planParams.variants ?? [],
+		),
+		productStatesContext,
+	});
 
 	for (const planParams of params.plans ?? []) {
 		if (planParams.versioning === "new_version") {
@@ -162,6 +250,10 @@ export const handleUpsertProductVersioningErrors = ({
 			versionSlug: planParams.version_slug,
 		});
 
+		for (const variant of planParams.variants ?? []) {
+			rejectUnknownVariantVersion({ variant, productStatesContext });
+		}
+
 		const existingVersions =
 			productStatesContext.versionsByPlanId[planParams.plan_id] ?? [];
 
@@ -182,24 +274,11 @@ export const handleUpsertProductVersioningErrors = ({
 			existingVersionCount: existingVersions.length,
 		});
 
-		for (const target of [
-			...(planParams.propagate?.license_parents ?? []),
-			...(planParams.propagate?.variants ?? []),
-		]) {
-			if (target.version_slug !== undefined && target.version === undefined) {
-				const version = versionForSlug({
-					planId: target.plan_id,
-					versionSlug: target.version_slug,
-					productStatesContext,
-				});
-				if (version === undefined) {
-					throw new RecaseError({
-						message: `Unknown version_slug "${target.version_slug}" for plan_id=${target.plan_id}`,
-						code: ErrCode.InvalidRequest,
-						statusCode: 400,
-					});
-				}
-			}
+		for (const target of planParams.propagate?.license_parents ?? []) {
+			rejectUnknownTargetSlug({ target, productStatesContext });
+		}
+		for (const target of planParams.propagate?.variants ?? []) {
+			rejectUnknownTargetSlug({ target, mintedPins, productStatesContext });
 		}
 
 		if (planParams.version !== undefined) {
@@ -234,6 +313,26 @@ export const handleUpsertProductVersioningErrors = ({
 					planParams.version,
 				),
 			);
+		} else if (
+			planParams.internal_id !== undefined &&
+			findFullProductByInternalId({
+				internalId: planParams.internal_id,
+				productStatesContext,
+			}) !== null
+		) {
+			// A stable id pins the entry to its own row; no slug is needed and it
+			// never competes with an unpinned sibling.
+			const current = findFullProductByInternalId({
+				internalId: planParams.internal_id,
+				productStatesContext,
+			});
+			if (current !== null && current.id === planParams.plan_id) {
+				claimPinnedVersion({
+					planId: planParams.plan_id,
+					version: current.version,
+					seenPinned,
+				});
+			}
 		} else if (planParams.version_slug !== undefined) {
 			const version = versionForSlug({
 				planId: planParams.plan_id,

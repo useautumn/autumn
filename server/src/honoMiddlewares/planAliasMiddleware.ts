@@ -22,6 +22,53 @@ const isCreatePlanRoute = ({
 	);
 };
 
+/** `plans[]` and nested `variants[]` entries carrying internal_id, with the plan_id they stated. */
+const statedPlanIdsByInternalId = (
+	body: object,
+): { entry: Record<string, unknown>; field: string; planId: unknown }[] => {
+	const plans = (body as { plans?: unknown }).plans;
+	if (!Array.isArray(plans)) return [];
+	const stated: {
+		entry: Record<string, unknown>;
+		field: string;
+		planId: unknown;
+	}[] = [];
+	for (const plan of plans) {
+		if (plan === null || typeof plan !== "object") continue;
+		const entry = plan as {
+			internal_id?: unknown;
+			plan_id?: unknown;
+			variants?: unknown;
+		};
+		if (typeof entry.internal_id === "string")
+			stated.push({
+				entry: entry as Record<string, unknown>,
+				field: "plan_id",
+				planId: entry.plan_id,
+			});
+		if (!Array.isArray(entry.variants)) continue;
+		for (const variant of entry.variants) {
+			if (variant === null || typeof variant !== "object") continue;
+			const nested = variant as {
+				internal_id?: unknown;
+				variant_plan_id?: unknown;
+			};
+			if (typeof nested.internal_id === "string")
+				stated.push({
+					entry: nested as Record<string, unknown>,
+					field: "variant_plan_id",
+					planId: nested.variant_plan_id,
+				});
+		}
+	}
+	return stated;
+};
+
+const isCatalogWriteRoute = ({ path }: { path: string }): boolean => {
+	const pathname = (path.split("?")[0] ?? path).replace(/^\/v1/, "");
+	return pathname.startsWith("/catalogV2.");
+};
+
 /**
  * Rewrites public plan ids in the JSON body and in `:product_id` path params.
  * Dashboard is skipped (it always sends canonical ids). Empty alias maps are a no-op.
@@ -58,6 +105,11 @@ export const planAliasMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	}
 
 	const before = JSON.stringify(body);
+	// A row addressed by internal_id states its desired plan_id (a reclaim
+	// rename names the alias on purpose), so that one field is kept as sent.
+	const statedIds = isCatalogWriteRoute({ path: c.req.path })
+		? statedPlanIdsByInternalId(body)
+		: [];
 	rewritePlanIdAliasValues({
 		value: body,
 		aliases,
@@ -65,6 +117,7 @@ export const planAliasMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			? CREATE_PLAN_ID_SKIP_KEYS
 			: undefined,
 	});
+	for (const { entry, field, planId } of statedIds) entry[field] = planId;
 	// Skip replaceJsonBody on a no-op rewrite so bodyCache.text stays the
 	// original bytes (Vercel HMAC runs captureRawBody after this middleware).
 	if (before !== JSON.stringify(body)) {

@@ -140,7 +140,6 @@ test.concurrent(
 		const { allowed } = await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			skip_cache: true,
 		});
 		expect(allowed).toBe(true);
 

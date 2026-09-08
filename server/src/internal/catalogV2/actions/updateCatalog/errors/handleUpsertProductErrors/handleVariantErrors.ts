@@ -2,9 +2,12 @@ import { ErrCode, findDuplicate, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { editedBaseInternalIds } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/editedBaseInternalIds";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
+import { mintedVariantPins } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/mintedVariantPins";
 import { rowHasVersionableCustomers } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/rowHasVersionableCustomers";
+import { variantPinKey } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantEntryMintsRow";
 import {
 	propagateTargetIsPinned,
 	variantRowForPropagateTarget,
@@ -218,9 +221,26 @@ export const handleVariantErrors = ({
 		}
 	}
 
+	const mintedPins = mintedVariantPins({
+		variants: declaredVariants,
+		productStatesContext,
+	});
+
 	for (const target of propagateTargets) {
 		if (target.plan_id === upsert.row.planId) {
 			rejectInvalidPropagationTarget({ planId: target.plan_id });
+		}
+		// The pin names a row this same push writes, so there is nothing to follow yet.
+		if (
+			mintedPins.has(
+				variantPinKey({
+					planId: target.plan_id,
+					version: target.version,
+					versionSlug: target.version_slug,
+				}),
+			)
+		) {
+			continue;
 		}
 		if (mintSource && propagateTargetIsPinned({ target })) {
 			throw new RecaseError({
@@ -230,12 +250,10 @@ export const handleVariantErrors = ({
 			});
 		}
 		if (!mintSource && !propagateTargetIsPinned({ target })) {
-			throw new RecaseError({
-				message:
-					"Propagate targets must pin a row: provide version or version_slug.",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
+			// A config pins nothing: an unpinned variant follows the row anchored
+			// to the edited base when there is one, and has nothing to follow yet
+			// when the variant is being created in this same push.
+			continue;
 		}
 		const targetRow = variantRowForPropagateTarget({
 			target,

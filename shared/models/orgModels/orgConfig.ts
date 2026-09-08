@@ -48,7 +48,9 @@ export const OrgConfigSchema = z.object({
 	checkout_on_failed_payment: z.boolean().default(true), // false for pipeline?
 	reverse_deduction_order: z.boolean().default(false),
 
+	/** @deprecated Use block_overdue_entitlements; remove after the rollout. */
 	include_past_due: z.boolean().default(true),
+	block_overdue_entitlements: z.boolean().default(false),
 
 	sync_status: z.boolean().default(true),
 	merge_billing_cycles: z.boolean().default(true),

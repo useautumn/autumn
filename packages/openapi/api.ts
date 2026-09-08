@@ -13,17 +13,23 @@ import { generateZodSchemas } from "./utils/zodSchemaGeneration.js";
 async function main() {
 	const paths = resolvePaths();
 
-	const { writeLatestOpenApi, writeLatestOpenApiStripped } = await import(
-		"./latest/openapi.js"
-	);
+	const {
+		writeLatestOpenApi,
+		writeLatestOpenApiStripped,
+		writeLatestOpenApiInternal,
+	} = await import("./latest/openapi.js");
 
 	console.log(
-		`Generating OpenAPI specs v${LATEST_VERSION} (full + stripped)...`,
+		`Generating OpenAPI specs v${LATEST_VERSION} (full + stripped + internal)...`,
 	);
 	await Promise.all([
 		writeLatestOpenApi({ outputFilePath: paths.openApiOutput }),
 		writeLatestOpenApiStripped({
 			outputFilePath: paths.openApiStrippedOutput,
+		}),
+		// Internal only: never fed to the SDKs, never merged into the docs spec.
+		writeLatestOpenApiInternal({
+			outputFilePath: paths.openApiInternalOutput,
 		}),
 	]);
 	console.log(

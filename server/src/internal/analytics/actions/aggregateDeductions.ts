@@ -4,6 +4,7 @@ import type {
 	DeductionBalance,
 	DeductionFeature,
 	DeductionPeriod,
+	Entitlement,
 	FeatureType,
 	FullCustomer,
 	RangeEnum,
@@ -65,7 +66,9 @@ const toGroupColumn = (groupBy?: string): GroupColumn | undefined => {
  */
 /** What pivotRows needs to know about a balance's owning entitlement. */
 type BalanceOwner = {
-	cusEnt: Pick<CustomerEntitlement, "id" | "next_reset_at">;
+	cusEnt: Pick<CustomerEntitlement, "id" | "next_reset_at"> & {
+		entitlement?: Pick<Entitlement, "feature_override">;
+	};
 	internalEntityId: string | null;
 };
 
@@ -340,6 +343,10 @@ const pivotRows = ({
 		}
 
 		const balanceFeatureId = row.balance_feature_id;
+		const rowCreditCost = (sourceFeatureId?: string) =>
+			cusEntById.get(row.balance_id)?.cusEnt.entitlement?.feature_override
+				? null
+				: resolveCreditCost({ ctx, sourceFeatureId, balanceFeatureId });
 		const feature = featureById.get(balanceFeatureId);
 
 		let featureEntry: DeductionFeature | undefined =
@@ -381,11 +388,7 @@ const pivotRows = ({
 									? Number(cusEnt?.next_reset_at)
 									: null,
 							},
-				credit_cost: resolveCreditCost({
-					ctx,
-					sourceFeatureId: pinnedSource,
-					balanceFeatureId,
-				}),
+				credit_cost: rowCreditCost(pinnedSource),
 				deducted: 0,
 				events: 0,
 			};
@@ -418,11 +421,7 @@ const pivotRows = ({
 			// pair, so the rate is exact here even when the balance-level one is null.
 			...(groupColumn === "source_feature_id" && groupValue !== OTHER_GROUP
 				? {
-						credit_cost: resolveCreditCost({
-							ctx,
-							sourceFeatureId: groupValue,
-							balanceFeatureId,
-						}),
+						credit_cost: rowCreditCost(groupValue),
 					}
 				: {}),
 		};

@@ -1,6 +1,7 @@
 import type {
 	ApiPlanItemV1,
 	CreatePlanItemParamsV1,
+	CustomizePlanLicense,
 	Feature,
 	MultiAttachParamsV0,
 	ProductItem,
@@ -114,6 +115,7 @@ export function buildBillingPlan({
 	productId,
 	prepaidOptions,
 	items,
+	addLicenses,
 	version,
 	isCustom,
 	entityId,
@@ -124,6 +126,7 @@ export function buildBillingPlan({
 	productId: string;
 	prepaidOptions: Record<string, number | undefined>;
 	items: ProductItem[] | null;
+	addLicenses?: CustomizePlanLicense[] | null;
 	version?: number;
 	isCustom: boolean;
 	entityId?: string | null;
@@ -135,9 +138,13 @@ export function buildBillingPlan({
 		prepaidOptions,
 		product,
 	});
-	const customize = isCustom
+	const itemCustomize = isCustom
 		? buildCustomize({ items, features, includeEmptyItems })
 		: undefined;
+	const customize =
+		addLicenses && addLicenses.length > 0
+			? { ...(itemCustomize ?? {}), upsert_licenses: addLicenses }
+			: itemCustomize;
 
 	return {
 		plan_id: productId,

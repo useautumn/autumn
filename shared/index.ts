@@ -34,6 +34,8 @@ export * from "./api/migrations/operations/index";
 export * from "./api/migrations/webhooks/migrationWebhookEvents";
 // API MODELS
 export * from "./api/models";
+// Sandboxes (isolated sub-orgs)
+export * from "./api/sandboxes/sandboxesModels";
 // API VERSIONING SYSTEM
 export * from "./api/versionUtils/versionUtils";
 // Webhook Schemas + WebhookEventType enum

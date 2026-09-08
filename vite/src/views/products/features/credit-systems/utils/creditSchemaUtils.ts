@@ -32,7 +32,7 @@ export const isGraduated = (
 	item: CreditSchemaItem,
 ): item is GraduatedCreditSchemaItem => item.tier_behavior === "graduated";
 
-export const rateTypeOf = (item: CreditSchemaItem): CreditRateType =>
+export const rateTypeFor = (item: CreditSchemaItem): CreditRateType =>
 	isGraduated(item) ? "graduated" : "flat";
 
 export const createSchemaItem = (): CreditSchemaItem => ({
@@ -50,7 +50,7 @@ export const setRateType = ({
 	item: CreditSchemaItem;
 	rateType: CreditRateType;
 }): CreditSchemaItem => {
-	if (rateType === rateTypeOf(item)) return item;
+	if (rateType === rateTypeFor(item)) return item;
 
 	const {
 		credit_amount: _creditAmount,

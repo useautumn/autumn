@@ -61,6 +61,12 @@ export const handleUpdateOrgConfig = createRoute({
 			sentKeys.map((k) => [k, validated[k]]),
 		) as Partial<OrgConfig>;
 
+		if (updates.block_overdue_entitlements !== undefined) {
+			updates.include_past_due = !updates.block_overdue_entitlements;
+		} else if (updates.include_past_due !== undefined) {
+			updates.block_overdue_entitlements = !updates.include_past_due;
+		}
+
 		// One atomic UPDATE for both columns — a mixed request can never
 		// partially commit.
 		const [row] = await db

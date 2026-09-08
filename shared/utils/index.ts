@@ -35,6 +35,7 @@ export * from "./intervalUtils/priceIntervalUtils";
 
 // Org utils
 export * from "./orgUtils/convertOrgUtils";
+export * from "./orgUtils/orgSettingsLabels";
 export * from "./planV1Utils/convertCustomize/basePriceToKey";
 export * from "./planV1Utils/convertCustomize/customizeToKey";
 export * from "./planV1Utils/convertPlanItem/createPlanItemToKey";
@@ -45,6 +46,7 @@ export * from "./planV1Utils/diff/deduplicateAddPlanItems";
 export * from "./planV1Utils/diff/diffPlanV1";
 export * from "./planV1Utils/diff/diffPlanV1PreviewFields";
 export * from "./planV1Utils/diff/planItemMatchesFilter";
+export * from "./planV1Utils/diff/planPreviousAttributeLabels";
 export * from "./planV1Utils/diff/replayPlanDiff";
 export * from "./planV1Utils/licenses/applyLicenseCustomizeToBasePlan";
 export * from "./planV1Utils/licenses/diffLicensePlanCustomize";

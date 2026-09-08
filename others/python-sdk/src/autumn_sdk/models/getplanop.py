@@ -754,28 +754,28 @@ class GetPlanItemRollover(BaseModel):
         return m
 
 
-class GetPlanCreditSchemaItemFeatureOverride2TypedDict(TypedDict):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
+class GetPlanDimensionsItem4TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
-    r"""Credits consumed per billing-unit group."""
-    billing_units: NotRequired[float]
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class GetPlanCreditSchemaItemFeatureOverride2(BaseModel):
-    metered_feature_id: str
-    r"""ID of the metered feature that draws from this credit system."""
+class GetPlanDimensionsItem4(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
-    r"""Credits consumed per billing-unit group."""
+    r"""Credits consumed per billing-unit group when this dimension matches."""
 
-    billing_units: Optional[float] = None
-    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["priority"])
         serialized = handler(self)
         m = {}
 
@@ -790,30 +790,346 @@ class GetPlanCreditSchemaItemFeatureOverride2(BaseModel):
         return m
 
 
-GetPlanToEnum = Literal["inf",]
+GetPlanDimensionsToItemEnum2 = Literal["inf",]
 
 
-GetPlanFeatureOverrideToUnionTypedDict = TypeAliasType(
-    "GetPlanFeatureOverrideToUnionTypedDict", Union[float, GetPlanToEnum]
+GetPlanDimensionsItemToUnion2TypedDict = TypeAliasType(
+    "GetPlanDimensionsItemToUnion2TypedDict", Union[float, GetPlanDimensionsToItemEnum2]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-GetPlanFeatureOverrideToUnion = TypeAliasType(
-    "GetPlanFeatureOverrideToUnion", Union[float, GetPlanToEnum]
+GetPlanDimensionsItemToUnion2 = TypeAliasType(
+    "GetPlanDimensionsItemToUnion2", Union[float, GetPlanDimensionsToItemEnum2]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class GetPlanDimensionsItemTier2TypedDict(TypedDict):
+    to: GetPlanDimensionsItemToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsItemTier2(BaseModel):
+    to: GetPlanDimensionsItemToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsItem3TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[GetPlanDimensionsItemTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class GetPlanDimensionsItem3(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[GetPlanDimensionsItemTier2]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanItemDimensionsUnion2TypedDict = TypeAliasType(
+    "GetPlanItemDimensionsUnion2TypedDict",
+    Union[GetPlanDimensionsItem4TypedDict, GetPlanDimensionsItem3TypedDict],
+)
+
+
+GetPlanItemDimensionsUnion2 = TypeAliasType(
+    "GetPlanItemDimensionsUnion2", Union[GetPlanDimensionsItem4, GetPlanDimensionsItem3]
+)
+
+
+class GetPlanItemMultipliers2TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class GetPlanItemMultipliers2(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetPlanCreditSchemaItemFeatureOverride2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, GetPlanItemDimensionsUnion2TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, GetPlanItemMultipliers2TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+
+class GetPlanCreditSchemaItemFeatureOverride2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, GetPlanItemDimensionsUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, GetPlanItemMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetPlanDimensionsItem2TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class GetPlanDimensionsItem2(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanDimensionsToItemEnum1 = Literal["inf",]
+
+
+GetPlanDimensionsItemToUnion1TypedDict = TypeAliasType(
+    "GetPlanDimensionsItemToUnion1TypedDict", Union[float, GetPlanDimensionsToItemEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+GetPlanDimensionsItemToUnion1 = TypeAliasType(
+    "GetPlanDimensionsItemToUnion1", Union[float, GetPlanDimensionsToItemEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class GetPlanDimensionsItemTier1TypedDict(TypedDict):
+    to: GetPlanDimensionsItemToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsItemTier1(BaseModel):
+    to: GetPlanDimensionsItemToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsItem1TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[GetPlanDimensionsItemTier1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class GetPlanDimensionsItem1(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[GetPlanDimensionsItemTier1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanItemDimensionsUnion1TypedDict = TypeAliasType(
+    "GetPlanItemDimensionsUnion1TypedDict",
+    Union[GetPlanDimensionsItem2TypedDict, GetPlanDimensionsItem1TypedDict],
+)
+
+
+GetPlanItemDimensionsUnion1 = TypeAliasType(
+    "GetPlanItemDimensionsUnion1", Union[GetPlanDimensionsItem2, GetPlanDimensionsItem1]
+)
+
+
+class GetPlanItemMultipliers1TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class GetPlanItemMultipliers1(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanToItemEnum = Literal["inf",]
+
+
+GetPlanItemFeatureOverrideToUnionTypedDict = TypeAliasType(
+    "GetPlanItemFeatureOverrideToUnionTypedDict", Union[float, GetPlanToItemEnum]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+GetPlanItemFeatureOverrideToUnion = TypeAliasType(
+    "GetPlanItemFeatureOverrideToUnion", Union[float, GetPlanToItemEnum]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
 class GetPlanItemFeatureOverrideTierTypedDict(TypedDict):
-    to: GetPlanFeatureOverrideToUnionTypedDict
+    to: GetPlanItemFeatureOverrideToUnionTypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
 class GetPlanItemFeatureOverrideTier(BaseModel):
-    to: GetPlanFeatureOverrideToUnion
+    to: GetPlanItemFeatureOverrideToUnion
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
@@ -826,6 +1142,10 @@ class GetPlanCreditSchemaItemFeatureOverride1TypedDict(TypedDict):
     tiers: List[GetPlanItemFeatureOverrideTierTypedDict]
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, GetPlanItemDimensionsUnion1TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, GetPlanItemMultipliers1TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
     tier_behavior: Literal["graduated"]
 
 
@@ -838,6 +1158,12 @@ class GetPlanCreditSchemaItemFeatureOverride1(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
+    dimensions: Optional[Dict[str, GetPlanItemDimensionsUnion1]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, GetPlanItemMultipliers1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
     tier_behavior: Annotated[
         Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
         pydantic.Field(alias="tier_behavior"),
@@ -845,7 +1171,7 @@ class GetPlanCreditSchemaItemFeatureOverride1(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
         serialized = handler(self)
         m = {}
 
@@ -1893,12 +2219,14 @@ class GetPlanAddItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-GetPlanVariantDetailsToTypedDict = TypeAliasType(
-    "GetPlanVariantDetailsToTypedDict", Union[float, str]
+GetPlanVariantDetailsPriceToTypedDict = TypeAliasType(
+    "GetPlanVariantDetailsPriceToTypedDict", Union[float, str]
 )
 
 
-GetPlanVariantDetailsTo = TypeAliasType("GetPlanVariantDetailsTo", Union[float, str])
+GetPlanVariantDetailsPriceTo = TypeAliasType(
+    "GetPlanVariantDetailsPriceTo", Union[float, str]
+)
 
 
 class GetPlanVariantDetailsTierAdditionalCurrencyTypedDict(TypedDict):
@@ -1938,7 +2266,7 @@ class GetPlanVariantDetailsTierAdditionalCurrency(BaseModel):
 
 
 class GetPlanVariantDetailsPriceTierTypedDict(TypedDict):
-    to: GetPlanVariantDetailsToTypedDict
+    to: GetPlanVariantDetailsPriceToTypedDict
     amount: float
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
@@ -1947,7 +2275,7 @@ class GetPlanVariantDetailsPriceTierTypedDict(TypedDict):
 
 
 class GetPlanVariantDetailsPriceTier(BaseModel):
-    to: GetPlanVariantDetailsTo
+    to: GetPlanVariantDetailsPriceTo
 
     amount: float
 
@@ -2193,6 +2521,165 @@ class GetPlanVariantDetailsRollover(BaseModel):
         return m
 
 
+class GetPlanDimensionsVariantDetails4TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class GetPlanDimensionsVariantDetails4(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanDimensionsToVariantDetailsEnum2 = Literal["inf",]
+
+
+GetPlanDimensionsVariantDetailsToUnion2TypedDict = TypeAliasType(
+    "GetPlanDimensionsVariantDetailsToUnion2TypedDict",
+    Union[float, GetPlanDimensionsToVariantDetailsEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+GetPlanDimensionsVariantDetailsToUnion2 = TypeAliasType(
+    "GetPlanDimensionsVariantDetailsToUnion2",
+    Union[float, GetPlanDimensionsToVariantDetailsEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class GetPlanDimensionsVariantDetailsTier2TypedDict(TypedDict):
+    to: GetPlanDimensionsVariantDetailsToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsVariantDetailsTier2(BaseModel):
+    to: GetPlanDimensionsVariantDetailsToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsVariantDetails3TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[GetPlanDimensionsVariantDetailsTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class GetPlanDimensionsVariantDetails3(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[GetPlanDimensionsVariantDetailsTier2]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanVariantDetailsDimensionsUnion2TypedDict = TypeAliasType(
+    "GetPlanVariantDetailsDimensionsUnion2TypedDict",
+    Union[
+        GetPlanDimensionsVariantDetails4TypedDict,
+        GetPlanDimensionsVariantDetails3TypedDict,
+    ],
+)
+
+
+GetPlanVariantDetailsDimensionsUnion2 = TypeAliasType(
+    "GetPlanVariantDetailsDimensionsUnion2",
+    Union[GetPlanDimensionsVariantDetails4, GetPlanDimensionsVariantDetails3],
+)
+
+
+class GetPlanVariantDetailsMultipliers2TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class GetPlanVariantDetailsMultipliers2(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class GetPlanCreditSchemaVariantDetails2TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
@@ -2200,6 +2687,10 @@ class GetPlanCreditSchemaVariantDetails2TypedDict(TypedDict):
     r"""Credits consumed per billing-unit group."""
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, GetPlanVariantDetailsDimensionsUnion2TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, GetPlanVariantDetailsMultipliers2TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
 
 class GetPlanCreditSchemaVariantDetails2(BaseModel):
@@ -2212,9 +2703,15 @@ class GetPlanCreditSchemaVariantDetails2(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
+    dimensions: Optional[Dict[str, GetPlanVariantDetailsDimensionsUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, GetPlanVariantDetailsMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
         serialized = handler(self)
         m = {}
 
@@ -2227,33 +2724,197 @@ class GetPlanCreditSchemaVariantDetails2(BaseModel):
                     m[k] = val
 
         return m
+
+
+class GetPlanDimensionsVariantDetails2TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class GetPlanDimensionsVariantDetails2(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanDimensionsToVariantDetailsEnum1 = Literal["inf",]
+
+
+GetPlanDimensionsVariantDetailsToUnion1TypedDict = TypeAliasType(
+    "GetPlanDimensionsVariantDetailsToUnion1TypedDict",
+    Union[float, GetPlanDimensionsToVariantDetailsEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+GetPlanDimensionsVariantDetailsToUnion1 = TypeAliasType(
+    "GetPlanDimensionsVariantDetailsToUnion1",
+    Union[float, GetPlanDimensionsToVariantDetailsEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class GetPlanDimensionsVariantDetailsTier1TypedDict(TypedDict):
+    to: GetPlanDimensionsVariantDetailsToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsVariantDetailsTier1(BaseModel):
+    to: GetPlanDimensionsVariantDetailsToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsVariantDetails1TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[GetPlanDimensionsVariantDetailsTier1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class GetPlanDimensionsVariantDetails1(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[GetPlanDimensionsVariantDetailsTier1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanVariantDetailsDimensionsUnion1TypedDict = TypeAliasType(
+    "GetPlanVariantDetailsDimensionsUnion1TypedDict",
+    Union[
+        GetPlanDimensionsVariantDetails2TypedDict,
+        GetPlanDimensionsVariantDetails1TypedDict,
+    ],
+)
+
+
+GetPlanVariantDetailsDimensionsUnion1 = TypeAliasType(
+    "GetPlanVariantDetailsDimensionsUnion1",
+    Union[GetPlanDimensionsVariantDetails2, GetPlanDimensionsVariantDetails1],
+)
+
+
+class GetPlanVariantDetailsMultipliers1TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class GetPlanVariantDetailsMultipliers1(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanToVariantDetailsEnum = Literal["inf",]
+
+
+GetPlanVariantDetailsFeatureOverrideToUnionTypedDict = TypeAliasType(
+    "GetPlanVariantDetailsFeatureOverrideToUnionTypedDict",
+    Union[float, GetPlanToVariantDetailsEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+GetPlanVariantDetailsFeatureOverrideToUnion = TypeAliasType(
+    "GetPlanVariantDetailsFeatureOverrideToUnion",
+    Union[float, GetPlanToVariantDetailsEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
 class GetPlanVariantDetailsFeatureOverrideTierTypedDict(TypedDict):
-    to: NotRequired[Any]
-    credit_cost: NotRequired[Any]
+    to: GetPlanVariantDetailsFeatureOverrideToUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
 
 
 class GetPlanVariantDetailsFeatureOverrideTier(BaseModel):
-    to: Optional[Any] = None
+    to: GetPlanVariantDetailsFeatureOverrideToUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
-    credit_cost: Optional[Any] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["to", "credit_cost"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
 
 
 class GetPlanCreditSchemaVariantDetails1TypedDict(TypedDict):
@@ -2262,6 +2923,10 @@ class GetPlanCreditSchemaVariantDetails1TypedDict(TypedDict):
     tiers: List[GetPlanVariantDetailsFeatureOverrideTierTypedDict]
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, GetPlanVariantDetailsDimensionsUnion1TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, GetPlanVariantDetailsMultipliers1TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
     tier_behavior: Literal["graduated"]
 
 
@@ -2274,6 +2939,12 @@ class GetPlanCreditSchemaVariantDetails1(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
+    dimensions: Optional[Dict[str, GetPlanVariantDetailsDimensionsUnion1]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, GetPlanVariantDetailsMultipliers1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
     tier_behavior: Annotated[
         Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
         pydantic.Field(alias="tier_behavior"),
@@ -2281,7 +2952,7 @@ class GetPlanCreditSchemaVariantDetails1(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
         serialized = handler(self)
         m = {}
 
@@ -3164,18 +3835,52 @@ class GetPlanUpsertLicenseReset(BaseModel):
 
 
 class GetPlanUpsertLicenseAddItemAdditionalCurrencyTypedDict(TypedDict):
-    currency: NotRequired[Any]
-    amount: NotRequired[Any]
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
 class GetPlanUpsertLicenseAddItemAdditionalCurrency(BaseModel):
-    currency: Optional[Any] = None
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
-    amount: Optional[Any] = None
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+GetPlanUpsertLicensePriceToTypedDict = TypeAliasType(
+    "GetPlanUpsertLicensePriceToTypedDict", Union[float, str]
+)
+
+
+GetPlanUpsertLicensePriceTo = TypeAliasType(
+    "GetPlanUpsertLicensePriceTo", Union[float, str]
+)
+
+
+class GetPlanUpsertLicenseTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+
+class GetPlanUpsertLicenseTierAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["currency", "amount"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
@@ -3190,25 +3895,29 @@ class GetPlanUpsertLicenseAddItemAdditionalCurrency(BaseModel):
         return m
 
 
-class GetPlanUpsertLicenseTierTypedDict(TypedDict):
-    to: NotRequired[Any]
-    amount: NotRequired[Any]
-    flat_amount: NotRequired[Any]
-    additional_currencies: NotRequired[Any]
+class GetPlanUpsertLicensePriceTierTypedDict(TypedDict):
+    to: GetPlanUpsertLicensePriceToTypedDict
+    amount: float
+    flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[GetPlanUpsertLicenseTierAdditionalCurrencyTypedDict]
+    ]
 
 
-class GetPlanUpsertLicenseTier(BaseModel):
-    to: Optional[Any] = None
+class GetPlanUpsertLicensePriceTier(BaseModel):
+    to: GetPlanUpsertLicensePriceTo
 
-    amount: Optional[Any] = None
+    amount: float
 
-    flat_amount: Optional[Any] = None
+    flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[Any] = None
+    additional_currencies: Optional[
+        List[GetPlanUpsertLicenseTierAdditionalCurrency]
+    ] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["to", "amount", "flat_amount", "additional_currencies"])
+        optional_fields = set(["flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -3269,7 +3978,7 @@ class GetPlanUpsertLicensePriceTypedDict(TypedDict):
         List[GetPlanUpsertLicenseAddItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[GetPlanUpsertLicenseTierTypedDict]]
+    tiers: NotRequired[List[GetPlanUpsertLicensePriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[GetPlanUpsertLicenseTierBehavior]
     interval_count: NotRequired[float]
@@ -3297,7 +4006,7 @@ class GetPlanUpsertLicensePrice(BaseModel):
     ] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[GetPlanUpsertLicenseTier]] = None
+    tiers: Optional[List[GetPlanUpsertLicensePriceTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[GetPlanUpsertLicenseTierBehavior] = None
@@ -3446,17 +4155,478 @@ class GetPlanUpsertLicenseRollover(BaseModel):
         return m
 
 
+class GetPlanDimensionsUpsertLicense4TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class GetPlanDimensionsUpsertLicense4(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanDimensionsToUpsertLicenseEnum2 = Literal["inf",]
+
+
+GetPlanDimensionsUpsertLicenseToUnion2TypedDict = TypeAliasType(
+    "GetPlanDimensionsUpsertLicenseToUnion2TypedDict",
+    Union[float, GetPlanDimensionsToUpsertLicenseEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+GetPlanDimensionsUpsertLicenseToUnion2 = TypeAliasType(
+    "GetPlanDimensionsUpsertLicenseToUnion2",
+    Union[float, GetPlanDimensionsToUpsertLicenseEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class GetPlanDimensionsUpsertLicenseTier2TypedDict(TypedDict):
+    to: GetPlanDimensionsUpsertLicenseToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsUpsertLicenseTier2(BaseModel):
+    to: GetPlanDimensionsUpsertLicenseToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsUpsertLicense3TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[GetPlanDimensionsUpsertLicenseTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class GetPlanDimensionsUpsertLicense3(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[GetPlanDimensionsUpsertLicenseTier2]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanUpsertLicenseDimensionsUnion2TypedDict = TypeAliasType(
+    "GetPlanUpsertLicenseDimensionsUnion2TypedDict",
+    Union[
+        GetPlanDimensionsUpsertLicense4TypedDict,
+        GetPlanDimensionsUpsertLicense3TypedDict,
+    ],
+)
+
+
+GetPlanUpsertLicenseDimensionsUnion2 = TypeAliasType(
+    "GetPlanUpsertLicenseDimensionsUnion2",
+    Union[GetPlanDimensionsUpsertLicense4, GetPlanDimensionsUpsertLicense3],
+)
+
+
+class GetPlanUpsertLicenseMultipliers2TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class GetPlanUpsertLicenseMultipliers2(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetPlanCreditSchemaUpsertLicense2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, GetPlanUpsertLicenseDimensionsUnion2TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, GetPlanUpsertLicenseMultipliers2TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+
+class GetPlanCreditSchemaUpsertLicense2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, GetPlanUpsertLicenseDimensionsUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, GetPlanUpsertLicenseMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetPlanDimensionsUpsertLicense2TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class GetPlanDimensionsUpsertLicense2(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanDimensionsToUpsertLicenseEnum1 = Literal["inf",]
+
+
+GetPlanDimensionsUpsertLicenseToUnion1TypedDict = TypeAliasType(
+    "GetPlanDimensionsUpsertLicenseToUnion1TypedDict",
+    Union[float, GetPlanDimensionsToUpsertLicenseEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+GetPlanDimensionsUpsertLicenseToUnion1 = TypeAliasType(
+    "GetPlanDimensionsUpsertLicenseToUnion1",
+    Union[float, GetPlanDimensionsToUpsertLicenseEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class GetPlanDimensionsUpsertLicenseTier1TypedDict(TypedDict):
+    to: GetPlanDimensionsUpsertLicenseToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsUpsertLicenseTier1(BaseModel):
+    to: GetPlanDimensionsUpsertLicenseToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanDimensionsUpsertLicense1TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[GetPlanDimensionsUpsertLicenseTier1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class GetPlanDimensionsUpsertLicense1(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[GetPlanDimensionsUpsertLicenseTier1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanUpsertLicenseDimensionsUnion1TypedDict = TypeAliasType(
+    "GetPlanUpsertLicenseDimensionsUnion1TypedDict",
+    Union[
+        GetPlanDimensionsUpsertLicense2TypedDict,
+        GetPlanDimensionsUpsertLicense1TypedDict,
+    ],
+)
+
+
+GetPlanUpsertLicenseDimensionsUnion1 = TypeAliasType(
+    "GetPlanUpsertLicenseDimensionsUnion1",
+    Union[GetPlanDimensionsUpsertLicense2, GetPlanDimensionsUpsertLicense1],
+)
+
+
+class GetPlanUpsertLicenseMultipliers1TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class GetPlanUpsertLicenseMultipliers1(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanToUpsertLicenseEnum = Literal["inf",]
+
+
+GetPlanUpsertLicenseFeatureOverrideToUnionTypedDict = TypeAliasType(
+    "GetPlanUpsertLicenseFeatureOverrideToUnionTypedDict",
+    Union[float, GetPlanToUpsertLicenseEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+GetPlanUpsertLicenseFeatureOverrideToUnion = TypeAliasType(
+    "GetPlanUpsertLicenseFeatureOverrideToUnion",
+    Union[float, GetPlanToUpsertLicenseEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class GetPlanUpsertLicenseFeatureOverrideTierTypedDict(TypedDict):
+    to: GetPlanUpsertLicenseFeatureOverrideToUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanUpsertLicenseFeatureOverrideTier(BaseModel):
+    to: GetPlanUpsertLicenseFeatureOverrideToUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class GetPlanCreditSchemaUpsertLicense1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[GetPlanUpsertLicenseFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, GetPlanUpsertLicenseDimensionsUnion1TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, GetPlanUpsertLicenseMultipliers1TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+    tier_behavior: Literal["graduated"]
+
+
+class GetPlanCreditSchemaUpsertLicense1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[GetPlanUpsertLicenseFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, GetPlanUpsertLicenseDimensionsUnion1]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, GetPlanUpsertLicenseMultipliers1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetPlanUpsertLicenseCreditSchemaUnionTypedDict = TypeAliasType(
+    "GetPlanUpsertLicenseCreditSchemaUnionTypedDict",
+    Union[
+        GetPlanCreditSchemaUpsertLicense2TypedDict,
+        GetPlanCreditSchemaUpsertLicense1TypedDict,
+    ],
+)
+
+
+GetPlanUpsertLicenseCreditSchemaUnion = TypeAliasType(
+    "GetPlanUpsertLicenseCreditSchemaUnion",
+    Union[GetPlanCreditSchemaUpsertLicense2, GetPlanCreditSchemaUpsertLicense1],
+)
+
+
 class GetPlanUpsertLicenseFeatureOverrideTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: NotRequired[List[Nullable[Any]]]
+    credit_schema: NotRequired[List[GetPlanUpsertLicenseCreditSchemaUnionTypedDict]]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
 
 class GetPlanUpsertLicenseFeatureOverride(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: Optional[List[Nullable[Any]]] = None
+    credit_schema: Optional[List[GetPlanUpsertLicenseCreditSchemaUnion]] = None
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
     @model_serializer(mode="wrap")
@@ -4034,6 +5204,14 @@ class GetPlanResponse(BaseModel):
 
 
 try:
+    GetPlanDimensionsItem3.model_rebuild()
+except NameError:
+    pass
+try:
+    GetPlanDimensionsItem1.model_rebuild()
+except NameError:
+    pass
+try:
     GetPlanCreditSchemaItemFeatureOverride1.model_rebuild()
 except NameError:
     pass
@@ -4046,6 +5224,14 @@ try:
 except NameError:
     pass
 try:
+    GetPlanDimensionsVariantDetails3.model_rebuild()
+except NameError:
+    pass
+try:
+    GetPlanDimensionsVariantDetails1.model_rebuild()
+except NameError:
+    pass
+try:
     GetPlanCreditSchemaVariantDetails1.model_rebuild()
 except NameError:
     pass
@@ -4055,5 +5241,17 @@ except NameError:
     pass
 try:
     GetPlanVariantDetailsUsageAlert.model_rebuild()
+except NameError:
+    pass
+try:
+    GetPlanDimensionsUpsertLicense3.model_rebuild()
+except NameError:
+    pass
+try:
+    GetPlanDimensionsUpsertLicense1.model_rebuild()
+except NameError:
+    pass
+try:
+    GetPlanCreditSchemaUpsertLicense1.model_rebuild()
 except NameError:
     pass

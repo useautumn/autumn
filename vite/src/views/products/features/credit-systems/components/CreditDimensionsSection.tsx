@@ -1,22 +1,11 @@
-import type { CreditSchemaItem, Feature } from "@autumn/shared";
 import { getFeatureName } from "@autumn/shared";
+import { useCreditSchemaListContext } from "../hooks/CreditSchemaListContext";
 import { CreditDimensionPriceList } from "./CreditDimensionPriceList";
 
-interface CreditDimensionsSectionProps {
-	schema: CreditSchemaItem[];
-	/** Stable per-row keys: the editor holds draft state, so it must not follow an index. */
-	schemaKeys: string[];
-	allFeatures: Feature[];
-	onItemChange: (params: { index: number; item: CreditSchemaItem }) => void;
-}
-
 /** A price list per rate-card row; rows are named by feature only when there are several. */
-export function CreditDimensionsSection({
-	schema,
-	schemaKeys,
-	allFeatures,
-	onItemChange,
-}: CreditDimensionsSectionProps) {
+export function CreditDimensionsSection() {
+	const { schema, schemaKeys, allSchemaCandidateFeatures, setSchemaItem } =
+		useCreditSchemaListContext();
 	const labelRows = schema.length > 1;
 
 	return (
@@ -26,7 +15,7 @@ export function CreditDimensionsSection({
 					{labelRows && (
 						<span className="text-sm">
 							{getFeatureName({
-								feature: allFeatures.find(
+								feature: allSchemaCandidateFeatures.find(
 									(feature) => feature.id === item.metered_feature_id,
 								),
 								capitalize: true,
@@ -37,7 +26,7 @@ export function CreditDimensionsSection({
 					)}
 					<CreditDimensionPriceList
 						item={item}
-						onChange={(next) => onItemChange({ index, item: next })}
+						onChange={(next) => setSchemaItem({ index, item: next })}
 					/>
 				</div>
 			))}

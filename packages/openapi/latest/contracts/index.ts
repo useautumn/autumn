@@ -23,6 +23,11 @@ import {
 	billingUpdateContract,
 } from "./billingContract.js";
 import {
+	catalogV2GetContract,
+	catalogV2PreviewUpdateContract,
+	catalogV2UpdateContract,
+} from "./catalogContract.js";
+import {
 	deleteCustomerContract,
 	getCustomerContract,
 	getOrCreateCustomerContract,
@@ -64,6 +69,10 @@ import {
 	releaseLicenseContract,
 } from "./licensesContract.js";
 import {
+	organizationPreviewUpdateContract,
+	organizationUpdateContract,
+} from "./organizationContract.js";
+import {
 	createPlanContract,
 	deletePlanContract,
 	getPlanContract,
@@ -90,6 +99,12 @@ import {
 	rewardsRedeemCodeContract,
 	rewardsUpdateContract,
 } from "./referralsContract.js";
+import {
+	createSandboxContract,
+	deleteSandboxContract,
+	listSandboxesContract,
+	resetSandboxContract,
+} from "./sandboxesContract.js";
 
 export const v2_3ContractRouter = oc.router({
 	// Customers
@@ -184,4 +199,30 @@ export const v2_3ContractRouter = oc.router({
 	keysMint: keysMintContract,
 	keysRefresh: keysRefreshContract,
 	keysRevoke: keysRevokeContract,
+
+	// Sandboxes (isolated sub-orgs)
+	sandboxesCreate: createSandboxContract,
+	sandboxesList: listSandboxesContract,
+	sandboxesDelete: deleteSandboxContract,
+	sandboxesReset: resetSandboxContract,
+});
+
+/**
+ * The public router plus catalogV2, used ONLY to generate
+ * `openapi-internal.yml` for the atmn generator. Keeping catalogV2 off
+ * `v2_3ContractRouter` is what keeps it out of the published spec, the SDKs
+ * and the docs — a filter downstream could be forgotten; a router it was
+ * never added to cannot leak.
+ */
+export const v2_3InternalContractRouter = oc.router({
+	...v2_3ContractRouter,
+
+	// catalogV2 (internal — see catalogContract.ts)
+	catalogV2Get: catalogV2GetContract,
+	catalogV2PreviewUpdate: catalogV2PreviewUpdateContract,
+	catalogV2Update: catalogV2UpdateContract,
+
+	// organization settings (internal — see organizationContract.ts)
+	organizationPreviewUpdate: organizationPreviewUpdateContract,
+	organizationUpdate: organizationUpdateContract,
 });

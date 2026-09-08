@@ -19,12 +19,6 @@ import {
 	type FullSubject,
 } from "@autumn/shared";
 
-const meteredFeature = {
-	id: "action1",
-	internal_id: "iaction1",
-	type: FeatureType.Metered,
-} as Feature;
-
 const looseEntitlement = ({
 	id,
 	internalEntityId = null,
@@ -66,7 +60,6 @@ describe("findUsageWindowAnchor", () => {
 		const { anchorCustomerEntitlementId } = findUsageWindowAnchor({
 			fullSubject: buildSubject([looseEntitlement({ id: "ce_loose" })]),
 			featureId: "action1",
-			features: [meteredFeature],
 			isCreditSystem: false,
 			scopeType: "customer",
 		});
@@ -80,7 +73,6 @@ describe("findUsageWindowAnchor", () => {
 				looseEntitlement({ id: "ce_entity", internalEntityId: "ie_1" }),
 			]),
 			featureId: "action1",
-			features: [meteredFeature],
 			isCreditSystem: false,
 			scopeType: "customer",
 		});

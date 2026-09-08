@@ -48,6 +48,16 @@ await mockModuleWithRestore(
 	}),
 );
 
+await mockModuleWithRestore(
+	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
+	() => ({
+		getOrSetCachedFullSubject: async () => ({
+			customer: { id: "cus_123" },
+			customer_products: [],
+		}),
+	}),
+);
+
 import { runBatchTrackTokens } from "@/internal/balances/track/runBatchTrackTokens.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";

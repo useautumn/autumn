@@ -1,0 +1,63 @@
+/**
+ * The registered Better Auth client for the atmn CLI, carried over from v2 so
+ * existing consent records keep working. `resolveTarget` lets `--client-id`
+ * or `AUTUMN_CLIENT_ID` replace it.
+ */
+export const CLI_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr";
+
+const OAUTH_PORT_BASE = 31448;
+const OAUTH_PORT_RANGE = 5;
+
+/** Callback ports tried in order; every one is registered as a redirect URI. */
+export const OAUTH_PORTS = Array.from(
+	{ length: OAUTH_PORT_RANGE },
+	(_, offset) => OAUTH_PORT_BASE + offset,
+);
+
+/**
+ * Modern read/write scopes covering everything the CLI reads and everything the
+ * minted keys are used for. The server rewrites v2's CRUDL scopes to these.
+ * platform:* is what `atmn sandbox create|delete` needs, migrations:write what
+ * `atmn reset` needs, and organisation:write what a config's `settings` block
+ * needs; a key minted before any was requested has to be re-minted with
+ * `atmn login`.
+ */
+export const CLI_OAUTH_SCOPES = [
+	"organisation:read",
+	"organisation:write",
+	"customers:read",
+	"customers:write",
+	"features:read",
+	"features:write",
+	"plans:read",
+	"plans:write",
+	"migrations:read",
+	"migrations:write",
+	"rewards:read",
+	"rewards:write",
+	"apiKeys:read",
+	"apiKeys:write",
+	"platform:read",
+	"platform:write",
+] as const;
+
+export const getOAuthRedirectUri = ({ port }: { port: number }): string =>
+	`http://localhost:${port}/`;
+
+export const getAuthorizationEndpoint = ({
+	backendUrl,
+}: {
+	backendUrl: string;
+}): string => `${backendUrl}/api/auth/oauth2/authorize`;
+
+export const getTokenEndpoint = ({
+	backendUrl,
+}: {
+	backendUrl: string;
+}): string => `${backendUrl}/api/auth/oauth2/token`;
+
+export const getApiKeysEndpoint = ({
+	backendUrl,
+}: {
+	backendUrl: string;
+}): string => `${backendUrl}/cli/api-keys`;

@@ -659,12 +659,171 @@ CreateEntityType = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
+class CreateEntityDimensions6TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class CreateEntityDimensions6(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityDimensionsToEnum3 = Literal["inf",]
+
+
+CreateEntityDimensionsToUnion3TypedDict = TypeAliasType(
+    "CreateEntityDimensionsToUnion3TypedDict",
+    Union[float, CreateEntityDimensionsToEnum3],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreateEntityDimensionsToUnion3 = TypeAliasType(
+    "CreateEntityDimensionsToUnion3", Union[float, CreateEntityDimensionsToEnum3]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreateEntityDimensionsTier3TypedDict(TypedDict):
+    to: CreateEntityDimensionsToUnion3TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateEntityDimensionsTier3(BaseModel):
+    to: CreateEntityDimensionsToUnion3
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateEntityDimensions5TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[CreateEntityDimensionsTier3TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreateEntityDimensions5(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[CreateEntityDimensionsTier3]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityDimensionsUnion3TypedDict = TypeAliasType(
+    "CreateEntityDimensionsUnion3TypedDict",
+    Union[CreateEntityDimensions6TypedDict, CreateEntityDimensions5TypedDict],
+)
+
+
+CreateEntityDimensionsUnion3 = TypeAliasType(
+    "CreateEntityDimensionsUnion3",
+    Union[CreateEntityDimensions6, CreateEntityDimensions5],
+)
+
+
+class CreateEntityMultipliers3TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class CreateEntityMultipliers3(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateEntityCreditSchema3TypedDict(TypedDict):
     credit_cost: float
     r"""Credits consumed per billing-unit group."""
     metered_feature_id: Literal[""]
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, CreateEntityDimensionsUnion3TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, CreateEntityMultipliers3TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
 
 class CreateEntityCreditSchema3(BaseModel):
@@ -679,9 +838,170 @@ class CreateEntityCreditSchema3(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
+    dimensions: Optional[Dict[str, CreateEntityDimensionsUnion3]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, CreateEntityMultipliers3]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityDimensions4TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class CreateEntityDimensions4(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityDimensionsToEnum2 = Literal["inf",]
+
+
+CreateEntityDimensionsToUnion2TypedDict = TypeAliasType(
+    "CreateEntityDimensionsToUnion2TypedDict",
+    Union[float, CreateEntityDimensionsToEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreateEntityDimensionsToUnion2 = TypeAliasType(
+    "CreateEntityDimensionsToUnion2", Union[float, CreateEntityDimensionsToEnum2]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreateEntityDimensionsTier2TypedDict(TypedDict):
+    to: CreateEntityDimensionsToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateEntityDimensionsTier2(BaseModel):
+    to: CreateEntityDimensionsToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateEntityDimensions3TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[CreateEntityDimensionsTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreateEntityDimensions3(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[CreateEntityDimensionsTier2]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityDimensionsUnion2TypedDict = TypeAliasType(
+    "CreateEntityDimensionsUnion2TypedDict",
+    Union[CreateEntityDimensions4TypedDict, CreateEntityDimensions3TypedDict],
+)
+
+
+CreateEntityDimensionsUnion2 = TypeAliasType(
+    "CreateEntityDimensionsUnion2",
+    Union[CreateEntityDimensions4, CreateEntityDimensions3],
+)
+
+
+class CreateEntityMultipliers2TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class CreateEntityMultipliers2(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
         serialized = handler(self)
         m = {}
 
@@ -703,6 +1023,10 @@ class CreateEntityCreditSchema2TypedDict(TypedDict):
     r"""Credits consumed per billing-unit group."""
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, CreateEntityDimensionsUnion2TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, CreateEntityMultipliers2TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
 
 class CreateEntityCreditSchema2(BaseModel):
@@ -715,9 +1039,170 @@ class CreateEntityCreditSchema2(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
+    dimensions: Optional[Dict[str, CreateEntityDimensionsUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, CreateEntityMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityDimensions2TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class CreateEntityDimensions2(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityDimensionsToEnum1 = Literal["inf",]
+
+
+CreateEntityDimensionsToUnion1TypedDict = TypeAliasType(
+    "CreateEntityDimensionsToUnion1TypedDict",
+    Union[float, CreateEntityDimensionsToEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreateEntityDimensionsToUnion1 = TypeAliasType(
+    "CreateEntityDimensionsToUnion1", Union[float, CreateEntityDimensionsToEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreateEntityDimensionsTier1TypedDict(TypedDict):
+    to: CreateEntityDimensionsToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateEntityDimensionsTier1(BaseModel):
+    to: CreateEntityDimensionsToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateEntityDimensions1TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[CreateEntityDimensionsTier1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreateEntityDimensions1(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[CreateEntityDimensionsTier1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityDimensionsUnion1TypedDict = TypeAliasType(
+    "CreateEntityDimensionsUnion1TypedDict",
+    Union[CreateEntityDimensions2TypedDict, CreateEntityDimensions1TypedDict],
+)
+
+
+CreateEntityDimensionsUnion1 = TypeAliasType(
+    "CreateEntityDimensionsUnion1",
+    Union[CreateEntityDimensions2, CreateEntityDimensions1],
+)
+
+
+class CreateEntityMultipliers1TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class CreateEntityMultipliers1(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
         serialized = handler(self)
         m = {}
 
@@ -768,6 +1253,10 @@ class CreateEntityCreditSchema1TypedDict(TypedDict):
     tiers: List[CreateEntityTierTypedDict]
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[Dict[str, CreateEntityDimensionsUnion1TypedDict]]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[Dict[str, CreateEntityMultipliers1TypedDict]]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
     tier_behavior: Literal["graduated"]
 
 
@@ -780,6 +1269,12 @@ class CreateEntityCreditSchema1(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
+    dimensions: Optional[Dict[str, CreateEntityDimensionsUnion1]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, CreateEntityMultipliers1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
     tier_behavior: Annotated[
         Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
         pydantic.Field(alias="tier_behavior"),
@@ -787,7 +1282,7 @@ class CreateEntityCreditSchema1(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_units"])
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
         serialized = handler(self)
         m = {}
 
@@ -1696,7 +2191,19 @@ try:
 except NameError:
     pass
 try:
+    CreateEntityDimensions5.model_rebuild()
+except NameError:
+    pass
+try:
     CreateEntityCreditSchema3.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateEntityDimensions3.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateEntityDimensions1.model_rebuild()
 except NameError:
     pass
 try:

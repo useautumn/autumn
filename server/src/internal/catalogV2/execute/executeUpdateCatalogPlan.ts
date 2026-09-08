@@ -1,4 +1,8 @@
-import type { CatalogAction, CatalogMigration } from "@autumn/shared";
+import {
+	type CatalogAction,
+	type CatalogMigration,
+	enrichCtxWithFeatures,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	type CatalogPhases,
@@ -18,6 +22,7 @@ import { validateAdoptedStripePrices } from "@/internal/catalogV2/execute/execut
 import { executeMigrationDrafts } from "@/internal/catalogV2/execute/executeMigrationDrafts";
 import { executeRemovePlans } from "@/internal/catalogV2/execute/executeRemovePlans";
 import { executeRenamePlans } from "@/internal/catalogV2/execute/executeRenamePlans";
+import { executeRewards } from "@/internal/catalogV2/execute/executeRewards";
 import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
 import { queueRewardMigrations } from "@/internal/catalogV2/execute/queueRewardMigrations";
 import { rewritePublicPlanIdsAfterRename } from "@/internal/catalogV2/execute/rewritePublicPlanIdsAfterRename";
@@ -39,6 +44,8 @@ export type CatalogAppliedResult = { id: string; action: CatalogAction };
 export type CatalogResult = {
 	features: CatalogAppliedResult[];
 	plans: CatalogAppliedResult[];
+	rewards: CatalogAppliedResult[];
+	referralPrograms: CatalogAppliedResult[];
 	migrations: CatalogMigration[];
 };
 
@@ -267,6 +274,21 @@ export const executeUpdateCatalogPlan = async ({
 		phase: "execute.init_stripe",
 		run: () => initStripeResourcesForCatalog({ ctx, updateCatalogPlan }),
 	});
+	// A feature grant created in this same push names a feature this request's
+	// ctx was loaded before, so rewards see the post-insert catalog.
+	const rewardResults = await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.rewards",
+		run: () =>
+			executeRewards({
+				ctx: enrichCtxWithFeatures({
+					ctx,
+					features: updateCatalogPlan.projected.features,
+				}),
+				updateCatalogPlan,
+			}),
+	});
 	await timeCatalogPhase({
 		ctx,
 		phases,
@@ -297,16 +319,19 @@ export const executeUpdateCatalogPlan = async ({
 		features: [
 			...updateCatalogPlan.insertFeatures.map((feature) => ({
 				id: feature.id,
+				internal_id: feature.internal_id,
 				action: "create" as const,
 			})),
 			...updateCatalogPlan.updateFeatures.map((updateFeaturePlan) => ({
 				id: updateFeaturePlan.next.id,
+				internal_id: updateFeaturePlan.current.internal_id,
 				action: updateFeaturePlan.previousAttributes
 					? ("update" as const)
 					: ("none" as const),
 			})),
 			...updateCatalogPlan.removeFeatures.map((removeFeaturePlan) => ({
 				id: removeFeaturePlan.featureId,
+				internal_id: removeFeaturePlan.current?.internal_id ?? null,
 				action: "delete" as const,
 			})),
 		],
@@ -317,6 +342,8 @@ export const executeUpdateCatalogPlan = async ({
 				action: "delete" as const,
 			})),
 		],
+		rewards: rewardResults.rewards,
+		referralPrograms: rewardResults.referralPrograms,
 		migrations,
 	};
 };

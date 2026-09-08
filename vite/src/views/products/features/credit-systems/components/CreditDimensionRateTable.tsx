@@ -17,8 +17,8 @@ import {
 	type MatchTableMeta,
 	MutedCell,
 	matchColumns,
-	metaOf,
 	removeColumn,
+	tableMeta,
 } from "./creditMatchColumns";
 
 interface RateRow extends MatchRow {
@@ -54,10 +54,10 @@ const priorityColumn: ColumnDef<RateRow, unknown> = {
 				placeholder="—"
 				value={priority}
 				onValueChange={(next) =>
-					metaOf<RateTableMeta, RateRow>(table).onPriorityChange(index, next)
+					tableMeta<RateTableMeta, RateRow>(table).onPriorityChange(index, next)
 				}
 				onClear={() =>
-					metaOf<RateTableMeta, RateRow>(table).onPriorityChange(
+					tableMeta<RateTableMeta, RateRow>(table).onPriorityChange(
 						index,
 						undefined,
 					)
@@ -88,7 +88,7 @@ const creditsColumn: ColumnDef<RateRow, unknown> = {
 		if (rate.dimension?.tier_behavior === "graduated") {
 			return <MutedCell>tiered</MutedCell>;
 		}
-		const meta = metaOf<RateTableMeta, RateRow>(table);
+		const meta = tableMeta<RateTableMeta, RateRow>(table);
 		return (
 			<CreditNumberInput
 				variant="headless"

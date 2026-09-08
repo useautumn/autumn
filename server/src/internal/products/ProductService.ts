@@ -516,7 +516,9 @@ export class ProductService {
 		}
 
 		if (returnAll) {
-			return data;
+			return notNullish(archived)
+				? data.filter((p) => p.archived === archived)
+				: data;
 		}
 
 		const latestProducts: FullProduct[] = getActiveProducts(data);

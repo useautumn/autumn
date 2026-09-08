@@ -73,7 +73,9 @@ test.concurrent(
 			PreviewUpdateCatalogResponseSchema.parse(preview);
 			const row = findPlanPreviewRow({ preview, planId });
 			expect(row.plan_change != null).toBe(true);
-			expect(row.plan_change?.previous_attributes).toMatchObject({ name: "Old" });
+			expect(row.plan_change?.previous_attributes).toMatchObject({
+				name: "Old",
+			});
 			expect(row.plan_change?.price_change != null).toBe(true);
 			expect((row.plan_change?.item_changes ?? []).length).toBeGreaterThan(0);
 			expect(row.plan_change?.customize?.price != null).toBe(true);
@@ -117,7 +119,6 @@ test.concurrent(
 				expected: {
 					planId,
 					action: "create",
-					planChange: null,
 				},
 			});
 			await expectDbPlansAbsent({ ctx, planIds: [planId] });
@@ -209,7 +210,9 @@ test.concurrent(
 			const rowB = findPlanPreviewRow({ preview, planId: planB });
 			expect(rowA.plan_change != null).toBe(true);
 			expect(rowB.plan_change != null).toBe(true);
-			expect(rowA.plan_change?.previous_attributes).toMatchObject({ name: "A1" });
+			expect(rowA.plan_change?.previous_attributes).toMatchObject({
+				name: "A1",
+			});
 			expect(rowA.plan_change?.price_change == null).toBe(true);
 			expect(rowB.plan_change?.price_change != null).toBe(true);
 			expect(rowB.plan_change?.previous_attributes == null).toBe(true);

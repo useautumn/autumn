@@ -3,9 +3,10 @@ import {
 	type ApiPlanItemV1,
 	type ApiPlanV1,
 	BillingInterval,
+	FreeTrialDuration,
 	type FullPlanLicense,
 	type FullProduct,
-	FreeTrialDuration,
+	PlanPreviousAttributesV0Schema,
 	ResetInterval,
 } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";
@@ -222,11 +223,8 @@ test("buildPlanItemChangesFromLists assembles explicit created/deleted", () => {
 	]);
 });
 
-const parentProduct = ({
-	name = "Pro",
-}: {
-	name?: string;
-} = {}): FullProduct => products.createFull({ id: "pro", name });
+const parentProduct = ({ name = "Pro" }: { name?: string } = {}): FullProduct =>
+	products.createFull({ id: "pro", name });
 
 const seatProduct = ({
 	version = 1,
@@ -371,7 +369,9 @@ test("identical FullProducts including licenses is a no-op", () => {
 	const licenses = [planLicense({ parent, licenseProduct: seat, included: 3 })];
 	const product = withLicenses({ parent, licenses });
 
-	expect(buildPlanChange({ from: product, to: { ...product } })).toBeUndefined();
+	expect(
+		buildPlanChange({ from: product, to: { ...product } }),
+	).toBeUndefined();
 });
 
 test("content + license compose onto one plan_change", () => {
@@ -397,7 +397,9 @@ test("license product content change: nested core plan_change", () => {
 	const change = buildPlanChange({
 		from: withLicenses({
 			parent,
-			licenses: [planLicense({ parent, licenseProduct: fromSeat, included: 3 })],
+			licenses: [
+				planLicense({ parent, licenseProduct: fromSeat, included: 3 }),
+			],
 		}),
 		to: withLicenses({
 			parent,
@@ -412,4 +414,19 @@ test("license product content change: nested core plan_change", () => {
 			plan_change: { previous_attributes: { name: "Seat" } },
 		},
 	]);
+});
+
+test("demotion reports the active pointer it hands over", () => {
+	const change = buildPlanChangeCore({
+		from: plan({ active: true }),
+		to: plan({ active: false }),
+	});
+
+	expect(change?.previous_attributes).toEqual({ active: true });
+});
+
+test("the preview schema carries the demoted active flag through", () => {
+	expect(PlanPreviousAttributesV0Schema.parse({ active: true })).toEqual({
+		active: true,
+	});
 });

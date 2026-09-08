@@ -98,6 +98,7 @@ const previewCreateClaim = async ({
 		plans: [{ plan_id: planId, name }],
 		remove_plans: [],
 		skip_deletions: true,
+		skip_version_deletions: true,
 		skip_plan_ids: [],
 		skip_feature_ids: [],
 	};
@@ -132,6 +133,7 @@ const executeCreateClaim = async ({
 			plans: [{ plan_id: planId, name }],
 			remove_plans: [],
 			skip_deletions: true,
+			skip_version_deletions: true,
 			skip_plan_ids: [],
 			skip_feature_ids: [],
 		},

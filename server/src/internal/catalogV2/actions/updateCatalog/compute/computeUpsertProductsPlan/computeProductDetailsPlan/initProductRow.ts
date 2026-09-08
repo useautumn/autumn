@@ -86,7 +86,7 @@ export const initProductRow = ({
 		archived: patch.archived ?? false,
 		deleted_at: null,
 		previous_version_slug: null,
-		config: { ignore_past_due: patch.config?.ignore_past_due ?? false },
+		config: patch.config ?? { ignore_past_due: false },
 		metadata: patch.metadata ?? {},
 		auto_topups: patch.auto_topups ?? null,
 		spend_limits: patch.spend_limits ?? null,

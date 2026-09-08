@@ -41,11 +41,24 @@ import {
 	removeInternalFields,
 } from "../utils/openapiTransform/index.js";
 import { registerInternalSchemas } from "../utils/registerInternalSchemas.js";
-import { v2_3ContractRouter } from "./contracts/index.js";
+import {
+	v2_3ContractRouter,
+	v2_3InternalContractRouter,
+} from "./contracts/index.js";
 import { injectWebhooks } from "./webhooks/injectWebhooks.js";
 
+const OPENAPI_MAX_STRUCTURE_DEPTH = 20;
+
 const generator = new OpenAPIGenerator({
-	schemaConverters: [new ZodToJsonSchemaConverter()],
+	// oRPC emits `{}` (any) for nodes deeper than maxStructureDepth (default 10).
+	// Customer responses nest plan → item → feature_override → credit_schema →
+	// dimensions → tiers past that, which degraded SDK types and tripped a
+	// Speakeasy Python ordering bug, so the limit is raised.
+	schemaConverters: [
+		new ZodToJsonSchemaConverter({
+			maxStructureDepth: OPENAPI_MAX_STRUCTURE_DEPTH,
+		}),
+	],
 });
 
 const OPENAPI_DOC_VERSION = LATEST_VERSION;
@@ -54,7 +67,22 @@ const OPENAPI_DOC_VERSION = LATEST_VERSION;
  * Generates the OpenAPI document with all transformations applied.
  * Internal helper used by both latest OpenAPI writers.
  */
-async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
+/**
+ * `router` and `stripInternal` are the only things that vary: the published
+ * outputs use the public router and strip internal fields, while
+ * `openapi-internal.yml` uses the internal router and keeps them, because the
+ * atmn generator needs `internal_id`, `variants`, `licenses` and
+ * `base_variant_id` to build the CLI's fixtures.
+ */
+async function generateOpenApiDocument({
+	router = v2_3ContractRouter,
+	stripInternal = true,
+	includeWebhooks = true,
+}: {
+	router?: unknown;
+	stripInternal?: boolean;
+	includeWebhooks?: boolean;
+} = {}): Promise<Record<string, unknown>> {
 	// Register internal schemas before generation so they get x-internal: true
 	// in the OpenAPI output, which removeInternalFields() will then strip
 	registerInternalSchemas(BaseApiCustomerSchema);
@@ -83,7 +111,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(DfuFlashParamsSchema);
 	registerInternalSchemas(InsertInvoicesParamsSchema);
 
-	const openApiDocument = (await generator.generate(v2_3ContractRouter, {
+	const openApiDocument = (await generator.generate(router as never, {
 		info: {
 			title: "Autumn API",
 			version: OPENAPI_DOC_VERSION,
@@ -136,8 +164,8 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	});
 	// Webhooks first: injectWebhooks builds its own schemas, so injecting after
 	// the sanitiser left that whole subtree carrying internal fields.
-	injectWebhooks({ openApiDocument });
-	removeInternalFields({ openApiDocument });
+	if (includeWebhooks) injectWebhooks({ openApiDocument });
+	if (stripInternal) removeInternalFields({ openApiDocument });
 	applyPaginationExtensions({ openApiDocument });
 
 	return openApiDocument;
@@ -174,6 +202,27 @@ export const writeLatestOpenApiStripped = async ({
 		?.schemas as Record<string, unknown> | undefined;
 	transformNode(openApiDocument, schemas);
 
+	const yamlContent = yaml.stringify(openApiDocument);
+	writeFileSync(outputFilePath, yamlContent, "utf8");
+};
+
+/**
+ * Generates and writes the INTERNAL OpenAPI spec: the public surface plus
+ * catalogV2, with internal fields intact. Read by the atmn generator, never
+ * published — not fed to the SDKs and not merged into the docs spec.
+ */
+export const writeLatestOpenApiInternal = async ({
+	outputFilePath,
+}: {
+	outputFilePath: string;
+}) => {
+	const openApiDocument = await generateOpenApiDocument({
+		router: v2_3InternalContractRouter,
+		stripInternal: false,
+		// Webhooks are not part of the CLI's surface, and this spec skips
+		// sanitising, so including them would carry internal fields for nothing.
+		includeWebhooks: false,
+	});
 	const yamlContent = yaml.stringify(openApiDocument);
 	writeFileSync(outputFilePath, yamlContent, "utf8");
 };

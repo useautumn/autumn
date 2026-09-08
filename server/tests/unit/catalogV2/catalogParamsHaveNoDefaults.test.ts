@@ -37,6 +37,8 @@ import chalk from "chalk";
  */
 const ALLOWED_DEFAULTS: Record<string, string> = {
 	skip_deletions: "absent means patch mode; there is no third state",
+	skip_version_deletions:
+		"absent means unstated versions are left alone; there is no third state",
 	skip_plan_ids: "an exemption list nobody sweeps",
 	skip_feature_ids: "an exemption list nobody sweeps",
 	remove_plans: "imperative removals; absent and empty both mean 'none'",
@@ -44,7 +46,6 @@ const ALLOWED_DEFAULTS: Record<string, string> = {
 
 	// Gated by their parent's presence.
 	"plans.migration.draft": "gated by `migration`",
-	"plans.config.ignore_past_due": "gated by `config`",
 	"plans.free_trial.card_required": "gated by `free_trial`",
 	"plans.free_trial.duration_type": "gated by `free_trial`",
 	"plans.items.pooled": "gated by `items`",

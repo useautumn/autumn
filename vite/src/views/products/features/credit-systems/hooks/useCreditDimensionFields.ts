@@ -23,10 +23,12 @@ export function useCreditDimensionFields({
 	item,
 	onChange,
 	onRestrictDrafts,
+	onRenameField,
 }: {
 	item: CreditSchemaItem;
 	onChange: (item: CreditSchemaItem) => void;
 	onRestrictDrafts: (isAllowed: (draft: CreditRateDraft) => boolean) => void;
+	onRenameField: (rename: { from: string; to: string }) => void;
 }) {
 	const [draftValues, setDraftValues] = useState<DimensionValues>(() =>
 		dimensionValues(item),
@@ -73,6 +75,7 @@ export function useCreditDimensionFields({
 			return;
 		}
 		setDraftValues(renameDimensionValuesKey({ values, from, to }));
+		onRenameField({ from, to });
 		onChange(withRenamedField({ item, from, to }));
 	};
 

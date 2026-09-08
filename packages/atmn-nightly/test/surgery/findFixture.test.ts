@@ -1,0 +1,290 @@
+import { expect, test } from "bun:test";
+import { findFixture } from "../../src/surgery/findFixture";
+
+const configSource = `import { atmn, feature } from "atmn";
+import { seats } from "./features";
+
+// a comment that must survive
+export default atmn({
+	features: [
+		seats,
+		feature({
+			featureId: "messages",
+			name: "Messages",
+			type: "metered",
+			consumable: true,
+		}),
+	],
+});
+`;
+
+const idFieldLastSource = `import { feature } from "atmn";
+
+export const seats = feature({
+	name: "Seats",
+	type: "metered",
+	consumable: false,
+	featureId: "seats",
+});
+`;
+
+test("findFixture returns the call_expression node", () => {
+	const call = findFixture({
+		source: configSource,
+		builder: "feature",
+		idField: "featureId",
+		id: "messages",
+	});
+	expect(call).not.toBeNull();
+	expect(call?.kind()).toBe("call_expression");
+	expect(call?.text()).toContain('featureId: "messages"');
+});
+
+test("idField is matched by value, not by position", () => {
+	const call = findFixture({
+		source: idFieldLastSource,
+		builder: "feature",
+		idField: "featureId",
+		id: "seats",
+	});
+	expect(call).not.toBeNull();
+	expect(call?.text()).toContain('featureId: "seats"');
+});
+
+test("two fixtures in one file: only the named id is found", () => {
+	const call = findFixture({
+		source: `${configSource}\n${idFieldLastSource}`,
+		builder: "feature",
+		idField: "featureId",
+		id: "seats",
+	});
+	expect(call?.text()).toContain('featureId: "seats"');
+	expect(call?.text()).not.toContain("messages");
+});
+
+test("an id containing $ is found", () => {
+	const source = `import { feature } from "atmn";
+export const odd = feature({
+	featureId: "or$er",
+	name: "Odd",
+	type: "metered",
+	consumable: true,
+});
+`;
+	const call = findFixture({
+		source,
+		builder: "feature",
+		idField: "featureId",
+		id: "or$er",
+	});
+	expect(call?.text()).toContain('featureId: "or$er"');
+});
+
+test("unknown id, unknown idField, and unknown builder return null", () => {
+	expect(
+		findFixture({
+			source: configSource,
+			builder: "feature",
+			idField: "featureId",
+			id: "nope",
+		}),
+	).toBeNull();
+	expect(
+		findFixture({
+			source: configSource,
+			builder: "feature",
+			idField: "planId",
+			id: "messages",
+		}),
+	).toBeNull();
+	expect(
+		findFixture({
+			source: configSource,
+			builder: "plan",
+			idField: "featureId",
+			id: "messages",
+		}),
+	).toBeNull();
+});
+
+test("feature(buildIt()) is not a fixture", () => {
+	const source = `const buildIt = () => ({ featureId: "messages" });
+export default atmn({ features: [feature(buildIt())] });
+`;
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "messages",
+		}),
+	).toBeNull();
+});
+
+test("a spread fixture is not found even when the id matches", () => {
+	const source = `const base = { name: "Base" };
+export default atmn({
+	features: [feature({ ...base, featureId: "messages" })],
+});
+`;
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "messages",
+		}),
+	).toBeNull();
+});
+
+const planVersionsSource = `import { plan } from "atmn";
+
+export default atmn({
+	plans: [
+		plan({
+			planId: "pro",
+			versionSlug: "v1",
+			name: "Pro",
+		}),
+		plan({
+			planId: "pro",
+			versionSlug: "v2",
+			name: "Pro v2",
+		}),
+	],
+});
+`;
+
+test("where narrows same-planId versions by versionSlug", () => {
+	const call = findFixture({
+		source: planVersionsSource,
+		builder: "plan",
+		idField: "planId",
+		id: "pro",
+		where: [{ field: "versionSlug", equals: "v2" }],
+	});
+	expect(call?.text()).toContain('versionSlug: "v2"');
+	expect(call?.text()).not.toContain('versionSlug: "v1"');
+});
+
+test("absentMeans matches a fixture missing the field, and only that value", () => {
+	const source = `import { plan } from "atmn";
+
+export default atmn({
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+		}),
+	],
+});
+`;
+	const foundByDefault = findFixture({
+		source,
+		builder: "plan",
+		idField: "planId",
+		id: "pro",
+		where: [{ field: "versionSlug", equals: "v1", absentMeans: "v1" }],
+	});
+	expect(foundByDefault?.text()).toContain('planId: "pro"');
+
+	const notFoundForOtherValue = findFixture({
+		source,
+		builder: "plan",
+		idField: "planId",
+		id: "pro",
+		where: [{ field: "versionSlug", equals: "v2", absentMeans: "v1" }],
+	});
+	expect(notFoundForOtherValue).toBeNull();
+});
+
+test("a where constraint on a non-string value never matches", () => {
+	const source = `import { plan } from "atmn";
+
+export default atmn({
+	plans: [
+		plan({
+			planId: "pro",
+			versionSlug: 1,
+			name: "Pro",
+		}),
+	],
+});
+`;
+	expect(
+		findFixture({
+			source,
+			builder: "plan",
+			idField: "planId",
+			id: "pro",
+			where: [{ field: "versionSlug", equals: "1" }],
+		}),
+	).toBeNull();
+});
+
+test("a mapped fixture with dynamic values is not found", () => {
+	const source = `const ids = ["messages"];
+export default atmn({
+	features: ids.map((id) =>
+		feature({ featureId: id, name: id, type: "metered", consumable: true })),
+});
+`;
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "messages",
+		}),
+	).toBeNull();
+});
+
+test("a single-quoted id with escapes is matched by its runtime value", () => {
+	const source = [
+		'import { feature } from "atmn";',
+		"",
+		"export const odd = feature({",
+		"\tfeatureId: 'it\\'s\\ta\\\\b\\u0041',",
+		"\tname: 'Odd',",
+		"});",
+		"",
+	].join("\n");
+
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "it's\ta\\bA",
+		}),
+	).not.toBeNull();
+	// The source spelling is not the value: matching it would be the bug.
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "it\\'s\\ta\\\\b\\u0041",
+		}),
+	).toBeNull();
+});
+
+test("a double-quoted id with escapes decodes the same way", () => {
+	const source = [
+		'import { feature } from "atmn";',
+		"",
+		"export const odd = feature({",
+		'\tfeatureId: "line\\nbreak",',
+		"});",
+		"",
+	].join("\n");
+
+	expect(
+		findFixture({
+			source,
+			builder: "feature",
+			idField: "featureId",
+			id: "line\nbreak",
+		}),
+	).not.toBeNull();
+});

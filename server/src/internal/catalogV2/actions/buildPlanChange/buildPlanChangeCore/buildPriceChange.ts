@@ -14,9 +14,11 @@ export const buildPriceChange = ({
 	customize: DiffedCustomizePlanV1;
 }): PlanPriceChangeV0 | undefined => {
 	if (customize.price === undefined) return undefined;
+	// Nothing to nothing is not a change worth a line.
+	if (from.price == null && to.price == null) return undefined;
 
 	return {
-		previous: from.price,
+		previous: from.price ?? null,
 		current: to.price,
 	};
 };

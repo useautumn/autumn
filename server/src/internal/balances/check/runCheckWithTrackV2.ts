@@ -20,35 +20,7 @@ import { buildLockScheduleName } from "@/internal/balances/utils/lock/buildLockS
 import { getCreditRateRequiredBalance } from "@/internal/features/creditSystemUtils.js";
 import { workflows } from "@/queue/workflows.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
-
-/**
- * Checks if the customer has any entitlement for the requested feature.
- * Returns false when apiBalance is undefined, indicating no customer_entitlement exists.
- */
-const customerHasEntitlementForFeature = (checkData: CheckDataV2): boolean => {
-	return checkData.apiBalance !== undefined;
-};
-
-/**
- * Builds a check response for when the customer has no entitlement for the feature.
- */
-const buildNoEntitlementResponse = ({
-	checkData,
-	requiredBalance,
-}: {
-	checkData: CheckDataV2;
-	requiredBalance: number;
-}) => {
-	return CheckResponseV3Schema.parse({
-		allowed: false,
-		customer_id: checkData.customerId || "",
-		entity_id: checkData.entityId,
-		required_balance: requiredBalance,
-		balance: null,
-		balances: undefined,
-		flag: checkData.apiFlag ?? null,
-	});
-};
+import { getCheckResponseV2 } from "./getCheckResponseV2.js";
 
 export const runCheckWithTrackV2 = async ({
 	ctx,
@@ -94,8 +66,16 @@ export const runCheckWithTrackV2 = async ({
 
 	// No entitlement means the Lua deduction script no-ops successfully,
 	// which would incorrectly surface as allowed: true.
-	if (!customerHasEntitlementForFeature(checkData) && requiredBalance > 0) {
-		return buildNoEntitlementResponse({ checkData, requiredBalance });
+	if (
+		!checkData.evaluationApiBalance &&
+		(requiredBalance > 0 || checkData.apiBalance)
+	) {
+		return getCheckResponseV2({
+			ctx,
+			checkData,
+			requiredBalance,
+			properties: body.properties,
+		});
 	}
 
 	const { featureToUse, originalFeature } = checkData;
@@ -118,7 +98,7 @@ export const runCheckWithTrackV2 = async ({
 		featureId: body.feature_id,
 		lock: body.lock,
 		value: requiredBalance,
-	});
+	}).map((deduction) => ({ ...deduction, enforceOverdueBlock: true }));
 
 	const trackBody: TrackParams = {
 		customer_id: body.customer_id,

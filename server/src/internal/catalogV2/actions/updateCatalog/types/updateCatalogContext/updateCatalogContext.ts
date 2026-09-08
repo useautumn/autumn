@@ -4,6 +4,7 @@ import type { FeatureState } from "@/internal/catalogV2/actions/updateCatalog/ty
 import type { LicenseStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext/licenseStatesContext";
 import type { PreviewCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext/previewCatalogContext";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext/productStateContext";
+import type { RewardStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext/rewardStatesContext";
 
 /** Everything setup fetches; compute and errors read only from here. */
 export interface UpdateCatalogContext {
@@ -15,6 +16,8 @@ export interface UpdateCatalogContext {
 	/** Persisted plan versions referencing a feature being enabled for invoice credits. */
 	invoiceCreditProducts: FullProduct[];
 	licenseStatesContext: LicenseStatesContext;
+	/** Rewards and referral programs the catalog can speak for. */
+	rewardStatesContext: RewardStatesContext;
 	/** Present iff the action ran with preview: true. */
 	previewContext?: PreviewCatalogContext;
 }

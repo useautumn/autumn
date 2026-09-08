@@ -1,32 +1,54 @@
-import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
+import type { ModelMarkups } from "../../../../models/featureModels/featureConfig/creditConfig.js";
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
 import type { EntitlementWithFeature } from "../../../../models/productModels/entModels/entModels.js";
+import { isAnyCreditSystem } from "../../../featureUtils/classifyFeature/isAnyCreditSystem.js";
 
-/**
- * The effective credit system for an entitlement: the plan item's
- * feature_override is keyed like the feature config, so applying it is a
- * config spread (each present key fully replaces the feature's value).
- * Everything downstream keeps consuming a plain Feature, so schema math is
- * override-aware without new code paths.
- */
+const mergeModelMarkups = ({
+	catalog,
+	override,
+}: {
+	catalog: ModelMarkups;
+	override: ModelMarkups;
+}): ModelMarkups => {
+	if (!catalog) return override ?? null;
+
+	const merged: NonNullable<ModelMarkups> = { ...override };
+	for (const [modelId, { markup: _perPlan, ...costBasis }] of Object.entries(
+		catalog,
+	)) {
+		// Cost basis last: a plan sets markup, never what the model itself costs.
+		merged[modelId] = { ...override?.[modelId], ...costBasis };
+	}
+	return merged;
+};
+
+/** The one place a plan item's feature_override is applied. */
 export const entitlementToCreditSystem = ({
 	entitlement,
 }: {
 	entitlement: EntitlementWithFeature;
 }): Feature => {
 	const creditSystem = entitlement.feature;
-	if (
-		creditSystem.type !== FeatureType.CreditSystem ||
-		!entitlement.feature_override
-	) {
-		return creditSystem;
-	}
+	const override = entitlement.feature_override;
+
+	if (!(override && isAnyCreditSystem(creditSystem.type))) return creditSystem;
+
+	const { markups, ...configKeys } = override;
+	const config = { ...creditSystem.config, ...configKeys };
+
+	if (!markups) return { ...creditSystem, config };
 
 	return {
 		...creditSystem,
+		// model_markups is a column; its two siblings live in config.
+		model_markups: mergeModelMarkups({
+			catalog: creditSystem.model_markups,
+			override: markups.model_markups,
+		}),
 		config: {
-			...creditSystem.config,
-			...entitlement.feature_override,
+			...config,
+			default_markup: markups.default_markup,
+			provider_markups: markups.provider_markups ?? null,
 		},
 	};
 };
