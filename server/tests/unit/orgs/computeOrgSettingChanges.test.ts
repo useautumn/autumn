@@ -63,29 +63,22 @@ test("changes come out in the settable set's order, updates and unmanaged mixed"
 	]);
 });
 
-test("the deprecated include_past_due twin counts as blocking when it alone is set", () => {
-	// A legacy row: include_past_due false, block_overdue_entitlements never written.
+test("the overdue flag is the stored one: the legacy twin does not speak for it", () => {
+	// Entitlement checks read block_overdue_entitlements alone, and so does the
+	// dashboard toggle; a legacy include_past_due: false must not be read as it.
 	const legacy = { ...config(), include_past_due: false };
-	expect(computeOrgSettingChanges({ config: legacy, stated: {} })).toEqual([
-		{
-			key: "block_overdue_entitlements",
-			action: "unmanaged",
-			previous: true,
-			current: null,
-		},
-	]);
-	// Stating false is then a real update, not a no-op.
+	expect(computeOrgSettingChanges({ config: legacy, stated: {} })).toEqual([]);
 	expect(
 		computeOrgSettingChanges({
 			config: legacy,
-			stated: { block_overdue_entitlements: false },
+			stated: { block_overdue_entitlements: true },
 		}),
 	).toEqual([
 		{
 			key: "block_overdue_entitlements",
 			action: "update",
-			previous: true,
-			current: false,
+			previous: false,
+			current: true,
 		},
 	]);
 });
