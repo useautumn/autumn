@@ -1,6 +1,7 @@
 import { type Reward, RewardType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type {
+	CatalogCoupon,
 	CatalogRewardState,
 	ReferralProgramState,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext/rewardStatesContext";
@@ -23,7 +24,8 @@ const STATABLE_TYPES = new Set<RewardType>([
 export type LoadedRewards = {
 	rewards: CatalogRewardState[];
 	unstatableIds: Set<string>;
-	/** Every row, statable or not — programs resolve their reward id from here. */
+	/** Stable ids of the rewards a config can state — the programs that may be stated too. */
+	statableInternalIds: Set<string>;
 	idByInternalId: Map<string, string>;
 };
 
@@ -60,11 +62,12 @@ export const loadRewardStates = async ({
 					internalId: reward.internal_id,
 					id: reward.id,
 					kind: "coupon",
+					// Narrowed by STATABLE_TYPES above: invoice credits never reach here.
 					coupon: getApiCoupon({
 						reward,
 						planIdByInternalProductId,
 						internalProductIdByPriceId,
-					}),
+					}) as CatalogCoupon,
 				};
 
 	return {
@@ -74,16 +77,24 @@ export const loadRewardStates = async ({
 				.filter((reward) => !STATABLE_TYPES.has(reward.type))
 				.map((reward) => reward.id),
 		),
+		statableInternalIds: new Set(statable.map((reward) => reward.internal_id)),
 		idByInternalId: new Map(rows.map((row) => [row.internal_id, row.id])),
 	};
 };
 
+/**
+ * Only the programs a config could state come back. A program backed by a
+ * free-product or invoice-credit reward names an id the catalog never returns,
+ * so pulling it would write a config its own lint rejects.
+ */
 export const loadReferralProgramStates = async ({
 	ctx,
 	idByInternalId,
+	statableInternalIds,
 }: {
 	ctx: AutumnContext;
 	idByInternalId: Map<string, string>;
+	statableInternalIds: Set<string>;
 }): Promise<ReferralProgramState[]> => {
 	const programs = await rewardProgramRepo.list({
 		db: ctx.db,
@@ -92,12 +103,13 @@ export const loadReferralProgramStates = async ({
 	});
 
 	return programs.flatMap((program) => {
+		if (!statableInternalIds.has(program.internal_reward_id)) return [];
 		const rewardId = idByInternalId.get(program.internal_reward_id);
-		// A program whose reward the org no longer holds cannot be stated.
 		if (!rewardId) return [];
 		return [
 			{
 				internalId: program.internal_id,
+				internalRewardId: program.internal_reward_id,
 				program: getApiReferralProgram({ rewardProgram: program, rewardId }),
 			},
 		];

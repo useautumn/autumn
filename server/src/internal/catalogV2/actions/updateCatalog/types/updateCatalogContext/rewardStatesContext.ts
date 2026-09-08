@@ -2,14 +2,20 @@ import type {
 	ApiCouponV0,
 	ApiFeatureGrantV0,
 	ApiReferralProgramV0,
+	RewardType,
 } from "@autumn/shared";
+
+/** The catalog states discount coupons; invoice credits are not statable. */
+export type CatalogCoupon = Omit<ApiCouponV0, "type"> & {
+	type: RewardType.PercentageDiscount | RewardType.FixedDiscount;
+};
 
 /** One reward the org holds, in the branch shape the config states. */
 export type RewardState = {
 	internalId: string;
 	id: string;
 	kind: "coupon";
-	coupon: ApiCouponV0;
+	coupon: CatalogCoupon;
 };
 
 export type FeatureGrantState = {
@@ -23,6 +29,8 @@ export type CatalogRewardState = RewardState | FeatureGrantState;
 
 export type ReferralProgramState = {
 	internalId: string;
+	/** Stable id of the reward it links, so a removal can see the link. */
+	internalRewardId: string;
 	program: ApiReferralProgramV0;
 };
 
