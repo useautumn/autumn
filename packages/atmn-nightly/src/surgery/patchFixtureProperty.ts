@@ -1,6 +1,11 @@
 import { type Edit, Lang, parse, type SgNode } from "@ast-grep/napi";
 import { appendPropertyEdit } from "./appendPropertyEdit";
-import { type FixtureConstraint, findFixture } from "./findFixture";
+import {
+	type FixtureConstraint,
+	type FixtureShape,
+	findFixture,
+	fixtureObjectOf,
+} from "./findFixture";
 import { lineEndInclusive, lineEndOf, lineStartOf } from "./fixtureEdit";
 
 const pairFor = ({
@@ -28,12 +33,12 @@ export const fixtureStatesProperty = ({
 	call: SgNode;
 	property: string;
 }): boolean => {
-	const object = call.field("arguments")?.namedChildren()[0];
-	if (object === undefined || object.kind() !== "object") return false;
+	const object = fixtureObjectOf(call);
+	if (object === null) return false;
 	return pairFor({ object, property }) !== null;
 };
 
-/** The string a fixture call states for one top-level property, or null. */
+/** The string a fixture literal states for one top-level property, or null. */
 export const fixturePropertyString = ({
 	call,
 	property,
@@ -41,8 +46,8 @@ export const fixturePropertyString = ({
 	call: SgNode;
 	property: string;
 }): string | null => {
-	const object = call.field("arguments")?.namedChildren()[0];
-	if (object === undefined || object.kind() !== "object") return null;
+	const object = fixtureObjectOf(call);
+	if (object === null) return null;
 	const pair = pairFor({ object, property });
 	const value = pair?.namedChildren()[1];
 	if (value === undefined || value.kind() !== "string") return null;
@@ -104,7 +109,7 @@ export const patchFixtureProperty = ({
 	text,
 }: {
 	source: string;
-	builder: string;
+	builder: FixtureShape;
 	idField: string;
 	id: string;
 	where?: FixtureConstraint[];
@@ -122,8 +127,8 @@ export const patchFixtureProperty = ({
 		allowDynamic: true,
 	});
 	if (call === null) return null;
-	const object = call.field("arguments")?.namedChildren()[0];
-	if (object === undefined || object.kind() !== "object") return null;
+	const object = fixtureObjectOf(call);
+	if (object === null) return null;
 	const root = parse(Lang.TypeScript, source).root();
 	const pair = pairFor({ object, property });
 	if (text === null) {

@@ -33,6 +33,7 @@ export const declaredVariantTargets = ({
 				versionSlug: variant.version_slug,
 				allVersions:
 					unlink || firstLink || upsert.row.versioning === "all_versions",
+				anchorInternalIds: unlinkableBaseIds,
 				productStatesContext,
 			});
 

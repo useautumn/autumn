@@ -1,5 +1,10 @@
 import { Lang, parse } from "@ast-grep/napi";
-import { type FixtureConstraint, findFixture } from "./findFixture";
+import {
+	type FixtureConstraint,
+	type FixtureShape,
+	findFixture,
+	fixtureObjectOf,
+} from "./findFixture";
 
 /** Overwrite one top-level property's value in a fixture literal; null when
  * the fixture or the property is not there. */
@@ -13,7 +18,7 @@ export const setFixtureProperty = ({
 	value,
 }: {
 	source: string;
-	builder: string;
+	builder: FixtureShape;
 	idField: string;
 	id: string;
 	where?: FixtureConstraint[];
@@ -31,7 +36,7 @@ export const setFixtureProperty = ({
 		allowDynamic: true,
 	});
 	if (call === null) return null;
-	const object = call.find({ rule: { kind: "object" } });
+	const object = fixtureObjectOf(call);
 	if (object === null) return null;
 	for (const member of object.children()) {
 		if (member.kind() !== "pair") continue;

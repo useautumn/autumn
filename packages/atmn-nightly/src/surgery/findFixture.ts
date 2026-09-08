@@ -10,16 +10,62 @@ export type FixtureConstraint = {
 };
 
 /**
- * The double `$$$` puts `idField` anywhere among the properties; a bare
- * `idField: $VALUE` pattern would parse as a labeled statement and match nothing.
+ * Where a fixture literal may stand: the first argument of a builder call
+ * (`plan({...})`), or an object element of one of a builder call's array
+ * properties (`plan({ variants: [{...}] })`).
  */
-const fixturePattern = ({
+export type FixtureShape =
+	| string
+	| { parentBuilder: string; arrayProperty: string };
+
+/** The object literal a found fixture node holds: the node itself, or a call's first argument. */
+export const fixtureObjectOf = (node: SgNode): SgNode | null => {
+	if (node.kind() === "object") return node;
+	const object = node.field("arguments")?.namedChildren()[0];
+	return object !== undefined && object.kind() === "object" ? object : null;
+};
+
+const builderCalls = ({
+	root,
 	builder,
-	idField,
 }: {
+	root: SgNode;
 	builder: string;
-	idField: string;
-}): string => `${builder}({ $$$, ${idField}: $VALUE, $$$ })`;
+}): SgNode[] =>
+	root
+		.findAll({ rule: { kind: "call_expression" } })
+		.filter((call) => call.field("function")?.text() === builder);
+
+/** Candidate nodes for the shape, each paired with the literal it holds. */
+const candidateFixtures = ({
+	root,
+	builder,
+}: {
+	root: SgNode;
+	builder: FixtureShape;
+}): { node: SgNode; object: SgNode }[] => {
+	if (typeof builder === "string") {
+		return builderCalls({ root, builder }).flatMap((call) => {
+			const object = fixtureObjectOf(call);
+			return object === null ? [] : [{ node: call, object }];
+		});
+	}
+	return builderCalls({ root, builder: builder.parentBuilder }).flatMap(
+		(call) => {
+			const parent = fixtureObjectOf(call);
+			if (parent === null) return [];
+			const array = topLevelPairValue({
+				object: parent,
+				key: builder.arrayProperty,
+			});
+			if (array === null || array.kind() !== "array") return [];
+			return array
+				.namedChildren()
+				.filter((element) => element.kind() === "object")
+				.map((element) => ({ node: element, object: element }));
+		},
+	);
+};
 
 export const findFixture = ({
 	source,
@@ -30,7 +76,7 @@ export const findFixture = ({
 	allowDynamic = false,
 }: {
 	source: string;
-	builder: string;
+	builder: FixtureShape;
 	idField: string;
 	id: string;
 	where?: FixtureConstraint[];
@@ -40,16 +86,13 @@ export const findFixture = ({
 	const root = parse(Lang.TypeScript, source).root();
 	// A rule walk rather than a pattern: a pattern misses an object whose id
 	// pair follows a spread, and the fixture must be found to be refused.
-	for (const call of root.findAll({ rule: { kind: "call_expression" } })) {
-		if (call.field("function")?.text() !== builder) continue;
-		const object = call.field("arguments")?.namedChildren()[0];
-		if (object === undefined || object.kind() !== "object") continue;
+	for (const { node, object } of candidateFixtures({ root, builder })) {
 		const idValue = topLevelPairValue({ object, key: idField });
 		if (idValue === null || stringLiteralValue(idValue) !== id) continue;
 		if (!allowDynamic && containsDynamicValue(object)) continue;
 		if (where !== undefined && !satisfiesFixtureConstraints({ object, where }))
 			continue;
-		return call;
+		return node;
 	}
 	return null;
 };

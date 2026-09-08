@@ -223,6 +223,8 @@ export const handleVariantErrors = ({
 
 	const mintedPins = mintedVariantPins({
 		variants: declaredVariants,
+		anchorInternalIds: editedBaseInternalIds({ upsert }),
+		baseVersionSlug: upsert.row.nextFullProduct.version_slug ?? undefined,
 		productStatesContext,
 	});
 

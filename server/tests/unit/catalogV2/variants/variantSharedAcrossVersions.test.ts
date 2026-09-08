@@ -1,7 +1,7 @@
 /**
- * Versioning a base plan without versioning its variant leaves two stated base
- * rows pointing at one variant row, and the last upsert silently wins. The
- * update is refused instead, in preview and in update alike.
+ * Two stated base rows pinning one variant row would let the last upsert
+ * silently win, so the update is refused, in preview and in update alike. An
+ * unpinned entry mints under its own base and never shares.
  */
 
 import { expect, test } from "bun:test";
@@ -118,14 +118,23 @@ const refusalFor = ({
 	return undefined;
 };
 
-test("two stated versions of a base linking one variant row are refused", () => {
-	const error = refusalFor({ plans: statedPlans({}) });
+test("two stated versions of a base pinning one variant row are refused", () => {
+	const error = refusalFor({
+		plans: statedPlans({
+			newVersionVariantSlug: "v1",
+			historyVariantSlug: "v1",
+		}),
+	});
 
 	expect(error?.message).toBe(
 		"pro_yearly v1 is linked from pro v2 and pro v1. When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
 	);
 	expect(error?.code).toBe(ErrCode.ConflictingVariantAnchor);
 	expect(error?.statusCode).toBe(400);
+});
+
+test("an unpinned entry under the new base mints its own row: accepted", () => {
+	expect(refusalFor({ plans: statedPlans({}) })).toBeUndefined();
 });
 
 test("versioning the variant alongside the base is accepted", () => {

@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { SgNode } from "@ast-grep/napi";
 import { COLLECTIONS, NESTED_FIXTURES } from "../../generated/emit";
+import type { FixtureShape } from "../../surgery/findFixture";
 import { insertFirstProperty } from "../../surgery/insertFirstProperty";
 import {
 	fixturePropertyString,
@@ -10,7 +11,11 @@ import {
 } from "../../surgery/patchFixtureProperty";
 import { setFixtureProperty } from "../../surgery/setFixtureProperty";
 import { listSourceFiles } from "../pull/listSourceFiles";
-import { locateFixture } from "../pull/locateFixture";
+import {
+	type FixtureConstraint,
+	type LocatedFixture,
+	locateFixture,
+} from "../pull/locateFixture";
 
 export type IdentityRow = {
 	id?: string;
@@ -206,9 +211,35 @@ export const backfillInternalIds = ({
 		}
 	}
 
-	// A variant written as its own `variant({...})` fixture takes its id too;
-	// an inline object under the plan is left as the plan's own text.
+	// A variant is a `variant({...})` fixture of its own, or an object literal
+	// inline under its base plan's `variants`; either takes its id and slug.
 	const variantSpec = NESTED_FIXTURES.variants;
+	const variantShapes: FixtureShape[] = [
+		variantSpec.builder,
+		{
+			parentBuilder: COLLECTIONS[variantSpec.parent]?.builder ?? "plan",
+			arrayProperty: variantSpec.path,
+		},
+	];
+	const locateVariant = ({
+		variantPlanId,
+		internalId,
+		where,
+	}: {
+		variantPlanId: string;
+		internalId?: string;
+		where?: FixtureConstraint[];
+	}): LocatedFixture | null =>
+		locateFixture({
+			configPath,
+			files,
+			builder: variantShapes,
+			idField: variantSpec.idField,
+			id: variantPlanId,
+			internalId,
+			where,
+			allowDynamic: true,
+		});
 	for (const row of rows.plans ?? []) {
 		for (const edge of row.variants ?? []) {
 			const internalId = variantInternalId(edge);
@@ -218,12 +249,8 @@ export const backfillInternalIds = ({
 				typeof internalId !== "string"
 			)
 				continue;
-			const located = locateFixture({
-				configPath,
-				files,
-				builder: variantSpec.builder,
-				idField: variantSpec.idField,
-				id: edge.variantPlanId,
+			const located = locateVariant({
+				variantPlanId: edge.variantPlanId,
 				// Versions of one variant share the id; the slug tells them apart
 				// whenever the catalog states one.
 				...(typeof versionSlug === "string"
@@ -237,7 +264,6 @@ export const backfillInternalIds = ({
 							],
 						}
 					: {}),
-				allowDynamic: true,
 			});
 			if (located === null) continue;
 			const stated = statedProperty({
@@ -250,7 +276,7 @@ export const backfillInternalIds = ({
 				stated.kind === "absent"
 					? insertFirstProperty({
 							source: located.source,
-							builder: variantSpec.builder,
+							builder: located.builder,
 							idField: located.idField,
 							id: located.id,
 							where: located.where,
@@ -258,7 +284,7 @@ export const backfillInternalIds = ({
 						})
 					: setFixtureProperty({
 							source: located.source,
-							builder: variantSpec.builder,
+							builder: located.builder,
 							idField: located.idField,
 							id: located.id,
 							where: located.where,
@@ -280,14 +306,9 @@ export const backfillInternalIds = ({
 				typeof versionSlug !== "string"
 			)
 				continue;
-			const located = locateFixture({
-				configPath,
-				files,
-				builder: variantSpec.builder,
-				idField: variantSpec.idField,
-				id: edge.variantPlanId,
+			const located = locateVariant({
+				variantPlanId: edge.variantPlanId,
 				internalId,
-				allowDynamic: true,
 			});
 			if (located === null) continue;
 			if (
@@ -299,7 +320,7 @@ export const backfillInternalIds = ({
 				continue;
 			const updated = patchFixtureProperty({
 				source: located.source,
-				builder: variantSpec.builder,
+				builder: located.builder,
 				idField: located.idField,
 				id: located.id,
 				where: located.where,

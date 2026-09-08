@@ -1,5 +1,10 @@
 import { appendPropertyEdit, holdsSpread } from "./appendPropertyEdit";
-import { type FixtureConstraint, findFixture } from "./findFixture";
+import {
+	type FixtureConstraint,
+	type FixtureShape,
+	findFixture,
+	fixtureObjectOf,
+} from "./findFixture";
 import { lineStartOf } from "./fixtureEdit";
 
 export const insertFirstProperty = ({
@@ -11,7 +16,7 @@ export const insertFirstProperty = ({
 	property,
 }: {
 	source: string;
-	builder: string;
+	builder: FixtureShape;
 	idField: string;
 	id: string;
 	where?: FixtureConstraint[];
@@ -28,7 +33,7 @@ export const insertFirstProperty = ({
 		allowDynamic: true,
 	});
 	if (call === null) return null;
-	const object = call.find({ rule: { kind: "object" } });
+	const object = fixtureObjectOf(call);
 	if (object === null) return null;
 	// A spread later in the literal overrides an earlier key, so a literal built
 	// from one takes the property at the end instead — where it still applies.

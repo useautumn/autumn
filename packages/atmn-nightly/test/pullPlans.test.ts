@@ -240,7 +240,7 @@ test("a config-only version is deleted by planId and slug, leaving its sibling",
 	expect(configText()).not.toContain("Never pushed");
 });
 
-test("a nested variant is pulled nested, pruned to its fixture shape", async () => {
+test("a nested variant is pulled nested, pruned to its fixture shape, with its identity stated", async () => {
 	fresh(`${imports}export default atmn({\n\tfeatures: [],\n});\n`);
 	const rows = {
 		features: [],
@@ -261,8 +261,10 @@ test("a nested variant is pulled nested, pruned to its fixture shape", async () 
 						customize: { price: { amount: 490, interval: "year" } },
 						plan: {
 							id: "pro_annual",
+							internalId: "prod_annual_v1",
 							name: "Pro (annual)",
 							version: 1,
+							versionSlug: "v1",
 							active: true,
 						},
 					},
@@ -296,6 +298,11 @@ test("a nested variant is pulled nested, pruned to its fixture shape", async () 
 	expect(text).toContain("amount: 490");
 	expect(text).not.toContain("plan: {");
 	expect(text).not.toContain("baseVariantId");
+	// The pulled entry is never version-less: id and slug ride on the edge.
+	expect(text).toContain(
+		'\t\t\t\t{\n\t\t\t\t\tinternalId: "prod_annual_v1",\n\t\t\t\t\tvariantPlanId: "pro_annual",',
+	);
+	expect(text).toContain('\t\t\t\t\tversionSlug: "v1",\n\t\t\t\t},');
 });
 
 /** The fresh-key layout: history lives in its own file, wired by an import.
