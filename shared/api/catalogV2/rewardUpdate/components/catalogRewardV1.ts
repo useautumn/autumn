@@ -6,7 +6,13 @@ import { z } from "zod/v4";
 
 /** invoice_credits rewards are not statable, so the catalog never returns one. */
 const CatalogCouponV1Schema = ApiCouponV0Schema.extend({
-	type: z.enum([RewardType.PercentageDiscount, RewardType.FixedDiscount]),
+	type: z
+		.enum([RewardType.PercentageDiscount, RewardType.FixedDiscount])
+		.meta({ description: "The type of discount: percentage or fixed." }),
+	value: ApiCouponV0Schema.shape.value.meta({
+		description:
+			"The discount value: a percentage for percentage_discount, or an amount for fixed_discount.",
+	}),
 });
 
 const internalId = z.string().meta({
