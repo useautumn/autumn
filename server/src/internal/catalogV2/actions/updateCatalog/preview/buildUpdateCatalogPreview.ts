@@ -1,6 +1,7 @@
 import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
 import { buildFeaturesPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/features/buildFeaturesPreview";
 import { buildPlansPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlansPreview";
+import { buildRewardsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/rewards/buildRewardsPreview";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
@@ -17,6 +18,7 @@ export const buildUpdateCatalogPreview = ({
 		catalogContext,
 	}),
 	features: buildFeaturesPreview({ catalogContext, updateCatalogPlan }),
+	...buildRewardsPreview({ updateCatalogPlan }),
 	migrations: updateCatalogPlan.migrationDrafts.map(
 		({ id: _id, ...preview }) => preview,
 	),
