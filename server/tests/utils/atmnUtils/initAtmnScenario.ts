@@ -204,6 +204,8 @@ export default atmn(${body});
 export const atmnImports = (): string =>
 	`import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";
 import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
+import { referralProgram } from "${CLI_PACKAGE_DIR}/src/generated/referralPrograms";
+import { coupon, featureGrant } from "${CLI_PACKAGE_DIR}/src/generated/rewards";
 import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
 `;
 
