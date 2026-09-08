@@ -9,7 +9,7 @@ export const isCusEntDisplayExpired = ({
 }: {
 	cusEnt: Pick<
 		FullCusEntWithFullCusProduct,
-		"expires_at" | "customer_product" | "balance" | "unlimited"
+		"expires_at" | "customer_product" | "balance" | "unlimited" | "next_reset_at"
 	>;
 	now?: number;
 }): boolean =>
@@ -17,4 +17,5 @@ export const isCusEntDisplayExpired = ({
 	cusEnt.customer_product?.status === CusProductStatus.Expired ||
 	(cusEnt.customer_product == null &&
 		cusEnt.balance === 0 &&
-		cusEnt.unlimited !== true);
+		cusEnt.unlimited !== true &&
+		cusEnt.next_reset_at == null);
