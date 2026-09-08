@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import {
-	type Product,
-	ProductConfigSchema,
-	productDetailsAreSame,
-	UpdateCatalogPlanParamsSchema,
-} from "@autumn/shared";
+import { type Product, productDetailsAreSame } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";
 import { diffProductDetails } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeProductDetailsPlan/diffProductDetails";
-import { planParamsToProductRowPatch } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeProductDetailsPlan/planParamsToProductRowPatch";
 
 const row = (overrides: Partial<Product> = {}): Product =>
 	({ ...products.create({ id: "pro" }), ...overrides }) as Product;
@@ -49,40 +43,6 @@ describe("productDetailsAreSame / diffProductDetails", () => {
 		expect(diffProductDetails({ current, next })).toEqual({
 			config: { ignore_past_due: false },
 		});
-	});
-
-	test("overdue access and cancellation flags patch independently", () => {
-		const current = row({ config: { ignore_past_due: true } });
-		const planParams = UpdateCatalogPlanParamsSchema.parse({
-			plan_id: current.id,
-			config: { allow_overdue_entitlements: true },
-		});
-		expect(planParams.config).toEqual({ allow_overdue_entitlements: true });
-		const next = {
-			...current,
-			...planParamsToProductRowPatch({ current, planParams }),
-		};
-		expect(next.config).toEqual({
-			ignore_past_due: true,
-			allow_overdue_entitlements: true,
-		});
-		expect(diffProductDetails({ current, next })).toEqual({
-			config: current.config,
-		});
-		const cancellationPatch = planParamsToProductRowPatch({
-			current: next,
-			planParams: UpdateCatalogPlanParamsSchema.parse({
-				plan_id: current.id,
-				config: { ignore_past_due: false },
-			}),
-		});
-		expect(cancellationPatch.config).toEqual({
-			ignore_past_due: false,
-			allow_overdue_entitlements: true,
-		});
-		expect(ProductConfigSchema.parse({}).allow_overdue_entitlements).toBe(
-			false,
-		);
 	});
 
 	test("pointer-only change diffs", () => {

@@ -13,9 +13,7 @@ export const getCheckSubject = ({
 	return {
 		...fullSubject,
 		customer_products: fullSubject.customer_products.filter(
-			(customerProduct) =>
-				customerProduct.product.config?.allow_overdue_entitlements ||
-				customerProduct.status !== CusProductStatus.PastDue,
+			(customerProduct) => customerProduct.status !== CusProductStatus.PastDue,
 		),
 	};
 };
