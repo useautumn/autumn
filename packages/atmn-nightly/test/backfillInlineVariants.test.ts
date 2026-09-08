@@ -163,3 +163,78 @@ test("a stated slug picks the matching inline entry when two versions share the 
 		'{ internalId: "prod_yearly_v1", variantPlanId: "proYearly", name: "Pro Yearly", versionSlug: "v1" }',
 	);
 });
+
+test("two base versions each holding a slug-less inline entry take their own ids", () => {
+	const configPath = setup();
+	writeFileSync(
+		`${dir}/pro.ts`,
+		[
+			'import { plan } from "../../../src/generated/plans";',
+			"",
+			"export const proV2 = plan({",
+			'\tplanId: "pro",',
+			'\tversionSlug: "v2",',
+			'\tname: "Pro",',
+			"\tvariants: [",
+			'\t\t{ variantPlanId: "proYearly", name: "Pro Yearly" },',
+			"\t],",
+			"});",
+			"",
+			"export const proV1 = plan({",
+			'\tplanId: "pro",',
+			'\tversionSlug: "v1",',
+			'\tname: "Pro",',
+			"\tvariants: [",
+			'\t\t{ variantPlanId: "proYearly", name: "Pro Yearly" },',
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	);
+	writeFileSync(
+		`${dir}/autumn.config.ts`,
+		'import { atmn } from "../../../src/generated/wire";\nimport { proV1, proV2 } from "./pro";\n\nexport default atmn({ plans: [proV2], planVersions: [proV1] });\n',
+	);
+
+	const twoVersions = {
+		plans: [
+			{
+				id: "pro",
+				internalId: "prod_pro_v1",
+				versionSlug: "v1",
+				variants: [
+					{
+						variantPlanId: "proYearly",
+						plan: { internalId: "prod_yearly_v1", versionSlug: "v1" },
+					},
+				],
+			},
+			{
+				id: "pro",
+				internalId: "prod_pro_v2",
+				versionSlug: "v2",
+				variants: [
+					{
+						variantPlanId: "proYearly",
+						plan: { internalId: "prod_yearly_v2", versionSlug: "v2" },
+					},
+				],
+			},
+		],
+	};
+	const result = backfillInternalIds({ rows: twoVersions, configPath });
+	expect(result.backfilled).toEqual(["pro", "pro", "proYearly", "proYearly"]);
+	expect(result.slugged).toEqual(["proYearly", "proYearly"]);
+
+	const source = readFileSync(`${dir}/pro.ts`, "utf8");
+	expect(source).toContain(
+		'export const proV2 = plan({\n\tinternalId: "prod_pro_v2",\n\tplanId: "pro",\n\tversionSlug: "v2",\n\tname: "Pro",\n\tvariants: [\n\t\t{ internalId: "prod_yearly_v2", variantPlanId: "proYearly", name: "Pro Yearly", versionSlug: "v2" },',
+	);
+	expect(source).toContain(
+		'export const proV1 = plan({\n\tinternalId: "prod_pro_v1",\n\tplanId: "pro",\n\tversionSlug: "v1",\n\tname: "Pro",\n\tvariants: [\n\t\t{ internalId: "prod_yearly_v1", variantPlanId: "proYearly", name: "Pro Yearly", versionSlug: "v1" },',
+	);
+	expect(backfillInternalIds({ rows: twoVersions, configPath })).toEqual({
+		backfilled: [],
+		slugged: [],
+	});
+});

@@ -29,6 +29,7 @@ export const declaredVariantTargets = ({
 				planRows.every((row) => row.base_internal_product_id == null);
 			const rows = selectVariantRows({
 				planId: variant.variant_plan_id,
+				internalId: variant.internal_id,
 				version: variant.version,
 				versionSlug: variant.version_slug,
 				allVersions:

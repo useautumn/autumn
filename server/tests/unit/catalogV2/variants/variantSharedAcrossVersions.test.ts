@@ -133,7 +133,7 @@ test("two stated versions of a base pinning one variant row are refused", () => 
 	expect(error?.statusCode).toBe(400);
 });
 
-test("an unpinned entry under the new base mints its own row: accepted", () => {
+test("an unpinned entry under the new base passes the shared-row guard", () => {
 	expect(refusalFor({ plans: statedPlans({}) })).toBeUndefined();
 });
 

@@ -195,6 +195,21 @@ export const emitWireModule = ({
 \t\t\t\tmessage: "${meta.historyKey} needs ${name}: history rows on their own would remove every active version.",
 \t\t\t},
 \t\t]);
+\t}
+\t// History alone is a row nobody can buy. Membership decides, not \`active\`:
+\t// a draft in ${name} may be inactive, a row only in ${meta.historyKey} may not.
+\tconst ${name}HistoryOnly = historyOnlyIds({
+\t\tidField: ${JSON.stringify(meta.idField)},
+\t\trows: config.${name} ?? [],
+\t\thistory: config.${meta.historyKey} ?? [],
+\t});
+\tif (${name}HistoryOnly.length > 0) {
+\t\tthrow new ConfigError(
+\t\t\t${name}HistoryOnly.map((id) => ({
+\t\t\t\tpath: \`${meta.builder} \${JSON.stringify(id)}\`,
+\t\t\t\tmessage: \`${meta.historyOnlyMessage ?? ""} \${${name}HistoryOnly.map((each) => JSON.stringify(each)).join(", ")}\`,
+\t\t\t})),
+\t\t);
 \t}`,
 		)
 		.join("\n");
@@ -239,6 +254,26 @@ const followDeclaredVariants = <
 				},
 			}
 		: row;
+
+/** Ids every row of which sits in history: no version of them would be active. */
+const historyOnlyIds = ({
+	idField,
+	rows,
+	history,
+}: {
+	idField: string;
+	rows: Record<string, unknown>[];
+	history: Record<string, unknown>[];
+}): string[] => {
+	const stated = new Set(rows.map((row) => row[idField]));
+	return [
+		...new Set(
+			history
+				.map((row) => row[idField])
+				.filter((id): id is string => typeof id === "string" && !stated.has(id)),
+		),
+	];
+};
 
 const stated = (config: AtmnConfig): Record<string, unknown> => ({
 ${stated}

@@ -1,23 +1,26 @@
 import type { CatalogVariantParams, FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { activeFullProductForPlan } from "./activeFullProductForPlan";
+import { findFullProductByInternalId } from "./findFullProductByInternalId";
 import { fullProductForPlanParams } from "./fullProductForPlanParams";
 
-/** Live row of `planId` pointing at one of these base rows: active first, else latest. */
+/** Row of `planId` pointing at one of these base rows: active first, else latest. */
 export const anchoredVariantRow = ({
 	planId,
 	anchorInternalIds,
 	productStatesContext,
+	includeArchived = false,
 }: {
 	planId: string;
 	anchorInternalIds: Set<string>;
 	productStatesContext: ProductStatesContext;
+	includeArchived?: boolean;
 }): FullProduct | null => {
 	const anchoredRows = (
 		productStatesContext.versionsByPlanId[planId] ?? []
 	).filter(
 		(product) =>
-			!product.archived &&
+			(includeArchived || !product.archived) &&
 			product.base_internal_product_id != null &&
 			anchorInternalIds.has(product.base_internal_product_id),
 	);
@@ -46,8 +49,10 @@ const planIsStandalone = ({
 };
 
 /**
- * Pinned → that row. Unpinned → the row anchored to the declaring base, or a
- * standalone plan's active row (first link); null means the entry mints.
+ * A stated stable id → that exact row. Pinned → that row. Unpinned → the row
+ * anchored to the declaring base (archived included, so a restore or a refused
+ * customize still finds it), or a standalone plan's active row (first link);
+ * null means the entry mints.
  */
 export const variantRowForDeclaredEntry = ({
 	variant,
@@ -57,11 +62,20 @@ export const variantRowForDeclaredEntry = ({
 	variant: Pick<
 		CatalogVariantParams,
 		"variant_plan_id" | "version" | "version_slug"
-	>;
+	> & { internal_id?: string };
 	anchorInternalIds: Set<string>;
 	productStatesContext: ProductStatesContext;
 }): FullProduct | null => {
 	const planId = variant.variant_plan_id;
+	// An id nothing owns is a guess the config made; the entry then falls back
+	// to its plan id like any other.
+	if (variant.internal_id !== undefined) {
+		const identified = findFullProductByInternalId({
+			internalId: variant.internal_id,
+			productStatesContext,
+		});
+		if (identified) return identified;
+	}
 	if (variant.version !== undefined || variant.version_slug !== undefined) {
 		return fullProductForPlanParams({
 			planParams: {
@@ -76,6 +90,7 @@ export const variantRowForDeclaredEntry = ({
 		planId,
 		anchorInternalIds,
 		productStatesContext,
+		includeArchived: true,
 	});
 	if (anchored) return anchored;
 	if (planIsStandalone({ planId, productStatesContext })) {

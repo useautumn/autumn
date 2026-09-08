@@ -5,7 +5,8 @@
  * a `variant({...})` fixture. Push backfills its identity into that object;
  * moving the v1 plan file to planVersions and writing pro@v2 beside it mints
  * proYearly@v2 under the new base, and the same config previews clean after.
- * A history entry that states no versionSlug still resolves to the v1 row.
+ * A history entry that states no versionSlug (lint forbids it in a config, so
+ * it is sent as a raw wire) still resolves to the v1 row.
  */
 
 import { expect, test } from "bun:test";
@@ -348,6 +349,43 @@ test.concurrent(
 	},
 );
 
+type WireVariantPin = { plan_id?: string; version_slug?: string };
+type WirePlanRow = {
+	plan_id: string;
+	version_slug?: string;
+	active?: boolean;
+	variants?: Array<{ variant_plan_id: string; version_slug?: string }>;
+	propagate?: { variants?: WireVariantPin[] };
+};
+
+/**
+ * Lint now insists every version of a variant states its slug, so the
+ * hand-written slug-less history entry can only reach the server as a raw
+ * wire: the config's own wire with that one slug (and its follow pin) removed.
+ */
+const withoutHistoryVariantSlug = ({
+	wire,
+	pro,
+}: {
+	wire: Record<string, unknown>;
+	pro: string;
+}): Record<string, unknown> => ({
+	...wire,
+	plans: (wire.plans as WirePlanRow[]).map((row) => {
+		if (row.plan_id !== pro || row.active !== false) return row;
+		return {
+			...row,
+			variants: row.variants?.map(({ version_slug: _slug, ...entry }) => entry),
+			propagate: {
+				...row.propagate,
+				variants: row.propagate?.variants?.map(
+					({ version_slug: _slug, ...pin }) => pin,
+				),
+			},
+		};
+	}),
+});
+
 test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/versions: a history base whose variant entry states no versionSlug resolves to the variant row anchored to it")}`,
 	async () => {
@@ -377,40 +415,23 @@ test.concurrent(
 			const proV1 = await productAt({ ctx, planId: pro, version: 1 });
 			const yearlyV1 = await productAt({ ctx, planId: proYearly, version: 1 });
 
-			// A hand-written history row: base slug stated, variant entry slug-less.
-			scenario.writeFile(
-				"planVersions/pro.ts",
-				withInlineVariant({
-					source: proV1WithoutVariant({ pro, messages }).replace(
-						`planId: "${pro}",`,
-						`planId: "${pro}",\n\tversionSlug: "v1",`,
-					),
-					proYearly,
-					messages,
-				}),
-			);
+			// The v1 file, slugs included, becomes history beside pro@v2.
+			scenario.writeFile("planVersions/pro.ts", read("plans/pro.ts"));
 			scenario.writeFile("plans/pro.ts", proV2({ pro, proYearly, messages }));
 			scenario.writeConfig(withHistory(read("autumn.config.ts")));
 			await scenario.push();
-			// Push backfills the slug into the entry; strip it again so the server
-			// sees the hand-written, slug-less shape.
-			const historySource = read("planVersions/pro.ts");
-			expect(historySource).toContain('\t\t\tversionSlug: "v1",\n\t\t},');
-			scenario.writeFile(
-				"planVersions/pro.ts",
-				historySource.replace('\t\t\tversionSlug: "v1",\n\t\t},', "\t\t},"),
-			);
 
-			// After the push proYearly@v2 is active, yet the slug-less entry under
+			// After the push proYearly@v2 is active, yet a slug-less entry under
 			// pro@v1 must still mean proYearly@v1: no conflict, no changes.
-			const dryRun = await scenario.push({ dryRun: true });
-			expect(dryRun.output).toContain("No changes");
-			await expectPreviewNone({
-				client: scenario.client,
+			const slugless = withoutHistoryVariantSlug({
 				wire: await scenario.wireFromConfig(),
+				pro,
 			});
+			await expectPreviewNone({ client: scenario.client, wire: slugless });
 
-			const preview = (await scenario.preview()) as unknown as {
+			const preview = (await scenario.client.previewUpdate(
+				slugless as never,
+			)) as unknown as {
 				plans: Array<{
 					planId: string;
 					version: number;
@@ -468,23 +489,14 @@ test.concurrent(
 
 		try {
 			await scenario.push();
-			scenario.writeFile(
-				"planVersions/pro.ts",
-				withInlineVariant({
-					source: proV1WithoutVariant({ pro, messages }).replace(
-						`planId: "${pro}",`,
-						`planId: "${pro}",\n\tversionSlug: "v1",`,
-					),
-					proYearly,
-					messages,
-				}),
-			);
+			scenario.writeFile("planVersions/pro.ts", read("plans/pro.ts"));
 			scenario.writeFile("plans/pro.ts", proV2({ pro, proYearly, messages }));
 			scenario.writeConfig(withHistory(read("autumn.config.ts")));
 			await scenario.push();
 
-			// Wipe, then rebuild the whole catalog from this config in one push. The
-			// "v2" fixture lands first, so its rows are numbered lower: assert by slug.
+			// Wipe, then rebuild the whole catalog in one update whose history
+			// variant entry states no slug. The "v2" row lands first, so its rows
+			// are numbered lower: assert by slug.
 			const wiped = runCli({
 				cwd: scenario.cwd,
 				args: ["reset", "--yes"],
@@ -492,8 +504,11 @@ test.concurrent(
 				baseUrl: scenario.baseUrl,
 			});
 			expect(wiped).toContain("Wiped");
-			const rebuilt = await scenario.push();
-			expect(rebuilt.output).not.toContain("two different base rows");
+			const slugless = withoutHistoryVariantSlug({
+				wire: await scenario.wireFromConfig(),
+				pro,
+			});
+			await scenario.client.update(slugless as never);
 
 			const proV1 = await productForSlug({
 				ctx,
@@ -530,12 +545,10 @@ test.concurrent(
 				included: 100,
 			});
 
+			// Slug-less and slugged alike, the same catalog: nothing left to apply.
+			await expectPreviewNone({ client: scenario.client, wire: slugless });
 			const dryRun = await scenario.push({ dryRun: true });
 			expect(dryRun.output).toContain("No changes");
-			await expectPreviewNone({
-				client: scenario.client,
-				wire: await scenario.wireFromConfig(),
-			});
 		} finally {
 			scenario.cleanup();
 		}

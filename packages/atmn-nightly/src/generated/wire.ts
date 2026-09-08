@@ -225,6 +225,28 @@ const followDeclaredVariants = <
 			}
 		: row;
 
+/** Ids every row of which sits in history: no version of them would be active. */
+const historyOnlyIds = ({
+	idField,
+	rows,
+	history,
+}: {
+	idField: string;
+	rows: Record<string, unknown>[];
+	history: Record<string, unknown>[];
+}): string[] => {
+	const stated = new Set(rows.map((row) => row[idField]));
+	return [
+		...new Set(
+			history
+				.map((row) => row[idField])
+				.filter(
+					(id): id is string => typeof id === "string" && !stated.has(id),
+				),
+		),
+	];
+};
+
 const stated = (config: AtmnConfig): Record<string, unknown> => ({
 	...(config.features !== undefined ? { features: config.features } : {}),
 	...(config.plans !== undefined
@@ -256,6 +278,21 @@ export const atmn = (config: AtmnConfig): WireDocument => {
 					"planVersions needs plans: history rows on their own would remove every active version.",
 			},
 		]);
+	}
+	// History alone is a row nobody can buy. Membership decides, not `active`:
+	// a draft in plans may be inactive, a row only in planVersions may not.
+	const plansHistoryOnly = historyOnlyIds({
+		idField: "planId",
+		rows: config.plans ?? [],
+		history: config.planVersions ?? [],
+	});
+	if (plansHistoryOnly.length > 0) {
+		throw new ConfigError(
+			plansHistoryOnly.map((id) => ({
+				path: `plan ${JSON.stringify(id)}`,
+				message: `At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version. ${plansHistoryOnly.map((each) => JSON.stringify(each)).join(", ")}`,
+			})),
+		);
 	}
 	const document = stated(config);
 	// Linted before anything is sent, and every problem is reported at once —

@@ -248,6 +248,16 @@ export const LINT_RULES: LintRules = {
 				because:
 					"When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
 			},
+			{
+				kind: "versionSlugs",
+				groupBy: "planId",
+				slug: "versionSlug",
+				label: "Plan",
+				collection: "variants",
+				identity: "variantPlanId",
+				pins: ["versionSlug", "version"],
+				because: "Add versionSlug to every version so they can be told apart.",
+			},
 		],
 	},
 	"plans.billingControls.autoTopups": {

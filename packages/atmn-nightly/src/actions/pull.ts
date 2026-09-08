@@ -182,15 +182,19 @@ export const runPull = async ({
 		writeFileSync(file, source, "utf8");
 	}
 
-	// Fixtures the catalog already knows get their stable id, even when nothing
-	// else about them changed.
-	const { backfilled } = backfillInternalIds({
+	// Fixtures the catalog already knows get their stable id and slug, even
+	// when nothing else about them changed: no row is left slug-less.
+	const { backfilled, slugged } = backfillInternalIds({
 		rows: identityRowsFromCatalog({ catalog: catalogRows }),
 		configPath,
 	});
 	if (backfilled.length > 0)
 		lines.push(
 			`↳ wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}`,
+		);
+	if (slugged.length > 0)
+		lines.push(
+			`↳ wrote versionSlug into ${slugged.length} fixture${slugged.length === 1 ? "" : "s"}`,
 		);
 
 	write(

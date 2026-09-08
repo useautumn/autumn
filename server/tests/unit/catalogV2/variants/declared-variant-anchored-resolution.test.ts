@@ -211,3 +211,57 @@ test("two bases pinning the same variant row are still refused", () => {
 	expect(error?.code).toBe(ErrCode.ConflictingVariantAnchor);
 	expect(error?.statusCode).toBe(400);
 });
+
+test("an entry stating internal_id resolves to that exact row before any unpinned logic", () => {
+	const productStatesContext = versionedCatalog();
+	// The anchor points at the v2 base, yet the id names the v1 row.
+	const resolved = variantRowForDeclaredEntry({
+		variant: {
+			variant_plan_id: "proYearly",
+			internal_id: "internal_proYearly_v1",
+		},
+		anchorInternalIds: new Set(["internal_pro_v2"]),
+		productStatesContext,
+	});
+	expect(resolved?.internal_id).toBe("internal_proYearly_v1");
+	expect(
+		selectVariantRows({
+			planId: "proYearly",
+			internalId: "internal_proYearly_v1",
+			anchorInternalIds: new Set(["internal_pro_v2"]),
+			productStatesContext,
+		}).map((product) => product.internal_id),
+	).toEqual(["internal_proYearly_v1"]);
+	// An id nothing owns is ignored: the entry falls back to its anchor.
+	expect(
+		variantRowForDeclaredEntry({
+			variant: {
+				variant_plan_id: "proYearly",
+				internal_id: "internal_unknown",
+			},
+			anchorInternalIds: new Set(["internal_pro_v2"]),
+			productStatesContext,
+		})?.internal_id,
+	).toBe("internal_proYearly_v2");
+});
+
+test("an unpinned entry over an archived anchored row resolves to it instead of minting", () => {
+	const productStatesContext = versionedCatalog();
+	const yearlyV1 = productStatesContext.versionsByPlanId.proYearly?.[0];
+	if (!yearlyV1) throw new Error("fixture missing proYearly@v1");
+	yearlyV1.archived = true;
+
+	const resolved = variantRowForDeclaredEntry({
+		variant: { variant_plan_id: "proYearly" },
+		anchorInternalIds: new Set(["internal_pro_v1"]),
+		productStatesContext,
+	});
+	expect(resolved?.internal_id).toBe("internal_proYearly_v1");
+	expect(
+		variantEntryMintsRow({
+			variant: { variant_plan_id: "proYearly", name: "Pro Yearly" },
+			anchorInternalIds: new Set(["internal_pro_v1"]),
+			productStatesContext,
+		}),
+	).toBe(false);
+});

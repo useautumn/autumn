@@ -9,14 +9,23 @@ export type FixtureConstraint = {
 	absentMeans?: string;
 };
 
+/** The one parent literal a nested shape may stand under: the base row that
+ * states this stable id, or, when it states none, this public id and constraints. */
+export type ParentFixture = {
+	internalId?: string;
+	idField: string;
+	id: string;
+	where?: FixtureConstraint[];
+};
+
 /**
  * Where a fixture literal may stand: the first argument of a builder call
  * (`plan({...})`), or an object element of one of a builder call's array
- * properties (`plan({ variants: [{...}] })`).
+ * properties (`plan({ variants: [{...}] })`), optionally under one `parent`.
  */
 export type FixtureShape =
 	| string
-	| { parentBuilder: string; arrayProperty: string };
+	| { parentBuilder: string; arrayProperty: string; parent?: ParentFixture };
 
 /** The object literal a found fixture node holds: the node itself, or a call's first argument. */
 export const fixtureObjectOf = (node: SgNode): SgNode | null => {
@@ -54,6 +63,11 @@ const candidateFixtures = ({
 		(call) => {
 			const parent = fixtureObjectOf(call);
 			if (parent === null) return [];
+			if (
+				builder.parent !== undefined &&
+				!isParentFixture({ object: parent, parent: builder.parent })
+			)
+				return [];
 			const array = topLevelPairValue({
 				object: parent,
 				key: builder.arrayProperty,
@@ -168,6 +182,29 @@ const topLevelPairValue = ({
 		if (name?.text() === key && value !== undefined) return value;
 	}
 	return null;
+};
+
+/** A stated stable id decides on its own; only a literal without one is
+ * matched by its public id, so two versions sharing an id stay apart. */
+const isParentFixture = ({
+	object,
+	parent,
+}: {
+	object: SgNode;
+	parent: ParentFixture;
+}): boolean => {
+	const statedInternalId = topLevelPairValue({ object, key: "internalId" });
+	const literalInternalId =
+		statedInternalId === null ? null : stringLiteralValue(statedInternalId);
+	if (literalInternalId !== null)
+		return literalInternalId === parent.internalId;
+	const idValue = topLevelPairValue({ object, key: parent.idField });
+	if (idValue === null || stringLiteralValue(idValue) !== parent.id)
+		return false;
+	return (
+		parent.where === undefined ||
+		satisfiesFixtureConstraints({ object, where: parent.where })
+	);
 };
 
 const satisfiesFixtureConstraints = ({

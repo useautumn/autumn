@@ -510,3 +510,109 @@ test("a migration target with no row of its own renders without details", () => 
 	expect(out).not.toContain("pro v1, 99 customers");
 	expect(out).not.toContain('Name: was "Pro two"');
 });
+
+/** The server diffs a create against an empty row, so its diff reads as
+ * "everything added", defaults included. */
+const freshPlanChange = {
+	previousAttributes: { name: null, add_on: false, auto_enable: false },
+	priceChange: { previous: null, current: { amount: 25, interval: "month" } },
+	freeTrialChange: {
+		previous: null,
+		current: { durationLength: 7, durationType: "day" },
+	},
+	itemChanges: [
+		{
+			action: "created",
+			featureId: "messages",
+			item: { featureId: "messages", included: 100 },
+		},
+	],
+	customize: { name: "Pro" },
+};
+
+test("a create row states what it sets and no defaults it left alone", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 1,
+				action: "create",
+				name: "Pro",
+				planChange: freshPlanChange,
+			},
+		],
+	});
+	expect(out).toContain("+ pro@v1  Pro");
+	expect(out).toContain('+ Name: "Pro"');
+	expect(out).toContain("+ Price: $25 per month");
+	expect(out).toContain("+ Free trial: 7 day trial");
+	expect(out).toContain("+ messages  100 messages");
+	expect(out).not.toContain("Add-on");
+	expect(out).not.toContain("Auto enable");
+	expect(out).not.toContain("->");
+	expect(out).not.toContain("was ");
+});
+
+test("a minted version is a fresh row too, even though its plan is an update", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 2,
+				action: "update",
+				name: "Pro",
+				versioning: {
+					currentVersion: 1,
+					newVersion: 2,
+					resolved: "new_version",
+					options: ["new_version"],
+				},
+				planChange: {
+					previousAttributes: null,
+					priceChange: {
+						previous: { amount: 20, interval: "month" },
+						current: { amount: 25, interval: "month" },
+					},
+					itemChanges: [],
+				},
+			},
+		],
+	});
+	expect(out).toContain("+ pro@v2  Pro");
+	expect(out).toContain("+ Price: $25 per month");
+	expect(out).not.toContain("$20 per month");
+	expect(out).not.toContain("~");
+});
+
+test("an edit of an existing version keeps the old -> new arrow", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 1,
+				action: "update",
+				name: "Pro",
+				versioning: {
+					currentVersion: 1,
+					newVersion: null,
+					resolved: "existing",
+					options: ["existing", "new_version"],
+				},
+				planChange: {
+					previousAttributes: { add_on: false },
+					priceChange: {
+						previous: { amount: 20, interval: "month" },
+						current: { amount: 25, interval: "month" },
+					},
+					itemChanges: [],
+				},
+			},
+		],
+	});
+	expect(out).toContain("~ pro@v1  Pro");
+	expect(out).toContain("~ Price: $20 per month -> $25 per month");
+	expect(out).toContain("~ Add-on: was false");
+});
