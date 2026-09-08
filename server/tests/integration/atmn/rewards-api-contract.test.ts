@@ -15,6 +15,7 @@
  *  - S6  a rewards-only payload rejects a coupon naming a plan the org holds
  *  - S7  a coupon naming a missing plan is rejected only in the reward phase,
  *        after the plan rename in the same payload has committed
+ *  - S9  a payload may claim the id of a hidden legacy referral program
  *
  * Green (after):
  *  - S1  403 before any reward row is read
@@ -24,6 +25,7 @@
  *  - S5  the applied result carries the id the row received
  *  - S6  a plan the payload leaves untouched still counts as present
  *  - S7  refused in the errors phase, so the rename does not land
+ *  - S9  409, the same answer a hidden reward's id gets
  */
 
 import { expect, test } from "bun:test";

@@ -29,17 +29,20 @@ export const setupRewardStatesContext = async ({
 	// partial reward update can remove nothing, so it pays for no scan.
 	const needsPrograms =
 		params.referral_programs !== undefined || params.skip_deletions === false;
-	const programs = needsPrograms
+	// Hidden ids are needed whenever the payload states programs, even if no
+	// removal is possible: a claimed id must be refused before the writer sees it.
+	const loadedPrograms = needsPrograms
 		? await loadReferralProgramStates({
 				ctx,
 				idByInternalId: loaded.idByInternalId,
 				statableInternalIds: loaded.statableInternalIds,
 			})
-		: [];
+		: { programs: [], hiddenProgramIds: new Set<string>() };
 
 	return {
 		rewards: loaded.rewards,
 		unstatableIds: loaded.unstatableIds,
-		programs,
+		programs: loadedPrograms.programs,
+		hiddenProgramIds: loadedPrograms.hiddenProgramIds,
 	};
 };

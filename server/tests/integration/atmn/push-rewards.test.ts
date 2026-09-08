@@ -15,6 +15,7 @@
  *   R6  a config claiming a free product's id is refused
  *   R7  pull writes the server's rewards back into the config
  *   R8  a referral program backed by a free product is invisible too
+ *   R9  and its id stays taken: a config claiming it is refused
  */
 
 import { expect, test } from "bun:test";
@@ -203,6 +204,29 @@ test.concurrent(
 					"coupon" in reward ? reward.coupon.id : reward.featureGrant.id,
 				),
 			).not.toContain(legacyFreeProduct);
+
+			// R9: hidden does not mean free. The id is still taken, so a config
+			// claiming it is refused rather than colliding inside the writer.
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: catalog({ rewards: grantFixture }).replace(
+						`id: "${refer}"`,
+						`id: "${legacyProgram}"`,
+					),
+				}),
+			);
+			// The writer would also refuse it, but only at apply time and with a
+			// generic message; this asserts the preview-time refusal.
+			await expect(scenario.push({ dryRun: true })).rejects.toThrow(
+				/already exists against a free product or invoice credit reward/,
+			);
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: catalog({
+						rewards: `${saleCoupon({ value: 35 })}${grantFixture}`,
+					}),
+				}),
+			);
 
 			// R4 + R5: dropping the coupon removes it; the free product is not
 			// even mentioned, let alone proposed for removal.

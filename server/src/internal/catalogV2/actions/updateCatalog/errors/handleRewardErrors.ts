@@ -204,12 +204,9 @@ const assertRewardReferencesResolve = async ({
 	const featureIds = new Set(
 		updateCatalogPlan.projected.features.map((feature) => feature.id),
 	);
-	// Plans are not: a partial payload projects only what it manages, so an id
-	// the projection cannot vouch for is looked up before it is called missing.
 	const projectedPlanIds = new Set(
 		updateCatalogPlan.projected.products.map((product) => product.id),
 	);
-
 	const couponPlans = new Map<string, string[]>();
 	for (const upsert of updateCatalogPlan.upsertRewards) {
 		const branch = rewardBranchOf(upsert.params);
@@ -225,6 +222,10 @@ const assertRewardReferencesResolve = async ({
 		}
 	}
 
+	// A plan the projection holds is settled; anything else is looked up once.
+	// KNOWN GAP: the lookup reads pre-change state, so an id this same payload
+	// renames away still resolves and the coupon is rejected later, by the
+	// reward writer, after the rename has committed.
 	const unresolved = [
 		...new Set(
 			[...couponPlans.values()]
@@ -232,16 +233,19 @@ const assertRewardReferencesResolve = async ({
 				.filter((planId) => !projectedPlanIds.has(planId)),
 		),
 	];
-	// Nothing outside the projection is referenced, so nothing to look up.
-	if (unresolved.length === 0) return;
-
-	const persisted = await ProductService.listFull({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		inIds: unresolved,
-	});
-	const known = new Set(persisted.map((plan) => plan.id));
+	const known =
+		unresolved.length === 0
+			? new Set<string>()
+			: new Set(
+					(
+						await ProductService.listFull({
+							db: ctx.db,
+							orgId: ctx.org.id,
+							env: ctx.env,
+							inIds: unresolved,
+						})
+					).map((plan) => plan.id),
+				);
 
 	for (const [rewardId, planIds] of couponPlans) {
 		for (const planId of planIds) {
@@ -250,6 +254,28 @@ const assertRewardReferencesResolve = async ({
 				`Reward ${rewardId} applies to plan ${planId}, which this catalog does not have.`,
 			);
 		}
+	}
+};
+
+/**
+ * A referral program the catalog hides still owns its public id. Claiming it
+ * would be discovered only by the writer, after earlier phases have committed.
+ */
+const assertIdsNotHeldByHiddenPrograms = ({
+	params,
+	catalogContext,
+}: {
+	params: UpdateCatalogParams;
+	catalogContext: UpdateCatalogContext;
+}) => {
+	const { hiddenProgramIds } = catalogContext.rewardStatesContext;
+	for (const entry of params.referral_programs ?? []) {
+		if (!hiddenProgramIds.has(entry.id)) continue;
+		throw new RecaseError({
+			message: `Referral program ${entry.id} already exists against a free product or invoice credit reward, which a config cannot state. Rename the program in your config or remove the existing one from the dashboard.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 409,
+		});
 	}
 };
 
@@ -266,6 +292,7 @@ export const handleRewardErrors = async ({
 }) => {
 	assertDistinctIds({ params });
 	assertIdsNotHeldByUnstatableRewards({ params, catalogContext });
+	assertIdsNotHeldByHiddenPrograms({ params, catalogContext });
 	assertRewardIdentitiesAgree({ params, catalogContext });
 	assertBranchUnchanged({ updateCatalogPlan, catalogContext });
 	assertProgramRewardsResolve({ catalogContext, updateCatalogPlan });

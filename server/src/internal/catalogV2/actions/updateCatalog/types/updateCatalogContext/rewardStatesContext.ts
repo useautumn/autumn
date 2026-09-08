@@ -46,10 +46,13 @@ export type RewardStatesContext = {
 	unstatableIds: Set<string>;
 	/** Empty when the payload never stated referral programs. */
 	programs: ReferralProgramState[];
+	/** Ids of programs the catalog hides because their reward is unstatable. */
+	hiddenProgramIds: Set<string>;
 };
 
 export const emptyRewardStatesContext = (): RewardStatesContext => ({
 	rewards: [],
 	unstatableIds: new Set(),
 	programs: [],
+	hiddenProgramIds: new Set(),
 });

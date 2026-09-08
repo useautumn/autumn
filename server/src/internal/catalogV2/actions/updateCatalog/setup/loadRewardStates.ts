@@ -95,23 +95,34 @@ export const loadReferralProgramStates = async ({
 	ctx: AutumnContext;
 	idByInternalId: Map<string, string>;
 	statableInternalIds: Set<string>;
-}): Promise<ReferralProgramState[]> => {
-	const programs = await rewardProgramRepo.list({
+}): Promise<{
+	programs: ReferralProgramState[];
+	/** Public ids of the programs hidden here: absent from the catalog, but
+	 * still taken, so a config claiming one is refused rather than colliding. */
+	hiddenProgramIds: Set<string>;
+}> => {
+	const rows = await rewardProgramRepo.list({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
 
-	return programs.flatMap((program) => {
-		if (!statableInternalIds.has(program.internal_reward_id)) return [];
-		const rewardId = idByInternalId.get(program.internal_reward_id);
-		if (!rewardId) return [];
-		return [
-			{
-				internalId: program.internal_id,
-				internalRewardId: program.internal_reward_id,
-				program: getApiReferralProgram({ rewardProgram: program, rewardId }),
-			},
-		];
-	});
+	const programs: ReferralProgramState[] = [];
+	const hiddenProgramIds = new Set<string>();
+	for (const program of rows) {
+		const rewardId = statableInternalIds.has(program.internal_reward_id)
+			? idByInternalId.get(program.internal_reward_id)
+			: undefined;
+		if (!rewardId) {
+			if (program.id) hiddenProgramIds.add(program.id);
+			continue;
+		}
+		programs.push({
+			internalId: program.internal_id,
+			internalRewardId: program.internal_reward_id,
+			program: getApiReferralProgram({ rewardProgram: program, rewardId }),
+		});
+	}
+
+	return { programs, hiddenProgramIds };
 };

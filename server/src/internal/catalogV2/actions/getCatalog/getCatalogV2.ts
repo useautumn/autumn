@@ -85,7 +85,7 @@ export const getCatalogV2 = async ({
 		);
 
 	const loadedRewards = await loadRewardStates({ ctx });
-	const programs = await loadReferralProgramStates({
+	const { programs } = await loadReferralProgramStates({
 		ctx,
 		idByInternalId: loadedRewards.idByInternalId,
 		statableInternalIds: loadedRewards.statableInternalIds,
