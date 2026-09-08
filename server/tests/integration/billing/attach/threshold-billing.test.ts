@@ -36,7 +36,7 @@ test.concurrent(
 		});
 
 		const { customerId, autumnV2_3, ctx } = await initScenario({
-			customerId: "threshold-billing-e2e",
+			customerId: `threshold-billing-e2e-${Math.random().toString(36).slice(2, 8)}`,
 			setup: [s.customer({ paymentMethod: "success" })],
 			actions: [],
 		});
@@ -51,13 +51,13 @@ test.concurrent(
 			value: 140,
 		});
 
-		await new Promise((resolve) => setTimeout(resolve, 12_000));
-		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
 			featureId: TestFeature.Messages,
 			usage: 40,
 		});
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 
 		const invoices = await ctx.stripeCli.invoices.list({
 			customer: customer.stripe_id as string,
@@ -97,7 +97,12 @@ test.concurrent("threshold billing blocks a failed payment", async () => {
 		feature_id: TestFeature.Messages,
 		value: 100,
 	});
-	await new Promise((resolve) => setTimeout(resolve, 12_000));
+	await expectBalanceCorrect({
+		customerId,
+		autumn: autumnV2_3,
+		featureId: TestFeature.Messages,
+		usage: 0,
+	});
 	await expect(
 		autumnV2_3.track({
 			customer_id: customerId,
