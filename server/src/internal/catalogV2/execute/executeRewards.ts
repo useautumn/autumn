@@ -108,23 +108,41 @@ const internalIdOfProgram = async ({
 };
 
 /**
- * Order is dictated by the link: a program must stop pointing at a reward
- * before that reward can be deleted, and must not point at one that does not
- * exist yet. So programs leave first, rewards arrive, programs are repointed,
- * and only then do the rewards they left behind go.
+ * Two orderings pull against each other. A promo code is owned by exactly one
+ * reward, so replacing a reward while keeping its code needs the old row gone
+ * BEFORE the new one is written. A referral program cannot point at a reward
+ * that does not exist, so a repoint needs the new row written BEFORE the old
+ * one goes. Splitting the deletes satisfies both: everything unlinked leaves
+ * first and frees its codes, and only the rows a surviving program still holds
+ * wait until after the repoint.
  */
 export const executeRewards = async ({
 	ctx,
 	updateCatalogPlan,
+	linkedInternalRewardIds,
 }: {
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
+	/** Stable ids of rewards a program that survives this push still links. */
+	linkedInternalRewardIds: Set<string>;
 }): Promise<CatalogRewardResults> => {
 	for (const remove of updateCatalogPlan.removeReferralPrograms) {
 		await deleteApiReferralProgram({
 			ctx,
 			params: { referral_program_id: remove.referralProgramId },
 		});
+	}
+
+	const [deferredRemovals, freeRemovals] = [
+		updateCatalogPlan.removeRewards.filter((remove) =>
+			linkedInternalRewardIds.has(remove.internalId),
+		),
+		updateCatalogPlan.removeRewards.filter(
+			(remove) => !linkedInternalRewardIds.has(remove.internalId),
+		),
+	];
+	for (const remove of freeRemovals) {
+		await deleteApiReward({ ctx, params: { reward_id: remove.rewardId } });
 	}
 
 	const rewards: CatalogAppliedResult[] = [];
@@ -189,8 +207,8 @@ export const executeRewards = async ({
 		});
 	}
 
-	// Last: every link that pointed here has been moved or deleted above.
-	for (const remove of updateCatalogPlan.removeRewards) {
+	// Last: the links that held these have been repointed just above.
+	for (const remove of deferredRemovals) {
 		await deleteApiReward({ ctx, params: { reward_id: remove.rewardId } });
 	}
 

@@ -16,6 +16,8 @@
  *  - S7  a coupon naming a missing plan is rejected only in the reward phase,
  *        after the plan rename in the same payload has committed
  *  - S9  a payload may claim the id of a hidden legacy referral program
+ *  - S10 replacing a reward while keeping its promo code fails, because the
+ *        replacement is created before the row that still owns the code goes
  *
  * Green (after):
  *  - S1  403 before any reward row is read
@@ -26,6 +28,7 @@
  *  - S6  a plan the payload leaves untouched still counts as present
  *  - S7  refused in the errors phase, so the rename does not land
  *  - S9  409, the same answer a hidden reward's id gets
+ *  - S10 the unlinked removal frees the code before the create needs it
  */
 
 import { expect, test } from "bun:test";
@@ -222,6 +225,54 @@ test.concurrent(
 			).rejects.toThrow(ghostPlan);
 			const afterGhost = await scenario.client.get({});
 			expect(afterGhost.plans.map((plan) => plan.id)).toContain(pro);
+		} finally {
+			scenario.cleanup();
+		}
+	},
+	600_000,
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 rewards: a replacement reward can keep the promo code")}`,
+	async () => {
+		const first = uniqueTestId("atmn_first");
+		const second = uniqueTestId("atmn_second");
+		const sharedCode = promoCode(uniqueTestId("SHARED"));
+
+		const scenario = await initAtmnScenario({
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
+			config: "{ features: [], plans: [] }",
+		});
+
+		try {
+			const withCode = ({ id }: { id: string }): UpdateCatalogRewardParams => {
+				const params = couponParams({ id, planIds: null });
+				if (!("coupon" in params)) throw new Error("expected a coupon");
+				return {
+					coupon: { ...params.coupon, promo_codes: [{ code: sharedCode }] },
+				};
+			};
+
+			await scenario.client.update({
+				rewards: [withCode({ id: first })],
+				skip_deletions: false,
+			} as never);
+
+			// S10: a promo code belongs to exactly one reward, so the row that
+			// owns it has to go before the replacement claims it.
+			await scenario.client.update({
+				rewards: [withCode({ id: second })],
+				skip_deletions: false,
+			} as never);
+
+			const catalog = await scenario.client.get({});
+			expect(
+				catalog.rewards.map((reward) =>
+					"coupon" in reward ? reward.coupon.id : reward.featureGrant.id,
+				),
+			).toEqual([second]);
 		} finally {
 			scenario.cleanup();
 		}
