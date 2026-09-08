@@ -19,11 +19,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { SettingsRow } from "../SettingsRow";
 import { SettingsSection } from "../SettingsSection";
 
 type TtlUnit = "hours" | "days";
 
 const MAX_TTL_HOURS = 24 * 30;
+const DEFAULT_AUTO_TOPUP_ATTEMPTS = 2;
 
 // Hidden until the DynamoDB idempotency store is fully rolled out.
 const IDEMPOTENCY_TTL_CONFIG_ENABLED: boolean = false;
@@ -145,10 +147,13 @@ export const BillingSettingsSection = () => {
 		},
 	});
 
-	const handleToggle = (key: keyof OrgConfig, value: boolean) => {
+	const handleChange = <K extends keyof OrgConfig>(
+		key: K,
+		value: OrgConfig[K],
+	) => {
 		setPending((prev) => {
 			const next = { ...prev, [key]: value };
-			if (serverConfig[key] === value) {
+			if ((serverConfig[key] ?? null) === (value ?? null)) {
 				delete next[key];
 			}
 			return next;
@@ -157,6 +162,17 @@ export const BillingSettingsSection = () => {
 
 	const handleSave = () => {
 		if (!isDirty || isPending) return;
+
+		const attemptLimit = pending.auto_topup_attempt_limit;
+		if (
+			attemptLimit != null &&
+			(!Number.isInteger(attemptLimit) || attemptLimit < 1)
+		) {
+			toast.error(
+				"Auto top-up attempt limit must be a whole number of at least 1",
+			);
+			return;
+		}
 
 		if (isTtlDirty && pendingTtl) {
 			const ttlHours = toHours(pendingTtl);
@@ -194,37 +210,42 @@ export const BillingSettingsSection = () => {
 			title="Configuration"
 			description="Configure how billing and subscriptions behave"
 		>
-			<div className="flex flex-col divide-y divide-border rounded-lg border bg-interactive-secondary px-4">
+			<div className="flex flex-col divide-y divide-border rounded-lg border bg-interactive-secondary px-4 [&>*]:py-3.5">
 				{BILLING_TOGGLES.map(({ key, label, description }) => (
-					<div
-						key={key}
-						className="flex items-center justify-between gap-4 py-3.5"
-					>
-						<div className="flex flex-col gap-0.5">
-							<span className="text-sm font-medium">{label}</span>
-							<span className="text-xs text-muted-foreground">
-								{description}
-							</span>
-						</div>
+					<SettingsRow key={key} label={label} description={description}>
 						<Switch
 							aria-label={label}
 							checked={!!displayConfig[key]}
-							onCheckedChange={(val) => handleToggle(key, val)}
+							onCheckedChange={(val) => handleChange(key, val)}
 							disabled={isPending}
 						/>
-					</div>
+					</SettingsRow>
 				))}
+				<SettingsRow
+					label="Auto top-up attempt limit"
+					description="How many auto top-ups a customer can trigger per feature every 10 minutes"
+				>
+					<Input
+						type="number"
+						aria-label="Auto top-up attempt limit"
+						className="w-20"
+						min={1}
+						placeholder={String(DEFAULT_AUTO_TOPUP_ATTEMPTS)}
+						value={displayConfig.auto_topup_attempt_limit ?? ""}
+						onChange={(e) =>
+							handleChange(
+								"auto_topup_attempt_limit",
+								e.target.value === "" ? null : Number(e.target.value),
+							)
+						}
+						disabled={isPending}
+					/>
+				</SettingsRow>
 				{IDEMPOTENCY_TTL_CONFIG_ENABLED && (
-					<div className="flex items-center justify-between gap-4 py-3.5">
-						<div className="flex flex-col gap-0.5">
-							<span className="text-sm font-medium">
-								Idempotency key duration
-							</span>
-							<span className="text-xs text-muted-foreground">
-								How long duplicate requests to balances endpoints (track, check)
-								are rejected
-							</span>
-						</div>
+					<SettingsRow
+						label="Idempotency key duration"
+						description="How long duplicate requests to balances endpoints (track, check) are rejected"
+					>
 						<div className="flex items-center gap-2">
 							<Input
 								type="number"
@@ -257,7 +278,7 @@ export const BillingSettingsSection = () => {
 								</SelectContent>
 							</Select>
 						</div>
-					</div>
+					</SettingsRow>
 				)}
 			</div>
 			<div className="pb-8">

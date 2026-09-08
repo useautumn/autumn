@@ -1,4 +1,4 @@
-import type { AutoTopup } from "@autumn/shared";
+import type { AutoTopup, OrgConfig } from "@autumn/shared";
 
 export type AutoTopupWindowLimitConfig = {
 	limit: number;
@@ -21,12 +21,19 @@ export const DEFAULT_AUTO_TOPUP_FAILED_ATTEMPT_LIMIT: AutoTopupWindowLimitConfig
 
 export const getAutoTopupRateLimitConfigs = ({
 	autoTopupConfig,
+	orgConfig,
 }: {
 	autoTopupConfig: AutoTopup;
+	orgConfig: OrgConfig;
 }) => {
 	return {
 		purchaseLimit: autoTopupConfig.purchase_limit,
-		attemptLimit: DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT,
+		attemptLimit: {
+			...DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT,
+			limit:
+				orgConfig.auto_topup_attempt_limit ??
+				DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT.limit,
+		},
 		failedAttemptLimit: DEFAULT_AUTO_TOPUP_FAILED_ATTEMPT_LIMIT,
 	};
 };
