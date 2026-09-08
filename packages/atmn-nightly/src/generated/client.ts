@@ -26037,8 +26037,7 @@ coupon: {
 id: string;
 /** A human-readable name for the coupon. */
 name?: string | null;
-/** The type of discount: percentage_discount, fixed_discount, or invoice_credits. */
-type: "percentage_discount" | "fixed_discount" | "invoice_credits";
+type: "percentage_discount" | "fixed_discount";
 /** The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits. */
 value: number;
 /** How long the coupon applies once redeemed. */
