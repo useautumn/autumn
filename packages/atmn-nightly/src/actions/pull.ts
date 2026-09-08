@@ -80,6 +80,35 @@ const entriesOf = (value: unknown): PreviewEntry[] => {
 const rowsOf = (value: unknown): Record<string, unknown>[] =>
 	Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
 
+type VariantEdge = Record<string, unknown> & {
+	plan?: { internalId?: unknown; versionSlug?: unknown } | null;
+};
+
+/**
+ * A variant edge names its identity on the resolved plan, which the fixture
+ * never carries; hoisted onto the edge, the written entry always states its
+ * stable id and slug, so no pulled variant is left version-less.
+ */
+const withVariantIdentity = (
+	rows: Record<string, unknown>[],
+): Record<string, unknown>[] =>
+	rows.map((row) => {
+		if (!Array.isArray(row.variants)) return row;
+		return {
+			...row,
+			variants: (row.variants as VariantEdge[]).map((edge) => {
+				const { internalId, versionSlug, ...rest } = edge;
+				const stableId = internalId ?? edge.plan?.internalId;
+				const slug = versionSlug ?? edge.plan?.versionSlug;
+				return {
+					...(typeof stableId === "string" ? { internalId: stableId } : {}),
+					...rest,
+					...(typeof slug === "string" ? { versionSlug: slug } : {}),
+				};
+			}),
+		};
+	});
+
 /**
  * Pull rides preview: the server's diff drives every edit, and the CLI never
  * diffs anything itself. Config sources are held in memory and only files
@@ -138,7 +167,7 @@ export const runPull = async ({
 			collection,
 			spec,
 			entries: entriesOf(previewRows[collection]),
-			catalogRows: rowsOf(catalogRows[collection]),
+			catalogRows: withVariantIdentity(rowsOf(catalogRows[collection])),
 			statedRows: rowsOf((wire as Record<string, unknown>)[collection]),
 			configPath,
 			files,
@@ -183,15 +212,19 @@ export const runPull = async ({
 		writeFileSync(file, source, "utf8");
 	}
 
-	// Fixtures the catalog already knows get their stable id, even when nothing
-	// else about them changed.
-	const { backfilled } = backfillInternalIds({
+	// Fixtures the catalog already knows get their stable id and slug, even
+	// when nothing else about them changed: no row is left slug-less.
+	const { backfilled, slugged } = backfillInternalIds({
 		rows: identityRowsFromCatalog({ catalog: catalogRows }),
 		configPath,
 	});
 	if (backfilled.length > 0)
 		lines.push(
 			`↳ wrote internalId into ${backfilled.length} fixture${backfilled.length === 1 ? "" : "s"}`,
+		);
+	if (slugged.length > 0)
+		lines.push(
+			`↳ wrote versionSlug into ${slugged.length} fixture${slugged.length === 1 ? "" : "s"}`,
 		);
 
 	write(

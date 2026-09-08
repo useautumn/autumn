@@ -45,6 +45,30 @@ test("a draft is a row in plans with explicit active: false", () => {
 	expect(wire.plans[0].active).toBe(false);
 });
 
+test("a plan that only appears in planVersions is refused, naming the plan", () => {
+	const issues = issuesOf(() =>
+		atmn({
+			plans: [plan({ planId: "free", name: "Free" })],
+			planVersions: [
+				plan({ planId: "pro", name: "Pro", versionSlug: "v1" }),
+				plan({ planId: "legacy", name: "Legacy", versionSlug: "v1" }),
+			],
+		}),
+	);
+	expect(issues).toEqual([
+		{
+			path: 'plan "pro"',
+			message:
+				'At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version. "pro", "legacy"',
+		},
+		{
+			path: 'plan "legacy"',
+			message:
+				'At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version. "pro", "legacy"',
+		},
+	]);
+});
+
 test("an omitted collection stays omitted", () => {
 	// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
 	const wire = atmn({ features: [] }) as any;
@@ -206,6 +230,11 @@ test("a variant linked from two versions of its base is refused", () => {
 			path: 'plan "pro"',
 			message:
 				"pro_yearly is linked from pro v2 and pro v1. When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
+		},
+		{
+			path: 'plan "pro"',
+			message:
+				'Variant "pro_yearly" is declared under 2 versions of "pro" but only 0 states versionSlug. Add versionSlug to every version so they can be told apart.',
 		},
 	]);
 });

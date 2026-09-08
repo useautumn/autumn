@@ -68,6 +68,11 @@ test("a variant declared under two versions of its base is refused", () => {
 			message:
 				"pro_yearly is linked from pro v2 and pro v1. When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
 		},
+		{
+			path: 'plan "pro"',
+			message:
+				'Variant "pro_yearly" is declared under 2 versions of "pro" but only 0 states versionSlug. Add versionSlug to every version so they can be told apart.',
+		},
 	]);
 });
 

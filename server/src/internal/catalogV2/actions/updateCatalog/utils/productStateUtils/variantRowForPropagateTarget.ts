@@ -1,5 +1,6 @@
 import type { CatalogPropagateTargetParams, FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { anchoredVariantRow } from "./anchoredVariantRow";
 import { fullProductForPlanParams } from "./fullProductForPlanParams";
 
 /** True when the target names a specific row rather than the whole plan. */
@@ -30,20 +31,9 @@ export const variantRowForPropagateTarget = ({
 		});
 	}
 
-	const anchoredRows = (
-		productStatesContext.versionsByPlanId[target.plan_id] ?? []
-	).filter(
-		(product) =>
-			!product.archived &&
-			product.base_internal_product_id != null &&
-			anchorInternalIds.has(product.base_internal_product_id),
-	);
-	if (anchoredRows.length === 0) return null;
-
-	return (
-		anchoredRows.find((product) => product.active) ??
-		anchoredRows.reduce((latest, product) =>
-			product.version > latest.version ? product : latest,
-		)
-	);
+	return anchoredVariantRow({
+		planId: target.plan_id,
+		anchorInternalIds,
+		productStatesContext,
+	});
 };

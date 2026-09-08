@@ -14,10 +14,12 @@ export const deriveVariantIntents = ({
 	intent,
 	upsert,
 	projectedProductStatesContext,
+	claimedProductKeys,
 }: {
 	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
+	claimedProductKeys?: Set<string>;
 }): ProductUpsertIntent[] => {
 	if (upsert.row.nextFullProduct.base_internal_product_id) return [];
 
@@ -25,5 +27,6 @@ export const deriveVariantIntents = ({
 		intent,
 		upsert,
 		projectedProductStatesContext,
+		claimedProductKeys,
 	});
 };

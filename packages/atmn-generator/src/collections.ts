@@ -11,6 +11,8 @@ export type CollectionMeta = {
 	readonly responseIdField: string;
 	/** Config key holding past versions; rows there are stamped `active: false`. */
 	readonly historyKey?: string;
+	/** Printed when an id has rows in `historyKey` and none in the collection. */
+	readonly historyOnlyMessage?: string;
 	/** Whether pull can address entries by `idField` alone. */
 	readonly pull: boolean;
 	/** Set when the item is a union; `builder` then names only the union type. */
@@ -45,6 +47,8 @@ export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
 		idField: "planId",
 		responseIdField: "id",
 		historyKey: "planVersions",
+		historyOnlyMessage:
+			"At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version.",
 		pull: true,
 	},
 	// Free-product and invoice-credit rewards have no branch: the catalog

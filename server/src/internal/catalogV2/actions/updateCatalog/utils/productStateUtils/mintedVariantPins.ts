@@ -10,12 +10,21 @@ import { variantPinKey } from "./variantEntryMintsRow";
  */
 const pinsForMintedVariant = ({
 	variant,
+	anchorInternalIds,
+	baseVersionSlug,
 	productStatesContext,
 }: {
 	variant: CatalogVariantParams;
+	anchorInternalIds: Set<string>;
+	baseVersionSlug?: string;
 	productStatesContext: ProductStatesContext;
 }): string[] => {
-	const target = variantCreateTarget({ variant, productStatesContext });
+	const target = variantCreateTarget({
+		variant,
+		anchorInternalIds,
+		baseVersionSlug,
+		productStatesContext,
+	});
 	if (!target) return [];
 
 	const planId = variant.variant_plan_id;
@@ -32,13 +41,22 @@ const pinsForMintedVariant = ({
 /** Pins these variants[] entries mint, keyed for a propagate target lookup. */
 export const mintedVariantPins = ({
 	variants,
+	anchorInternalIds,
+	baseVersionSlug,
 	productStatesContext,
 }: {
 	variants: CatalogVariantParams[];
+	anchorInternalIds: Set<string>;
+	baseVersionSlug?: string;
 	productStatesContext: ProductStatesContext;
 }): Set<string> =>
 	new Set(
 		variants.flatMap((variant) =>
-			pinsForMintedVariant({ variant, productStatesContext }),
+			pinsForMintedVariant({
+				variant,
+				anchorInternalIds,
+				baseVersionSlug,
+				productStatesContext,
+			}),
 		),
 	);

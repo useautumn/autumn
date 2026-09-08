@@ -36,6 +36,7 @@ export const deriveIntents = ({
 				intent,
 				upsert,
 				projectedProductStatesContext,
+				claimedProductKeys,
 			}),
 			...deriveLicenseParentIntents({
 				intent,
