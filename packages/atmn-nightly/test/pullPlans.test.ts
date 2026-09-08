@@ -114,6 +114,7 @@ const previewDeletes = {
 };
 
 const clientWith = (preview: unknown) => ({
+	previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 	previewUpdate: async () => preview,
 	update: async () => ({}),
 	get: async () => serverRows,
@@ -285,6 +286,7 @@ test("a nested variant is pulled nested, pruned to its fixture shape", async () 
 		],
 	};
 	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 		previewUpdate: async () => preview,
 		update: async () => ({}),
 		get: async () => rows,
@@ -378,6 +380,7 @@ const numberedLaterRows = {
 };
 const clientFor = ({ preview, rows }: { preview: unknown; rows: unknown }) =>
 	({
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 		previewUpdate: async () => preview,
 		update: async () => ({}),
 		get: async () => rows,

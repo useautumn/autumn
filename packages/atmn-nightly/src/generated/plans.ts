@@ -74,7 +74,7 @@ export type Plan = {
 		included?: number;
 		/** If true, customer has unlimited access to this feature. */
 		unlimited?: boolean;
-		/** Whether entity-level grants contribute to a shared customer balance. */
+		/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 		pooled?: boolean;
 		/** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 		reset?: {
@@ -129,7 +129,7 @@ export type Plan = {
 				| "year";
 			/** Number of intervals per billing cycle. Defaults to 1. */
 			intervalCount?: number;
-			/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+			/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 			billingUnits?: number;
 			/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 			billingMethod: "prepaid" | "usage_based";
@@ -299,7 +299,7 @@ export type Plan = {
 	freeTrial?: {
 		/** Number of duration_type periods the trial lasts. */
 		durationLength: number;
-		/** Unit of time for the trial ('day', 'month', 'year'). */
+		/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 		durationType?: "day" | "month" | "year";
 		/** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 		cardRequired?: boolean;
@@ -319,7 +319,7 @@ export type Plan = {
 		autoTopups?: Array<{
 			/** The ID of the feature (credit balance) to auto top-up. */
 			featureId: string;
-			/** Whether auto top-up is enabled. */
+			/** Whether auto top-up is enabled. Defaults to false. */
 			enabled?: boolean;
 			/** When the balance drops below this threshold, an auto top-up will be purchased. */
 			threshold: number;
@@ -329,7 +329,7 @@ export type Plan = {
 			purchaseLimit?: {
 				/** The time interval for the purchase limit window. */
 				interval: "hour" | "day" | "week" | "month";
-				/** Number of intervals in the purchase limit window. */
+				/** Number of intervals in the purchase limit window. Defaults to 1. */
 				intervalCount?: number;
 				/** Maximum number of auto top-ups allowed within the interval. */
 				limit: number;
@@ -343,7 +343,7 @@ export type Plan = {
 		spendLimits?: Array<{
 			/** Optional feature ID this spend limit applies to. */
 			featureId?: string;
-			/** Whether the overage spend limit is enabled. */
+			/** Whether the overage spend limit is enabled. Defaults to false. */
 			enabled?: boolean;
 			/** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 			limitType?: "absolute" | "usage_percentage";
@@ -356,7 +356,7 @@ export type Plan = {
 		usageLimits?: Array<{
 			/** The feature this usage limit applies to. */
 			featureId: string;
-			/** Whether this usage limit is enabled. */
+			/** Whether this usage limit is enabled. Defaults to true. */
 			enabled?: boolean;
 			/** Maximum units allowed per interval. */
 			limit: number;
@@ -373,7 +373,7 @@ export type Plan = {
 		usageAlerts?: Array<{
 			/** The feature ID this alert applies to. */
 			featureId?: string;
-			/** Whether this usage alert is enabled. */
+			/** Whether this usage alert is enabled. Defaults to true. */
 			enabled?: boolean;
 			/** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 			threshold: number;
@@ -383,7 +383,7 @@ export type Plan = {
 				| "usage_percentage"
 				| "remaining"
 				| "remaining_percentage";
-			/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+			/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 			basis?: "balance" | "included" | "recurring" | "usage_limit";
 			/** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 			filter?: {
@@ -396,7 +396,7 @@ export type Plan = {
 		overageAllowed?: Array<{
 			/** The feature ID this overage allowed control applies to. */
 			featureId: string;
-			/** Whether overage is allowed for this feature. */
+			/** Whether overage is allowed for this feature. Defaults to false. */
 			enabled?: boolean;
 		}>;
 	};
@@ -477,7 +477,7 @@ export type Plan = {
 				included?: number;
 				/** If true, customer has unlimited access to this feature. */
 				unlimited?: boolean;
-				/** Whether entity-level grants contribute to a shared customer balance. */
+				/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 				pooled?: boolean;
 				/** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 				reset?: {
@@ -532,7 +532,7 @@ export type Plan = {
 						| "year";
 					/** Number of intervals per billing cycle. Defaults to 1. */
 					intervalCount?: number;
-					/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+					/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 					billingUnits?: number;
 					/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 					billingMethod: "prepaid" | "usage_based";
@@ -698,7 +698,7 @@ export type Plan = {
 				included?: number;
 				/** If true, customer has unlimited access to this feature. */
 				unlimited?: boolean;
-				/** Whether entity-level grants contribute to a shared customer balance. */
+				/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 				pooled?: boolean;
 				/** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 				reset?: {
@@ -753,7 +753,7 @@ export type Plan = {
 						| "year";
 					/** Number of intervals per billing cycle. Defaults to 1. */
 					intervalCount?: number;
-					/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+					/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 					billingUnits?: number;
 					/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 					billingMethod: "prepaid" | "usage_based";
@@ -943,7 +943,7 @@ export type Plan = {
 			freeTrial?: {
 				/** Number of duration_type periods the trial lasts. */
 				durationLength: number;
-				/** Unit of time for the trial ('day', 'month', 'year'). */
+				/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 				durationType?: "day" | "month" | "year";
 				/** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 				cardRequired?: boolean;
@@ -956,7 +956,7 @@ export type Plan = {
 				autoTopups?: Array<{
 					/** The ID of the feature (credit balance) to auto top-up. */
 					featureId: string;
-					/** Whether auto top-up is enabled. */
+					/** Whether auto top-up is enabled. Defaults to false. */
 					enabled?: boolean;
 					/** When the balance drops below this threshold, an auto top-up will be purchased. */
 					threshold: number;
@@ -966,7 +966,7 @@ export type Plan = {
 					purchaseLimit?: {
 						/** The time interval for the purchase limit window. */
 						interval: "hour" | "day" | "week" | "month";
-						/** Number of intervals in the purchase limit window. */
+						/** Number of intervals in the purchase limit window. Defaults to 1. */
 						intervalCount?: number;
 						/** Maximum number of auto top-ups allowed within the interval. */
 						limit: number;
@@ -980,7 +980,7 @@ export type Plan = {
 				spendLimits?: Array<{
 					/** Optional feature ID this spend limit applies to. */
 					featureId?: string;
-					/** Whether the overage spend limit is enabled. */
+					/** Whether the overage spend limit is enabled. Defaults to false. */
 					enabled?: boolean;
 					/** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 					limitType?: "absolute" | "usage_percentage";
@@ -993,7 +993,7 @@ export type Plan = {
 				usageLimits?: Array<{
 					/** The feature this usage limit applies to. */
 					featureId: string;
-					/** Whether this usage limit is enabled. */
+					/** Whether this usage limit is enabled. Defaults to true. */
 					enabled?: boolean;
 					/** Maximum units allowed per interval. */
 					limit: number;
@@ -1010,7 +1010,7 @@ export type Plan = {
 				usageAlerts?: Array<{
 					/** The feature ID this alert applies to. */
 					featureId?: string;
-					/** Whether this usage alert is enabled. */
+					/** Whether this usage alert is enabled. Defaults to true. */
 					enabled?: boolean;
 					/** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 					threshold: number;
@@ -1020,7 +1020,7 @@ export type Plan = {
 						| "usage_percentage"
 						| "remaining"
 						| "remaining_percentage";
-					/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+					/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 					basis?: "balance" | "included" | "recurring" | "usage_limit";
 					/** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 					filter?: {
@@ -1033,7 +1033,7 @@ export type Plan = {
 				overageAllowed?: Array<{
 					/** The feature ID this overage allowed control applies to. */
 					featureId: string;
-					/** Whether overage is allowed for this feature. */
+					/** Whether overage is allowed for this feature. Defaults to false. */
 					enabled?: boolean;
 				}>;
 			};
@@ -1072,7 +1072,7 @@ export type Plan = {
 						included?: number;
 						/** If true, customer has unlimited access to this feature. */
 						unlimited?: boolean;
-						/** Whether entity-level grants contribute to a shared customer balance. */
+						/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 						pooled?: boolean;
 						/** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 						reset?: {
@@ -1127,7 +1127,7 @@ export type Plan = {
 								| "year";
 							/** Number of intervals per billing cycle. Defaults to 1. */
 							intervalCount?: number;
-							/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+							/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 							billingUnits?: number;
 							/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 							billingMethod: "prepaid" | "usage_based";
@@ -1355,7 +1355,7 @@ export type Plan = {
 				included?: number;
 				/** If true, customer has unlimited access to this feature. */
 				unlimited?: boolean;
-				/** Whether entity-level grants contribute to a shared customer balance. */
+				/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 				pooled?: boolean;
 				/** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 				reset?: {
@@ -1410,7 +1410,7 @@ export type Plan = {
 						| "year";
 					/** Number of intervals per billing cycle. Defaults to 1. */
 					intervalCount?: number;
-					/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+					/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 					billingUnits?: number;
 					/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 					billingMethod: "prepaid" | "usage_based";

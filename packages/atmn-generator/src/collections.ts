@@ -106,3 +106,24 @@ export const NESTED_FIXTURES: Readonly<Record<string, NestedFixtureMeta>> = {
 		path: "licenses",
 	},
 };
+
+/**
+ * A singleton is one object on the config, not a list of rows: no id, no
+ * history, and its wire semantics are PATCH — a stated field is written, an
+ * omitted one is left alone. The type is read off the operation's body.
+ */
+export type SingletonMeta = {
+	readonly typeName: string;
+	/** The operation whose request body declares the singleton's shape. */
+	readonly operationPath: string;
+	/** The request-body field holding the object; the config's key is the map key. */
+	readonly wireKey: string;
+};
+
+export const SINGLETONS: Readonly<Record<string, SingletonMeta>> = {
+	settings: {
+		typeName: "Settings",
+		operationPath: "/v1/organization.update",
+		wireKey: "config",
+	},
+};

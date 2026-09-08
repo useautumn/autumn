@@ -87,6 +87,17 @@ export const branchSpecs = ({
 }): CollectionSpec[] =>
 	spec.branches?.map((branch) => branchSpecOf({ spec, branch })) ?? [spec];
 
+export type SingletonSpec = {
+	/** The request-body field the object is sent as. */
+	readonly wireKey: string;
+	/** Fixture key, wire key and the server's default, in spec order. */
+	readonly fields: readonly {
+		readonly key: string;
+		readonly wireKey: string;
+		readonly default: unknown;
+	}[];
+};
+
 const PLAIN_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 const keyText = (key: string): string =>

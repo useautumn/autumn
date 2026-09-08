@@ -30,6 +30,7 @@ const fakeClient = ({
 	catalog: unknown;
 }): AutumnClient =>
 	({
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 		previewUpdate: async () => preview,
 		update: async () => ({}),
 		get: async () => catalog,
@@ -607,6 +608,7 @@ test("a fixture that is not a plain literal stops the pull before any write", as
 	writeFileSync(configPath, before, "utf8");
 
 	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 		previewUpdate: async () => ({
 			features: [{ featureId: "seats", action: "update" }],
 			plans: [],
@@ -646,6 +648,7 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 	mkdirSync(dir, { recursive: true });
 
 	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 		previewUpdate: async () => ({
 			features: [
 				{ featureId: "seats", action: "delete" },
