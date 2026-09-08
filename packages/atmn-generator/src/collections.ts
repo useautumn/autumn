@@ -2,19 +2,6 @@
  * The one per-concept registration the spec cannot express: what a builder is
  * called, what names a row, and which config key holds a collection's history.
  */
-/**
- * A collection whose item is a union writes one builder per branch: the entry
- * is `{ <key>: body }`, so the id and the fields live one level down.
- */
-export type CollectionBranchMeta = {
-	readonly builder: string;
-	readonly typeName: string;
-	/** Fixture key wrapping this branch's body. */
-	readonly key: string;
-	/** Fixture field naming one entry, branch-rooted. */
-	readonly idField: string;
-};
-
 export type CollectionMeta = {
 	readonly builder: string;
 	readonly typeName: string;
@@ -28,6 +15,19 @@ export type CollectionMeta = {
 	readonly pull: boolean;
 	/** Set when the item is a union; `builder` then names only the union type. */
 	readonly branches?: readonly CollectionBranchMeta[];
+};
+
+/**
+ * A collection whose item is a union writes one builder per branch: the entry
+ * is `{ <key>: body }`, so the id and the fields live one level down.
+ */
+export type CollectionBranchMeta = {
+	readonly builder: string;
+	readonly typeName: string;
+	/** Fixture key wrapping this branch's body. */
+	readonly key: string;
+	/** Fixture field naming one entry, branch-rooted. */
+	readonly idField: string;
 };
 
 export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
