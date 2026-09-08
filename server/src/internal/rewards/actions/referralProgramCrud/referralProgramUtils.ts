@@ -103,14 +103,14 @@ export const toApiProgram = async ({
 	});
 };
 
-/** An omitted field keeps its stored value */
+/** An omitted field keeps its stored value; an explicit null clears it */
 const patchField = <T>({
 	patch,
 	existing,
 }: {
-	patch: T | undefined;
+	patch: T | null | undefined;
 	existing: T | undefined;
-}) => patch ?? existing;
+}): T | undefined => (patch === undefined ? existing : (patch ?? undefined));
 
 export const mergeProgramUpdate = ({
 	existing,

@@ -11,4 +11,10 @@ export type {
 	ProductStatesContext,
 } from "./productStateContext";
 export { emptyProductStatesContext } from "./productStateContext";
+export type {
+	CatalogRewardState,
+	ReferralProgramState,
+	RewardStatesContext,
+} from "./rewardStatesContext";
+export { emptyRewardStatesContext } from "./rewardStatesContext";
 export type { UpdateCatalogContext } from "./updateCatalogContext";

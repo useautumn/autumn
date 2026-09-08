@@ -1,6 +1,7 @@
 import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeUpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateCatalogPlan";
+import { assertRewardScope } from "@/internal/catalogV2/actions/updateCatalog/errors/assertRewardScope";
 import { handleUpdateCatalogErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateCatalogErrors";
 import { setupUpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupUpdateCatalogContext";
 import {
@@ -33,6 +34,8 @@ export async function updateCatalogV2({
 }): Promise<UpdateCatalogActionResult> {
 	const phases: CatalogPhases = {};
 	const started = Date.now();
+
+	assertRewardScope({ ctx, params, preview });
 
 	// 1. Setup — all DB reads; preview adds previewContext presentation facts
 	const catalogContext = await setupUpdateCatalogContext({

@@ -5,6 +5,8 @@ import type { Feature } from "./features";
 import { LINT_RULES } from "./lintRules";
 import { ConfigError, lintDocument } from "./lintRuntime";
 import type { Plan } from "./plans";
+import type { ReferralProgram } from "./referralPrograms";
+import type { Reward } from "./rewards";
 
 /** Operators like `$startsWith` are literal API keys, not snake_case fields. */
 const isOperatorKey = (key: string): boolean => key.startsWith("$");
@@ -133,24 +135,34 @@ const CATALOG_HINTS = hintsOf({
 		"plans.items.featureOverride.creditSchema.dimensions.*.match",
 		"plans.items.featureOverride.creditSchema.multipliers",
 		"plans.items.featureOverride.creditSchema.multipliers.*.match",
+		"plans.items.featureOverride.markups.modelMarkups",
+		"plans.items.featureOverride.markups.providerMarkups",
 		"plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions",
 		"plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match",
 		"plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers",
 		"plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match",
+		"plans.licenses.customize.addItems.featureOverride.markups.modelMarkups",
+		"plans.licenses.customize.addItems.featureOverride.markups.providerMarkups",
 		"plans.variants.customize.addItems.featureOverride.creditSchema.dimensions",
 		"plans.variants.customize.addItems.featureOverride.creditSchema.dimensions.*.match",
 		"plans.variants.customize.addItems.featureOverride.creditSchema.multipliers",
 		"plans.variants.customize.addItems.featureOverride.creditSchema.multipliers.*.match",
+		"plans.variants.customize.addItems.featureOverride.markups.modelMarkups",
+		"plans.variants.customize.addItems.featureOverride.markups.providerMarkups",
 		"plans.variants.customize.billingControls.usageAlerts.filter.properties",
 		"plans.variants.customize.billingControls.usageLimits.filter.properties",
 		"plans.variants.customize.items.featureOverride.creditSchema.dimensions",
 		"plans.variants.customize.items.featureOverride.creditSchema.dimensions.*.match",
 		"plans.variants.customize.items.featureOverride.creditSchema.multipliers",
 		"plans.variants.customize.items.featureOverride.creditSchema.multipliers.*.match",
+		"plans.variants.customize.items.featureOverride.markups.modelMarkups",
+		"plans.variants.customize.items.featureOverride.markups.providerMarkups",
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions",
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match",
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers",
 		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match",
+		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups",
+		"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups",
 	],
 	frozenPaths: [
 		"plans.licenses.metadata",
@@ -168,6 +180,12 @@ export type AtmnConfig = {
 	plans?: Plan[];
 	/** Past versions of plans, full rows, stamped `active: false`. */
 	planVersions?: Plan[];
+	/** Every rewards entry this catalog should have. `[]` means "mine, and
+	 * empty"; omitted means "not mine". */
+	rewards?: Reward[];
+	/** Every referralPrograms entry this catalog should have. `[]` means "mine, and
+	 * empty"; omitted means "not mine". */
+	referralPrograms?: ReferralProgram[];
 };
 
 /** The document as the server sees it: history rows folded into their collection. */
@@ -222,6 +240,10 @@ const stated = (config: AtmnConfig): Record<string, unknown> => ({
 				// Absent history is "not mine"; stated history removes the versions it omits.
 				skip_version_deletions: config.planVersions === undefined,
 			}
+		: {}),
+	...(config.rewards !== undefined ? { rewards: config.rewards } : {}),
+	...(config.referralPrograms !== undefined
+		? { referralPrograms: config.referralPrograms }
 		: {}),
 });
 

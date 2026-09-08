@@ -7,6 +7,7 @@ import { setupFeatureStatesContext } from "@/internal/catalogV2/actions/updateCa
 import { setupInvoiceCreditProducts } from "@/internal/catalogV2/actions/updateCatalog/setup/setupInvoiceCreditProducts";
 import { setupLicenseStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupLicenseStatesContext";
 import { setupProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupProductStatesContext";
+import { setupRewardStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupRewardStatesContext";
 import {
 	type CatalogPhases,
 	timeCatalogPhase,
@@ -39,24 +40,34 @@ export const setupUpdateCatalogContext = async ({
 		phase: "invoice_credit_products",
 		run: () => setupInvoiceCreditProducts({ ctx, params }),
 	});
-	const [featureStatesContext, productStatesContext, featureUsagePersisted] =
-		await Promise.all([
-			timeCatalogPhase({
-				ctx,
-				phases,
-				phase: "feature_states",
-				run: () => setupFeatureStatesContext({ ctx, params }),
-			}),
-			setupProductStatesContext({ ctx, params, phases, internalIdRefs }),
-			preview
-				? timeCatalogPhase({
-						ctx,
-						phases,
-						phase: "feature_usage",
-						run: () => setupFeatureUsagePersisted({ ctx, params }),
-					})
-				: undefined,
-		]);
+	const [
+		featureStatesContext,
+		productStatesContext,
+		featureUsagePersisted,
+		rewardStatesContext,
+	] = await Promise.all([
+		timeCatalogPhase({
+			ctx,
+			phases,
+			phase: "feature_states",
+			run: () => setupFeatureStatesContext({ ctx, params }),
+		}),
+		setupProductStatesContext({ ctx, params, phases, internalIdRefs }),
+		preview
+			? timeCatalogPhase({
+					ctx,
+					phases,
+					phase: "feature_usage",
+					run: () => setupFeatureUsagePersisted({ ctx, params }),
+				})
+			: undefined,
+		timeCatalogPhase({
+			ctx,
+			phases,
+			phase: "reward_states",
+			run: () => setupRewardStatesContext({ ctx, params }),
+		}),
+	]);
 	const invoiceCreditProducts = await invoiceCreditProductsPromise;
 
 	// License refs + plan-usage samples both need loaded product internal ids.
@@ -84,6 +95,7 @@ export const setupUpdateCatalogContext = async ({
 		internalIdRefs,
 		invoiceCreditProducts,
 		licenseStatesContext,
+		rewardStatesContext,
 		previewContext: preview
 			? {
 					featureUsagePersisted: featureUsagePersisted ?? {},

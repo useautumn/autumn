@@ -566,6 +566,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -743,6 +758,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -1029,6 +1059,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -1235,6 +1280,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -1680,6 +1740,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -1857,6 +1932,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -2461,6 +2551,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -2638,6 +2743,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -2920,6 +3040,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -3126,6 +3261,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -3567,6 +3717,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -3740,6 +3905,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -4354,6 +4534,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -4531,6 +4726,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -4797,6 +5007,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -4993,6 +5218,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -5418,6 +5658,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -5575,6 +5830,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -6193,6 +6463,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -6360,6 +6645,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -6586,6 +6886,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -6746,6 +7061,21 @@ add?: unknown;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -7131,6 +7461,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -7248,6 +7593,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -7866,6 +8226,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -8043,6 +8418,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -8309,6 +8699,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -8505,6 +8910,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -8930,6 +9350,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -9087,6 +9522,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -9703,6 +10153,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -9870,6 +10335,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -10096,6 +10576,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -10256,6 +10751,21 @@ add?: unknown;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -10641,6 +11151,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -10758,6 +11283,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -11384,6 +11924,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -11561,6 +12116,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -11843,6 +12413,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -12049,6 +12634,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -12490,6 +13090,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -12663,6 +13278,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -13291,6 +13921,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -13468,6 +14113,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -13734,6 +14394,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -13930,6 +14605,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -14355,6 +15045,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -14512,6 +15217,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -15130,6 +15850,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -15307,6 +16042,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -15589,6 +16339,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -15795,6 +16560,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -16236,6 +17016,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -16409,6 +17204,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -17035,6 +17845,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -17212,6 +18037,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -17478,6 +18318,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -17674,6 +18529,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -18099,6 +18969,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -18256,6 +19141,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -18586,6 +19486,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -18669,6 +19584,28 @@ message: string;
 }>;
 };
 /** Changed feature fields holding their previous values. Null when nothing changed or the feature is new. */
+previousAttributes: Record<string, unknown> | null;
+}>;
+rewards?: Array<{
+id: string;
+/** Stable id of the row this preview is about. Null on create — the applied result carries the id the row received. */
+internalId: string | null;
+name?: string | null;
+/** Which branch of the reward the config states. Free-product rewards have no branch and never appear here. */
+kind: "coupon" | "feature_grant";
+/** What would happen to this resource: created, updated, deleted (or archived — see will_archive), explicitly skipped, or unchanged. For plans this is per plan_id, not per version — minting a new version of a live plan is `update`, and `create` means the plan_id had no live version. */
+action: "create" | "update" | "delete" | "skip" | "none";
+/** Changed reward fields holding their previous values. Null when nothing changed or the reward is new. */
+previousAttributes: Record<string, unknown> | null;
+}>;
+referralPrograms?: Array<{
+id: string;
+/** Stable id of the row this preview is about. Null on create. */
+internalId: string | null;
+rewardId?: string | null;
+/** What would happen to this resource: created, updated, deleted (or archived — see will_archive), explicitly skipped, or unchanged. For plans this is per plan_id, not per version — minting a new version of a live plan is `update`, and `create` means the plan_id had no live version. */
+action: "create" | "update" | "delete" | "skip" | "none";
+/** Changed referral program fields holding their previous values. Null when nothing changed or the program is new. */
 previousAttributes: Record<string, unknown> | null;
 }>;
 /** Migration drafts that would be created if this update is applied. */
@@ -20415,6 +21352,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -20616,6 +21568,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -20820,6 +21787,20 @@ internalId?: string | null;
 action: "create" | "update" | "delete" | "skip" | "none";
 }>;
 features: Array<{
+id: string;
+/** Stable id of the row this result is about (features today). */
+internalId?: string | null;
+/** What was actually applied, including 'skip' and 'none'. */
+action: "create" | "update" | "delete" | "skip" | "none";
+}>;
+rewards?: Array<{
+id: string;
+/** Stable id of the row this result is about (features today). */
+internalId?: string | null;
+/** What was actually applied, including 'skip' and 'none'. */
+action: "create" | "update" | "delete" | "skip" | "none";
+}>;
+referralPrograms?: Array<{
 id: string;
 /** Stable id of the row this result is about (features today). */
 internalId?: string | null;
@@ -22571,6 +23552,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -22772,6 +23768,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -23204,6 +24215,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -23526,6 +24552,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -23812,6 +24853,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24019,6 +25075,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24219,6 +25290,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24505,6 +25591,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24766,6 +25867,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24914,6 +26030,93 @@ baseVariantId: string | null;
 };
 }>;
 }>;
+/** Coupons and feature grants. Free-product rewards are omitted — the catalog does not state them. */
+rewards: Array<{
+coupon: {
+/** The unique identifier for the coupon. */
+id: string;
+/** A human-readable name for the coupon. */
+name?: string | null;
+/** The type of discount: percentage_discount, fixed_discount, or invoice_credits. */
+type: "percentage_discount" | "fixed_discount" | "invoice_credits";
+/** The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits. */
+value: number;
+/** How long the coupon applies once redeemed. */
+duration: {
+/** The unit of time the duration is measured in. */
+type: "one_off" | "months" | "forever";
+/** The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever). */
+length: number | null;
+};
+/** The plan IDs the coupon applies to, or null when it applies to all plans. */
+planIds: Array<string> | null;
+/** The promo codes customers can use to redeem the coupon. */
+promoCodes: Array<{
+/** The promo code customers enter to redeem the coupon. */
+code: string;
+/** Maximum number of times this promo code can be redeemed across all customers, or null for unlimited. */
+globalMaxRedemption?: number | null;
+/** Whether this promo code can only be applied to a customer's first transaction. */
+firstTimeTransaction?: boolean | null;
+}>;
+/** The Unix timestamp (in milliseconds) when the coupon was created. */
+createdAt: number;
+/** Stable id of the row, unchanged by edits. */
+internalId: string;
+};
+} | {
+featureGrant: {
+/** The unique identifier for the feature grant. */
+id: string;
+/** A human-readable name for the feature grant. */
+name?: string | null;
+/** The feature grants awarded when the grant is redeemed. */
+grants: Array<{
+/** The feature ID this grant applies to. */
+featureId: string;
+/** The amount of the feature granted, or null for boolean features. */
+included: number | null;
+/** How long the granted amount lasts before expiring, or null for a permanent grant. */
+expiry: {
+/** The unit of time the grant lasts. */
+type: "day" | "week" | "month" | "year";
+/** The positive integer count of periods before the grant expires. */
+length: number;
+} | null;
+}>;
+/** The promo codes customers can use to redeem the feature grant. */
+promoCodes: Array<{
+/** The promo code customers enter to redeem the feature grant. */
+code: string;
+/** Maximum number of times this promo code can be redeemed, or null for unlimited. */
+maxUses: number | null;
+}>;
+/** The Unix timestamp (in milliseconds) when the feature grant was created. */
+createdAt: number;
+/** Stable id of the row, unchanged by edits. */
+internalId: string;
+};
+}>;
+referralPrograms: Array<{
+/** The unique identifier for the referral program. */
+id: string;
+/** The ID of the reward granted when a code is redeemed. */
+rewardId: string;
+/** When the reward is granted: on redemption, or when the redeemer checks out. */
+redeemOn: "customer_creation" | "checkout";
+/** Who receives the reward: the referrer only, or both parties. */
+receivedBy: "referrer" | "all";
+/** The maximum number of times a referral code can be redeemed. */
+maxRedemptions?: number | null;
+/** The plans whose checkout triggers the reward. Only used when redeem_on is checkout. */
+planIds?: Array<string> | null;
+/** Whether checkouts that start a trial should skip granting the reward. */
+excludeTrial?: boolean | null;
+/** The Unix timestamp (in milliseconds) when the referral program was created. */
+createdAt: number;
+/** Stable id of the row, unchanged by edits. */
+internalId: string;
+}>;
 };
 export type CreateSandboxResponse = {
 /** The sandbox's organization ID. */
@@ -24973,15 +26176,15 @@ const RESETSANDBOX_REQUEST_HINTS = hintsOf({
 	frozenPaths: [],
 });
 const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
-	recordPaths: ["migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.billingControls.usageAlerts.filter.properties","plans.licenses.plan.billingControls.usageLimits.filter.properties","plans.licenses.plan.items.featureOverride.creditSchema.dimensions","plans.licenses.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.items.featureOverride.creditSchema.multipliers","plans.licenses.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenses.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.customize.billingControls.usageAlerts.filter.properties","plans.planChange.customize.billingControls.usageLimits.filter.properties","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.planChange.plan.billingControls.usageAlerts.filter.properties","plans.planChange.plan.billingControls.usageLimits.filter.properties","plans.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties"],
-	frozenPaths: ["features.previousAttributes","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.upsertLicenses.metadata","plans.licenseParents.planChange.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.metadata","plans.licenseParents.planChange.licenseChanges.plan.metadata","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.planChange.plan.metadata","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.licenseParents.planChange.plan.metadata","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.previousAttributes.metadata","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.licenseParents.siblingVersions.planChange.plan.metadata","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.previousAttributes.metadata","plans.licenses.metadata","plans.licenses.plan.metadata","plans.licenses.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.metadata","plans.planChange.licenseChanges.plan.metadata","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.planChange.plan.metadata","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.planChange.plan.metadata","plans.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.planChange.plan.metadata","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.metadata","plans.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.planChange.plan.metadata","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.previousAttributes.metadata","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.metadata","plans.siblingVersions.variants.planChange.licenseChanges.plan.metadata","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.variants.planChange.plan.metadata","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.previousAttributes.metadata","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.variants.siblingVersions.planChange.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.metadata","plans.variants.planChange.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.metadata","plans.variants.planChange.licenseChanges.plan.metadata","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.planChange.plan.metadata","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.variants.planChange.plan.metadata","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.previousAttributes.metadata","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.metadata","plans.variants.siblingVersions.planChange.licenseChanges.plan.metadata","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.variants.siblingVersions.planChange.plan.metadata","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.previousAttributes.metadata"],
+	recordPaths: ["migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.addItems.featureOverride.markups.modelMarkups","migrations.operations.customer.customize.addItems.featureOverride.markups.providerMarkups","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenses.plan.billingControls.usageAlerts.filter.properties","plans.licenses.plan.billingControls.usageLimits.filter.properties","plans.licenses.plan.items.featureOverride.creditSchema.dimensions","plans.licenses.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.items.featureOverride.creditSchema.multipliers","plans.licenses.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.items.featureOverride.markups.modelMarkups","plans.licenses.plan.items.featureOverride.markups.providerMarkups","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenses.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenses.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.customize.billingControls.usageAlerts.filter.properties","plans.planChange.customize.billingControls.usageLimits.filter.properties","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.planChange.plan.billingControls.usageAlerts.filter.properties","plans.planChange.plan.billingControls.usageLimits.filter.properties","plans.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.items.featureOverride.markups.modelMarkups","plans.planChange.plan.items.featureOverride.markups.providerMarkups","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.variants.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.items.featureOverride.markups.modelMarkups","plans.variants.planChange.plan.items.featureOverride.markups.providerMarkups","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties"],
+	frozenPaths: ["features.previousAttributes","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.upsertLicenses.metadata","plans.licenseParents.planChange.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.metadata","plans.licenseParents.planChange.licenseChanges.plan.metadata","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.planChange.plan.metadata","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.licenseParents.planChange.plan.metadata","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.previousAttributes.metadata","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.licenseParents.siblingVersions.planChange.plan.metadata","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.previousAttributes.metadata","plans.licenses.metadata","plans.licenses.plan.metadata","plans.licenses.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.metadata","plans.planChange.licenseChanges.plan.metadata","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.planChange.plan.metadata","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.planChange.plan.metadata","plans.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.planChange.plan.metadata","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.metadata","plans.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.planChange.plan.metadata","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.previousAttributes.metadata","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.metadata","plans.siblingVersions.variants.planChange.licenseChanges.plan.metadata","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.variants.planChange.plan.metadata","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.previousAttributes.metadata","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.variants.siblingVersions.planChange.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.metadata","plans.variants.planChange.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.metadata","plans.variants.planChange.licenseChanges.plan.metadata","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.planChange.plan.metadata","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.variants.planChange.plan.metadata","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.previousAttributes.metadata","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.metadata","plans.variants.siblingVersions.planChange.licenseChanges.plan.metadata","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.variants.siblingVersions.planChange.plan.metadata","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.previousAttributes.metadata","referralPrograms.previousAttributes","rewards.previousAttributes"],
 });
 const UPDATE_RESPONSE_HINTS = hintsOf({
-	recordPaths: ["features.creditSchema.dimensions","features.creditSchema.dimensions.*.match","features.creditSchema.multipliers","features.creditSchema.multipliers.*.match","features.modelMarkups","features.providerMarkups","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.billingControls.usageAlerts.filter.properties","plans.billingControls.usageLimits.filter.properties","plans.items.featureOverride.creditSchema.dimensions","plans.items.featureOverride.creditSchema.dimensions.*.match","plans.items.featureOverride.creditSchema.multipliers","plans.items.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match"],
+	recordPaths: ["features.creditSchema.dimensions","features.creditSchema.dimensions.*.match","features.creditSchema.multipliers","features.creditSchema.multipliers.*.match","features.modelMarkups","features.providerMarkups","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.addItems.featureOverride.markups.modelMarkups","migrations.operations.customer.customize.addItems.featureOverride.markups.providerMarkups","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.billingControls.usageAlerts.filter.properties","plans.billingControls.usageLimits.filter.properties","plans.items.featureOverride.creditSchema.dimensions","plans.items.featureOverride.creditSchema.dimensions.*.match","plans.items.featureOverride.creditSchema.multipliers","plans.items.featureOverride.creditSchema.multipliers.*.match","plans.items.featureOverride.markups.modelMarkups","plans.items.featureOverride.markups.providerMarkups","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups"],
 	frozenPaths: ["migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.upsertLicenses.metadata","plans.metadata","plans.variantDetails.customize.upsertLicenses.metadata"],
 });
 const GET_RESPONSE_HINTS = hintsOf({
-	recordPaths: ["features.creditSchema.dimensions","features.creditSchema.dimensions.*.match","features.creditSchema.multipliers","features.creditSchema.multipliers.*.match","features.modelMarkups","features.providerMarkups","plans.billingControls.usageAlerts.filter.properties","plans.billingControls.usageLimits.filter.properties","plans.items.featureOverride.creditSchema.dimensions","plans.items.featureOverride.creditSchema.dimensions.*.match","plans.items.featureOverride.creditSchema.multipliers","plans.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.billingControls.usageAlerts.filter.properties","plans.licenses.plan.billingControls.usageLimits.filter.properties","plans.licenses.plan.items.featureOverride.creditSchema.dimensions","plans.licenses.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.items.featureOverride.creditSchema.multipliers","plans.licenses.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenses.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.customize.billingControls.usageAlerts.filter.properties","plans.variants.customize.billingControls.usageLimits.filter.properties","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.plan.billingControls.usageAlerts.filter.properties","plans.variants.plan.billingControls.usageLimits.filter.properties","plans.variants.plan.items.featureOverride.creditSchema.dimensions","plans.variants.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.plan.items.featureOverride.creditSchema.multipliers","plans.variants.plan.items.featureOverride.creditSchema.multipliers.*.match"],
+	recordPaths: ["features.creditSchema.dimensions","features.creditSchema.dimensions.*.match","features.creditSchema.multipliers","features.creditSchema.multipliers.*.match","features.modelMarkups","features.providerMarkups","plans.billingControls.usageAlerts.filter.properties","plans.billingControls.usageLimits.filter.properties","plans.items.featureOverride.creditSchema.dimensions","plans.items.featureOverride.creditSchema.dimensions.*.match","plans.items.featureOverride.creditSchema.multipliers","plans.items.featureOverride.creditSchema.multipliers.*.match","plans.items.featureOverride.markups.modelMarkups","plans.items.featureOverride.markups.providerMarkups","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenses.plan.billingControls.usageAlerts.filter.properties","plans.licenses.plan.billingControls.usageLimits.filter.properties","plans.licenses.plan.items.featureOverride.creditSchema.dimensions","plans.licenses.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.items.featureOverride.creditSchema.multipliers","plans.licenses.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.items.featureOverride.markups.modelMarkups","plans.licenses.plan.items.featureOverride.markups.providerMarkups","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenses.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenses.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.customize.billingControls.usageAlerts.filter.properties","plans.variants.customize.billingControls.usageLimits.filter.properties","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.plan.billingControls.usageAlerts.filter.properties","plans.variants.plan.billingControls.usageLimits.filter.properties","plans.variants.plan.items.featureOverride.creditSchema.dimensions","plans.variants.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.plan.items.featureOverride.creditSchema.multipliers","plans.variants.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.plan.items.featureOverride.markups.modelMarkups","plans.variants.plan.items.featureOverride.markups.providerMarkups"],
 	frozenPaths: ["plans.licenses.metadata","plans.licenses.plan.metadata","plans.licenses.plan.variantDetails.customize.upsertLicenses.metadata","plans.metadata","plans.variantDetails.customize.upsertLicenses.metadata","plans.variants.customize.upsertLicenses.metadata","plans.variants.plan.metadata"],
 });
 const CREATESANDBOX_RESPONSE_HINTS = hintsOf({

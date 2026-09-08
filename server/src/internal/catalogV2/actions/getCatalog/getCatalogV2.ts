@@ -8,6 +8,10 @@ import {
 } from "@autumn/shared";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	loadReferralProgramStates,
+	loadRewardStates,
+} from "@/internal/catalogV2/actions/updateCatalog/setup/loadRewardStates.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -80,5 +84,28 @@ export const getCatalogV2 = async ({
 			}),
 		);
 
-	return { features, plans };
+	const loadedRewards = await loadRewardStates({ ctx });
+	const programs = await loadReferralProgramStates({
+		ctx,
+		idByInternalId: loadedRewards.idByInternalId,
+	});
+
+	return {
+		features,
+		plans,
+		rewards: loadedRewards.rewards.map((reward) =>
+			reward.kind === "coupon"
+				? { coupon: { ...reward.coupon, internal_id: reward.internalId } }
+				: {
+						feature_grant: {
+							...reward.featureGrant,
+							internal_id: reward.internalId,
+						},
+					},
+		),
+		referral_programs: programs.map((state) => ({
+			...state.program,
+			internal_id: state.internalId,
+		})),
+	};
 };

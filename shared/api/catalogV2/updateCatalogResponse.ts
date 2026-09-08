@@ -15,6 +15,8 @@ const CatalogAppliedResultSchema = z.object({
 	}),
 });
 
+export type CatalogAppliedResult = z.infer<typeof CatalogAppliedResultSchema>;
+
 /** Resolved post-update state plus what was actually done per requested entry. */
 export const UpdateCatalogResponseSchema = z.object({
 	plans: z.array(ApiPlanV1Schema),
@@ -22,6 +24,11 @@ export const UpdateCatalogResponseSchema = z.object({
 	results: z.object({
 		plans: z.array(CatalogAppliedResultSchema),
 		features: z.array(CatalogAppliedResultSchema),
+		rewards: z.array(CatalogAppliedResultSchema).optional().default([]),
+		referral_programs: z
+			.array(CatalogAppliedResultSchema)
+			.optional()
+			.default([]),
 	}),
 	migrations: z.array(CatalogMigrationSchema).optional().meta({
 		description:

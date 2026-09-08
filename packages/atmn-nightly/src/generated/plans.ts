@@ -270,6 +270,27 @@ export type Plan = {
 						creditCost: number;
 				  }
 			>;
+			/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+			markups?: {
+				/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+				defaultMarkup?: number;
+				/** Per-provider markup percentages for customers on this plan. */
+				providerMarkups?: Record<
+					string,
+					{
+						markup: number;
+					}
+				> | null;
+				/** Per-model markup overrides for customers on this plan. */
+				modelMarkups?: Record<
+					string,
+					{
+						markup?: number;
+						inputCost?: number;
+						outputCost?: number;
+					}
+				> | null;
+			};
 		};
 		/** @deprecated Per-entity items are deprecated but existing catalogs carry them, so a config must keep round-tripping the field. */
 		entityFeatureId?: string;
@@ -645,6 +666,27 @@ export type Plan = {
 								creditCost: number;
 						  }
 					>;
+					/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+					markups?: {
+						/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+						defaultMarkup?: number;
+						/** Per-provider markup percentages for customers on this plan. */
+						providerMarkups?: Record<
+							string,
+							{
+								markup: number;
+							}
+						> | null;
+						/** Per-model markup overrides for customers on this plan. */
+						modelMarkups?: Record<
+							string,
+							{
+								markup?: number;
+								inputCost?: number;
+								outputCost?: number;
+							}
+						> | null;
+					};
 				};
 				entityFeatureId?: string;
 			}>;
@@ -845,6 +887,27 @@ export type Plan = {
 								creditCost: number;
 						  }
 					>;
+					/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+					markups?: {
+						/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+						defaultMarkup?: number;
+						/** Per-provider markup percentages for customers on this plan. */
+						providerMarkups?: Record<
+							string,
+							{
+								markup: number;
+							}
+						> | null;
+						/** Per-model markup overrides for customers on this plan. */
+						modelMarkups?: Record<
+							string,
+							{
+								markup?: number;
+								inputCost?: number;
+								outputCost?: number;
+							}
+						> | null;
+					};
 				};
 				entityFeatureId?: string;
 			}>;
@@ -1198,6 +1261,27 @@ export type Plan = {
 										creditCost: number;
 								  }
 							>;
+							/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+							markups?: {
+								/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+								defaultMarkup?: number;
+								/** Per-provider markup percentages for customers on this plan. */
+								providerMarkups?: Record<
+									string,
+									{
+										markup: number;
+									}
+								> | null;
+								/** Per-model markup overrides for customers on this plan. */
+								modelMarkups?: Record<
+									string,
+									{
+										markup?: number;
+										inputCost?: number;
+										outputCost?: number;
+									}
+								> | null;
+							};
 						};
 						entityFeatureId?: string;
 					}>;
@@ -1460,6 +1544,27 @@ export type Plan = {
 								creditCost: number;
 						  }
 					>;
+					/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+					markups?: {
+						/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+						defaultMarkup?: number;
+						/** Per-provider markup percentages for customers on this plan. */
+						providerMarkups?: Record<
+							string,
+							{
+								markup: number;
+							}
+						> | null;
+						/** Per-model markup overrides for customers on this plan. */
+						modelMarkups?: Record<
+							string,
+							{
+								markup?: number;
+								inputCost?: number;
+								outputCost?: number;
+							}
+						> | null;
+					};
 				};
 				entityFeatureId?: string;
 			}>;

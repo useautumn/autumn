@@ -2,6 +2,19 @@
  * The one per-concept registration the spec cannot express: what a builder is
  * called, what names a row, and which config key holds a collection's history.
  */
+/**
+ * A collection whose item is a union writes one builder per branch: the entry
+ * is `{ <key>: body }`, so the id and the fields live one level down.
+ */
+export type CollectionBranchMeta = {
+	readonly builder: string;
+	readonly typeName: string;
+	/** Fixture key wrapping this branch's body. */
+	readonly key: string;
+	/** Fixture field naming one entry, branch-rooted. */
+	readonly idField: string;
+};
+
 export type CollectionMeta = {
 	readonly builder: string;
 	readonly typeName: string;
@@ -13,6 +26,8 @@ export type CollectionMeta = {
 	readonly historyKey?: string;
 	/** Whether pull can address entries by `idField` alone. */
 	readonly pull: boolean;
+	/** Set when the item is a union; `builder` then names only the union type. */
+	readonly branches?: readonly CollectionBranchMeta[];
 };
 
 export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
@@ -30,6 +45,31 @@ export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
 		idField: "planId",
 		responseIdField: "id",
 		historyKey: "planVersions",
+		pull: true,
+	},
+	// Free-product and invoice-credit rewards have no branch: the catalog
+	// neither states nor touches them.
+	rewards: {
+		builder: "reward",
+		typeName: "Reward",
+		idField: "id",
+		responseIdField: "id",
+		pull: true,
+		branches: [
+			{ builder: "coupon", typeName: "Coupon", key: "coupon", idField: "id" },
+			{
+				builder: "featureGrant",
+				typeName: "FeatureGrant",
+				key: "featureGrant",
+				idField: "id",
+			},
+		],
+	},
+	referralPrograms: {
+		builder: "referralProgram",
+		typeName: "ReferralProgram",
+		idField: "id",
+		responseIdField: "id",
 		pull: true,
 	},
 };

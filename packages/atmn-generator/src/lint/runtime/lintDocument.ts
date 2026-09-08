@@ -68,9 +68,11 @@ export type LintRule =
 	  }
 	| {
 			/** No two entries of the collection share a value of `field`, paired
-			 * with `alongside` when given (an absent `alongside` reads as `absentMeans`). */
+			 * with `alongside` when given (an absent `alongside` reads as `absentMeans`).
+			 * A list of paths reads the first one the entry states, which is how a
+			 * union item is named. */
 			readonly kind: "unique";
-			readonly field: string;
+			readonly field: string | readonly string[];
 			readonly alongside?: string;
 			readonly absentMeans?: string;
 			readonly because: string;
@@ -91,11 +93,13 @@ export type LintRule =
 	  }
 	| {
 			/** `field` names an entry of top-level collection `in` by `matching`.
-			 * Skipped when that collection is absent: absent means "not mine". */
+			 * An array-valued `field` is checked element-wise; a list of `matching`
+			 * paths matches on whichever the candidate states. Skipped when that
+			 * collection is absent: absent means "not mine". */
 			readonly kind: "exists";
 			readonly field: string;
 			readonly in: string;
-			readonly matching: string;
+			readonly matching: string | readonly string[];
 			readonly because: string;
 	  }
 	| {
@@ -187,6 +191,37 @@ type Walk = {
 
 const isEntry = (value: unknown): value is Entry =>
 	value !== null && typeof value === "object" && !Array.isArray(value);
+
+/** Dotted lookup, so a rule can name a field inside a union branch. */
+const valueAtPath = ({
+	entry,
+	path,
+}: {
+	entry: Entry;
+	path: string;
+}): unknown => {
+	let current: unknown = entry;
+	for (const segment of path.split(".")) {
+		if (!isEntry(current)) return undefined;
+		current = current[segment];
+	}
+	return current;
+};
+
+/** The first of `paths` the entry states — a union item is named by its branch. */
+const firstValueAtPaths = ({
+	entry,
+	paths,
+}: {
+	entry: Entry;
+	paths: string | readonly string[];
+}): unknown => {
+	for (const path of typeof paths === "string" ? [paths] : paths) {
+		const value = valueAtPath({ entry, path });
+		if (value !== undefined) return value;
+	}
+	return undefined;
+};
 
 const show = (value: unknown): string => JSON.stringify(value);
 
@@ -406,17 +441,24 @@ const entryRuleFailures = ({
 			return [`${joinNames(set)} cannot be set together. ${rule.because}`];
 		}
 		case "exists": {
-			const value = entry[rule.field];
+			const value = valueAtPath({ entry, path: rule.field });
 			const target = document[rule.in];
-			if (value === undefined || !Array.isArray(target)) return [];
-			const found = target.some(
-				(candidate) => isEntry(candidate) && candidate[rule.matching] === value,
+			if (value === undefined || value === null || !Array.isArray(target))
+				return [];
+			const names = (wanted: unknown): boolean =>
+				target.some(
+					(candidate) =>
+						isEntry(candidate) &&
+						firstValueAtPaths({ entry: candidate, paths: rule.matching }) ===
+							wanted,
+				);
+			const missing = (Array.isArray(value) ? value : [value]).filter(
+				(wanted) => !names(wanted),
 			);
-			return found
-				? []
-				: [
-						`${rule.field} ${show(value)} is not in ${rule.in}. ${rule.because}`,
-					];
+			return missing.map(
+				(wanted) =>
+					`${rule.field} ${show(wanted)} is not in ${rule.in}. ${rule.because}`,
+			);
 		}
 		case "compare": {
 			const a = entry[rule.field];
@@ -489,8 +531,10 @@ const checkUnique = ({
 	const seen = new Set<string>();
 	for (const [index, entry] of entries.entries()) {
 		if (!isEntry(entry)) continue;
-		const value = entry[rule.field];
+		const value = firstValueAtPaths({ entry, paths: rule.field });
 		if (typeof value !== "string") continue;
+		const fieldName =
+			typeof rule.field === "string" ? rule.field : rule.field.join(" / ");
 		const pair =
 			rule.alongside === undefined
 				? undefined
@@ -500,8 +544,8 @@ const checkUnique = ({
 		if (seen.has(composite)) {
 			const label =
 				rule.alongside === undefined
-					? `${rule.field} ${show(value)}`
-					: `${rule.field} ${show(value)} with ${rule.alongside} ${show(pair)}`;
+					? `${fieldName} ${show(value)}`
+					: `${fieldName} ${show(value)} with ${rule.alongside} ${show(pair)}`;
 			issues.push({
 				path: render([...trail, crumbFor({ node, key, entry, index })]),
 				message: `${label} is used more than once. ${rule.because}`,

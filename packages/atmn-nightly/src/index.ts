@@ -5,5 +5,16 @@
 export { type Feature, feature } from "./generated/features";
 export { type License, license } from "./generated/licenses";
 export { type Plan, plan } from "./generated/plans";
+export {
+	type ReferralProgram,
+	referralProgram,
+} from "./generated/referralPrograms";
+export {
+	type Coupon,
+	coupon,
+	type FeatureGrant,
+	featureGrant,
+	type Reward,
+} from "./generated/rewards";
 export { type Variant, variant } from "./generated/variants";
 export { type AtmnConfig, atmn } from "./generated/wire";
