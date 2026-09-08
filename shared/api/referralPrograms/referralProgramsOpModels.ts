@@ -13,7 +13,8 @@ const referralProgramId = z.string().min(1).meta({
 });
 
 const uniquePlanIds = z.array(z.string().min(1)).nullish().meta({
-	description: "Required when redeem_on is checkout. Plan IDs must be unique.",
+	description:
+		"Required when redeem_on is checkout. Plan IDs must be unique. Omit to leave unchanged; null removes them.",
 });
 
 export const ReferralProgramsListParamsSchema = z.object({}).optional();
@@ -37,7 +38,7 @@ export const GetReferralProgramResponseSchema = ApiReferralProgramV0Schema.meta(
 	},
 );
 
-/** Omitted fields keep their current value; checkout rules are re-checked on the merged program */
+/** Omitted fields keep their current value; null clears one. Checkout rules are re-checked on the merged program */
 export const UpdateReferralProgramParamsSchema = z
 	.object({
 		referral_program_id: referralProgramId,
@@ -46,14 +47,14 @@ export const UpdateReferralProgramParamsSchema = z
 		}),
 		redeem_on: ApiReferralProgramV0Schema.shape.redeem_on.optional(),
 		received_by: ApiReferralProgramV0Schema.shape.received_by.optional(),
-		max_redemptions: z.number().int().positive().optional().meta({
-			description: "A positive redemption limit.",
-		}),
-		plan_ids: z.array(z.string().min(1)).optional().meta({
+		max_redemptions: z.number().int().positive().nullish().meta({
 			description:
-				"Required when redeem_on is checkout. Plan IDs must be unique.",
+				"A positive redemption limit. Omit to leave unchanged; null removes it.",
 		}),
-		exclude_trial: z.boolean().optional(),
+		plan_ids: uniquePlanIds,
+		exclude_trial: z.boolean().nullish().meta({
+			description: "Omit to leave unchanged; null removes it.",
+		}),
 	})
 	.strict()
 	.superRefine((program, ctx) => {

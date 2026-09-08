@@ -1,6 +1,12 @@
 import type { LintRule } from "../runtime/lintDocument";
 import { featureRules } from "./features";
 import { planItemPriceRules, planItemRules, planRules } from "./plans";
+import {
+	couponRules,
+	featureGrantGrantRules,
+	referralProgramRules,
+	rewardRules,
+} from "./rewards";
 
 /**
  * Hand-written rules and names, keyed by fixture path with array indices
@@ -21,4 +27,17 @@ export const LINT_REGISTRY: Record<string, RegistryEntry> = {
 	"plans.items": { label: "item", idField: "featureId", rules: planItemRules },
 	"plans.items.price": { label: "price", rules: planItemPriceRules },
 	"plans.licenses": { label: "license", idField: "licensePlanId" },
+	rewards: { label: "reward", rules: rewardRules },
+	"rewards.coupon": { label: "coupon", idField: "id", rules: couponRules },
+	"rewards.featureGrant": { label: "feature grant", idField: "id" },
+	"rewards.featureGrant.grants": {
+		label: "grant",
+		idField: "featureId",
+		rules: featureGrantGrantRules,
+	},
+	referralPrograms: {
+		label: "referral program",
+		idField: "id",
+		rules: referralProgramRules,
+	},
 };

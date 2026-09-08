@@ -5,6 +5,8 @@ import type { Feature } from "./features";
 import { LINT_RULES } from "./lintRules";
 import { ConfigError, lintDocument } from "./lintRuntime";
 import type { Plan } from "./plans";
+import type { ReferralProgram } from "./referralPrograms";
+import type { Reward } from "./rewards";
 import type { Settings } from "./settings";
 
 /** Operators like `$startsWith` are literal API keys, not snake_case fields. */
@@ -204,6 +206,12 @@ export type AtmnConfig = {
 	plans?: Plan[];
 	/** Past versions of plans, full rows, stamped `active: false`. */
 	planVersions?: Plan[];
+	/** Every rewards entry this catalog should have. `[]` means "mine, and
+	 * empty"; omitted means "not mine". */
+	rewards?: Reward[];
+	/** Every referralPrograms entry this catalog should have. `[]` means "mine, and
+	 * empty"; omitted means "not mine". */
+	referralPrograms?: ReferralProgram[];
 	/** The settings this config manages. Only the fields stated are written;
 	 * an omitted field keeps its value, and an omitted block manages nothing. */
 	settings?: Settings;
@@ -261,6 +269,10 @@ const stated = (config: AtmnConfig): Record<string, unknown> => ({
 				// Absent history is "not mine"; stated history removes the versions it omits.
 				skip_version_deletions: config.planVersions === undefined,
 			}
+		: {}),
+	...(config.rewards !== undefined ? { rewards: config.rewards } : {}),
+	...(config.referralPrograms !== undefined
+		? { referralPrograms: config.referralPrograms }
 		: {}),
 	...(config.settings !== undefined ? { settings: config.settings } : {}),
 });

@@ -169,7 +169,9 @@ export const looksLikeV2Config = ({
 		const bag = defaults as Record<string, unknown>;
 		if ("skip_deletions" in bag) return false;
 		if (
-			["products", "features", "plans"].some((key) => Array.isArray(bag[key]))
+			["products", "features", "plans", "rewards"].some((key) =>
+				Array.isArray(bag[key]),
+			)
 		)
 			return true;
 	}

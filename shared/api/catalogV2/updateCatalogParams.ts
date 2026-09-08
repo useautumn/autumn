@@ -3,6 +3,8 @@ import { CreateFeatureV2ParamsSchema } from "@api/features/crud/createFeaturePar
 import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
 import { z } from "zod/v4";
 import { UpdateCatalogPlanParamsSchema } from "./planUpdate/params/catalogPlanParams.js";
+import { UpdateCatalogReferralProgramParamsSchema } from "./rewardUpdate/params/catalogReferralProgramParams.js";
+import { UpdateCatalogRewardParamsSchema } from "./rewardUpdate/params/catalogRewardParams.js";
 
 // Intersection, not .extend — extend silently drops the create-schema refines.
 export const UpdateCatalogFeatureParamsSchema = z.intersection(
@@ -67,17 +69,17 @@ export const UpdateCatalogParamsSchema = z.object({
 	plans: z.array(UpdateCatalogPlanParamsSchema).optional(),
 	remove_plans: z.array(RemoveCatalogPlanParamsSchema).optional().default([]),
 
-	// rewards: z.array(CreateRewardParamsSchema).optional().meta({
-	// 	description:
-	// 		"Desired rewards. Omit to leave rewards untouched; [] with skip_deletions false deletes them all.",
-	// }),
-	// referral_programs: z
-	// 	.array(CreateReferralProgramParamsSchema)
-	// 	.optional()
-	// 	.meta({
-	// 		description:
-	// 			"Desired referral programs. Same omit-vs-empty semantics as rewards.",
-	// 	}),
+	rewards: z.array(UpdateCatalogRewardParamsSchema).optional().meta({
+		description:
+			"Desired coupons and feature grants. Omit to leave rewards untouched; [] with skip_deletions false deletes every coupon and feature grant. Free-product rewards are never stated and never touched.",
+	}),
+	referral_programs: z
+		.array(UpdateCatalogReferralProgramParamsSchema)
+		.optional()
+		.meta({
+			description:
+				"Desired referral programs. Same omit-vs-empty semantics as rewards.",
+		}),
 
 	skip_deletions: z.boolean().optional().default(true).meta({
 		description:

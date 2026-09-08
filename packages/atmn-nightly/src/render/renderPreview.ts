@@ -91,6 +91,18 @@ type PlanChange = PreviewChange & {
 	state?: unknown;
 };
 
+type RewardChange = PreviewChange & {
+	id?: string;
+	kind?: string;
+	previousAttributes?: Record<string, unknown> | null;
+};
+
+type ReferralProgramChange = PreviewChange & {
+	id?: string;
+	rewardId?: string | null;
+	previousAttributes?: Record<string, unknown> | null;
+};
+
 /** One flag organization.preview_update reports: moved, or left behind. */
 export type SettingChange = {
 	key?: string;
@@ -106,6 +118,8 @@ export type SettingsPreview = {
 export type CatalogPreview = {
 	features?: FeatureChange[];
 	plans?: PlanChange[];
+	rewards?: RewardChange[];
+	referralPrograms?: ReferralProgramChange[];
 	migrations?: PlannedMigration[];
 	/** Absent when the config states no `settings`. */
 	settings?: SettingsPreview;
@@ -732,10 +746,18 @@ export const renderPreview = ({
 }): string => {
 	const features = (preview.features ?? []).filter(rowHasWork);
 	const plans = (preview.plans ?? []).filter(rowHasWork);
+	const rewards = (preview.rewards ?? []).filter(rowHasWork);
+	const referralPrograms = (preview.referralPrograms ?? []).filter(rowHasWork);
 	const migrations = preview.migrations ?? [];
 	const settings = settingChanges(preview.settings);
 
-	if (features.length === 0 && plans.length === 0 && settings.length === 0) {
+	if (
+		features.length === 0 &&
+		plans.length === 0 &&
+		rewards.length === 0 &&
+		referralPrograms.length === 0 &&
+		settings.length === 0
+	) {
 		return chalk.dim("No changes. Your catalog matches your config.");
 	}
 
@@ -778,6 +800,44 @@ export const renderPreview = ({
 		);
 	}
 
+	if (rewards.length > 0) {
+		sections.push(
+			[
+				chalk.bold(`Rewards (${rewards.length})`),
+				...rewards.flatMap((reward) => [
+					line({
+						action: reward.action,
+						id: reward.id ?? "?",
+						label: reward.name ?? reward.kind,
+					}),
+					...renderPreviousAttributes({
+						attributes: reward.previousAttributes,
+						indent: DETAIL_INDENT,
+					}),
+				]),
+			].join("\n"),
+		);
+	}
+
+	if (referralPrograms.length > 0) {
+		sections.push(
+			[
+				chalk.bold(`Referral programs (${referralPrograms.length})`),
+				...referralPrograms.flatMap((program) => [
+					line({
+						action: program.action,
+						id: program.id ?? "?",
+						label: program.rewardId ?? undefined,
+					}),
+					...renderPreviousAttributes({
+						attributes: program.previousAttributes,
+						indent: DETAIL_INDENT,
+					}),
+				]),
+			].join("\n"),
+		);
+	}
+
 	if (migrations.length > 0) {
 		// The server saying customers would need moving. Nothing is drafted by a
 		// preview; the applied block after --yes carries the ids and links.
@@ -795,4 +855,6 @@ export const previewIsEmpty = ({
 }): boolean =>
 	!(preview.features ?? []).some(rowHasWork) &&
 	!(preview.plans ?? []).some(rowHasWork) &&
+	!(preview.rewards ?? []).some(rowHasWork) &&
+	!(preview.referralPrograms ?? []).some(rowHasWork) &&
 	!settingsHaveWork({ settings: preview.settings });

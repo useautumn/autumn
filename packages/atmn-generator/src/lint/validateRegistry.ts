@@ -10,6 +10,12 @@ import type { LintRule } from "./runtime/lintDocument";
  * This turns it into a generate-time error listing every problem at once.
  */
 
+/** A dotted path is validated by its first segment: the branch key. */
+const rootOf = (path: string): string => path.split(".")[0] as string;
+
+const rootsOf = (paths: string | readonly string[]): string[] =>
+	(typeof paths === "string" ? [paths] : [...paths]).map(rootOf);
+
 const fieldsNamedBy = (rule: LintRule): string[] => {
 	switch (rule.kind) {
 		case "requiredWhen":
@@ -21,12 +27,12 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return [...rule.fields];
 		case "unique":
 			return rule.alongside === undefined
-				? [rule.field]
-				: [rule.field, rule.alongside];
+				? rootsOf(rule.field)
+				: [...rootsOf(rule.field), rule.alongside];
 		case "linkedOnce":
 			return [rule.groupBy, rule.namedBy, rule.collection];
 		case "exists":
-			return [rule.field];
+			return rootsOf(rule.field);
 		case "compare":
 			return [rule.field, rule.than];
 		case "valueWhen":
@@ -87,10 +93,12 @@ export const validateRegistry = ({
 					path: rule.in,
 					overlay,
 				});
-				if (!targetFields?.has(rule.matching)) {
-					problems.push(
-						`"${path}": exists rule matches on "${rule.in}.${rule.matching}", which is not a field there.`,
-					);
+				for (const matching of rootsOf(rule.matching)) {
+					if (!targetFields?.has(matching)) {
+						problems.push(
+							`"${path}": exists rule matches on "${rule.in}.${matching}", which is not a field there.`,
+						);
+					}
 				}
 			}
 			if (rule.kind === "linkedOnce") {

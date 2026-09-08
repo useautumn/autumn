@@ -1916,6 +1916,63 @@ export const LINT_RULES: LintRules = {
 	"plans.variants.processors.stripe": {
 		required: ["productId"],
 	},
+	referralPrograms: {
+		label: "referral program",
+		idField: "id",
+		required: ["id", "receivedBy", "redeemOn", "rewardId"],
+		fields: {
+			id: {
+				minLength: 1,
+			},
+			rewardId: {
+				minLength: 1,
+			},
+			redeemOn: {
+				enum: ["customer_creation", "checkout"],
+			},
+			receivedBy: {
+				enum: ["referrer", "all"],
+			},
+			maxRedemptions: {
+				minimum: -9007199254740991,
+				maximum: 9007199254740991,
+				exclusiveMinimum: 0,
+			},
+			internalId: {
+				minLength: 1,
+			},
+		},
+		rules: [
+			{
+				kind: "unique",
+				field: "id",
+				because:
+					"Two referral programs claiming one id race to define the same row.",
+			},
+			{
+				kind: "unique",
+				field: "internalId",
+				because:
+					"A stable id names exactly one row; two fixtures cannot both be it.",
+			},
+			{
+				kind: "exists",
+				field: "rewardId",
+				in: "rewards",
+				matching: ["coupon.id", "featureGrant.id"],
+				because:
+					"A referral program grants a reward this config does not declare.",
+			},
+			{
+				kind: "exists",
+				field: "planIds",
+				in: "plans",
+				matching: "planId",
+				because:
+					"A referral program triggers on checkout of a plan this config does not declare.",
+			},
+		],
+	},
 	removeFeatures: {
 		required: ["featureId"],
 	},
@@ -1925,6 +1982,161 @@ export const LINT_RULES: LintRules = {
 			version: {
 				minimum: 1,
 				maximum: 9007199254740991,
+			},
+		},
+	},
+	rewards: {
+		label: "reward",
+		rules: [
+			{
+				kind: "unique",
+				field: ["coupon.id", "featureGrant.id"],
+				because: "Two rewards claiming one id race to define the same row.",
+			},
+			{
+				kind: "unique",
+				field: ["coupon.internalId", "featureGrant.internalId"],
+				because:
+					"A stable id names exactly one row; two fixtures cannot both be it.",
+			},
+		],
+	},
+	"rewards.coupon": {
+		label: "coupon",
+		idField: "id",
+		required: [
+			"duration",
+			"id",
+			"name",
+			"planIds",
+			"promoCodes",
+			"type",
+			"value",
+		],
+		fields: {
+			id: {
+				minLength: 1,
+			},
+			name: {
+				minLength: 1,
+			},
+			planIds: {
+				minItems: 1,
+			},
+			internalId: {
+				minLength: 1,
+			},
+			type: {
+				enum: ["percentage_discount", "fixed_discount"],
+			},
+			value: {
+				exclusiveMinimum: 0,
+			},
+		},
+		rules: [
+			{
+				kind: "exists",
+				field: "planIds",
+				in: "plans",
+				matching: "planId",
+				because: "A coupon discounts a plan this config does not declare.",
+			},
+		],
+	},
+	"rewards.coupon.duration": {
+		required: ["length", "type"],
+		fields: {
+			type: {
+				enum: ["one_off", "months", "forever"],
+			},
+			length: {
+				minimum: -9007199254740991,
+				maximum: 9007199254740991,
+				exclusiveMinimum: 0,
+			},
+		},
+	},
+	"rewards.coupon.promoCodes": {
+		required: ["code"],
+		fields: {
+			code: {
+				minLength: 1,
+			},
+			globalMaxRedemption: {
+				minimum: -9007199254740991,
+				maximum: 9007199254740991,
+				exclusiveMinimum: 0,
+			},
+		},
+	},
+	"rewards.featureGrant": {
+		label: "feature grant",
+		idField: "id",
+		required: ["grants", "id", "name", "promoCodes"],
+		fields: {
+			id: {
+				minLength: 1,
+			},
+			name: {
+				minLength: 1,
+			},
+			grants: {
+				minItems: 1,
+			},
+			promoCodes: {
+				minItems: 1,
+			},
+			internalId: {
+				minLength: 1,
+			},
+		},
+	},
+	"rewards.featureGrant.grants": {
+		label: "grant",
+		idField: "featureId",
+		required: ["expiry", "featureId", "included"],
+		fields: {
+			featureId: {
+				minLength: 1,
+			},
+			included: {
+				minimum: 0,
+			},
+		},
+		rules: [
+			{
+				kind: "exists",
+				field: "featureId",
+				in: "features",
+				matching: "featureId",
+				because:
+					"A feature grant awards a feature this config does not declare.",
+			},
+		],
+	},
+	"rewards.featureGrant.grants.expiry": {
+		required: ["length", "type"],
+		fields: {
+			type: {
+				enum: ["day", "week", "month", "year"],
+			},
+			length: {
+				minimum: -9007199254740991,
+				maximum: 9007199254740991,
+				exclusiveMinimum: 0,
+			},
+		},
+	},
+	"rewards.featureGrant.promoCodes": {
+		required: ["code", "maxUses"],
+		fields: {
+			code: {
+				minLength: 1,
+			},
+			maxUses: {
+				minimum: -9007199254740991,
+				maximum: 9007199254740991,
+				exclusiveMinimum: 0,
 			},
 		},
 	},

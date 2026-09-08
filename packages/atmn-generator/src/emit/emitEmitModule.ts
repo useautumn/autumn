@@ -1,4 +1,8 @@
-import type { NestedFixtureMeta, SingletonMeta } from "../collections";
+import type {
+	CollectionBranchMeta,
+	NestedFixtureMeta,
+	SingletonMeta,
+} from "../collections";
 import { schemaPaths } from "../fuzz/schemaPaths";
 import { deprecatedFieldsOf, type Overlay } from "../overlay/overlay";
 import {
@@ -8,6 +12,7 @@ import {
 	requestBodySchema,
 } from "../spec/loadSpec";
 import { resolveRef } from "../spec/resolveRef";
+import { branchBodySchema } from "./emitCollection";
 import { singletonFields } from "./emitSingleton";
 import { fixtureKeys } from "./fixtureKeys";
 
@@ -22,6 +27,7 @@ type EmittedCollection = {
 	readonly responseIdField: string;
 	readonly historyKey?: string;
 	readonly pull: boolean;
+	readonly branches?: readonly CollectionBranchMeta[];
 };
 
 /**
@@ -77,6 +83,27 @@ export const emitEmitModule = ({
 		lines.push(
 			`\t\tdeprecated: ${JSON.stringify(deprecatedFieldsOf({ overlay, collection: name }))},`,
 		);
+		if (meta.branches) {
+			const itemSchema = collectionItemSchema({ spec, collection: name });
+			const branches = meta.branches.map((branch) => {
+				const branchPrefix = `${prefix}${branch.key}.`;
+				return {
+					builder: branch.builder,
+					key: branch.key,
+					idField: branch.idField,
+					keys: fixtureKeys({
+						schema: branchBodySchema({ schema: itemSchema, key: branch.key }),
+						overlay,
+						collection: name,
+					}),
+					paths: [...allPaths.keys()]
+						.filter((path) => path.startsWith(branchPrefix))
+						.map((path) => path.slice(branchPrefix.length))
+						.sort(),
+				};
+			});
+			lines.push(`\t\tbranches: ${JSON.stringify(branches)},`);
+		}
 		lines.push("\t},");
 	}
 	lines.push("};");

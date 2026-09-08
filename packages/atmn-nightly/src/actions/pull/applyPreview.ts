@@ -1,7 +1,9 @@
 import {
+	branchSpecs,
 	type CollectionSpec,
 	emitFixture,
 	emitFixtureProperty,
+	resolveBranch,
 } from "../../generated/emitRuntime";
 import { appendToBinding } from "../../surgery/appendToBinding";
 import { appendToCollection } from "../../surgery/appendToCollection";
@@ -84,12 +86,21 @@ export const applyPreview = ({
 	const keyOf = ({ id, slug }: { id: string; slug: string }): string =>
 		versioned ? `${id}@${slug}` : id;
 
+	// A union item is addressed through its branch: the builder, the id field
+	// and the fixture keys are the branch's, not the collection's.
+	const specFor = (row: Record<string, unknown>): CollectionSpec =>
+		resolveBranch({ spec, row }).spec;
+	const bodyOf = (row: Record<string, unknown>): Record<string, unknown> =>
+		resolveBranch({ spec, row }).row;
+	const idOfRow = (row: Record<string, unknown>): unknown =>
+		bodyOf(row)[specFor(row).responseIdField];
+
 	const rowsById = new Map<string, Record<string, unknown>>();
 	const rowsByPlan = new Map<string, Record<string, unknown>[]>();
 	for (const row of catalogRows) {
 		// Archived rows are server history, not something a pull should write.
 		if (row.archived === true) continue;
-		const id = row[spec.responseIdField];
+		const id = idOfRow(row);
 		if (typeof id !== "string") continue;
 		rowsById.set(keyOf({ id, slug: slugOf(row) }), row);
 		rowsByPlan.set(id, [...(rowsByPlan.get(id) ?? []), row]);
@@ -136,22 +147,30 @@ export const applyPreview = ({
 		id: string;
 		entry: PreviewEntry;
 	}): void => {
-		const located = locateFixture({
-			configPath,
-			files,
-			builder: spec.builder,
-			idField: spec.idField,
-			id,
-			internalId: internalIdOf(entry),
-			where: constraintsFor(entry),
-		});
+		let entrySpec = spec;
+		let located: ReturnType<typeof locateFixture> = null;
+		for (const candidate of branchSpecs({ spec })) {
+			located = locateFixture({
+				configPath,
+				files,
+				builder: candidate.builder,
+				idField: candidate.idField,
+				id,
+				internalId: internalIdOf(entry),
+				where: constraintsFor(entry),
+			});
+			if (located !== null) {
+				entrySpec = candidate;
+				break;
+			}
+		}
 		if (located === null) {
 			result.unlocated.push({ id, action: "delete from your config" });
 			return;
 		}
 		const removed = deleteFixtureLiteral({
 			source: located.source,
-			builder: spec.builder,
+			builder: entrySpec.builder,
 			idField: located.idField,
 			id: located.id,
 			where: located.where,
@@ -240,6 +259,7 @@ export const applyPreview = ({
 			return false;
 		}
 		// The surgery indents the first line; the emitter indents the rest.
+		const rowSpec = specFor(row);
 		const text = (elementIndent: string) =>
 			emitFixture({
 				spec,
@@ -264,7 +284,7 @@ export const applyPreview = ({
 			resolved.file,
 			ensureBuilderImport({
 				source: updated,
-				builder: spec.builder,
+				builder: rowSpec.builder,
 				collection,
 			}),
 		);
@@ -278,23 +298,25 @@ export const applyPreview = ({
 		row,
 		indent,
 		located,
+		rowSpec,
 	}: {
 		entry: PreviewEntry;
 		row: Record<string, unknown>;
 		indent: string;
 		located: NonNullable<ReturnType<typeof locateFixture>>;
+		rowSpec: CollectionSpec;
 	}): string | null => {
 		// The fixture may have been found by its stable id; the public id it
 		// states is what a rename has to move.
 		const keys = changedFixtureKeys({
-			spec,
+			spec: rowSpec,
 			entry,
 			includeMappings,
 			fixtureId: fixturePropertyString({
 				call: located.node,
-				property: spec.idField,
+				property: rowSpec.idField,
 			}),
-			rowId: row[spec.responseIdField],
+			rowId: bodyOf(row)[rowSpec.responseIdField],
 		});
 		if (keys === null) return null;
 		let source = located.source;
@@ -311,7 +333,7 @@ export const applyPreview = ({
 			});
 			const next = patchFixtureProperty({
 				source,
-				builder: spec.builder,
+				builder: rowSpec.builder,
 				idField: located.idField,
 				id: located.id,
 				where,
@@ -338,11 +360,12 @@ export const applyPreview = ({
 	}): void => {
 		const row = rowsById.get(keyOf({ id, slug: slugOf(entry) }));
 		if (row === undefined) return;
+		const rowSpec = specFor(row);
 		const located = locateFixture({
 			configPath,
 			files,
-			builder: spec.builder,
-			idField: spec.idField,
+			builder: rowSpec.builder,
+			idField: rowSpec.idField,
 			id,
 			internalId: internalIdOf(entry),
 			where: constraintsFor(entry),
@@ -353,8 +376,8 @@ export const applyPreview = ({
 			const dynamic = locateFixture({
 				configPath,
 				files,
-				builder: spec.builder,
-				idField: spec.idField,
+				builder: rowSpec.builder,
+				idField: rowSpec.idField,
 				id,
 				internalId: internalIdOf(entry),
 				where: constraintsFor(entry),
@@ -381,7 +404,7 @@ export const applyPreview = ({
 			if (moves) {
 				const removed = deleteFixtureLiteral({
 					source: located.source,
-					builder: spec.builder,
+					builder: rowSpec.builder,
 					idField: located.idField,
 					id: located.id,
 					where: located.where,
@@ -428,6 +451,7 @@ export const applyPreview = ({
 			row: emitted,
 			indent,
 			located,
+			rowSpec,
 		});
 		if (patched !== null) {
 			files.set(located.file, patched);
@@ -438,7 +462,7 @@ export const applyPreview = ({
 		const text = emitFixture({ spec, row: emitted, includeMappings, indent });
 		const updated = replaceFixture({
 			source: located.source,
-			builder: spec.builder,
+			builder: rowSpec.builder,
 			idField: located.idField,
 			id: located.id,
 			where: located.where,
@@ -456,7 +480,7 @@ export const applyPreview = ({
 	const appendUnstatedVersions = (): void => {
 		if (!versioned) return;
 		for (const row of rowsById.values()) {
-			const id = row[spec.responseIdField];
+			const id = idOfRow(row);
 			if (typeof id !== "string") continue;
 			const slug = slugOf(row);
 			const stated = entries.some(

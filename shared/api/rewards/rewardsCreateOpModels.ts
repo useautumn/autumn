@@ -33,6 +33,13 @@ const CouponDurationSchema = z
 			"Use a positive integer length for months, and null for one_off or forever.",
 	});
 
+/** Stable id of an existing row, for catalog updates; ignored on create. */
+const internalId = z.string().min(1).optional().meta({
+	description:
+		"Address an existing reward by its stable id. Omit when creating — the server generates one.",
+	internal: true,
+});
+
 const CreateCouponBaseSchema = ApiCouponV0Schema.omit({
 	created_at: true,
 	type: true,
@@ -40,6 +47,7 @@ const CreateCouponBaseSchema = ApiCouponV0Schema.omit({
 })
 	.extend({
 		id: z.string().min(1),
+		internal_id: internalId,
 		name: z.string().min(1),
 		duration: CouponDurationSchema,
 		plan_ids: z
@@ -113,6 +121,7 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 })
 	.extend({
 		id: z.string().min(1),
+		internal_id: internalId,
 		name: z.string().min(1),
 		grants: z
 			.array(
@@ -160,15 +169,16 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 		}
 	});
 
-const CreateRewardCouponRequestSchema = CreateCouponSchema.meta({
+export const CreateRewardCouponRequestSchema = CreateCouponSchema.meta({
 	title: "CreateRewardCouponRequest",
 	description: "Provide exactly one of coupon or feature_grant, not both.",
 });
 
-const CreateRewardFeatureGrantRequestSchema = CreateFeatureGrantSchema.meta({
-	title: "CreateRewardFeatureGrantRequest",
-	description: "Provide exactly one of coupon or feature_grant, not both.",
-});
+export const CreateRewardFeatureGrantRequestSchema =
+	CreateFeatureGrantSchema.meta({
+		title: "CreateRewardFeatureGrantRequest",
+		description: "Provide exactly one of coupon or feature_grant, not both.",
+	});
 
 export const CreateRewardParamsSchema = z
 	.object({

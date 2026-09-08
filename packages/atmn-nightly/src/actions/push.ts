@@ -55,9 +55,13 @@ export type PushOptions = {
 	migrationLinkBase?: string;
 };
 
+type RewardBody = { id?: string; internal_id?: string };
+
 type WireLike = {
 	features?: { feature_id?: string; internal_id?: string }[];
 	plans?: { plan_id?: string; internal_id?: string }[];
+	rewards?: { coupon?: RewardBody; feature_grant?: RewardBody }[];
+	referral_programs?: { id?: string; internal_id?: string }[];
 };
 
 const fixtureCount = (count: number): string =>
@@ -93,8 +97,17 @@ export const possibleRenameHint = ({
 	wire: WireLike;
 }): string | null => {
 	const lanes: {
-		rows: { action?: string; featureId?: string; planId?: string }[];
-		idOf: (row: { featureId?: string; planId?: string }) => string | undefined;
+		rows: {
+			action?: string;
+			featureId?: string;
+			planId?: string;
+			id?: string;
+		}[];
+		idOf: (row: {
+			featureId?: string;
+			planId?: string;
+			id?: string;
+		}) => string | undefined;
 		stated: Set<string>;
 		noun: string;
 	}[] = [
@@ -117,6 +130,29 @@ export const possibleRenameHint = ({
 					.map((row) => row.plan_id ?? ""),
 			),
 			noun: "plan",
+		},
+		{
+			rows: preview.rewards ?? [],
+			idOf: (row) => row.id,
+			stated: new Set(
+				(wire.rewards ?? [])
+					.map((row) => row.coupon ?? row.feature_grant)
+					.filter(
+						(body) => body !== undefined && body.internal_id === undefined,
+					)
+					.map((body) => body?.id ?? ""),
+			),
+			noun: "reward",
+		},
+		{
+			rows: preview.referralPrograms ?? [],
+			idOf: (row) => row.id,
+			stated: new Set(
+				(wire.referral_programs ?? [])
+					.filter((row) => row.internal_id === undefined)
+					.map((row) => row.id ?? ""),
+			),
+			noun: "referral program",
 		},
 	];
 	const notes: string[] = [];

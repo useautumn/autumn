@@ -3,7 +3,10 @@ import { join } from "node:path";
 import { COLLECTIONS, NESTED_FIXTURES, SINGLETONS } from "./collections";
 import { copyRuntime } from "./emit/copyRuntime";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
-import { emitCollectionModule } from "./emit/emitCollection";
+import {
+	emitBranchedCollectionModule,
+	emitCollectionModule,
+} from "./emit/emitCollection";
 import { emitEmitModule } from "./emit/emitEmitModule";
 import { emitLabelsModule } from "./emit/emitLabelsModule";
 import { emitSingletonModule } from "./emit/emitSingleton";
@@ -76,15 +79,24 @@ export const generate = async (): Promise<string[]> => {
 	};
 
 	for (const [name, meta] of Object.entries(COLLECTIONS)) {
+		const schema = collectionItemSchema({ spec, collection: name });
 		write({
 			name: `${name}.ts`,
-			source: emitCollectionModule({
-				name,
-				builder: meta.builder,
-				typeName: meta.typeName,
-				schema: collectionItemSchema({ spec, collection: name }),
-				overlay: OVERLAY,
-			}),
+			source: meta.branches
+				? emitBranchedCollectionModule({
+						name,
+						typeName: meta.typeName,
+						schema,
+						overlay: OVERLAY,
+						branches: meta.branches,
+					})
+				: emitCollectionModule({
+						name,
+						builder: meta.builder,
+						typeName: meta.typeName,
+						schema,
+						overlay: OVERLAY,
+					}),
 		});
 	}
 

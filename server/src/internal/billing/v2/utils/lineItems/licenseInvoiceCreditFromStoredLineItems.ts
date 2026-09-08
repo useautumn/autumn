@@ -34,8 +34,9 @@ export const licenseInvoiceCreditFromStoredLineItems = ({
 	// charge, so each charge row may only be credited once.
 	const consumedChargeRowIds = new Set<string>();
 
-	return catalogCredits.flatMap((catalogCredit) => {
-		const storedCredit = storedInvoiceCreditForPrice({
+	const credits = catalogCredits.map((catalogCredit) => ({
+		catalogCredit,
+		storedCredit: storedInvoiceCreditForPrice({
 			ctx,
 			customerProduct,
 			billingContext,
@@ -44,8 +45,28 @@ export const licenseInvoiceCreditFromStoredLineItems = ({
 				product: licenseProduct,
 			},
 			consumedChargeRowIds,
-		});
+		}),
+	}));
 
-		return storedCredit.resolved ? storedCredit.lineItems : [catalogCredit];
-	});
+	const resolvedCredits = credits.filter(
+		({ storedCredit }) => storedCredit.resolved,
+	);
+	const storedSeats = resolvedCredits.reduce(
+		(total, { storedCredit }) => total + storedCredit.coveredSeats,
+		0,
+	);
+	const paidSeats = resolvedCredits.reduce(
+		(total, { catalogCredit }) => total + (catalogCredit.paidQuantity ?? 0),
+		0,
+	);
+	if (storedSeats < paidSeats) {
+		ctx.logger.warn(
+			`[licenseInvoiceCreditFromStoredLineItems] Stored rows cover ${storedSeats} of ${paidSeats} paid seats for cusProduct=${customerProduct.id}; falling back to catalog credit`,
+		);
+		return catalogCredits;
+	}
+
+	return credits.flatMap(({ catalogCredit, storedCredit }) =>
+		storedCredit.resolved ? storedCredit.lineItems : [catalogCredit],
+	);
 };

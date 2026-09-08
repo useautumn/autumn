@@ -1,4 +1,6 @@
 import type { JsonSchema } from "../casing/schemaKeyCasing";
+import { toCamelCase } from "../casing/schemaKeyCasing";
+import type { CollectionBranchMeta } from "../collections";
 import type { Overlay } from "../overlay/overlay";
 import { emitFixtureType } from "./emitType";
 
@@ -39,3 +41,65 @@ export const emitCollectionModule = ({
 		}),
 		`export const ${builder} = (input: ${typeName}): ${typeName} => input;\n`,
 	].join("\n");
+
+/**
+ * The one branch of a union item, by its fixture key. `anyOf`/`oneOf` members
+ * each state exactly one of the keys, which is what makes them tellable apart.
+ */
+export const branchBodySchema = ({
+	schema,
+	key,
+}: {
+	schema: JsonSchema;
+	key: string;
+}): JsonSchema => {
+	for (const member of [...(schema.anyOf ?? []), ...(schema.oneOf ?? [])]) {
+		for (const [wireKey, body] of Object.entries(member.properties ?? {})) {
+			if (toCamelCase(wireKey) === key) return body;
+		}
+	}
+	throw new Error(`No union branch of the item states \`${key}\`.`);
+};
+
+/**
+ * A union item: one type and one builder per branch, plus the union the
+ * collection's array is typed by. Each builder wraps its body in the branch
+ * key, so the wire shape stays exactly what the spec describes.
+ */
+export const emitBranchedCollectionModule = ({
+	name,
+	typeName,
+	schema,
+	overlay,
+	branches,
+}: {
+	name: string;
+	typeName: string;
+	schema: JsonSchema;
+	overlay: Overlay;
+	branches: readonly CollectionBranchMeta[];
+}): string => {
+	const types = branches.map((branch) =>
+		emitFixtureType({
+			name: branch.typeName,
+			schema: branchBodySchema({ schema, key: branch.key }),
+			collection: name,
+			overlay,
+			path: branch.key,
+		}),
+	);
+	const union = branches
+		.map((branch) => `{ ${branch.key}: ${branch.typeName} }`)
+		.join(" | ");
+	const builders = branches.map(
+		(branch) =>
+			`export const ${branch.builder} = (input: ${branch.typeName}): ${typeName} => ({ ${branch.key}: input });\n`,
+	);
+
+	return [
+		GENERATED_HEADER,
+		...types,
+		`export type ${typeName} = ${union};\n`,
+		...builders,
+	].join("\n");
+};
