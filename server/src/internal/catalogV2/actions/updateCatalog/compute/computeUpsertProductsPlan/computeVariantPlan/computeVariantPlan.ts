@@ -18,10 +18,13 @@ export const computeVariantPlan = ({
 	intent,
 	upsert,
 	projectedProductStatesContext,
+	claimedProductKeys,
 }: {
 	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
+	/** Rows earlier intents already spoke for, folded or still pending. */
+	claimedProductKeys?: Set<string>;
 }): ProductUpsertIntent[] => {
 	const settingsPatch = variantSettingsPlanParams({
 		current: upsert.row.currentFullProduct ?? upsert.row.baseFullProduct,
@@ -49,7 +52,11 @@ export const computeVariantPlan = ({
 	});
 
 	return [
-		...deriveVariantCreates({ upsert, projectedProductStatesContext }),
+		...deriveVariantCreates({
+			upsert,
+			projectedProductStatesContext,
+			claimedProductKeys,
+		}),
 		...mints,
 		...edits,
 	];

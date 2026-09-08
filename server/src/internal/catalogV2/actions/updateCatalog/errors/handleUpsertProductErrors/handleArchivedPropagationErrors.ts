@@ -3,6 +3,8 @@ import { StatusCodes } from "http-status-codes";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
+import { variantRowForDeclaredEntry } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/anchoredVariantRow";
+import { editedBaseInternalIds } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/editedBaseInternalIds";
 
 const latestOrPinned = ({
 	planId,
@@ -17,7 +19,9 @@ const latestOrPinned = ({
 	if (version !== undefined) {
 		return versions.find((product) => product.version === version);
 	}
-	return activeFullProductForPlan({ planId, productStatesContext }) ?? undefined;
+	return (
+		activeFullProductForPlan({ planId, productStatesContext }) ?? undefined
+	);
 };
 
 const rejectArchivedPropagateTarget = ({
@@ -54,12 +58,13 @@ export const handleArchivedPropagationErrors = ({
 		}
 	}
 
+	const anchorInternalIds = editedBaseInternalIds({ upsert });
 	for (const variant of upsert.declaredVariants ?? []) {
 		if (variant.archived === false) continue;
 		if (!variant.customize) continue;
-		const product = latestOrPinned({
-			planId: variant.variant_plan_id,
-			version: variant.version,
+		const product = variantRowForDeclaredEntry({
+			variant,
+			anchorInternalIds,
 			productStatesContext,
 		});
 		if (product?.archived) {

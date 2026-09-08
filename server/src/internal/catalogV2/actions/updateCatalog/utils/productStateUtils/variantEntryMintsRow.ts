@@ -1,7 +1,6 @@
 import type { CatalogVariantParams } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
-import { fullProductForSlug } from "./fullProductForSlug";
-import { maxVersionForPlan } from "./maxVersionForPlan";
+import { variantRowForDeclaredEntry } from "./anchoredVariantRow";
 
 /**
  * How a variants[] entry or a propagate target names one row of a variant plan.
@@ -22,32 +21,25 @@ export const variantPinKey = ({
 };
 
 /**
- * A variants[] entry naming a row of its plan that does not exist yet. The
- * config is the desired state, so this push writes that row rather than 400ing.
- * A numeric `version` only addresses — naming no row is refused, never minted.
+ * A variants[] entry naming a row that does not exist yet (unknown slug, or
+ * unpinned under a base nothing points at) mints it; a numeric pin never does.
  */
 export const variantEntryMintsRow = ({
 	variant,
+	anchorInternalIds,
 	productStatesContext,
 }: {
 	variant: CatalogVariantParams;
+	/** Base rows the entry sits under: the row being written and what it replaces. */
+	anchorInternalIds: Set<string>;
 	productStatesContext: ProductStatesContext;
 }): boolean => {
 	if (variant.base_variant_id === null) return false;
 	if (variant.version !== undefined) return false;
-	if (variant.version_slug === undefined) {
-		return (
-			maxVersionForPlan({
-				planId: variant.variant_plan_id,
-				productStatesContext,
-			}) === 0
-		);
-	}
-
 	return (
-		fullProductForSlug({
-			planId: variant.variant_plan_id,
-			versionSlug: variant.version_slug,
+		variantRowForDeclaredEntry({
+			variant,
+			anchorInternalIds,
 			productStatesContext,
 		}) === null
 	);

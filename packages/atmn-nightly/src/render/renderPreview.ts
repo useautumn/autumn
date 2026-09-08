@@ -86,6 +86,8 @@ type PlanChange = PreviewChange & {
 	version?: number;
 	active?: boolean;
 	planChange?: PlanChangeLite | null;
+	/** `new_version` says the row is minted by this update, not edited. */
+	versioning?: { resolved?: string; newVersion?: number | null } | null;
 	siblingVersions?: PlanChange[];
 	variants?: VariantChange[];
 	state?: unknown;
@@ -201,20 +203,29 @@ const renderPreviousAttributes = ({
 	indent,
 	current = {},
 	skip = [],
+	fresh = false,
 }: {
 	attributes: Record<string, unknown> | null | undefined;
 	indent: string;
 	current?: Record<string, unknown>;
 	/** Keys a dedicated change line already covers. */
 	skip?: string[];
+	/** The row did not exist before: every value is set, none is left. */
+	fresh?: boolean;
 }): string[] =>
 	Object.entries(attributes ?? {})
 		.filter(([key]) => !skip.includes(key))
-		.map(([key, previous]) => {
+		.flatMap(([key, previous]) => {
 			const label = labelFor(key);
+			const now = current[key];
+			if (fresh) {
+				// A default the empty "before" carried is not something the row set.
+				if (now === undefined) return [];
+				const { symbol, paint } = marker("create");
+				return [`${indent}${paint(`${symbol} ${label}: ${formatValue(now)}`)}`];
+			}
 			const added = previous === null || previous === undefined;
 			const { symbol, paint } = marker(added ? "create" : "update");
-			const now = current[key];
 			const text =
 				now !== undefined
 					? added
@@ -223,7 +234,7 @@ const renderPreviousAttributes = ({
 					: added
 						? "added"
 						: `was ${formatValue(previous)}`;
-			return `${indent}${paint(`${symbol} ${label}: ${text}`)}`;
+			return [`${indent}${paint(`${symbol} ${label}: ${text}`)}`];
 		});
 
 const formatMoney = (amount: number): string =>
@@ -316,11 +327,21 @@ const renderItemChanges = ({
 const renderPriceChange = ({
 	priceChange,
 	indent,
+	fresh = false,
 }: {
 	priceChange: PlanChangeLite["priceChange"];
 	indent: string;
+	fresh?: boolean;
 }): string[] => {
 	if (priceChange === undefined) return [];
+	if (fresh) {
+		if (priceChange.current === null || priceChange.current === undefined)
+			return [];
+		const { symbol, paint } = marker("create");
+		return [
+			`${indent}${paint(`${symbol} Price: ${formatPrice(priceChange.current)}`)}`,
+		];
+	}
 	const { symbol, paint } = marker("update");
 	return [
 		`${indent}${paint(`${symbol} Price: ${formatPrice(priceChange.previous)} -> ${formatPrice(priceChange.current)}`)}`,
@@ -335,11 +356,24 @@ const formatTrial = (trial: TrialLite | undefined): string =>
 const renderFreeTrialChange = ({
 	freeTrialChange,
 	indent,
+	fresh = false,
 }: {
 	freeTrialChange: PlanChangeLite["freeTrialChange"];
 	indent: string;
+	fresh?: boolean;
 }): string[] => {
 	if (freeTrialChange === undefined) return [];
+	if (fresh) {
+		if (
+			freeTrialChange.current === null ||
+			freeTrialChange.current === undefined
+		)
+			return [];
+		const { symbol, paint } = marker("create");
+		return [
+			`${indent}${paint(`${symbol} Free trial: ${formatTrial(freeTrialChange.current)}`)}`,
+		];
+	}
 	const { symbol, paint } = marker("update");
 	return [
 		`${indent}${paint(`${symbol} Free trial: ${formatTrial(freeTrialChange.previous)} -> ${formatTrial(freeTrialChange.current)}`)}`,
@@ -388,11 +422,14 @@ const renderPlanChangeDetail = ({
 	current = {},
 	indent,
 	covered = [],
+	fresh = false,
 }: {
 	planChange: PlanChangeLite;
 	current?: Record<string, unknown>;
 	indent: string;
 	covered?: readonly CoveredDetail[];
+	/** A row this update brings into being: it sets values, it changes none. */
+	fresh?: boolean;
 }): string[] => [
 	...renderPreviousAttributes({
 		attributes: planChange.previousAttributes,
@@ -402,13 +439,19 @@ const renderPlanChangeDetail = ({
 		],
 		indent,
 		current,
+		fresh,
 	}),
 	...(covered.includes("price")
 		? []
-		: renderPriceChange({ priceChange: planChange.priceChange, indent })),
+		: renderPriceChange({
+				priceChange: planChange.priceChange,
+				indent,
+				fresh,
+			})),
 	...renderFreeTrialChange({
 		freeTrialChange: planChange.freeTrialChange,
 		indent,
+		fresh,
 	}),
 	...(covered.includes("items")
 		? []
@@ -591,19 +634,32 @@ const currentAttributes = (plan: {
 	...(plan.active === undefined ? {} : { active: plan.active }),
 });
 
+/** A minted version is an `update` of its plan, yet the row itself is new:
+ * the server diffs it against the version it clones, which is not a "before". */
+const isMintedVersion = (plan: PlanChange): boolean =>
+	plan.versioning?.resolved === "new_version" ||
+	(plan.versioning?.newVersion !== null &&
+		plan.versioning?.newVersion !== undefined);
+
+/** A row that did not exist before this update: a create, or a minted version. */
+const isFreshRow = (plan: PlanChange): boolean =>
+	plan.action === "create" || isMintedVersion(plan);
+
 /** The plan's own line — a marker when it changes, context when its variants
  * are the only work — then its diff, then those variants. */
 const renderPlanRow = ({ plan }: { plan: PlanChange }): string[] => {
 	const id = planRowId(plan);
+	const fresh = isFreshRow(plan);
 	return [
 		isChange(plan)
-			? line({ action: plan.action, id, label: plan.name })
+			? line({ action: fresh ? "create" : plan.action, id, label: plan.name })
 			: contextLine({ id, label: plan.name }),
 		...(plan.planChange
 			? renderPlanChangeDetail({
 					planChange: plan.planChange,
 					current: currentAttributes(plan),
 					indent: DETAIL_INDENT,
+					fresh,
 				})
 			: []),
 		...renderVariantLanes({ plan }),

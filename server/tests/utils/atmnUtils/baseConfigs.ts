@@ -144,11 +144,15 @@ export const configBody = ({
 	features,
 	plans,
 	planVersions,
+	rewards,
+	referralPrograms,
 	settings,
 }: {
 	features?: string;
 	plans?: string;
 	planVersions?: string;
+	rewards?: string;
+	referralPrograms?: string;
 	/** The `settings` block's members, as source: `multiCurrency: true`. */
 	settings?: string;
 }): string => {
@@ -157,6 +161,9 @@ export const configBody = ({
 	if (plans !== undefined) lines.push(`\tplans: [${plans}\n\t],`);
 	if (planVersions !== undefined)
 		lines.push(`\tplanVersions: [${planVersions}\n\t],`);
+	if (rewards !== undefined) lines.push(`\trewards: [${rewards}\n\t],`);
+	if (referralPrograms !== undefined)
+		lines.push(`\treferralPrograms: [${referralPrograms}\n\t],`);
 	if (settings !== undefined) lines.push(`\tsettings: { ${settings} },`);
 	return `{\n${lines.join("\n")}\n}`;
 };

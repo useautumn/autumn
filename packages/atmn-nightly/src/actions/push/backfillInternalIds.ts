@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import type { SgNode } from "@ast-grep/napi";
 import { COLLECTIONS, NESTED_FIXTURES } from "../../generated/emit";
 import { branchSpecs, resolveBranch } from "../../generated/emitRuntime";
+import type { FixtureShape } from "../../surgery/findFixture";
 import { insertFirstProperty } from "../../surgery/insertFirstProperty";
 import {
 	fixturePropertyString,
@@ -11,7 +12,11 @@ import {
 } from "../../surgery/patchFixtureProperty";
 import { setFixtureProperty } from "../../surgery/setFixtureProperty";
 import { listSourceFiles } from "../pull/listSourceFiles";
-import { locateFixture } from "../pull/locateFixture";
+import {
+	type FixtureConstraint,
+	type LocatedFixture,
+	locateFixture,
+} from "../pull/locateFixture";
 
 export type IdentityRow = {
 	id?: string;
@@ -229,9 +234,72 @@ export const backfillInternalIds = ({
 		}
 	}
 
-	// A variant written as its own `variant({...})` fixture takes its id too;
-	// an inline object under the plan is left as the plan's own text.
+	// A variant is a `variant({...})` fixture of its own, or an object literal
+	// inline under its base plan's `variants`; either takes its id and slug.
+	// The inline lookup is scoped to the base row the edge came from, so two
+	// versions each holding a slug-less `{ variantPlanId }` get their own ids.
 	const variantSpec = NESTED_FIXTURES.variants;
+	const parentSpec = COLLECTIONS[variantSpec.parent];
+	const variantShapesUnder = (row: IdentityRow): FixtureShape[] => [
+		variantSpec.builder,
+		{
+			parentBuilder: parentSpec?.builder ?? "plan",
+			arrayProperty: variantSpec.path,
+			...(typeof row.id === "string"
+				? {
+						parent: {
+							...(typeof row.internalId === "string"
+								? { internalId: row.internalId }
+								: {}),
+							idField: parentSpec?.idField ?? "planId",
+							id: row.id,
+							where: [
+								{
+									field: "versionSlug",
+									equals: row.versionSlug ?? "v1",
+									absentMeans: "v1",
+								},
+							],
+						},
+					}
+				: {}),
+		},
+	];
+	const locateVariant = ({
+		row,
+		variantPlanId,
+		internalId,
+		where,
+	}: {
+		row: IdentityRow;
+		variantPlanId: string;
+		internalId?: string;
+		where?: FixtureConstraint[];
+	}): LocatedFixture | null => {
+		const [, inlineUnderBase] = variantShapesUnder(row);
+		const located = locateFixture({
+			configPath,
+			files,
+			builder: variantShapesUnder(row),
+			idField: variantSpec.idField,
+			id: variantPlanId,
+			internalId,
+			where,
+			allowDynamic: true,
+		});
+		if (located !== null || inlineUnderBase === undefined) return located;
+		// One base declares a variant once, so under it the slug is redundant:
+		// a slug-less inline entry belongs to whatever row its base links.
+		return locateFixture({
+			configPath,
+			files,
+			builder: [inlineUnderBase],
+			idField: variantSpec.idField,
+			id: variantPlanId,
+			internalId,
+			allowDynamic: true,
+		});
+	};
 	for (const row of rows.plans ?? []) {
 		for (const edge of row.variants ?? []) {
 			const internalId = variantInternalId(edge);
@@ -241,12 +309,10 @@ export const backfillInternalIds = ({
 				typeof internalId !== "string"
 			)
 				continue;
-			const located = locateFixture({
-				configPath,
-				files,
-				builder: variantSpec.builder,
-				idField: variantSpec.idField,
-				id: edge.variantPlanId,
+			const located = locateVariant({
+				row,
+				variantPlanId: edge.variantPlanId,
+				internalId,
 				// Versions of one variant share the id; the slug tells them apart
 				// whenever the catalog states one.
 				...(typeof versionSlug === "string"
@@ -260,7 +326,6 @@ export const backfillInternalIds = ({
 							],
 						}
 					: {}),
-				allowDynamic: true,
 			});
 			if (located === null) continue;
 			const stated = statedProperty({
@@ -268,69 +333,56 @@ export const backfillInternalIds = ({
 				property: "internalId",
 			});
 			if (stated.kind === "dynamic") continue;
-			if (stated.kind === "literal" && stated.value === internalId) continue;
-			const updated =
-				stated.kind === "absent"
-					? insertFirstProperty({
-							source: located.source,
-							builder: variantSpec.builder,
-							idField: located.idField,
-							id: located.id,
-							where: located.where,
-							property: `internalId: ${JSON.stringify(internalId)}`,
-						})
-					: setFixtureProperty({
-							source: located.source,
-							builder: variantSpec.builder,
-							idField: located.idField,
-							id: located.id,
-							where: located.where,
-							property: "internalId",
-							value: internalId,
-						});
-			if (updated === null) continue;
-			files.set(located.file, updated);
-			backfilled.push(edge.variantPlanId);
-		}
-	}
-	for (const row of rows.plans ?? []) {
-		for (const edge of row.variants ?? []) {
-			const internalId = variantInternalId(edge);
-			const versionSlug = variantVersionSlug(edge);
-			if (
-				typeof edge.variantPlanId !== "string" ||
-				typeof internalId !== "string" ||
-				typeof versionSlug !== "string"
-			)
-				continue;
-			const located = locateFixture({
-				configPath,
-				files,
-				builder: variantSpec.builder,
-				idField: variantSpec.idField,
-				id: edge.variantPlanId,
+			if (stated.kind !== "literal" || stated.value !== internalId) {
+				const updated =
+					stated.kind === "absent"
+						? insertFirstProperty({
+								source: located.source,
+								builder: located.builder,
+								idField: located.idField,
+								id: located.id,
+								where: located.where,
+								property: `internalId: ${JSON.stringify(internalId)}`,
+							})
+						: setFixtureProperty({
+								source: located.source,
+								builder: located.builder,
+								idField: located.idField,
+								id: located.id,
+								where: located.where,
+								property: "internalId",
+								value: internalId,
+							});
+				if (updated === null) continue;
+				files.set(located.file, updated);
+				backfilled.push(edge.variantPlanId);
+			}
+			if (typeof versionSlug !== "string") continue;
+			// The id is on the literal now, so the slug lookup addresses it by that.
+			const identified = locateVariant({
+				row,
+				variantPlanId: edge.variantPlanId,
 				internalId,
-				allowDynamic: true,
 			});
-			if (located === null) continue;
+			if (identified === null) continue;
 			if (
 				fixtureStatesProperty({
-					call: located.node,
+					call: identified.node,
 					property: "versionSlug",
 				})
 			)
 				continue;
-			const updated = patchFixtureProperty({
-				source: located.source,
-				builder: variantSpec.builder,
-				idField: located.idField,
-				id: located.id,
-				where: located.where,
+			const withSlug = patchFixtureProperty({
+				source: identified.source,
+				builder: identified.builder,
+				idField: identified.idField,
+				id: identified.id,
+				where: identified.where,
 				property: "versionSlug",
 				text: JSON.stringify(versionSlug),
 			});
-			if (updated === null) continue;
-			files.set(located.file, updated);
+			if (withSlug === null) continue;
+			files.set(identified.file, withSlug);
 			slugged.push(edge.variantPlanId);
 		}
 	}

@@ -84203,14 +84203,12 @@ paths:
                                   enum:
                                     - percentage_discount
                                     - fixed_discount
-                                    - invoice_credits
                                   type: string
-                                  description: "The type of discount: percentage_discount, fixed_discount, or
-                                    invoice_credits."
+                                  description: "The type of discount: percentage or fixed."
                                 value:
                                   type: number
-                                  description: The discount value. A percentage for percentage_discount, or an
-                                    amount for fixed_discount / invoice_credits.
+                                  description: "The discount value: a percentage for percentage_discount, or an
+                                    amount for fixed_discount."
                                 duration:
                                   type: object
                                   properties:

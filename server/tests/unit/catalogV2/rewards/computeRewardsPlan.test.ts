@@ -72,6 +72,7 @@ const context = (
 	rewards: [],
 	unstatableIds: new Set(),
 	programs: [],
+	hiddenProgramIds: new Set(),
 	...overrides,
 });
 

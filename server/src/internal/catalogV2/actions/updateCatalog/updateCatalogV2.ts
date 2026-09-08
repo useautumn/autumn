@@ -23,6 +23,26 @@ export type UpdateCatalogActionResult = {
 	catalogResult?: CatalogResult;
 };
 
+/** Rewards a referral program that outlives this push still points at. */
+const linkedInternalRewardIds = ({
+	catalogContext,
+	updateCatalogPlan,
+}: {
+	catalogContext: UpdateCatalogContext;
+	updateCatalogPlan: UpdateCatalogPlan;
+}): Set<string> => {
+	const removedProgramIds = new Set(
+		updateCatalogPlan.removeReferralPrograms.map(
+			(remove) => remove.referralProgramId,
+		),
+	);
+	return new Set(
+		catalogContext.rewardStatesContext.programs
+			.filter((state) => !removedProgramIds.has(state.program.id))
+			.map((state) => state.internalRewardId),
+	);
+};
+
 export async function updateCatalogV2({
 	ctx,
 	params,
@@ -85,6 +105,10 @@ export async function updateCatalogV2({
 		ctx,
 		updateCatalogPlan,
 		phases,
+		linkedInternalRewardIds: linkedInternalRewardIds({
+			catalogContext,
+			updateCatalogPlan,
+		}),
 	});
 
 	addToExtraLogs({

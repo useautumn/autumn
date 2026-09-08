@@ -2,6 +2,23 @@
  * The one per-concept registration the spec cannot express: what a builder is
  * called, what names a row, and which config key holds a collection's history.
  */
+export type CollectionMeta = {
+	readonly builder: string;
+	readonly typeName: string;
+	/** Fixture field naming one entry. */
+	readonly idField: string;
+	/** The same id as catalogV2.get names it. */
+	readonly responseIdField: string;
+	/** Config key holding past versions; rows there are stamped `active: false`. */
+	readonly historyKey?: string;
+	/** Printed when an id has rows in `historyKey` and none in the collection. */
+	readonly historyOnlyMessage?: string;
+	/** Whether pull can address entries by `idField` alone. */
+	readonly pull: boolean;
+	/** Set when the item is a union; `builder` then names only the union type. */
+	readonly branches?: readonly CollectionBranchMeta[];
+};
+
 /**
  * A collection whose item is a union writes one builder per branch: the entry
  * is `{ <key>: body }`, so the id and the fields live one level down.
@@ -13,21 +30,6 @@ export type CollectionBranchMeta = {
 	readonly key: string;
 	/** Fixture field naming one entry, branch-rooted. */
 	readonly idField: string;
-};
-
-export type CollectionMeta = {
-	readonly builder: string;
-	readonly typeName: string;
-	/** Fixture field naming one entry. */
-	readonly idField: string;
-	/** The same id as catalogV2.get names it. */
-	readonly responseIdField: string;
-	/** Config key holding past versions; rows there are stamped `active: false`. */
-	readonly historyKey?: string;
-	/** Whether pull can address entries by `idField` alone. */
-	readonly pull: boolean;
-	/** Set when the item is a union; `builder` then names only the union type. */
-	readonly branches?: readonly CollectionBranchMeta[];
 };
 
 export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
@@ -45,6 +47,8 @@ export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
 		idField: "planId",
 		responseIdField: "id",
 		historyKey: "planVersions",
+		historyOnlyMessage:
+			"At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version.",
 		pull: true,
 	},
 	// Free-product and invoice-credit rewards have no branch: the catalog

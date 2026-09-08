@@ -10,11 +10,8 @@ import type { LintRule } from "./runtime/lintDocument";
  * This turns it into a generate-time error listing every problem at once.
  */
 
-/** A dotted path is validated by its first segment: the branch key. */
-const rootOf = (path: string): string => path.split(".")[0] as string;
-
-const rootsOf = (paths: string | readonly string[]): string[] =>
-	(typeof paths === "string" ? [paths] : [...paths]).map(rootOf);
+const listOf = (paths: string | readonly string[]): string[] =>
+	typeof paths === "string" ? [paths] : [...paths];
 
 const fieldsNamedBy = (rule: LintRule): string[] => {
 	switch (rule.kind) {
@@ -27,12 +24,18 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return [...rule.fields];
 		case "unique":
 			return rule.alongside === undefined
-				? rootsOf(rule.field)
-				: [...rootsOf(rule.field), rule.alongside];
+				? listOf(rule.field)
+				: [...listOf(rule.field), rule.alongside];
 		case "linkedOnce":
 			return [rule.groupBy, rule.namedBy, rule.collection];
+		case "versionSlugs":
+			return [
+				rule.groupBy,
+				rule.slug,
+				...(rule.collection === undefined ? [] : [rule.collection]),
+			];
 		case "exists":
-			return rootsOf(rule.field);
+			return listOf(rule.field);
 		case "compare":
 			return [rule.field, rule.than];
 		case "valueWhen":
@@ -71,13 +74,30 @@ export const validateRegistry = ({
 		const unknownField = (field: string, where: string) =>
 			`"${path}": ${where} names "${field}", which is not a field there. Fields: ${[...fields].sort().join(", ")}.`;
 
+		/** A dotted field names a node under `path` — a union branch, say — so
+		 * the leaf is checked against the node it actually lives on. */
+		const namesField = (field: string): boolean => {
+			const segments = field.split(".");
+			const leaf = segments.pop() as string;
+			if (segments.length === 0) return fields.has(leaf);
+			const owner = fieldsAtPath({
+				schema,
+				root,
+				// Only the registry key can be empty; an empty rule segment is a
+				// typo, and joining it keeps `fieldsAtPath` rejecting the path.
+				path: (path === "" ? segments : [path, ...segments]).join("."),
+				overlay,
+			});
+			return owner?.has(leaf) ?? false;
+		};
+
 		if (entry.idField && !fields.has(entry.idField)) {
 			problems.push(unknownField(entry.idField, "idField"));
 		}
 
 		for (const rule of entry.rules ?? []) {
 			for (const field of fieldsNamedBy(rule)) {
-				if (!fields.has(field))
+				if (!namesField(field))
 					problems.push(unknownField(field, describeRule(rule)));
 			}
 			if (rule.kind === "exists") {
@@ -93,8 +113,19 @@ export const validateRegistry = ({
 					path: rule.in,
 					overlay,
 				});
-				for (const matching of rootsOf(rule.matching)) {
-					if (!targetFields?.has(matching)) {
+				for (const matching of listOf(rule.matching)) {
+					const segments = matching.split(".");
+					const leaf = segments.pop() as string;
+					const owner =
+						segments.length === 0
+							? targetFields
+							: fieldsAtPath({
+									schema,
+									root,
+									path: [rule.in, ...segments].join("."),
+									overlay,
+								});
+					if (!owner?.has(leaf)) {
 						problems.push(
 							`"${path}": exists rule matches on "${rule.in}.${matching}", which is not a field there.`,
 						);
@@ -119,6 +150,24 @@ export const validateRegistry = ({
 					if (!linkFields.has(field))
 						problems.push(
 							`"${path}": linkedOnce rule names "${linkPath}.${field}", which is not a field there.`,
+						);
+				}
+			}
+			if (rule.kind === "versionSlugs" && rule.collection !== undefined) {
+				const linkPath = `${path}.${rule.collection}`;
+				const linkFields = fieldsAtPath({
+					schema,
+					root,
+					path: linkPath,
+					overlay,
+				});
+				for (const field of [
+					rule.identity ?? "",
+					...(rule.pins ?? [rule.slug]),
+				]) {
+					if (!linkFields?.has(field))
+						problems.push(
+							`"${path}": versionSlugs rule names "${linkPath}.${field}", which is not a field there.`,
 						);
 				}
 			}

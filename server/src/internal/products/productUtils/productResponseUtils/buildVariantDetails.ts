@@ -1,5 +1,6 @@
 import {
 	type ApiPlanV1,
+	type DiffablePlanV1,
 	diffPlanV1,
 	type Feature,
 	type FullProduct,
@@ -28,9 +29,9 @@ const fetchBaseFullProduct = async ({
 };
 
 /**
- * A variant plan's up-link to its base: base_plan_id + the customize diff.
- * Base plan sources, in precedence order: pre-rendered basePlan, hydrated
- * baseFullProduct, DB fetch (when resolveBaseFullProduct).
+ * A variant plan's up-link to its base: base_plan_id + the customize diff,
+ * license links included. Base plan sources, in precedence order:
+ * pre-rendered basePlan, hydrated baseFullProduct, DB fetch (when resolveBaseFullProduct).
  */
 export const buildVariantDetails = async ({
 	ctx,
@@ -45,11 +46,11 @@ export const buildVariantDetails = async ({
 }: {
 	ctx?: AutumnContext;
 	product: FullProduct;
-	plan: ApiPlanV1;
+	plan: DiffablePlanV1;
 	features: Feature[];
 	expand?: string[];
 	currency?: string;
-	basePlan?: ApiPlanV1;
+	basePlan?: DiffablePlanV1;
 	baseFullProduct?: FullProduct;
 	resolveBaseFullProduct: boolean;
 }): Promise<ApiPlanV1["variant_details"]> => {
@@ -71,7 +72,12 @@ export const buildVariantDetails = async ({
 			: undefined);
 	if (!resolvedBasePlan) return undefined;
 
-	const customize = diffPlanV1({ from: resolvedBasePlan, to: plan });
+	const customize = diffPlanV1({
+		from: resolvedBasePlan,
+		to: plan,
+		includeAdds: true,
+		includeRemoves: true,
+	});
 	const hasCustomize = Object.keys(customize).length > 0;
 
 	return {

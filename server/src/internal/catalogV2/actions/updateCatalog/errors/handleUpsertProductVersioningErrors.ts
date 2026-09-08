@@ -201,12 +201,27 @@ export const handleUpsertProductVersioningErrors = ({
 	const seenSlugs = new Set<string>();
 	const unpinnedPlanIds = new Set<string>();
 	const mintedVersionsByPlanId = new Map<string, number>();
-	const mintedPins = mintedVariantPins({
-		variants: (params.plans ?? []).flatMap(
-			(planParams) => planParams.variants ?? [],
-		),
-		productStatesContext,
-	});
+	// Each entry mints relative to the base row it sits under.
+	const mintedPins = new Set(
+		(params.plans ?? []).flatMap((planParams) => {
+			const base = fullProductForPlanParams({
+				planParams,
+				productStatesContext,
+			});
+			return [
+				...mintedVariantPins({
+					variants: planParams.variants ?? [],
+					anchorInternalIds: new Set(base ? [base.internal_id] : []),
+					baseVersionSlug:
+						planParams.new_version_slug ??
+						planParams.version_slug ??
+						base?.version_slug ??
+						undefined,
+					productStatesContext,
+				}),
+			];
+		}),
+	);
 
 	for (const planParams of params.plans ?? []) {
 		if (planParams.versioning === "new_version") {

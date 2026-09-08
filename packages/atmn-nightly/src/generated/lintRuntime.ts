@@ -95,6 +95,20 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
+			/** Entries sharing `groupBy` are versions of one thing; once there is
+			 * more than one, every one of them must state `slug`. With
+			 * `collection`, the same holds for the nested rows named by `identity`
+			 * across every entry's `collection`, where any of `pins` counts. */
+			readonly kind: "versionSlugs";
+			readonly groupBy: string;
+			readonly slug: string;
+			readonly label: string;
+			readonly collection?: string;
+			readonly identity?: string;
+			readonly pins?: readonly string[];
+			readonly because: string;
+	  }
+	| {
 			/** `field` names an entry of top-level collection `in` by `matching`.
 			 * An array-valued `field` is checked element-wise; a list of `matching`
 			 * paths matches on whichever the candidate states. Skipped when that
@@ -510,6 +524,7 @@ const entryRuleFailures = ({
 		}
 		case "unique":
 		case "linkedOnce":
+		case "versionSlugs":
 			return [];
 	}
 };
@@ -630,6 +645,93 @@ const checkLinkedOnce = ({
 	}
 };
 
+/** Once a thing has versions, a slug-less one no longer reads as "the v1". */
+const checkVersionSlugs = ({
+	entries,
+	rule,
+	node,
+	key,
+	trail,
+	issues,
+}: CollectionCheck<"versionSlugs">): void => {
+	type Member = { entry: Entry; index: number; slugged: boolean };
+	const statesSlug = (entry: Entry): boolean =>
+		typeof entry[rule.slug] === "string";
+	const report = ({
+		members,
+		subject,
+	}: {
+		members: Member[];
+		subject: string;
+	}): void => {
+		const slugged = members.filter((member) => member.slugged).length;
+		if (members.length <= 1 || slugged === members.length) return;
+		const first = members.find((member) => !member.slugged);
+		if (first === undefined) return;
+		issues.push({
+			path: render([
+				...trail,
+				crumbFor({ node, key, entry: first.entry, index: first.index }),
+			]),
+			message: `${subject} has ${members.length} versions but only ${slugged} states ${rule.slug}. ${rule.because}`,
+		});
+	};
+
+	const rowsByGroup = new Map<string, Member[]>();
+	for (const [index, entry] of entries.entries()) {
+		if (!isEntry(entry)) continue;
+		const group = entry[rule.groupBy];
+		if (typeof group !== "string") continue;
+		rowsByGroup.set(group, [
+			...(rowsByGroup.get(group) ?? []),
+			{ entry, index, slugged: statesSlug(entry) },
+		]);
+	}
+	for (const [group, members] of rowsByGroup) {
+		report({ members, subject: `${rule.label} ${show(group)}` });
+	}
+
+	if (rule.collection === undefined || rule.identity === undefined) return;
+	// A nested row is reported on the base entry that declares it without a
+	// slug, so the finding points at a fixture the user can open.
+	const linksByIdentity = new Map<
+		string,
+		{ base: string; members: Member[] }
+	>();
+	for (const [index, entry] of entries.entries()) {
+		if (!isEntry(entry)) continue;
+		const base = entry[rule.groupBy];
+		const links = entry[rule.collection];
+		if (typeof base !== "string" || !Array.isArray(links)) continue;
+		for (const link of links) {
+			if (!isEntry(link)) continue;
+			const id = link[rule.identity];
+			if (typeof id !== "string") continue;
+			const current = linksByIdentity.get(id) ?? { base, members: [] };
+			current.members.push({
+				entry,
+				index,
+				slugged:
+					pinOf({ entry: link, pins: rule.pins ?? [rule.slug] }) !== undefined,
+			});
+			linksByIdentity.set(id, current);
+		}
+	}
+	for (const [id, { base, members }] of linksByIdentity) {
+		const slugged = members.filter((member) => member.slugged).length;
+		if (members.length <= 1 || slugged === members.length) continue;
+		const first = members.find((member) => !member.slugged);
+		if (first === undefined) continue;
+		issues.push({
+			path: render([
+				...trail,
+				crumbFor({ node, key, entry: first.entry, index: first.index }),
+			]),
+			message: `Variant ${show(id)} is declared under ${members.length} versions of ${show(base)} but only ${slugged} states ${rule.slug}. ${rule.because}`,
+		});
+	}
+};
+
 /** Rules about the collection as a whole, reported on the offending entry. */
 const checkCollection = ({
 	entries,
@@ -649,6 +751,8 @@ const checkCollection = ({
 			checkUnique({ entries, rule, node, key, trail, issues });
 		if (rule.kind === "linkedOnce")
 			checkLinkedOnce({ entries, rule, node, key, trail, issues });
+		if (rule.kind === "versionSlugs")
+			checkVersionSlugs({ entries, rule, node, key, trail, issues });
 	}
 };
 

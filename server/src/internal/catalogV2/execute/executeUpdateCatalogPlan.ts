@@ -212,10 +212,14 @@ export const executeUpdateCatalogPlan = async ({
 	ctx,
 	updateCatalogPlan,
 	phases,
+	linkedInternalRewardIds,
 }: {
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 	phases: CatalogPhases;
+	/** Rewards a program that survives this push still links — their deletes
+	 * wait until after the repoint. */
+	linkedInternalRewardIds: Set<string>;
 }): Promise<CatalogResult> => {
 	await timeCatalogPhase({
 		ctx,
@@ -287,6 +291,7 @@ export const executeUpdateCatalogPlan = async ({
 					features: updateCatalogPlan.projected.features,
 				}),
 				updateCatalogPlan,
+				linkedInternalRewardIds,
 			}),
 	});
 	await timeCatalogPhase({
