@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { SgNode } from "@ast-grep/napi";
 import { COLLECTIONS, NESTED_FIXTURES } from "../../generated/emit";
+import { branchSpecs, resolveBranch } from "../../generated/emitRuntime";
 import { insertFirstProperty } from "../../surgery/insertFirstProperty";
 import {
 	fixturePropertyString,
@@ -61,7 +62,20 @@ export const identityRowsFromCatalog = ({
 	Object.fromEntries(
 		Object.keys(COLLECTIONS).map((collection) => {
 			const rows = catalog[collection];
-			return [collection, Array.isArray(rows) ? (rows as IdentityRow[]) : []];
+			if (!Array.isArray(rows)) return [collection, []];
+			// A union row carries its identity inside its branch.
+			const spec = COLLECTIONS[collection];
+			return [
+				collection,
+				rows.map((row) =>
+					spec === undefined
+						? row
+						: resolveBranch({
+								spec,
+								row: row as Record<string, unknown>,
+							}).row,
+				) as IdentityRow[],
+			];
 		}),
 	);
 
@@ -111,23 +125,32 @@ export const backfillInternalIds = ({
 		for (const row of collectionRows) {
 			if (typeof row.id !== "string" || typeof row.internalId !== "string")
 				continue;
-			const located = locateFixture({
-				configPath,
-				files,
-				builder: spec.builder,
-				idField: spec.idField,
-				id: row.id,
-				where: spec.historyKey
-					? [
-							{
-								field: "versionSlug",
-								equals: row.versionSlug ?? "v1",
-								absentMeans: "v1",
-							},
-						]
-					: undefined,
-				allowDynamic: true,
-			});
+			// A union row could be written with any of the branch builders.
+			let rowSpec = spec;
+			let located: ReturnType<typeof locateFixture> = null;
+			for (const candidate of branchSpecs({ spec })) {
+				located = locateFixture({
+					configPath,
+					files,
+					builder: candidate.builder,
+					idField: candidate.idField,
+					id: row.id,
+					where: candidate.historyKey
+						? [
+								{
+									field: "versionSlug",
+									equals: row.versionSlug ?? "v1",
+									absentMeans: "v1",
+								},
+							]
+						: undefined,
+					allowDynamic: true,
+				});
+				if (located !== null) {
+					rowSpec = candidate;
+					break;
+				}
+			}
 			// No literal to write into: the row still matches by public id next push.
 			if (located === null) continue;
 			const stated = statedProperty({
@@ -144,7 +167,7 @@ export const backfillInternalIds = ({
 				stated.kind === "absent"
 					? insertFirstProperty({
 							source: located.source,
-							builder: spec.builder,
+							builder: rowSpec.builder,
 							idField: located.idField,
 							id: located.id,
 							where: located.where,
@@ -152,7 +175,7 @@ export const backfillInternalIds = ({
 						})
 					: setFixtureProperty({
 							source: located.source,
-							builder: spec.builder,
+							builder: rowSpec.builder,
 							idField: located.idField,
 							id: located.id,
 							where: located.where,
