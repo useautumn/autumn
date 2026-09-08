@@ -24,13 +24,18 @@ export const setupRewardStatesContext = async ({
 		return emptyRewardStatesContext();
 
 	const loaded = await loadRewardStates({ ctx });
-	// Loaded whenever a reward could be removed, not only when the payload
-	// states programs: a link the payload never mentions still blocks a delete.
-	const programs = await loadReferralProgramStates({
-		ctx,
-		idByInternalId: loaded.idByInternalId,
-		statableInternalIds: loaded.statableInternalIds,
-	});
+	// Loaded when the payload states programs, and whenever a reward could be
+	// removed: a link the payload never mentions still blocks a delete. A
+	// partial reward update can remove nothing, so it pays for no scan.
+	const needsPrograms =
+		params.referral_programs !== undefined || params.skip_deletions === false;
+	const programs = needsPrograms
+		? await loadReferralProgramStates({
+				ctx,
+				idByInternalId: loaded.idByInternalId,
+				statableInternalIds: loaded.statableInternalIds,
+			})
+		: [];
 
 	return {
 		rewards: loaded.rewards,
