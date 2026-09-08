@@ -5,8 +5,8 @@ import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
 } from "@api/billing/common/customizePlan/customizePlanV1.js";
-import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import type { ApiPlanLicenseV1 } from "@api/products/apiPlanLicenseV1.js";
+import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
 import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter.js";
@@ -133,6 +133,9 @@ export const toCreatePlanItemParams = (
 			on_decrease: item.proration.on_decrease,
 		};
 	}
+	// Carries the item's credit schema and dimension rates; dropping it turns a
+	// remove+add that means to change one field into one that deletes pricing.
+	if (item.feature_override) out.feature_override = item.feature_override;
 	return out;
 };
 
@@ -264,8 +267,7 @@ export const customizePlanV1DiffsEqual = ({
 		arraysEqual({
 			left: a.upsert_licenses,
 			right: b.upsert_licenses,
-			equals: (left, right) =>
-				customizePlanLicensesAreSame({ left, right }),
+			equals: (left, right) => customizePlanLicensesAreSame({ left, right }),
 		}) &&
 		arraysEqual({
 			left: a.remove_licenses,

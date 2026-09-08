@@ -57,6 +57,21 @@ export const attachGenerationSchema = AttachParamsV1Schema.pick({
 	})
 	.strict();
 
+/** The generatable subset of the resolve-stage UPDATE_FIELDS — the omitted
+ * ones (status, processor_subscription_id, recalculate_balances) are not in
+ * this schema, so an update carrying only those cannot be generated. */
+const GENERATABLE_UPDATE_FIELDS = [
+	"billing_cycle_anchor",
+	"cancel_action",
+	"customize",
+	"discounts",
+	"feature_quantities",
+	"license_quantities",
+	"no_billing_changes",
+	"refund_last_payment",
+	"version",
+] as const;
+
 export const updateSubscriptionGenerationSchema =
 	ExtUpdateSubscriptionV1ParamsSchema.omit({
 		customer_data: true,
@@ -77,7 +92,17 @@ export const updateSubscriptionGenerationSchema =
 					"Customize the current plan: base price override, item replacement or patches, free trial, or license links.",
 			}),
 		})
-		.strict();
+		.strict()
+		// Mirrors the resolve-stage refine so an empty update fails generation,
+		// where the repair retry can still recover it, not the caller's request.
+		.refine(
+			(params) =>
+				GENERATABLE_UPDATE_FIELDS.some((key) => params[key] !== undefined),
+			{
+				message:
+					"At least one update parameter must be provided (feature_quantities, license_quantities, version, customize, cancel_action, billing_cycle_anchor, refund_last_payment, no_billing_changes or discounts)",
+			},
+		);
 
 export const createScheduleGenerationSchema = z
 	.strictObject({
