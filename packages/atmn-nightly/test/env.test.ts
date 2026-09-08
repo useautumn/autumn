@@ -6,34 +6,15 @@
  */
 
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import type { Command } from "commander";
 import { runEnv } from "../src/actions/env";
 import type { OrgInfo } from "../src/actions/env/types/orgInfo";
-import { buildProgram } from "../src/cli";
-import {
-	resolveTarget,
-	type Target,
-	type TargetFlags,
-} from "../src/env/resolveTarget";
+import { resolveTarget } from "../src/env/resolveTarget";
 import { renderEnv } from "../src/render/renderEnv";
+import { isolateTargetEnv, targetFor } from "./helpers/targetFor";
 
-const CLEARED = ["AUTUMN_BASE_URL", "AUTUMN_SANDBOX_ID"] as const;
-const saved = new Map<string, string | undefined>();
-
-beforeEach(() => {
-	for (const key of CLEARED) {
-		saved.set(key, process.env[key]);
-		delete process.env[key];
-	}
-});
-
-afterEach(() => {
-	for (const [key, value] of saved) {
-		if (value === undefined) delete process.env[key];
-		else process.env[key] = value;
-	}
-	saved.clear();
-});
+const env = isolateTargetEnv();
+beforeEach(env.clear);
+afterEach(env.restore);
 
 const ORG: OrgInfo = {
 	id: "org_123",
@@ -69,15 +50,42 @@ test("names the pinned sandbox and a non-default server", async () => {
 	const { lines, write } = capture();
 	await runEnv({
 		target: resolveTarget({ sandbox: "sb_1", local: true }),
-		fetchOrgInfo: async () => ({ ...ORG, env: "sandbox" }),
+		// A sandbox key authenticates as the sandbox's own org.
+		fetchOrgInfo: async () => ({ ...ORG, id: "sb_1", env: "sandbox" }),
 		write,
 	});
 
 	const output = lines.join("");
 	expect(output).toContain("Sandbox");
 	expect(output).toContain("sb_1");
+	expect(output).not.toContain("key belongs to");
 	expect(output).toContain("AUTUMN_SANDBOX_SB_1_SECRET_KEY");
 	expect(output).toContain("http://localhost:8080");
+});
+
+test("flags a pinned sandbox whose key answers as another org", async () => {
+	const { lines, write } = capture();
+	await runEnv({
+		target: resolveTarget({ sandbox: "sb_1" }),
+		fetchOrgInfo: async () => ({ ...ORG, id: "sb_other", env: "sandbox" }),
+		write,
+	});
+
+	expect(lines.join("")).toContain("sb_1 ← key belongs to sb_other");
+});
+
+test("strips terminal controls from every server-provided string", () => {
+	const output = renderEnv({
+		info: {
+			...ORG,
+			name: "Acme\u001b[2J",
+			slug: "acme\u001b]0;x\u0007",
+			user: { id: "u", email: "dev@example.com\u001b[2J", name: "Dev" },
+		},
+		secretKeyName: "AUTUMN_SECRET_KEY",
+	});
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: the point of the test
+	expect(output.replace(/\u001b\[[0-9;]*m/g, "")).not.toMatch(/\u001b|\u0007/);
 });
 
 test("--json prints the response verbatim", async () => {
@@ -105,29 +113,13 @@ test("renderEnv lines every value up in one column", () => {
 	].map(([value, line]) =>
 		output.split("\n")[line as number]?.indexOf(value as string),
 	);
+	for (const start of starts) expect(start).toBeGreaterThanOrEqual(0);
 	expect(new Set(starts).size).toBe(1);
 });
 
-/** The real program, with env's action swapped for a capture so parsing
- * neither reads a .env nor calls the server. */
-const targetFor = async ({ argv }: { argv: string[] }): Promise<Target> => {
-	const program = buildProgram();
-	const env = program.commands.find((command) => command.name() === "env");
-	if (env === undefined) throw new Error("the env command is gone");
-
-	let resolved: Target | undefined;
-	env.action((_options: unknown, command: Command) => {
-		resolved = resolveTarget(command.optsWithGlobals<TargetFlags>());
-	});
-	await program.parseAsync(argv, { from: "user" });
-
-	if (resolved === undefined) throw new Error("the env action never ran");
-	return resolved;
-};
-
 test("--prod reaches env from either side of the command", async () => {
-	const before = await targetFor({ argv: ["-p", "env"] });
-	const after = await targetFor({ argv: ["env", "-p"] });
+	const before = await targetFor({ command: "env", argv: ["-p", "env"] });
+	const after = await targetFor({ command: "env", argv: ["env", "-p"] });
 
 	expect(before.secretKeyName).toBe("AUTUMN_PROD_SECRET_KEY");
 	expect(after).toEqual(before);

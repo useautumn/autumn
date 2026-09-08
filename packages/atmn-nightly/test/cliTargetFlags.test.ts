@@ -5,54 +5,17 @@
  */
 
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import type { Command } from "commander";
-import { buildProgram } from "../src/cli";
 import {
-	resolveTarget,
-	type Target,
-	type TargetFlags,
-} from "../src/env/resolveTarget";
+	isolateTargetEnv,
+	targetFor as parseTarget,
+} from "./helpers/targetFor";
 
-const CLEARED = [
-	"AUTUMN_BASE_URL",
-	"AUTUMN_SANDBOX_ID",
-	"AUTUMN_CLIENT_ID",
-	"ATMN_CLI_CLIENT_ID",
-] as const;
+const env = isolateTargetEnv();
+beforeEach(env.clear);
+afterEach(env.restore);
 
-const saved = new Map<string, string | undefined>();
-
-beforeEach(() => {
-	for (const key of CLEARED) {
-		saved.set(key, process.env[key]);
-		delete process.env[key];
-	}
-});
-
-afterEach(() => {
-	for (const [key, value] of saved) {
-		if (value === undefined) delete process.env[key];
-		else process.env[key] = value;
-	}
-	saved.clear();
-});
-
-/** The real program, with push's action swapped for a capture so parsing
- * neither reads a .env nor builds a client. */
-const targetFor = async ({ argv }: { argv: string[] }): Promise<Target> => {
-	const program = buildProgram();
-	const push = program.commands.find((command) => command.name() === "push");
-	if (push === undefined) throw new Error("the push command is gone");
-
-	let resolved: Target | undefined;
-	push.action((_options: unknown, command: Command) => {
-		resolved = resolveTarget(command.optsWithGlobals<TargetFlags>());
-	});
-	await program.parseAsync(argv, { from: "user" });
-
-	if (resolved === undefined) throw new Error("the push action never ran");
-	return resolved;
-};
+const targetFor = ({ argv }: { argv: string[] }) =>
+	parseTarget({ command: "push", argv });
 
 test("--local reaches push from either side of the command", async () => {
 	const before = await targetFor({ argv: ["--local", "push"] });

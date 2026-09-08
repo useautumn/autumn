@@ -11,6 +11,22 @@ const envLabel = ({ env }: { env: string }): string => {
 };
 
 /**
+ * A sandbox key authenticates as the sandbox's own org, so the id the server
+ * answers with is the sandbox the key really unlocks. A pin whose key answers
+ * as something else is a stale or copied key, and worth saying out loud.
+ */
+const sandboxCell = ({
+	sandboxId,
+	authenticatedId,
+}: {
+	sandboxId: string;
+	authenticatedId: string;
+}): string =>
+	sandboxId === authenticatedId
+		? sandboxId
+		: `${sandboxId} ${chalk.yellow(`← key belongs to ${authenticatedId}`)}`;
+
+/**
  * Headless rendering, like the sandbox table: a label column a terminal or a
  * CI log can read. Nothing here decides anything — it reports what the server
  * said about the key, plus where that key came from.
@@ -31,12 +47,21 @@ export const renderEnv = ({
 	const rows: [string, string][] = [
 		[
 			"Organization",
-			`${stripTerminalControls(info.name)} ${chalk.dim(`(${info.slug})`)}`,
+			`${stripTerminalControls(info.name)} ${chalk.dim(`(${stripTerminalControls(info.slug)})`)}`,
 		],
-		["Environment", envLabel({ env: info.env })],
+		["Environment", envLabel({ env: stripTerminalControls(info.env) })],
 	];
-	if (sandboxId !== undefined) rows.push(["Sandbox", sandboxId]);
-	if (info.user?.email !== undefined) rows.push(["User", info.user.email]);
+	if (sandboxId !== undefined) {
+		rows.push([
+			"Sandbox",
+			sandboxCell({
+				sandboxId,
+				authenticatedId: stripTerminalControls(info.id),
+			}),
+		]);
+	}
+	if (info.user?.email !== undefined)
+		rows.push(["User", stripTerminalControls(info.user.email)]);
 	rows.push(["Key", secretKeyName]);
 	if (baseUrl !== undefined) rows.push(["Server", baseUrl]);
 
