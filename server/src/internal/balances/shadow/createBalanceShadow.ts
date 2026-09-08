@@ -1,4 +1,7 @@
-import type { TrackDecision } from "@autumn/balance-engine";
+import {
+	meteringPartitionKeyOf,
+	type TrackDecision,
+} from "@autumn/balance-engine";
 import type {
 	BalanceShadow,
 	BalanceShadowDependencies,
@@ -32,6 +35,7 @@ export function createBalanceShadow({
 		throw new RangeError("Invalid shadow delivery limits");
 	const queue: BalanceShadowTrack[] = [];
 	const jobs = new Map<AbortController, Promise<void>>();
+	const activeCustomers = new Set<string>();
 	const counts = { submitted: 0, completed: 0, failed: 0, dropped: 0 };
 	let scheduled: ReturnType<typeof setImmediate> | undefined;
 	let stopped = false;
@@ -117,12 +121,24 @@ export function createBalanceShadow({
 	function pump(): void {
 		scheduled = undefined;
 		while (!stopped && jobs.size < limits.concurrency && queue.length > 0) {
-			const track = queue.shift()!;
+			const index = queue.findIndex(
+				({ command }) =>
+					!activeCustomers.has(
+						meteringPartitionKeyOf({ identity: command.identity }),
+					),
+			);
+			if (index === -1) break;
+			const [track] = queue.splice(index, 1);
+			const customerKey = meteringPartitionKeyOf({
+				identity: track.command.identity,
+			});
+			activeCustomers.add(customerKey);
 			const controller = new AbortController();
 			const job = Promise.resolve()
 				.then(() => deliver({ track, controller }))
 				.finally(() => {
 					jobs.delete(controller);
+					activeCustomers.delete(customerKey);
 					schedule();
 				});
 			jobs.set(controller, job);
