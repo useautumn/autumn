@@ -52,7 +52,7 @@ describe("customer feature usage pooled balances", () => {
 			...buildCustomerEntitlement({ id: "resetting", pooled: false }),
 			balance: 0,
 			unlimited: false,
-			next_reset_at: 1,
+			next_reset_at: Date.now() + 1000,
 			customer_product: null,
 		};
 
