@@ -2,7 +2,7 @@
 	"name": "atmn-nightly",
 	"version": "3.0.0-nightly.1",
 	"license": "MIT",
-	"description": "Autumn CLI \u2014 nightly. Renamed to `atmn` at 3.0.0.",
+	"description": "Autumn CLI nightly.",
 	"bin": {
 		"atmn-nightly": "dist/bin.js"
 	},
