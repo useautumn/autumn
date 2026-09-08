@@ -62,6 +62,19 @@ const objectNodesOf = ({
 	];
 };
 
+/** The value schema of a record node, when the node is one. */
+const recordValueSchema = ({
+	schema,
+	root,
+}: {
+	schema: JsonSchema;
+	root: JsonSchema;
+}): JsonSchema | undefined => {
+	const resolved = resolveRef({ schema, root });
+	const values = resolved?.additionalProperties;
+	return typeof values === "object" ? (values as JsonSchema) : undefined;
+};
+
 const requiredPathsOf = ({
 	schema,
 	root,
@@ -91,6 +104,18 @@ const requiredPathsOf = ({
 				seen: next,
 				out,
 			});
+			// A record's keys are the user's; its values are still ours, one
+			// level down at `.*` — the same convention the path hints use.
+			const values = recordValueSchema({ schema: member.schema, root });
+			if (values)
+				requiredPathsOf({
+					schema: values,
+					root,
+					path: `${memberPath}.*`,
+					context,
+					seen: next,
+					out,
+				});
 		}
 	}
 };

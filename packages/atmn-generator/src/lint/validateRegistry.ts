@@ -77,7 +77,9 @@ export const validateRegistry = ({
 			const owner = fieldsAtPath({
 				schema,
 				root,
-				path: [path, ...segments].filter(Boolean).join("."),
+				// Only the registry key can be empty; an empty rule segment is a
+				// typo, and joining it keeps `fieldsAtPath` rejecting the path.
+				path: (path === "" ? segments : [path, ...segments]).join("."),
 				overlay,
 			});
 			return owner?.has(leaf) ?? false;
