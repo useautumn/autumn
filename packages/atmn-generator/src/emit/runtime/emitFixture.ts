@@ -9,6 +9,8 @@ export type CollectionSpec = {
 	readonly idField: string;
 	readonly responseIdField: string;
 	readonly keys: readonly string[];
+	/** Fixture paths the type demands: written even when the row's value is null. */
+	readonly required?: readonly string[];
 	/** Every fixture path a config may state, collection-relative (no `entitlementId`, `versioning`, …). */
 	readonly paths: readonly string[];
 	/** Config key holding past versions, when the collection has history. */
@@ -27,6 +29,7 @@ export type BranchSpec = {
 	readonly key: string;
 	readonly idField: string;
 	readonly keys: readonly string[];
+	readonly required?: readonly string[];
 	readonly paths: readonly string[];
 };
 
@@ -72,6 +75,7 @@ const branchSpecOf = ({
 	idField: branch.idField,
 	responseIdField: branch.idField,
 	keys: branch.keys,
+	required: branch.required,
 	paths: branch.paths,
 	branches: undefined,
 });
@@ -162,12 +166,14 @@ const serialize = ({
 	index,
 	indent,
 	includeMappings,
+	required,
 }: {
 	value: unknown;
 	path: string;
 	index: PathIndex;
 	indent: string;
 	includeMappings: boolean;
+	required: ReadonlySet<string>;
 }): string => {
 	if (typeof value === "string") return JSON.stringify(value);
 	if (typeof value === "number" || typeof value === "boolean")
@@ -178,7 +184,7 @@ const serialize = ({
 		if (value.length === 0) return "[]";
 		const items = value.map(
 			(entry) =>
-				`${indent}\t${serialize({ includeMappings, value: entry, path, index, indent: `${indent}\t` })},`,
+				`${indent}\t${serialize({ includeMappings, required, value: entry, path, index, indent: `${indent}\t` })},`,
 		);
 		return `[\n${items.join("\n")}\n${indent}]`;
 	}
@@ -189,18 +195,19 @@ const serialize = ({
 
 	const childPathOf = (key: string): string =>
 		isRecord ? `${path}.*` : `${path}.${key}`;
-	// A null from the server means unset — omission says the same on the wire.
+	// A null from the server means unset, and omission says the same on the wire
+	// — unless the fixture type demands the key, which omission would not compile.
 	const entries = Object.entries(value as Record<string, unknown>).filter(
 		([key, entry]) =>
 			entry !== undefined &&
-			entry !== null &&
+			(entry !== null || required.has(childPathOf(key))) &&
 			(includeMappings || key !== "processors") &&
 			(isRecord || index.paths.has(childPathOf(key))),
 	);
 	if (entries.length === 0) return "{}";
 	const items = entries.map(([key, entry]) => {
 		const childPath = childPathOf(key);
-		return `${indent}\t${keyText(key)}: ${serialize({ includeMappings, value: entry, path: childPath, index, indent: `${indent}\t` })},`;
+		return `${indent}\t${keyText(key)}: ${serialize({ includeMappings, required, value: entry, path: childPath, index, indent: `${indent}\t` })},`;
 	});
 	return `{\n${items.join("\n")}\n${indent}}`;
 };
@@ -284,10 +291,13 @@ export const emitFixtureProperty = ({
 		row: collectionRow,
 	});
 	const value = rowValueOf({ spec, key, row, includeMappings });
-	if (value === undefined || value === null) return null;
+	if (value === undefined) return null;
+	const required = new Set(spec.required ?? []);
+	if (value === null && !required.has(key)) return null;
 	const index = pathIndexOf(spec.paths);
 	return serialize({
 		includeMappings,
+		required,
 		value,
 		path: key,
 		index,
@@ -311,12 +321,16 @@ export const emitFixture = ({
 		row: collectionRow,
 	});
 	const index = pathIndexOf(spec.paths);
+	const required = new Set(spec.required ?? []);
 	const lines: string[] = [`${spec.builder}({`];
 	for (const key of spec.keys) {
 		const value = rowValueOf({ spec, key, row, includeMappings });
-		if (value === undefined || value === null) continue;
+		if (value === undefined) continue;
+		// A required key states null rather than vanishing: the fixture type
+		// demands it, so dropping it emits source that does not compile.
+		if (value === null && !required.has(key)) continue;
 		lines.push(
-			`${indent}\t${keyText(key)}: ${serialize({ includeMappings, value, path: key, index, indent: `${indent}\t` })},`,
+			`${indent}\t${keyText(key)}: ${serialize({ includeMappings, required, value, path: key, index, indent: `${indent}\t` })},`,
 		);
 	}
 	lines.push(`${indent}})`);
