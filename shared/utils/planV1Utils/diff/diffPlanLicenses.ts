@@ -35,15 +35,17 @@ const byLicensePlanId = <T extends { license_plan_id: string }>(
 
 /** Link-field patch. Numeric `version` / expanded `plan` are display — ignored;
  * `version_slug` (the version anchor) is a term.
- * New links are skipped unless `includeAdds` — those are lifecycle, not terms. */
+ * Link lifecycle is skipped unless asked: `includeAdds` / `includeRemoves`. */
 export const diffPlanLicenses = ({
 	from,
 	to,
 	includeAdds = false,
+	includeRemoves = false,
 }: {
 	from?: ApiPlanLicenseV1[];
 	to?: ApiPlanLicenseV1[];
 	includeAdds?: boolean;
+	includeRemoves?: boolean;
 }): {
 	upsert_licenses?: CustomizePlanLicense[];
 	remove_licenses?: RemovePlanLicense[];
@@ -76,9 +78,18 @@ export const diffPlanLicenses = ({
 		);
 	}
 
+	const remove_licenses: RemovePlanLicense[] = includeRemoves
+		? [...fromById.keys()]
+				.filter((licensePlanId) => !toById.has(licensePlanId))
+				.map((license_plan_id) => ({ license_plan_id }))
+		: [];
+
 	return {
 		...(upsert_licenses.length > 0
 			? { upsert_licenses: upsert_licenses.sort(byLicensePlanId) }
+			: {}),
+		...(remove_licenses.length > 0
+			? { remove_licenses: remove_licenses.sort(byLicensePlanId) }
 			: {}),
 	};
 };

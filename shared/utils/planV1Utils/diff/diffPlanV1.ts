@@ -5,8 +5,8 @@ import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
 } from "@api/billing/common/customizePlan/customizePlanV1.js";
-import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import type { ApiPlanLicenseV1 } from "@api/products/apiPlanLicenseV1.js";
+import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
 import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter.js";
@@ -264,8 +264,7 @@ export const customizePlanV1DiffsEqual = ({
 		arraysEqual({
 			left: a.upsert_licenses,
 			right: b.upsert_licenses,
-			equals: (left, right) =>
-				customizePlanLicensesAreSame({ left, right }),
+			equals: (left, right) => customizePlanLicensesAreSame({ left, right }),
 		}) &&
 		arraysEqual({
 			left: a.remove_licenses,
@@ -280,11 +279,13 @@ export const diffPlanV1 = ({
 	from,
 	to,
 	includeAdds = false,
+	includeRemoves = false,
 	filterPrecision = PlanItemFilterPrecision.Identity,
 }: {
 	from: DiffablePlanV1;
 	to: DiffablePlanV1;
 	includeAdds?: boolean;
+	includeRemoves?: boolean;
 	filterPrecision?: PlanItemFilterPrecision;
 }): DiffedCustomizePlanV1 => {
 	const diff: DiffedCustomizePlanV1 = {};
@@ -329,6 +330,7 @@ export const diffPlanV1 = ({
 			from: from.licenses,
 			to: to.licenses,
 			includeAdds,
+			includeRemoves,
 		}),
 	);
 

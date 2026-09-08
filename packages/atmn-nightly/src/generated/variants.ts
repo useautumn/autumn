@@ -634,7 +634,6 @@ export type Variant = {
 		/** License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance. */
 		upsertLicenses?: Array<{
 			licensePlanId: string;
-			versionSlug?: string;
 			included?: number;
 			prepaidOnly?: boolean;
 			customize?: {

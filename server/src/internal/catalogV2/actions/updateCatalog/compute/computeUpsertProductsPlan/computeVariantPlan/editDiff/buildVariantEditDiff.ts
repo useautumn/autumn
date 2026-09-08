@@ -11,6 +11,7 @@ import {
 	diffPlanV1,
 	type FullProduct,
 	type PlanLicenseParams,
+	type RemovePlanLicense,
 } from "@autumn/shared";
 import { diffFullProducts } from "@/internal/catalogV2/actions/buildPlanChange/diffFullProducts";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
@@ -40,6 +41,22 @@ const isEmptyDiff = (diff: DiffedCustomizePlanV1) =>
 	diff.free_trial === undefined &&
 	diff.upsert_licenses === undefined &&
 	diff.remove_licenses === undefined;
+
+const removeLicensesFromPlan = ({
+	plan,
+	removeLicenses,
+}: {
+	plan: DiffablePlanV1;
+	removeLicenses: RemovePlanLicense[];
+}): DiffablePlanV1 => {
+	const removed = new Set(removeLicenses.map((entry) => entry.license_plan_id));
+	return {
+		...plan,
+		licenses: (plan.licenses ?? []).filter(
+			(license) => !removed.has(license.license_plan_id),
+		),
+	};
+};
 
 /** Apply variants[n].customize.upsert_licenses as a slot-level patch onto
  * the current license list (follow's rebase first), not a wholesale replace. */
@@ -84,9 +101,11 @@ const mergeUpsertLicensesOntoPlan = ({
 			});
 		}
 
+		const versionSlug = upsert.version_slug ?? existing?.version_slug;
 		const nextLicense: ApiPlanLicenseV1 = {
 			license_plan_id: upsert.license_plan_id,
 			version: existing?.version ?? 1,
+			...(versionSlug !== undefined ? { version_slug: versionSlug } : {}),
 			included: upsert.included ?? existing?.included ?? 0,
 			prepaid_only: upsert.prepaid_only ?? existing?.prepaid_only ?? true,
 			...(nextCustomize !== undefined ? { customize: nextCustomize } : {}),
@@ -138,8 +157,9 @@ const hasContentCustomize = (
 
 /**
  * Follow applies the base current→next diff onto the variant; customize then
- * patches on top. Declared customize alone recomposes over the declaring
- * base row's pre-edit content.
+ * patches on top — its license lanes last, so an overlay that drops a base
+ * link wins over the base's declared licenses[]. Declared customize alone
+ * recomposes over the declaring base row's pre-edit content.
  */
 export const buildVariantEditDiff = ({
 	variantProduct,
@@ -171,7 +191,7 @@ export const buildVariantEditDiff = ({
 		});
 	}
 	if (customize) {
-		const { upsert_licenses, ...contentCustomize } = customize;
+		const { upsert_licenses, remove_licenses, ...contentCustomize } = customize;
 		if (!follow) {
 			const basePlan = fullProductToApiPlanV1Sync({
 				product: baseCurrent ?? baseNext,
@@ -187,9 +207,18 @@ export const buildVariantEditDiff = ({
 				: { ...basePlan, licenses: currentPlan.licenses };
 		} else if (hasContentCustomize(customize)) {
 			nextPlan = {
-				...applyCustomizeToPlan({ plan: nextPlan, customize: contentCustomize }),
+				...applyCustomizeToPlan({
+					plan: nextPlan,
+					customize: contentCustomize,
+				}),
 				licenses: nextPlan.licenses,
 			};
+		}
+		if (remove_licenses !== undefined) {
+			nextPlan = removeLicensesFromPlan({
+				plan: nextPlan,
+				removeLicenses: remove_licenses,
+			});
 		}
 		if (upsert_licenses !== undefined) {
 			nextPlan = mergeUpsertLicensesOntoPlan({
@@ -200,10 +229,12 @@ export const buildVariantEditDiff = ({
 		}
 	}
 
+	// Removes are real here: a link only leaves nextPlan when the overlay drops it.
 	const editDiff = diffPlanV1({
 		from: currentPlan,
 		to: nextPlan,
 		includeAdds: true,
+		includeRemoves: true,
 	});
 	if (isEmptyDiff(editDiff)) return undefined;
 	return editDiff;

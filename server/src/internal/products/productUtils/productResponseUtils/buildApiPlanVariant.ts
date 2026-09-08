@@ -1,6 +1,6 @@
 import type {
-	ApiPlanV1,
 	ApiPlanVariantV1,
+	DiffablePlanV1,
 	Feature,
 	FullProduct,
 	RevenueCatPlanMapping,
@@ -19,7 +19,7 @@ export const buildApiPlanVariant = async ({
 	revenuecatMappings,
 }: {
 	ctx?: AutumnContext;
-	basePlan: ApiPlanV1;
+	basePlan: DiffablePlanV1;
 	variant: FullProduct;
 	features: Feature[];
 	expand?: string[];

@@ -6,6 +6,7 @@ import {
 	type ApiPlanV1,
 	ApiPlanV1Schema,
 	billingControlsFromColumns,
+	type DiffablePlanV1,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
@@ -54,7 +55,7 @@ type GetPlanResponseArgs = {
 	expand?: string[];
 	currency?: string;
 	/** Pre-rendered base plan — reuse it instead of re-rendering per variant. */
-	basePlan?: ApiPlanV1;
+	basePlan?: DiffablePlanV1;
 	baseFullProduct?: FullProduct;
 	resolveBaseFullProduct?: boolean;
 	/** RevenueCat mappings live in their own table, so the row is read in. */
@@ -226,10 +227,15 @@ export async function getPlanResponse({
 	} satisfies ApiPlanV1;
 
 	// 10. Graph edges: up-link to the base plan, down-links to variants.
+	// License links ride along so a variant's customize can state its license overlay.
+	const planWithLicenses = {
+		...plan,
+		...(apiLicenses ? { licenses: apiLicenses } : {}),
+	};
 	const variantDetails = await buildVariantDetails({
 		ctx,
 		product,
-		plan,
+		plan: planWithLicenses,
 		features,
 		expand,
 		currency,
@@ -243,7 +249,7 @@ export async function getPlanResponse({
 					product.variants.map((variant) =>
 						buildApiPlanVariant({
 							ctx,
-							basePlan: plan,
+							basePlan: planWithLicenses,
 							variant,
 							features,
 							expand,
@@ -255,8 +261,7 @@ export async function getPlanResponse({
 			: undefined;
 
 	const planResponse = {
-		...plan,
-		...(apiLicenses ? { licenses: apiLicenses } : {}),
+		...planWithLicenses,
 		...(variantDetails ? { variant_details: variantDetails } : {}),
 		...(variants ? { variants } : {}),
 	};
