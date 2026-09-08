@@ -19,9 +19,24 @@ export const getCheckSubject = ({
 		customerProduct.status === CusProductStatus.PastDue &&
 		!customerProduct.product.config?.ignore_past_due &&
 		(ctx.org.config.block_overdue_entitlements ||
+<<<<<<< HEAD
 			isThresholdProduct(customerProduct));
 
 	if (!fullSubject.customer_products.some(shouldBlockPastDue))
+=======
+			thresholdBillingProduct(customerProduct) ||
+			customerProduct.status === CusProductStatus.PastDue);
+
+	if (
+		!ctx.org.config.block_overdue_entitlements &&
+		!fullSubject.customer_products.some(
+			(customerProduct) =>
+				thresholdBillingProduct(customerProduct) ||
+				(customerProduct.status === CusProductStatus.PastDue &&
+					!customerProduct.product.config?.ignore_past_due),
+		)
+	)
+>>>>>>> 67ea8ba17e (Block threshold usage after failed payment)
 		return fullSubject;
 
 	return {
