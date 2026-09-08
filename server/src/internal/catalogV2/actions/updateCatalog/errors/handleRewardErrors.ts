@@ -204,8 +204,26 @@ const assertRewardReferencesResolve = async ({
 	const featureIds = new Set(
 		updateCatalogPlan.projected.features.map((feature) => feature.id),
 	);
-	const projectedPlanIds = new Set(
-		updateCatalogPlan.projected.products.map((product) => product.id),
+	// A rename moves every version row, but the projection only carries the new
+	// id for the versions the payload restated — an untouched sibling version
+	// still projects the old one. Reading each projected id through the rename
+	// gives the plan ids this push actually leaves behind.
+	const renamedTo = new Map(
+		updateCatalogPlan.renamePlans.map(({ planId, toId }) => [planId, toId]),
+	);
+	const survivingPlanIds = new Set(
+		updateCatalogPlan.projected.products.map(
+			(product) => renamedTo.get(product.id) ?? product.id,
+		),
+	);
+	// An id this payload takes away: renamed off its rows, or removed with no
+	// version left holding it. The database still answers to it, so the lookup
+	// below would call it resolved — it has to be asked first.
+	const vacatedPlanIds = new Set(
+		[
+			...updateCatalogPlan.renamePlans.map(({ planId }) => planId),
+			...updateCatalogPlan.removePlans.map(({ planId }) => planId),
+		].filter((planId) => !survivingPlanIds.has(planId)),
 	);
 	const couponPlans = new Map<string, string[]>();
 	for (const upsert of updateCatalogPlan.upsertRewards) {
@@ -222,15 +240,14 @@ const assertRewardReferencesResolve = async ({
 		}
 	}
 
-	// A plan the projection holds is settled; anything else is looked up once.
-	// KNOWN GAP: the lookup reads pre-change state, so an id this same payload
-	// renames away still resolves and the coupon is rejected later, by the
-	// reward writer, after the rename has committed.
+	// An id the push keeps is settled; every other id is looked up once. A
+	// vacated id is looked up too, and found — the database is pre-change — so
+	// the vacating question below has to be asked before this answer is read.
 	const unresolved = [
 		...new Set(
 			[...couponPlans.values()]
 				.flat()
-				.filter((planId) => !projectedPlanIds.has(planId)),
+				.filter((planId) => !survivingPlanIds.has(planId)),
 		),
 	];
 	const known =
@@ -249,7 +266,11 @@ const assertRewardReferencesResolve = async ({
 
 	for (const [rewardId, planIds] of couponPlans) {
 		for (const planId of planIds) {
-			if (projectedPlanIds.has(planId) || known.has(planId)) continue;
+			if (vacatedPlanIds.has(planId))
+				invalid(
+					`Reward ${rewardId} applies to plan ${planId}, which this request removes or renames. Point the reward at the plan id this catalog keeps.`,
+				);
+			if (survivingPlanIds.has(planId) || known.has(planId)) continue;
 			invalid(
 				`Reward ${rewardId} applies to plan ${planId}, which this catalog does not have.`,
 			);
