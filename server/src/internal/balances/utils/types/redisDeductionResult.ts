@@ -20,4 +20,6 @@ export interface LuaDeductionResult {
 	error?: string;
 	feature_id?: string;
 	logs?: string[];
+	observation?: unknown;
+	observation_error?: string;
 }
