@@ -633,6 +633,7 @@
       "name": "@autumn/scripts",
       "version": "1.0.0",
       "dependencies": {
+        "@autumn/balance-worker-client": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/shared": "workspace:*",
         "@aws-sdk/client-dynamodb": "^3.1095.0",

@@ -83,3 +83,23 @@ test.concurrent(
 			).toThrow();
 	},
 );
+
+test.concurrent(
+	"read-only comparison can inspect an expired run without re-enabling copying",
+	() => {
+		const runtimeEnv = {
+			BALANCE_WORKER_SHADOW: JSON.stringify({ ...config, expiresAt: now - 1 }),
+		};
+		expect(() => parseBalanceShadowConfig({ runtimeEnv, now })).toThrow();
+		expect(
+			parseBalanceShadowConfig({ runtimeEnv, now, purpose: "inspect" }),
+		).toMatchObject({ expiresAt: now - 1 });
+		expect(() =>
+			parseBalanceShadowConfig({
+				runtimeEnv: { ...runtimeEnv, BALANCE_WORKER_ROLLOUT_ENABLED: "true" },
+				now,
+				purpose: "inspect",
+			}),
+		).toThrow();
+	},
+);

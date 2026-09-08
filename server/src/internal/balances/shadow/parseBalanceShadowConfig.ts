@@ -22,9 +22,11 @@ const schema = z.strictObject({
 export function parseBalanceShadowConfig({
 	runtimeEnv,
 	now = Date.now(),
+	purpose = "run",
 }: {
 	runtimeEnv: Record<string, string | undefined>;
 	now?: number;
+	purpose?: "run" | "inspect";
 }): BalanceShadowConfig | undefined {
 	const raw = runtimeEnv.BALANCE_WORKER_SHADOW;
 	if (!raw) return undefined;
@@ -38,7 +40,10 @@ export function parseBalanceShadowConfig({
 		(runtimeEnv.BALANCE_WORKER_OWNERSHIP_TOPIC ?? "autumn-metering-ownership")
 	)
 		throw new Error("Shadow requires a separate ownership topic");
-	if (config.expiresAt <= now || config.expiresAt > now + 86_400_000)
+	if (
+		(purpose === "run" && config.expiresAt <= now) ||
+		config.expiresAt > now + 86_400_000
+	)
 		throw new Error("Shadow expiry must be within the next 24 hours");
 	const identities = config.customers.map((customer) =>
 		JSON.stringify([

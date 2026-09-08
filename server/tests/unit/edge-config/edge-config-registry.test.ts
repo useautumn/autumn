@@ -34,6 +34,16 @@ afterEach(() => {
 });
 
 describe("edge config registry", () => {
+	test("one-shot refresh loads configuration without creating a timestamp or polling", async () => {
+		const { refresh, registry, readTimestamp, writeTimestamp } = createRegistry(
+			{ timestamps: [null] },
+		);
+		await registry.refreshAll();
+		expect(refresh).toHaveBeenCalledTimes(1);
+		expect(readTimestamp).not.toHaveBeenCalled();
+		expect(writeTimestamp).not.toHaveBeenCalled();
+	});
+
 	test("loads every config on startup and creates a missing timestamp", async () => {
 		const { refresh, registry, writeTimestamp } = createRegistry({
 			timestamps: [null],
