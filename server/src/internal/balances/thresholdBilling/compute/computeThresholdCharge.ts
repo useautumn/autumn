@@ -17,6 +17,6 @@ export const computeThresholdCharge = ({
 
 	return {
 		chargeUnits: threshold,
-		remainingUnits: outstandingUnits - threshold,
+		remainingUnits: unclaimedUnits - threshold,
 	};
 };

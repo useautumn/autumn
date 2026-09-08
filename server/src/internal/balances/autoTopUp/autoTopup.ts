@@ -179,19 +179,6 @@ export const autoTopup = async ({
 			invoiceStatus !== "paid" &&
 			!isPaymentProcessing
 		) {
-			if (
-				thresholdBilling &&
-				autoTopupContext.customerEntitlement.customer_product &&
-				!autoTopupContext.customerEntitlement.customer_product.product.config
-					?.ignore_past_due
-			) {
-				await customerProductActions.markPastDue({
-					ctx,
-					customerProduct:
-						autoTopupContext.customerEntitlement.customer_product,
-					fullCustomer: autoTopupContext.fullCustomer,
-				});
-			}
 			try {
 				await voidStripeInvoiceIfOpen({
 					ctx,
