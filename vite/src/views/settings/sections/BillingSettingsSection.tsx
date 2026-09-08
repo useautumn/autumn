@@ -25,7 +25,6 @@ import { SettingsSection } from "../SettingsSection";
 type TtlUnit = "hours" | "days";
 
 const MAX_TTL_HOURS = 24 * 30;
-const DEFAULT_AUTO_TOPUP_ATTEMPTS = 2;
 
 // Hidden until the DynamoDB idempotency store is fully rolled out.
 const IDEMPOTENCY_TTL_CONFIG_ENABLED: boolean = false;
@@ -163,17 +162,6 @@ export const BillingSettingsSection = () => {
 	const handleSave = () => {
 		if (!isDirty || isPending) return;
 
-		const attemptLimit = pending.auto_topup_attempt_limit;
-		if (
-			attemptLimit != null &&
-			(!Number.isInteger(attemptLimit) || attemptLimit < 1)
-		) {
-			toast.error(
-				"Auto top-up attempt limit must be a whole number of at least 1",
-			);
-			return;
-		}
-
 		if (isTtlDirty && pendingTtl) {
 			const ttlHours = toHours(pendingTtl);
 			if (
@@ -221,26 +209,6 @@ export const BillingSettingsSection = () => {
 						/>
 					</SettingsRow>
 				))}
-				<SettingsRow
-					label="Auto top-up attempt limit"
-					description="How many auto top-ups a customer can trigger per feature every 10 minutes"
-				>
-					<Input
-						type="number"
-						aria-label="Auto top-up attempt limit"
-						className="w-20"
-						min={1}
-						placeholder={String(DEFAULT_AUTO_TOPUP_ATTEMPTS)}
-						value={displayConfig.auto_topup_attempt_limit ?? ""}
-						onChange={(e) =>
-							handleChange(
-								"auto_topup_attempt_limit",
-								e.target.value === "" ? null : Number(e.target.value),
-							)
-						}
-						disabled={isPending}
-					/>
-				</SettingsRow>
 				{IDEMPOTENCY_TTL_CONFIG_ENABLED && (
 					<SettingsRow
 						label="Idempotency key duration"

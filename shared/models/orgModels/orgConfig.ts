@@ -70,7 +70,6 @@ export const OrgConfigSchema = z.object({
 	disabled_auto_topup: z.boolean().default(false),
 	persist_free_overage: z.boolean().default(false),
 	dryrun_autotopups: z.boolean().default(false),
-	auto_topup_attempt_limit: z.number().int().min(1).nullish(),
 
 	forward_customer_metadata: z.boolean().default(false),
 
