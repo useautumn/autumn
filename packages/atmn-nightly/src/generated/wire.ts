@@ -7,6 +7,7 @@ import { ConfigError, lintDocument } from "./lintRuntime";
 import type { Plan } from "./plans";
 import type { ReferralProgram } from "./referralPrograms";
 import type { Reward } from "./rewards";
+import type { Settings } from "./settings";
 
 /** Operators like `$startsWith` are literal API keys, not snake_case fields. */
 const isOperatorKey = (key: string): boolean => key.startsWith("$");
@@ -22,7 +23,14 @@ const toCamelCase = (key: string): string =>
 		? key
 		: key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 
-export type PathHints = { recordPaths: Set<string>; frozenPaths: Set<string> };
+export type PathHints = {
+	recordPaths: Set<string>;
+	frozenPaths: Set<string>;
+	/** Fixture path -> wire key, where the overlay renamed a field. */
+	renamedPaths: Map<string, string>;
+	/** Wire path -> fixture name: the same renames, read from a response. */
+	renamedWirePaths: Map<string, string>;
+};
 
 export type WireDocument = Record<string, unknown>;
 
@@ -60,10 +68,13 @@ export const toWire = ({
 	}
 
 	return Object.fromEntries(
-		Object.entries(source).map(([key, entry]) => [
-			toSnakeCase(key),
-			toWire({ value: entry, path: path ? `${path}.${key}` : key, hints }),
-		]),
+		Object.entries(source).map(([key, entry]) => {
+			const childPath = path ? `${path}.${key}` : key;
+			return [
+				hints.renamedPaths.get(childPath) ?? toSnakeCase(key),
+				toWire({ value: entry, path: childPath, hints }),
+			];
+		}),
 	);
 };
 
@@ -100,7 +111,9 @@ export const toFixture = ({
 
 	return Object.fromEntries(
 		Object.entries(source).map(([key, entry]) => {
-			const name = toCamelCase(key);
+			const name =
+				hints.renamedWirePaths.get(path ? `${path}.${key}` : key) ??
+				toCamelCase(key);
 			return [
 				name,
 				toFixture({
@@ -116,9 +129,21 @@ export const toFixture = ({
 export const hintsOf = (hints: {
 	recordPaths: readonly string[];
 	frozenPaths: readonly string[];
+	renamedPaths: Readonly<Record<string, string>>;
 }): PathHints => ({
 	recordPaths: new Set(hints.recordPaths),
 	frozenPaths: new Set(hints.frozenPaths),
+	renamedPaths: new Map(Object.entries(hints.renamedPaths)),
+	renamedWirePaths: new Map(
+		Object.entries(hints.renamedPaths).map(([fixturePath, wireKey]) => {
+			const segments = fixturePath.split(".");
+			const parent = segments.slice(0, -1);
+			return [
+				[...parent, wireKey].join("."),
+				segments[segments.length - 1] ?? "",
+			];
+		}),
+	),
 });
 
 const CATALOG_HINTS = hintsOf({
@@ -169,6 +194,7 @@ const CATALOG_HINTS = hintsOf({
 		"plans.metadata",
 		"plans.variants.customize.upsertLicenses.metadata",
 	],
+	renamedPaths: { "settings.paydownOverages": "persist_free_overage" },
 });
 
 export type AtmnConfig = {
@@ -186,6 +212,9 @@ export type AtmnConfig = {
 	/** Every referralPrograms entry this catalog should have. `[]` means "mine, and
 	 * empty"; omitted means "not mine". */
 	referralPrograms?: ReferralProgram[];
+	/** The settings this config manages. Only the fields stated are written;
+	 * an omitted field keeps its value, and an omitted block manages nothing. */
+	settings?: Settings;
 };
 
 /** The document as the server sees it: history rows folded into their collection. */
@@ -245,6 +274,30 @@ const stated = (config: AtmnConfig): Record<string, unknown> => ({
 	...(config.referralPrograms !== undefined
 		? { referralPrograms: config.referralPrograms }
 		: {}),
+	...(config.settings !== undefined ? { settings: config.settings } : {}),
+});
+
+const SINGLETON_KEYS: readonly string[] = ["settings"];
+
+/**
+ * The catalog document and each singleton's own request body, split from the
+ * one document `atmn()` returns: they go to different operations.
+ */
+export const splitWire = (
+	document: WireDocument,
+): {
+	catalog: WireDocument;
+	singletons: Record<string, WireDocument | undefined>;
+} => ({
+	catalog: Object.fromEntries(
+		Object.entries(document).filter(([key]) => !SINGLETON_KEYS.includes(key)),
+	),
+	singletons: {
+		settings:
+			document.settings === undefined
+				? undefined
+				: { config: document.settings },
+	},
 });
 
 export const atmn = (config: AtmnConfig): WireDocument => {

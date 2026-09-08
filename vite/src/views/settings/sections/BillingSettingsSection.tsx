@@ -1,6 +1,7 @@
 import {
 	DEFAULT_IDEMPOTENCY_TTL_HOURS,
 	type IdempotencyConfig,
+	ORG_SETTINGS_LABELS,
 	type OrgConfig,
 	RouteGroup,
 } from "@autumn/shared";
@@ -19,6 +20,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { SettingsRow } from "../SettingsRow";
 import { SettingsSection } from "../SettingsSection";
 
 type TtlUnit = "hours" | "days";
@@ -36,36 +38,38 @@ const fromHours = (hours: number): { value: number; unit: TtlUnit } =>
 		? { value: hours / 24, unit: "days" }
 		: { value: hours, unit: "hours" };
 
+/** A flag the CLI's `settings` block can state takes its label from shared,
+ * so the dashboard and atmn never disagree on what a flag is called. */
 const BILLING_TOGGLES = [
 	{
 		key: "cancel_on_past_due",
-		label: "Cancel on past due",
+		label: ORG_SETTINGS_LABELS.cancel_on_past_due,
 		description: "Automatically cancel subscriptions when payment is past due",
 	},
 	{
 		key: "reverse_deduction_order",
-		label: "Reverse deduction order",
+		label: ORG_SETTINGS_LABELS.reverse_deduction_order,
 		description: "Deduct from newest balance first instead of oldest",
 	},
 	{
 		key: "block_overdue_entitlements",
-		label: "Block access while overdue",
+		label: ORG_SETTINGS_LABELS.block_overdue_entitlements,
 		description:
 			"Block access when a plan is past due. Plans can override this setting.",
 	},
 	{
 		key: "invoice_memos",
-		label: "Invoice memos",
+		label: ORG_SETTINGS_LABELS.invoice_memos,
 		description: "Include line-item memos on Stripe invoices",
 	},
 	{
 		key: "disable_overage_billing",
-		label: "Disable overage billing",
+		label: ORG_SETTINGS_LABELS.disable_overage_billing,
 		description: "Stop posting usage overage line items to Stripe",
 	},
 	{
 		key: "persist_free_overage",
-		label: "Pay down overages",
+		label: ORG_SETTINGS_LABELS.persist_free_overage,
 		description: "Resets and top ups pay down unbilled overages",
 	},
 	{
@@ -90,12 +94,12 @@ const BILLING_TOGGLES = [
 	},
 	{
 		key: "automatic_tax",
-		label: "Automatic tax",
+		label: ORG_SETTINGS_LABELS.automatic_tax,
 		description: "Enable Stripe Tax for automatic tax calculation",
 	},
 	{
 		key: "multi_currency",
-		label: "Multi-currency",
+		label: ORG_SETTINGS_LABELS.multi_currency,
 		description: "Enable prices and billing in multiple currencies",
 	},
 ] as const satisfies readonly {
@@ -146,10 +150,13 @@ export const BillingSettingsSection = () => {
 		},
 	});
 
-	const handleToggle = (key: keyof OrgConfig, value: boolean) => {
+	const handleChange = <K extends keyof OrgConfig>(
+		key: K,
+		value: OrgConfig[K],
+	) => {
 		setPending((prev) => {
 			const next = { ...prev, [key]: value };
-			if (serverConfig[key] === value) {
+			if ((serverConfig[key] ?? null) === (value ?? null)) {
 				delete next[key];
 			}
 			return next;
@@ -195,37 +202,22 @@ export const BillingSettingsSection = () => {
 			title="Configuration"
 			description="Configure how billing and subscriptions behave"
 		>
-			<div className="flex flex-col divide-y divide-border rounded-lg border bg-interactive-secondary px-4">
+			<div className="flex flex-col divide-y divide-border rounded-lg border bg-interactive-secondary px-4 [&>*]:py-3.5">
 				{BILLING_TOGGLES.map(({ key, label, description }) => (
-					<div
-						key={key}
-						className="flex items-center justify-between gap-4 py-3.5"
-					>
-						<div className="flex flex-col gap-0.5">
-							<span className="text-sm font-medium">{label}</span>
-							<span className="text-xs text-muted-foreground">
-								{description}
-							</span>
-						</div>
+					<SettingsRow key={key} label={label} description={description}>
 						<Switch
 							aria-label={label}
 							checked={!!displayConfig[key]}
-							onCheckedChange={(val) => handleToggle(key, val)}
+							onCheckedChange={(val) => handleChange(key, val)}
 							disabled={isPending}
 						/>
-					</div>
+					</SettingsRow>
 				))}
 				{IDEMPOTENCY_TTL_CONFIG_ENABLED && (
-					<div className="flex items-center justify-between gap-4 py-3.5">
-						<div className="flex flex-col gap-0.5">
-							<span className="text-sm font-medium">
-								Idempotency key duration
-							</span>
-							<span className="text-xs text-muted-foreground">
-								How long duplicate requests to balances endpoints (track, check)
-								are rejected
-							</span>
-						</div>
+					<SettingsRow
+						label="Idempotency key duration"
+						description="How long duplicate requests to balances endpoints (track, check) are rejected"
+					>
 						<div className="flex items-center gap-2">
 							<Input
 								type="number"
@@ -258,7 +250,7 @@ export const BillingSettingsSection = () => {
 								</SelectContent>
 							</Select>
 						</div>
-					</div>
+					</SettingsRow>
 				)}
 			</div>
 			<div className="pb-8">

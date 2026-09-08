@@ -1,7 +1,9 @@
 export const DEFAULT_CUS_PRODUCT_LIMIT = 15;
+export const DEFAULT_AUTO_TOPUP_ATTEMPTS = 2;
 
 export type OrgLimitsEntry = {
 	maxCusProducts?: number;
+	maxAutoTopupAttempts?: number;
 };
 
 export type OrgLimitsConfig = {
@@ -40,6 +42,8 @@ export const getEntryRows = ({ config }: { config: OrgLimitsConfig }) => {
 		.map(([orgId, entry]) => ({
 			orgId,
 			maxCusProducts: entry.maxCusProducts ?? DEFAULT_CUS_PRODUCT_LIMIT,
+			maxAutoTopupAttempts:
+				entry.maxAutoTopupAttempts ?? DEFAULT_AUTO_TOPUP_ATTEMPTS,
 		}))
 		.sort((a, b) => a.orgId.localeCompare(b.orgId));
 };

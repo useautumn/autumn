@@ -108,6 +108,7 @@ const hintsLiteral = ({
 	`const ${name} = hintsOf({
 	recordPaths: ${JSON.stringify(hints.recordPaths)},
 	frozenPaths: ${JSON.stringify(hints.frozenPaths)},
+	renamedPaths: ${JSON.stringify(hints.renamedPaths)},
 });`;
 
 const hintsName = ({

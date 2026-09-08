@@ -326,6 +326,7 @@
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "@typescript/native-preview": "catalog:",
       },
     },
     "packages/atmn-nightly": {
@@ -346,6 +347,7 @@
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "@typescript/native-preview": "catalog:",
       },
     },
     "packages/atmn-tests": {

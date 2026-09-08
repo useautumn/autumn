@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { SettingsRow } from "../../SettingsRow";
 
 export const DefaultNetTermsSubsection = () => {
 	const { org, mutate: refetchOrg } = useOrg();
@@ -44,15 +45,14 @@ export const DefaultNetTermsSubsection = () => {
 	};
 
 	return (
-		<div className="flex items-center justify-between gap-4">
-			<div className="flex flex-col gap-0.5">
-				<span className="text-sm font-medium">Net payment terms</span>
-				<span className="text-xs text-muted-foreground">
-					{savedDays === null
-						? "Unset — invoices Autumn creates are due 30 days after they're sent"
-						: "Used when neither the request nor the invoice template sets its own terms"}
-				</span>
-			</div>
+		<SettingsRow
+			label="Net payment terms"
+			description={
+				savedDays === null
+					? "Unset — invoices Autumn creates are due 30 days after they're sent"
+					: "Used when neither the request nor the invoice template sets its own terms"
+			}
+		>
 			<Input
 				type="number"
 				min={1}
@@ -67,6 +67,6 @@ export const DefaultNetTermsSubsection = () => {
 					if (event.key === "Enter") event.currentTarget.blur();
 				}}
 			/>
-		</div>
+		</SettingsRow>
 	);
 };

@@ -1,7 +1,7 @@
 import {
 	CusProductStatus,
 	type FullCusEntWithFullCusProduct,
-	isCusEntExpired,
+	isCusEntDisplayExpired,
 	isPooledBalanceSourceCustomerEntitlement,
 } from "@autumn/shared";
 import type { CustomerProductsStatusOption } from "@/views/customers2/hooks/useCustomerProductsTableState";
@@ -27,7 +27,9 @@ export function filterCustomerFeatureUsage({
 				return false;
 			}
 			if (!ent.customer_product) {
-				return isCusEntExpired({ cusEnt: ent }) ? showExpired : showActive;
+				return isCusEntDisplayExpired({ cusEnt: ent })
+					? showExpired
+					: showActive;
 			}
 			if (ent.customer_product.status === CusProductStatus.Expired) {
 				return showExpired;

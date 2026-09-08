@@ -1,7 +1,7 @@
 import { dirname, resolve } from "node:path";
 import type { SgNode } from "@ast-grep/napi";
 import { Lang, parse } from "@ast-grep/napi";
-import { findArrayBinding } from "../../surgery/arrayBinding";
+import { findLiteralBinding } from "../../surgery/arrayBinding";
 
 export type CollectionTarget =
 	| { kind: "inline"; file: string }
@@ -20,28 +20,31 @@ export const resolveCollectionTarget = ({
 	configPath,
 	files,
 	collection,
+	kind = "array",
 }: {
 	configPath: string;
 	files: Map<string, string>;
 	collection: string;
+	/** What the key holds: a collection's array, or a singleton's object. */
+	kind?: "array" | "object";
 }): CollectionTarget | null => {
 	const source = files.get(configPath);
 	if (source === undefined) return null;
 	const root = parse(Lang.TypeScript, source).root();
 	const value = collectionValue({ root, collection });
 	if (value === null) return null;
-	if (value.kind() === "array") {
-		const spread = trailingSpreadName(value);
+	if (value.kind() === kind) {
+		const spread = kind === "array" ? trailingSpreadName(value) : null;
 		return spread === null
 			? { kind: "inline", file: configPath }
-			: resolveBinding({ root, name: spread, configPath, files });
+			: resolveBinding({ root, name: spread, configPath, files, kind });
 	}
 	// `atmn({ plans })` names the binding without a pair.
 	const named =
 		value.kind() === "identifier" ||
 		value.kind() === "shorthand_property_identifier";
 	if (!named) return null;
-	return resolveBinding({ root, name: value.text(), configPath, files });
+	return resolveBinding({ root, name: value.text(), configPath, files, kind });
 };
 
 /** `[...a, ...b]` appends into `b`; a literal element last means inline. */
@@ -58,13 +61,15 @@ const resolveBinding = ({
 	name,
 	configPath,
 	files,
+	kind,
 }: {
 	root: SgNode;
 	name: string;
 	configPath: string;
 	files: Map<string, string>;
+	kind: "array" | "object";
 }): CollectionTarget | null => {
-	if (findArrayBinding({ root, name }) !== null)
+	if (findLiteralBinding({ root, name, kind }) !== null)
 		return { kind: "binding", file: configPath, name };
 	const imported = importedFrom({ root, name });
 	if (imported === null) return null;
@@ -75,8 +80,11 @@ const resolveBinding = ({
 	});
 	if (file === null) return null;
 	const module = parse(Lang.TypeScript, files.get(file) ?? "").root();
-	return findArrayBinding({ root: module, name: imported.exportedName }) !==
-		null
+	return findLiteralBinding({
+		root: module,
+		name: imported.exportedName,
+		kind,
+	}) !== null
 		? { kind: "binding", file, name: imported.exportedName }
 		: null;
 };

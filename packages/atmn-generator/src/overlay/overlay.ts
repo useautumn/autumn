@@ -135,6 +135,13 @@ export const OVERLAY: Overlay = {
 					"Deprecated on the server, but existing catalogs carry it, so a config must keep round-tripping the field.",
 			},
 		},
+		settings: {
+			persist_free_overage: {
+				rename: "paydownOverages",
+				reason:
+					"The flag's effect is that resets and top-ups pay down unbilled overages; the wire name describes the mechanism, not the outcome.",
+			},
+		},
 	},
 };
 

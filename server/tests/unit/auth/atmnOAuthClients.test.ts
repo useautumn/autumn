@@ -134,3 +134,35 @@ test("self-heals the migration scopes the v3 CLI requests for reset", async () =
 		scopes: ["migrations:read", "migrations:write"],
 	});
 });
+
+// A config's `settings` block writes org config, so its key needs organisation:write.
+test("self-heals the organisation:write scope the v3 CLI requests for settings", async () => {
+	const db = {} as DrizzleCli;
+	const clientId = "atmn_client";
+	const client = {
+		id: "oauth_client",
+		clientId,
+		name: "atmn",
+		redirectUris: ["http://localhost:31448/"],
+		scopes: ["organisation:read"],
+		metadata: null,
+		createdAt: new Date(),
+	};
+	spyOn(oauthClientRepo, "getByClientId").mockResolvedValue(client);
+	const addScopes = spyOn(
+		oauthClientRepo,
+		"addScopesByClientId",
+	).mockResolvedValue(client);
+
+	await ensureAtmnAuthorizeScopes({
+		db,
+		clientId,
+		scope: "organisation:read organisation:write billing:write",
+	});
+
+	expect(addScopes).toHaveBeenCalledWith({
+		db,
+		clientId,
+		scopes: ["organisation:read", "organisation:write"],
+	});
+});

@@ -3,8 +3,11 @@ import { dirname } from "node:path";
 import { ConfigNotFoundError, loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
 import type { AutumnClient } from "../generated/client";
-import { COLLECTIONS } from "../generated/emit";
+import { COLLECTIONS, SINGLETONS } from "../generated/emit";
+import { splitWire } from "../generated/wire";
+import type { SettingsPreview } from "../render/renderPreview";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
+import { applySettingsPreview } from "./pull/applySettingsPreview";
 import { listSourceFiles } from "./pull/listSourceFiles";
 import { type ConfigImports, scaffoldConfig } from "./pull/scaffoldConfig";
 import { configSearchDirs } from "./push";
@@ -92,17 +95,23 @@ export const runPull = async ({
 	const dirs = configSearchDirs({ cwd });
 	loadEnvFiles({ dirs });
 
-	const { path: configPath, wire } = await loadOrScaffold({
+	const { path: configPath, wire: document } = await loadOrScaffold({
 		dirs,
 		cwd,
 		imports,
 		write,
 	});
+	const { catalog: wire, singletons } = splitWire(document);
 
-	const [preview, catalog] = await Promise.all([
+	const [preview, catalog, settingsPreview] = await Promise.all([
 		client.previewUpdate(wire),
 		// History rows too: pull routes them into plans or planVersions.
 		client.get({ include_versions: true }),
+		// Always asked, even with no `settings` stated: a non-default flag the
+		// config omits is exactly what a first pull should write.
+		client.previewUpdateOrganization(
+			singletons.settings ?? { config: {} },
+		) as Promise<SettingsPreview>,
 	]);
 
 	const files = new Map<string, string>();
@@ -141,6 +150,27 @@ export const runPull = async ({
 		lines.push(...applied.lines);
 		unlocated.push(
 			...applied.unlocated.map((entry) => ({ collection, ...entry })),
+		);
+	}
+
+	for (const [singleton, spec] of Object.entries(SINGLETONS)) {
+		const applied = applySettingsPreview({
+			singleton,
+			spec,
+			changes: settingsPreview.config?.changes ?? [],
+			stated: singletons[singleton]?.[spec.wireKey] as
+				| Record<string, unknown>
+				| undefined,
+			configPath,
+			files,
+		});
+		lines.push(...applied.lines);
+		unlocated.push(
+			...applied.unlocated.map((key) => ({
+				collection: singleton,
+				id: key,
+				action: `set by hand: \`${singleton}\` is not an object literal`,
+			})),
 		);
 	}
 

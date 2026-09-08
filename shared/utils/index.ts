@@ -35,6 +35,7 @@ export * from "./intervalUtils/priceIntervalUtils";
 
 // Org utils
 export * from "./orgUtils/convertOrgUtils";
+export * from "./orgUtils/orgSettingsLabels";
 export * from "./planV1Utils/convertCustomize/basePriceToKey";
 export * from "./planV1Utils/convertCustomize/customizeToKey";
 export * from "./planV1Utils/convertPlanItem/createPlanItemToKey";

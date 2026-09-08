@@ -174350,6 +174350,219 @@ paths:
                 title: UpdateCatalogResponse
       parameters:
         - *a1
+  /v1/organization.preview_update:
+    post:
+      operationId: previewUpdateOrganization
+      description: What organization.update would change, without persisting. Takes
+        the exact params organization.update takes.
+      tags:
+        - organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                config:
+                  type: object
+                  properties:
+                    cancel_on_past_due:
+                      type: boolean
+                      description: Cancel on past due.
+                      default: false
+                    reverse_deduction_order:
+                      type: boolean
+                      description: Reverse deduction order.
+                      default: false
+                    block_overdue_entitlements:
+                      type: boolean
+                      description: Block access while overdue.
+                      default: false
+                    invoice_memos:
+                      type: boolean
+                      description: Invoice memos.
+                      default: false
+                    disable_overage_billing:
+                      type: boolean
+                      description: Disable overage billing.
+                      default: false
+                    persist_free_overage:
+                      type: boolean
+                      description: Pay down overages.
+                      default: false
+                    automatic_tax:
+                      type: boolean
+                      description: Automatic tax.
+                      default: false
+                    multi_currency:
+                      type: boolean
+                      description: Multi-currency.
+                      default: false
+                  description: Org settings to set. Only the flags stated are written; every other
+                    flag keeps its value.
+              title: PreviewUpdateOrganizationParams
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  config:
+                    type: object
+                    properties:
+                      changes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            key:
+                              enum:
+                                - cancel_on_past_due
+                                - reverse_deduction_order
+                                - block_overdue_entitlements
+                                - invoice_memos
+                                - disable_overage_billing
+                                - persist_free_overage
+                                - automatic_tax
+                                - multi_currency
+                              type: string
+                            action:
+                              enum:
+                                - update
+                                - unmanaged
+                              type: string
+                            previous:
+                              type: boolean
+                            current:
+                              anyOf:
+                                - type: boolean
+                                - type: "null"
+                              description: The value after the update; null when the flag is unmanaged.
+                          required:
+                            - key
+                            - action
+                            - previous
+                            - current
+                    required:
+                      - changes
+                required:
+                  - config
+                title: PreviewUpdateOrganizationResponse
+      parameters:
+        - *a1
+  /v1/organization.update:
+    post:
+      operationId: updateOrganization
+      description: Set organization settings. Only the flags stated are written; every
+        other flag keeps its value.
+      tags:
+        - organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                config:
+                  type: object
+                  properties:
+                    cancel_on_past_due:
+                      type: boolean
+                      description: Cancel on past due.
+                      default: false
+                    reverse_deduction_order:
+                      type: boolean
+                      description: Reverse deduction order.
+                      default: false
+                    block_overdue_entitlements:
+                      type: boolean
+                      description: Block access while overdue.
+                      default: false
+                    invoice_memos:
+                      type: boolean
+                      description: Invoice memos.
+                      default: false
+                    disable_overage_billing:
+                      type: boolean
+                      description: Disable overage billing.
+                      default: false
+                    persist_free_overage:
+                      type: boolean
+                      description: Pay down overages.
+                      default: false
+                    automatic_tax:
+                      type: boolean
+                      description: Automatic tax.
+                      default: false
+                    multi_currency:
+                      type: boolean
+                      description: Multi-currency.
+                      default: false
+                  description: Org settings to set. Only the flags stated are written; every other
+                    flag keeps its value.
+              title: UpdateOrganizationParams
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  config:
+                    type: object
+                    properties:
+                      cancel_on_past_due:
+                        type: boolean
+                        description: Cancel on past due.
+                        default: false
+                      reverse_deduction_order:
+                        type: boolean
+                        description: Reverse deduction order.
+                        default: false
+                      block_overdue_entitlements:
+                        type: boolean
+                        description: Block access while overdue.
+                        default: false
+                      invoice_memos:
+                        type: boolean
+                        description: Invoice memos.
+                        default: false
+                      disable_overage_billing:
+                        type: boolean
+                        description: Disable overage billing.
+                        default: false
+                      persist_free_overage:
+                        type: boolean
+                        description: Pay down overages.
+                        default: false
+                      automatic_tax:
+                        type: boolean
+                        description: Automatic tax.
+                        default: false
+                      multi_currency:
+                        type: boolean
+                        description: Multi-currency.
+                        default: false
+                    required:
+                      - cancel_on_past_due
+                      - reverse_deduction_order
+                      - block_overdue_entitlements
+                      - invoice_memos
+                      - disable_overage_billing
+                      - persist_free_overage
+                      - automatic_tax
+                      - multi_currency
+                    description: Every settable flag, as it stands after the update.
+                required:
+                  - config
+                title: UpdateOrganizationResponse
+      parameters:
+        - *a1
 security:
   - secretKey: []
 x-speakeasy-globals:

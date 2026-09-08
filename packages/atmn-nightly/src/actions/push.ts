@@ -2,11 +2,14 @@ import { join } from "node:path";
 import { loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
 import type { AutumnClient } from "../generated/client";
+import { splitWire } from "../generated/wire";
 import {
 	type CatalogPreview,
 	previewIsEmpty,
 	renderMigrationLinks,
 	renderPreview,
+	type SettingsPreview,
+	settingsHaveWork,
 } from "../render/renderPreview";
 import { findRepoLayout } from "../repo/findRepoRoot";
 import {
@@ -17,6 +20,7 @@ import {
 	deprecatedUsesIn,
 	renderDeprecatedUses,
 } from "./push/deprecatedFields";
+import { withSettingsScopeHint } from "./sandbox/withSandboxScopeHint";
 
 export type PushResult = {
 	configPath: string;
@@ -24,6 +28,22 @@ export type PushResult = {
 	/** Absent on a dry run, or when the preview showed nothing to do. */
 	applied?: unknown;
 	migrationIds: string[];
+};
+
+/** The settings lane of one push: absent when the config states no `settings`. */
+const previewSettings = async ({
+	client,
+	body,
+}: {
+	client: AutumnClient;
+	body: Record<string, unknown> | undefined;
+}): Promise<SettingsPreview | undefined> => {
+	if (body === undefined) return undefined;
+	try {
+		return (await client.previewUpdateOrganization(body)) as SettingsPreview;
+	} catch (error) {
+		throw withSettingsScopeHint({ error });
+	}
 };
 
 export type PushOptions = {
@@ -173,29 +193,53 @@ export const runPush = async ({
 	const dirs = configSearchDirs({ cwd });
 	loadEnvFiles({ dirs });
 
-	const { path: configPath, wire } = await loadConfig({ dirs });
+	const { path: configPath, wire: document } = await loadConfig({ dirs });
+	// One document, two operations: the catalog and each singleton go their own way.
+	const { catalog: wire, singletons } = splitWire(document);
 
-	const deprecated = deprecatedUsesIn({
-		wire: wire as Record<string, unknown>,
-	});
+	const deprecated = deprecatedUsesIn({ wire });
 	if (deprecated.length > 0)
 		write(`${renderDeprecatedUses({ uses: deprecated })}\n\n`);
 
-	const preview = (await client.previewUpdate(
-		wire as Record<string, unknown>,
-	)) as CatalogPreview;
+	// Settings go first, on their own: a flag like multi_currency changes what
+	// the catalog accepts, so the catalog is previewed against the settings as
+	// they will be, and a settings write can never fail on the catalog's account.
+	const settingsBody = singletons.settings;
+	const settings = await previewSettings({ client, body: settingsBody });
+	const settingsWork =
+		settingsBody !== undefined && settingsHaveWork({ settings });
+	if (settingsWork) {
+		write(`${renderPreview({ preview: { settings } })}\n`);
+		if (!dryRun) {
+			try {
+				await client.updateOrganization(settingsBody);
+			} catch (error) {
+				throw withSettingsScopeHint({ error });
+			}
+			write("\nApplied settings.\n\n");
+		}
+	}
+
+	const catalogPreview = (await client.previewUpdate(wire)) as CatalogPreview;
+	// The settings lane is already printed when it applied; the unmanaged
+	// notes still belong beside the catalog's own rows.
+	const preview: CatalogPreview = {
+		...catalogPreview,
+		...(settingsWork ? {} : { settings }),
+	};
 
 	write(`${renderPreview({ preview, migrationLinkBase })}\n`);
 
 	const renameHint = possibleRenameHint({ preview, wire: wire as WireLike });
 	if (renameHint !== null) write(`${renameHint}\n\n`);
 
-	if (previewIsEmpty({ preview })) {
-		return { configPath, preview, migrationIds: [] };
+	const fullPreview: CatalogPreview = { ...catalogPreview, settings };
+	if (previewIsEmpty({ preview: catalogPreview })) {
+		return { configPath, preview: fullPreview, migrationIds: [] };
 	}
-	if (dryRun) return { configPath, preview, migrationIds: [] };
+	if (dryRun) return { configPath, preview: fullPreview, migrationIds: [] };
 
-	const applied = (await client.update(wire as Record<string, unknown>)) as {
+	const applied = (await client.update(wire)) as {
 		migrations?: { id?: string }[];
 		results?: Record<string, unknown>;
 	};
@@ -234,5 +278,5 @@ export const runPush = async ({
 		write(backfillSummary({ backfilled, slugged }));
 	}
 
-	return { configPath, preview, applied, migrationIds };
+	return { configPath, preview: fullPreview, applied, migrationIds };
 };

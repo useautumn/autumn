@@ -34,7 +34,7 @@ export type License = {
 			included?: number;
 			/** If true, customer has unlimited access to this feature. */
 			unlimited?: boolean;
-			/** Whether entity-level grants contribute to a shared customer balance. */
+			/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 			pooled?: boolean;
 			/** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 			reset?: {
@@ -89,7 +89,7 @@ export type License = {
 					| "year";
 				/** Number of intervals per billing cycle. Defaults to 1. */
 				intervalCount?: number;
-				/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+				/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 				billingUnits?: number;
 				/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 				billingMethod: "prepaid" | "usage_based";

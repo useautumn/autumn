@@ -48,6 +48,7 @@ const clientWith = ({
 	preview: unknown;
 	rows: unknown;
 }) => ({
+	previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 	previewUpdate: async () => preview,
 	update: async () => ({}),
 	get: async () => rows,
