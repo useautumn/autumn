@@ -35,6 +35,7 @@ describe("customer feature usage pooled balances", () => {
 			...buildCustomerEntitlement({ id: "consumed", pooled: false }),
 			balance: 0,
 			unlimited: false,
+			next_reset_at: null,
 			customer_product: null,
 		};
 
@@ -44,6 +45,23 @@ describe("customer feature usage pooled balances", () => {
 		});
 
 		expect(filtered.map(({ id }) => id)).toEqual(["consumed"]);
+	});
+
+	test("keeps consumed resetting balances out of the expired view", () => {
+		const resetting = {
+			...buildCustomerEntitlement({ id: "resetting", pooled: false }),
+			balance: 0,
+			unlimited: false,
+			next_reset_at: 1,
+			customer_product: null,
+		};
+
+		const filtered = filterCustomerFeatureUsage({
+			entitlements: [resetting],
+			statuses: ["expired"],
+		});
+
+		expect(filtered).toEqual([]);
 	});
 
 	test("shows the synthetic pool and hides its contribution sources", () => {
