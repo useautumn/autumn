@@ -828,7 +828,7 @@ export const getPaginatedFullCusQuery = ({
 		AND ce.pooled_balance_id IS NULL
 		AND ce.pooled_contribution_id IS NULL
         ${looseEntitlementExpiryFilterSql({ includeExpiredLooseEntitlements: false })}
-        AND (${looseEntitlementIsLiveSql()} OR ce.next_reset_at IS NOT NULL)
+        AND ${looseEntitlementIsLiveSql()}
         ${customerLevelOnly("ce")}
       ORDER BY ce.id DESC
 	  LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
