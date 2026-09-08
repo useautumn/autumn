@@ -115,6 +115,10 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 3,
 		});
+		const trackedEntity = (await autumn.entities.get(customerId, entityId)) as {
+			billing_controls?: { usage_limits?: Array<{ usage?: number }> };
+		};
+		expect(trackedEntity.billing_controls?.usage_limits?.[0]?.usage).toBe(3);
 		await autumn.entities.update(customerId, entityId, {
 			billing_controls: {
 				usage_limits: [{ feature_id: TestFeature.Messages, usage: 0 }],
