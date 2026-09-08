@@ -120,6 +120,18 @@ export function submitInitialization({
 		}
 		return inFlight.settlement.join({ kind: "duplicate" });
 	}
+	const receipt = scope.ctx.stateStore.readInitializationReceipt({ identity });
+	if (receipt?.initializationId === initialization.initializationId) {
+		if (
+			receipt.initializationFingerprint !==
+			stateInitializationFingerprintOf({ initialization })
+		) {
+			throw new ConflictingMeteringStateInitializationError({
+				partitionKey: customerKey,
+			});
+		}
+		return Promise.resolve({ kind: "duplicate", outcome: initialization });
+	}
 	if (readFreshestState({ scope, customerKey, identity })) {
 		return Promise.resolve({ kind: "already_initialized" });
 	}

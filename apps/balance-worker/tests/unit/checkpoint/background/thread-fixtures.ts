@@ -64,7 +64,18 @@ export const createThreadFixture = ({
 				featureStatesById: {
 					messages: {
 						kind: "direct_metered_v1",
-						customerEntitlements: [{ id: "messages", balance: 100, usage: 0 }],
+						customerEntitlements: [
+							{
+								id: "messages",
+								balance: 100,
+								usage: 0,
+								granted: 100,
+								externalId: null,
+								planId: null,
+								reset: null,
+								expiresAt: null,
+							},
+						],
 					},
 				},
 			}),

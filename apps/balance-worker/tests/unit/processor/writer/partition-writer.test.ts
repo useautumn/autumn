@@ -72,7 +72,18 @@ const createState = ({
 		featureStatesById: {
 			messages: {
 				kind: "direct_metered_v1",
-				customerEntitlements: [{ id: "messages_monthly", balance, usage: 0 }],
+				customerEntitlements: [
+					{
+						id: "messages_monthly",
+						balance,
+						usage: 0,
+						granted: balance,
+						externalId: null,
+						planId: null,
+						reset: null,
+						expiresAt: null,
+					},
+				],
 			},
 		},
 	});
@@ -280,7 +291,18 @@ const createPartitionTrackWriter = ({
 	return {
 		submitTrack: ({ command }) => track({ scope, command }),
 		submitInitialization: ({ initialization }) =>
-			initialize({ writer, initialization }),
+			initialize({
+				writer,
+				command: {
+					schemaVersion: 1,
+					type: "initialize",
+					requestId: initialization.initializationId,
+					identity: initialization.state.identity,
+					initializationId: initialization.initializationId,
+					state: initialization.state,
+					occurredAt: initialization.initializedAt,
+				},
+			}),
 	};
 };
 
@@ -855,6 +877,9 @@ describe("partition writer", () => {
 			const appender = new RecordingCommittedAppender();
 			const stateStore = {
 				readState: fixture.store.readState.bind(fixture.store),
+				readInitializationReceipt: fixture.store.readInitializationReceipt.bind(
+					fixture.store,
+				),
 				readTrackReceipt: fixture.store.readTrackReceipt.bind(fixture.store),
 				applyDurableMutations: () => {
 					throw new Error("disk write failed");
@@ -970,6 +995,99 @@ describe("partition writer", () => {
 			closeFixture(fixture);
 		}
 	});
+
+	test.concurrent(
+		"committed initialization retry returns duplicate without resetting later usage",
+		async () => {
+			const fixture = createFixture({ identities: [] });
+			try {
+				const appender = new RecordingCommittedAppender();
+				const writerOptions = {
+					topic,
+					partition,
+					stateStore: fixture.store,
+					appender,
+					limits: defaultLimits,
+				};
+				const writer = createPartitionTrackWriter(writerOptions);
+				const initialization = createInitialization({
+					identity: firstIdentity,
+				});
+				await writer.submitInitialization({ initialization });
+				await writer.submitTrack({
+					command: createCommand({ commandId: "after_initialization" }),
+				});
+
+				const replacementWriter = createPartitionTrackWriter(writerOptions);
+				const decision = await replacementWriter.submitInitialization({
+					initialization: {
+						...initialization,
+						initializedAt: initialization.initializedAt + 1_000,
+					},
+				});
+
+				expect(decision).toEqual({
+					kind: "duplicate",
+					state: initialization.state,
+				});
+				expect(appender.batches).toHaveLength(2);
+				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
+				expect(
+					readBalance({ store: fixture.store, identity: firstIdentity }),
+				).toEqual({ balance: 5, usage: 5, revision: 1 });
+			} finally {
+				closeFixture(fixture);
+			}
+		},
+	);
+
+	test.concurrent(
+		"committed initialization identity rejects a different baseline without changing state",
+		async () => {
+			const fixture = createFixture({ identities: [] });
+			try {
+				const appender = new RecordingCommittedAppender();
+				const writer = createPartitionTrackWriter({
+					topic,
+					partition,
+					stateStore: fixture.store,
+					appender,
+					limits: defaultLimits,
+				});
+				await writer.submitInitialization({
+					initialization: createInitialization({ identity: firstIdentity }),
+				});
+				await writer.submitTrack({
+					command: createCommand({ commandId: "before_conflict" }),
+				});
+
+				await expect(
+					writer.submitInitialization({
+						initialization: createInitialization({
+							identity: firstIdentity,
+							balance: 99,
+						}),
+					}),
+				).rejects.toBeInstanceOf(ConflictingMeteringStateInitializationError);
+
+				expect(appender.batches).toHaveLength(2);
+				expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
+				expect(
+					readBalance({ store: fixture.store, identity: firstIdentity }),
+				).toEqual({ balance: 5, usage: 5, revision: 1 });
+				await expect(
+					writer.submitTrack({
+						command: createCommand({ commandId: "after_conflict", value: 1 }),
+					}),
+				).resolves.toMatchObject({
+					kind: "new",
+					outcome: { balanceAfter: 4, revisionAfter: 2 },
+				});
+			} finally {
+				closeFixture(fixture);
+			}
+		},
+	);
 
 	test("replies already_initialized for a customer that has state", async () => {
 		const fixture = createFixture();

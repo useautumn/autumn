@@ -2,7 +2,11 @@ import { isDeepStrictEqual } from "node:util";
 import { Decimal } from "decimal.js";
 import { parseTrackOutcome } from "../../common/parsers.js";
 import { balanceOf, identitiesMatch } from "../../common/state.js";
-import type { CustomerMeteringState, TrackOutcome } from "../../contracts.js";
+import {
+	type CustomerMeteringState,
+	canonicalizeJsonValue,
+	type TrackOutcome,
+} from "../../contracts.js";
 import { applyDeduction } from "../../deduction/applyDeduction.js";
 import {
 	ConflictingTrackReceiptError,
@@ -89,6 +93,12 @@ export const executeTrack = ({
 		kind: "direct_metered_v1" as const,
 		customerEntitlements: nextCustomerEntitlements,
 	};
+	if (
+		JSON.stringify(canonicalizeJsonValue(nextCustomerEntitlements[0])) !==
+		JSON.stringify(canonicalizeJsonValue(parsedOutcome.balanceSnapshot))
+	) {
+		throw new StaleTrackOutcomeError({ subject: parsedOutcome.featureId });
+	}
 	if (
 		!new Decimal(balanceOf({ featureState: nextFeatureState })).eq(
 			parsedOutcome.balanceAfter,

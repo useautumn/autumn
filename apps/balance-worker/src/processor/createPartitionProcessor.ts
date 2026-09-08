@@ -1,5 +1,10 @@
-import type { CheckCommand, TrackCommand } from "@autumn/balance-engine";
+import type {
+	CheckCommand,
+	InitializeCommand,
+	TrackCommand,
+} from "@autumn/balance-engine";
 import { check as checkPartition } from "./commands/check.js";
+import { initialize as initializePartition } from "./commands/initialize.js";
 import { track as trackPartition } from "./commands/track.js";
 import {
 	acceptCommand,
@@ -58,5 +63,12 @@ export function createPartitionProcessor({
 		return settleAcceptedCommands({ accepted: scope.accepted });
 	}
 
-	return { track, check, drain };
+	function initialize({ command }: { command: InitializeCommand }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: initializePartition({ writer: scope.ctx.writer, command }),
+		});
+	}
+
+	return { track, check, initialize, drain };
 }

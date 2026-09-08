@@ -62,7 +62,7 @@ export const trackCommandSchema = z
 
 export type TrackCommand = z.infer<typeof trackCommandSchema>;
 
-const canonicalizeJsonValue = (value: JsonValue): JsonValue => {
+export const canonicalizeJsonValue = (value: JsonValue): JsonValue => {
 	if (Array.isArray(value)) return value.map(canonicalizeJsonValue);
 	if (value === null || typeof value !== "object") return value;
 
@@ -119,6 +119,41 @@ const balanceMutationSchema = z
 
 export type BalanceMutation = z.infer<typeof balanceMutationSchema>;
 
+const balanceResetSchema = z
+	.object({
+		interval: z.enum([
+			"one_off",
+			"minute",
+			"hour",
+			"day",
+			"week",
+			"month",
+			"quarter",
+			"semi_annual",
+			"year",
+		]),
+		intervalCount: z.number().int().positive(),
+		nextResetAt: z.number().int().nonnegative().nullable(),
+	})
+	.strict();
+
+const leanCustomerEntitlementSchema = z
+	.object({
+		id: nonEmptyStringSchema,
+		externalId: nonEmptyStringSchema.nullable(),
+		balance: z.number().finite(),
+		usage: z.number().finite().nonnegative(),
+		granted: z.number().finite(),
+		planId: nonEmptyStringSchema.nullable(),
+		reset: balanceResetSchema.nullable(),
+		expiresAt: z.number().int().nonnegative().nullable(),
+	})
+	.strict();
+
+export type LeanCustomerEntitlement = z.infer<
+	typeof leanCustomerEntitlementSchema
+>;
+
 export const trackOutcomeSchema = z
 	.object({
 		schemaVersion: z.literal(1),
@@ -137,6 +172,7 @@ export const trackOutcomeSchema = z
 		reason: z.literal("insufficient_balance").nullable(),
 		balanceBefore: z.number().finite(),
 		balanceAfter: z.number().finite(),
+		balanceSnapshot: leanCustomerEntitlementSchema,
 		revisionBefore: z.number().int().nonnegative(),
 		revisionAfter: z.number().int().positive(),
 		mutations: z.array(balanceMutationSchema),
@@ -145,6 +181,20 @@ export const trackOutcomeSchema = z
 	})
 	.strict()
 	.superRefine((outcome, context) => {
+		if (
+			!new Decimal(outcome.balanceSnapshot.balance).eq(outcome.balanceAfter) ||
+			outcome.mutations.some(
+				(mutation) =>
+					mutation.customerEntitlementId !== outcome.balanceSnapshot.id ||
+					!new Decimal(mutation.usageAfter).eq(outcome.balanceSnapshot.usage),
+			)
+		) {
+			context.addIssue({
+				code: "custom",
+				message: "Balance snapshot must match the committed mutations",
+				path: ["balanceSnapshot"],
+			});
+		}
 		const expectedCommandFingerprint = trackCommandFingerprintOf({
 			command: {
 				schemaVersion: 1,
@@ -291,18 +341,6 @@ export const trackOutcomeSchema = z
 
 export type TrackOutcome = z.infer<typeof trackOutcomeSchema>;
 
-const leanCustomerEntitlementSchema = z
-	.object({
-		id: nonEmptyStringSchema,
-		balance: z.number().finite(),
-		usage: z.number().finite().nonnegative(),
-	})
-	.strict();
-
-export type LeanCustomerEntitlement = z.infer<
-	typeof leanCustomerEntitlementSchema
->;
-
 export const directMeteredV1FeatureStateSchema = z
 	.object({
 		kind: z.literal("direct_metered_v1"),
@@ -362,6 +400,43 @@ export const stateInitializedEventSchema = z
 
 export type StateInitializedEvent = z.infer<typeof stateInitializedEventSchema>;
 
+export const initializeCommandSchema = z
+	.object({
+		schemaVersion: z.literal(1),
+		type: z.literal("initialize"),
+		requestId: nonEmptyStringSchema,
+		initializationId: nonEmptyStringSchema,
+		identity: meteringIdentitySchema,
+		state: customerMeteringStateSchema,
+		occurredAt: z.number().int().nonnegative(),
+	})
+	.strict()
+	.superRefine(({ identity, state }, context) => {
+		if (state.revision !== 0) {
+			context.addIssue({
+				code: "custom",
+				message: "Initialization must start at revision zero",
+				path: ["state", "revision"],
+			});
+		}
+		if (
+			identity.orgId !== state.identity.orgId ||
+			identity.env !== state.identity.env ||
+			identity.customerId !== state.identity.customerId
+		) {
+			context.addIssue({
+				code: "custom",
+				message: "Initialization identity must match its state",
+				path: ["identity"],
+			});
+		}
+	});
+
+export type InitializeCommand = z.infer<typeof initializeCommandSchema>;
+export type InitializationDecision =
+	| { kind: "initialized" | "duplicate"; state: CustomerMeteringState }
+	| { kind: "already_initialized" };
+
 export const stateInitializationFingerprintOf = ({
 	initialization,
 }: {
@@ -408,6 +483,7 @@ export type CheckDecision =
 			allowed: boolean;
 			reason: "insufficient_balance" | null;
 			balance: number;
+			balanceSnapshot: LeanCustomerEntitlement;
 			requiredBalance: number;
 			revision: number;
 	  }

@@ -305,6 +305,18 @@ export class SqliteBalanceStateStore {
 		return readState({ database: this.database, identity });
 	}
 
+	readInitializationReceipt({ identity }: { identity: MeteringIdentity }): {
+		initializationId: string;
+		initializationFingerprint: string;
+	} | null {
+		const storedState = readStoredState({ database: this.database, identity });
+		if (!storedState) return null;
+		return {
+			initializationId: storedState.initializationId,
+			initializationFingerprint: storedState.initializationFingerprint,
+		};
+	}
+
 	readTrackReceipt({
 		identity,
 		commandId,

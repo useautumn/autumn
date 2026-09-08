@@ -80,7 +80,20 @@ export const createReceiptReplayFixture = async ({
 				messages: {
 					kind: "direct_metered_v1",
 					customerEntitlements: [
-						{ id: "messages_monthly", balance: 10, usage: 0 },
+						{
+							id: "messages_monthly",
+							externalId: "monthly-grant",
+							balance: 10,
+							usage: 0,
+							granted: 10,
+							planId: "pro",
+							reset: {
+								interval: "month",
+								intervalCount: 1,
+								nextResetAt: 1_800_000_000_000,
+							},
+							expiresAt: null,
+						},
 					],
 				},
 			},
@@ -174,6 +187,7 @@ export const createReceiptReplayFixture = async ({
 				: [{ position: { topic, partition, offset: BigInt(index) }, mutation }],
 		);
 		return {
+			initialization,
 			liveStore,
 			restoredStore,
 			restoredProcessor,

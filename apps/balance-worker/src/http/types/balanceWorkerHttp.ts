@@ -1,4 +1,9 @@
-import type { TrackCommand, TrackDecision } from "@autumn/balance-engine";
+import type {
+	CheckDecision,
+	InitializationDecision,
+	TrackCommand,
+	TrackDecision,
+} from "@autumn/balance-engine";
 import type {
 	PartitionRoute,
 	WorkerErrorCode,
@@ -24,8 +29,11 @@ export type BalanceWorkerHttpEnv = {
 
 export type BalanceWorkerRequestLog = {
 	id: string;
-	command?: TrackCommand;
-	decision?: TrackDecision;
+	command?: Pick<TrackCommand, "requestId" | "identity"> &
+		Partial<
+			Pick<TrackCommand, "commandId" | "entityId" | "featureId" | "value">
+		>;
+	decision?: TrackDecision | CheckDecision | InitializationDecision;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
 };

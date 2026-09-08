@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createBalanceWorkerClientEnv } from "./balanceWorkerClient.js";
 
 test(
-	"balance worker routing is enabled by default only in development",
+	"balance worker routing requires an explicit development opt-in",
 	usesDevelopmentRollout,
 );
 test(
@@ -21,26 +21,37 @@ function usesDevelopmentRollout() {
 	expect(
 		createBalanceWorkerClientEnv({ NODE_ENV: "development" })
 			.BALANCE_WORKER_ROLLOUT_ENABLED,
-	).toBe(true);
+	).toBe(false);
 	expect(
 		createBalanceWorkerClientEnv({
 			NODE_ENV: "development",
 			BALANCE_WORKER_ROLLOUT_ENABLED: "false",
 		}).BALANCE_WORKER_ROLLOUT_ENABLED,
+	).toBe(false);
+	expect(
+		createBalanceWorkerClientEnv({
+			NODE_ENV: "development",
+			BALANCE_WORKER_ROLLOUT_ENABLED: "true",
+		}).BALANCE_WORKER_ROLLOUT_ENABLED,
 	).toBe(true);
 }
 
 function rejectsProductionRollout() {
-	expect(
+	expect(() =>
 		createBalanceWorkerClientEnv({
 			NODE_ENV: "production",
 			BALANCE_WORKER_ROLLOUT_ENABLED: "true",
-		}).BALANCE_WORKER_ROLLOUT_ENABLED,
-	).toBe(false);
-	expect(
-		createBalanceWorkerClientEnv({ BALANCE_WORKER_ROLLOUT_ENABLED: "true" })
-			.BALANCE_WORKER_ROLLOUT_ENABLED,
-	).toBe(false);
+		}),
+	).toThrow("requires NODE_ENV=development");
+	expect(() =>
+		createBalanceWorkerClientEnv({ BALANCE_WORKER_ROLLOUT_ENABLED: "true" }),
+	).toThrow("requires NODE_ENV=development");
+	expect(() =>
+		createBalanceWorkerClientEnv({
+			NODE_ENV: "development",
+			BALANCE_WORKER_ROLLOUT_ENABLED: "yes",
+		}),
+	).toThrow("must be true or false");
 }
 
 function readsBalanceWorkerEnvironment() {
