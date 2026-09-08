@@ -1,5 +1,5 @@
 import { type UsageWindow, usageWindows } from "@autumn/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const setUsageWindows = async ({
@@ -7,51 +7,23 @@ export const setUsageWindows = async ({
 	windows,
 }: {
 	db: DrizzleCli;
-	windows: Array<{ window: UsageWindow; usage: number }>;
+	windows: UsageWindow[];
 }): Promise<void> => {
-	if (windows.length === 0) return;
-
-	await db.transaction(async (tx) => {
-		for (const { window, usage } of windows) {
-			const existing = await tx
-				.select({ id: usageWindows.id })
-				.from(usageWindows)
-				.where(
-					and(
-						eq(usageWindows.internal_customer_id, window.internal_customer_id),
-						eq(usageWindows.internal_feature_id, window.internal_feature_id),
-						sql`coalesce(${usageWindows.internal_entity_id}, '') = coalesce(${window.internal_entity_id}, '')`,
-						sql`coalesce(${usageWindows.filter_key}, '') = coalesce(${window.filter_key}, '')`,
-					),
-				)
-				.for("update");
-
-			if (existing[0]) {
-				await tx
-					.update(usageWindows)
-					.set({ usage, updated_at: Date.now() })
-					.where(eq(usageWindows.id, existing[0].id));
-				continue;
-			}
-
-			await tx
-				.insert(usageWindows)
-				.values({ ...window, usage })
-				.onConflictDoNothing();
-			const inserted = await tx
-				.select({ id: usageWindows.id })
-				.from(usageWindows)
-				.where(
-					and(
-						eq(usageWindows.internal_customer_id, window.internal_customer_id),
-						eq(usageWindows.internal_feature_id, window.internal_feature_id),
-						sql`coalesce(${usageWindows.internal_entity_id}, '') = coalesce(${window.internal_entity_id}, '')`,
-						sql`coalesce(${usageWindows.filter_key}, '') = coalesce(${window.filter_key}, '')`,
-					),
-				)
-				.limit(1);
-			if (inserted[0]?.id !== window.id)
-				await tx.update(usageWindows).set({ usage, updated_at: Date.now() }).where(eq(usageWindows.id, inserted[0].id));
-		}
-	});
+	for (const window of windows) {
+		await db.execute(sql`
+   INSERT INTO ${usageWindows} (
+    id, internal_customer_id, internal_feature_id, internal_entity_id,
+    feature_id, filter_key, anchor_customer_entitlement_id,
+    window_start_at, window_end_at, usage, updated_at
+   ) VALUES (
+    ${window.id}, ${window.internal_customer_id}, ${window.internal_feature_id},
+    ${window.internal_entity_id}, ${window.feature_id}, ${window.filter_key},
+    ${window.anchor_customer_entitlement_id}, ${window.window_start_at},
+    ${window.window_end_at}, ${window.usage}, ${Date.now()}
+   )
+   ON CONFLICT (internal_customer_id, internal_feature_id,
+    (COALESCE(internal_entity_id, '')), (COALESCE(filter_key, '')))
+   DO UPDATE SET usage = EXCLUDED.usage, updated_at = EXCLUDED.updated_at
+  `);
+	}
 };

@@ -1,17 +1,20 @@
 import {
-	type ApiEntityBillingControlsParams,
 	CustomerNotFoundError,
 	EntityNotFoundError,
 	ErrCode,
 	RecaseError,
 	type UpdateEntityParams,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { assertEntityUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertEntityUsageLimitAlertsResolvable.js";
-import { setUsageLimitUsage } from "@/internal/customers/actions/update/setUsageLimitUsage.js";
+import { getUsageLimitConfigUpdate } from "@/internal/customers/actions/update/getUsageLimitConfigUpdate.js";
+import { prepareUsageLimitUsage } from "@/internal/customers/actions/update/prepareUsageLimitUsage.js";
 import { updateCachedEntityData } from "@/internal/customers/cache/fullSubject/actions/updateCachedEntityData.js";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
+import { usageWindowRepo } from "@/internal/customers/usageWindows/repos/index.js";
 
 export const updateEntity = async ({
 	ctx,
@@ -49,60 +52,64 @@ export const updateEntity = async ({
 		throw new EntityNotFoundError({ entityId });
 	}
 
+	const configUsageLimits = getUsageLimitConfigUpdate({
+		usageLimits: billing_controls?.usage_limits,
+	});
+	const usageWindows = await prepareUsageLimitUsage({
+		ctx,
+		customerId,
+		entityId,
+		usageLimits: billing_controls?.usage_limits,
+		configUsageLimits,
+	});
+
 	assertEntityUsageLimitAlertsResolvable({
 		ctx,
 		entity,
 		fullSubject,
 		billingControls: billing_controls
-			? {
-					...billing_controls,
-					usage_limits: billing_controls.usage_limits?.filter(
-						(entry) => "limit" in entry,
-					) as ApiEntityBillingControlsParams["usage_limits"],
-				} as ApiEntityBillingControlsParams
+			? { ...billing_controls, usage_limits: configUsageLimits }
 			: undefined,
 	});
 
 	const filteredUpdates = Object.fromEntries(
 		Object.entries({
 			spend_limits: billing_controls?.spend_limits,
-			usage_limits: (() => {
-				const entries = billing_controls?.usage_limits;
-				if (entries === undefined) return undefined;
-				const configEntries = entries
-					.filter((entry) => entry.source !== "plan" && "limit" in entry)
-					.map(({ usage: _usage, source: _source, ...entry }) => entry);
-				return entries.length === 0 || configEntries.length > 0
-					? configEntries
-					: undefined;
-			})(),
+			usage_limits: configUsageLimits,
 			usage_alerts: billing_controls?.usage_alerts,
 			overage_allowed: billing_controls?.overage_allowed,
 		}).filter(([, value]) => value !== undefined),
 	);
 
-	if (Object.keys(filteredUpdates).length > 0) {
-		await EntityService.update({
-			db: ctx.db,
-			internalId: entity.internal_id,
-			update: filteredUpdates,
+	const hasConfigUpdates = Object.keys(filteredUpdates).length > 0;
+	if (hasConfigUpdates || usageWindows.length > 0) {
+		await ctx.db.transaction(async (tx) => {
+			await usageWindowRepo.setWindows({
+				db: tx as unknown as DrizzleCli,
+				windows: usageWindows,
+			});
+			if (hasConfigUpdates)
+				await EntityService.update({
+					db: tx as unknown as DrizzleCli,
+					internalId: entity.internal_id,
+					update: filteredUpdates,
+				});
 		});
-
+	}
+	if (hasConfigUpdates)
 		await updateCachedEntityData({
 			ctx,
 			customerId,
 			entityId,
 			updates: filteredUpdates,
 		});
-	}
-	if (billing_controls?.usage_limits) {
-		await setUsageLimitUsage({
+	if (usageWindows.length > 0)
+		await invalidateCachedFullSubject({
 			ctx,
 			customerId,
-			entityId: entity.id ?? entity.internal_id,
-			usageLimits: billing_controls.usage_limits,
+			entityId,
+			source: "updateEntity:usage",
 		});
-	}
 
 	return entity.id ?? entity.internal_id;
 };

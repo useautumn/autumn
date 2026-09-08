@@ -1,5 +1,7 @@
 import { CustomerDataSchema } from "@api/common/customerData";
 import { CustomerIdSchema } from "@api/common/customerId";
+import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls";
+import { UsageLimitUpdateSchema } from "@models/cusModels/billingControls/usageLimit";
 import { z } from "zod/v4";
 
 export const UpdateCustomerParamsV0Schema = z
@@ -8,6 +10,9 @@ export const UpdateCustomerParamsV0Schema = z
 			"New unique identifier for the customer",
 		),
 		...CustomerDataSchema.shape,
+		billing_controls: CustomerBillingControlsParamsSchema.extend({
+			usage_limits: z.array(UsageLimitUpdateSchema).optional(),
+		}).optional(),
 	})
 	.omit({
 		auto_enable_plan_id: true,

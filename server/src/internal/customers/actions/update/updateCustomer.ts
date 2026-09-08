@@ -1,7 +1,6 @@
 import {
 	type Customer,
 	CustomerAlreadyExistsError,
-	type CustomerBillingControlsParams,
 	CustomerNotFoundError,
 	notNullish,
 	ProcessorType,
@@ -9,7 +8,6 @@ import {
 	shouldForwardCustomerMetadata,
 	stripAutoTopupCountsForStorage,
 	type UpdateCustomerParamsV1,
-	type UsageLimitUpdate,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -22,8 +20,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { assertCustomerUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertCustomerUsageLimitAlertsResolvable";
 import { CusService } from "@/internal/customers/CusService";
+import { invalidateCachedFullSubject } from "../../cache/fullSubject/index.js";
+import { usageWindowRepo } from "../../usageWindows/repos/index.js";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
-import { setUsageLimitUsage } from "./setUsageLimitUsage.js";
+import { getUsageLimitConfigUpdate } from "./getUsageLimitConfigUpdate.js";
+import { prepareUsageLimitUsage } from "./prepareUsageLimitUsage.js";
 import {
 	syncAutoTopupPurchaseLimitCounts,
 	validateAutoTopupPurchaseLimitCounts,
@@ -87,16 +88,21 @@ export const updateCustomer = async ({
 		}
 	}
 
+	const configUsageLimits = getUsageLimitConfigUpdate({
+		usageLimits: billing_controls?.usage_limits,
+	});
+	const usageWindows = await prepareUsageLimitUsage({
+		ctx,
+		customerId,
+		usageLimits: billing_controls?.usage_limits,
+		configUsageLimits,
+	});
+
 	await assertCustomerUsageLimitAlertsResolvable({
 		ctx,
 		customer: originalCustomer,
 		billingControls: billing_controls
-			? {
-					...billing_controls,
-					usage_limits: billing_controls.usage_limits?.filter(
-						(entry) => "limit" in entry,
-					) as CustomerBillingControlsParams["usage_limits"],
-				} as CustomerBillingControlsParams
+			? { ...billing_controls, usage_limits: configUsageLimits }
 			: undefined,
 	});
 
@@ -173,17 +179,8 @@ export const updateCustomer = async ({
 		}
 		if (billing_controls.spend_limits !== undefined)
 			billingControlUpdates.spend_limits = billing_controls.spend_limits;
-		if (billing_controls.usage_limits !== undefined) {
-			const configEntries = billing_controls.usage_limits
-				.filter((entry) => entry.source !== "plan" && "limit" in entry)
-				.map(({ usage: _usage, source: _source, ...entry }) => entry);
-			if (
-				billing_controls.usage_limits.length === 0 ||
-				configEntries.length > 0
-			)
-				billingControlUpdates.usage_limits =
-					configEntries as unknown as Customer["usage_limits"];
-		}
+		if (configUsageLimits !== undefined)
+			billingControlUpdates.usage_limits = configUsageLimits;
 		if (billing_controls.usage_alerts !== undefined)
 			billingControlUpdates.usage_alerts = billing_controls.usage_alerts;
 		if (billing_controls.overage_allowed !== undefined)
@@ -235,6 +232,8 @@ export const updateCustomer = async ({
 			});
 		}
 
+		await usageWindowRepo.setWindows({ db: txCtx.db, windows: usageWindows });
+
 		await CusService.update({
 			ctx: txCtx,
 			idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
@@ -244,11 +243,11 @@ export const updateCustomer = async ({
 
 	ctx.skipCache = true;
 	const resolvedCustomerId = newCustomerId ?? customerId;
-	if (billing_controls?.usage_limits) {
-		await setUsageLimitUsage({
+	if (usageWindows.length > 0) {
+		await invalidateCachedFullSubject({
 			ctx,
 			customerId: resolvedCustomerId,
-			usageLimits: billing_controls.usage_limits as UsageLimitUpdate[],
+			source: "updateCustomer:usage",
 		});
 	}
 

@@ -1,5 +1,11 @@
 import { z } from "zod/v4";
+import { UsageLimitUpdateSchema } from "../../../models/cusModels/billingControls/usageLimit.js";
 import { ApiEntityBillingControlsParamsSchema } from "../../billingControls/entityBillingControls.js";
+
+const UpdateEntityBillingControlsSchema =
+	ApiEntityBillingControlsParamsSchema.extend({
+		usage_limits: z.array(UsageLimitUpdateSchema).optional(),
+	});
 
 export const UpdateEntityParamsSchema = z.object({
 	customer_id: z.string().optional().meta({
@@ -8,7 +14,7 @@ export const UpdateEntityParamsSchema = z.object({
 	entity_id: z.string().meta({
 		description: "The ID of the entity.",
 	}),
-	billing_controls: ApiEntityBillingControlsParamsSchema.optional().meta({
+	billing_controls: UpdateEntityBillingControlsSchema.optional().meta({
 		description: "Billing controls to replace on the entity.",
 	}),
 });
