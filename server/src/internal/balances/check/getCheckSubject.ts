@@ -28,11 +28,17 @@ export const getCheckSubject = ({
 		customerProduct.status === CusProductStatus.PastDue &&
 		!customerProduct.product.config?.ignore_past_due &&
 		(ctx.org.config.block_overdue_entitlements ||
-			thresholdBillingProduct(customerProduct));
+			thresholdBillingProduct(customerProduct) ||
+			customerProduct.status === CusProductStatus.PastDue);
 
 	if (
 		!ctx.org.config.block_overdue_entitlements &&
-		!fullSubject.customer_products.some(thresholdBillingProduct)
+		!fullSubject.customer_products.some(
+			(customerProduct) =>
+				thresholdBillingProduct(customerProduct) ||
+				(customerProduct.status === CusProductStatus.PastDue &&
+					!customerProduct.product.config?.ignore_past_due),
+		)
 	)
 		return fullSubject;
 
