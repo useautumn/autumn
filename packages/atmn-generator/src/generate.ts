@@ -1,13 +1,14 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { COLLECTIONS, NESTED_FIXTURES } from "./collections";
+import { COLLECTIONS, NESTED_FIXTURES, SINGLETONS } from "./collections";
 import { copyRuntime } from "./emit/copyRuntime";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
 import { emitCollectionModule } from "./emit/emitCollection";
 import { emitEmitModule } from "./emit/emitEmitModule";
 import { emitLabelsModule } from "./emit/emitLabelsModule";
+import { emitSingletonModule } from "./emit/emitSingleton";
 import { emitWireModule } from "./emit/emitWire";
-import { wirePathHints } from "./emit/freeFormPaths";
+import { renamedPaths, wirePathHints, withRenames } from "./emit/freeFormPaths";
 import { emitLintRulesModule } from "./lint/emitLintRules";
 import { LINT_REGISTRY } from "./lint/rules/registry";
 import { nodeRulesFromSpec } from "./lint/specRules/nodeRulesFromSpec";
@@ -21,6 +22,7 @@ import {
 	responseSchema,
 	serverBaseUrl,
 } from "./spec/loadSpec";
+import { resolveRef } from "./spec/resolveRef";
 
 const OUTPUT_DIR = join(import.meta.dir, "../../atmn-nightly/src/generated");
 const REPO_ROOT = join(import.meta.dir, "../../..");
@@ -106,6 +108,24 @@ export const generate = async (): Promise<string[]> => {
 		});
 	}
 
+	for (const [name, meta] of Object.entries(SINGLETONS)) {
+		const body = requestBodySchema({ spec, path: meta.operationPath });
+		const schema = body.properties?.[meta.wireKey];
+		if (!schema)
+			throw new Error(
+				`\`${meta.wireKey}\` is not on the ${meta.operationPath} body.`,
+			);
+		write({
+			name: `${name}.ts`,
+			source: emitSingletonModule({
+				name,
+				typeName: meta.typeName,
+				schema: resolveRef({ schema, root }) ?? schema,
+				overlay: OVERLAY,
+			}),
+		});
+	}
+
 	const lintRuntimePath = join(OUTPUT_DIR, "lintRuntime.ts");
 	copyRuntime({
 		from: LINT_RUNTIME_SOURCE,
@@ -129,6 +149,7 @@ export const generate = async (): Promise<string[]> => {
 			overlay: OVERLAY,
 			collections: COLLECTIONS,
 			nested: NESTED_FIXTURES,
+			singletons: SINGLETONS,
 		}),
 	});
 
@@ -140,14 +161,30 @@ export const generate = async (): Promise<string[]> => {
 		root,
 		overlay: OVERLAY,
 	});
+	// Singletons are linted under their config key, so the spec's constraints
+	// on them reach the document walk like any collection's.
+	const singletonEnvelope = {
+		type: "object",
+		properties: Object.fromEntries(
+			Object.entries(SINGLETONS).map(([name, meta]) => [
+				name,
+				requestBodySchema({ spec, path: meta.operationPath }).properties?.[
+					meta.wireKey
+				] ?? {},
+			]),
+		),
+	};
 	write({
 		name: "lintRules.ts",
 		source: emitLintRulesModule({
-			specRules: nodeRulesFromSpec({
-				schema: envelope,
-				root,
-				overlay: OVERLAY,
-			}),
+			specRules: {
+				...nodeRulesFromSpec({ schema: envelope, root, overlay: OVERLAY }),
+				...nodeRulesFromSpec({
+					schema: singletonEnvelope,
+					root,
+					overlay: OVERLAY,
+				}),
+			},
 			registry: LINT_REGISTRY,
 		}),
 	});
@@ -159,8 +196,19 @@ export const generate = async (): Promise<string[]> => {
 	write({
 		name: "wire.ts",
 		source: emitWireModule({
-			catalogHints: wirePathHints({ schema: envelope, root }),
+			catalogHints: withRenames({
+				hints: wirePathHints({ schema: envelope, root }),
+				renames: renamedPaths({
+					overlay: OVERLAY,
+					roots: Object.fromEntries(
+						[...Object.keys(COLLECTIONS), ...Object.keys(SINGLETONS)].map(
+							(name) => [name, name],
+						),
+					),
+				}),
+			}),
 			collections: COLLECTIONS,
+			singletons: SINGLETONS,
 		}),
 	});
 
@@ -182,6 +230,17 @@ export const generate = async (): Promise<string[]> => {
 				name: "get",
 				path: "/v1/catalogV2.get",
 				responseTypeName: "GetCatalogResponse",
+			},
+			// Singleton operations take the body `splitWire` cut from the document.
+			{
+				name: "previewUpdateOrganization",
+				path: "/v1/organization.preview_update",
+				responseTypeName: "PreviewUpdateOrganizationResponse",
+			},
+			{
+				name: "updateOrganization",
+				path: "/v1/organization.update",
+				responseTypeName: "UpdateOrganizationResponse",
 			},
 			{
 				name: "createSandbox",
@@ -210,6 +269,16 @@ export const generate = async (): Promise<string[]> => {
 		] as const
 	).map(({ name, path, responseTypeName, ...rest }) => {
 		const schema = responseSchema({ spec, path });
+		// A singleton's response echoes the object under its wire key, so the
+		// overlay's renames apply there too — rooted at that key, not the config's.
+		const singletonRenames = renamedPaths({
+			overlay: OVERLAY,
+			roots: Object.fromEntries(
+				Object.entries(SINGLETONS)
+					.filter(([, meta]) => meta.operationPath === path)
+					.map(([singleton, meta]) => [singleton, meta.wireKey]),
+			),
+		});
 		const requestTypeName =
 			"requestTypeName" in rest ? rest.requestTypeName : undefined;
 		const request =
@@ -221,7 +290,10 @@ export const generate = async (): Promise<string[]> => {
 			path,
 			responseTypeName,
 			responseSchema: schema,
-			responseHints: wirePathHints({ schema, root }),
+			responseHints: withRenames({
+				hints: wirePathHints({ schema, root }),
+				renames: singletonRenames,
+			}),
 			...(request === undefined || requestTypeName === undefined
 				? {}
 				: {

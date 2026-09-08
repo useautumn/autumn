@@ -507,6 +507,39 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.items.featureOverride.markups": {
+		fields: {
+			defaultMarkup: {
+				minimum: -100,
+			},
+		},
+	},
+	"plans.items.featureOverride.markups.modelMarkups": {
+		keys: {
+			pattern: ".+\\/.+",
+		},
+	},
+	"plans.items.featureOverride.markups.modelMarkups.*": {
+		fields: {
+			markup: {
+				minimum: -100,
+			},
+			inputCost: {
+				minimum: 0,
+			},
+			outputCost: {
+				minimum: 0,
+			},
+		},
+	},
+	"plans.items.featureOverride.markups.providerMarkups.*": {
+		required: ["markup"],
+		fields: {
+			markup: {
+				minimum: -100,
+			},
+		},
+	},
 	"plans.items.price": {
 		label: "price",
 		required: ["billingMethod", "interval"],
@@ -729,6 +762,40 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.licenses.customize.addItems.featureOverride.markups": {
+		fields: {
+			defaultMarkup: {
+				minimum: -100,
+			},
+		},
+	},
+	"plans.licenses.customize.addItems.featureOverride.markups.modelMarkups": {
+		keys: {
+			pattern: ".+\\/.+",
+		},
+	},
+	"plans.licenses.customize.addItems.featureOverride.markups.modelMarkups.*": {
+		fields: {
+			markup: {
+				minimum: -100,
+			},
+			inputCost: {
+				minimum: 0,
+			},
+			outputCost: {
+				minimum: 0,
+			},
+		},
+	},
+	"plans.licenses.customize.addItems.featureOverride.markups.providerMarkups.*":
+		{
+			required: ["markup"],
+			fields: {
+				markup: {
+					minimum: -100,
+				},
+			},
+		},
 	"plans.licenses.customize.addItems.price": {
 		required: ["billingMethod", "interval"],
 		fields: {
@@ -1073,6 +1140,40 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.addItems.featureOverride.markups": {
+		fields: {
+			defaultMarkup: {
+				minimum: -100,
+			},
+		},
+	},
+	"plans.variants.customize.addItems.featureOverride.markups.modelMarkups": {
+		keys: {
+			pattern: ".+\\/.+",
+		},
+	},
+	"plans.variants.customize.addItems.featureOverride.markups.modelMarkups.*": {
+		fields: {
+			markup: {
+				minimum: -100,
+			},
+			inputCost: {
+				minimum: 0,
+			},
+			outputCost: {
+				minimum: 0,
+			},
+		},
+	},
+	"plans.variants.customize.addItems.featureOverride.markups.providerMarkups.*":
+		{
+			required: ["markup"],
+			fields: {
+				markup: {
+					minimum: -100,
+				},
+			},
+		},
 	"plans.variants.customize.addItems.price": {
 		required: ["billingMethod", "interval"],
 		fields: {
@@ -1367,6 +1468,39 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.items.featureOverride.markups": {
+		fields: {
+			defaultMarkup: {
+				minimum: -100,
+			},
+		},
+	},
+	"plans.variants.customize.items.featureOverride.markups.modelMarkups": {
+		keys: {
+			pattern: ".+\\/.+",
+		},
+	},
+	"plans.variants.customize.items.featureOverride.markups.modelMarkups.*": {
+		fields: {
+			markup: {
+				minimum: -100,
+			},
+			inputCost: {
+				minimum: 0,
+			},
+			outputCost: {
+				minimum: 0,
+			},
+		},
+	},
+	"plans.variants.customize.items.featureOverride.markups.providerMarkups.*": {
+		required: ["markup"],
+		fields: {
+			markup: {
+				minimum: -100,
+			},
+		},
+	},
 	"plans.variants.customize.items.price": {
 		required: ["billingMethod", "interval"],
 		fields: {
@@ -1612,6 +1746,43 @@ export const LINT_RULES: LintRules = {
 				},
 				creditCost: {
 					minimum: 0,
+				},
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups":
+		{
+			fields: {
+				defaultMarkup: {
+					minimum: -100,
+				},
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups":
+		{
+			keys: {
+				pattern: ".+\\/.+",
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups.*":
+		{
+			fields: {
+				markup: {
+					minimum: -100,
+				},
+				inputCost: {
+					minimum: 0,
+				},
+				outputCost: {
+					minimum: 0,
+				},
+			},
+		},
+	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups.*":
+		{
+			required: ["markup"],
+			fields: {
+				markup: {
+					minimum: -100,
 				},
 			},
 		},

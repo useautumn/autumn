@@ -54,6 +54,9 @@ export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
 // Licenses
 export * from "./licenses/index.js";
+// Organization (internal: the CLI's `settings` block)
+export * from "./organization/updateOrganizationParams.js";
+export * from "./organization/updateOrganizationResponse.js";
 // Others
 export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";

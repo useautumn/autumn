@@ -103,9 +103,9 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
-/** Capped dependency counts/samples (customers, license parents, reward programs, variants). */
+/** Capped dependency counts/samples (customers, license parents, reward programs, variants). Defaults to {"customers":{"count":0,"count_capped":false,"samples":[]},"license_parents":{"count":0,"count_capped":false,"samples":[]},"reward_programs":{"count":0,"count_capped":false,"samples":[]},"variants":{"count":0,"count_capped":false,"samples":[]}}. */
 usage?: {
 customers: {
 count: number;
@@ -148,7 +148,7 @@ name: string;
 }>;
 };
 };
-/** Ready-made dialog lines explaining why a delete archives (or other blockers). */
+/** Ready-made dialog lines explaining why a delete archives (or other blockers). Defaults to []. */
 reasons?: Array<{
 /** Presentation-ready explanation for archive/delete dialogs. */
 message: string;
@@ -167,9 +167,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -213,7 +213,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -223,7 +223,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -234,7 +234,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -246,7 +246,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -262,13 +262,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -280,7 +280,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -373,7 +373,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -412,7 +412,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -566,6 +566,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -596,7 +611,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -635,7 +650,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -743,6 +758,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -763,7 +793,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -776,7 +806,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -786,7 +816,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -800,7 +830,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -813,7 +843,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -830,13 +860,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -849,7 +879,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -882,7 +912,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -921,7 +951,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -1029,6 +1059,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -1088,7 +1133,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -1127,7 +1172,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -1235,6 +1280,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -1281,9 +1341,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -1327,7 +1387,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -1337,7 +1397,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -1348,7 +1408,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -1360,7 +1420,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -1376,13 +1436,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -1394,7 +1454,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -1487,7 +1547,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -1526,7 +1586,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -1680,6 +1740,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -1710,7 +1785,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -1749,7 +1824,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -1857,6 +1932,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -1877,7 +1967,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -1890,7 +1980,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -1900,7 +1990,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -1914,7 +2004,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -1927,7 +2017,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -1944,13 +2034,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -1963,7 +2053,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -2003,7 +2093,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -2062,9 +2152,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -2108,7 +2198,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -2118,7 +2208,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -2129,7 +2219,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -2141,7 +2231,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -2157,13 +2247,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -2175,7 +2265,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -2268,7 +2358,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -2307,7 +2397,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -2461,6 +2551,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -2491,7 +2596,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -2530,7 +2635,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -2638,6 +2743,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -2658,7 +2778,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -2671,7 +2791,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -2681,7 +2801,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -2695,7 +2815,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -2708,7 +2828,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -2725,13 +2845,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -2744,7 +2864,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -2777,7 +2897,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -2816,7 +2936,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -2920,6 +3040,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -2979,7 +3114,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -3018,7 +3153,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -3126,6 +3261,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -3172,9 +3322,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -3218,7 +3368,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -3228,7 +3378,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -3239,7 +3389,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -3251,7 +3401,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -3267,13 +3417,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -3285,7 +3435,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -3378,7 +3528,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -3417,7 +3567,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -3567,6 +3717,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -3597,7 +3762,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -3636,7 +3801,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -3740,6 +3905,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -3760,7 +3940,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -3773,7 +3953,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -3783,7 +3963,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -3797,7 +3977,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -3810,7 +3990,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -3827,13 +4007,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -3846,7 +4026,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -3896,7 +4076,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -3955,9 +4135,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -4001,7 +4181,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -4011,7 +4191,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -4022,7 +4202,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -4034,7 +4214,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -4050,13 +4230,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -4068,7 +4248,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -4161,7 +4341,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -4200,7 +4380,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -4354,6 +4534,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -4384,7 +4579,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -4423,7 +4618,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -4531,6 +4726,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -4551,7 +4761,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -4564,7 +4774,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -4574,7 +4784,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -4588,7 +4798,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -4601,7 +4811,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -4618,13 +4828,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -4637,7 +4847,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -4670,7 +4880,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -4709,7 +4919,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -4797,6 +5007,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -4856,7 +5081,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -4895,7 +5120,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -4993,6 +5218,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -5039,9 +5279,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -5085,7 +5325,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -5095,7 +5335,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -5106,7 +5346,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -5118,7 +5358,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -5134,13 +5374,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -5152,7 +5392,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -5245,7 +5485,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -5284,7 +5524,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -5418,6 +5658,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -5448,7 +5703,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -5487,7 +5742,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -5575,6 +5830,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -5595,7 +5865,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -5608,7 +5878,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -5618,7 +5888,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -5632,7 +5902,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -5645,7 +5915,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -5662,13 +5932,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -5681,7 +5951,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -5745,7 +6015,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -5804,9 +6074,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -5850,7 +6120,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -5860,7 +6130,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -5871,7 +6141,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -5883,7 +6153,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -5899,13 +6169,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -5917,7 +6187,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -6010,7 +6280,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -6049,7 +6319,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -6193,6 +6463,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -6223,7 +6508,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -6262,7 +6547,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -6360,6 +6645,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -6380,7 +6680,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -6393,7 +6693,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -6403,7 +6703,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -6417,7 +6717,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -6430,7 +6730,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -6447,13 +6747,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -6466,7 +6766,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -6499,7 +6799,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -6535,7 +6835,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -6586,6 +6886,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -6645,7 +6960,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -6684,7 +6999,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -6746,6 +7061,21 @@ add?: unknown;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -6792,9 +7122,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -6838,7 +7168,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -6848,7 +7178,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -6859,7 +7189,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -6871,7 +7201,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -6887,13 +7217,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -6905,7 +7235,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -6998,7 +7328,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -7037,7 +7367,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -7131,6 +7461,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -7161,7 +7506,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -7197,7 +7542,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -7248,6 +7593,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -7268,7 +7628,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -7281,7 +7641,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -7291,7 +7651,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -7305,7 +7665,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -7318,7 +7678,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -7335,13 +7695,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -7354,7 +7714,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -7408,7 +7768,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -7467,9 +7827,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -7513,7 +7873,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -7523,7 +7883,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -7534,7 +7894,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -7546,7 +7906,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -7562,13 +7922,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -7580,7 +7940,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -7673,7 +8033,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -7712,7 +8072,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -7866,6 +8226,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -7896,7 +8271,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -7935,7 +8310,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -8043,6 +8418,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -8063,7 +8453,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -8076,7 +8466,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -8086,7 +8476,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -8100,7 +8490,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -8113,7 +8503,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -8130,13 +8520,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -8149,7 +8539,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -8182,7 +8572,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -8221,7 +8611,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -8309,6 +8699,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -8368,7 +8773,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -8407,7 +8812,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -8505,6 +8910,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -8551,9 +8971,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -8597,7 +9017,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -8607,7 +9027,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -8618,7 +9038,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -8630,7 +9050,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -8646,13 +9066,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -8664,7 +9084,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -8757,7 +9177,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -8796,7 +9216,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -8930,6 +9350,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -8960,7 +9395,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -8999,7 +9434,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -9087,6 +9522,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -9107,7 +9557,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -9120,7 +9570,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -9130,7 +9580,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -9144,7 +9594,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -9157,7 +9607,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -9174,13 +9624,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -9193,7 +9643,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -9255,7 +9705,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -9314,9 +9764,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -9360,7 +9810,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -9370,7 +9820,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -9381,7 +9831,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -9393,7 +9843,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -9409,13 +9859,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -9427,7 +9877,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -9520,7 +9970,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -9559,7 +10009,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -9703,6 +10153,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -9733,7 +10198,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -9772,7 +10237,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -9870,6 +10335,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -9890,7 +10370,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -9903,7 +10383,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -9913,7 +10393,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -9927,7 +10407,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -9940,7 +10420,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -9957,13 +10437,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -9976,7 +10456,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -10009,7 +10489,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -10045,7 +10525,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -10096,6 +10576,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -10155,7 +10650,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -10194,7 +10689,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -10256,6 +10751,21 @@ add?: unknown;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -10302,9 +10812,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -10348,7 +10858,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -10358,7 +10868,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -10369,7 +10879,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -10381,7 +10891,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -10397,13 +10907,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -10415,7 +10925,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -10508,7 +11018,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -10547,7 +11057,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -10641,6 +11151,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -10671,7 +11196,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -10707,7 +11232,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -10758,6 +11283,21 @@ multipliers?: Record<string, unknown>;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -10778,7 +11318,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -10791,7 +11331,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -10801,7 +11341,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -10815,7 +11355,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -10828,7 +11368,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -10845,13 +11385,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -10864,7 +11404,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -10926,7 +11466,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -10985,9 +11525,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -11031,7 +11571,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -11041,7 +11581,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -11052,7 +11592,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -11064,7 +11604,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -11080,13 +11620,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -11098,7 +11638,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -11191,7 +11731,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -11230,7 +11770,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -11384,6 +11924,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -11414,7 +11969,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -11453,7 +12008,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -11561,6 +12116,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -11581,7 +12151,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -11594,7 +12164,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -11604,7 +12174,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -11618,7 +12188,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -11631,7 +12201,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -11648,13 +12218,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -11667,7 +12237,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -11700,7 +12270,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -11739,7 +12309,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -11843,6 +12413,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -11902,7 +12487,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -11941,7 +12526,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -12049,6 +12634,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -12095,9 +12695,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -12141,7 +12741,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -12151,7 +12751,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -12162,7 +12762,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -12174,7 +12774,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -12190,13 +12790,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -12208,7 +12808,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -12301,7 +12901,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -12340,7 +12940,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -12490,6 +13090,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -12520,7 +13135,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -12559,7 +13174,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -12663,6 +13278,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -12683,7 +13313,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -12696,7 +13326,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -12706,7 +13336,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -12720,7 +13350,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -12733,7 +13363,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -12750,13 +13380,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -12769,7 +13399,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -12833,7 +13463,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -12892,9 +13522,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -12938,7 +13568,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -12948,7 +13578,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -12959,7 +13589,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -12971,7 +13601,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -12987,13 +13617,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -13005,7 +13635,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -13098,7 +13728,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -13137,7 +13767,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -13291,6 +13921,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -13321,7 +13966,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -13360,7 +14005,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -13468,6 +14113,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -13488,7 +14148,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -13501,7 +14161,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -13511,7 +14171,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -13525,7 +14185,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -13538,7 +14198,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -13555,13 +14215,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -13574,7 +14234,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -13607,7 +14267,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -13646,7 +14306,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -13734,6 +14394,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -13793,7 +14468,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -13832,7 +14507,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -13930,6 +14605,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -13976,9 +14666,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -14022,7 +14712,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -14032,7 +14722,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -14043,7 +14733,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -14055,7 +14745,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -14071,13 +14761,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -14089,7 +14779,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -14182,7 +14872,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -14221,7 +14911,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -14355,6 +15045,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -14385,7 +15090,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -14424,7 +15129,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -14512,6 +15217,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -14532,7 +15252,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -14545,7 +15265,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -14555,7 +15275,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -14569,7 +15289,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -14582,7 +15302,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -14599,13 +15319,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -14618,7 +15338,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -14672,7 +15392,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -14731,9 +15451,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -14777,7 +15497,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -14787,7 +15507,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -14798,7 +15518,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -14810,7 +15530,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -14826,13 +15546,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -14844,7 +15564,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -14937,7 +15657,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -14976,7 +15696,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -15130,6 +15850,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -15160,7 +15895,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -15199,7 +15934,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -15307,6 +16042,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -15327,7 +16077,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -15340,7 +16090,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -15350,7 +16100,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -15364,7 +16114,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -15377,7 +16127,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -15394,13 +16144,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -15413,7 +16163,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -15446,7 +16196,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -15485,7 +16235,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -15589,6 +16339,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -15648,7 +16413,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -15687,7 +16452,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -15795,6 +16560,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -15841,9 +16621,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -15887,7 +16667,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -15897,7 +16677,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -15908,7 +16688,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -15920,7 +16700,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -15936,13 +16716,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -15954,7 +16734,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -16047,7 +16827,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -16086,7 +16866,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -16236,6 +17016,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -16266,7 +17061,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -16305,7 +17100,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -16409,6 +17204,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -16429,7 +17239,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -16442,7 +17252,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -16452,7 +17262,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -16466,7 +17276,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -16479,7 +17289,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -16496,13 +17306,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -16515,7 +17325,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -16577,7 +17387,7 @@ previousActiveVersionSlug: string;
 };
 state: {
 hasCustomers: boolean;
-/** For deletes: archive (customers exist) instead of hard delete. */
+/** For deletes: archive (customers exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
 /** Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage. */
 usage?: {
@@ -16636,9 +17446,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -16682,7 +17492,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -16692,7 +17502,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -16703,7 +17513,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -16715,7 +17525,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -16731,13 +17541,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -16749,7 +17559,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -16842,7 +17652,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -16881,7 +17691,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -17035,6 +17845,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -17065,7 +17890,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -17104,7 +17929,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -17212,6 +18037,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -17232,7 +18072,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -17245,7 +18085,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -17255,7 +18095,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -17269,7 +18109,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -17282,7 +18122,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -17299,13 +18139,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -17318,7 +18158,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -17351,7 +18191,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -17390,7 +18230,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -17478,6 +18318,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -17537,7 +18392,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -17576,7 +18431,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -17674,6 +18529,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -17720,9 +18590,9 @@ group?: string | null | null;
 addOn?: boolean | null;
 autoEnable?: boolean | null;
 config?: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
@@ -17766,7 +18636,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -17776,7 +18646,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -17787,7 +18657,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -17799,7 +18669,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -17815,13 +18685,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -17833,7 +18703,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }> | null;
 } | null;
@@ -17926,7 +18796,7 @@ cardRequired: boolean;
 onEnd?: "bill" | "revert" | null;
 } | null;
 };
-/** Feature items added to or removed from the plan. */
+/** Feature items added to or removed from the plan. Defaults to []. */
 itemChanges?: Array<{
 /** Whether the item was added to or removed from the plan. */
 action: "created" | "deleted";
@@ -17965,7 +18835,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -18099,6 +18969,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 };
@@ -18129,7 +19014,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -18168,7 +19053,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -18256,6 +19141,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -18276,7 +19176,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -18289,7 +19189,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -18299,7 +19199,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -18313,7 +19213,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -18326,7 +19226,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -18343,13 +19243,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -18362,7 +19262,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -18439,7 +19339,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -18478,7 +19378,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -18586,6 +19486,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -18625,9 +19540,9 @@ action: "create" | "update" | "delete" | "skip" | "none";
 state: {
 /** Whether any customer entitlement references this feature. */
 hasCustomers: boolean;
-/** For deletes: archive (dependencies exist) instead of hard delete. */
+/** For deletes: archive (dependencies exist) instead of hard delete. Defaults to false. */
 willArchive?: boolean;
-/** Capped dependency counts/samples (plan items, credit systems, customers). */
+/** Capped dependency counts/samples (plan items, credit systems, customers). Defaults to {"plans":{"count":0,"count_capped":false,"samples":[]},"credit_systems":{"count":0,"count_capped":false,"samples":[]},"customers":{"count":0,"count_capped":false,"samples":[]}}. */
 usage?: {
 /** Distinct plans with any plan item referencing this feature (entitlement and/or price, including entity_feature_id). */
 plans: {
@@ -18662,7 +19577,7 @@ name: string;
 }>;
 };
 };
-/** Ready-made dialog lines explaining why a delete archives (or other blockers). */
+/** Ready-made dialog lines explaining why a delete archives (or other blockers). Defaults to []. */
 reasons?: Array<{
 /** Presentation-ready explanation for archive/delete dialogs. */
 message: string;
@@ -18671,7 +19586,7 @@ message: string;
 /** Changed feature fields holding their previous values. Null when nothing changed or the feature is new. */
 previousAttributes: Record<string, unknown> | null;
 }>;
-/** Migration drafts that would be created if this update is applied. */
+/** Migration drafts that would be created if this update is applied. Defaults to []. */
 migrations?: Array<{
 /** Plans and versions whose customers this migration targets. */
 plans: Array<{
@@ -18679,7 +19594,7 @@ planId: string;
 /** Versions of this plan whose customers the draft targets. Omitted versions (no customers, mint, empty diff) are excluded. */
 versions: Array<number>;
 }>;
-/** Echo of the `migration.include_custom` param — whether customized plans are matched. */
+/** Echo of the `migration.include_custom` param — whether customized plans are matched. Defaults to false. */
 includeCustom?: boolean;
 filter: {
 customer?: {
@@ -20268,7 +21183,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -20307,7 +21222,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -20415,6 +21330,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -20479,7 +21409,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -20518,7 +21448,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -20616,6 +21546,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -20835,7 +21780,7 @@ planId: string;
 /** Versions of this plan whose customers the draft targets. Omitted versions (no customers, mint, empty diff) are excluded. */
 versions: Array<number>;
 }>;
-/** Echo of the `migration.include_custom` param — whether customized plans are matched. */
+/** Echo of the `migration.include_custom` param — whether customized plans are matched. Defaults to false. */
 includeCustom?: boolean;
 filter: {
 customer?: {
@@ -22424,7 +23369,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -22463,7 +23408,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -22571,6 +23516,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -22635,7 +23595,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -22674,7 +23634,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -22772,6 +23732,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -23050,7 +24025,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -23204,6 +24179,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -23247,9 +24237,9 @@ env: "sandbox" | "live";
 archived: boolean;
 /** Miscellaneous plan-level configuration flags. */
 config: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 };
 /** Plan-level billing controls used as customer defaults. */
@@ -23258,7 +24248,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -23268,7 +24258,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -23280,7 +24270,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -23293,7 +24283,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -23310,13 +24300,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -23329,7 +24319,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -23379,7 +24369,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -23418,7 +24408,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -23526,6 +24516,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -23546,7 +24551,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -23559,7 +24564,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -23569,7 +24574,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -23583,7 +24588,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -23596,7 +24601,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -23613,13 +24618,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -23632,7 +24637,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -23665,7 +24670,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -23704,7 +24709,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -23812,6 +24817,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -23872,7 +24892,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -23911,7 +24931,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -24019,6 +25039,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24072,7 +25107,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -24111,7 +25146,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -24219,6 +25254,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24239,7 +25289,7 @@ included?: number;
 freeTrial?: {
 /** Number of duration_type periods the trial lasts. */
 durationLength: number;
-/** Unit of time for the trial ('day', 'month', 'year'). */
+/** Unit of time for the trial ('day', 'month', 'year'). Defaults to "month". */
 durationType?: "day" | "month" | "year";
 /** If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false. */
 cardRequired?: boolean;
@@ -24252,7 +25302,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -24262,7 +25312,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -24276,7 +25326,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -24289,7 +25339,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -24306,13 +25356,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -24325,7 +25375,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -24358,7 +25408,7 @@ featureId: string;
 included?: number;
 /** If true, customer has unlimited access to this feature. */
 unlimited?: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Omit for non-consumable features like seats. */
 reset?: {
@@ -24397,7 +25447,7 @@ tierBehavior?: "graduated" | "volume";
 interval: "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 /** Number of intervals per billing cycle. Defaults to 1. */
 intervalCount?: number;
-/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). */
+/** Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200). Defaults to 1. */
 billingUnits?: number;
 /** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 billingMethod: "prepaid" | "usage_based";
@@ -24505,6 +25555,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24612,7 +25677,7 @@ archived?: boolean | null;
 included: number;
 /** Whether the customer has unlimited access to this feature. */
 unlimited: boolean;
-/** Whether entity-level grants contribute to a shared customer balance. */
+/** Whether entity-level grants contribute to a shared customer balance. Defaults to false. */
 pooled?: boolean;
 /** Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles. */
 reset: {
@@ -24766,6 +25831,21 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
+/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
+markups?: {
+/** Default percentage markup for customers on this plan. Use -100 to make usage free. */
+defaultMarkup?: number;
+/** Per-provider markup percentages for customers on this plan. */
+providerMarkups?: Record<string, {
+markup: number;
+}> | null;
+/** Per-model markup overrides for customers on this plan. */
+modelMarkups?: Record<string, {
+markup?: number;
+inputCost?: number;
+outputCost?: number;
+}> | null;
+};
 };
 entityFeatureId?: string;
 }>;
@@ -24809,9 +25889,9 @@ env: "sandbox" | "live";
 archived: boolean;
 /** Miscellaneous plan-level configuration flags. */
 config: {
-/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
+/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
+/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
 allowOverdueEntitlements?: boolean;
 };
 /** Plan-level billing controls used as customer defaults. */
@@ -24820,7 +25900,7 @@ billingControls?: {
 autoTopups?: Array<{
 /** The ID of the feature (credit balance) to auto top-up. */
 featureId: string;
-/** Whether auto top-up is enabled. */
+/** Whether auto top-up is enabled. Defaults to false. */
 enabled?: boolean;
 /** When the balance drops below this threshold, an auto top-up will be purchased. */
 threshold: number;
@@ -24830,7 +25910,7 @@ quantity: number;
 purchaseLimit?: {
 /** The time interval for the purchase limit window. */
 interval: "hour" | "day" | "week" | "month";
-/** Number of intervals in the purchase limit window. */
+/** Number of intervals in the purchase limit window. Defaults to 1. */
 intervalCount?: number;
 /** Maximum number of auto top-ups allowed within the interval. */
 limit: number;
@@ -24842,7 +25922,7 @@ invoiceMode?: boolean;
 spendLimits?: Array<{
 /** Optional feature ID this spend limit applies to. */
 featureId?: string;
-/** Whether the overage spend limit is enabled. */
+/** Whether the overage spend limit is enabled. Defaults to false. */
 enabled?: boolean;
 /** How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance. */
 limitType?: "absolute" | "usage_percentage";
@@ -24855,7 +25935,7 @@ skipOverageBilling?: boolean;
 usageLimits?: Array<{
 /** The feature this usage limit applies to. */
 featureId: string;
-/** Whether this usage limit is enabled. */
+/** Whether this usage limit is enabled. Defaults to true. */
 enabled?: boolean;
 /** Maximum units allowed per interval. */
 limit: number;
@@ -24872,13 +25952,13 @@ properties: Record<string, string>;
 usageAlerts?: Array<{
 /** The feature ID this alert applies to. */
 featureId?: string;
-/** Whether this usage alert is enabled. */
+/** Whether this usage alert is enabled. Defaults to true. */
 enabled?: boolean;
 /** The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100). */
 threshold: number;
 /** Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance. */
 thresholdType: "usage" | "usage_percentage" | "remaining" | "remaining_percentage";
-/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. */
+/** What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter. Defaults to "balance". */
 basis?: "balance" | "included" | "recurring" | "usage_limit";
 /** Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter. */
 filter?: {
@@ -24891,7 +25971,7 @@ name?: string;
 overageAllowed?: Array<{
 /** The feature ID this overage allowed control applies to. */
 featureId: string;
-/** Whether overage is allowed for this feature. */
+/** Whether overage is allowed for this feature. Defaults to false. */
 enabled?: boolean;
 }>;
 };
@@ -24914,6 +25994,38 @@ baseVariantId: string | null;
 };
 }>;
 }>;
+};
+export type PreviewUpdateOrganizationResponse = {
+config: {
+changes: Array<{
+key: "cancel_on_past_due" | "reverse_deduction_order" | "block_overdue_entitlements" | "invoice_memos" | "disable_overage_billing" | "persist_free_overage" | "automatic_tax" | "multi_currency";
+action: "update" | "unmanaged";
+previous: boolean;
+/** The value after the update; null when the flag is unmanaged. */
+current: boolean | null;
+}>;
+};
+};
+export type UpdateOrganizationResponse = {
+/** Every settable flag, as it stands after the update. */
+config: {
+/** Cancel on past due. Defaults to false. */
+cancelOnPastDue: boolean;
+/** Reverse deduction order. Defaults to false. */
+reverseDeductionOrder: boolean;
+/** Block access while overdue. Defaults to false. */
+blockOverdueEntitlements: boolean;
+/** Invoice memos. Defaults to false. */
+invoiceMemos: boolean;
+/** Disable overage billing. Defaults to false. */
+disableOverageBilling: boolean;
+/** Pay down overages. Defaults to false. */
+persistFreeOverage: boolean;
+/** Automatic tax. Defaults to false. */
+automaticTax: boolean;
+/** Multi-currency. Defaults to false. */
+multiCurrency: boolean;
+};
 };
 export type CreateSandboxResponse = {
 /** The sandbox's organization ID. */
@@ -24959,46 +26071,67 @@ success: true;
 const CREATESANDBOX_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
+	renamedPaths: {},
 });
 const LISTSANDBOXES_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
+	renamedPaths: {},
 });
 const DELETESANDBOX_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
+	renamedPaths: {},
 });
 const RESETSANDBOX_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
+	renamedPaths: {},
 });
 const PREVIEWUPDATE_RESPONSE_HINTS = hintsOf({
-	recordPaths: ["migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.billingControls.usageAlerts.filter.properties","plans.licenses.plan.billingControls.usageLimits.filter.properties","plans.licenses.plan.items.featureOverride.creditSchema.dimensions","plans.licenses.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.items.featureOverride.creditSchema.multipliers","plans.licenses.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenses.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.customize.billingControls.usageAlerts.filter.properties","plans.planChange.customize.billingControls.usageLimits.filter.properties","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.planChange.plan.billingControls.usageAlerts.filter.properties","plans.planChange.plan.billingControls.usageLimits.filter.properties","plans.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties"],
+	recordPaths: ["migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.addItems.featureOverride.markups.modelMarkups","migrations.operations.customer.customize.addItems.featureOverride.markups.providerMarkups","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenses.plan.billingControls.usageAlerts.filter.properties","plans.licenses.plan.billingControls.usageLimits.filter.properties","plans.licenses.plan.items.featureOverride.creditSchema.dimensions","plans.licenses.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.items.featureOverride.creditSchema.multipliers","plans.licenses.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.items.featureOverride.markups.modelMarkups","plans.licenses.plan.items.featureOverride.markups.providerMarkups","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenses.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenses.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.customize.billingControls.usageAlerts.filter.properties","plans.planChange.customize.billingControls.usageLimits.filter.properties","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.planChange.plan.billingControls.usageAlerts.filter.properties","plans.planChange.plan.billingControls.usageLimits.filter.properties","plans.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.items.featureOverride.markups.modelMarkups","plans.planChange.plan.items.featureOverride.markups.providerMarkups","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.variants.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.items.featureOverride.markups.modelMarkups","plans.variants.planChange.plan.items.featureOverride.markups.providerMarkups","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.items.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.items.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.plan.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.items.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.plan.items.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.siblingVersions.planChange.previousAttributes.billingControls.usageAlerts.filter.properties","plans.variants.siblingVersions.planChange.previousAttributes.billingControls.usageLimits.filter.properties"],
 	frozenPaths: ["features.previousAttributes","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.upsertLicenses.metadata","plans.licenseParents.planChange.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.metadata","plans.licenseParents.planChange.licenseChanges.plan.metadata","plans.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.planChange.plan.metadata","plans.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.licenseParents.planChange.plan.metadata","plans.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.planChange.previousAttributes.metadata","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.licenseParents.siblingVersions.planChange.plan.metadata","plans.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.licenseParents.siblingVersions.planChange.previousAttributes.metadata","plans.licenses.metadata","plans.licenses.plan.metadata","plans.licenses.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.metadata","plans.planChange.licenseChanges.plan.metadata","plans.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.planChange.plan.metadata","plans.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.planChange.plan.metadata","plans.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.planChange.plan.metadata","plans.siblingVersions.licenseParents.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.licenseParents.siblingVersions.planChange.previousAttributes.metadata","plans.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.planChange.plan.metadata","plans.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.planChange.previousAttributes.metadata","plans.siblingVersions.variants.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.planChange.licenseChanges.metadata","plans.siblingVersions.variants.planChange.licenseChanges.plan.metadata","plans.siblingVersions.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.variants.planChange.plan.metadata","plans.siblingVersions.variants.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.planChange.previousAttributes.metadata","plans.siblingVersions.variants.siblingVersions.planChange.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.itemChanges.item.featureOverride.creditSchema.dimensions.*.match","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.dimensions","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.siblingVersions.variants.siblingVersions.planChange.plan.metadata","plans.siblingVersions.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.siblingVersions.variants.siblingVersions.planChange.previousAttributes.metadata","plans.variants.planChange.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.metadata","plans.variants.planChange.licenseChanges.plan.metadata","plans.variants.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.planChange.plan.metadata","plans.variants.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.variants.planChange.plan.metadata","plans.variants.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.planChange.previousAttributes.metadata","plans.variants.siblingVersions.planChange.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.siblingVersions.planChange.licenseChanges.metadata","plans.variants.siblingVersions.planChange.licenseChanges.plan.metadata","plans.variants.siblingVersions.planChange.licenseChanges.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.itemChanges.item.featureOverride.creditSchema.multipliers.*.match","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.licenseChanges.planChange.previousAttributes.metadata","plans.variants.siblingVersions.planChange.plan.metadata","plans.variants.siblingVersions.planChange.plan.variantDetails.customize.upsertLicenses.metadata","plans.variants.siblingVersions.planChange.previousAttributes.metadata"],
+	renamedPaths: {},
 });
 const UPDATE_RESPONSE_HINTS = hintsOf({
-	recordPaths: ["features.creditSchema.dimensions","features.creditSchema.dimensions.*.match","features.creditSchema.multipliers","features.creditSchema.multipliers.*.match","features.modelMarkups","features.providerMarkups","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.billingControls.usageAlerts.filter.properties","plans.billingControls.usageLimits.filter.properties","plans.items.featureOverride.creditSchema.dimensions","plans.items.featureOverride.creditSchema.dimensions.*.match","plans.items.featureOverride.creditSchema.multipliers","plans.items.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match"],
+	recordPaths: ["features.creditSchema.dimensions","features.creditSchema.dimensions.*.match","features.creditSchema.multipliers","features.creditSchema.multipliers.*.match","features.modelMarkups","features.providerMarkups","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.addItems.featureOverride.markups.modelMarkups","migrations.operations.customer.customize.addItems.featureOverride.markups.providerMarkups","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.billingControls.usageAlerts.filter.properties","plans.billingControls.usageLimits.filter.properties","plans.items.featureOverride.creditSchema.dimensions","plans.items.featureOverride.creditSchema.dimensions.*.match","plans.items.featureOverride.creditSchema.multipliers","plans.items.featureOverride.creditSchema.multipliers.*.match","plans.items.featureOverride.markups.modelMarkups","plans.items.featureOverride.markups.providerMarkups","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups"],
 	frozenPaths: ["migrations.operations.customer.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","migrations.operations.customer.customize.upsertLicenses.metadata","plans.metadata","plans.variantDetails.customize.upsertLicenses.metadata"],
+	renamedPaths: {},
 });
 const GET_RESPONSE_HINTS = hintsOf({
-	recordPaths: ["features.creditSchema.dimensions","features.creditSchema.dimensions.*.match","features.creditSchema.multipliers","features.creditSchema.multipliers.*.match","features.modelMarkups","features.providerMarkups","plans.billingControls.usageAlerts.filter.properties","plans.billingControls.usageLimits.filter.properties","plans.items.featureOverride.creditSchema.dimensions","plans.items.featureOverride.creditSchema.dimensions.*.match","plans.items.featureOverride.creditSchema.multipliers","plans.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.billingControls.usageAlerts.filter.properties","plans.licenses.plan.billingControls.usageLimits.filter.properties","plans.licenses.plan.items.featureOverride.creditSchema.dimensions","plans.licenses.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.items.featureOverride.creditSchema.multipliers","plans.licenses.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenses.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.customize.billingControls.usageAlerts.filter.properties","plans.variants.customize.billingControls.usageLimits.filter.properties","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.plan.billingControls.usageAlerts.filter.properties","plans.variants.plan.billingControls.usageLimits.filter.properties","plans.variants.plan.items.featureOverride.creditSchema.dimensions","plans.variants.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.plan.items.featureOverride.creditSchema.multipliers","plans.variants.plan.items.featureOverride.creditSchema.multipliers.*.match"],
+	recordPaths: ["features.creditSchema.dimensions","features.creditSchema.dimensions.*.match","features.creditSchema.multipliers","features.creditSchema.multipliers.*.match","features.modelMarkups","features.providerMarkups","plans.billingControls.usageAlerts.filter.properties","plans.billingControls.usageLimits.filter.properties","plans.items.featureOverride.creditSchema.dimensions","plans.items.featureOverride.creditSchema.dimensions.*.match","plans.items.featureOverride.creditSchema.multipliers","plans.items.featureOverride.creditSchema.multipliers.*.match","plans.items.featureOverride.markups.modelMarkups","plans.items.featureOverride.markups.providerMarkups","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.customize.addItems.featureOverride.markups.providerMarkups","plans.licenses.plan.billingControls.usageAlerts.filter.properties","plans.licenses.plan.billingControls.usageLimits.filter.properties","plans.licenses.plan.items.featureOverride.creditSchema.dimensions","plans.licenses.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.items.featureOverride.creditSchema.multipliers","plans.licenses.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.items.featureOverride.markups.modelMarkups","plans.licenses.plan.items.featureOverride.markups.providerMarkups","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.plan.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.licenses.plan.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.licenses.plan.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.licenses.plan.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.addItems.featureOverride.markups.modelMarkups","plans.variantDetails.customize.addItems.featureOverride.markups.providerMarkups","plans.variantDetails.customize.billingControls.usageAlerts.filter.properties","plans.variantDetails.customize.billingControls.usageLimits.filter.properties","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variantDetails.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.customize.billingControls.usageAlerts.filter.properties","plans.variants.customize.billingControls.usageLimits.filter.properties","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.match","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.modelMarkups","plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.markups.providerMarkups","plans.variants.plan.billingControls.usageAlerts.filter.properties","plans.variants.plan.billingControls.usageLimits.filter.properties","plans.variants.plan.items.featureOverride.creditSchema.dimensions","plans.variants.plan.items.featureOverride.creditSchema.dimensions.*.match","plans.variants.plan.items.featureOverride.creditSchema.multipliers","plans.variants.plan.items.featureOverride.creditSchema.multipliers.*.match","plans.variants.plan.items.featureOverride.markups.modelMarkups","plans.variants.plan.items.featureOverride.markups.providerMarkups"],
 	frozenPaths: ["plans.licenses.metadata","plans.licenses.plan.metadata","plans.licenses.plan.variantDetails.customize.upsertLicenses.metadata","plans.metadata","plans.variantDetails.customize.upsertLicenses.metadata","plans.variants.customize.upsertLicenses.metadata","plans.variants.plan.metadata"],
+	renamedPaths: {},
+});
+const PREVIEWUPDATEORGANIZATION_RESPONSE_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const UPDATEORGANIZATION_RESPONSE_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {"config.paydownOverages":"persist_free_overage"},
 });
 const CREATESANDBOX_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
+	renamedPaths: {},
 });
 const LISTSANDBOXES_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
+	renamedPaths: {},
 });
 const DELETESANDBOX_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
+	renamedPaths: {},
 });
 const RESETSANDBOX_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
+	renamedPaths: {},
 });
 
 export const createClient = (options: ClientOptions) => ({
@@ -25026,6 +26159,22 @@ export const createClient = (options: ClientOptions) => ({
 			path: "",
 			hints: GET_RESPONSE_HINTS,
 		}) as GetCatalogResponse,
+	previewUpdateOrganization: async (
+		body: WireDocument,
+	): Promise<PreviewUpdateOrganizationResponse> =>
+		toFixture({
+			value: await post({ options, path: "/v1/organization.preview_update", body: body }),
+			path: "",
+			hints: PREVIEWUPDATEORGANIZATION_RESPONSE_HINTS,
+		}) as PreviewUpdateOrganizationResponse,
+	updateOrganization: async (
+		body: WireDocument,
+	): Promise<UpdateOrganizationResponse> =>
+		toFixture({
+			value: await post({ options, path: "/v1/organization.update", body: body }),
+			path: "",
+			hints: UPDATEORGANIZATION_RESPONSE_HINTS,
+		}) as UpdateOrganizationResponse,
 	createSandbox: async (
 		body: CreateSandboxParams,
 	): Promise<CreateSandboxResponse> =>

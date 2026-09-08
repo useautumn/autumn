@@ -2,11 +2,14 @@ import { join } from "node:path";
 import { loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
 import type { AutumnClient } from "../generated/client";
+import { splitWire } from "../generated/wire";
 import {
 	type CatalogPreview,
 	previewIsEmpty,
 	renderMigrationLinks,
 	renderPreview,
+	type SettingsPreview,
+	settingsHaveWork,
 } from "../render/renderPreview";
 import { findRepoLayout } from "../repo/findRepoRoot";
 import {
@@ -17,6 +20,7 @@ import {
 	deprecatedUsesIn,
 	renderDeprecatedUses,
 } from "./push/deprecatedFields";
+import { withSettingsScopeHint } from "./sandbox/withSandboxScopeHint";
 
 export type PushResult = {
 	configPath: string;
@@ -24,6 +28,22 @@ export type PushResult = {
 	/** Absent on a dry run, or when the preview showed nothing to do. */
 	applied?: unknown;
 	migrationIds: string[];
+};
+
+/** The settings lane of one push: absent when the config states no `settings`. */
+const previewSettings = async ({
+	client,
+	body,
+}: {
+	client: AutumnClient;
+	body: Record<string, unknown> | undefined;
+}): Promise<SettingsPreview | undefined> => {
+	if (body === undefined) return undefined;
+	try {
+		return (await client.previewUpdateOrganization(body)) as SettingsPreview;
+	} catch (error) {
+		throw withSettingsScopeHint({ error });
+	}
 };
 
 export type PushOptions = {
@@ -137,17 +157,19 @@ export const runPush = async ({
 	const dirs = configSearchDirs({ cwd });
 	loadEnvFiles({ dirs });
 
-	const { path: configPath, wire } = await loadConfig({ dirs });
+	const { path: configPath, wire: document } = await loadConfig({ dirs });
+	// One document, two operations: the catalog and each singleton go their own way.
+	const { catalog: wire, singletons } = splitWire(document);
 
-	const deprecated = deprecatedUsesIn({
-		wire: wire as Record<string, unknown>,
-	});
+	const deprecated = deprecatedUsesIn({ wire });
 	if (deprecated.length > 0)
 		write(`${renderDeprecatedUses({ uses: deprecated })}\n\n`);
 
-	const preview = (await client.previewUpdate(
-		wire as Record<string, unknown>,
-	)) as CatalogPreview;
+	const [catalogPreview, settings] = await Promise.all([
+		client.previewUpdate(wire) as Promise<CatalogPreview>,
+		previewSettings({ client, body: singletons.settings }),
+	]);
+	const preview: CatalogPreview = { ...catalogPreview, settings };
 
 	write(`${renderPreview({ preview, migrationLinkBase })}\n`);
 
@@ -159,10 +181,22 @@ export const runPush = async ({
 	}
 	if (dryRun) return { configPath, preview, migrationIds: [] };
 
-	const applied = (await client.update(wire as Record<string, unknown>)) as {
-		migrations?: { id?: string }[];
-		results?: Record<string, unknown>;
-	};
+	// Settings first: a flag like multi_currency changes what the catalog
+	// accepts, and the settings write cannot fail on the catalog's account.
+	if (singletons.settings !== undefined && settingsHaveWork({ settings })) {
+		try {
+			await client.updateOrganization(singletons.settings);
+		} catch (error) {
+			throw withSettingsScopeHint({ error });
+		}
+	}
+
+	const applied = previewIsEmpty({ preview: catalogPreview })
+		? {}
+		: ((await client.update(wire)) as {
+				migrations?: { id?: string }[];
+				results?: Record<string, unknown>;
+			});
 
 	const migrationIds = (applied.migrations ?? [])
 		.map((migration) => migration.id)

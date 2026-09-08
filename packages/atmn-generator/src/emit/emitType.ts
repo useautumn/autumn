@@ -105,20 +105,30 @@ export type ObjectMember = {
 	schema: JsonSchema;
 };
 
-/** The spec's description, tidied, with the overlay's note appended. */
+/** The spec's description, tidied, with the overlay's note appended. A
+ * default is spelled out only where the description leaves it unsaid: an
+ * omitted flag reads as its default, and a reader should not have to guess. */
 const describedMember = ({
 	description,
+	defaultValue,
 	note,
 }: {
 	description: unknown;
+	defaultValue: unknown;
 	note: string | undefined;
 }): string | undefined => {
 	const base =
 		typeof description === "string"
 			? description.replace(/\s+/g, " ").trim()
 			: undefined;
-	if (note === undefined) return base;
-	return base === undefined ? note : `${base} ${note}`;
+	const parts = [
+		...(base === undefined ? [] : [base]),
+		...(defaultValue === undefined || /default/i.test(base ?? "")
+			? []
+			: [`Defaults to ${JSON.stringify(defaultValue)}.`]),
+		...(note === undefined ? [] : [note]),
+	];
+	return parts.length === 0 ? undefined : parts.join(" ");
 };
 
 export const objectMembers = ({
@@ -174,6 +184,7 @@ export const objectMembers = ({
 				),
 				description: describedMember({
 					description: propertySchema.description,
+					defaultValue: propertySchema.default,
 					note: describeByOverlay({
 						overlay: context.overlay,
 						collection: context.collection,

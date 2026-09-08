@@ -69,6 +69,7 @@ const preview = {
 	],
 };
 const client = {
+	previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 	previewUpdate: async () => preview,
 	update: async () => ({}),
 	get: async () => rows,
@@ -115,6 +116,7 @@ test("by-reference layout: update in place, delete export and reference, append 
 	const second = await runPull({
 		client: {
 			...client,
+			previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 			previewUpdate: async () => ({
 				features: [],
 				plans: preview.plans.map((row) => ({ ...row, action: "none" })),

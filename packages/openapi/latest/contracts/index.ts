@@ -69,6 +69,10 @@ import {
 	releaseLicenseContract,
 } from "./licensesContract.js";
 import {
+	organizationPreviewUpdateContract,
+	organizationUpdateContract,
+} from "./organizationContract.js";
+import {
 	createPlanContract,
 	deletePlanContract,
 	getPlanContract,
@@ -217,4 +221,8 @@ export const v2_3InternalContractRouter = oc.router({
 	catalogV2Get: catalogV2GetContract,
 	catalogV2PreviewUpdate: catalogV2PreviewUpdateContract,
 	catalogV2Update: catalogV2UpdateContract,
+
+	// organization settings (internal — see organizationContract.ts)
+	organizationPreviewUpdate: organizationPreviewUpdateContract,
+	organizationUpdate: organizationUpdateContract,
 });

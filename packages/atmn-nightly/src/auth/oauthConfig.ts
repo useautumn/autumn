@@ -17,12 +17,14 @@ export const OAUTH_PORTS = Array.from(
 /**
  * Modern read/write scopes covering everything the CLI reads and everything the
  * minted keys are used for. The server rewrites v2's CRUDL scopes to these.
- * platform:* is what `atmn sandbox create|delete` needs and migrations:write
- * what `atmn reset` needs; a key minted before either was requested has to be
- * re-minted with `atmn login`.
+ * platform:* is what `atmn sandbox create|delete` needs, migrations:write what
+ * `atmn reset` needs, and organisation:write what a config's `settings` block
+ * needs; a key minted before any was requested has to be re-minted with
+ * `atmn login`.
  */
 export const CLI_OAUTH_SCOPES = [
 	"organisation:read",
+	"organisation:write",
 	"customers:read",
 	"customers:write",
 	"features:read",

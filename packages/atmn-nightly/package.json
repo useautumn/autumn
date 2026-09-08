@@ -29,6 +29,7 @@
 	"scripts": {
 		"ts": "bunx tsgo --build --noEmit",
 		"build": "bun run bun.config.ts",
+		"dev": "bun scripts/watchBuild.ts",
 		"test": "bun test test",
 		"prepack": "bun run build"
 	},

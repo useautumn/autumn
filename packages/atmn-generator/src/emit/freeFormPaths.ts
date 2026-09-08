@@ -4,6 +4,7 @@ import {
 	type JsonSchema,
 	toCamelCase,
 } from "../casing/schemaKeyCasing";
+import type { Overlay } from "../overlay/overlay";
 
 /**
  * Where the runtime must stop recasing. Emitting these instead of the whole 4MB
@@ -23,6 +24,8 @@ import {
 export type WirePathHints = {
 	recordPaths: string[];
 	frozenPaths: string[];
+	/** Fixture path → wire key where the overlay renamed a field. */
+	renamedPaths: Record<string, string>;
 };
 
 export const wirePathHints = ({
@@ -96,5 +99,43 @@ export const wirePathHints = ({
 	return {
 		recordPaths: [...recordPaths].sort(),
 		frozenPaths: [...frozenPaths].sort(),
+		renamedPaths: {},
 	};
 };
+
+/**
+ * The overlay's renames as the runtime needs them: the fixture path of the
+ * renamed field (root key, then recased segments, then the new name) mapped to
+ * the wire key it stands for. `roots` says what each overlay collection is
+ * called at the top of the document, since a singleton's config key and wire
+ * key differ.
+ */
+export const renamedPaths = ({
+	overlay,
+	roots,
+}: {
+	overlay: Overlay;
+	roots: Record<string, string>;
+}): Record<string, string> => {
+	const out: Record<string, string> = {};
+	for (const [collection, fields] of Object.entries(overlay.collections)) {
+		const root = roots[collection];
+		if (root === undefined) continue;
+		for (const [path, field] of Object.entries(fields)) {
+			if (field.rename === undefined) continue;
+			const segments = path.split(".");
+			const wireKey = segments[segments.length - 1] ?? path;
+			const parents = segments.slice(0, -1).map(toCamelCase);
+			out[[root, ...parents, field.rename].join(".")] = wireKey;
+		}
+	}
+	return out;
+};
+
+export const withRenames = ({
+	hints,
+	renames,
+}: {
+	hints: WirePathHints;
+	renames: Record<string, string>;
+}): WirePathHints => ({ ...hints, renamedPaths: renames });

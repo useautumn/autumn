@@ -144,15 +144,19 @@ export const configBody = ({
 	features,
 	plans,
 	planVersions,
+	settings,
 }: {
 	features?: string;
 	plans?: string;
 	planVersions?: string;
+	/** The `settings` block's members, as source: `multiCurrency: true`. */
+	settings?: string;
 }): string => {
 	const lines: string[] = [];
 	if (features !== undefined) lines.push(`\tfeatures: [${features}\n\t],`);
 	if (plans !== undefined) lines.push(`\tplans: [${plans}\n\t],`);
 	if (planVersions !== undefined)
 		lines.push(`\tplanVersions: [${planVersions}\n\t],`);
+	if (settings !== undefined) lines.push(`\tsettings: { ${settings} },`);
 	return `{\n${lines.join("\n")}\n}`;
 };

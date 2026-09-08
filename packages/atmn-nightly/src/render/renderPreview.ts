@@ -91,10 +91,24 @@ type PlanChange = PreviewChange & {
 	state?: unknown;
 };
 
+/** One flag organization.preview_update reports: moved, or left behind. */
+export type SettingChange = {
+	key?: string;
+	action?: "update" | "unmanaged" | string;
+	previous?: boolean;
+	current?: boolean | null;
+};
+
+export type SettingsPreview = {
+	config?: { changes?: SettingChange[] };
+};
+
 export type CatalogPreview = {
 	features?: FeatureChange[];
 	plans?: PlanChange[];
 	migrations?: PlannedMigration[];
+	/** Absent when the config states no `settings`. */
+	settings?: SettingsPreview;
 };
 
 const MARKERS: Record<
@@ -681,6 +695,33 @@ export const renderMigrationLinks = ({
 		),
 	].join("\n");
 
+/** An unmanaged flag is one the config no longer states: atmn leaves it as it
+ * is, and the only way to turn it off is to state it off. */
+const UNMANAGED_NOTE =
+	"unmanaged (set false explicitly to disable; atmn won't override)";
+
+const renderSettingChange = ({ change }: { change: SettingChange }): string => {
+	const label = labelFor(change.key ?? "?");
+	if (change.action === "unmanaged") {
+		const { symbol, paint } = marker("update");
+		return `${DETAIL_INDENT}${paint(`${symbol} ${label}: ${formatValue(change.previous)} -> ${UNMANAGED_NOTE}`)}`;
+	}
+	const { symbol, paint } = marker("update");
+	return `${DETAIL_INDENT}${paint(`${symbol} ${label}: ${formatValue(change.previous)} -> ${formatValue(change.current)}`)}`;
+};
+
+/** A stated flag that moves, or an unstated one sitting off its default. */
+const settingChanges = (
+	settings: SettingsPreview | undefined,
+): SettingChange[] => settings?.config?.changes ?? [];
+
+export const settingsHaveWork = ({
+	settings,
+}: {
+	settings: SettingsPreview | undefined;
+}): boolean =>
+	settingChanges(settings).some((change) => change.action === "update");
+
 export const renderPreview = ({
 	preview,
 	migrationLinkBase,
@@ -692,12 +733,22 @@ export const renderPreview = ({
 	const features = (preview.features ?? []).filter(rowHasWork);
 	const plans = (preview.plans ?? []).filter(rowHasWork);
 	const migrations = preview.migrations ?? [];
+	const settings = settingChanges(preview.settings);
 
-	if (features.length === 0 && plans.length === 0) {
+	if (features.length === 0 && plans.length === 0 && settings.length === 0) {
 		return chalk.dim("No changes. Your catalog matches your config.");
 	}
 
 	const sections: string[] = [];
+
+	if (settings.length > 0) {
+		sections.push(
+			[
+				chalk.bold(`Settings (${settings.length})`),
+				...settings.map((change) => renderSettingChange({ change })),
+			].join("\n"),
+		);
+	}
 
 	if (features.length > 0) {
 		sections.push(
@@ -743,4 +794,5 @@ export const previewIsEmpty = ({
 	preview: CatalogPreview;
 }): boolean =>
 	!(preview.features ?? []).some(rowHasWork) &&
-	!(preview.plans ?? []).some(rowHasWork);
+	!(preview.plans ?? []).some(rowHasWork) &&
+	!settingsHaveWork({ settings: preview.settings });

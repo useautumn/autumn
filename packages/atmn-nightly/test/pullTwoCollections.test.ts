@@ -85,6 +85,7 @@ test("features and plans in one catalog.ts each receive their append", async () 
 		],
 	};
 	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 		previewUpdate: async () => preview,
 		update: async () => ({}),
 		get: async () => rows,
