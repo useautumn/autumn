@@ -20,17 +20,17 @@ export const setupRewardStatesContext = async ({
 	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 }): Promise<RewardStatesContext> => {
-	const statesRewards = params.rewards !== undefined;
-	const statesPrograms = params.referral_programs !== undefined;
-	if (!statesRewards && !statesPrograms) return emptyRewardStatesContext();
+	if (params.rewards === undefined && params.referral_programs === undefined)
+		return emptyRewardStatesContext();
 
 	const loaded = await loadRewardStates({ ctx });
-	const programs = statesPrograms
-		? await loadReferralProgramStates({
-				ctx,
-				idByInternalId: loaded.idByInternalId,
-			})
-		: [];
+	// Loaded whenever a reward could be removed, not only when the payload
+	// states programs: a link the payload never mentions still blocks a delete.
+	const programs = await loadReferralProgramStates({
+		ctx,
+		idByInternalId: loaded.idByInternalId,
+		statableInternalIds: loaded.statableInternalIds,
+	});
 
 	return {
 		rewards: loaded.rewards,

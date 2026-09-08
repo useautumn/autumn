@@ -124,13 +124,14 @@ const assertProgramRewardsResolve = ({
 	catalogContext: UpdateCatalogContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
-	const { rewards, unstatableIds } = catalogContext.rewardStatesContext;
+	const { rewards } = catalogContext.rewardStatesContext;
 	const removedIds = new Set(
 		updateCatalogPlan.removeRewards.map((remove) => remove.rewardId),
 	);
+	// Unstatable rewards are deliberately absent: a config that could name one
+	// could not state the reward beside it, so the program would never round-trip.
 	const surviving = new Set([
 		...updateCatalogPlan.upsertRewards.map((upsert) => upsert.rewardId),
-		...unstatableIds,
 		...rewards.map((reward) => reward.id).filter((id) => !removedIds.has(id)),
 	]);
 
@@ -139,6 +140,86 @@ const assertProgramRewardsResolve = ({
 		invalid(
 			`Referral program ${program.referralProgramId} references reward ${program.rewardId}, which this catalog does not have. Add the reward or remove the program.`,
 		);
+	}
+};
+
+/**
+ * A reward a referral program still links cannot be deleted, and the writer
+ * finds that out only mid-phase. The push is refused here instead, before the
+ * feature and plan writes it would otherwise leave half applied.
+ */
+const assertRemovedRewardsAreUnlinked = ({
+	catalogContext,
+	updateCatalogPlan,
+}: {
+	catalogContext: UpdateCatalogContext;
+	updateCatalogPlan: UpdateCatalogPlan;
+}) => {
+	if (updateCatalogPlan.removeRewards.length === 0) return;
+
+	const removedProgramIds = new Set(
+		updateCatalogPlan.removeReferralPrograms.map(
+			(remove) => remove.referralProgramId,
+		),
+	);
+	// A program this push repoints stops linking its old reward before the
+	// removal runs, so it is not a blocker.
+	const repointedProgramIds = new Set(
+		updateCatalogPlan.upsertReferralPrograms
+			.filter((upsert) => upsert.internalId !== null)
+			.map((upsert) => upsert.referralProgramId),
+	);
+
+	for (const remove of updateCatalogPlan.removeRewards) {
+		const blockers = catalogContext.rewardStatesContext.programs
+			.filter((state) => state.internalRewardId === remove.internalId)
+			.map((state) => state.program.id)
+			.filter(
+				(programId) =>
+					!removedProgramIds.has(programId) &&
+					!repointedProgramIds.has(programId),
+			);
+		if (blockers.length === 0) continue;
+		invalid(
+			`Reward ${remove.rewardId} is linked to referral programs: ${blockers.join(", ")}. Remove them in the same push, or point them at another reward.`,
+		);
+	}
+};
+
+/**
+ * Coupons name plans and feature grants name features. The reward writers
+ * resolve those only mid-phase, so a dangling reference is caught here against
+ * the catalog this push will leave behind.
+ */
+const assertRewardReferencesResolve = ({
+	updateCatalogPlan,
+}: {
+	updateCatalogPlan: UpdateCatalogPlan;
+}) => {
+	const planIds = new Set(
+		updateCatalogPlan.projected.products.map((product) => product.id),
+	);
+	const featureIds = new Set(
+		updateCatalogPlan.projected.features.map((feature) => feature.id),
+	);
+
+	for (const upsert of updateCatalogPlan.upsertRewards) {
+		const branch = rewardBranchOf(upsert.params);
+		if (branch.kind === "coupon") {
+			for (const planId of branch.body.plan_ids ?? []) {
+				if (planIds.has(planId)) continue;
+				invalid(
+					`Reward ${upsert.rewardId} applies to plan ${planId}, which this catalog does not have.`,
+				);
+			}
+			continue;
+		}
+		for (const grant of branch.body.grants) {
+			if (featureIds.has(grant.feature_id)) continue;
+			invalid(
+				`Reward ${upsert.rewardId} grants feature ${grant.feature_id}, which this catalog does not have.`,
+			);
+		}
 	}
 };
 
@@ -156,4 +237,6 @@ export const handleRewardErrors = ({
 	assertRewardIdentitiesAgree({ params, catalogContext });
 	assertBranchUnchanged({ updateCatalogPlan, catalogContext });
 	assertProgramRewardsResolve({ catalogContext, updateCatalogPlan });
+	assertRemovedRewardsAreUnlinked({ catalogContext, updateCatalogPlan });
+	assertRewardReferencesResolve({ updateCatalogPlan });
 };
