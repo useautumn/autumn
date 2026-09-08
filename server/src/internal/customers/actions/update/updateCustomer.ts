@@ -1,6 +1,7 @@
 import {
 	type Customer,
 	CustomerAlreadyExistsError,
+	type CustomerBillingControlsParams,
 	CustomerNotFoundError,
 	notNullish,
 	ProcessorType,
@@ -8,6 +9,7 @@ import {
 	shouldForwardCustomerMetadata,
 	stripAutoTopupCountsForStorage,
 	type UpdateCustomerParamsV1,
+	type UsageLimitUpdate,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -21,6 +23,7 @@ import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/trigge
 import { assertCustomerUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertCustomerUsageLimitAlertsResolvable";
 import { CusService } from "@/internal/customers/CusService";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
+import { setUsageLimitUsage } from "./setUsageLimitUsage.js";
 import {
 	syncAutoTopupPurchaseLimitCounts,
 	validateAutoTopupPurchaseLimitCounts,
@@ -87,7 +90,14 @@ export const updateCustomer = async ({
 	await assertCustomerUsageLimitAlertsResolvable({
 		ctx,
 		customer: originalCustomer,
-		billingControls: billing_controls,
+		billingControls: billing_controls
+			? {
+					...billing_controls,
+					usage_limits: billing_controls.usage_limits?.filter(
+						(entry) => "limit" in entry,
+					) as CustomerBillingControlsParams["usage_limits"],
+				}
+			: undefined,
 	});
 
 	// Try to update stripe ID. Distinguish omitted (undefined -> leave as is)
@@ -163,8 +173,17 @@ export const updateCustomer = async ({
 		}
 		if (billing_controls.spend_limits !== undefined)
 			billingControlUpdates.spend_limits = billing_controls.spend_limits;
-		if (billing_controls.usage_limits !== undefined)
-			billingControlUpdates.usage_limits = billing_controls.usage_limits;
+		if (billing_controls.usage_limits !== undefined) {
+			const configEntries = billing_controls.usage_limits
+				.filter((entry) => entry.source !== "plan" && "limit" in entry)
+				.map(({ usage: _usage, source: _source, ...entry }) => entry);
+			if (
+				billing_controls.usage_limits.length === 0 ||
+				configEntries.length > 0
+			)
+				billingControlUpdates.usage_limits =
+					configEntries as Customer["usage_limits"];
+		}
 		if (billing_controls.usage_alerts !== undefined)
 			billingControlUpdates.usage_alerts = billing_controls.usage_alerts;
 		if (billing_controls.overage_allowed !== undefined)
@@ -225,6 +244,13 @@ export const updateCustomer = async ({
 
 	ctx.skipCache = true;
 	const resolvedCustomerId = newCustomerId ?? customerId;
+	if (billing_controls?.usage_limits) {
+		await setUsageLimitUsage({
+			ctx,
+			customerId: resolvedCustomerId,
+			usageLimits: billing_controls.usage_limits as UsageLimitUpdate[],
+		});
+	}
 
 	const apiCustomer = await getApiCustomerByRollout({
 		disableReplicaRead: true,
