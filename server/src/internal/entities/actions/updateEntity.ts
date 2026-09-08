@@ -59,7 +59,7 @@ export const updateEntity = async ({
 					usage_limits: billing_controls.usage_limits?.filter(
 						(entry) => "limit" in entry,
 					) as ApiEntityBillingControlsParams["usage_limits"],
-				}
+				} as ApiEntityBillingControlsParams
 			: undefined,
 	});
 

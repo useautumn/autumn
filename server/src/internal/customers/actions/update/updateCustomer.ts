@@ -96,7 +96,7 @@ export const updateCustomer = async ({
 					usage_limits: billing_controls.usage_limits?.filter(
 						(entry) => "limit" in entry,
 					) as CustomerBillingControlsParams["usage_limits"],
-				}
+				} as CustomerBillingControlsParams
 			: undefined,
 	});
 
@@ -182,7 +182,7 @@ export const updateCustomer = async ({
 				configEntries.length > 0
 			)
 				billingControlUpdates.usage_limits =
-					configEntries as Customer["usage_limits"];
+					configEntries as unknown as Customer["usage_limits"];
 		}
 		if (billing_controls.usage_alerts !== undefined)
 			billingControlUpdates.usage_alerts = billing_controls.usage_alerts;
