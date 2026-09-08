@@ -20,7 +20,72 @@ export type CollectionSpec = {
 	readonly pull: boolean;
 	/** Wire-named, item-rooted paths kept for existing catalogs only. */
 	readonly deprecated?: readonly { path: string; reason: string }[];
+	/** Set when the item is a union: one builder per branch, keyed by its wrapper. */
+	readonly branches?: readonly BranchSpec[];
 };
+
+/** One branch of a union item: the fixture lives under `key`, not at the root. */
+export type BranchSpec = {
+	readonly builder: string;
+	readonly key: string;
+	readonly idField: string;
+	readonly keys: readonly string[];
+	readonly paths: readonly string[];
+};
+
+/** The branch an entry or row states, or undefined when it states none. */
+export const branchOf = ({
+	spec,
+	row,
+}: {
+	spec: CollectionSpec;
+	row: Record<string, unknown>;
+}): BranchSpec | undefined =>
+	spec.branches?.find((branch) => row[branch.key] !== undefined);
+
+/**
+ * A branched row read as if its branch were the whole collection: the builder,
+ * keys and paths become the branch's and the body becomes the row, so
+ * everything downstream stays union-blind.
+ */
+export const resolveBranch = ({
+	spec,
+	row,
+}: {
+	spec: CollectionSpec;
+	row: Record<string, unknown>;
+}): { spec: CollectionSpec; row: Record<string, unknown> } => {
+	const branch = branchOf({ spec, row });
+	if (!branch) return { spec, row };
+	return {
+		spec: branchSpecOf({ spec, branch }),
+		row: row[branch.key] as Record<string, unknown>,
+	};
+};
+
+const branchSpecOf = ({
+	spec,
+	branch,
+}: {
+	spec: CollectionSpec;
+	branch: BranchSpec;
+}): CollectionSpec => ({
+	...spec,
+	builder: branch.builder,
+	idField: branch.idField,
+	responseIdField: branch.idField,
+	keys: branch.keys,
+	paths: branch.paths,
+	branches: undefined,
+});
+
+/** Every shape an entry of the collection can take; just itself when unbranched. */
+export const branchSpecs = ({
+	spec,
+}: {
+	spec: CollectionSpec;
+}): CollectionSpec[] =>
+	spec.branches?.map((branch) => branchSpecOf({ spec, branch })) ?? [spec];
 
 const PLAIN_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
@@ -205,8 +270,8 @@ const camelOf = (snake: string): string =>
 
 /** One top-level fixture property as `key: value` text, or null when the row omits it. */
 export const emitFixtureProperty = ({
-	spec,
-	row,
+	spec: collectionSpec,
+	row: collectionRow,
 	key,
 	includeMappings,
 	indent,
@@ -217,6 +282,10 @@ export const emitFixtureProperty = ({
 	includeMappings: boolean;
 	indent: string;
 }): string | null => {
+	const { spec, row } = resolveBranch({
+		spec: collectionSpec,
+		row: collectionRow,
+	});
 	const value = rowValueOf({ spec, key, row, includeMappings });
 	if (value === undefined || value === null) return null;
 	const index = pathIndexOf(spec.paths);
@@ -230,8 +299,8 @@ export const emitFixtureProperty = ({
 };
 
 export const emitFixture = ({
-	spec,
-	row,
+	spec: collectionSpec,
+	row: collectionRow,
 	includeMappings,
 	indent,
 }: {
@@ -240,6 +309,10 @@ export const emitFixture = ({
 	includeMappings: boolean;
 	indent: string;
 }): string => {
+	const { spec, row } = resolveBranch({
+		spec: collectionSpec,
+		row: collectionRow,
+	});
 	const index = pathIndexOf(spec.paths);
 	const lines: string[] = [`${spec.builder}({`];
 	for (const key of spec.keys) {

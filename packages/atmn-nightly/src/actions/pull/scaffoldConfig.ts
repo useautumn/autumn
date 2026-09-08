@@ -12,7 +12,11 @@ export const PACKAGE_IMPORTS: ConfigImports = {
 
 const importLines = ({ imports }: { imports: ConfigImports }): string[] => {
 	const builders = Object.values(COLLECTIONS)
-		.map((spec) => spec.builder)
+		.flatMap((spec) =>
+			spec.branches
+				? spec.branches.map((branch) => branch.builder)
+				: [spec.builder],
+		)
 		.sort();
 	if (imports.atmn === imports.builders) {
 		return [`import { atmn, ${builders.join(", ")} } from "${imports.atmn}";`];

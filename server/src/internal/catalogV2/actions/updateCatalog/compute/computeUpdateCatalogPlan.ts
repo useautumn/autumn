@@ -8,6 +8,14 @@ import { computeMigrationDraftPlans } from "@/internal/catalogV2/actions/updateC
 import { computeRemoveFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveFeaturesPlan/computeRemoveFeaturesPlan";
 import { computeRemoveProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveProductsPlan/computeRemoveProductsPlan";
 import { computeRenameProductIdsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRenameProductIdsPlan/computeRenameProductIdsPlan";
+import {
+	computeRemoveReferralProgramsPlan,
+	computeUpsertReferralProgramsPlan,
+} from "@/internal/catalogV2/actions/updateCatalog/compute/computeRewardsPlan/computeReferralProgramsPlan";
+import {
+	computeRemoveRewardsPlan,
+	computeUpsertRewardsPlan,
+} from "@/internal/catalogV2/actions/updateCatalog/compute/computeRewardsPlan/computeRewardsPlan";
 import { computeUpdateFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateFeaturesPlan/computeUpdateFeaturesPlan";
 import { computeUpsertProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductsPlan";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -103,8 +111,19 @@ export const computeUpdateCatalogPlan = ({
 	});
 
 	const plan = compute.toPlan();
+	const { rewardStatesContext } = catalogContext;
 	return {
 		...plan,
+		upsertRewards: computeUpsertRewardsPlan({ params, rewardStatesContext }),
+		removeRewards: computeRemoveRewardsPlan({ params, rewardStatesContext }),
+		upsertReferralPrograms: computeUpsertReferralProgramsPlan({
+			params,
+			rewardStatesContext,
+		}),
+		removeReferralPrograms: computeRemoveReferralProgramsPlan({
+			params,
+			rewardStatesContext,
+		}),
 		renamePlans: computeRenameProductIdsPlan({
 			params,
 			productStatesContext: catalogContext.productStatesContext,

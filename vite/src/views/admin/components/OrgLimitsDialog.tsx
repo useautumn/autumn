@@ -41,8 +41,8 @@ export function OrgLimitsDialog({
 				<DialogHeader>
 					<DialogTitle className="text-balance">Org Limits</DialogTitle>
 					<DialogDescription className="text-pretty">
-						Raise the cap on customer products returned per query, one org at a
-						time.
+						Raise the cap on customer products returned per query and on auto
+						top-up attempts, one org at a time.
 					</DialogDescription>
 				</DialogHeader>
 

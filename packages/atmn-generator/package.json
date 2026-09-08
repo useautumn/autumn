@@ -15,6 +15,7 @@
 		"yaml": "2.9.0"
 	},
 	"devDependencies": {
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"@typescript/native-preview": "catalog:"
 	}
 }

@@ -50,6 +50,8 @@ export const handleUpdateCatalogV2 = createRoute({
 			results: {
 				plans: catalogResult?.plans ?? [],
 				features: catalogResult?.features ?? [],
+				rewards: catalogResult?.rewards ?? [],
+				referral_programs: catalogResult?.referralPrograms ?? [],
 			},
 			...(catalogResult?.migrations.length
 				? { migrations: catalogResult.migrations }

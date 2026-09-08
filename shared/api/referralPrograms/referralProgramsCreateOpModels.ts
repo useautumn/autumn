@@ -11,6 +11,11 @@ export const CreateReferralProgramParamsSchema =
 	})
 		.extend({
 			id: z.string().min(1),
+			internal_id: z.string().min(1).optional().meta({
+				description:
+					"Address an existing referral program by its stable id. Omit when creating — the server generates one.",
+				internal: true,
+			}),
 			reward_id: z.string().min(1),
 			max_redemptions: z.number().int().positive().nullish().meta({
 				description:

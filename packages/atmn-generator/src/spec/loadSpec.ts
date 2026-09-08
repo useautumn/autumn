@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import yaml from "yaml";
-import type { JsonSchema } from "../casing/schemaKeyCasing";
+import { type JsonSchema, toCamelCase } from "../casing/schemaKeyCasing";
 
 /**
  * The INTERNAL spec, not the published one. catalogV2 is registered only on the
@@ -63,7 +63,7 @@ export const catalogUpdateSchema = ({
 	return schema;
 };
 
-/** The item schema for one top-level collection, e.g. `features` or `plans`. */
+/** The item schema for one top-level collection, named as a fixture states it. */
 export const collectionItemSchema = ({
 	spec,
 	collection,
@@ -71,11 +71,15 @@ export const collectionItemSchema = ({
 	spec: OpenApiDocument;
 	collection: string;
 }): JsonSchema => {
-	const item = catalogUpdateSchema({ spec }).properties?.[collection]?.items;
+	const properties = catalogUpdateSchema({ spec }).properties ?? {};
+	const entry = Object.entries(properties).find(
+		([wireKey]) => toCamelCase(wireKey) === collection,
+	);
+	const item = entry?.[1]?.items;
 	if (!item) {
 		throw new Error(
 			`\`${collection}\` is not an array on the catalogV2.update body. Available: ${Object.keys(
-				catalogUpdateSchema({ spec }).properties ?? {},
+				properties,
 			).join(", ")}`,
 		);
 	}

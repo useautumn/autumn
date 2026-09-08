@@ -37,7 +37,7 @@ export const recordAutoTopupAttempt = async ({
 	const outcome = succeeded ? "success" : "failure";
 
 	const { purchaseLimit, attemptLimit, failedAttemptLimit } =
-		getAutoTopupRateLimitConfigs({ autoTopupConfig });
+		getAutoTopupRateLimitConfigs({ autoTopupConfig, org: ctx.org });
 
 	const normalizedAttempt = normalizeWindowCounter({
 		now,

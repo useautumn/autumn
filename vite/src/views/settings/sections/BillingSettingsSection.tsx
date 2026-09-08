@@ -19,6 +19,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { SettingsRow } from "../SettingsRow";
 import { SettingsSection } from "../SettingsSection";
 
 type TtlUnit = "hours" | "days";
@@ -146,10 +147,13 @@ export const BillingSettingsSection = () => {
 		},
 	});
 
-	const handleToggle = (key: keyof OrgConfig, value: boolean) => {
+	const handleChange = <K extends keyof OrgConfig>(
+		key: K,
+		value: OrgConfig[K],
+	) => {
 		setPending((prev) => {
 			const next = { ...prev, [key]: value };
-			if (serverConfig[key] === value) {
+			if ((serverConfig[key] ?? null) === (value ?? null)) {
 				delete next[key];
 			}
 			return next;
@@ -195,37 +199,22 @@ export const BillingSettingsSection = () => {
 			title="Configuration"
 			description="Configure how billing and subscriptions behave"
 		>
-			<div className="flex flex-col divide-y divide-border rounded-lg border bg-interactive-secondary px-4">
+			<div className="flex flex-col divide-y divide-border rounded-lg border bg-interactive-secondary px-4 [&>*]:py-3.5">
 				{BILLING_TOGGLES.map(({ key, label, description }) => (
-					<div
-						key={key}
-						className="flex items-center justify-between gap-4 py-3.5"
-					>
-						<div className="flex flex-col gap-0.5">
-							<span className="text-sm font-medium">{label}</span>
-							<span className="text-xs text-muted-foreground">
-								{description}
-							</span>
-						</div>
+					<SettingsRow key={key} label={label} description={description}>
 						<Switch
 							aria-label={label}
 							checked={!!displayConfig[key]}
-							onCheckedChange={(val) => handleToggle(key, val)}
+							onCheckedChange={(val) => handleChange(key, val)}
 							disabled={isPending}
 						/>
-					</div>
+					</SettingsRow>
 				))}
 				{IDEMPOTENCY_TTL_CONFIG_ENABLED && (
-					<div className="flex items-center justify-between gap-4 py-3.5">
-						<div className="flex flex-col gap-0.5">
-							<span className="text-sm font-medium">
-								Idempotency key duration
-							</span>
-							<span className="text-xs text-muted-foreground">
-								How long duplicate requests to balances endpoints (track, check)
-								are rejected
-							</span>
-						</div>
+					<SettingsRow
+						label="Idempotency key duration"
+						description="How long duplicate requests to balances endpoints (track, check) are rejected"
+					>
 						<div className="flex items-center gap-2">
 							<Input
 								type="number"
@@ -258,7 +247,7 @@ export const BillingSettingsSection = () => {
 								</SelectContent>
 							</Select>
 						</div>
-					</div>
+					</SettingsRow>
 				)}
 			</div>
 			<div className="pb-8">

@@ -330,7 +330,7 @@ export const getCursorPaginatedFullCusQuery = ({
 					AND ce.pooled_balance_id IS NULL
 					AND ce.pooled_contribution_id IS NULL
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-					AND ${looseEntitlementIsLiveSql()}
+					AND (${looseEntitlementIsLiveSql()} OR ce.next_reset_at IS NOT NULL)
 					${customerLevelOnly("ce")}
 				ORDER BY ce.id DESC
 				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
