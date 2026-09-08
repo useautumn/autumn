@@ -7,6 +7,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import {
 	buildOrgLimitsJsonText,
+	DEFAULT_AUTO_TOPUP_ATTEMPTS,
 	DEFAULT_CUS_PRODUCT_LIMIT,
 	getEntryRows,
 	getStatusMessage,
@@ -14,6 +15,29 @@ import {
 	type OrgLimitsConfig,
 	type OrgLimitsEntry,
 } from "./orgLimitsConfigTypes";
+
+const parsePositiveInt = (value: string): number | undefined => {
+	const parsed = parseInt(value.trim(), 10);
+	return Number.isNaN(parsed) || parsed < 1 ? undefined : parsed;
+};
+
+const parseEntry = ({
+	limit,
+	attempts,
+}: {
+	limit: string;
+	attempts: string;
+}): OrgLimitsEntry | undefined => {
+	const maxCusProducts = parsePositiveInt(limit);
+	const maxAutoTopupAttempts = parsePositiveInt(attempts);
+	if (maxCusProducts === undefined && maxAutoTopupAttempts === undefined) {
+		return undefined;
+	}
+	return {
+		...(maxCusProducts !== undefined ? { maxCusProducts } : {}),
+		...(maxAutoTopupAttempts !== undefined ? { maxAutoTopupAttempts } : {}),
+	};
+};
 
 export const OrgLimitsConfigForm = ({
 	config: loadedConfig,
@@ -32,6 +56,7 @@ export const OrgLimitsConfigForm = ({
 	const [syncSource, setSyncSource] = useState<"form" | "json">("form");
 	const [newOrgId, setNewOrgId] = useState("");
 	const [newLimit, setNewLimit] = useState("");
+	const [newAttempts, setNewAttempts] = useState("");
 
 	const mutation = useMutation({
 		mutationFn: async (payload: unknown) => {
@@ -77,20 +102,18 @@ export const OrgLimitsConfigForm = ({
 
 	const addEntry = () => {
 		const orgId = newOrgId.trim();
-		const limit = parseInt(newLimit.trim(), 10);
+		const entry = parseEntry({ limit: newLimit, attempts: newAttempts });
 
-		if (!orgId || Number.isNaN(limit) || limit < 1) return;
+		if (!orgId || !entry) return;
 
 		setSyncSource("form");
 		setConfig((current) => ({
 			...current,
-			orgs: {
-				...current.orgs,
-				[orgId]: { maxCusProducts: limit },
-			},
+			orgs: { ...current.orgs, [orgId]: entry },
 		}));
 		setNewOrgId("");
 		setNewLimit("");
+		setNewAttempts("");
 	};
 
 	const removeEntry = ({ orgId }: { orgId: string }) => {
@@ -128,7 +151,9 @@ export const OrgLimitsConfigForm = ({
 							Org overrides
 						</div>
 						<div className="text-pretty text-xs text-tertiary-foreground">
-							Orgs without an override get {DEFAULT_CUS_PRODUCT_LIMIT}.
+							Orgs without an override get {DEFAULT_CUS_PRODUCT_LIMIT} customer
+							products and {DEFAULT_AUTO_TOPUP_ATTEMPTS} auto top-up attempts
+							per 10 minutes.
 						</div>
 					</div>
 
@@ -147,15 +172,21 @@ export const OrgLimitsConfigForm = ({
 								onChange={(event) => setNewLimit(event.target.value)}
 								className="tabular-nums"
 							/>
+							<Input
+								placeholder="Auto top-up attempts per 10 min (e.g. 10)"
+								type="number"
+								min={1}
+								value={newAttempts}
+								onChange={(event) => setNewAttempts(event.target.value)}
+								className="tabular-nums"
+							/>
 							<Button
 								variant="secondary"
 								size="sm"
 								onClick={addEntry}
 								disabled={
 									!newOrgId.trim() ||
-									!newLimit.trim() ||
-									Number.isNaN(parseInt(newLimit, 10)) ||
-									parseInt(newLimit, 10) < 1
+									!parseEntry({ limit: newLimit, attempts: newAttempts })
 								}
 							>
 								Add org limit
@@ -165,7 +196,7 @@ export const OrgLimitsConfigForm = ({
 						<div className="flex flex-col gap-2 border-t border-border pt-3">
 							{entryRows.length === 0 && (
 								<div className="text-pretty text-xs italic text-tertiary-foreground">
-									No overrides — every org uses {DEFAULT_CUS_PRODUCT_LIMIT}.
+									No overrides — every org uses the defaults.
 								</div>
 							)}
 							{entryRows.map((entry) => (
@@ -179,6 +210,10 @@ export const OrgLimitsConfigForm = ({
 										</div>
 										<div className="text-xs tabular-nums text-muted-foreground">
 											Max customer products: {entry.maxCusProducts}
+										</div>
+										<div className="text-xs tabular-nums text-muted-foreground">
+											Auto top-up attempts per 10 min:{" "}
+											{entry.maxAutoTopupAttempts}
 										</div>
 									</div>
 									<Button

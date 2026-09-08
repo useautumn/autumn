@@ -90,10 +90,7 @@ export const preflightAutoTopupLimits = async ({
 	}
 
 	const { purchaseLimit, attemptLimit, failedAttemptLimit } =
-		getAutoTopupRateLimitConfigs({
-			autoTopupConfig,
-			orgConfig: ctx.org.config,
-		});
+		getAutoTopupRateLimitConfigs({ autoTopupConfig, org: ctx.org });
 
 	const normalizedAttempt = normalizeWindowCounter({
 		now,
