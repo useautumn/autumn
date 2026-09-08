@@ -20,21 +20,29 @@ export const setupRewardStatesContext = async ({
 	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 }): Promise<RewardStatesContext> => {
-	const statesRewards = params.rewards !== undefined;
-	const statesPrograms = params.referral_programs !== undefined;
-	if (!statesRewards && !statesPrograms) return emptyRewardStatesContext();
+	if (params.rewards === undefined && params.referral_programs === undefined)
+		return emptyRewardStatesContext();
 
 	const loaded = await loadRewardStates({ ctx });
-	const programs = statesPrograms
+	// Loaded when the payload states programs, and whenever a reward could be
+	// removed: a link the payload never mentions still blocks a delete. A
+	// partial reward update can remove nothing, so it pays for no scan.
+	const needsPrograms =
+		params.referral_programs !== undefined || params.skip_deletions === false;
+	// Hidden ids are needed whenever the payload states programs, even if no
+	// removal is possible: a claimed id must be refused before the writer sees it.
+	const loadedPrograms = needsPrograms
 		? await loadReferralProgramStates({
 				ctx,
 				idByInternalId: loaded.idByInternalId,
+				statableInternalIds: loaded.statableInternalIds,
 			})
-		: [];
+		: { programs: [], hiddenProgramIds: new Set<string>() };
 
 	return {
 		rewards: loaded.rewards,
 		unstatableIds: loaded.unstatableIds,
-		programs,
+		programs: loadedPrograms.programs,
+		hiddenProgramIds: loadedPrograms.hiddenProgramIds,
 	};
 };

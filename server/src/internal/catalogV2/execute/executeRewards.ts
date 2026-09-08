@@ -73,6 +73,8 @@ const programUpdateParamsFor = ({
 	exclude_trial: upsert.desired.exclude_trial,
 });
 
+/** The create response is the public V0 shape, which carries no stable id, so
+ * the row is read back. Push pins the fixture with it. */
 const internalIdOfReward = async ({
 	ctx,
 	rewardId,
@@ -89,16 +91,40 @@ const internalIdOfReward = async ({
 	return reward?.internal_id ?? null;
 };
 
+const internalIdOfProgram = async ({
+	ctx,
+	referralProgramId,
+}: {
+	ctx: AutumnContext;
+	referralProgramId: string;
+}): Promise<string | null> => {
+	const program = await rewardProgramRepo.get({
+		db: ctx.db,
+		idOrInternalId: referralProgramId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	return program?.internal_id ?? null;
+};
+
 /**
- * Programs go before rewards on the way out and after them on the way in: a
- * program cannot outlive the reward it points at, and cannot precede it either.
+ * Two orderings pull against each other. A promo code is owned by exactly one
+ * reward, so replacing a reward while keeping its code needs the old row gone
+ * BEFORE the new one is written. A referral program cannot point at a reward
+ * that does not exist, so a repoint needs the new row written BEFORE the old
+ * one goes. Splitting the deletes satisfies both: everything unlinked leaves
+ * first and frees its codes, and only the rows a surviving program still holds
+ * wait until after the repoint.
  */
 export const executeRewards = async ({
 	ctx,
 	updateCatalogPlan,
+	linkedInternalRewardIds,
 }: {
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
+	/** Stable ids of rewards a program that survives this push still links. */
+	linkedInternalRewardIds: Set<string>;
 }): Promise<CatalogRewardResults> => {
 	for (const remove of updateCatalogPlan.removeReferralPrograms) {
 		await deleteApiReferralProgram({
@@ -106,7 +132,16 @@ export const executeRewards = async ({
 			params: { referral_program_id: remove.referralProgramId },
 		});
 	}
-	for (const remove of updateCatalogPlan.removeRewards) {
+
+	const [deferredRemovals, freeRemovals] = [
+		updateCatalogPlan.removeRewards.filter((remove) =>
+			linkedInternalRewardIds.has(remove.internalId),
+		),
+		updateCatalogPlan.removeRewards.filter(
+			(remove) => !linkedInternalRewardIds.has(remove.internalId),
+		),
+	];
+	for (const remove of freeRemovals) {
 		await deleteApiReward({ ctx, params: { reward_id: remove.rewardId } });
 	}
 
@@ -137,7 +172,7 @@ export const executeRewards = async ({
 	const referralPrograms: CatalogAppliedResult[] = [];
 	for (const upsert of updateCatalogPlan.upsertReferralPrograms) {
 		if (upsert.internalId === null) {
-			await createApiReferralProgram({
+			const created = await createApiReferralProgram({
 				ctx,
 				params: {
 					id: upsert.referralProgramId,
@@ -149,15 +184,12 @@ export const executeRewards = async ({
 					exclude_trial: upsert.desired.exclude_trial,
 				},
 			});
-			const created = await rewardProgramRepo.get({
-				db: ctx.db,
-				idOrInternalId: upsert.referralProgramId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			});
 			referralPrograms.push({
-				id: upsert.referralProgramId,
-				internal_id: created?.internal_id ?? null,
+				id: created.id,
+				internal_id: await internalIdOfProgram({
+					ctx,
+					referralProgramId: upsert.referralProgramId,
+				}),
 				action: "create",
 			});
 			continue;
@@ -173,6 +205,11 @@ export const executeRewards = async ({
 			internal_id: upsert.internalId,
 			action: upsert.previousAttributes ? "update" : "none",
 		});
+	}
+
+	// Last: the links that held these have been repointed just above.
+	for (const remove of deferredRemovals) {
+		await deleteApiReward({ ctx, params: { reward_id: remove.rewardId } });
 	}
 
 	return {

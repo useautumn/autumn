@@ -14,10 +14,16 @@
  *   R5  a free-product reward is invisible: never previewed, never removed
  *   R6  a config claiming a free product's id is refused
  *   R7  pull writes the server's rewards back into the config
+ *   R8  a referral program backed by a free product is invisible too
+ *   R9  and its id stays taken: a config claiming it is refused
  */
 
 import { expect, test } from "bun:test";
-import { RewardType } from "@autumn/shared";
+import {
+	RewardReceivedBy,
+	RewardTriggerEvent,
+	RewardType,
+} from "@autumn/shared";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -29,7 +35,10 @@ import {
 	rewardProgramRepo,
 	rewardRepo,
 } from "@/internal/rewards/repos/index.js";
-import { constructReward } from "@/internal/rewards/rewardUtils.js";
+import {
+	constructReward,
+	constructRewardProgram,
+} from "@/internal/rewards/rewardUtils.js";
 import { uniqueTestId } from "../catalog-v2/utils/uniqueTestId.js";
 
 const rewardIds = async ({
@@ -69,6 +78,7 @@ test.concurrent(
 		// Stripe only accepts letters and digits in a promo code.
 		const promoCode = (id: string) => id.replace(/[^a-zA-Z0-9]/g, "");
 		const legacyFreeProduct = uniqueTestId("atmn_legacy_free");
+		const legacyProgram = uniqueTestId("atmn_legacy_prog");
 
 		const catalog = ({ rewards }: { rewards: string }) => `{
 			features: [
@@ -152,7 +162,7 @@ test.concurrent(
 			await scenario.push();
 
 			// R5: a free-product reward the config can never state.
-			await rewardRepo.insert({
+			const [legacyReward] = await rewardRepo.insert({
 				db: scenario.ctx.db,
 				data: constructReward({
 					reward: {
@@ -166,6 +176,57 @@ test.concurrent(
 					env: scenario.ctx.env,
 				}),
 			});
+			// R8: and a program hanging off it. Neither is statable, so pull must
+			// not write the program either — its reward would be a dangling ref.
+			await rewardProgramRepo.insert({
+				db: scenario.ctx.db,
+				data: constructRewardProgram({
+					rewardProgramData: {
+						id: legacyProgram,
+						when: RewardTriggerEvent.CustomerCreation,
+						received_by: RewardReceivedBy.Referrer,
+						internal_reward_id: legacyReward.internal_id,
+					},
+					orgId: scenario.ctx.org.id,
+					env: scenario.ctx.env,
+				}),
+			});
+
+			// R8: neither the legacy reward nor the program hanging off it is
+			// visible to the catalog — a stated program would name a reward the
+			// catalog never returns, and the config would not lint.
+			const legacyCatalog = await scenario.client.get({});
+			expect(
+				legacyCatalog.referralPrograms.map((program) => program.id),
+			).not.toContain(legacyProgram);
+			expect(
+				legacyCatalog.rewards.map((reward) =>
+					"coupon" in reward ? reward.coupon.id : reward.featureGrant.id,
+				),
+			).not.toContain(legacyFreeProduct);
+
+			// R9: hidden does not mean free. The id is still taken, so a config
+			// claiming it is refused rather than colliding inside the writer.
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: catalog({ rewards: grantFixture }).replace(
+						`id: "${refer}"`,
+						`id: "${legacyProgram}"`,
+					),
+				}),
+			);
+			// The writer would also refuse it, but only at apply time and with a
+			// generic message; this asserts the preview-time refusal.
+			await expect(scenario.push({ dryRun: true })).rejects.toThrow(
+				/already exists against a free product or invoice credit reward/,
+			);
+			scenario.writeConfig(
+				atmnConfigSource({
+					body: catalog({
+						rewards: `${saleCoupon({ value: 35 })}${grantFixture}`,
+					}),
+				}),
+			);
 
 			// R4 + R5: dropping the coupon removes it; the free product is not
 			// even mentioned, let alone proposed for removal.

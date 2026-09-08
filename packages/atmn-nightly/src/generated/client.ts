@@ -26041,9 +26041,9 @@ coupon: {
 id: string;
 /** A human-readable name for the coupon. */
 name?: string | null;
-/** The type of discount: percentage_discount, fixed_discount, or invoice_credits. */
-type: "percentage_discount" | "fixed_discount" | "invoice_credits";
-/** The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits. */
+/** The type of discount: percentage or fixed. */
+type: "percentage_discount" | "fixed_discount";
+/** The discount value: a percentage for percentage_discount, or an amount for fixed_discount. */
 value: number;
 /** How long the coupon applies once redeemed. */
 duration: {

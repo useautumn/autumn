@@ -21,8 +21,7 @@ export const handleRemovePlanVariantErrors = ({
 
 		const planId =
 			base?.id ??
-			removePlans.find((row) => row.current?.internal_id === pointer)
-				?.planId;
+			removePlans.find((row) => row.current?.internal_id === pointer)?.planId;
 		if (!planId) continue;
 
 		throw new RecaseError({

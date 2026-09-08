@@ -1,7 +1,19 @@
 import { ApiReferralProgramV0Schema } from "@api/referralPrograms/components/apiReferralProgramV0.js";
 import { ApiCouponV0Schema } from "@api/rewards/coupons/apiCouponV0.js";
 import { ApiFeatureGrantV0Schema } from "@api/rewards/featureGrants/apiFeatureGrantV0.js";
+import { RewardType } from "@models/rewardModels/rewardModels/rewardEnums.js";
 import { z } from "zod/v4";
+
+/** invoice_credits rewards are not statable, so the catalog never returns one. */
+const CatalogCouponV1Schema = ApiCouponV0Schema.extend({
+	type: z
+		.enum([RewardType.PercentageDiscount, RewardType.FixedDiscount])
+		.meta({ description: "The type of discount: percentage or fixed." }),
+	value: ApiCouponV0Schema.shape.value.meta({
+		description:
+			"The discount value: a percentage for percentage_discount, or an amount for fixed_discount.",
+	}),
+});
 
 const internalId = z.string().meta({
 	description: "Stable id of the row, unchanged by edits.",
@@ -14,7 +26,9 @@ const internalId = z.string().meta({
  */
 export const CatalogRewardV1Schema = z.union([
 	z
-		.object({ coupon: ApiCouponV0Schema.extend({ internal_id: internalId }) })
+		.object({
+			coupon: CatalogCouponV1Schema.extend({ internal_id: internalId }),
+		})
 		.strict(),
 	z
 		.object({

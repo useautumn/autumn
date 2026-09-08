@@ -1,7 +1,9 @@
 import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { rewardBranchOf } from "@/internal/catalogV2/actions/updateCatalog/utils/rewardUpdateUtils/rewardBranch";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 const invalid = (message: string): never => {
 	throw new RecaseError({
@@ -124,13 +126,14 @@ const assertProgramRewardsResolve = ({
 	catalogContext: UpdateCatalogContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
-	const { rewards, unstatableIds } = catalogContext.rewardStatesContext;
+	const { rewards } = catalogContext.rewardStatesContext;
 	const removedIds = new Set(
 		updateCatalogPlan.removeRewards.map((remove) => remove.rewardId),
 	);
+	// Unstatable rewards are deliberately absent: a config that could name one
+	// could not state the reward beside it, so the program would never round-trip.
 	const surviving = new Set([
 		...updateCatalogPlan.upsertRewards.map((upsert) => upsert.rewardId),
-		...unstatableIds,
 		...rewards.map((reward) => reward.id).filter((id) => !removedIds.has(id)),
 	]);
 
@@ -142,18 +145,157 @@ const assertProgramRewardsResolve = ({
 	}
 };
 
-export const handleRewardErrors = ({
+/**
+ * A reward a referral program still links cannot be deleted, and the writer
+ * finds that out only mid-phase. The push is refused here instead, before the
+ * feature and plan writes it would otherwise leave half applied.
+ */
+const assertRemovedRewardsAreUnlinked = ({
+	catalogContext,
+	updateCatalogPlan,
+}: {
+	catalogContext: UpdateCatalogContext;
+	updateCatalogPlan: UpdateCatalogPlan;
+}) => {
+	if (updateCatalogPlan.removeRewards.length === 0) return;
+
+	const removedProgramIds = new Set(
+		updateCatalogPlan.removeReferralPrograms.map(
+			(remove) => remove.referralProgramId,
+		),
+	);
+	// A program this push repoints stops linking its old reward before the
+	// removal runs, so it is not a blocker.
+	const repointedProgramIds = new Set(
+		updateCatalogPlan.upsertReferralPrograms
+			.filter((upsert) => upsert.internalId !== null)
+			.map((upsert) => upsert.referralProgramId),
+	);
+
+	for (const remove of updateCatalogPlan.removeRewards) {
+		const blockers = catalogContext.rewardStatesContext.programs
+			.filter((state) => state.internalRewardId === remove.internalId)
+			.map((state) => state.program.id)
+			.filter(
+				(programId) =>
+					!removedProgramIds.has(programId) &&
+					!repointedProgramIds.has(programId),
+			);
+		if (blockers.length === 0) continue;
+		invalid(
+			`Reward ${remove.rewardId} is linked to referral programs: ${blockers.join(", ")}. Remove them in the same push, or point them at another reward.`,
+		);
+	}
+};
+
+/**
+ * Coupons name plans and feature grants name features. The reward writers
+ * resolve those only mid-phase, so a dangling reference is caught here against
+ * the catalog this push will leave behind.
+ */
+const assertRewardReferencesResolve = async ({
+	ctx,
+	updateCatalogPlan,
+}: {
+	ctx: AutumnContext;
+	updateCatalogPlan: UpdateCatalogPlan;
+}) => {
+	// Features are always fully loaded, so the projection speaks for them.
+	const featureIds = new Set(
+		updateCatalogPlan.projected.features.map((feature) => feature.id),
+	);
+	const projectedPlanIds = new Set(
+		updateCatalogPlan.projected.products.map((product) => product.id),
+	);
+	const couponPlans = new Map<string, string[]>();
+	for (const upsert of updateCatalogPlan.upsertRewards) {
+		const branch = rewardBranchOf(upsert.params);
+		if (branch.kind === "coupon") {
+			couponPlans.set(upsert.rewardId, branch.body.plan_ids ?? []);
+			continue;
+		}
+		for (const grant of branch.body.grants) {
+			if (featureIds.has(grant.feature_id)) continue;
+			invalid(
+				`Reward ${upsert.rewardId} grants feature ${grant.feature_id}, which this catalog does not have.`,
+			);
+		}
+	}
+
+	// A plan the projection holds is settled; anything else is looked up once.
+	// KNOWN GAP: the lookup reads pre-change state, so an id this same payload
+	// renames away still resolves and the coupon is rejected later, by the
+	// reward writer, after the rename has committed.
+	const unresolved = [
+		...new Set(
+			[...couponPlans.values()]
+				.flat()
+				.filter((planId) => !projectedPlanIds.has(planId)),
+		),
+	];
+	const known =
+		unresolved.length === 0
+			? new Set<string>()
+			: new Set(
+					(
+						await ProductService.listFull({
+							db: ctx.db,
+							orgId: ctx.org.id,
+							env: ctx.env,
+							inIds: unresolved,
+						})
+					).map((plan) => plan.id),
+				);
+
+	for (const [rewardId, planIds] of couponPlans) {
+		for (const planId of planIds) {
+			if (projectedPlanIds.has(planId) || known.has(planId)) continue;
+			invalid(
+				`Reward ${rewardId} applies to plan ${planId}, which this catalog does not have.`,
+			);
+		}
+	}
+};
+
+/**
+ * A referral program the catalog hides still owns its public id. Claiming it
+ * would be discovered only by the writer, after earlier phases have committed.
+ */
+const assertIdsNotHeldByHiddenPrograms = ({
+	params,
+	catalogContext,
+}: {
+	params: UpdateCatalogParams;
+	catalogContext: UpdateCatalogContext;
+}) => {
+	const { hiddenProgramIds } = catalogContext.rewardStatesContext;
+	for (const entry of params.referral_programs ?? []) {
+		if (!hiddenProgramIds.has(entry.id)) continue;
+		throw new RecaseError({
+			message: `Referral program ${entry.id} already exists against a free product or invoice credit reward, which a config cannot state. Rename the program in your config or remove the existing one from the dashboard.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 409,
+		});
+	}
+};
+
+export const handleRewardErrors = async ({
+	ctx,
 	params,
 	catalogContext,
 	updateCatalogPlan,
 }: {
+	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 	catalogContext: UpdateCatalogContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
 	assertDistinctIds({ params });
 	assertIdsNotHeldByUnstatableRewards({ params, catalogContext });
+	assertIdsNotHeldByHiddenPrograms({ params, catalogContext });
 	assertRewardIdentitiesAgree({ params, catalogContext });
 	assertBranchUnchanged({ updateCatalogPlan, catalogContext });
 	assertProgramRewardsResolve({ catalogContext, updateCatalogPlan });
+	assertRemovedRewardsAreUnlinked({ catalogContext, updateCatalogPlan });
+	await assertRewardReferencesResolve({ ctx, updateCatalogPlan });
 };

@@ -103,14 +103,15 @@ export const toApiProgram = async ({
 	});
 };
 
-/** An omitted field keeps its stored value; an explicit null clears it */
+/** An omitted field keeps its stored value; an explicit null reaches the column
+ * as null, which is what clears it — undefined would be dropped by the update. */
 const patchField = <T>({
 	patch,
 	existing,
 }: {
 	patch: T | null | undefined;
 	existing: T | undefined;
-}): T | undefined => (patch === undefined ? existing : (patch ?? undefined));
+}): T | null | undefined => (patch === undefined ? existing : patch);
 
 export const mergeProgramUpdate = ({
 	existing,
