@@ -62,6 +62,53 @@ test.concurrent(
 );
 
 test.concurrent(
+	"initialization rejects negative raw balances before submission but accepts zero",
+	async () => {
+		const fixture = createCustomerFixture();
+		const commands: InitializeCommand[] = [];
+		const client: Pick<BalanceWorkerClient, "initialize"> = {
+			initialize: async ({ command }) => {
+				commands.push(command);
+				return { kind: "initialized", state: command.state };
+			},
+		};
+		const initialization = {
+			...fixture,
+			featureIds: ["messages"],
+			initializationId: "baseline",
+			client,
+		};
+		// Public remaining clamps negatives to zero; initialization must inspect the raw balance.
+		for (const balance of [-5, -0.25]) {
+			fixture.customerEntitlement.balance = balance;
+			await expect(
+				initializeBalanceWorkerCustomer(initialization),
+			).rejects.toMatchObject({
+				code: "invalid_request",
+				statusCode: 400,
+				data: { reason: "negative_balance_not_supported" },
+			});
+		}
+		expect(commands).toHaveLength(0);
+
+		fixture.customerEntitlement.balance = 0;
+		expect(await initializeBalanceWorkerCustomer(initialization)).toMatchObject(
+			{
+				kind: "initialized",
+				state: {
+					featureStatesById: {
+						messages: {
+							customerEntitlements: [{ balance: 0, granted: 110, usage: 110 }],
+						},
+					},
+				},
+			},
+		);
+		expect(commands).toHaveLength(1);
+	},
+);
+
+test.concurrent(
 	"check maps the committed snapshot, request defaults and legacy API responses without reading the customer",
 	async () => {
 		const { ctx } = createCustomerFixture();

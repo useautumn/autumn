@@ -113,6 +113,8 @@ export function validateMeteringEntitlement({
 		!Number.isFinite(customerEntitlement.balance)
 	)
 		reason = "balance_missing";
+	else if (customerEntitlement.balance < 0)
+		reason = "negative_balance_not_supported";
 	else if (
 		customerEntitlement.next_reset_at != null &&
 		customerEntitlement.next_reset_at <= ctx.timestamp
