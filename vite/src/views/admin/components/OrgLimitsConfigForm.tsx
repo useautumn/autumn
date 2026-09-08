@@ -17,9 +17,12 @@ import {
 } from "./orgLimitsConfigTypes";
 
 const parsePositiveInt = (value: string): number | undefined => {
-	const parsed = parseInt(value.trim(), 10);
-	return Number.isNaN(parsed) || parsed < 1 ? undefined : parsed;
+	const parsed = Number(value.trim());
+	return Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined;
 };
+
+const isBlankOrPositiveInt = (value: string) =>
+	value.trim() === "" || parsePositiveInt(value) !== undefined;
 
 const parseEntry = ({
 	limit,
@@ -109,7 +112,7 @@ export const OrgLimitsConfigForm = ({
 		setSyncSource("form");
 		setConfig((current) => ({
 			...current,
-			orgs: { ...current.orgs, [orgId]: entry },
+			orgs: { ...current.orgs, [orgId]: { ...current.orgs[orgId], ...entry } },
 		}));
 		setNewOrgId("");
 		setNewLimit("");
@@ -186,6 +189,8 @@ export const OrgLimitsConfigForm = ({
 								onClick={addEntry}
 								disabled={
 									!newOrgId.trim() ||
+									!isBlankOrPositiveInt(newLimit) ||
+									!isBlankOrPositiveInt(newAttempts) ||
 									!parseEntry({ limit: newLimit, attempts: newAttempts })
 								}
 							>
