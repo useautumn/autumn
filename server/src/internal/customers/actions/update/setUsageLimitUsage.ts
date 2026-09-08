@@ -80,6 +80,7 @@ export const setUsageLimitUsage = async ({
 			: (fullSubject.usage_windows ?? []).find(
 					(window) =>
 						window.feature_id === entry.feature_id &&
+						(window.internal_entity_id ?? null) === (entityId ? fullSubject.entity?.internal_id ?? entityId : null) &&
 						(window.filter_key || "") === filterKey,
 				);
 		if (!existing && entry.usage === 0) continue;

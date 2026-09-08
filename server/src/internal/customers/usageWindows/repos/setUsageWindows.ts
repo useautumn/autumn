@@ -34,7 +34,24 @@ export const setUsageWindows = async ({
 				continue;
 			}
 
-			await tx.insert(usageWindows).values({ ...window, usage });
+			await tx
+				.insert(usageWindows)
+				.values({ ...window, usage })
+				.onConflictDoNothing();
+			const inserted = await tx
+				.select({ id: usageWindows.id })
+				.from(usageWindows)
+				.where(
+					and(
+						eq(usageWindows.internal_customer_id, window.internal_customer_id),
+						eq(usageWindows.internal_feature_id, window.internal_feature_id),
+						sql`coalesce(${usageWindows.internal_entity_id}, '') = coalesce(${window.internal_entity_id}, '')`,
+						sql`coalesce(${usageWindows.filter_key}, '') = coalesce(${window.filter_key}, '')`,
+					),
+				)
+				.limit(1);
+			if (inserted[0]?.id !== window.id)
+				await tx.update(usageWindows).set({ usage, updated_at: Date.now() }).where(eq(usageWindows.id, inserted[0].id));
 		}
 	});
 };
