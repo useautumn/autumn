@@ -24,6 +24,7 @@ import { SettingsSection } from "../SettingsSection";
 type TtlUnit = "hours" | "days";
 
 const MAX_TTL_HOURS = 24 * 30;
+const DEFAULT_AUTO_TOPUP_ATTEMPTS = 2;
 
 // Hidden until the DynamoDB idempotency store is fully rolled out.
 const IDEMPOTENCY_TTL_CONFIG_ENABLED: boolean = false;
@@ -145,10 +146,13 @@ export const BillingSettingsSection = () => {
 		},
 	});
 
-	const handleToggle = (key: keyof OrgConfig, value: boolean) => {
+	const handleChange = <K extends keyof OrgConfig>(
+		key: K,
+		value: OrgConfig[K],
+	) => {
 		setPending((prev) => {
 			const next = { ...prev, [key]: value };
-			if (serverConfig[key] === value) {
+			if ((serverConfig[key] ?? null) === (value ?? null)) {
 				delete next[key];
 			}
 			return next;
@@ -209,11 +213,37 @@ export const BillingSettingsSection = () => {
 						<Switch
 							aria-label={label}
 							checked={!!displayConfig[key]}
-							onCheckedChange={(val) => handleToggle(key, val)}
+							onCheckedChange={(val) => handleChange(key, val)}
 							disabled={isPending}
 						/>
 					</div>
 				))}
+				<div className="flex items-center justify-between gap-4 py-3.5">
+					<div className="flex flex-col gap-0.5">
+						<span className="text-sm font-medium">
+							Auto top-up attempts per 10 minutes
+						</span>
+						<span className="text-xs text-muted-foreground">
+							How many auto top-ups a customer can trigger per feature in a 10
+							minute window
+						</span>
+					</div>
+					<Input
+						type="number"
+						aria-label="Auto top-up attempts per 10 minutes"
+						className="w-20"
+						min={1}
+						placeholder={String(DEFAULT_AUTO_TOPUP_ATTEMPTS)}
+						value={displayConfig.auto_topup_attempt_limit ?? ""}
+						onChange={(e) =>
+							handleChange(
+								"auto_topup_attempt_limit",
+								e.target.value === "" ? null : Number(e.target.value),
+							)
+						}
+						disabled={isPending}
+					/>
+				</div>
 				{IDEMPOTENCY_TTL_CONFIG_ENABLED && (
 					<div className="flex items-center justify-between gap-4 py-3.5">
 						<div className="flex flex-col gap-0.5">
