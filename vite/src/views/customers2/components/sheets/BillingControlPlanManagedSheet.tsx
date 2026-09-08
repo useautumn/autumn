@@ -72,8 +72,10 @@ export function BillingControlPlanManagedSheet() {
 		if (!usage.trim()) return;
 		const value = Number(usage);
 		const customerId = customer?.id ?? customer?.internal_id;
+		const featureId = usageLimitItem?.feature_id;
 		if (
 			!customerId ||
+			!featureId ||
 			!Number.isFinite(value) ||
 			value < 0 ||
 			controlKey !== "usage_limits"
@@ -88,7 +90,7 @@ export function BillingControlPlanManagedSheet() {
 					billing_controls: {
 						usage_limits: [
 							{
-								feature_id: usageLimitItem?.feature_id,
+								feature_id: featureId,
 								usage: value,
 								...(usageLimitItem?.filter && {
 									filter: usageLimitItem.filter,

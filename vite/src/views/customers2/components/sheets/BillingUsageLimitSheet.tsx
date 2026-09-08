@@ -102,11 +102,7 @@ export function BillingUsageLimitSheet() {
 	const [usageLimit, setUsageLimit] = useState(
 		existingItem?.limit?.toString() ?? "",
 	);
-	const [usage, setUsage] = useState(
-		(
-			existingItem as (DbUsageLimit & { usage?: number }) | undefined
-		)?.usage?.toString() ?? "",
-	);
+	const [usage, setUsage] = useState("");
 	const [selectedInterval, setSelectedInterval] = useState<string>(
 		existingItem?.interval ?? ResetInterval.Month,
 	);
