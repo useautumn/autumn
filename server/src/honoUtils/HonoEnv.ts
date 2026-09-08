@@ -11,7 +11,6 @@ import type { Redis } from "ioredis";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { OidcClaims } from "@/external/vercel/misc/vercelAuth.js";
-import type { BalanceObservationCapture } from "@/internal/balances/shadow/balanceObservation.js";
 import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
 export type RolloutSnapshot = {
@@ -88,7 +87,6 @@ export type RequestContext = {
 
 	fullCustomer?: FullCustomer;
 	rolloutSnapshot?: RolloutSnapshot;
-	balanceObservationCapture?: BalanceObservationCapture;
 
 	/** Non-prod debug box (x-debug-subject-source); shared by reference across
 	 *  ctx spread-copies so chokepoints can record where the subject came from. */

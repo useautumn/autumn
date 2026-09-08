@@ -26,7 +26,6 @@ import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 // FULL SUBJECT DEDUCTION HELPERS (V2 cache — per-feature hash balances)
 // ============================================================================
 
-import BALANCE_OBSERVATION from "./fullSubjectDeduction/balanceObservation.lua";
 import CONTEXT_UTILS_V2 from "./fullSubjectDeduction/contextUtilsV2.lua";
 import CREDIT_RATE_UTILS from "./fullSubjectDeduction/creditRateUtils.lua";
 import DEDUCT_FROM_MAIN_BALANCE_V2 from "./fullSubjectDeduction/deductFromMainBalanceV2.lua";
@@ -94,7 +93,6 @@ ${MUTATION_ITEM_UTILS}
 ${LOCK_RECEIPT_UTILS_V2}
 ${LOCK_UNWIND_UTILS_V2}
 ${UPDATE_AGGREGATED_BALANCES}
-${BALANCE_OBSERVATION}
 ${DEDUCT_FROM_SUBJECT_BALANCES_MAIN}`;
 
 // ============================================================================
