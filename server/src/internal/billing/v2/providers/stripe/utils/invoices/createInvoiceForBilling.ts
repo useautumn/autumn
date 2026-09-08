@@ -72,6 +72,9 @@ export const createInvoiceForBilling = async ({
 		autumnMetadata: {
 			autumn_billing_update: "true",
 			autumn_invoice_mode: billingContext.invoiceMode ? "true" : "false",
+			...(billingContext.actionSource
+				? { autumn_action_source: billingContext.actionSource }
+				: {}),
 			...(vercelInstallationId
 				? {
 						vercel_installation_id: vercelInstallationId,

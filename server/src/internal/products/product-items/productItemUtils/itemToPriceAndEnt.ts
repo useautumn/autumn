@@ -265,6 +265,9 @@ const toFeatureAndPrice = ({
 				: BillWhen.EndOfPeriod,
 
 		billing_units: item.billing_units || 1,
+		...(item.config?.threshold_billing
+			? { threshold_billing: item.config.threshold_billing }
+			: {}),
 		should_prorate:
 			entInterval === EntInterval.Lifetime && !itemIsAllocatedArrear,
 		...(allocatedBillingBehavior

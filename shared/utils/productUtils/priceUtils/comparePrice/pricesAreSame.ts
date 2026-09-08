@@ -156,6 +156,9 @@ export const pricesAreSame = (
 		billWhen: usageConfig1.bill_when !== usageConfig2.bill_when,
 		billingUnits:
 			(usageConfig1.billing_units ?? 1) !== (usageConfig2.billing_units ?? 1),
+		thresholdBilling:
+			usageConfig1.threshold_billing?.threshold !==
+			usageConfig2.threshold_billing?.threshold,
 		interval: usageConfig1.interval !== usageConfig2.interval,
 		intervalCount:
 			(usageConfig1.interval_count ?? 1) !== (usageConfig2.interval_count ?? 1),
