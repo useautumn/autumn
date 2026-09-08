@@ -17,6 +17,7 @@ import {
 type StoredInvoiceCreditForPriceResult = {
 	lineItems: LineItem[];
 	resolved: boolean;
+	coveredSeats: number;
 };
 
 export const storedInvoiceCreditForPrice = ({
@@ -63,7 +64,7 @@ export const storedInvoiceCreditForPrice = ({
 		ctx.logger.warn(
 			`[storedInvoiceCreditForPrice] No usable stored charge row for cusProduct=${customerProduct.id} price=${price.id}; falling back to catalog synthesis`,
 		);
-		return { lineItems: [], resolved: false };
+		return { lineItems: [], resolved: false, coveredSeats: 0 };
 	}
 
 	const currentPeriodRefunds = refundRows.filter(
@@ -75,6 +76,7 @@ export const storedInvoiceCreditForPrice = ({
 			row.effective_period_end > now,
 	);
 	const lineItems: LineItem[] = [];
+	let coveredSeats = 0;
 	const creditableRows = consumedChargeRowIds
 		? usableRows.filter((row) => !consumedChargeRowIds.has(row.id))
 		: usableRows;
@@ -108,6 +110,9 @@ export const storedInvoiceCreditForPrice = ({
 		});
 		if (creditAmount === 0) continue;
 
+		coveredSeats +=
+			(chargeRow.paid_quantity ?? 0) /
+			Math.max(chargeRow.customer_product_ids.length, 1);
 		lineItems.push(
 			chargeRowToRefundLineItem({
 				chargeRow,
@@ -121,5 +126,5 @@ export const storedInvoiceCreditForPrice = ({
 		);
 	}
 
-	return { lineItems, resolved: true };
+	return { lineItems, resolved: true, coveredSeats };
 };
