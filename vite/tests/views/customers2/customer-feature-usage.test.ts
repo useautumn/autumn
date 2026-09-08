@@ -52,7 +52,7 @@ describe("customer feature usage pooled balances", () => {
 			...buildCustomerEntitlement({ id: "resetting", pooled: false }),
 			balance: 0,
 			unlimited: false,
-			next_reset_at: 1,
+			next_reset_at: Date.now() + 1000,
 			customer_product: null,
 		};
 
@@ -62,6 +62,23 @@ describe("customer feature usage pooled balances", () => {
 		});
 
 		expect(filtered).toEqual([]);
+	});
+
+	test("shows consumed resetting balances in the active view", () => {
+		const resetting = {
+			...buildCustomerEntitlement({ id: "resetting", pooled: false }),
+			balance: 0,
+			unlimited: false,
+			next_reset_at: Date.now() + 1000,
+			customer_product: null,
+		};
+
+		const filtered = filterCustomerFeatureUsage({
+			entitlements: [resetting],
+			statuses: ["active"],
+		});
+
+		expect(filtered.map(({ id }) => id)).toEqual(["resetting"]);
 	});
 
 	test("shows the synthetic pool and hides its contribution sources", () => {

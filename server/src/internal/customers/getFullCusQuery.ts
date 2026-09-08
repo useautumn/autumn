@@ -426,8 +426,8 @@ const buildExtraEntitlementsCTE = ({
             AND ce.customer_product_id IS NULL
             AND ce.pooled_balance_id IS NULL
             AND ce.pooled_contribution_id IS NULL
-            AND (ce.expires_at <= EXTRACT(EPOCH FROM now()) * 1000 OR (ce.balance = 0 AND ce.unlimited IS NOT TRUE AND ce.next_reset_at IS NULL))
-            AND (${looseEntitlementIsLiveSql()} OR (ce.balance = 0 AND ce.unlimited IS NOT TRUE AND ce.next_reset_at IS NULL))
+            AND (ce.expires_at <= EXTRACT(EPOCH FROM now()) * 1000 OR (ce.expires_at IS NULL AND ce.balance = 0 AND ce.unlimited IS NOT TRUE AND ce.next_reset_at IS NULL))
+            AND (ce.expires_at <= EXTRACT(EPOCH FROM now()) * 1000 OR ${looseEntitlementIsLiveSql()} OR (ce.expires_at IS NULL AND ce.balance = 0 AND ce.unlimited IS NOT TRUE AND ce.next_reset_at IS NULL))
           ORDER BY ce.id DESC
           LIMIT ${EXPIRED_EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
         ) expired_ce`
@@ -453,7 +453,7 @@ const buildExtraEntitlementsCTE = ({
             AND ce.pooled_balance_id IS NULL
             AND ce.pooled_contribution_id IS NULL
             AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-            AND ${looseEntitlementIsLiveSql()}
+            AND (${looseEntitlementIsLiveSql()} OR ce.next_reset_at IS NOT NULL)
           ORDER BY ce.id DESC
           LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
         ) active_ce
@@ -828,7 +828,7 @@ export const getPaginatedFullCusQuery = ({
 		AND ce.pooled_balance_id IS NULL
 		AND ce.pooled_contribution_id IS NULL
         ${looseEntitlementExpiryFilterSql({ includeExpiredLooseEntitlements: false })}
-        AND ${looseEntitlementIsLiveSql()}
+        AND (${looseEntitlementIsLiveSql()} OR ce.next_reset_at IS NOT NULL)
         ${customerLevelOnly("ce")}
       ORDER BY ce.id DESC
 	  LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
