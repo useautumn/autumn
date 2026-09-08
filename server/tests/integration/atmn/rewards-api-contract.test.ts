@@ -15,6 +15,8 @@
  *  - S6  a rewards-only payload rejects a coupon naming a plan the org holds
  *  - S7  a coupon naming a missing plan is rejected only in the reward phase,
  *        after the plan rename in the same payload has committed
+ *  - S8  a coupon naming a plan the same payload renames or removes passes the
+ *        errors phase, because the lookup behind it reads pre-change state
  *  - S9  a payload may claim the id of a hidden legacy referral program
  *  - S10 replacing a reward while keeping its promo code fails, because the
  *        replacement is created before the row that still owns the code goes
@@ -27,6 +29,9 @@
  *  - S5  the applied result carries the id the row received
  *  - S6  a plan the payload leaves untouched still counts as present
  *  - S7  refused in the errors phase, so the rename does not land
+ *  - S8  an id this payload vacates is refused before the plan phase, so
+ *        neither the rename nor the removal lands; the id a rename lands on
+ *        still resolves
  *  - S9  409, the same answer a hidden reward's id gets
  *  - S10 the unlinked removal frees the code before the create needs it
  */
@@ -80,15 +85,17 @@ const promoCode = (id: string): string => id.replace(/[^a-zA-Z0-9]/g, "");
 const couponParams = ({
 	id,
 	planIds,
+	value = 10,
 }: {
 	id: string;
 	planIds: string[] | null;
+	value?: number;
 }): UpdateCatalogRewardParams => ({
 	coupon: {
 		id,
 		name: "Sale",
 		type: "percentage_discount" as never,
-		value: 10,
+		value,
 		duration: { type: "one_off" as never, length: null },
 		plan_ids: planIds,
 		promo_codes: [{ code: promoCode(id) }],
@@ -225,6 +232,43 @@ test.concurrent(
 			).rejects.toThrow(ghostPlan);
 			const afterGhost = await scenario.client.get({});
 			expect(afterGhost.plans.map((plan) => plan.id)).toContain(pro);
+
+			// S8: the plan the coupon names is the one this payload renames away.
+			// The database still holds the old id while the errors phase runs, so
+			// only the payload itself can say the reference is about to dangle.
+			await expect(
+				scenario.client.update({
+					plans: [{ plan_id: pro, new_plan_id: renamedPlan, name: "Pro" }],
+					rewards: [couponParams({ id: sale, planIds: [pro], value: 20 })],
+				} as never),
+			).rejects.toThrow(pro);
+			const afterVacated = await scenario.client.get({});
+			expect(afterVacated.plans.map((plan) => plan.id)).toContain(pro);
+
+			// The id the rename lands on is the one that will exist, so the same
+			// payload pointed at it goes through.
+			await scenario.client.update({
+				plans: [{ plan_id: pro, new_plan_id: renamedPlan, name: "Pro" }],
+				rewards: [
+					couponParams({ id: sale, planIds: [renamedPlan], value: 20 }),
+				],
+			} as never);
+			const afterRename = await scenario.client.get({});
+			expect(afterRename.plans.map((plan) => plan.id)).toContain(renamedPlan);
+
+			// The same question for a removal: the row is still in the database
+			// while the errors phase runs, and the plan phase deletes it before
+			// the reward writer would ever look.
+			await expect(
+				scenario.client.update({
+					remove_plans: [{ plan_id: renamedPlan }],
+					rewards: [
+						couponParams({ id: sale, planIds: [renamedPlan], value: 30 }),
+					],
+				} as never),
+			).rejects.toThrow(renamedPlan);
+			const afterRemoval = await scenario.client.get({});
+			expect(afterRemoval.plans.map((plan) => plan.id)).toContain(renamedPlan);
 		} finally {
 			scenario.cleanup();
 		}
