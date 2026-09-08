@@ -1,7 +1,6 @@
 import type {
 	CatalogAppliedResult,
 	CreateRewardParams,
-	CreateRewardResponse,
 	UpdateRewardParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -21,7 +20,10 @@ import {
 	deleteApiReward,
 	updateApiReward,
 } from "@/internal/rewards/actions/rewardCrud/index.js";
-import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
+import {
+	rewardProgramRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
 
 export type CatalogRewardResults = {
 	rewards: CatalogAppliedResult[];
@@ -71,16 +73,22 @@ const programUpdateParamsFor = ({
 	exclude_trial: upsert.desired.exclude_trial,
 });
 
-/** The created row carries its own stable id; no read-back needed. */
-const internalIdOfCreated = ({
-	created,
+/** The create response is the public V0 shape, which carries no stable id, so
+ * the row is read back. Push pins the fixture with it. */
+const internalIdOfReward = async ({
+	ctx,
+	rewardId,
 }: {
-	created: CreateRewardResponse;
-}): string | null => {
-	const body = created.coupon ?? created.feature_grant;
-	const internalId = (body as { internal_id?: string } | undefined)
-		?.internal_id;
-	return internalId ?? null;
+	ctx: AutumnContext;
+	rewardId: string;
+}): Promise<string | null> => {
+	const reward = await rewardRepo.get({
+		db: ctx.db,
+		idOrInternalId: rewardId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	return reward?.internal_id ?? null;
 };
 
 const internalIdOfProgram = async ({
@@ -122,13 +130,13 @@ export const executeRewards = async ({
 	const rewards: CatalogAppliedResult[] = [];
 	for (const upsert of updateCatalogPlan.upsertRewards) {
 		if (upsert.internalId === null) {
-			const created = await createApiReward({
-				ctx,
-				params: createParamsFor({ upsert }),
-			});
+			await createApiReward({ ctx, params: createParamsFor({ upsert }) });
 			rewards.push({
 				id: upsert.rewardId,
-				internal_id: internalIdOfCreated({ created }),
+				internal_id: await internalIdOfReward({
+					ctx,
+					rewardId: upsert.rewardId,
+				}),
 				action: "create",
 			});
 			continue;
