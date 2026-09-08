@@ -30,6 +30,22 @@ const buildCustomerEntitlement = ({
 	}) as FullCusEntWithFullCusProduct;
 
 describe("customer feature usage pooled balances", () => {
+	test("shows consumed standalone balances in the expired view", () => {
+		const consumed = {
+			...buildCustomerEntitlement({ id: "consumed", pooled: false }),
+			balance: 0,
+			unlimited: false,
+			customer_product: null,
+		};
+
+		const filtered = filterCustomerFeatureUsage({
+			entitlements: [consumed],
+			statuses: ["expired"],
+		});
+
+		expect(filtered.map(({ id }) => id)).toEqual(["consumed"]);
+	});
+
 	test("shows the synthetic pool and hides its contribution sources", () => {
 		const ordinary = buildCustomerEntitlement({
 			id: "ordinary",
