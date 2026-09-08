@@ -8,7 +8,7 @@ import { buildSharedFullSubjectBalanceKey } from "./buildSharedFullSubjectBalanc
 //   KEYS[2]  = lock receipt key ("" when no lock)
 //   KEYS[3]  = idempotency key ("" when request is not idempotent)
 //   KEYS[4]  = subject-view epoch key
-//   KEYS[5+] = per-feature balance hashes, then optional observation metadata
+//   KEYS[5+] = per-feature balance hash keys
 const ROUTING_KEY_INDEX = 1;
 const LOCK_RECEIPT_KEY_INDEX = 2;
 const IDEMPOTENCY_KEY_INDEX = 3;
@@ -25,7 +25,6 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	customerEntitlementDeductions,
 	fallbackFeatureId,
 	usageWindowFeatureIds = [],
-	observationMetadataKey,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -39,7 +38,6 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	// field, and a capped feature may have no entitlements (so no deduction
 	// entry references its hash). Declare those keys in KEYS[] too.
 	usageWindowFeatureIds?: string[];
-	observationMetadataKey?: string;
 }) => {
 	const balanceKeysByFeatureId: Record<string, string> = {};
 	const addFeatureKey = (featureId: string) => {
@@ -81,8 +79,5 @@ export const buildDeductFromSubjectBalancesKeys = ({
 			balanceKeysByFeatureId[balanceFeatureIds[i]];
 	}
 
-	const observationKeyIndex = observationMetadataKey
-		? keys.push(observationMetadataKey)
-		: undefined;
-	return { keys, balanceKeyIndexByFeatureId, observationKeyIndex };
+	return { keys, balanceKeyIndexByFeatureId };
 };

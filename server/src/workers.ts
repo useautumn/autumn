@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cluster from "node:cluster";
 import { getAutumnEnv } from "@autumn/env";
+import { startBalanceShadow } from "./external/balanceWorker/balanceShadow.js";
 
 import { initInfisical } from "./external/infisical/initInfisical.js";
 import { logger } from "./external/logtail/logtailUtils.js";
@@ -108,6 +109,7 @@ if (cluster.isPrimary) {
 	const queueImplementation = "SQS";
 	startMemoryMonitor("worker", 60_000);
 	await startAllEdgeConfigPolling({ logger });
+	startBalanceShadow();
 
 	const { db } = await import("./db/initDrizzle.js");
 	const { primeRedisMonitor } = await import(

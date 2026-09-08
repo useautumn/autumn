@@ -23,7 +23,6 @@
   KEYS[4] = customer-scoped subject-view epoch key
   KEYS[5..N] = per-feature shared balance hash keys; params.balance_key_index_by_feature_id
               maps feature_id → the index (5..N) of the key for that feature
-  Optional final key = observation metadata, addressed by params.observation.metadata_key_index
 
   All Redis keys the script touches MUST be declared in KEYS[] so Upstash (and
   Redis Cluster) can apply key-based locking / slot routing. Do not reconstruct
@@ -158,11 +157,8 @@ end
 
 if not is_nil(idempotency_key) then
   if redis.call('EXISTS', idempotency_key) == 1 then
-    local replay = replay_balance_observation(params, idempotency_key)
     return cjson.encode({
       error = 'DUPLICATE_IDEMPOTENCY_KEY',
-      observation = replay.observation,
-      observation_error = replay.error,
       updates = {},
       rollover_updates = {},
       modified_customer_entitlement_ids = new_empty_array(),
@@ -227,7 +223,6 @@ if #(context.missing_customer_entitlement_ids or {}) > 0 then
   })
 end
 
-local observation_capture = begin_balance_observation(params, context)
 local unwind_modified_cus_ent_ids = {}
 
 if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
@@ -328,11 +323,8 @@ end
 -- a window-capped leftover clamps under 'cap' and rejects as
 -- INSUFFICIENT_BALANCE under 'reject'.
 if remaining_amount > 0 and overage_behaviour == 'reject' then
-  local captured = capture_balance_observation(params, context, observation_capture, 'rejected')
   return cjson.encode({
     error = 'INSUFFICIENT_BALANCE',
-    observation = captured.observation,
-    observation_error = captured.error,
     feature_id = feature_id,
     remaining = remaining_amount,
     updates = {},
@@ -398,8 +390,6 @@ then
 end
 
 -- Apply all pending writes to Redis (only after validation passes)
-local observation_decision = remaining_amount ~= 0 and 'capped' or 'applied'
-local captured = capture_balance_observation(params, context, observation_capture, observation_decision)
 apply_pending_writes(routing_key, context)
 
 update_aggregated_balances({
@@ -412,14 +402,12 @@ if enforce_usage_windows or unwind_usage_windows then
 end
 
 if not is_nil(idempotency_key) and not is_nil(idempotency_ttl_ms) then
-  redis.call('SET', idempotency_key, captured.marker or '1', 'PX', idempotency_ttl_ms)
+  redis.call('SET', idempotency_key, '1', 'PX', idempotency_ttl_ms)
 end
 
 logger.log("=== LUA DEDUCTION END ===")
 
 return cjson.encode({
-  observation = captured.observation,
-  observation_error = captured.error,
   updates = updates,
   rollover_updates = rollover_updates,
   modified_customer_entitlement_ids = modified_customer_entitlement_ids,

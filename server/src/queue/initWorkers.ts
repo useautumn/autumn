@@ -13,6 +13,7 @@ import {
 import * as Sentry from "@sentry/bun";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "@/db/pgPoolMonitor.js";
+import { stopBalanceShadow } from "@/external/balanceWorker/balanceShadow.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import {
 	type QueueCapacityLease,
@@ -633,6 +634,7 @@ export const initWorkers = async ({
 		for (const controller of abortControllers) {
 			controller.abort();
 		}
+		await stopBalanceShadow();
 		await shutdownSqsSendBatchers();
 
 		const isProd = process.env.NODE_ENV === "production";
