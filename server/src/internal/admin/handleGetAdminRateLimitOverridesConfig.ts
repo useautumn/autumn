@@ -4,7 +4,10 @@ import {
 	AUTO_TOPUP_ATTEMPTS_RATE_LIMIT,
 	DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT,
 } from "@/internal/balances/autoTopUp/helpers/limits/autoTopupRateLimitConfigs.js";
-import { RATE_LIMIT_CONFIGS } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+import {
+	RATE_LIMIT_CONFIGS,
+	RateLimitScope,
+} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import {
 	getRateLimitOverridesFromSource,
 	getRuntimeRateLimitOverridesStatus,
@@ -16,7 +19,10 @@ export const handleGetAdminRateLimitOverridesConfig = createRoute({
 		const status = getRuntimeRateLimitOverridesStatus();
 		const config = await getRateLimitOverridesFromSource();
 
-		const defaults = Object.fromEntries(
+		const defaults: Record<
+			string,
+			{ limit: number; windowMs: number; scope: RateLimitScope }
+		> = Object.fromEntries(
 			Object.entries(RATE_LIMIT_CONFIGS).map(([type, cfg]) => [
 				type,
 				{
@@ -29,7 +35,7 @@ export const handleGetAdminRateLimitOverridesConfig = createRoute({
 		defaults[AUTO_TOPUP_ATTEMPTS_RATE_LIMIT] = {
 			limit: DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT.limit,
 			windowMs: 10 * 60 * 1000,
-			scope: "customer",
+			scope: RateLimitScope.Customer,
 		};
 
 		return c.json({
