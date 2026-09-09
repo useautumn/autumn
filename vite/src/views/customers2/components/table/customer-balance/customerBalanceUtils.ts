@@ -133,7 +133,7 @@ export function getCustomerBalanceSourceParts({
 	});
 	const productName =
 		getCustomerBalancePlanName({ balance, fullCustomer }) ??
-		(isPooledBalance ? "Pooled" : "No plan");
+		(isPooledBalance ? "Pooled" : (balance.external_id ?? "No plan"));
 
 	const { interval, interval_count } = balance.entitlement;
 	let intervalLabel: string;
