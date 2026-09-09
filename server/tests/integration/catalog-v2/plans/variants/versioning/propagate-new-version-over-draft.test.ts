@@ -15,7 +15,10 @@ import {
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
 import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
-import { expectVersionIdentityCorrect } from "../../utils/expectVersionIdentity.js";
+import {
+	expectExactlyOneActiveVersion,
+	expectVersionIdentityCorrect,
+} from "../../utils/expectVersionIdentity.js";
 import { seedBaseWithVariant } from "../utils/seedVariantPlans.js";
 
 test.concurrent(
@@ -46,6 +49,17 @@ test.concurrent(
 						},
 					],
 				});
+
+				// The premise: v2 drafts exist above the still-active v1.
+				for (const planId of [baseId, variantId]) {
+					await expectVersionIdentityCorrect({
+						ctx,
+						planId,
+						version: 2,
+						active: false,
+						isDefault: false,
+					});
+				}
 
 				// Second versioning from the still-active v1: must mint v3 drafts, not 400.
 				await autumnV2_3.catalogV2.update({
@@ -85,6 +99,8 @@ test.concurrent(
 					active: false,
 					isDefault: false,
 				});
+				await expectExactlyOneActiveVersion({ ctx, planId: baseId });
+				await expectExactlyOneActiveVersion({ ctx, planId: variantId });
 			},
 		});
 	},
