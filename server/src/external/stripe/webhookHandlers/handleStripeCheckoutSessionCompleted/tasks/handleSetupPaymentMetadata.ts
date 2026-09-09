@@ -1,8 +1,11 @@
 import {
 	type DeferredSetupPaymentData,
+	ErrCode,
 	MetadataType,
 	notNullish,
+	RecaseError,
 } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { updateDefaultPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { billingActions } from "@/internal/billing/v2/actions";
@@ -70,7 +73,7 @@ export const handleSetupPaymentMetadata = async ({
 		});
 
 		// Webhook-driven direct bill — serialize with API attaches like the V2 flow.
-		await withBillingLock({
+		const { billingResult } = await withBillingLock({
 			lockKeys: [
 				ctx.fullCustomer?.id,
 				ctx.fullCustomer?.internal_id,
@@ -88,6 +91,15 @@ export const handleSetupPaymentMetadata = async ({
 					skipAutumnCheckout: true,
 				}),
 		});
+
+		// Rethrow keeps the metadata for Stripe's retry instead of claiming success.
+		if (billingResult?.stripe.resumedPendingInvoice) {
+			throw new RecaseError({
+				code: ErrCode.PendingPlanConflict,
+				message: `Setup payment for plan ${deferredData.params.plan_id} found an earlier pending invoice for the same plan group and was not applied`,
+				statusCode: StatusCodes.CONFLICT,
+			});
+		}
 
 		logger.info(
 			`Setup payment metadata: plan ${deferredData.params.plan_id} attached successfully`,

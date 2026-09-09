@@ -1,12 +1,17 @@
 import type {
 	BillingPlan,
 	BillingResult,
+	FullCusProduct,
 	MultiAttachBillingContext,
 	MultiAttachParamsV0,
 } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
+import {
+	findPendingInvoiceConflict,
+	listPendingCustomerProducts,
+} from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -56,7 +61,6 @@ export async function multiAttach({
 		billingContext,
 		redirectMode: params.redirect_mode,
 		params,
-		preview,
 	});
 
 	handleMultiAttachCurrencyErrors({ ctx, billingContext, params });
@@ -110,6 +114,30 @@ export async function multiAttach({
 		existingLock: checkoutReservation,
 	});
 	if (cachedResult) return cachedResult;
+
+	let pendingCustomerProducts: Promise<FullCusProduct[]> | undefined;
+	const loadPendingCustomerProducts = () => {
+		pendingCustomerProducts ??= listPendingCustomerProducts({
+			ctx,
+			fullCustomer: billingContext.fullCustomer,
+		});
+		return pendingCustomerProducts;
+	};
+	for (const productContext of billingContext.productContexts) {
+		const pendingInvoiceResult = await findPendingInvoiceConflict({
+			ctx,
+			fullCustomer: productContext.fullCustomer,
+			attachProduct: productContext.fullProduct,
+			loadPendingCustomerProducts,
+		});
+		if (pendingInvoiceResult) {
+			return {
+				billingContext,
+				billingPlan,
+				billingResult: pendingInvoiceResult,
+			};
+		}
+	}
 
 	// 5. Execute billing plan
 	const billingResult = await executeBillingPlan({
