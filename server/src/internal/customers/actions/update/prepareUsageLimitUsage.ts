@@ -1,5 +1,6 @@
 import {
 	type DbUsageLimit,
+	type FullSubject,
 	findFeatureById,
 	findUsageWindowByLimit,
 	fullSubjectToUsageWindowLimits,
@@ -13,6 +14,27 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import { invalidateCachedFullSubject } from "../../cache/fullSubject/index.js";
 import { getFullSubject } from "../../repos/getFullSubject/getFullSubject.js";
+
+/** The subject as it will look once this request's usage-limit config is saved. */
+const withPendingUsageLimits = ({
+	fullSubject,
+	usageLimits,
+}: {
+	fullSubject: FullSubject;
+	usageLimits: DbUsageLimit[] | undefined;
+}): FullSubject => {
+	if (usageLimits === undefined) return fullSubject;
+	if (fullSubject.entity) {
+		return {
+			...fullSubject,
+			entity: { ...fullSubject.entity, usage_limits: usageLimits },
+		};
+	}
+	return {
+		...fullSubject,
+		customer: { ...fullSubject.customer, usage_limits: usageLimits },
+	};
+};
 
 export const prepareUsageLimitUsage = async ({
 	ctx,
@@ -52,13 +74,12 @@ export const prepareUsageLimitUsage = async ({
 		readFrom: "primary",
 	});
 	if (!fullSubject) return [];
-	if (configUsageLimits !== undefined) {
-		const subject = fullSubject.entity ?? fullSubject.customer;
-		subject.usage_limits = configUsageLimits;
-	}
 
 	const limits = fullSubjectToUsageWindowLimits({
-		fullSubject,
+		fullSubject: withPendingUsageLimits({
+			fullSubject,
+			usageLimits: configUsageLimits,
+		}),
 		featureIds: usageUpdates.map((entry) => entry.feature_id),
 		features: ctx.features,
 		now: ctx.timestamp,
