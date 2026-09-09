@@ -3,6 +3,7 @@ import {
 	CusProductStatus,
 	cp,
 	ErrCode,
+	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
 	isOneOffProduct,
@@ -16,41 +17,64 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-const unpayableInvoiceMessage = ({
-	planName,
-	stripeInvoice,
-}: {
-	planName: string;
+type PendingInvoiceCandidate = {
+	customerProduct: FullCusProduct;
+	metadataId: string;
 	stripeInvoice: Stripe.Invoice;
-}) => {
-	if (stripeInvoice.status === "paid")
-		return `A payment for the pending plan '${planName}' is still processing. Retry once it has been applied.`;
+};
+
+const isPayable = (candidate: PendingInvoiceCandidate) =>
+	candidate.stripeInvoice.status === "open" &&
+	Boolean(candidate.stripeInvoice.hosted_invoice_url);
+
+const byEarliestCreated = (
+	a: PendingInvoiceCandidate,
+	b: PendingInvoiceCandidate,
+) =>
+	(a.customerProduct.created_at ?? 0) - (b.customerProduct.created_at ?? 0) ||
+	a.stripeInvoice.id.localeCompare(b.stripeInvoice.id);
+
+const unpayableInvoiceMessage = ({
+	customerProduct,
+	stripeInvoice,
+}: PendingInvoiceCandidate) => {
 	const reason =
 		stripeInvoice.status === "open"
 			? "invoice has no payment page"
 			: `invoice is ${stripeInvoice.status}`;
-	return `The pending plan '${planName}' cannot be paid (${reason}). Cancel or review the pending plan before attaching another plan.`;
+	return `The pending plan '${customerProduct.product.name}' cannot be paid (${reason}). Cancel or review the pending plan before attaching another plan.`;
 };
 
-/** Resumes the open invoice of an invoice-backed pending main plan in the same scope
- * (queried uncapped; checkout-backed rows stay with checkCheckoutSessionLock). */
-export const findPendingInvoiceConflict = async ({
+/** Uncapped: fullCustomer.customer_products is limited and orders pending rows last. */
+export const listPendingCustomerProducts = ({
 	ctx,
 	fullCustomer,
-	attachProduct,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
-	attachProduct: FullProduct;
-}): Promise<BillingResult | undefined> => {
-	if (attachProduct.is_add_on || isOneOffProduct({ product: attachProduct }))
-		return;
-
-	const pendingCustomerProducts = await CusProductService.list({
+}) =>
+	CusProductService.list({
 		db: ctx.db,
 		internalCustomerId: fullCustomer.internal_id,
 		inStatuses: [CusProductStatus.Pending],
 	});
+
+/** Invoice-backed pending main plans in the same entity/group, each with a fresh
+ * Stripe invoice (checkout-backed rows stay with checkCheckoutSessionLock). */
+const listPendingInvoiceCandidates = async ({
+	ctx,
+	fullCustomer,
+	attachProduct,
+	pendingCustomerProducts,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	attachProduct: FullProduct;
+	pendingCustomerProducts: FullCusProduct[];
+}): Promise<PendingInvoiceCandidate[]> => {
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const candidates: PendingInvoiceCandidate[] = [];
+	const seenInvoiceIds = new Set<string>();
 
 	for (const customerProduct of pendingCustomerProducts) {
 		if (!customerProduct.metadata_id) continue;
@@ -71,29 +95,72 @@ export const findPendingInvoiceConflict = async ({
 			Boolean(metadata.stripe_invoice_id) &&
 			!metadata.stripe_checkout_session_id;
 		if (!invoiceBacked || !metadata?.stripe_invoice_id) continue;
+		if (seenInvoiceIds.has(metadata.stripe_invoice_id)) continue;
+		seenInvoiceIds.add(metadata.stripe_invoice_id);
 
-		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 		const stripeInvoice = await stripeCli.invoices.retrieve(
 			metadata.stripe_invoice_id,
 		);
-
-		if (stripeInvoice.status !== "open" || !stripeInvoice.hosted_invoice_url) {
-			throw new RecaseError({
-				code: ErrCode.PendingPlanConflict,
-				message: unpayableInvoiceMessage({
-					planName: customerProduct.product.name,
-					stripeInvoice,
-				}),
-				statusCode: StatusCodes.CONFLICT,
-			});
-		}
-
-		return {
-			stripe: {
-				deferred: true,
-				deferredMetadataId: metadata.id,
-				stripeInvoice,
-			},
-		};
+		candidates.push({
+			customerProduct,
+			metadataId: metadata.id,
+			stripeInvoice,
+		});
 	}
+
+	return candidates.sort(byEarliestCreated);
+};
+
+/** Resumes the earliest open pending invoice for this transition instead of minting
+ * another; a paid one blocks until promoted, and no payable one throws 409. */
+export const findPendingInvoiceConflict = async ({
+	ctx,
+	fullCustomer,
+	attachProduct,
+	pendingCustomerProducts,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	attachProduct: FullProduct;
+	pendingCustomerProducts: FullCusProduct[];
+}): Promise<BillingResult | undefined> => {
+	if (attachProduct.is_add_on || isOneOffProduct({ product: attachProduct }))
+		return;
+
+	const candidates = await listPendingInvoiceCandidates({
+		ctx,
+		fullCustomer,
+		attachProduct,
+		pendingCustomerProducts,
+	});
+	if (candidates.length === 0) return;
+
+	const paid = candidates.find(
+		(candidate) => candidate.stripeInvoice.status === "paid",
+	);
+	if (paid) {
+		throw new RecaseError({
+			code: ErrCode.PendingPlanConflict,
+			message: `A payment for the pending plan '${paid.customerProduct.product.name}' is still processing. Retry once it has been applied.`,
+			statusCode: StatusCodes.CONFLICT,
+		});
+	}
+
+	const payable = candidates.find(isPayable);
+	if (!payable) {
+		throw new RecaseError({
+			code: ErrCode.PendingPlanConflict,
+			message: unpayableInvoiceMessage(candidates[0]),
+			statusCode: StatusCodes.CONFLICT,
+		});
+	}
+
+	return {
+		stripe: {
+			deferred: true,
+			deferredMetadataId: payable.metadataId,
+			stripeInvoice: payable.stripeInvoice,
+			resumedPendingInvoice: true,
+		},
+	};
 };

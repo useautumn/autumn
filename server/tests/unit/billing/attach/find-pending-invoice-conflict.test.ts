@@ -1,5 +1,5 @@
-// Red: every invoice-backed pending plan was rejected with 409. Green: an open invoice
-// is resumed from a fresh Stripe retrieve; paid/void/no-URL states still raise 409.
+// Red: every invoice-backed pending plan was rejected with 409, then the first row's
+// invoice was resumed regardless of siblings. Green: earliest open wins; paid blocks.
 
 import { expect, test } from "bun:test";
 import {
@@ -16,24 +16,23 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
+type InvoiceStatus = "open" | "paid" | "void";
+
 const state = {
-	invoiceStatus: "open" as "open" | "paid" | "void",
-	hostedInvoiceUrl: "https://invoice.stripe.com/i/inv_pending" as string | null,
+	invoices: {} as Record<string, { status: InvoiceStatus; url: string | null }>,
 	retrievedInvoiceIds: [] as string[],
 };
-
-const metadataId = "meta_pending_invoice";
-const stripeInvoiceId = "in_pending";
 
 await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 	createStripeCli: () => ({
 		invoices: {
 			retrieve: async (id: string) => {
 				state.retrievedInvoiceIds.push(id);
+				const invoice = state.invoices[id];
 				return {
 					id,
-					status: state.invoiceStatus,
-					hosted_invoice_url: state.hostedInvoiceUrl,
+					status: invoice.status,
+					hosted_invoice_url: invoice.url,
 					total: 1000,
 					currency: "usd",
 				};
@@ -44,46 +43,48 @@ await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 
 await mockModuleWithRestore("@/internal/metadata/MetadataService.js", () => ({
 	MetadataService: {
-		get: async () => ({
-			id: metadataId,
+		get: async ({ id }: { id: string }) => ({
+			id,
 			type: MetadataType.DeferredInvoice,
-			stripe_invoice_id: stripeInvoiceId,
+			stripe_invoice_id: id.replace("meta_", "in_"),
 			stripe_checkout_session_id: null,
 			data: {},
 		}),
 	},
 }));
 
+const { findPendingInvoiceConflict } = await import(
+	"@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict.js"
+);
+
 const attachProduct: FullProduct = products.createFull({
 	id: "premium",
 	prices: [prices.createFixed({ id: "price_premium" })],
 });
 
-const pendingCustomerProduct = {
-	id: "cp_pending",
-	internal_customer_id: "icus_1",
-	internal_entity_id: null,
-	status: CusProductStatus.Pending,
-	metadata_id: metadataId,
-	product: attachProduct,
-	customer_prices: [
-		{ price: attachProduct.prices[0], customer_product_id: "cp_pending" },
-	],
-	customer_entitlements: [],
-} as unknown as FullCusProduct;
-
-await mockModuleWithRestore(
-	"@/internal/customers/cusProducts/CusProductService.js",
-	() => ({
-		CusProductService: {
-			list: async () => [pendingCustomerProduct],
-		},
-	}),
-);
-
-const { findPendingInvoiceConflict } = await import(
-	"@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict.js"
-);
+const pendingRow = ({
+	invoiceId,
+	createdAt,
+}: {
+	invoiceId: string;
+	createdAt: number;
+}) =>
+	({
+		id: `cp_${invoiceId}`,
+		internal_customer_id: "icus_1",
+		internal_entity_id: null,
+		status: CusProductStatus.Pending,
+		metadata_id: invoiceId.replace("in_", "meta_"),
+		created_at: createdAt,
+		product: attachProduct,
+		customer_prices: [
+			{
+				price: attachProduct.prices[0],
+				customer_product_id: `cp_${invoiceId}`,
+			},
+		],
+		customer_entitlements: [],
+	}) as unknown as FullCusProduct;
 
 const fullCustomer = {
 	id: "cus_1",
@@ -99,68 +100,120 @@ const ctx = {
 	logger: { info: () => {}, warn: () => {}, error: () => {} },
 } as never;
 
-const resetState = () => {
-	state.invoiceStatus = "open";
-	state.hostedInvoiceUrl = "https://invoice.stripe.com/i/inv_pending";
+const withInvoices = (
+	invoices: Record<string, { status: InvoiceStatus; url?: string | null }>,
+) => {
 	state.retrievedInvoiceIds = [];
+	state.invoices = Object.fromEntries(
+		Object.entries(invoices).map(([id, invoice]) => [
+			id,
+			{ status: invoice.status, url: invoice.url ?? `https://pay/${id}` },
+		]),
+	);
+};
+
+const expectConflict = async ({
+	rows,
+	messageIncludes,
+}: {
+	rows: FullCusProduct[];
+	messageIncludes: string;
+}) => {
+	let thrown: unknown;
+	try {
+		await findPendingInvoiceConflict({
+			ctx,
+			fullCustomer,
+			attachProduct,
+			pendingCustomerProducts: rows,
+		});
+	} catch (error) {
+		thrown = error;
+	}
+	expect(thrown).toBeInstanceOf(RecaseError);
+	expect((thrown as RecaseError).statusCode).toBe(409);
+	expect((thrown as RecaseError).code).toBe(ErrCode.PendingPlanConflict);
+	expect((thrown as RecaseError).message).toInclude(messageIncludes);
 };
 
 test("resumes an open pending invoice from a fresh Stripe retrieve", async () => {
-	resetState();
+	withInvoices({ in_a: { status: "open" } });
 
 	const billingResult = await findPendingInvoiceConflict({
 		ctx,
 		fullCustomer,
 		attachProduct,
+		pendingCustomerProducts: [pendingRow({ invoiceId: "in_a", createdAt: 1 })],
 	});
 
-	expect(state.retrievedInvoiceIds).toEqual([stripeInvoiceId]);
-	expect(billingResult?.stripe.stripeInvoice?.id).toBe(stripeInvoiceId);
-	expect(billingResult?.stripe.stripeInvoice?.status).toBe("open");
-	expect(billingResult?.stripe.deferredMetadataId).toBe(metadataId);
+	expect(state.retrievedInvoiceIds).toEqual(["in_a"]);
+	expect(billingResult?.stripe.stripeInvoice?.id).toBe("in_a");
+	expect(billingResult?.stripe.deferredMetadataId).toBe("meta_a");
+	expect(billingResult?.stripe.resumedPendingInvoice).toBe(true);
 	expect(billingResult?.stripe.requiredAction).toBeUndefined();
 });
 
-test("reports a paid pending invoice as processing instead of payable", async () => {
-	resetState();
-	state.invoiceStatus = "paid";
+test("two open invoices: the earliest-created one wins regardless of row order", async () => {
+	withInvoices({ in_late: { status: "open" }, in_early: { status: "open" } });
 
-	let thrown: unknown;
-	try {
-		await findPendingInvoiceConflict({ ctx, fullCustomer, attachProduct });
-	} catch (error) {
-		thrown = error;
-	}
+	const billingResult = await findPendingInvoiceConflict({
+		ctx,
+		fullCustomer,
+		attachProduct,
+		pendingCustomerProducts: [
+			pendingRow({ invoiceId: "in_late", createdAt: 20 }),
+			pendingRow({ invoiceId: "in_early", createdAt: 10 }),
+		],
+	});
 
-	expect(thrown).toBeInstanceOf(RecaseError);
-	expect((thrown as RecaseError).statusCode).toBe(409);
-	expect((thrown as RecaseError).code).toBe(ErrCode.PendingPlanConflict);
-	expect((thrown as RecaseError).message).toInclude("still processing");
+	expect(billingResult?.stripe.stripeInvoice?.id).toBe("in_early");
 });
 
-test("refuses a void pending invoice and names the state", async () => {
-	resetState();
-	state.invoiceStatus = "void";
+test("a void invoice listed first does not mask a later open one", async () => {
+	withInvoices({ in_void: { status: "void" }, in_open: { status: "open" } });
 
-	let thrown: unknown;
-	try {
-		await findPendingInvoiceConflict({ ctx, fullCustomer, attachProduct });
-	} catch (error) {
-		thrown = error;
-	}
+	const billingResult = await findPendingInvoiceConflict({
+		ctx,
+		fullCustomer,
+		attachProduct,
+		pendingCustomerProducts: [
+			pendingRow({ invoiceId: "in_void", createdAt: 1 }),
+			pendingRow({ invoiceId: "in_open", createdAt: 2 }),
+		],
+	});
 
-	expect(thrown).toBeInstanceOf(RecaseError);
-	expect((thrown as RecaseError).code).toBe(ErrCode.PendingPlanConflict);
-	expect((thrown as RecaseError).message).toInclude("invoice is void");
+	expect(billingResult?.stripe.stripeInvoice?.id).toBe("in_open");
+});
+
+test("a paid invoice blocks even when another open one exists", async () => {
+	withInvoices({ in_open: { status: "open" }, in_paid: { status: "paid" } });
+
+	await expectConflict({
+		rows: [
+			pendingRow({ invoiceId: "in_open", createdAt: 1 }),
+			pendingRow({ invoiceId: "in_paid", createdAt: 2 }),
+		],
+		messageIncludes: "still processing",
+	});
+});
+
+test("only a void invoice: refuses and names the state", async () => {
+	withInvoices({ in_void: { status: "void" } });
+
+	await expectConflict({
+		rows: [pendingRow({ invoiceId: "in_void", createdAt: 1 })],
+		messageIncludes: "invoice is void",
+	});
 });
 
 test("skips add-on attach targets without touching Stripe", async () => {
-	resetState();
+	withInvoices({ in_a: { status: "open" } });
 
 	const billingResult = await findPendingInvoiceConflict({
 		ctx,
 		fullCustomer,
 		attachProduct: { ...attachProduct, is_add_on: true },
+		pendingCustomerProducts: [pendingRow({ invoiceId: "in_a", createdAt: 1 })],
 	});
 
 	expect(billingResult).toBeUndefined();

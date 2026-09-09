@@ -7,7 +7,10 @@ import type {
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
-import { findPendingInvoiceConflict } from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
+import {
+	findPendingInvoiceConflict,
+	listPendingCustomerProducts,
+} from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -102,11 +105,25 @@ export async function multiAttach({
 		};
 	}
 
+	const cachedResult = await checkCheckoutSessionLock({
+		ctx,
+		params,
+		billingContext,
+		billingPlan,
+		existingLock: checkoutReservation,
+	});
+	if (cachedResult) return cachedResult;
+
+	const pendingCustomerProducts = await listPendingCustomerProducts({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+	});
 	for (const productContext of billingContext.productContexts) {
 		const pendingInvoiceResult = await findPendingInvoiceConflict({
 			ctx,
 			fullCustomer: productContext.fullCustomer,
 			attachProduct: productContext.fullProduct,
+			pendingCustomerProducts,
 		});
 		if (pendingInvoiceResult) {
 			return {
@@ -116,15 +133,6 @@ export async function multiAttach({
 			};
 		}
 	}
-
-	const cachedResult = await checkCheckoutSessionLock({
-		ctx,
-		params,
-		billingContext,
-		billingPlan,
-		existingLock: checkoutReservation,
-	});
-	if (cachedResult) return cachedResult;
 
 	// 5. Execute billing plan
 	const billingResult = await executeBillingPlan({

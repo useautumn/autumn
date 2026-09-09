@@ -13,7 +13,10 @@ import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/error
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
-import { findPendingInvoiceConflict } from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
+import {
+	findPendingInvoiceConflict,
+	listPendingCustomerProducts,
+} from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -125,16 +128,6 @@ export async function attach({
 		};
 	}
 
-	const pendingInvoiceResult = await findPendingInvoiceConflict({
-		ctx,
-		fullCustomer: billingContext.fullCustomer,
-		attachProduct: billingContext.attachProduct,
-	});
-	if (pendingInvoiceResult) {
-		preserveSubjectCache({ ctx });
-		return { billingContext, billingPlan, billingResult: pendingInvoiceResult };
-	}
-
 	const shouldCreateLongLivedCheckout =
 		params.long_lived_checkout &&
 		billingContext.checkoutMode === "stripe_checkout" &&
@@ -172,6 +165,20 @@ export async function attach({
 			preserveSubjectCache({ ctx });
 			return cachedResult;
 		}
+	}
+
+	const pendingInvoiceResult = await findPendingInvoiceConflict({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+		attachProduct: billingContext.attachProduct,
+		pendingCustomerProducts: await listPendingCustomerProducts({
+			ctx,
+			fullCustomer: billingContext.fullCustomer,
+		}),
+	});
+	if (pendingInvoiceResult) {
+		preserveSubjectCache({ ctx });
+		return { billingContext, billingPlan, billingResult: pendingInvoiceResult };
 	}
 
 	if (

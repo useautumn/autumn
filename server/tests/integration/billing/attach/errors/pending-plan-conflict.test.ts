@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -300,5 +301,39 @@ test.concurrent(
 		});
 		expect(openInvoices.has_more).toBe(false);
 		expect(openInvoices.data).toHaveLength(0);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending-plan-conflict 6: an open checkout session is arbitrated before the pending invoice is resumed")}`,
+	async () => {
+		const customerId = "pending-plan-conflict-checkout-lock";
+		const credits = products.oneOffAddOn({
+			id: "credits",
+			items: [items.oneOffWords({ billingUnits: 100, price: 10 })],
+		});
+		const { autumnV2_4, ctx, customer, premium, first } =
+			await initFailedUpgrade({ customerId, extraProducts: [credits] });
+
+		const checkout = await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: credits.id,
+			feature_quantities: [{ feature_id: TestFeature.Words, quantity: 100 }],
+			redirect_mode: "always",
+		});
+		expect(checkout.payment_url).toContain("checkout.stripe.com");
+
+		const retry = await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: premium.id,
+		});
+		expect(retry.invoice?.stripe_id).toBe(first.invoice?.stripe_id);
+
+		const sessions = await ctx.stripeCli.checkout.sessions.list({
+			customer: customer?.processor?.id ?? "",
+			limit: 100,
+		});
+		expect(sessions.has_more).toBe(false);
+		expect(sessions.data.map((session) => session.status)).toEqual(["expired"]);
 	},
 );

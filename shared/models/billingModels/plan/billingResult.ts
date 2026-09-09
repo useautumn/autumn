@@ -4,6 +4,8 @@ import type Stripe from "stripe";
 export interface StripeBillingPlanResult {
 	deferred?: boolean;
 	deferredMetadataId?: string;
+	/** An earlier pending plan's open invoice was returned; this request was not applied. */
+	resumedPendingInvoice?: boolean;
 	stripeInvoice?: Stripe.Invoice;
 	stripeSubscription?: Stripe.Subscription;
 	stripeCheckoutSession?:
