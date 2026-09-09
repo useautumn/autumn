@@ -32,8 +32,10 @@ const AUTO_TOPUP_RETRY_SUPPRESSION_MS = ms.minutes(10);
 
 const isThresholdBilling = (autoTopupContext: AutoTopupContext) =>
 	Boolean(
-		cusEntToCusPrice({ cusEnt: autoTopupContext.customerEntitlement })?.price
-			.config.threshold_billing,
+		(
+			cusEntToCusPrice({ cusEnt: autoTopupContext.customerEntitlement })?.price
+				.config as { threshold_billing?: unknown }
+		).threshold_billing,
 	);
 
 /** Workflow handler for auto top-ups. */

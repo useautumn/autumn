@@ -12,15 +12,18 @@ export const getCheckSubject = ({
 		customerProduct: FullSubject["customer_products"][number],
 	) =>
 		customerProduct.customer_prices.some((customerPrice) =>
-			Boolean(customerPrice.price.config.threshold_billing),
+			Boolean(
+				(customerPrice.price.config as { threshold_billing?: unknown })
+					.threshold_billing,
+			),
 		);
 	const shouldBlockPastDue = (
 		customerProduct: FullSubject["customer_products"][number],
 	) =>
 		customerProduct.status === CusProductStatus.PastDue &&
-		!customerProduct.product.config?.ignore_past_due &&
 		(ctx.org.config.block_overdue_entitlements ||
-			isThresholdProduct(customerProduct));
+			(isThresholdProduct(customerProduct) &&
+				!customerProduct.product.config?.ignore_past_due));
 
 	if (!fullSubject.customer_products.some(shouldBlockPastDue)) {
 		return fullSubject;
@@ -29,10 +32,7 @@ export const getCheckSubject = ({
 	return {
 		...fullSubject,
 		customer_products: fullSubject.customer_products.filter(
-			(customerProduct) =>
-				!shouldBlockPastDue(customerProduct) &&
-				(customerProduct.product.config?.allow_overdue_entitlements ||
-					customerProduct.status !== CusProductStatus.PastDue),
+			(customerProduct) => !shouldBlockPastDue(customerProduct),
 		),
 	};
 };
