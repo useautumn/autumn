@@ -63,6 +63,90 @@ test("threshold billing charges one feature-unit chunk", async () => {
 	expect(invoices.data.some((invoice) => invoice.total === 10_000)).toBe(true);
 });
 
+test("threshold billing does not charge below the threshold", async () => {
+	const planId = `threshold_below_${Math.random().toString(36).slice(2, 9)}`;
+	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: planId,
+		name: "Threshold billing below threshold",
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 0,
+				price: {
+					amount: 1,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+				threshold_billing: { threshold: 100 },
+			},
+		],
+	});
+	const { customerId, autumnV2_3, ctx } = await initScenario({
+		customerId: `threshold-billing-below-${Math.random().toString(36).slice(2, 8)}`,
+		setup: [s.customer({ paymentMethod: "success" })],
+		actions: [],
+	});
+	await autumnV2_3.billing.attach({ customer_id: customerId, plan_id: planId });
+	await autumnV2_3.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 99,
+	});
+	await expectBalanceCorrect({
+		customerId,
+		autumn: autumnV2_3,
+		featureId: TestFeature.Messages,
+		usage: 99,
+	});
+	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+	const invoices = await ctx.stripeCli.invoices.list({
+		customer: customer.stripe_id as string,
+	});
+	expect(invoices.data.some((invoice) => invoice.total === 10_000)).toBe(false);
+});
+
+test("threshold billing charges at the exact threshold", async () => {
+	const planId = `threshold_exact_${Math.random().toString(36).slice(2, 9)}`;
+	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: planId,
+		name: "Threshold billing exact threshold",
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 0,
+				price: {
+					amount: 1,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+				threshold_billing: { threshold: 100 },
+			},
+		],
+	});
+	const { customerId, autumnV2_3, ctx } = await initScenario({
+		customerId: `threshold-billing-exact-${Math.random().toString(36).slice(2, 8)}`,
+		setup: [s.customer({ paymentMethod: "success" })],
+		actions: [],
+	});
+	await autumnV2_3.billing.attach({ customer_id: customerId, plan_id: planId });
+	await autumnV2_3.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 100,
+	});
+	await expectBalanceCorrect({
+		customerId,
+		autumn: autumnV2_3,
+		featureId: TestFeature.Messages,
+		usage: 0,
+	});
+	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+	const invoices = await ctx.stripeCli.invoices.list({
+		customer: customer.stripe_id as string,
+	});
+	expect(invoices.data.some((invoice) => invoice.total === 10_000)).toBe(true);
+});
+
 test("threshold billing blocks a failed payment", async () => {
 	const planId = `threshold_fail_${Math.random().toString(36).slice(2, 9)}`;
 	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
