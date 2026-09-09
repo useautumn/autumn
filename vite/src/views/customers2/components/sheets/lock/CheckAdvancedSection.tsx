@@ -1,8 +1,13 @@
-import { Button, Input, SheetAccordion, SheetAccordionItem } from "@autumn/ui";
+import {
+	Button,
+	Input,
+	SheetAccordion,
+	SheetAccordionItem,
+	Switch,
+} from "@autumn/ui";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { nanoid } from "nanoid";
 import { ConfigRow } from "@/components/forms/shared/advanced-section";
-import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
 	LOCK_OVERAGE_DESCRIPTIONS,
 	type LockOverageBehavior,
@@ -33,64 +38,66 @@ export function CheckAdvancedSection({
 	return (
 		<SheetAccordion>
 			<SheetAccordionItem value="advanced" title="Advanced">
-				<SheetSection
+				<ConfigRow
 					title="Lock balance"
-					description="Reserve the required balance upfront, then confirm or release it later with balances.finalize."
-					checked={lock.enabled}
-					setChecked={(enabled) =>
-						onLockChange({
-							...lock,
-							enabled,
-							lockId: enabled && !lock.lockId ? generateLockId() : lock.lockId,
-						})
+					description="Reserve the required balance upfront, then confirm or release it with balances.finalize"
+					expanded={lock.enabled}
+					action={
+						<Switch
+							checked={lock.enabled}
+							onCheckedChange={(enabled) =>
+								onLockChange({
+									...lock,
+									enabled,
+									lockId:
+										enabled && !lock.lockId ? generateLockId() : lock.lockId,
+								})
+							}
+						/>
 					}
-					withSeparator={false}
-					className="p-0"
 				>
-					{lock.enabled && (
-						<div className="space-y-4">
-							<ConfigRow
-								title="Lock ID"
-								description="Pass this ID to balances.finalize"
-							>
-								<div className="flex items-center gap-2">
-									<Input
-										placeholder="lck_..."
-										value={lock.lockId}
-										onChange={(e) =>
-											onLockChange({ ...lock, lockId: e.target.value })
-										}
-										className="flex-1 font-mono text-xs"
-									/>
-									<Button
-										variant="secondary"
-										size="sm"
-										onClick={() =>
-											onLockChange({ ...lock, lockId: generateLockId() })
-										}
-										className="shrink-0 gap-1 text-xs text-tertiary-foreground"
-									>
-										<ArrowsClockwiseIcon size={12} />
-										New
-									</Button>
-								</div>
-							</ConfigRow>
+					<div className="space-y-4 pt-2">
+						<ConfigRow
+							title="Lock ID"
+							description="Pass this ID to balances.finalize"
+						>
+							<div className="flex items-center gap-2">
+								<Input
+									placeholder="lck_..."
+									value={lock.lockId}
+									onChange={(e) =>
+										onLockChange({ ...lock, lockId: e.target.value })
+									}
+									className="flex-1 font-mono text-xs"
+								/>
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={() =>
+										onLockChange({ ...lock, lockId: generateLockId() })
+									}
+									className="shrink-0 gap-1 text-xs text-tertiary-foreground"
+								>
+									<ArrowsClockwiseIcon size={12} />
+									New
+								</Button>
+							</div>
+						</ConfigRow>
 
-							<ConfigRow
-								title="Overage behavior"
-								description={LOCK_OVERAGE_DESCRIPTIONS[lock.overageBehavior]}
-								action={
-									<LockOverageBehaviorToggle
-										value={lock.overageBehavior}
-										onChange={(overageBehavior) =>
-											onLockChange({ ...lock, overageBehavior })
-										}
-									/>
-								}
-							/>
-						</div>
-					)}
-				</SheetSection>
+						<ConfigRow
+							title="Overage behavior"
+							description={LOCK_OVERAGE_DESCRIPTIONS[lock.overageBehavior]}
+							action={
+								<LockOverageBehaviorToggle
+									value={lock.overageBehavior}
+									onChange={(overageBehavior) =>
+										onLockChange({ ...lock, overageBehavior })
+									}
+								/>
+							}
+						/>
+					</div>
+				</ConfigRow>
 			</SheetAccordionItem>
 		</SheetAccordion>
 	);
