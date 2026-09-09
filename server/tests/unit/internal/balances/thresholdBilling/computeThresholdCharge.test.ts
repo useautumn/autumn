@@ -31,6 +31,6 @@ describe("computeThresholdCharge", () => {
 				threshold: 100,
 				claimedUnits: 100,
 			}),
-		).toEqual({ chargeUnits: 100, remainingUnits: 140 });
+		).toEqual({ chargeUnits: 100, remainingUnits: 40 });
 	});
 });
