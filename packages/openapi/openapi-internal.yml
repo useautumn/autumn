@@ -604,8 +604,8 @@ components:
                   usage:
                     type: number
                     minimum: 0
-                    description: Current usage already consumed in the active interval.
-                      Response-only; not stored on billing controls.
+                    description: Usage consumed in the active interval, stored in the usage-window
+                      counter.
                   source:
                     enum:
                       - customer
@@ -2790,10 +2790,10 @@ components:
           properties:
             ignore_past_due:
               type: boolean
+              default: false
               description: If true, entitlements attached to this plan will still reset on
                 schedule even when the customer's product is in a past_due
                 state.
-              default: false
           description: Miscellaneous plan-level configuration flags.
         billing_controls:
           type: object
@@ -6571,8 +6571,8 @@ paths:
                             usage:
                               type: number
                               minimum: 0
-                              description: Current usage already consumed in the active interval.
-                                Response-only; not stored on billing controls.
+                              description: Usage consumed in the active interval, stored in the usage-window
+                                counter.
                             source:
                               enum:
                                 - customer
@@ -8237,9 +8237,8 @@ paths:
                                   usage:
                                     type: number
                                     minimum: 0
-                                    description: Current usage already consumed in the active interval.
-                                      Response-only; not stored on billing
-                                      controls.
+                                    description: Usage consumed in the active interval, stored in the usage-window
+                                      counter.
                                   source:
                                     enum:
                                       - customer
@@ -9497,61 +9496,118 @@ paths:
                     usage_limits:
                       type: array
                       items:
-                        type: object
-                        properties:
-                          feature_id:
-                            type: string
-                            description: The feature this usage limit applies to.
-                          enabled:
-                            type: boolean
-                            default: true
-                            description: Whether this usage limit is enabled.
-                          limit:
-                            type: number
-                            minimum: 0
-                            description: Maximum units allowed per interval.
-                          interval:
-                            enum:
-                              - day
-                              - week
-                              - month
-                              - year
-                            type: string
-                            description: Interval for the cap, aligned to the customer's billing cycle.
-                          anchor:
-                            enum:
-                              - billing_cycle
-                              - utc
-                            type: string
-                            description: Window alignment. 'billing_cycle' phases the interval to the
-                              customer's renewal time; 'utc' aligns to the UTC
-                              calendar.
-                          filter:
-                            type: object
+                        anyOf:
+                          - type: object
                             properties:
-                              properties:
+                              feature_id:
+                                type: string
+                                description: The feature this usage limit applies to.
+                              enabled:
+                                type: boolean
+                                default: true
+                                description: Whether this usage limit is enabled.
+                              limit:
+                                type: number
+                                minimum: 0
+                                description: Maximum units allowed per interval.
+                              interval:
+                                enum:
+                                  - day
+                                  - week
+                                  - month
+                                  - year
+                                type: string
+                                description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
+                              filter:
                                 type: object
-                                propertyNames:
-                                  type: string
-                                  minLength: 1
-                                  maxLength: 64
-                                additionalProperties:
-                                  anyOf:
-                                    - type: string
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
                                       minLength: 1
-                                      maxLength: 128
-                                    - type: number
-                                    - type: boolean
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
+                              usage:
+                                type: number
+                                minimum: 0
+                                description: Usage consumed in the active interval, stored in the usage-window
+                                  counter.
+                              source:
+                                enum:
+                                  - customer
+                                  - plan
+                                type: string
+                                description: "Response-only: whether the entry is a customer-level override or
+                                  inherited from an attached plan's defaults."
                             required:
-                              - properties
-                            description: When set, only usage from events whose properties match counts
-                              toward this cap. Omit to count all usage of the
-                              feature.
-                        required:
-                          - feature_id
-                          - limit
-                          - interval
-                      description: List of hard usage caps per feature (max units per interval).
+                              - feature_id
+                              - limit
+                              - interval
+                          - type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature this usage limit applies to.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
+                              source:
+                                enum:
+                                  - customer
+                                  - plan
+                                type: string
+                                description: "Response-only: whether the entry is a customer-level override or
+                                  inherited from an attached plan's defaults."
+                              usage:
+                                type: number
+                                minimum: 0
+                                description: Usage consumed in the active interval, stored in the usage-window
+                                  counter.
+                            required:
+                              - feature_id
+                              - usage
+                            additionalProperties: false
+                      description: List of hard usage caps per feature. An entry with only feature_id
+                        and usage sets the current counter without changing
+                        configuration.
                     usage_alerts:
                       type: array
                       items:
@@ -9636,7 +9692,6 @@ paths:
                           - feature_id
                       description: List of overage allowed controls per feature. When enabled, usage
                         can exceed balance.
-                  description: Billing controls for the customer (auto top-ups, etc.)
                 config:
                   type: object
                   properties:
@@ -9919,8 +9974,8 @@ paths:
                             usage:
                               type: number
                               minimum: 0
-                              description: Current usage already consumed in the active interval.
-                                Response-only; not stored on billing controls.
+                              description: Usage consumed in the active interval, stored in the usage-window
+                                counter.
                             source:
                               enum:
                                 - customer
@@ -12483,6 +12538,7 @@ paths:
                       description: If true, entitlements attached to this plan will still reset on
                         schedule even when the customer's product is in a
                         past_due state.
+                      default: false
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -13671,10 +13727,10 @@ paths:
                     properties:
                       ignore_past_due:
                         type: boolean
+                        default: false
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
-                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -16772,10 +16828,10 @@ paths:
                     properties:
                       ignore_past_due:
                         type: boolean
+                        default: false
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
-                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -19857,10 +19913,10 @@ paths:
                           properties:
                             ignore_past_due:
                               type: boolean
+                              default: false
                               description: If true, entitlements attached to this plan will still reset on
                                 schedule even when the customer's product is in
                                 a past_due state.
-                              default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
                           type: object
@@ -25385,10 +25441,10 @@ paths:
                                     properties:
                                       ignore_past_due:
                                         type: boolean
+                                        default: false
                                         description: If true, entitlements attached to this plan will still reset on
                                           schedule even when the customer's
                                           product is in a past_due state.
-                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -27279,6 +27335,7 @@ paths:
                       description: If true, entitlements attached to this plan will still reset on
                         schedule even when the customer's product is in a
                         past_due state.
+                      default: false
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -29616,10 +29673,10 @@ paths:
                     properties:
                       ignore_past_due:
                         type: boolean
+                        default: false
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
-                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -70262,8 +70319,8 @@ paths:
                             usage:
                               type: number
                               minimum: 0
-                              description: Current usage already consumed in the active interval.
-                                Response-only; not stored on billing controls.
+                              description: Usage consumed in the active interval, stored in the usage-window
+                                counter.
                             source:
                               enum:
                                 - customer
@@ -71381,8 +71438,8 @@ paths:
                             usage:
                               type: number
                               minimum: 0
-                              description: Current usage already consumed in the active interval.
-                                Response-only; not stored on billing controls.
+                              description: Usage consumed in the active interval, stored in the usage-window
+                                counter.
                             source:
                               enum:
                                 - customer
@@ -72572,9 +72629,8 @@ paths:
                                   usage:
                                     type: number
                                     minimum: 0
-                                    description: Current usage already consumed in the active interval.
-                                      Response-only; not stored on billing
-                                      controls.
+                                    description: Usage consumed in the active interval, stored in the usage-window
+                                      counter.
                                   source:
                                     enum:
                                       - customer
@@ -72871,62 +72927,118 @@ paths:
                     usage_limits:
                       type: array
                       items:
-                        type: object
-                        properties:
-                          feature_id:
-                            type: string
-                            description: The feature this usage limit applies to.
-                          enabled:
-                            type: boolean
-                            default: true
-                            description: Whether this usage limit is enabled.
-                          limit:
-                            type: number
-                            minimum: 0
-                            description: Maximum units allowed per interval.
-                          interval:
-                            enum:
-                              - day
-                              - week
-                              - month
-                              - year
-                            type: string
-                            description: Interval for the cap, aligned to the customer's billing cycle.
-                          anchor:
-                            enum:
-                              - billing_cycle
-                              - utc
-                            type: string
-                            description: Window alignment. 'billing_cycle' phases the interval to the
-                              customer's renewal time; 'utc' aligns to the UTC
-                              calendar.
-                          filter:
-                            type: object
+                        anyOf:
+                          - type: object
                             properties:
-                              properties:
+                              feature_id:
+                                type: string
+                                description: The feature this usage limit applies to.
+                              enabled:
+                                type: boolean
+                                default: true
+                                description: Whether this usage limit is enabled.
+                              limit:
+                                type: number
+                                minimum: 0
+                                description: Maximum units allowed per interval.
+                              interval:
+                                enum:
+                                  - day
+                                  - week
+                                  - month
+                                  - year
+                                type: string
+                                description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
+                              filter:
                                 type: object
-                                propertyNames:
-                                  type: string
-                                  minLength: 1
-                                  maxLength: 64
-                                additionalProperties:
-                                  anyOf:
-                                    - type: string
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
                                       minLength: 1
-                                      maxLength: 128
-                                    - type: number
-                                    - type: boolean
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
+                              usage:
+                                type: number
+                                minimum: 0
+                                description: Usage consumed in the active interval, stored in the usage-window
+                                  counter.
+                              source:
+                                enum:
+                                  - customer
+                                  - plan
+                                type: string
+                                description: "Response-only: whether the entry is a customer-level override or
+                                  inherited from an attached plan's defaults."
                             required:
-                              - properties
-                            description: When set, only usage from events whose properties match counts
-                              toward this cap. Omit to count all usage of the
-                              feature.
-                        required:
-                          - feature_id
-                          - limit
-                          - interval
-                      description: List of hard usage caps per feature for this entity. An entity
-                        entry overrides the customer's for that feature.
+                              - feature_id
+                              - limit
+                              - interval
+                          - type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature this usage limit applies to.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
+                              source:
+                                enum:
+                                  - customer
+                                  - plan
+                                type: string
+                                description: "Response-only: whether the entry is a customer-level override or
+                                  inherited from an attached plan's defaults."
+                              usage:
+                                type: number
+                                minimum: 0
+                                description: Usage consumed in the active interval, stored in the usage-window
+                                  counter.
+                            required:
+                              - feature_id
+                              - usage
+                            additionalProperties: false
+                      description: List of hard usage caps per feature. An entry with only feature_id
+                        and usage sets the current counter without changing
+                        configuration.
                     usage_alerts:
                       type: array
                       items:
@@ -73868,8 +73980,8 @@ paths:
                             usage:
                               type: number
                               minimum: 0
-                              description: Current usage already consumed in the active interval.
-                                Response-only; not stored on billing controls.
+                              description: Usage consumed in the active interval, stored in the usage-window
+                                counter.
                             source:
                               enum:
                                 - customer
@@ -78258,10 +78370,10 @@ paths:
                           properties:
                             ignore_past_due:
                               type: boolean
+                              default: false
                               description: If true, entitlements attached to this plan will still reset on
                                 schedule even when the customer's product is in
                                 a past_due state.
-                              default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
                           type: object
@@ -83786,10 +83898,10 @@ paths:
                                     properties:
                                       ignore_past_due:
                                         type: boolean
+                                        default: false
                                         description: If true, entitlements attached to this plan will still reset on
                                           schedule even when the customer's
                                           product is in a past_due state.
-                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -85655,6 +85767,7 @@ paths:
                             description: If true, entitlements attached to this plan will still reset on
                               schedule even when the customer's product is in a
                               past_due state.
+                            default: false
                         description: Miscellaneous plan-level configuration flags.
                       billing_controls:
                         type: object
@@ -89922,11 +90035,11 @@ paths:
                                               properties:
                                                 ignore_past_due:
                                                   type: boolean
+                                                  default: false
                                                   description: If true, entitlements attached to this plan will still reset on
                                                     schedule even when the
                                                     customer's product is in a
                                                     past_due state.
-                                                  default: false
                                               description: Miscellaneous plan-level configuration flags.
                                             - type: "null"
                                         active:
@@ -93869,12 +93982,12 @@ paths:
                                                             properties:
                                                               ignore_past_due:
                                                                 type: boolean
+                                                                default: false
                                                                 description: If true, entitlements attached to this plan will still reset on
                                                                   schedule even when
                                                                   the customer's
                                                                   product is in a
                                                                   past_due state.
-                                                                default: false
                                                             description: Miscellaneous plan-level configuration flags.
                                                           - type: "null"
                                                       active:
@@ -96629,11 +96742,11 @@ paths:
                                                     properties:
                                                       ignore_past_due:
                                                         type: boolean
+                                                        default: false
                                                         description: If true, entitlements attached to this plan will still reset on
                                                           schedule even when the
                                                           customer's product is
                                                           in a past_due state.
-                                                        default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
                                               active:
@@ -100587,12 +100700,12 @@ paths:
                                                                   properties:
                                                                     ignore_past_due:
                                                                       type: boolean
+                                                                      default: false
                                                                       description: If true, entitlements attached to this plan will still reset on
                                                                         schedule even when
                                                                         the customer's
                                                                         product is in a
                                                                         past_due state.
-                                                                      default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
                                                             active:
@@ -103330,12 +103443,12 @@ paths:
                                                           properties:
                                                             ignore_past_due:
                                                               type: boolean
+                                                              default: false
                                                               description: If true, entitlements attached to this plan will still reset on
                                                                 schedule even when
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
-                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
                                                     active:
@@ -107182,12 +107295,12 @@ paths:
                                                                         properties:
                                                                           ignore_past_due:
                                                                             type: boolean
+                                                                            default: false
                                                                             description: If true, entitlements attached to this plan will still reset on
                                                                               schedule even when
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
-                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
                                                                   active:
@@ -109784,12 +109897,12 @@ paths:
                                                                 properties:
                                                                   ignore_past_due:
                                                                     type: boolean
+                                                                    default: false
                                                                     description: If true, entitlements attached to this plan will still reset on
                                                                       schedule even when
                                                                       the customer's
                                                                       product is in a
                                                                       past_due state.
-                                                                    default: false
                                                                 description: Miscellaneous plan-level configuration flags.
                                                               - type: "null"
                                                           active:
@@ -113338,12 +113451,12 @@ paths:
                                                                               properties:
                                                                                 ignore_past_due:
                                                                                   type: boolean
+                                                                                  default: false
                                                                                   description: If true, entitlements attached to this plan will still reset on
                                                                                     schedule even when
                                                                                     the customer's
                                                                                     product is in a
                                                                                     past_due state.
-                                                                                  default: false
                                                                               description: Miscellaneous plan-level configuration flags.
                                                                             - type: "null"
                                                                         active:
@@ -115722,12 +115835,12 @@ paths:
                                                           properties:
                                                             ignore_past_due:
                                                               type: boolean
+                                                              default: false
                                                               description: If true, entitlements attached to this plan will still reset on
                                                                 schedule even when
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
-                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
                                                     active:
@@ -119574,12 +119687,12 @@ paths:
                                                                         properties:
                                                                           ignore_past_due:
                                                                             type: boolean
+                                                                            default: false
                                                                             description: If true, entitlements attached to this plan will still reset on
                                                                               schedule even when
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
-                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
                                                                   active:
@@ -122172,12 +122285,12 @@ paths:
                                                                 properties:
                                                                   ignore_past_due:
                                                                     type: boolean
+                                                                    default: false
                                                                     description: If true, entitlements attached to this plan will still reset on
                                                                       schedule even when
                                                                       the customer's
                                                                       product is in a
                                                                       past_due state.
-                                                                    default: false
                                                                 description: Miscellaneous plan-level configuration flags.
                                                               - type: "null"
                                                           active:
@@ -125726,12 +125839,12 @@ paths:
                                                                               properties:
                                                                                 ignore_past_due:
                                                                                   type: boolean
+                                                                                  default: false
                                                                                   description: If true, entitlements attached to this plan will still reset on
                                                                                     schedule even when
                                                                                     the customer's
                                                                                     product is in a
                                                                                     past_due state.
-                                                                                  default: false
                                                                               description: Miscellaneous plan-level configuration flags.
                                                                             - type: "null"
                                                                         active:
@@ -128133,11 +128246,11 @@ paths:
                                                     properties:
                                                       ignore_past_due:
                                                         type: boolean
+                                                        default: false
                                                         description: If true, entitlements attached to this plan will still reset on
                                                           schedule even when the
                                                           customer's product is
                                                           in a past_due state.
-                                                        default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
                                               active:
@@ -132091,12 +132204,12 @@ paths:
                                                                   properties:
                                                                     ignore_past_due:
                                                                       type: boolean
+                                                                      default: false
                                                                       description: If true, entitlements attached to this plan will still reset on
                                                                         schedule even when
                                                                         the customer's
                                                                         product is in a
                                                                         past_due state.
-                                                                      default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
                                                             active:
@@ -134883,12 +134996,12 @@ paths:
                                                           properties:
                                                             ignore_past_due:
                                                               type: boolean
+                                                              default: false
                                                               description: If true, entitlements attached to this plan will still reset on
                                                                 schedule even when
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
-                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
                                                     active:
@@ -138735,12 +138848,12 @@ paths:
                                                                         properties:
                                                                           ignore_past_due:
                                                                             type: boolean
+                                                                            default: false
                                                                             description: If true, entitlements attached to this plan will still reset on
                                                                               schedule even when
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
-                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
                                                                   active:
@@ -141312,11 +141425,11 @@ paths:
                                                     properties:
                                                       ignore_past_due:
                                                         type: boolean
+                                                        default: false
                                                         description: If true, entitlements attached to this plan will still reset on
                                                           schedule even when the
                                                           customer's product is
                                                           in a past_due state.
-                                                        default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
                                               active:
@@ -145270,12 +145383,12 @@ paths:
                                                                   properties:
                                                                     ignore_past_due:
                                                                       type: boolean
+                                                                      default: false
                                                                       description: If true, entitlements attached to this plan will still reset on
                                                                         schedule even when
                                                                         the customer's
                                                                         product is in a
                                                                         past_due state.
-                                                                      default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
                                                             active:
@@ -148059,12 +148172,12 @@ paths:
                                                           properties:
                                                             ignore_past_due:
                                                               type: boolean
+                                                              default: false
                                                               description: If true, entitlements attached to this plan will still reset on
                                                                 schedule even when
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
-                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
                                                     active:
@@ -151911,12 +152024,12 @@ paths:
                                                                         properties:
                                                                           ignore_past_due:
                                                                             type: boolean
+                                                                            default: false
                                                                             description: If true, entitlements attached to this plan will still reset on
                                                                               schedule even when
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
-                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
                                                                   active:
@@ -162987,6 +163100,7 @@ paths:
                             description: If true, entitlements attached to this plan will still reset on
                               schedule even when the customer's product is in a
                               past_due state.
+                            default: false
                         description: Miscellaneous plan-level configuration flags.
                       billing_controls:
                         type: object
