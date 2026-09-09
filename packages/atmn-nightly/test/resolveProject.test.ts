@@ -48,6 +48,11 @@ test("-c takes a file, a folder, or a folder that does not exist yet", () => {
 	expect(configPathFromFlag({ cwd: root, flag: "packages/new" })).toBe(
 		join(root, "packages/new/autumn.config.ts"),
 	);
+	mkdirSync(join(root, "packages/js"), { recursive: true });
+	writeFileSync(join(root, "packages/js/autumn.config.js"), "");
+	expect(configPathFromFlag({ cwd: root, flag: "packages/js" })).toBe(
+		join(root, "packages/js/autumn.config.js"),
+	);
 });
 
 test("a config beside cwd wins over the marker", () => {

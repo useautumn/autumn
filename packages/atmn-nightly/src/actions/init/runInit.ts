@@ -195,6 +195,14 @@ const packageJsonFor = ({
 	dependencies: { [PACKAGE_NAME]: dependencySpec },
 });
 
+/** A repo with no package.json gets a minimal one: the config needs a package to depend from. */
+const ensureRootManifest = ({ repoRoot }: { repoRoot: string }): string => {
+	const manifestPath = join(repoRoot, "package.json");
+	if (!existsSync(manifestPath))
+		writeJson(manifestPath, { name: "autumn", private: true, type: "module" });
+	return manifestPath;
+};
+
 /** The config imports the CLI, so whichever package owns it depends on it.
  * True when the manifest changed. */
 const addDependency = ({
@@ -330,7 +338,7 @@ export const runInit = async ({
 		addDependency({
 			manifestPath: existsSync(manifestPath)
 				? manifestPath
-				: join(repoRoot, "package.json"),
+				: ensureRootManifest({ repoRoot }),
 			dependencySpec,
 		})
 	) {

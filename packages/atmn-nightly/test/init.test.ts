@@ -184,6 +184,26 @@ test("single repo, valid key: no questions, config in cwd, skills beside it", as
 	expect(text).toContain("npm run atmn push");
 });
 
+test("a repo with no package.json gets one, so the config's import resolves", async () => {
+	const root = repo({
+		monorepo: false,
+		env: "AUTUMN_SECRET_KEY=am_sk_test_main\n",
+	});
+	rmSync(join(root, "package.json"));
+	const { deps: d, calls } = deps({ keyAnswers: { am_sk_test_main: org } });
+
+	await runInit({
+		cwd: root,
+		deps: d,
+		prompter: createPrompter({ interactive: false, write: () => {} }),
+	});
+
+	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+	expect(manifest.dependencies["atmn-nightly"]).toBeDefined();
+	expect(manifest.atmn).toEqual({ config: "autumn.config.ts" });
+	expect(calls.install).toEqual(["npm"]);
+});
+
 test("an expired key exported in the shell does not shadow the one login writes", async () => {
 	const root = repo({ monorepo: false });
 	process.env.AUTUMN_SECRET_KEY = "am_sk_test_expired";

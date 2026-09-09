@@ -153,27 +153,38 @@ const installedVersion = ({
 	return match?.[1]?.trim() ?? "unknown";
 };
 
-/** Numeric-first compare of `3.0.0-nightly.2`-style versions; prerelease tags compare after their base. */
+/** SemVer ordering: numeric core, then prerelease identifiers (a release beats any prerelease). */
 const compareVersions = (a: string, b: string): number => {
 	const parse = (v: string) => {
-		const [base = "", pre] = v.split("-", 2);
-		const nums = base.split(".").map((n) => Number.parseInt(n, 10) || 0);
-		const preNum =
-			pre === undefined
-				? null
-				: Number.parseInt(pre.replace(/\D+/g, "") || "0", 10);
-		return { nums, preNum };
+		const [core = "", pre] = v.split("+", 1)[0]?.split("-", 2) ?? [];
+		return {
+			nums: core.split(".").map((n) => Number.parseInt(n, 10) || 0),
+			pre: pre === undefined ? null : pre.split("."),
+		};
 	};
-	const x = parse(a),
-		y = parse(b);
+	const x = parse(a);
+	const y = parse(b);
 	for (let i = 0; i < Math.max(x.nums.length, y.nums.length); i++) {
 		const d = (x.nums[i] ?? 0) - (y.nums[i] ?? 0);
 		if (d !== 0) return d;
 	}
-	if (x.preNum === null && y.preNum === null) return 0;
-	if (x.preNum === null) return 1;
-	if (y.preNum === null) return -1;
-	return x.preNum - y.preNum;
+	if (x.pre === null && y.pre === null) return 0;
+	if (x.pre === null) return 1;
+	if (y.pre === null) return -1;
+	for (let i = 0; i < Math.max(x.pre.length, y.pre.length); i++) {
+		const p = x.pre[i];
+		const q = y.pre[i];
+		if (p === undefined) return -1;
+		if (q === undefined) return 1;
+		const pn = /^\d+$/.test(p) ? Number(p) : null;
+		const qn = /^\d+$/.test(q) ? Number(q) : null;
+		if (pn !== null && qn !== null) {
+			if (pn !== qn) return pn - qn;
+		} else if (pn !== null) return -1;
+		else if (qn !== null) return 1;
+		else if (p !== q) return p < q ? -1 : 1;
+	}
+	return 0;
 };
 
 /** Older than the bundle: the only case update touches. Unknown reads as older. */

@@ -107,7 +107,22 @@ test("--json prints the org, whether the key is the main one, the pin, and notes
 	expect(parsed.isMaster).toBe(true);
 	expect(parsed.sandbox).toBeNull();
 	expect(parsed.keyName).toBe("AUTUMN_SECRET_KEY");
-	expect(Array.isArray(parsed.notes)).toBe(true);
+	expect(parsed.notes.length).toBeGreaterThan(0);
+});
+
+test("--json under a pin reports the sandbox and which org the key answered as", async () => {
+	const { lines, write } = capture();
+	await runEnv({
+		target: resolveTarget({ sandbox: "sb_1" }),
+		fetchOrgInfo: async () => ({ ...ORG, id: "sb_1", is_sandbox: true }),
+		json: true,
+		write,
+	});
+	const parsed = JSON.parse(lines.join(""));
+	expect(parsed.sandbox).toEqual({ id: "sb_1", authenticatedAs: "sb_1" });
+	expect(parsed.isMaster).toBe(false);
+	expect(parsed.keyName).toBe("AUTUMN_SANDBOX_SB_1_SECRET_KEY");
+	expect(parsed.notes.length).toBeGreaterThan(0);
 });
 
 test("renderEnv lines every value up in one column", () => {

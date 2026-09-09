@@ -338,8 +338,12 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 			rmSync(root, { recursive: true, force: true });
 		}
 	} finally {
-		if (createdId !== undefined)
-			await client.deleteSandbox({ id: createdId }).catch(() => undefined);
-		scenario.cleanup();
+		// A failed delete is a real failure, not something to hide.
+		try {
+			if (createdId !== undefined)
+				await client.deleteSandbox({ id: createdId });
+		} finally {
+			scenario.cleanup();
+		}
 	}
 }, 600_000);

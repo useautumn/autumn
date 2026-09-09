@@ -155,7 +155,7 @@ test("status tells installed from missing from stale, and update rewrites only t
 	expect(staleSkillsHint({ dir })).toBeNull();
 });
 
-test("a newer install is never downgraded, and push/pull do not nag about it", () => {
+test("a newer install is never downgraded, and the stale hint stays quiet for it", () => {
 	const dir = tmp();
 	installSkills({ dir, write: () => {} });
 	const path = join(dir, first.name, "SKILL.md");
@@ -171,6 +171,26 @@ test("a newer install is never downgraded, and push/pull do not nag about it", (
 	expect(updated).toEqual([]);
 	expect(readFileSync(path, "utf8")).toBe(newer);
 	expect(lines.join("")).toContain("newer than this CLI, kept");
+
+	// Prerelease identifiers order like semver: rc beats nightly, a release beats both.
+	for (const version of ["3.0.0-rc.1", "3.0.0", "3.0.1-nightly.1"]) {
+		writeFileSync(
+			path,
+			first.markdown.replace(
+				`version: ${SKILLS_VERSION}`,
+				`version: ${version}`,
+			),
+		);
+		expect(updateSkills({ dir, write: () => {} }).updated).toEqual([]);
+	}
+	writeFileSync(
+		path,
+		first.markdown.replace(
+			`version: ${SKILLS_VERSION}`,
+			"version: 3.0.0-nightly.1",
+		),
+	);
+	expect(updateSkills({ dir, write: () => {} }).updated).toEqual([first.name]);
 });
 
 test("update follows a symlinked skill folder back to the canonical copy", () => {

@@ -116,8 +116,12 @@ test(`${chalk.yellowBright("atmn sandbox: create_key mints a scoped key for an o
 			client.createSandboxKey({ id: "not_a_sandbox" }),
 		).rejects.toThrow(/Sandbox not found/);
 	} finally {
-		if (createdId !== undefined)
-			await client.deleteSandbox({ id: createdId }).catch(() => undefined);
-		scenario.cleanup();
+		// A failed delete is a real failure, not something to hide.
+		try {
+			if (createdId !== undefined)
+				await client.deleteSandbox({ id: createdId });
+		} finally {
+			scenario.cleanup();
+		}
 	}
 }, 600_000);
