@@ -52,6 +52,11 @@ export const fixtureDefaults = ({
 }): FixtureDefault[] => {
 	const context: EmitContext = { overlay, collection };
 	return omitWhenDefaultFieldsOf({ overlay, collection }).map((wirePath) => {
+		// The runtime compares top-level fixture keys, so a nested path would never match.
+		if (wirePath.includes("."))
+			throw new Error(
+				`\`${collection}.${wirePath}\` is marked omitWhenDefault, but only a top-level object can be.`,
+			);
 		const node = propertyAt({ schema, root, wirePath });
 		if (!node?.properties)
 			throw new Error(
@@ -60,11 +65,13 @@ export const fixtureDefaults = ({
 		const members = objectMembers({ schema: node, path: wirePath, context });
 		const value: Record<string, unknown> = {};
 		for (const member of members) {
-			if (member.schema.default === undefined)
+			const memberSchema =
+				resolveRef({ schema: member.schema, root }) ?? member.schema;
+			if (memberSchema.default === undefined)
 				throw new Error(
 					`\`${collection}.${member.fieldPath}\` has no spec default, so \`${wirePath}\` cannot be omitted at default.`,
 				);
-			value[member.name] = member.schema.default;
+			value[member.name] = memberSchema.default;
 		}
 		const segments = wirePath.split(".");
 		const path = segments
