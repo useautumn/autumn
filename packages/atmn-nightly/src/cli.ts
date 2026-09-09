@@ -4,7 +4,7 @@ import { runEnv } from "./actions/env";
 import { fetchOrgInfo } from "./actions/env/fetchOrgInfo";
 import { runLogin } from "./actions/login";
 import { runPull } from "./actions/pull";
-import { configSearchDirs, runPush } from "./actions/push";
+import { runPush } from "./actions/push";
 import { runReset } from "./actions/reset/runReset";
 import { runSandboxCreate } from "./actions/sandbox/createSandbox";
 import { runSandboxDelete } from "./actions/sandbox/deleteSandbox";
@@ -22,6 +22,12 @@ import {
 } from "./env/resolveTarget";
 import type { CreateSandboxParams } from "./generated/client";
 import { createClient } from "./generated/client";
+import { type Project, resolveProject } from "./project/resolveProject";
+import {
+	createPrompter,
+	NeedsInputError,
+	type Prompter,
+} from "./prompt/prompt";
 import { previewIsEmpty } from "./render/renderPreview";
 import { version } from "./version";
 
@@ -41,7 +47,15 @@ const withTargetFlags = (program: Command): Command =>
 		// Long-only: -p is prod.
 		.option("--port <port>", "port of a local server (implies --local)")
 		.option("-b, --base-url <url>", "send to this URL instead")
-		.option("--client-id <id>", "OAuth client id the CLI identifies as");
+		.option("--client-id <id>", "OAuth client id the CLI identifies as")
+		.option(
+			"-c, --config <path>",
+			"autumn.config.ts, or the folder holding it (default: found from cwd or the root package.json)",
+		)
+		.option(
+			"--headless",
+			"never prompt: print what a command needs and stop (default when not a TTY)",
+		);
 
 /**
  * Env first: the key and AUTUMN_BASE_URL usually live in a .env beside the
@@ -49,9 +63,29 @@ const withTargetFlags = (program: Command): Command =>
  * which is what the "put it in your .env" error message promises.
  */
 const prepareTarget = ({ command }: { command: Command }): Target => {
-	loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+	loadEnvFiles({ dirs: projectOf({ command }).envDirs });
 	return resolveTarget(command.optsWithGlobals<TargetFlags>());
 };
+
+type GlobalFlags = TargetFlags & { config?: string; headless?: boolean };
+
+const projectOf = ({ command }: { command: Command }): Project =>
+	resolveProject({
+		cwd: process.cwd(),
+		configFlag: command.optsWithGlobals<GlobalFlags>().config,
+	});
+
+const configFlagOf = ({ command }: { command: Command }): string | undefined =>
+	command.optsWithGlobals<GlobalFlags>().config;
+
+/** `--headless` forces the hint path; a pipe or CI log gets it by default. */
+const prompterFor = ({ command }: { command: Command }): Prompter =>
+	createPrompter({
+		interactive:
+			command.optsWithGlobals<GlobalFlags>().headless !== true &&
+			process.stdout.isTTY === true &&
+			process.stdin.isTTY === true,
+	});
 
 const clientFor = ({ target }: { target: Target }) =>
 	createClient({
@@ -78,7 +112,10 @@ export const buildProgram = (): Command => {
 		.command("login")
 		.description("authenticate and write org keys to your .env")
 		.action(async (_options: unknown, command: Command) => {
-			await runLogin({ target: prepareTarget({ command }) });
+			await runLogin({
+				target: prepareTarget({ command }),
+				configPath: configFlagOf({ command }),
+			});
 		});
 
 	program
@@ -116,6 +153,7 @@ export const buildProgram = (): Command => {
 				const apply = options.yes === true && options.dryRun !== true;
 				const result = await runPush({
 					client: clientFor({ target }),
+					configPath: configFlagOf({ command }),
 					dryRun: !apply,
 				});
 				if (apply || previewIsEmpty({ preview: result.preview })) return;
@@ -136,6 +174,7 @@ export const buildProgram = (): Command => {
 				const target = prepareTarget({ command });
 				await runPull({
 					client: clientFor({ target }),
+					configPath: configFlagOf({ command }),
 					includeMappings: options.includeMappings === true,
 				});
 			},
@@ -212,7 +251,7 @@ export const buildProgram = (): Command => {
 						...(options.icon === undefined ? {} : { icon: options.icon }),
 						use: options.use === true,
 						json: options.json === true,
-						envDirs: configSearchDirs({ cwd: process.cwd() }),
+						envDirs: projectOf({ command }).envDirs,
 					});
 				} catch (error) {
 					throw withSandboxScopeHint({ error });
@@ -233,7 +272,7 @@ export const buildProgram = (): Command => {
 						client: sandboxClientFor({ target }),
 						id,
 						yes: options.yes === true,
-						envDirs: configSearchDirs({ cwd: process.cwd() }),
+						envDirs: projectOf({ command }).envDirs,
 					});
 				} catch (error) {
 					throw withSandboxScopeHint({ error });
@@ -245,7 +284,14 @@ export const buildProgram = (): Command => {
 };
 
 export const run = async ({ argv }: { argv: string[] }): Promise<void> => {
-	await buildProgram().parseAsync(normalizeVersionFlag({ argv }));
+	try {
+		await buildProgram().parseAsync(normalizeVersionFlag({ argv }));
+	} catch (error) {
+		// A headless run stopping at a prompt has already printed what it
+		// needs; that is a normal end, not a failure.
+		if (error instanceof NeedsInputError) return;
+		throw error;
+	}
 };
 
 if (import.meta.main) {

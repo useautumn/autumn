@@ -100,11 +100,17 @@ const importConfigModule = async ({
 
 export const loadConfig = async ({
 	dirs,
+	configPath,
 }: {
 	dirs: string[];
+	/** `-c`: an exact file, which may be named anything. */
+	configPath?: string;
 }): Promise<{ path: string; wire: WireDocument }> => {
-	const path = findConfigPath({ dirs });
-	if (!path) throw new ConfigNotFoundError(dirs);
+	const path =
+		configPath !== undefined && existsSync(configPath)
+			? configPath
+			: findConfigPath({ dirs });
+	if (!path) throw new ConfigNotFoundError(configPath ? [configPath] : dirs);
 
 	// Cache-busted because the module cache would otherwise pin the first read
 	// for the life of the process — irrelevant for a single `atmn push`, wrong

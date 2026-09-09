@@ -33,12 +33,15 @@ const importLines = ({ imports }: { imports: ConfigImports }): string[] => {
  */
 export const scaffoldConfig = ({
 	directory,
+	configPath = join(directory, "autumn.config.ts"),
 	imports = PACKAGE_IMPORTS,
 }: {
 	directory: string;
+	/** `-c` may name the file; the folder is created when missing. */
+	configPath?: string;
 	imports?: ConfigImports;
 }): string => {
-	const configPath = join(directory, "autumn.config.ts");
+	mkdirSync(directory, { recursive: true });
 	const collections = Object.entries(COLLECTIONS).flatMap(([name, spec]) => [
 		`\t${name}: [],`,
 		...(spec.historyKey ? [`\t${spec.historyKey}: [],`] : []),
