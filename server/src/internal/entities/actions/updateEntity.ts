@@ -15,6 +15,7 @@ import { updateCachedEntityData } from "@/internal/customers/cache/fullSubject/a
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 import { usageWindowRepo } from "@/internal/customers/usageWindows/repos/index.js";
+import { mergeEntityMetadata } from "./mergeEntityMetadata.js";
 
 export const updateEntity = async ({
 	ctx,
@@ -27,6 +28,7 @@ export const updateEntity = async ({
 		customer_id: customerId,
 		entity_id: entityId,
 		billing_controls,
+		metadata,
 	} = params;
 	if (!customerId) {
 		throw new RecaseError({
@@ -72,23 +74,32 @@ export const updateEntity = async ({
 			: undefined,
 	});
 
+	const nextMetadata =
+		metadata == null
+			? undefined
+			: mergeEntityMetadata({
+					existing: entity.metadata,
+					incoming: metadata,
+				});
+
 	const filteredUpdates = Object.fromEntries(
 		Object.entries({
 			spend_limits: billing_controls?.spend_limits,
 			usage_limits: configUsageLimits,
 			usage_alerts: billing_controls?.usage_alerts,
 			overage_allowed: billing_controls?.overage_allowed,
+			metadata: nextMetadata,
 		}).filter(([, value]) => value !== undefined),
 	);
 
-	const hasConfigUpdates = Object.keys(filteredUpdates).length > 0;
-	if (hasConfigUpdates || usageWindows.length > 0) {
+	const hasEntityUpdates = Object.keys(filteredUpdates).length > 0;
+	if (hasEntityUpdates || usageWindows.length > 0) {
 		await ctx.db.transaction(async (tx) => {
 			await usageWindowRepo.setWindows({
 				db: tx as unknown as DrizzleCli,
 				windows: usageWindows,
 			});
-			if (hasConfigUpdates)
+			if (hasEntityUpdates)
 				await EntityService.update({
 					db: tx as unknown as DrizzleCli,
 					internalId: entity.internal_id,
@@ -96,7 +107,7 @@ export const updateEntity = async ({
 				});
 		});
 	}
-	if (hasConfigUpdates)
+	if (hasEntityUpdates)
 		await updateCachedEntityData({
 			ctx,
 			customerId,

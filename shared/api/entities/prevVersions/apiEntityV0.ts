@@ -10,6 +10,7 @@ export const API_ENTITY_V0_EXAMPLE = {
 	customer_id: "org_123",
 	created_at: 1762971906762,
 	env: AppEnv.Sandbox,
+	metadata: {},
 	products: [
 		{
 			id: "pro_plan",
@@ -90,6 +91,9 @@ export const ApiEntityV0Schema = z.object({
 		description: entityDescriptions.created_at,
 	}),
 	env: z.enum(AppEnv),
+	metadata: z.record(z.any(), z.any()).default({}).meta({
+		description: "Additional metadata for the entity.",
+	}),
 
 	// V1.2 format: products and features (not subscriptions and balances)
 	products: z.array(ApiCusProductV3Schema).optional().meta({

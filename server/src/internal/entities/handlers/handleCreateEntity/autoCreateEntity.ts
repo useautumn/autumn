@@ -49,6 +49,7 @@ export const autoCreateEntity = async ({
 		id: entityId,
 		name: entityData.name,
 		feature_id: entityData.feature_id,
+		metadata: entityData.metadata,
 	};
 
 	if (!fullCus) {
@@ -92,6 +93,7 @@ export const autoCreateEntity = async ({
 			update: {
 				id: entityId,
 				name: entityData.name,
+				...(entityData.metadata && { metadata: entityData.metadata }),
 			},
 		});
 	} else {

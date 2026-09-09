@@ -22,6 +22,7 @@ export const createEntityV2 = async ({
 				name: params.name,
 				feature_id: params.feature_id,
 				billing_controls: params.billing_controls,
+				metadata: params.metadata,
 			},
 		],
 		customerData: params.customer_data,

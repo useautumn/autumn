@@ -22,6 +22,7 @@ export const EntitySchema = z.object({
 	usage_limits: z.array(DbUsageLimitSchema).nullish(),
 	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
 	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
+	metadata: z.record(z.any(), z.any()).nullish(),
 });
 
 // export const CreateEntitySchema = z.object({

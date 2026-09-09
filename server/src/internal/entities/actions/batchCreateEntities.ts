@@ -82,6 +82,9 @@ const createEntities = async ({
 					usage_alerts: inputEntities[0].billing_controls.usage_alerts,
 					overage_allowed: inputEntities[0].billing_controls.overage_allowed,
 				}),
+				...(inputEntities[0].metadata && {
+					metadata: inputEntities[0].metadata,
+				}),
 			},
 		});
 

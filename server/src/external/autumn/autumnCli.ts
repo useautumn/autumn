@@ -706,6 +706,7 @@ export class AutumnInt {
 			entityId: string,
 			updates: {
 				billing_controls?: WritableBillingControls<ApiEntityBillingControlsParams>;
+				metadata?: Record<string, unknown> | null;
 			},
 		) => {
 			const data = await this.post(`/entities.update`, {
@@ -743,6 +744,7 @@ export class AutumnInt {
 			feature_id,
 			billing_controls,
 			customer_data,
+			metadata,
 		}: {
 			customer_id: string;
 			entity_id: string;
@@ -750,6 +752,7 @@ export class AutumnInt {
 			feature_id: string;
 			billing_controls?: ApiEntityBillingControlsParams;
 			customer_data?: CreateEntityParams["customer_data"];
+			metadata?: Record<string, unknown> | null;
 		}) => {
 			return await this.post(`/entities.create`, {
 				customer_id,
@@ -758,6 +761,7 @@ export class AutumnInt {
 				feature_id,
 				billing_controls,
 				customer_data,
+				metadata,
 			});
 		},
 	};

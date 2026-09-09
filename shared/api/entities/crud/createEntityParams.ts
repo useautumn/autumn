@@ -25,6 +25,9 @@ export const CreateEntityParamsV0Schema = z.object({
 		description:
 			"Customer attributes used to resolve the customer when customer_id is not provided.",
 	}),
+	metadata: z.record(z.string(), z.any()).nullish().meta({
+		description: "Additional metadata for the entity.",
+	}),
 });
 
 export const CreateEntityParamsV1Schema = CreateEntityParamsV0Schema.omit({

@@ -38,6 +38,7 @@ export const entities = pgTable(
 
 		// Optional...
 		feature_id: text("feature_id"),
+		metadata: jsonb().$type<Record<string, unknown>>(),
 	},
 	(table) => [
 		foreignKey({

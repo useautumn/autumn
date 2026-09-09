@@ -55,6 +55,7 @@ export const getApiEntityBaseV2 = async ({
 			feature_id: entity.feature_id || undefined,
 			created_at: entity.created_at,
 			env: fullSubject.customer.env,
+			metadata: entity.metadata ?? {},
 			subscriptions,
 			purchases,
 			balances,

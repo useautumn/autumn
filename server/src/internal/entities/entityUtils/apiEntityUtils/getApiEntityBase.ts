@@ -67,6 +67,7 @@ export const getApiEntityBase = async ({
 		customer_id: fullCus.id || fullCus.internal_id,
 		created_at: entity.created_at,
 		env: fullCus.env,
+		metadata: entity.metadata ?? {},
 
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,

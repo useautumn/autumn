@@ -11,6 +11,10 @@ export const UpdateEntityParamsSchema = z.object({
 	billing_controls: ApiEntityBillingControlsUpdateSchema.optional().meta({
 		description: "Billing controls to replace on the entity.",
 	}),
+	metadata: z.record(z.string(), z.any()).nullish().meta({
+		description:
+			"Metadata to merge onto the entity. Set a key to null to remove it.",
+	}),
 });
 
 export type UpdateEntityParams = z.infer<typeof UpdateEntityParamsSchema>;

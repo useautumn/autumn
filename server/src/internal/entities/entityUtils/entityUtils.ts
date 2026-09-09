@@ -36,6 +36,7 @@ export const constructEntity = ({
 		usage_limits: inputEntity.billing_controls?.usage_limits,
 		usage_alerts: inputEntity.billing_controls?.usage_alerts,
 		overage_allowed: inputEntity.billing_controls?.overage_allowed,
+		metadata: inputEntity.metadata ?? {},
 	};
 
 	return entity;
