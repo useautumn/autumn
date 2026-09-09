@@ -29,3 +29,12 @@ export const UsageLimitUpdateSchema = z.union([
 ]);
 
 export type UsageLimitUpdate = z.input<typeof UsageLimitUpdateSchema>;
+
+/** Request-side usage limits: entries may also be counter-only writes
+ * ({ feature_id, usage }) that leave configuration untouched. */
+export const WritableUsageLimitsShape = {
+	usage_limits: z.array(UsageLimitUpdateSchema).optional().meta({
+		description:
+			"List of hard usage caps per feature. An entry with only feature_id and usage sets the current counter without changing configuration.",
+	}),
+};
