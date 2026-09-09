@@ -153,6 +153,34 @@ const installedVersion = ({
 	return match?.[1]?.trim() ?? "unknown";
 };
 
+/** Numeric-first compare of `3.0.0-nightly.2`-style versions; prerelease tags compare after their base. */
+const compareVersions = (a: string, b: string): number => {
+	const parse = (v: string) => {
+		const [base = "", pre] = v.split("-", 2);
+		const nums = base.split(".").map((n) => Number.parseInt(n, 10) || 0);
+		const preNum =
+			pre === undefined
+				? null
+				: Number.parseInt(pre.replace(/\D+/g, "") || "0", 10);
+		return { nums, preNum };
+	};
+	const x = parse(a),
+		y = parse(b);
+	for (let i = 0; i < Math.max(x.nums.length, y.nums.length); i++) {
+		const d = (x.nums[i] ?? 0) - (y.nums[i] ?? 0);
+		if (d !== 0) return d;
+	}
+	if (x.preNum === null && y.preNum === null) return 0;
+	if (x.preNum === null) return 1;
+	if (y.preNum === null) return -1;
+	return x.preNum - y.preNum;
+};
+
+/** Older than the bundle: the only case update touches. Unknown reads as older. */
+const isStale = (installed: string | null): boolean =>
+	installed !== null &&
+	(installed === "unknown" || compareVersions(installed, SKILLS_VERSION) < 0);
+
 export const skillsStatus = ({ dir }: { dir: string }): SkillStatus[] =>
 	SKILLS.map((skill) => {
 		const skillDir = realSkillDir({ dir, name: skill.name });
@@ -165,8 +193,8 @@ export const skillsStatus = ({ dir }: { dir: string }): SkillStatus[] =>
 
 /** One dim line for push/pull when an installed skill is older than the CLI; null when nothing is. */
 export const staleSkillsHint = ({ dir }: { dir: string }): string | null => {
-	const stale = skillsStatus({ dir }).filter(
-		(entry) => entry.installed !== null && entry.installed !== entry.bundled,
+	const stale = skillsStatus({ dir }).filter((entry) =>
+		isStale(entry.installed),
 	);
 	if (stale.length === 0) return null;
 	const versions = [...new Set(stale.map((entry) => entry.installed))].join(
@@ -188,8 +216,10 @@ export const updateSkills = ({
 	for (const skill of SKILLS) {
 		const skillDir = realSkillDir({ dir, name: skill.name });
 		const installed = skillDir === null ? null : installedVersion({ skillDir });
-		if (installed === SKILLS_VERSION) {
-			write(`${same(`${skill.name}  up to date`)}\n`);
+		if (installed !== null && !isStale(installed)) {
+			write(
+				`${same(`${skill.name}  ${installed === SKILLS_VERSION ? "up to date" : `${installed} is newer than this CLI, kept`}`)}\n`,
+			);
 			continue;
 		}
 		writeSkill({ dir: skillDir === null ? dir : dirname(skillDir), skill });

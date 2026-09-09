@@ -36,6 +36,7 @@ import { join } from "node:path";
 import chalk from "chalk";
 import { type InitDeps, runInit } from "../src/actions/init/runInit";
 import { sandboxKeyName } from "../src/env/sandboxKeyName";
+import { AutumnApiError } from "../src/generated/client";
 import { SKILLS } from "../src/generated/skills";
 import { createPrompter } from "../src/prompt/prompt";
 
@@ -110,7 +111,7 @@ const deps = ({
 		fetchOrgInfo: async ({ secretKey }) => {
 			const answer = answers[secretKey];
 			if (answer === undefined)
-				throw Object.assign(new Error("401"), { status: 401 });
+				throw new AutumnApiError({ status: 401, body: null, path: "/me" });
 			return answer;
 		},
 		login: async ({ envDirs }) => {
@@ -137,11 +138,9 @@ const deps = ({
 		},
 		pull: async ({ configDir }) => {
 			calls.pull.push(configDir);
-			const { scaffoldConfig } = await import(
-				"../src/actions/pull/scaffoldConfig"
-			);
+			// Scaffolding is init's job; a pull that finds no config is a bug.
 			if (!existsSync(join(configDir, "autumn.config.ts")))
-				scaffoldConfig({ directory: configDir });
+				throw new Error("pull ran before the config was scaffolded");
 			return { appended: ["messages", "pro"], replaced: [], deleted: [] };
 		},
 	};
@@ -163,7 +162,8 @@ test("single repo, valid key: no questions, config in cwd, skills beside it", as
 	});
 
 	expect(calls.login).toBe(0);
-	expect(calls.install).toEqual([]);
+	// The config imports the CLI, so the root package gains the dependency.
+	expect(calls.install).toEqual(["npm"]);
 	expect(calls.pull).toEqual([root]);
 	expect(result.configDir).toBe(root);
 	expect(existsSync(join(root, "autumn.config.ts"))).toBe(true);
@@ -179,6 +179,72 @@ test("single repo, valid key: no questions, config in cwd, skills beside it", as
 	// A single-package repo still gets the marker so `-c` stays optional.
 	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 	expect(manifest.atmn).toEqual({ config: "autumn.config.ts" });
+	expect(manifest.dependencies["atmn-nightly"]).toBeDefined();
+	expect(text).toContain("✓ Added atmn-nightly to package.json");
+	expect(text).toContain("npm run atmn push");
+});
+
+test("an expired key exported in the shell does not shadow the one login writes", async () => {
+	const root = repo({ monorepo: false });
+	process.env.AUTUMN_SECRET_KEY = "am_sk_test_expired";
+	const { deps: d, calls } = deps();
+	const { lines, write } = capture();
+
+	await runInit({
+		cwd: root,
+		login: true,
+		deps: d,
+		prompter: createPrompter({ interactive: false, write }),
+	});
+
+	expect(calls.login).toBe(1);
+	expect(lines.join("")).toContain("✓ Logged in as Acme (acme)");
+});
+
+test("a server error is not mistaken for a missing key", async () => {
+	const root = repo({
+		monorepo: false,
+		env: "AUTUMN_SECRET_KEY=am_sk_test_main\n",
+	});
+	const { deps: d } = deps();
+	d.fetchOrgInfo = async () => {
+		throw new AutumnApiError({ status: 500, body: null, path: "/me" });
+	};
+	await expect(
+		runInit({
+			cwd: root,
+			deps: d,
+			prompter: createPrompter({ interactive: false, write: () => {} }),
+		}),
+	).rejects.toThrow(/500/);
+});
+
+test("an existing workspace package gains the dependency instead of a new manifest", async () => {
+	const root = repo({
+		monorepo: true,
+		env: "AUTUMN_SECRET_KEY=am_sk_test_main\n",
+	});
+	mkdirSync(join(root, "packages/billing"), { recursive: true });
+	writeFileSync(
+		join(root, "packages/billing/package.json"),
+		JSON.stringify({ name: "@acme/billing", dependencies: { left: "1.0.0" } }),
+	);
+	const { deps: d, calls } = deps({ keyAnswers: { am_sk_test_main: org } });
+
+	await runInit({
+		cwd: root,
+		path: "packages/billing",
+		deps: d,
+		prompter: createPrompter({ interactive: false, write: () => {} }),
+	});
+
+	const pkg = JSON.parse(
+		readFileSync(join(root, "packages/billing/package.json"), "utf8"),
+	);
+	expect(pkg.name).toBe("@acme/billing");
+	expect(pkg.dependencies.left).toBe("1.0.0");
+	expect(pkg.dependencies["atmn-nightly"]).toBeDefined();
+	expect(calls.install).toEqual(["npm"]);
 });
 
 test("no key, headless: hints --login and stops before touching the repo", async () => {
@@ -321,7 +387,7 @@ test("monorepo, headless: hints --path, then --name, then does everything", asyn
 	expect(text).toContain("✓ Wrote packages/autumn/package.json");
 	expect(text).toContain('✓ Wrote "atmn" script and marker to package.json');
 	expect(text).toContain("✓ Installed with npm");
-	expect(text).toContain("npx atmn push");
+	expect(text).toContain("npm run atmn push");
 });
 
 test("monorepo, interactive: enter accepts the suggested path and name", async () => {

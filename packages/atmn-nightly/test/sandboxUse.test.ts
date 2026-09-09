@@ -13,7 +13,7 @@
  *   - unknown query    → error naming `atmn sandbox list`
  */
 
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -26,11 +26,15 @@ import { createPrompter } from "../src/prompt/prompt";
 chalk.level = 0;
 
 const dirs: string[] = [];
+const clearAutumnEnv = () => {
+	for (const key of Object.keys(process.env))
+		if (key.startsWith("AUTUMN_")) delete process.env[key];
+};
+beforeEach(clearAutumnEnv);
 afterEach(() => {
 	for (const dir of dirs.splice(0))
 		rmSync(dir, { recursive: true, force: true });
-	delete process.env.AUTUMN_SANDBOX_ID;
-	delete process.env[sandboxKeyName({ sandboxId: "id_pricing" })];
+	clearAutumnEnv();
 });
 
 const projectDir = ({ env = "" }: { env?: string } = {}): string => {
@@ -146,9 +150,8 @@ test("--clear drops the pin and keeps every key", async () => {
 	const { client } = fakeClient();
 	const { lines, write } = capture();
 
+	// No client, no org: clearing must work logged out and offline.
 	await runSandboxUse({
-		client,
-		org,
 		clear: true,
 		envDirs: [dir],
 		prompter: createPrompter({ interactive: false, write }),
@@ -158,6 +161,33 @@ test("--clear drops the pin and keeps every key", async () => {
 	expect(lines.join("")).toBe(
 		"✓ Cleared AUTUMN_SANDBOX_ID; commands target the main sandbox again.\n",
 	);
+});
+
+test("an empty key on disk is minted over, not trusted", async () => {
+	const keyName = sandboxKeyName({ sandboxId: "id_qa" });
+	const dir = projectDir({ env: `${keyName}=\n` });
+	const { client, minted } = fakeClient();
+	await runSandboxUse({
+		client,
+		org,
+		query: "QA",
+		envDirs: [dir],
+		prompter: createPrompter({ interactive: false, write: () => {} }),
+	});
+	expect(minted).toEqual(["id_qa"]);
+	expect(envOf(dir)).toContain(`${keyName}=am_sk_test_id_qa\n`);
+});
+
+test("--clear --json prints JSON", async () => {
+	const dir = projectDir({ env: "AUTUMN_SANDBOX_ID=id_qa\n" });
+	const { lines, write } = capture();
+	await runSandboxUse({
+		clear: true,
+		json: true,
+		envDirs: [dir],
+		prompter: createPrompter({ interactive: false, write }),
+	});
+	expect(JSON.parse(lines.join("")).cleared).toBe(true);
 });
 
 test("headless with no argument prints the table and the hint, writes nothing", async () => {

@@ -106,9 +106,13 @@ export const loadConfig = async ({
 	/** `-c`: an exact file, which may be named anything. */
 	configPath?: string;
 }): Promise<{ path: string; wire: WireDocument }> => {
+	// An explicit path is the whole answer: a typo must not quietly load
+	// whichever config the search would have found instead.
 	const path =
-		configPath !== undefined && existsSync(configPath)
-			? configPath
+		configPath !== undefined
+			? existsSync(configPath)
+				? configPath
+				: null
 			: findConfigPath({ dirs });
 	if (!path) throw new ConfigNotFoundError(configPath ? [configPath] : dirs);
 

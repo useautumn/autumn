@@ -88,7 +88,7 @@ test("strips terminal controls from every server-provided string", () => {
 	expect(output.replace(/\u001b\[[0-9;]*m/g, "")).not.toMatch(/\u001b|\u0007/);
 });
 
-test("--json prints the response verbatim", async () => {
+test("--json prints the org, whether the key is the main one, the pin, and notes", async () => {
 	const { lines, write } = capture();
 	await runEnv({
 		target: resolveTarget({}),
@@ -97,7 +97,17 @@ test("--json prints the response verbatim", async () => {
 		write,
 	});
 
-	expect(JSON.parse(lines.join(""))).toEqual(ORG);
+	const parsed = JSON.parse(lines.join(""));
+	expect(parsed.organization).toEqual({
+		id: ORG.id,
+		name: ORG.name,
+		slug: ORG.slug,
+	});
+	expect(parsed.env).toBe(ORG.env);
+	expect(parsed.isMaster).toBe(true);
+	expect(parsed.sandbox).toBeNull();
+	expect(parsed.keyName).toBe("AUTUMN_SECRET_KEY");
+	expect(Array.isArray(parsed.notes)).toBe(true);
 });
 
 test("renderEnv lines every value up in one column", () => {

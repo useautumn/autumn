@@ -155,6 +155,24 @@ test("status tells installed from missing from stale, and update rewrites only t
 	expect(staleSkillsHint({ dir })).toBeNull();
 });
 
+test("a newer install is never downgraded, and push/pull do not nag about it", () => {
+	const dir = tmp();
+	installSkills({ dir, write: () => {} });
+	const path = join(dir, first.name, "SKILL.md");
+	const newer = first.markdown.replace(
+		`version: ${SKILLS_VERSION}`,
+		"version: 99.0.0",
+	);
+	writeFileSync(path, newer);
+
+	expect(staleSkillsHint({ dir })).toBeNull();
+	const { lines, write } = capture();
+	const { updated } = updateSkills({ dir, write });
+	expect(updated).toEqual([]);
+	expect(readFileSync(path, "utf8")).toBe(newer);
+	expect(lines.join("")).toContain("newer than this CLI, kept");
+});
+
 test("update follows a symlinked skill folder back to the canonical copy", () => {
 	const canonical = tmp();
 	installSkills({ dir: canonical, write: () => {} });

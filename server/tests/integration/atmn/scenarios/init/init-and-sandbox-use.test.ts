@@ -152,6 +152,8 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 		expect(exitCode).toBe(0);
 		expect(output).toContain("✓ Logged in as");
 		expect(output).toContain("✓ Wrote autumn.config.ts, planVersions/");
+		expect(output).toContain("✓ Added atmn-nightly to package.json");
+		expect(output).toContain("✓ Installed with npm");
 		expect(output).toContain(
 			'✓ Wrote "atmn" script and marker to package.json',
 		);
@@ -259,10 +261,12 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 	const { cwd, secretKey, baseUrl, client } = scenario;
 	scenario.writeFile(".env", `AUTUMN_SECRET_KEY=${secretKey}\n`);
 	const atmn = (args: string[]) => runCliHeadless({ cwd, args, baseUrl });
+	let createdId: string | undefined;
 
 	try {
 		// A sandbox this machine holds no key for: created through the API, not the CLI.
 		const created = await client.createSandbox({ name: sandboxName });
+		createdId = created.id;
 
 		// C3 — headless with no argument: table and hint, nothing written.
 		const listed = atmn(["sandbox", "use"]);
@@ -315,6 +319,10 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 		// C5 — init with the sub key in AUTUMN_SECRET_KEY: soft error, login hint, no files.
 		const root = makeRepo({ monorepo: false, secretKey: sandboxKey ?? "" });
 		try {
+			const before = {
+				env: readFileSync(join(root, ".env"), "utf8"),
+				manifest: readFileSync(join(root, "package.json"), "utf8"),
+			};
 			const init = runCliHeadless({ cwd: root, args: ["init"], baseUrl });
 			expect(init.exitCode).toBe(0);
 			expect(init.output).toContain(
@@ -322,12 +330,16 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 			);
 			expect(init.output).toContain("Pass --login to continue");
 			expect(existsSync(join(root, "autumn.config.ts"))).toBe(false);
+			expect(readFileSync(join(root, ".env"), "utf8")).toBe(before.env);
+			expect(readFileSync(join(root, "package.json"), "utf8")).toBe(
+				before.manifest,
+			);
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
-
-		await client.deleteSandbox({ id: created.id });
 	} finally {
+		if (createdId !== undefined)
+			await client.deleteSandbox({ id: createdId }).catch(() => undefined);
 		scenario.cleanup();
 	}
 }, 600_000);

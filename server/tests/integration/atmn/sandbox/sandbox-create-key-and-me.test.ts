@@ -66,6 +66,7 @@ test(`${chalk.yellowBright("atmn sandbox: create_key mints a scoped key for an o
 		config: `{ features: [] }`,
 	});
 	const { client, baseUrl, secretKey, ctx } = scenario;
+	let createdId: string | undefined;
 
 	try {
 		// ── Contract: /me on the main key says it is not a sandbox ──────────
@@ -74,6 +75,7 @@ test(`${chalk.yellowBright("atmn sandbox: create_key mints a scoped key for an o
 		expect(mainMe.is_sandbox).toBe(false);
 
 		const created = await client.createSandbox({ name: sandboxName });
+		createdId = created.id;
 
 		// ── Contract: create_key returns a fresh key for an owned sandbox ───
 		const minted = await client.createSandboxKey({ id: created.id });
@@ -113,9 +115,9 @@ test(`${chalk.yellowBright("atmn sandbox: create_key mints a scoped key for an o
 		await expect(
 			client.createSandboxKey({ id: "not_a_sandbox" }),
 		).rejects.toThrow(/Sandbox not found/);
-
-		await client.deleteSandbox({ id: created.id });
 	} finally {
+		if (createdId !== undefined)
+			await client.deleteSandbox({ id: createdId }).catch(() => undefined);
 		scenario.cleanup();
 	}
 }, 600_000);

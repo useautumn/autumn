@@ -12,9 +12,10 @@ import type { OrgInfo } from "../env/types/orgInfo";
 import type { UseSandboxClient } from "./types/sandboxClient";
 
 export type SandboxUseOptions = {
-	client: UseSandboxClient;
+	/** Absent only for `--clear`, which touches nothing remote. */
+	client?: UseSandboxClient;
 	/** The main organization, as `/organization/me` answered for the main key. */
-	org: Pick<OrgInfo, "id" | "name" | "slug">;
+	org?: Pick<OrgInfo, "id" | "name" | "slug">;
 	/** A name or an id; asked for when absent and interactive. */
 	query?: string;
 	/** Drop the pin instead of setting one. */
@@ -69,12 +70,23 @@ export const runSandboxUse = async ({
 	prompter,
 }: SandboxUseOptions): Promise<SandboxUseResult | null> => {
 	if (clear) {
-		removeEnvValues({ dirs: envDirs, keys: [SANDBOX_PIN_NAME] });
+		const changed = removeEnvValues({
+			dirs: envDirs,
+			keys: [SANDBOX_PIN_NAME],
+		});
+		if (json) {
+			prompter.write(
+				`${JSON.stringify({ cleared: true, envPaths: changed, notes: ["Commands target the main sandbox again."] }, null, 2)}\n`,
+			);
+			return null;
+		}
 		prompter.write(
 			`${done(`Cleared ${SANDBOX_PIN_NAME}; commands target the main sandbox again.`)}\n`,
 		);
 		return null;
 	}
+	if (client === undefined || org === undefined)
+		throw new Error("sandbox use needs the main key to list sandboxes.");
 
 	const { list } = await client.listSandboxes({});
 	const currentId = process.env[SANDBOX_PIN_NAME];
@@ -107,7 +119,9 @@ export const runSandboxUse = async ({
 	const name = stripTerminalControls(sandbox.name);
 
 	const onDisk =
-		process.env[keyName] ?? readEnvFileValue({ dirs: envDirs, key: keyName });
+		process.env[keyName] ||
+		readEnvFileValue({ dirs: envDirs, key: keyName }) ||
+		undefined;
 	let keyMinted = false;
 	const values: Record<string, string> = { [SANDBOX_PIN_NAME]: sandbox.id };
 	if (onDisk === undefined) {

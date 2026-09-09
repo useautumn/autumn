@@ -6,6 +6,7 @@ import {
 	writeEnvValues,
 } from "../../env/loadEnv";
 import { SANDBOX_PIN_NAME, sandboxKeyName } from "../../env/sandboxKeyName";
+import { AutumnApiError } from "../../generated/client";
 import { MARKER_FIELD, readMarker } from "../../project/resolveProject";
 import {
 	ask,
@@ -83,8 +84,14 @@ const checkMainKey = async ({
 		return info.is_sandbox === true
 			? { kind: "sub", info, secretKey }
 			: { kind: "main", info };
-	} catch {
-		return { kind: "missing" };
+	} catch (error) {
+		// A rejected key is a missing key; a server that cannot be reached is not.
+		if (
+			error instanceof AutumnApiError &&
+			(error.status === 401 || error.status === 403)
+		)
+			return { kind: "missing" };
+		throw error;
 	}
 };
 
@@ -153,6 +160,9 @@ const authenticate = async ({
 
 	if (check.kind === "sub") relocateSubKey({ check, envDirs, prompter });
 	await deps.login({ envDirs });
+	// A rejected key exported in the shell would otherwise shadow the one
+	// login just wrote, since env files never override the process.
+	delete process.env.AUTUMN_SECRET_KEY;
 	loadEnvFiles({ dirs: envDirs });
 
 	const after = await checkMainKey({ deps });
@@ -184,6 +194,28 @@ const packageJsonFor = ({
 	type: "module",
 	dependencies: { [PACKAGE_NAME]: dependencySpec },
 });
+
+/** The config imports the CLI, so whichever package owns it depends on it.
+ * True when the manifest changed. */
+const addDependency = ({
+	manifestPath,
+	dependencySpec,
+}: {
+	manifestPath: string;
+	dependencySpec: string;
+}): boolean => {
+	if (!existsSync(manifestPath)) return false;
+	const manifest = readJson(manifestPath);
+	const deps = (manifest.dependencies ?? {}) as Record<string, string>;
+	const devDeps = (manifest.devDependencies ?? {}) as Record<string, string>;
+	if (deps[PACKAGE_NAME] !== undefined || devDeps[PACKAGE_NAME] !== undefined)
+		return false;
+	writeJson(manifestPath, {
+		...manifest,
+		dependencies: { ...deps, [PACKAGE_NAME]: dependencySpec },
+	});
+	return true;
+};
 
 /** The root's marker and script, added beside whatever is already there. */
 const writeRootMarker = ({
@@ -226,7 +258,7 @@ const packageManager = ({ repoRoot }: { repoRoot: string }): string => {
 };
 
 const runnerFor = (manager: string): string =>
-	manager === "npm" ? "npx" : manager === "yarn" ? "yarn" : manager;
+	manager === "npm" ? "npm run" : manager === "yarn" ? "yarn" : manager;
 
 /**
  * Auth, path, pull, skills, next steps. Every step prints what it did; a
@@ -285,15 +317,25 @@ export const runInit = async ({
 	const configPath = join(configDir, "autumn.config.ts");
 	mkdirSync(configDir, { recursive: true });
 	const wrote: string[] = [];
-	if (packageName !== undefined) {
-		const manifestPath = join(configDir, "package.json");
-		if (!existsSync(manifestPath)) {
-			writeJson(
-				manifestPath,
-				packageJsonFor({ name: packageName, dependencySpec }),
-			);
-			wrote.push(`${relative(repoRoot, manifestPath)}`);
-		}
+	let dependencyAdded = false;
+	const manifestPath = join(configDir, "package.json");
+	if (packageName !== undefined && !existsSync(manifestPath)) {
+		writeJson(
+			manifestPath,
+			packageJsonFor({ name: packageName, dependencySpec }),
+		);
+		wrote.push(`${relative(repoRoot, manifestPath)}`);
+		dependencyAdded = true;
+	} else if (
+		addDependency({
+			manifestPath: existsSync(manifestPath)
+				? manifestPath
+				: join(repoRoot, "package.json"),
+			dependencySpec,
+		})
+	) {
+		dependencyAdded = true;
+		prompter.write(`${done(`Added ${PACKAGE_NAME} to package.json`)}\n`);
 	}
 	if (!existsSync(configPath)) {
 		scaffoldConfig({ directory: configDir });
@@ -310,7 +352,7 @@ export const runInit = async ({
 	const runner = runnerFor(manager);
 	// The scaffolded config imports the CLI; a package written a moment ago
 	// cannot resolve it until its dependency is installed.
-	if (wrote.some((file) => file.endsWith("package.json"))) {
+	if (dependencyAdded) {
 		const installed = await deps.install({ manager, repoRoot });
 		if (!installed)
 			throw new Error(

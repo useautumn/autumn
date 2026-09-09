@@ -422,12 +422,21 @@ export const buildProgram = (): Command => {
 				command: Command,
 			) => {
 				const target = prepareTarget({ command });
+				// Clearing only edits .env: no key, no server, no reason to fail.
+				if (options.clear === true) {
+					await runSandboxUse({
+						clear: true,
+						json: options.json === true,
+						envDirs: projectOf({ command }).envDirs,
+						prompter: prompterFor({ command }),
+					});
+					return;
+				}
 				try {
 					await runSandboxUse({
 						client: sandboxClientFor({ target }),
 						org: await mainOrgInfo({ target }),
 						...(query === undefined ? {} : { query }),
-						clear: options.clear === true,
 						json: options.json === true,
 						envDirs: projectOf({ command }).envDirs,
 						prompter: prompterFor({ command }),
