@@ -13,6 +13,7 @@ import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/error
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
+import { findPendingInvoiceConflict } from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -122,6 +123,16 @@ export async function attach({
 			billingContext,
 			billingPlan: { ...billingPlan, preview: previewBillingPlan },
 		};
+	}
+
+	const pendingInvoiceResult = await findPendingInvoiceConflict({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+		attachProduct: billingContext.attachProduct,
+	});
+	if (pendingInvoiceResult) {
+		preserveSubjectCache({ ctx });
+		return { billingContext, billingPlan, billingResult: pendingInvoiceResult };
 	}
 
 	const shouldCreateLongLivedCheckout =
