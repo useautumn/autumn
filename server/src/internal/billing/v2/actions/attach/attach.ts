@@ -133,6 +133,54 @@ export async function attach({
 		billingContext.checkoutMode === "stripe_checkout" &&
 		!skipAutumnCheckout;
 
+	const autumnCheckoutParams = params.long_lived_checkout
+		? { ...params, long_lived_checkout: false }
+		: params;
+
+	const arbitrateCheckoutLock = () =>
+		checkCheckoutSessionLock({
+			ctx,
+			params: autumnCheckoutParams,
+			billingContext,
+			billingPlan,
+			existingLock: checkoutReservation,
+		});
+
+	// 5. Checkout session lock (skip for confirm flows)
+	if (!skipAutumnCheckout && !shouldCreateLongLivedCheckout) {
+		const cachedResult = await arbitrateCheckoutLock();
+		if (cachedResult) {
+			preserveSubjectCache({ ctx });
+			return cachedResult;
+		}
+	}
+
+	const pendingInvoiceResult = await findPendingInvoiceConflict({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+		attachProduct: billingContext.attachProduct,
+		loadPendingCustomerProducts: () =>
+			listPendingCustomerProducts({
+				ctx,
+				fullCustomer: billingContext.fullCustomer,
+			}),
+	});
+	if (pendingInvoiceResult) {
+		preserveSubjectCache({ ctx });
+		// Long-lived skipped the lock above; a completed session must still win.
+		const cachedResult =
+			shouldCreateLongLivedCheckout && checkoutReservation
+				? await arbitrateCheckoutLock()
+				: null;
+		return (
+			cachedResult ?? {
+				billingContext,
+				billingPlan,
+				billingResult: pendingInvoiceResult,
+			}
+		);
+	}
+
 	if (shouldCreateLongLivedCheckout) {
 		// Creating a checkout changes no Autumn balance state. Keep any accepted
 		// Redis-only tracks for the later confirmation request to consume.
@@ -145,40 +193,6 @@ export async function attach({
 			billingPlan,
 			expiresInMs: LONG_LIVED_CHECKOUT_EXPIRY_MS,
 		});
-	}
-
-	const autumnCheckoutParams = params.long_lived_checkout
-		? { ...params, long_lived_checkout: false }
-		: params;
-
-	// 5. Checkout session lock (skip for confirm flows)
-	if (!skipAutumnCheckout) {
-		const cachedResult = await checkCheckoutSessionLock({
-			ctx,
-			params: autumnCheckoutParams,
-			billingContext,
-			billingPlan,
-			existingLock: checkoutReservation,
-		});
-
-		if (cachedResult) {
-			preserveSubjectCache({ ctx });
-			return cachedResult;
-		}
-	}
-
-	const pendingInvoiceResult = await findPendingInvoiceConflict({
-		ctx,
-		fullCustomer: billingContext.fullCustomer,
-		attachProduct: billingContext.attachProduct,
-		pendingCustomerProducts: await listPendingCustomerProducts({
-			ctx,
-			fullCustomer: billingContext.fullCustomer,
-		}),
-	});
-	if (pendingInvoiceResult) {
-		preserveSubjectCache({ ctx });
-		return { billingContext, billingPlan, billingResult: pendingInvoiceResult };
 	}
 
 	if (

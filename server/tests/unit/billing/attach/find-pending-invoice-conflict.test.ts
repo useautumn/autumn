@@ -29,6 +29,7 @@ await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 			retrieve: async (id: string) => {
 				state.retrievedInvoiceIds.push(id);
 				const invoice = state.invoices[id];
+				if (!invoice) throw new Error(`No such invoice: ${id}`);
 				return {
 					id,
 					status: invoice.status,
@@ -125,7 +126,7 @@ const expectConflict = async ({
 			ctx,
 			fullCustomer,
 			attachProduct,
-			pendingCustomerProducts: rows,
+			loadPendingCustomerProducts: async () => rows,
 		});
 	} catch (error) {
 		thrown = error;
@@ -143,7 +144,9 @@ test("resumes an open pending invoice from a fresh Stripe retrieve", async () =>
 		ctx,
 		fullCustomer,
 		attachProduct,
-		pendingCustomerProducts: [pendingRow({ invoiceId: "in_a", createdAt: 1 })],
+		loadPendingCustomerProducts: async () => [
+			pendingRow({ invoiceId: "in_a", createdAt: 1 }),
+		],
 	});
 
 	expect(state.retrievedInvoiceIds).toEqual(["in_a"]);
@@ -160,13 +163,49 @@ test("two open invoices: the earliest-created one wins regardless of row order",
 		ctx,
 		fullCustomer,
 		attachProduct,
-		pendingCustomerProducts: [
+		loadPendingCustomerProducts: async () => [
 			pendingRow({ invoiceId: "in_late", createdAt: 20 }),
 			pendingRow({ invoiceId: "in_early", createdAt: 10 }),
 		],
 	});
 
 	expect(billingResult?.stripe.stripeInvoice?.id).toBe("in_early");
+});
+
+test("equal created_at: the lower invoice id wins in either row order", async () => {
+	withInvoices({ in_b: { status: "open" }, in_a: { status: "open" } });
+	const rowA = pendingRow({ invoiceId: "in_a", createdAt: 5 });
+	const rowB = pendingRow({ invoiceId: "in_b", createdAt: 5 });
+
+	for (const rows of [
+		[rowA, rowB],
+		[rowB, rowA],
+	]) {
+		const billingResult = await findPendingInvoiceConflict({
+			ctx,
+			fullCustomer,
+			attachProduct,
+			loadPendingCustomerProducts: async () => rows,
+		});
+		expect(billingResult?.stripe.stripeInvoice?.id).toBe("in_a");
+	}
+});
+
+test("a failed invoice retrieve propagates and never offers another payment", async () => {
+	withInvoices({ in_open: { status: "open" } });
+	const rows = [
+		pendingRow({ invoiceId: "in_missing", createdAt: 1 }),
+		pendingRow({ invoiceId: "in_open", createdAt: 2 }),
+	];
+
+	await expect(
+		findPendingInvoiceConflict({
+			ctx,
+			fullCustomer,
+			attachProduct,
+			loadPendingCustomerProducts: async () => rows,
+		}),
+	).rejects.toThrow("No such invoice: in_missing");
 });
 
 test("a void invoice listed first does not mask a later open one", async () => {
@@ -176,7 +215,7 @@ test("a void invoice listed first does not mask a later open one", async () => {
 		ctx,
 		fullCustomer,
 		attachProduct,
-		pendingCustomerProducts: [
+		loadPendingCustomerProducts: async () => [
 			pendingRow({ invoiceId: "in_void", createdAt: 1 }),
 			pendingRow({ invoiceId: "in_open", createdAt: 2 }),
 		],
@@ -206,16 +245,21 @@ test("only a void invoice: refuses and names the state", async () => {
 	});
 });
 
-test("skips add-on attach targets without touching Stripe", async () => {
+test("skips add-on attach targets without loading rows or touching Stripe", async () => {
 	withInvoices({ in_a: { status: "open" } });
+	let loads = 0;
 
 	const billingResult = await findPendingInvoiceConflict({
 		ctx,
 		fullCustomer,
 		attachProduct: { ...attachProduct, is_add_on: true },
-		pendingCustomerProducts: [pendingRow({ invoiceId: "in_a", createdAt: 1 })],
+		loadPendingCustomerProducts: async () => {
+			loads += 1;
+			return [pendingRow({ invoiceId: "in_a", createdAt: 1 })];
+		},
 	});
 
 	expect(billingResult).toBeUndefined();
+	expect(loads).toBe(0);
 	expect(state.retrievedInvoiceIds).toEqual([]);
 });

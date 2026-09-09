@@ -1,6 +1,7 @@
 import type {
 	BillingPlan,
 	BillingResult,
+	FullCusProduct,
 	MultiAttachBillingContext,
 	MultiAttachParamsV0,
 } from "@autumn/shared";
@@ -114,16 +115,20 @@ export async function multiAttach({
 	});
 	if (cachedResult) return cachedResult;
 
-	const pendingCustomerProducts = await listPendingCustomerProducts({
-		ctx,
-		fullCustomer: billingContext.fullCustomer,
-	});
+	let pendingCustomerProducts: Promise<FullCusProduct[]> | undefined;
+	const loadPendingCustomerProducts = () => {
+		pendingCustomerProducts ??= listPendingCustomerProducts({
+			ctx,
+			fullCustomer: billingContext.fullCustomer,
+		});
+		return pendingCustomerProducts;
+	};
 	for (const productContext of billingContext.productContexts) {
 		const pendingInvoiceResult = await findPendingInvoiceConflict({
 			ctx,
 			fullCustomer: productContext.fullCustomer,
 			attachProduct: productContext.fullProduct,
-			pendingCustomerProducts,
+			loadPendingCustomerProducts,
 		});
 		if (pendingInvoiceResult) {
 			return {

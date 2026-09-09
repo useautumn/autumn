@@ -117,12 +117,12 @@ export const findPendingInvoiceConflict = async ({
 	ctx,
 	fullCustomer,
 	attachProduct,
-	pendingCustomerProducts,
+	loadPendingCustomerProducts,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	attachProduct: FullProduct;
-	pendingCustomerProducts: FullCusProduct[];
+	loadPendingCustomerProducts: () => Promise<FullCusProduct[]>;
 }): Promise<BillingResult | undefined> => {
 	if (attachProduct.is_add_on || isOneOffProduct({ product: attachProduct }))
 		return;
@@ -131,7 +131,7 @@ export const findPendingInvoiceConflict = async ({
 		ctx,
 		fullCustomer,
 		attachProduct,
-		pendingCustomerProducts,
+		pendingCustomerProducts: await loadPendingCustomerProducts(),
 	});
 	if (candidates.length === 0) return;
 

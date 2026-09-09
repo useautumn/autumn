@@ -328,6 +328,8 @@ test.concurrent(
 			plan_id: premium.id,
 		});
 		expect(retry.invoice?.stripe_id).toBe(first.invoice?.stripe_id);
+		expect(retry.payment_url).toBe(retry.invoice?.hosted_invoice_url);
+		expect(retry.required_action).toBeUndefined();
 
 		const sessions = await ctx.stripeCli.checkout.sessions.list({
 			customer: customer?.processor?.id ?? "",
