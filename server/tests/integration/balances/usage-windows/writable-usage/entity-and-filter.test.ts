@@ -136,6 +136,22 @@ test.concurrent(
 			value: 3,
 			properties: KEY_A_FILTER.properties,
 		});
+		await expectCustomerUsageLimit({
+			autumn,
+			customerId,
+			featureId: TestFeature.Messages,
+			filterProperties: KEY_A_FILTER.properties,
+			usage: 3,
+			skipCache: true,
+		});
+		await expectCustomerUsageLimit({
+			autumn,
+			customerId,
+			featureId: TestFeature.Messages,
+			filterProperties: null,
+			usage: 3,
+			skipCache: true,
+		});
 
 		await autumn.customers.updateRpc(customerId, {
 			billing_controls: {
