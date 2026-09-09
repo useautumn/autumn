@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { runEnv } from "./actions/env";
+import { fetchOrgInfo } from "./actions/env/fetchOrgInfo";
 import { runLogin } from "./actions/login";
 import { runPull } from "./actions/pull";
 import { configSearchDirs, runPush } from "./actions/push";
@@ -16,6 +18,7 @@ import {
 	resolveTarget,
 	type Target,
 	type TargetFlags,
+	targetBaseUrl,
 } from "./env/resolveTarget";
 import type { CreateSandboxParams } from "./generated/client";
 import { createClient } from "./generated/client";
@@ -76,6 +79,23 @@ export const buildProgram = (): Command => {
 		.description("authenticate and write org keys to your .env")
 		.action(async (_options: unknown, command: Command) => {
 			await runLogin({ target: prepareTarget({ command }) });
+		});
+
+	program
+		.command("env")
+		.description("show the org, environment and key your commands target")
+		.option("--json", "print the response instead of the summary")
+		.action(async (options: { json?: boolean }, command: Command) => {
+			const target = prepareTarget({ command });
+			await runEnv({
+				target,
+				fetchOrgInfo: () =>
+					fetchOrgInfo({
+						baseUrl: targetBaseUrl({ target }),
+						secretKey: requireSecretKey({ target }),
+					}),
+				json: options.json === true,
+			});
 		});
 
 	program
