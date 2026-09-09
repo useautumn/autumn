@@ -58,7 +58,6 @@ const createPlan = ({
 	id = "overdue",
 	status = CusProductStatus.PastDue,
 	amount = 100,
-	allowOverdueEntitlements = false,
 	featureType = FeatureType.Metered,
 	unlimited = false,
 } = {}) => {
@@ -79,7 +78,6 @@ const createPlan = ({
 		status,
 		customerEntitlements: [entitlement],
 	});
-	plan.product.config.allow_overdue_entitlements = allowOverdueEntitlements;
 	return plan;
 };
 
@@ -99,17 +97,13 @@ const setup = ({ blocked = true, plans = [createPlan()] } = {}) => {
 	return { ctx, feature, fullSubject: cachedSubject };
 };
 
-test("overdue access: org default, status and plan exemption preserve normal limits", async () => {
-	for (const [blocked, status, allowOverdueEntitlements, allowed] of [
-		[false, CusProductStatus.PastDue, false, true],
-		[true, CusProductStatus.Active, false, true],
-		[true, CusProductStatus.PastDue, false, false],
-		[true, CusProductStatus.PastDue, true, true],
+test("overdue access: org default and status preserve normal limits", async () => {
+	for (const [blocked, status, allowed] of [
+		[false, CusProductStatus.PastDue, true],
+		[true, CusProductStatus.Active, true],
+		[true, CusProductStatus.PastDue, false],
 	] as const) {
-		const { ctx } = setup({
-			blocked,
-			plans: [createPlan({ status, allowOverdueEntitlements })],
-		});
+		const { ctx } = setup({ blocked, plans: [createPlan({ status })] });
 		const checkData = await getCheckDataV2({
 			ctx,
 			body: { customer_id: "cus_test", feature_id: "messages" },
@@ -383,32 +377,6 @@ test("overdue access: credit fallback and tracked responses select eligible fund
 			balance: { feature_id: "credits", remaining: 100 },
 		});
 	}
-	creditEntitlement.entitlement.feature_override = null;
-	creditPlan.product.config.allow_overdue_entitlements = true;
-	const exemptCreditCheck = await getCheckDataV2({
-		ctx,
-		body,
-		requiredBalance: 4,
-	});
-	expect(
-		await getCheckResponseV2({
-			ctx,
-			checkData: exemptCreditCheck,
-			requiredBalance: 4,
-		}),
-	).toMatchObject({
-		allowed: true,
-		required_balance: 20,
-		balance: { feature_id: "credits", remaining: 100 },
-	});
-	const prepared = prepareFeatureDeductionV2({
-		ctx,
-		fullSubject,
-		deduction: { feature, deduction: 4, enforceOverdueBlock: true },
-	});
-	expect(prepared.customerEntitlementDeductions).toMatchObject([
-		{ customer_entitlement_id: "credit_balance", credit_cost: 5 },
-	]);
 });
 
 test("overdue access: subject refresh rechecks eligibility before retrying a deduction", async () => {

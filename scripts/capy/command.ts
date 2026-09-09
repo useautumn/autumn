@@ -1,4 +1,5 @@
 import {
+	appendFileSync,
 	chmodSync,
 	existsSync,
 	mkdirSync,
@@ -108,6 +109,21 @@ function ensureBunGlobalBin(): void {
 	}
 }
 
+export function ensureCapyBashrc({
+	machineConfig = process.env.CAPY_MACHINE_CONFIG,
+	home = process.env.HOME ?? "/home/user",
+}: {
+	machineConfig?: string;
+	home?: string;
+} = {}): void {
+	if (!machineConfig || !existsSync(machineConfig)) return;
+	const bashrc = join(home, ".bashrc");
+	const contents = readLog(bashrc) ?? "";
+	const command = "cd /workspace/autumn";
+	if (contents.split("\n").some((line) => line.trim() === command)) return;
+	appendFileSync(bashrc, `${contents.endsWith("\n") ? "" : "\n"}${command}\n`);
+}
+
 export function capyHandoffText(): string {
 	return [
 		"Capy is ready.",
@@ -182,6 +198,7 @@ function ensureAppProcess(): void {
 }
 
 export async function cmdCapy(): Promise<void> {
+	ensureCapyBashrc();
 	ensureAppProcess();
 	await waitForReady();
 	console.log(capyHandoffText());

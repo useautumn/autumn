@@ -97,7 +97,7 @@ type ExpectedPlan = {
 		on_end?: "bill" | "revert" | null;
 	} | null;
 	metadata?: Record<string, unknown>;
-	config?: { ignore_past_due?: boolean; allow_overdue_entitlements?: boolean };
+	config?: { ignore_past_due?: boolean };
 	billingControls?: CustomerBillingControls;
 	/** Deep equality — asserts absent columns too (cross-contamination checks). */
 	billingControlsExact?: CustomerBillingControls;

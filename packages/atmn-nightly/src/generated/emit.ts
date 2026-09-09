@@ -350,7 +350,6 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"billingControls.usageLimits.interval",
 			"billingControls.usageLimits.limit",
 			"config",
-			"config.allowOverdueEntitlements",
 			"config.ignorePastDue",
 			"createInStripe",
 			"description",
@@ -831,6 +830,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.versionSlug",
 			"versionSlug",
 		],
+		omitWhenDefault: [{ path: "config", default: { ignorePastDue: false } }],
 		historyKey: "planVersions",
 		pull: true,
 		deprecated: [

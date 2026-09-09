@@ -8,6 +8,7 @@ import {
 	calculateLockValue,
 	calculateUnwindValue,
 } from "@/internal/balances/utils/lock/unwindLockUtils.js";
+import type { DeductionOptions } from "@/internal/balances/utils/types/deductionTypes.js";
 import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 
@@ -26,6 +27,7 @@ export type FinalizeLockContextV2 = {
 	deductionOptions: {
 		triggerAutoTopUp: boolean;
 		eventProperties?: EventProperties;
+		overageBehaviour: NonNullable<DeductionOptions["overageBehaviour"]>;
 	};
 };
 
@@ -92,6 +94,11 @@ export const buildFinalizeLockContextV2 = async ({
 			unwindValue,
 			lockReceiptKey,
 		},
-		deductionOptions: { triggerAutoTopUp: true, eventProperties },
+		deductionOptions: {
+			triggerAutoTopUp: true,
+			eventProperties,
+			// Receipts written before this field existed were always locked under reject.
+			overageBehaviour: receipt.overage_behavior ?? "reject",
+		},
 	};
 };

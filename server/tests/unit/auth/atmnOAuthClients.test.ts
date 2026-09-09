@@ -166,3 +166,41 @@ test("self-heals the organisation:write scope the v3 CLI requests for settings",
 		scopes: ["organisation:read", "organisation:write"],
 	});
 });
+
+// atmn v3 requests modern read/write scopes instead of the legacy CRUDL forms.
+test("self-heals the modern write scopes the v3 CLI requests at login", async () => {
+	const db = {} as DrizzleCli;
+	const clientId = "atmn_client";
+	const client = {
+		id: "oauth_client",
+		clientId,
+		name: "atmn",
+		redirectUris: ["http://localhost:31448/"],
+		scopes: ["customers:read", "features:read", "plans:read", "apiKeys:read"],
+		metadata: null,
+		createdAt: new Date(),
+	};
+	spyOn(oauthClientRepo, "getByClientId").mockResolvedValue(client);
+	const addScopes = spyOn(
+		oauthClientRepo,
+		"addScopesByClientId",
+	).mockResolvedValue(client);
+
+	await ensureAtmnAuthorizeScopes({
+		db,
+		clientId,
+		scope:
+			"customers:write features:write plans:write apiKeys:write billing:write",
+	});
+
+	expect(addScopes).toHaveBeenCalledWith({
+		db,
+		clientId,
+		scopes: [
+			"customers:write",
+			"features:write",
+			"plans:write",
+			"apiKeys:write",
+		],
+	});
+});

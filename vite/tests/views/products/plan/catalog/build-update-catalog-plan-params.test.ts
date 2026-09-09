@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
-	compareConfig,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -128,44 +127,6 @@ describe("buildUpdateCatalogPlanParams", () => {
 			]),
 		);
 		expect(() => UpdateCatalogPlanParamsSchema.parse(body)).not.toThrow();
-	});
-
-	test("reverting the overdue access toggle restores an unchanged legacy config", () => {
-		expect(
-			compareConfig({
-				curConfig: undefined,
-				newConfig: {
-					ignore_past_due: false,
-					allow_overdue_entitlements: false,
-				},
-			}),
-		).toBe(true);
-		expect(
-			compareConfig({
-				curConfig: undefined,
-				newConfig: { ignore_past_due: false, allow_overdue_entitlements: true },
-			}),
-		).toBe(false);
-	});
-
-	test("overdue access override is detected and saved independently of cancellation protection", () => {
-		const current = { ...baseProduct, config: { ignore_past_due: true } };
-		const edited = {
-			...current,
-			config: { ...current.config, allow_overdue_entitlements: true },
-		};
-		expect(
-			compareConfig({ newConfig: edited.config, curConfig: current.config }),
-		).toBe(false);
-		const params = buildUpdateCatalogPlanParams({
-			baseProduct: current,
-			editedProduct: edited,
-			features,
-		});
-		expect(UpdateCatalogPlanParamsSchema.parse(params).config).toEqual({
-			ignore_past_due: true,
-			allow_overdue_entitlements: true,
-		});
 	});
 
 	test("rename sends new_plan_id and keeps the original plan_id", () => {
@@ -476,9 +437,9 @@ describe("buildUpdateCatalogPlanParams", () => {
 				features,
 			});
 			expect(params.billing_controls).toEqual({ [key]: items });
-			expect(
-				JSON.stringify(params.billing_controls).includes("null"),
-			).toBe(false);
+			expect(JSON.stringify(params.billing_controls).includes("null")).toBe(
+				false,
+			);
 		}
 	});
 

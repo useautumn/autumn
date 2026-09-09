@@ -5,6 +5,7 @@ import {
 	type EntityBillingControls,
 	ResetInterval,
 } from "@autumn/shared";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 
@@ -47,7 +48,8 @@ export const setEntityUsageLimit = async ({
 
 /**
  * Fetches the entity and asserts its own `billing_controls.usage_limits`
- * entry: configured `limit` and the current window's `usage`.
+ * entry: configured `limit` and the current window's `usage`. Polls until the
+ * assertion holds, since counters sync from Redis lazily.
  */
 export const expectEntityUsageLimit = async ({
 	autumn,
@@ -66,24 +68,29 @@ export const expectEntityUsageLimit = async ({
 	limit?: number;
 	skipCache?: boolean;
 }) => {
-	const entity = await autumn.entities.get<ApiEntityV2>(
-		customerId,
-		entityId,
-		skipCache ? { skip_cache: "true" } : undefined,
-	);
-	const usageLimit = entity.billing_controls?.usage_limits?.find(
-		(entry) => entry.feature_id === featureId,
-	);
-	expect(
-		usageLimit,
-		`Missing entity usage_limits entry for ${featureId}`,
-	).toBeDefined();
+	await pollUntilAsserted({
+		fetch: () =>
+			autumn.entities.get<ApiEntityV2>(
+				customerId,
+				entityId,
+				skipCache ? { skip_cache: "true" } : undefined,
+			),
+		assert: (entity) => {
+			const usageLimit = entity.billing_controls?.usage_limits?.find(
+				(entry) => entry.feature_id === featureId,
+			);
+			expect(
+				usageLimit,
+				`Missing entity usage_limits entry for ${featureId}`,
+			).toBeDefined();
 
-	if (typeof limit !== "undefined") {
-		expect(usageLimit?.limit).toBe(limit);
-	}
+			if (typeof limit !== "undefined") {
+				expect(usageLimit?.limit).toBe(limit);
+			}
 
-	if (typeof usage !== "undefined") {
-		expect(usageLimit?.usage ?? 0).toBe(usage);
-	}
+			if (typeof usage !== "undefined") {
+				expect(usageLimit?.usage ?? 0).toBe(usage);
+			}
+		},
+	});
 };

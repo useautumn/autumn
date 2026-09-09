@@ -1,6 +1,7 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { currentRegion } from "@/external/redis/initRedis.js";
+import type { DeductionOptions } from "@/internal/balances/utils/types/deductionTypes.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -27,6 +28,7 @@ export const saveLockReceiptV2 = async ({
 		created_at: number;
 		ttl_at: number;
 		properties?: Record<string, unknown> | null;
+		overage_behavior?: DeductionOptions["overageBehaviour"];
 	};
 	customerId: string;
 	featureId: string;
@@ -46,6 +48,7 @@ export const saveLockReceiptV2 = async ({
 		expires_at: lock.expires_at ?? null,
 		created_at: lock.created_at,
 		properties: lock.properties ?? null,
+		overage_behavior: lock.overage_behavior ?? null,
 		overrideLockValue: overrideLockValue ?? null,
 		items,
 	});

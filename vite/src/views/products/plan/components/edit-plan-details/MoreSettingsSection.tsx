@@ -116,27 +116,6 @@ export const MoreSettingsSection = () => {
 						}
 					/>
 
-					<ConfigRow
-						title="Allow access while overdue"
-						description="Allow access when this plan is past due."
-						action={
-							<Switch
-								aria-label="Allow access while overdue"
-								checked={!!product.config?.allow_overdue_entitlements}
-								onCheckedChange={(checked) =>
-									setProduct({
-										...product,
-										config: {
-											...product.config,
-											ignore_past_due: product.config?.ignore_past_due ?? false,
-											allow_overdue_entitlements: checked,
-										},
-									})
-								}
-							/>
-						}
-					/>
-
 					{!isCustomPlan && (
 						<ConfigRow
 							title="Base plan"

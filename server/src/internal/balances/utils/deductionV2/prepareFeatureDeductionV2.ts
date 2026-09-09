@@ -267,8 +267,9 @@ export const prepareFeatureDeductionV2 = ({
 					lockKey: lock.hashed_key ?? Bun.hash(lock.lock_id!).toString(),
 				}),
 				created_at: Date.now(),
-				// Persisted so an expiry-triggered finalize can reuse the check's metadata.
+				// Persisted so finalize can reuse the check's metadata and overage mode.
 				properties: options.eventProperties ?? null,
+				overage_behavior: overageBehaviour,
 				ttl_at: lock.expires_at
 					? Math.ceil(lock.expires_at / 1000) + oneHourSeconds
 					: Math.ceil(Date.now() / 1000) + oneDaySeconds,

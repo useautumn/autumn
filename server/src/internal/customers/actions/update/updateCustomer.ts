@@ -20,7 +20,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { assertCustomerUsageLimitAlertsResolvable } from "@/internal/balances/usageAlerts/validate/assertCustomerUsageLimitAlertsResolvable";
 import { CusService } from "@/internal/customers/CusService";
+import { invalidateCachedFullSubject } from "../../cache/fullSubject/index.js";
+import { usageWindowRepo } from "../../usageWindows/repos/index.js";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
+import { getUsageLimitConfigUpdate } from "./getUsageLimitConfigUpdate.js";
+import { prepareUsageLimitUsage } from "./prepareUsageLimitUsage.js";
 import {
 	syncAutoTopupPurchaseLimitCounts,
 	validateAutoTopupPurchaseLimitCounts,
@@ -84,10 +88,22 @@ export const updateCustomer = async ({
 		}
 	}
 
+	const configUsageLimits = getUsageLimitConfigUpdate({
+		usageLimits: billing_controls?.usage_limits,
+	});
+	const usageWindows = await prepareUsageLimitUsage({
+		ctx,
+		customerId,
+		usageLimits: billing_controls?.usage_limits,
+		configUsageLimits,
+	});
+
 	await assertCustomerUsageLimitAlertsResolvable({
 		ctx,
 		customer: originalCustomer,
-		billingControls: billing_controls,
+		billingControls: billing_controls
+			? { ...billing_controls, usage_limits: configUsageLimits }
+			: undefined,
 	});
 
 	// Try to update stripe ID. Distinguish omitted (undefined -> leave as is)
@@ -163,8 +179,8 @@ export const updateCustomer = async ({
 		}
 		if (billing_controls.spend_limits !== undefined)
 			billingControlUpdates.spend_limits = billing_controls.spend_limits;
-		if (billing_controls.usage_limits !== undefined)
-			billingControlUpdates.usage_limits = billing_controls.usage_limits;
+		if (configUsageLimits !== undefined)
+			billingControlUpdates.usage_limits = configUsageLimits;
 		if (billing_controls.usage_alerts !== undefined)
 			billingControlUpdates.usage_alerts = billing_controls.usage_alerts;
 		if (billing_controls.overage_allowed !== undefined)
@@ -216,6 +232,8 @@ export const updateCustomer = async ({
 			});
 		}
 
+		await usageWindowRepo.setWindows({ db: txCtx.db, windows: usageWindows });
+
 		await CusService.update({
 			ctx: txCtx,
 			idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
@@ -225,6 +243,13 @@ export const updateCustomer = async ({
 
 	ctx.skipCache = true;
 	const resolvedCustomerId = newCustomerId ?? customerId;
+	if (usageWindows.length > 0) {
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId: resolvedCustomerId,
+			source: "updateCustomer:usage",
+		});
+	}
 
 	const apiCustomer = await getApiCustomerByRollout({
 		disableReplicaRead: true,

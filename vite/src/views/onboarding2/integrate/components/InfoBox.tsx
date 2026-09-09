@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 export const InfoBox = ({
 	classNames,
 	children,
+	action,
 	variant = "note",
 }: {
 	classNames?: {
@@ -11,6 +12,7 @@ export const InfoBox = ({
 		infoBox?: string;
 	};
 	children: React.ReactNode;
+	action?: React.ReactNode;
 	variant?: "info" | "warning" | "error" | "note" | "success";
 }) => {
 	return (
@@ -29,7 +31,10 @@ export const InfoBox = ({
 			<div className={cn("pt-0.25 mr-1 shrink-0", classNames?.infoIcon)}>
 				<InfoIcon size={16} className="" weight="fill" />
 			</div>
-			<span className="min-w-0 whitespace-pre-wrap">{children}</span>
+			<div className="flex min-w-0 flex-col gap-2">
+				<span className="whitespace-pre-wrap">{children}</span>
+				{action && <div className="self-start">{action}</div>}
+			</div>
 		</div>
 	);
 };

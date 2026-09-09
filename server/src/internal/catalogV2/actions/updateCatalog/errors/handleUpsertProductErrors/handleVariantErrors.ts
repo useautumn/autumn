@@ -273,8 +273,11 @@ export const handleVariantErrors = ({
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
+		// Historical = inactive AND below the latest version: the active row stays
+		// mintable under a draft above it, and a latest-but-inactive draft still mints.
 		if (
 			mintSource &&
+			!targetRow.active &&
 			targetRow.version <
 				maxVersionForPlan({
 					planId: target.plan_id,

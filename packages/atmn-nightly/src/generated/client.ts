@@ -169,8 +169,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -1343,8 +1341,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -2154,8 +2150,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -3324,8 +3318,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -4137,8 +4129,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -5281,8 +5271,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -6076,8 +6064,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -7124,8 +7110,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -7829,8 +7813,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -8973,8 +8955,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -9766,8 +9746,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -10814,8 +10792,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -11527,8 +11503,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -12697,8 +12671,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -13524,8 +13496,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -14668,8 +14638,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -15453,8 +15421,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -16623,8 +16589,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -17448,8 +17412,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -18592,8 +18554,6 @@ autoEnable?: boolean | null;
 config?: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 } | null;
 /** The `active` flag before this update; true on the version being demoted. */
 active?: boolean | null;
@@ -24279,8 +24239,6 @@ archived: boolean;
 config: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 };
 /** Plan-level billing controls used as customer defaults. */
 billingControls?: {
@@ -25931,8 +25889,6 @@ archived: boolean;
 config: {
 /** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. Defaults to false. */
 ignorePastDue?: boolean;
-/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. Defaults to false. */
-allowOverdueEntitlements?: boolean;
 };
 /** Plan-level billing controls used as customer defaults. */
 billingControls?: {

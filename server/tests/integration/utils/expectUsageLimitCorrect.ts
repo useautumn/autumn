@@ -1,5 +1,9 @@
 import { expect } from "bun:test";
-import type { ApiCustomerV5, DbUsageLimit } from "@autumn/shared";
+import type {
+	ApiCustomerV5,
+	ApiUsageLimit,
+	DbUsageLimit,
+} from "@autumn/shared";
 
 const roundTo8Dp = (value: number) => Math.round(value * 1e8) / 1e8;
 
@@ -29,6 +33,7 @@ export const expectUsageLimitCorrect = ({
 	usage,
 	limit,
 	interval,
+	source,
 	filterProperties,
 }: {
 	customer: ApiCustomerV5;
@@ -36,6 +41,7 @@ export const expectUsageLimitCorrect = ({
 	usage?: number;
 	limit?: number;
 	interval?: DbUsageLimit["interval"];
+	source?: ApiUsageLimit["source"];
 	filterProperties?: Record<string, string> | null;
 }) => {
 	const usageLimit = customer.billing_controls?.usage_limits?.find(
@@ -59,7 +65,28 @@ export const expectUsageLimitCorrect = ({
 		expect(usageLimit?.interval).toBe(interval);
 	}
 
+	if (typeof source !== "undefined") {
+		expect(usageLimit?.source).toBe(source);
+	}
+
 	if (typeof usage !== "undefined") {
 		expect(roundTo8Dp(usageLimit?.usage ?? 0)).toBe(roundTo8Dp(usage));
 	}
+};
+
+/** Asserts no `usage_limits` entry exists for the feature (e.g. after a config list replaced it). */
+export const expectUsageLimitAbsent = ({
+	customer,
+	featureId,
+}: {
+	customer: ApiCustomerV5;
+	featureId: string;
+}) => {
+	const usageLimit = customer.billing_controls?.usage_limits?.find(
+		(entry) => entry.feature_id === featureId,
+	);
+	expect(
+		usageLimit,
+		`Unexpected usage_limits entry for ${featureId}`,
+	).toBeUndefined();
 };

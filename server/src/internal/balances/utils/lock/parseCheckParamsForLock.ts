@@ -49,6 +49,7 @@ export const parseCheckParamsForLock = ({
 		lock_id: lockId,
 		hashed_key: hashedKey,
 		expires_at: lock.expires_at ?? undefined,
+		overage_behavior: lock.overage_behavior ?? undefined,
 	};
 
 	return {
