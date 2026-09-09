@@ -10,6 +10,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusService } from "@/internal/customers/CusService";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
 import { tryProcessRevertExpiry } from "@/internal/customers/cusProducts/actions/revertTrialExpiry";
@@ -105,18 +106,26 @@ export const processExpiredTrialRow = async ({
 		source: "productCron",
 	});
 
+	const autumnBillingPlan = {
+		customerId: originalFullCustomer.id ?? originalFullCustomer.internal_id,
+		insertCustomerProducts: activatedDefault ? [activatedDefault] : [],
+		updateCustomerProducts: [
+			{
+				customerProduct: trialFullCusProduct,
+				updates: { status: CusProductStatus.Expired },
+			},
+		],
+	};
+
+	await billingPlanToSendProductsUpdated({
+		ctx,
+		autumnBillingPlan,
+		billingContext: { fullCustomer: originalFullCustomer },
+	});
+
 	void sendBillingUpdatedWebhook({
 		ctx,
-		autumnBillingPlan: {
-			customerId: originalFullCustomer.id ?? originalFullCustomer.internal_id,
-			insertCustomerProducts: activatedDefault ? [activatedDefault] : [],
-			updateCustomerProducts: [
-				{
-					customerProduct: trialFullCusProduct,
-					updates: { status: CusProductStatus.Expired },
-				},
-			],
-		},
+		autumnBillingPlan,
 		originalFullCustomer,
 		tags: ["trial_ended"],
 	});

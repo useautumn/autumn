@@ -4,7 +4,7 @@ import {
 	DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT,
 	getAutoTopupRateLimitConfigs,
 } from "@/internal/balances/autoTopUp/helpers/limits/autoTopupRateLimitConfigs";
-import { _setOrgLimitsConfigForTesting } from "@/internal/misc/edgeConfig/orgLimitsStore";
+import { _setRateLimitOverridesConfigForTesting } from "@/internal/misc/rateLimiter/rateLimitOverridesStore";
 
 const autoTopupConfig = AutoTopupSchema.parse({
 	feature_id: "credits",
@@ -15,7 +15,7 @@ const org = { id: "org_limited", slug: "limited" };
 
 describe("getAutoTopupRateLimitConfigs", () => {
 	test("uses the default attempt limit when the org has no override", () => {
-		_setOrgLimitsConfigForTesting({ config: { orgs: {} } });
+		_setRateLimitOverridesConfigForTesting({ config: { orgs: {} } });
 
 		const { attemptLimit } = getAutoTopupRateLimitConfigs({
 			autoTopupConfig,
@@ -26,8 +26,8 @@ describe("getAutoTopupRateLimitConfigs", () => {
 	});
 
 	test("uses the org limits override within the default window", () => {
-		_setOrgLimitsConfigForTesting({
-			config: { orgs: { [org.id]: { maxAutoTopupAttempts: 10 } } },
+		_setRateLimitOverridesConfigForTesting({
+			config: { orgs: { [org.id]: { limits: { auto_topup_attempts: 10 } } } },
 		});
 
 		const { attemptLimit } = getAutoTopupRateLimitConfigs({

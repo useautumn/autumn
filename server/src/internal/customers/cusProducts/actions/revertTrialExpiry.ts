@@ -1,5 +1,6 @@
 import {
 	type AutumnBillingPlan,
+	AttachScenario,
 	CusProductStatus,
 	type customerProducts,
 	customerProducts as customerProductsTable,
@@ -10,6 +11,7 @@ import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusService } from "@/internal/customers/CusService";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
@@ -19,8 +21,8 @@ import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCust
  * cusProduct and unpause the previous one atomically so we never leave a
  * customer without an active plan.
  *
- * Emits the `billing.updated` webhook (tag: `trial_ended`) describing both
- * the trial expiry and the restored previous plan.
+ * Emits `customer.products.updated` for the expired trial and restored
+ * previous plan, plus `billing.updated` (tag: `trial_ended`).
  *
  * Returns true if handled, false to fall through to standard expiry.
  */
@@ -131,6 +133,13 @@ export const tryProcessRevertExpiry = async ({
 				},
 			],
 		};
+
+		await billingPlanToSendProductsUpdated({
+			ctx,
+			autumnBillingPlan,
+			billingContext: { fullCustomer },
+			fallbackUpdateScenario: AttachScenario.New,
+		});
 
 		void sendBillingUpdatedWebhook({
 			ctx,
