@@ -46,8 +46,9 @@ const hasPaidScheduledProduct = ({
 
 /**
  * Get the webhook scenario for an updateCustomerProduct, or null if no webhook needed.
- * - Expire: status=expired → "expired"
  * - Cancel: canceled=true with timestamps set → "cancel" or "downgrade"
+ *   (even when status is also expired — immediate cancel must stay cancel)
+ * - Expire: status=expired with no cancel timestamps → "expired"
  * - Uncancel: canceled=false with timestamps cleared → "renew"
  */
 const getUpdateScenario = ({
@@ -57,10 +58,6 @@ const getUpdateScenario = ({
 	updates: UpdateCustomerProductUpdates;
 	insertCustomerProducts: FullCusProduct[];
 }): AttachScenario | null => {
-	if (updates.status === CusProductStatus.Expired) {
-		return AttachScenario.Expired;
-	}
-
 	// Cancel: canceled=true with timestamps set
 	if (
 		updates.canceled === true &&
@@ -70,6 +67,10 @@ const getUpdateScenario = ({
 		return hasPaidScheduledProduct({ customerProducts: insertCustomerProducts })
 			? AttachScenario.Downgrade
 			: AttachScenario.Cancel;
+	}
+
+	if (updates.status === CusProductStatus.Expired) {
+		return AttachScenario.Expired;
 	}
 
 	// Uncancel: canceled=false with timestamps cleared

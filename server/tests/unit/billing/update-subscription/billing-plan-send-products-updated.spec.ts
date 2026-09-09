@@ -141,6 +141,23 @@ describe(chalk.yellowBright("billingPlanToSendProductsUpdated"), () => {
 		expect(calls).toHaveLength(0);
 	});
 
+	test("keeps cancel scenario when immediate cancel also sets status=expired", async () => {
+		const calls = await runPlan({
+			updateCustomerProduct: {
+				customerProduct: customerProducts.create({}),
+				updates: {
+					canceled: true,
+					canceled_at: Date.now(),
+					ended_at: Date.now(),
+					status: CusProductStatus.Expired,
+				},
+			},
+		});
+
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.scenario).toBe(AttachScenario.Cancel);
+	});
+
 	test("queues expired webhook for status=expired updates", async () => {
 		const calls = await runPlan({
 			updateCustomerProduct: {
