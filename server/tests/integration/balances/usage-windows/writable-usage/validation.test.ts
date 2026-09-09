@@ -5,6 +5,8 @@
  *   Unknown feature_id -> feature_not_found, nothing written.
  *   usage > 0 with no cap configured for the feature -> 400.
  *   Negative usage -> invalid_inputs.
+ *   Two entries for one (feature, filter) -> rejected as duplicates, even when
+ *   one of them is counter-only.
  *   One bad entry rejects the whole list: valid entries in the same request
  *   are not applied.
  */
@@ -64,6 +66,23 @@ test.concurrent(
 				autumn.customers.updateRpc(customerId, {
 					billing_controls: {
 						usage_limits: [{ feature_id: TestFeature.Messages, usage: -1 }],
+					},
+				}),
+		});
+
+		await expectAutumnError({
+			errMessage: "Only one usage limit entry",
+			func: () =>
+				autumn.customers.updateRpc(customerId, {
+					billing_controls: {
+						usage_limits: [
+							{
+								feature_id: TestFeature.Messages,
+								limit: 5,
+								interval: ResetInterval.Day,
+							},
+							{ feature_id: TestFeature.Messages, usage: 0 },
+						],
 					},
 				}),
 		});
