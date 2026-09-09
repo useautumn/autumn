@@ -227,6 +227,12 @@ export const featureItemsAreSame = ({
 			}),
 			message: `Feature override different: ${JSON.stringify(item1.config?.feature_override)} !== ${JSON.stringify(item2.config?.feature_override)}`,
 		},
+		threshold_billing: {
+			condition:
+				(item1.config?.threshold_billing?.threshold ?? null) ===
+				(item2.config?.threshold_billing?.threshold ?? null),
+			message: `Threshold billing different: ${JSON.stringify(item1.config?.threshold_billing)} !== ${JSON.stringify(item2.config?.threshold_billing)}`,
+		},
 		// config: {
 		// 	condition: JSON.stringify(item1.config) === JSON.stringify(item2.config),
 		// 	message: `Config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
@@ -389,6 +395,12 @@ export const featurePriceItemsAreSame = ({
 				override2: item2.config?.feature_override,
 			}),
 			message: `Feature override different: ${JSON.stringify(item1.config?.feature_override)} !== ${JSON.stringify(item2.config?.feature_override)}`,
+		},
+		threshold_billing: {
+			condition:
+				(item1.config?.threshold_billing?.threshold ?? null) ===
+				(item2.config?.threshold_billing?.threshold ?? null),
+			message: `Threshold billing different: ${JSON.stringify(item1.config?.threshold_billing)} !== ${JSON.stringify(item2.config?.threshold_billing)}`,
 		},
 		entity_feature_id: {
 			condition: item1.entity_feature_id == item2.entity_feature_id,

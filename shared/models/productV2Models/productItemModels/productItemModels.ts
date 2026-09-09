@@ -73,6 +73,13 @@ export const RolloverConfigSchema = z.object({
 });
 
 const ProductItemConfigSchema = z.object({
+	threshold_billing: z
+		.object({ threshold: z.number().finite().positive() })
+		.nullish()
+		.meta({
+			description:
+				"Bills this many feature units when outstanding overage reaches it.",
+		}),
 	allocated_billing_behavior: z.enum(AllocatedBillingBehavior).nullish(),
 	on_increase: z.enum(OnIncrease).nullish(),
 	on_decrease: z.enum(OnDecrease).nullish(),
