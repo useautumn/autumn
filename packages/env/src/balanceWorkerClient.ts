@@ -1,3 +1,5 @@
+import { createKafkaAuthEnv } from "./kafkaAuth.js";
+
 export function createBalanceWorkerClientEnv(
 	runtimeEnv: Record<string, string | undefined>,
 ) {
@@ -17,6 +19,7 @@ export function createBalanceWorkerClientEnv(
 		brokers.push(broker.trim());
 	}
 	return {
+		...createKafkaAuthEnv({ runtimeEnv }),
 		BALANCE_WORKER_ROLLOUT_ENABLED: rollout === "true",
 		KAFKA_BROKERS: brokers,
 		BALANCE_WORKER_OWNERSHIP_TOPIC:
