@@ -339,3 +339,56 @@ test.concurrent(
 		expect(sessions.data.map((session) => session.status)).toEqual(["expired"]);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("pending-plan-conflict 7: long-lived retry by internal id still expires the public-id checkout reservation")}`,
+	async () => {
+		const customerId = "pending-plan-conflict-long-lived-alias";
+		const premium = products.premium({
+			id: "premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const credits = products.oneOffAddOn({
+			id: "credits",
+			items: [items.oneOffWords({ billingUnits: 100, price: 10 })],
+		});
+
+		const { autumnV2_4, ctx, customer } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [premium, credits] }),
+			],
+			actions: [
+				s.billing.attach({
+					productId: premium.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const checkout = await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: credits.id,
+			feature_quantities: [{ feature_id: TestFeature.Words, quantity: 100 }],
+		});
+		expect(checkout.payment_url).toContain("checkout.stripe.com");
+
+		const retry = await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customer?.internal_id ?? "",
+			plan_id: premium.id,
+			long_lived_checkout: true,
+		});
+		expect(retry.invoice?.status).toBe("open");
+		expect(retry.payment_url).toBe(retry.invoice?.hosted_invoice_url);
+
+		const sessions = await ctx.stripeCli.checkout.sessions.list({
+			customer: customer?.processor?.id ?? "",
+			limit: 100,
+		});
+		expect(sessions.has_more).toBe(false);
+		expect(sessions.data.map((session) => session.status)).toEqual(["expired"]);
+	},
+);

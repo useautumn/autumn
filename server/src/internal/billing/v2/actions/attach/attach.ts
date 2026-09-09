@@ -168,10 +168,9 @@ export async function attach({
 	if (pendingInvoiceResult) {
 		preserveSubjectCache({ ctx });
 		// Long-lived skipped the lock above; a completed session must still win.
-		const cachedResult =
-			shouldCreateLongLivedCheckout && checkoutReservation
-				? await arbitrateCheckoutLock()
-				: null;
+		const cachedResult = shouldCreateLongLivedCheckout
+			? await arbitrateCheckoutLock()
+			: null;
 		return (
 			cachedResult ?? {
 				billingContext,
