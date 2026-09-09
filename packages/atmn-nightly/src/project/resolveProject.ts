@@ -30,7 +30,7 @@ const configIn = ({ dir }: { dir: string }): string | null => {
 	return null;
 };
 
-/** `-c` takes a file or a directory; a directory means its autumn.config.ts. */
+/** `-c` takes a file or a directory; a directory means the config it holds, or a new autumn.config.ts. */
 export const configPathFromFlag = ({
 	cwd,
 	flag,

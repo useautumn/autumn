@@ -156,10 +156,13 @@ const installedVersion = ({
 /** SemVer ordering: numeric core, then prerelease identifiers (a release beats any prerelease). */
 const compareVersions = (a: string, b: string): number => {
 	const parse = (v: string) => {
-		const [core = "", pre] = v.split("+", 1)[0]?.split("-", 2) ?? [];
+		const version = v.split("+", 1)[0] ?? "";
+		const dash = version.indexOf("-");
+		const core = dash === -1 ? version : version.slice(0, dash);
+		const pre = dash === -1 ? null : version.slice(dash + 1).split(".");
 		return {
 			nums: core.split(".").map((n) => Number.parseInt(n, 10) || 0),
-			pre: pre === undefined ? null : pre.split("."),
+			pre,
 		};
 	};
 	const x = parse(a);

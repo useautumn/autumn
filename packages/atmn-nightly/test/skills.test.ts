@@ -173,7 +173,12 @@ test("a newer install is never downgraded, and the stale hint stays quiet for it
 	expect(lines.join("")).toContain("newer than this CLI, kept");
 
 	// Prerelease identifiers order like semver: rc beats nightly, a release beats both.
-	for (const version of ["3.0.0-rc.1", "3.0.0", "3.0.1-nightly.1"]) {
+	for (const version of [
+		"3.0.0-rc.1",
+		"3.0.0-rc-2.1",
+		"3.0.0",
+		"3.0.1-nightly.1",
+	]) {
 		writeFileSync(
 			path,
 			first.markdown.replace(
