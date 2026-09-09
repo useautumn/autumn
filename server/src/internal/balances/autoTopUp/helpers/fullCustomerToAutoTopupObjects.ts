@@ -111,7 +111,7 @@ export const fullCustomerToAutoTopupObjects = ({
 
 	// 4. Check balance against threshold
 	const thresholdPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
-	const thresholdBilling = thresholdPrice?.price.config.threshold_billing;
+	const thresholdBilling = getThreshold(customerEntitlement);
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
 	const balanceBelowThreshold = thresholdBilling
 		? cusEntToInvoiceOverage({ cusEnt: customerEntitlement }) >=

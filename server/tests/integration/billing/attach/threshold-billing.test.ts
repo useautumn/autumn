@@ -183,7 +183,7 @@ const expectRejectedTrack = async ({
 	autumn,
 	customerId,
 }: {
-	autumn: typeof autumnRpc;
+	autumn: Awaited<ReturnType<typeof initScenario>>["autumnV2_3"];
 	customerId: string;
 }) => {
 	for (let attempt = 0; attempt < 30; attempt++) {

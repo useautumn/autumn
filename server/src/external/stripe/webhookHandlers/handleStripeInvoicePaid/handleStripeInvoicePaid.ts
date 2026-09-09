@@ -42,7 +42,7 @@ export const handleStripeInvoicePaid = async ({
 				await customerProductActions.markActive({
 					ctx,
 					customerProduct,
-					fullCustomer: ctx.fullCustomer,
+					fullCustomer,
 				});
 			}
 		}
