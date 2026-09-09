@@ -62,6 +62,7 @@ export const createRewardCouponRequestOutboundSchema = z.object({
 	duration: createRewardDurationOutboundSchema,
 	plan_ids: z.array(z.string()).nullable(),
 	promo_codes: z.array(createRewardCouponPromoCodeOutboundSchema),
+	internal_id: z.union([z.string(), z.undefined()]).optional(),
 	type: z.string(),
 	value: z.number(),
 });
@@ -87,6 +88,7 @@ export const createRewardFeatureGrantRequestOutboundSchema = z.object({
 	name: z.string(),
 	grants: z.array(createRewardGrantOutboundSchema),
 	promo_codes: z.array(createRewardFeatureGrantPromoCodeOutboundSchema),
+	internal_id: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const createRewardParamsOutboundSchema = z.object({
@@ -117,6 +119,7 @@ export const createRewardCouponRequestSchema = z.object({
 	duration: createRewardDurationSchema,
 	planIds: z.array(z.string()).nullable(),
 	promoCodes: z.array(createRewardCouponPromoCodeSchema),
+	internalId: z.union([z.string(), z.undefined()]).optional(),
 	type: couponTypeRequestBodySchema,
 	value: z.number(),
 });
@@ -139,6 +142,7 @@ export const createRewardFeatureGrantRequestSchema = z.object({
 	name: z.string(),
 	grants: z.array(createRewardGrantSchema),
 	promoCodes: z.array(createRewardFeatureGrantPromoCodeSchema),
+	internalId: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const createRewardParamsSchema = z.object({

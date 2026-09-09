@@ -61,14 +61,17 @@ export type UpdateReferralProgramParams = {
    */
   receivedBy?: UpdateReferralProgramReceivedByRequest | undefined;
   /**
-   * A positive redemption limit.
+   * A positive redemption limit. Omit to leave unchanged; null removes it.
    */
-  maxRedemptions?: number | undefined;
+  maxRedemptions?: number | null | undefined;
   /**
-   * Required when redeem_on is checkout. Plan IDs must be unique.
+   * Required when redeem_on is checkout. Plan IDs must be unique. Omit to leave unchanged; null removes them.
    */
-  planIds?: Array<string> | undefined;
-  excludeTrial?: boolean | undefined;
+  planIds?: Array<string> | null | undefined;
+  /**
+   * Omit to leave unchanged; null removes it.
+   */
+  excludeTrial?: boolean | null | undefined;
 };
 
 /**
@@ -154,9 +157,9 @@ export type UpdateReferralProgramParams$Outbound = {
   reward_id?: string | undefined;
   redeem_on?: string | undefined;
   received_by?: string | undefined;
-  max_redemptions?: number | undefined;
-  plan_ids?: Array<string> | undefined;
-  exclude_trial?: boolean | undefined;
+  max_redemptions?: number | null | undefined;
+  plan_ids?: Array<string> | null | undefined;
+  exclude_trial?: boolean | null | undefined;
 };
 
 /** @internal */
@@ -171,9 +174,9 @@ export const UpdateReferralProgramParams$outboundSchema: z.ZodMiniType<
     receivedBy: z.optional(
       UpdateReferralProgramReceivedByRequest$outboundSchema,
     ),
-    maxRedemptions: z.optional(z.int()),
-    planIds: z.optional(z.array(z.string())),
-    excludeTrial: z.optional(z.boolean()),
+    maxRedemptions: z.optional(z.nullable(z.int())),
+    planIds: z.optional(z.nullable(z.array(z.string()))),
+    excludeTrial: z.optional(z.nullable(z.boolean())),
   }),
   z.transform((v) => {
     return remap$(v, {

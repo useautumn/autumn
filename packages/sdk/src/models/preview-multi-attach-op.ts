@@ -121,15 +121,24 @@ export type PreviewMultiAttachItemAdditionalCurrency = {
   amount: number;
 };
 
-export type PreviewMultiAttachTo = number | string;
+export type PreviewMultiAttachPriceTo = number | string;
 
 export type PreviewMultiAttachTierAdditionalCurrency = {
-  currency?: any | undefined;
-  amount?: any | undefined;
-  flatAmount?: any | undefined;
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
 };
 
-export type PreviewMultiAttachTier = {
+export type PreviewMultiAttachPriceTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
@@ -198,7 +207,7 @@ export type PreviewMultiAttachPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<PreviewMultiAttachTier> | undefined;
+  tiers?: Array<PreviewMultiAttachPriceTier> | undefined;
   tierBehavior?: PreviewMultiAttachTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -305,6 +314,84 @@ export type PreviewMultiAttachRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type PreviewMultiAttachDimensionsMatch4 = string | number | boolean;
+
+export type PreviewMultiAttachDimensions4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type PreviewMultiAttachDimensionsMatch3 = string | number | boolean;
+
+export const PreviewMultiAttachDimensionsToEnum2 = {
+  Inf: "inf",
+} as const;
+export type PreviewMultiAttachDimensionsToEnum2 = ClosedEnum<
+  typeof PreviewMultiAttachDimensionsToEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PreviewMultiAttachDimensionsToUnion2 =
+  | number
+  | PreviewMultiAttachDimensionsToEnum2;
+
+export type PreviewMultiAttachDimensionsTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PreviewMultiAttachDimensionsToEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PreviewMultiAttachDimensions3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PreviewMultiAttachDimensionsTier2>;
+};
+
+export type PreviewMultiAttachDimensionsUnion2 =
+  | PreviewMultiAttachDimensions3
+  | PreviewMultiAttachDimensions4;
+
+export type PreviewMultiAttachMultipliersMatch2 = string | number | boolean;
+
+export type PreviewMultiAttachMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type PreviewMultiAttachCreditSchema2 = {
   /**
    * ID of the metered feature that draws from this credit system.
@@ -315,7 +402,120 @@ export type PreviewMultiAttachCreditSchema2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: PreviewMultiAttachDimensions3 | PreviewMultiAttachDimensions4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PreviewMultiAttachMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type PreviewMultiAttachDimensionsMatch2 = string | number | boolean;
+
+export type PreviewMultiAttachDimensions2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type PreviewMultiAttachDimensionsMatch1 = string | number | boolean;
+
+export const PreviewMultiAttachDimensionsToEnum1 = {
+  Inf: "inf",
+} as const;
+export type PreviewMultiAttachDimensionsToEnum1 = ClosedEnum<
+  typeof PreviewMultiAttachDimensionsToEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PreviewMultiAttachDimensionsToUnion1 =
+  | number
+  | PreviewMultiAttachDimensionsToEnum1;
+
+export type PreviewMultiAttachDimensionsTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PreviewMultiAttachDimensionsToEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PreviewMultiAttachDimensions1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PreviewMultiAttachDimensionsTier1>;
+};
+
+export type PreviewMultiAttachDimensionsUnion1 =
+  | PreviewMultiAttachDimensions1
+  | PreviewMultiAttachDimensions2;
+
+export type PreviewMultiAttachMultipliersMatch1 = string | number | boolean;
+
+export type PreviewMultiAttachMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const PreviewMultiAttachToEnum = {
+  Inf: "inf",
+} as const;
+export type PreviewMultiAttachToEnum = ClosedEnum<
+  typeof PreviewMultiAttachToEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PreviewMultiAttachFeatureOverrideToUnion =
+  | number
+  | PreviewMultiAttachToEnum;
+
+export type PreviewMultiAttachFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PreviewMultiAttachToEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
@@ -329,13 +529,57 @@ export type PreviewMultiAttachCreditSchema1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: PreviewMultiAttachDimensions1 | PreviewMultiAttachDimensions2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PreviewMultiAttachMultipliers1 } | undefined;
   tierBehavior: "graduated";
-  tiers: Array<any>;
+  tiers: Array<PreviewMultiAttachFeatureOverrideTier>;
 };
 
 export type PreviewMultiAttachCreditSchemaUnion =
   | PreviewMultiAttachCreditSchema1
   | PreviewMultiAttachCreditSchema2;
+
+export type PreviewMultiAttachProviderMarkups = {
+  markup: number;
+};
+
+export type PreviewMultiAttachModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type PreviewMultiAttachMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: PreviewMultiAttachProviderMarkups }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?:
+    | { [k: string]: PreviewMultiAttachModelMarkups }
+    | null
+    | undefined;
+};
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
@@ -347,6 +591,10 @@ export type PreviewMultiAttachFeatureOverride = {
   creditSchema?:
     | Array<PreviewMultiAttachCreditSchema1 | PreviewMultiAttachCreditSchema2>
     | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: PreviewMultiAttachMarkups | undefined;
 };
 
 /**
@@ -1367,27 +1615,27 @@ export function previewMultiAttachItemAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type PreviewMultiAttachTo$Outbound = number | string;
+export type PreviewMultiAttachPriceTo$Outbound = number | string;
 
 /** @internal */
-export const PreviewMultiAttachTo$outboundSchema: z.ZodMiniType<
-  PreviewMultiAttachTo$Outbound,
-  PreviewMultiAttachTo
+export const PreviewMultiAttachPriceTo$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachPriceTo$Outbound,
+  PreviewMultiAttachPriceTo
 > = smartUnion([z.number(), z.string()]);
 
-export function previewMultiAttachToToJSON(
-  previewMultiAttachTo: PreviewMultiAttachTo,
+export function previewMultiAttachPriceToToJSON(
+  previewMultiAttachPriceTo: PreviewMultiAttachPriceTo,
 ): string {
   return JSON.stringify(
-    PreviewMultiAttachTo$outboundSchema.parse(previewMultiAttachTo),
+    PreviewMultiAttachPriceTo$outboundSchema.parse(previewMultiAttachPriceTo),
   );
 }
 
 /** @internal */
 export type PreviewMultiAttachTierAdditionalCurrency$Outbound = {
-  currency?: any | undefined;
-  amount?: any | undefined;
-  flat_amount?: any | undefined;
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
 };
 
 /** @internal */
@@ -1397,9 +1645,9 @@ export const PreviewMultiAttachTierAdditionalCurrency$outboundSchema:
     PreviewMultiAttachTierAdditionalCurrency
   > = z.pipe(
     z.object({
-      currency: z.optional(z.any()),
-      amount: z.optional(z.any()),
-      flatAmount: z.optional(z.any()),
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -1420,7 +1668,7 @@ export function previewMultiAttachTierAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type PreviewMultiAttachTier$Outbound = {
+export type PreviewMultiAttachPriceTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
@@ -1430,9 +1678,9 @@ export type PreviewMultiAttachTier$Outbound = {
 };
 
 /** @internal */
-export const PreviewMultiAttachTier$outboundSchema: z.ZodMiniType<
-  PreviewMultiAttachTier$Outbound,
-  PreviewMultiAttachTier
+export const PreviewMultiAttachPriceTier$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachPriceTier$Outbound,
+  PreviewMultiAttachPriceTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -1450,11 +1698,13 @@ export const PreviewMultiAttachTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewMultiAttachTierToJSON(
-  previewMultiAttachTier: PreviewMultiAttachTier,
+export function previewMultiAttachPriceTierToJSON(
+  previewMultiAttachPriceTier: PreviewMultiAttachPriceTier,
 ): string {
   return JSON.stringify(
-    PreviewMultiAttachTier$outboundSchema.parse(previewMultiAttachTier),
+    PreviewMultiAttachPriceTier$outboundSchema.parse(
+      previewMultiAttachPriceTier,
+    ),
   );
 }
 
@@ -1479,7 +1729,7 @@ export type PreviewMultiAttachPrice$Outbound = {
   additional_currencies?:
     | Array<PreviewMultiAttachItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<PreviewMultiAttachTier$Outbound> | undefined;
+  tiers?: Array<PreviewMultiAttachPriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -1499,7 +1749,7 @@ export const PreviewMultiAttachPrice$outboundSchema: z.ZodMiniType<
       PreviewMultiAttachItemAdditionalCurrency$outboundSchema
     ))),
     tiers: z.optional(z.array(z.lazy(() =>
-      PreviewMultiAttachTier$outboundSchema
+      PreviewMultiAttachPriceTier$outboundSchema
     ))),
     tierBehavior: z.optional(PreviewMultiAttachTierBehavior$outboundSchema),
     interval: PreviewMultiAttachItemPriceInterval$outboundSchema,
@@ -1613,9 +1863,277 @@ export function previewMultiAttachRolloverToJSON(
 }
 
 /** @internal */
+export type PreviewMultiAttachDimensionsMatch4$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewMultiAttachDimensionsMatch4$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsMatch4$Outbound,
+  PreviewMultiAttachDimensionsMatch4
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewMultiAttachDimensionsMatch4ToJSON(
+  previewMultiAttachDimensionsMatch4: PreviewMultiAttachDimensionsMatch4,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsMatch4$outboundSchema.parse(
+      previewMultiAttachDimensionsMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensions4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachDimensions4$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensions4$Outbound,
+  PreviewMultiAttachDimensions4
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function previewMultiAttachDimensions4ToJSON(
+  previewMultiAttachDimensions4: PreviewMultiAttachDimensions4,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensions4$outboundSchema.parse(
+      previewMultiAttachDimensions4,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensionsMatch3$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewMultiAttachDimensionsMatch3$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsMatch3$Outbound,
+  PreviewMultiAttachDimensionsMatch3
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewMultiAttachDimensionsMatch3ToJSON(
+  previewMultiAttachDimensionsMatch3: PreviewMultiAttachDimensionsMatch3,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsMatch3$outboundSchema.parse(
+      previewMultiAttachDimensionsMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachDimensionsToEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachDimensionsToEnum2
+> = z.enum(PreviewMultiAttachDimensionsToEnum2);
+
+/** @internal */
+export type PreviewMultiAttachDimensionsToUnion2$Outbound = number | string;
+
+/** @internal */
+export const PreviewMultiAttachDimensionsToUnion2$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsToUnion2$Outbound,
+  PreviewMultiAttachDimensionsToUnion2
+> = smartUnion([
+  z.number(),
+  PreviewMultiAttachDimensionsToEnum2$outboundSchema,
+]);
+
+export function previewMultiAttachDimensionsToUnion2ToJSON(
+  previewMultiAttachDimensionsToUnion2: PreviewMultiAttachDimensionsToUnion2,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsToUnion2$outboundSchema.parse(
+      previewMultiAttachDimensionsToUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensionsTier2$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachDimensionsTier2$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsTier2$Outbound,
+  PreviewMultiAttachDimensionsTier2
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      PreviewMultiAttachDimensionsToEnum2$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function previewMultiAttachDimensionsTier2ToJSON(
+  previewMultiAttachDimensionsTier2: PreviewMultiAttachDimensionsTier2,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsTier2$outboundSchema.parse(
+      previewMultiAttachDimensionsTier2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensions3$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<PreviewMultiAttachDimensionsTier2$Outbound>;
+};
+
+/** @internal */
+export const PreviewMultiAttachDimensions3$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensions3$Outbound,
+  PreviewMultiAttachDimensions3
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => PreviewMultiAttachDimensionsTier2$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function previewMultiAttachDimensions3ToJSON(
+  previewMultiAttachDimensions3: PreviewMultiAttachDimensions3,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensions3$outboundSchema.parse(
+      previewMultiAttachDimensions3,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensionsUnion2$Outbound =
+  | PreviewMultiAttachDimensions3$Outbound
+  | PreviewMultiAttachDimensions4$Outbound;
+
+/** @internal */
+export const PreviewMultiAttachDimensionsUnion2$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsUnion2$Outbound,
+  PreviewMultiAttachDimensionsUnion2
+> = smartUnion([
+  z.lazy(() => PreviewMultiAttachDimensions3$outboundSchema),
+  z.lazy(() => PreviewMultiAttachDimensions4$outboundSchema),
+]);
+
+export function previewMultiAttachDimensionsUnion2ToJSON(
+  previewMultiAttachDimensionsUnion2: PreviewMultiAttachDimensionsUnion2,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsUnion2$outboundSchema.parse(
+      previewMultiAttachDimensionsUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachMultipliersMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewMultiAttachMultipliersMatch2$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachMultipliersMatch2$Outbound,
+  PreviewMultiAttachMultipliersMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewMultiAttachMultipliersMatch2ToJSON(
+  previewMultiAttachMultipliersMatch2: PreviewMultiAttachMultipliersMatch2,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachMultipliersMatch2$outboundSchema.parse(
+      previewMultiAttachMultipliersMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachMultipliers2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachMultipliers2$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachMultipliers2$Outbound,
+  PreviewMultiAttachMultipliers2
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function previewMultiAttachMultipliers2ToJSON(
+  previewMultiAttachMultipliers2: PreviewMultiAttachMultipliers2,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachMultipliers2$outboundSchema.parse(
+      previewMultiAttachMultipliers2,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachCreditSchema2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | PreviewMultiAttachDimensions3$Outbound
+      | PreviewMultiAttachDimensions4$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: PreviewMultiAttachMultipliers2$Outbound }
+    | undefined;
   credit_cost: number;
 };
 
@@ -1627,6 +2145,17 @@ export const PreviewMultiAttachCreditSchema2$outboundSchema: z.ZodMiniType<
   z.object({
     meteredFeatureId: z.string(),
     billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => PreviewMultiAttachDimensions3$outboundSchema),
+        z.lazy(() => PreviewMultiAttachDimensions4$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => PreviewMultiAttachMultipliers2$outboundSchema),
+    )),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -1649,11 +2178,338 @@ export function previewMultiAttachCreditSchema2ToJSON(
 }
 
 /** @internal */
+export type PreviewMultiAttachDimensionsMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewMultiAttachDimensionsMatch2$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsMatch2$Outbound,
+  PreviewMultiAttachDimensionsMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewMultiAttachDimensionsMatch2ToJSON(
+  previewMultiAttachDimensionsMatch2: PreviewMultiAttachDimensionsMatch2,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsMatch2$outboundSchema.parse(
+      previewMultiAttachDimensionsMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensions2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachDimensions2$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensions2$Outbound,
+  PreviewMultiAttachDimensions2
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function previewMultiAttachDimensions2ToJSON(
+  previewMultiAttachDimensions2: PreviewMultiAttachDimensions2,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensions2$outboundSchema.parse(
+      previewMultiAttachDimensions2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensionsMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewMultiAttachDimensionsMatch1$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsMatch1$Outbound,
+  PreviewMultiAttachDimensionsMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewMultiAttachDimensionsMatch1ToJSON(
+  previewMultiAttachDimensionsMatch1: PreviewMultiAttachDimensionsMatch1,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsMatch1$outboundSchema.parse(
+      previewMultiAttachDimensionsMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachDimensionsToEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachDimensionsToEnum1
+> = z.enum(PreviewMultiAttachDimensionsToEnum1);
+
+/** @internal */
+export type PreviewMultiAttachDimensionsToUnion1$Outbound = number | string;
+
+/** @internal */
+export const PreviewMultiAttachDimensionsToUnion1$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsToUnion1$Outbound,
+  PreviewMultiAttachDimensionsToUnion1
+> = smartUnion([
+  z.number(),
+  PreviewMultiAttachDimensionsToEnum1$outboundSchema,
+]);
+
+export function previewMultiAttachDimensionsToUnion1ToJSON(
+  previewMultiAttachDimensionsToUnion1: PreviewMultiAttachDimensionsToUnion1,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsToUnion1$outboundSchema.parse(
+      previewMultiAttachDimensionsToUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensionsTier1$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachDimensionsTier1$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsTier1$Outbound,
+  PreviewMultiAttachDimensionsTier1
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      PreviewMultiAttachDimensionsToEnum1$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function previewMultiAttachDimensionsTier1ToJSON(
+  previewMultiAttachDimensionsTier1: PreviewMultiAttachDimensionsTier1,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsTier1$outboundSchema.parse(
+      previewMultiAttachDimensionsTier1,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensions1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<PreviewMultiAttachDimensionsTier1$Outbound>;
+};
+
+/** @internal */
+export const PreviewMultiAttachDimensions1$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensions1$Outbound,
+  PreviewMultiAttachDimensions1
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => PreviewMultiAttachDimensionsTier1$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function previewMultiAttachDimensions1ToJSON(
+  previewMultiAttachDimensions1: PreviewMultiAttachDimensions1,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensions1$outboundSchema.parse(
+      previewMultiAttachDimensions1,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachDimensionsUnion1$Outbound =
+  | PreviewMultiAttachDimensions1$Outbound
+  | PreviewMultiAttachDimensions2$Outbound;
+
+/** @internal */
+export const PreviewMultiAttachDimensionsUnion1$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachDimensionsUnion1$Outbound,
+  PreviewMultiAttachDimensionsUnion1
+> = smartUnion([
+  z.lazy(() => PreviewMultiAttachDimensions1$outboundSchema),
+  z.lazy(() => PreviewMultiAttachDimensions2$outboundSchema),
+]);
+
+export function previewMultiAttachDimensionsUnion1ToJSON(
+  previewMultiAttachDimensionsUnion1: PreviewMultiAttachDimensionsUnion1,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachDimensionsUnion1$outboundSchema.parse(
+      previewMultiAttachDimensionsUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachMultipliersMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const PreviewMultiAttachMultipliersMatch1$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachMultipliersMatch1$Outbound,
+  PreviewMultiAttachMultipliersMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewMultiAttachMultipliersMatch1ToJSON(
+  previewMultiAttachMultipliersMatch1: PreviewMultiAttachMultipliersMatch1,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachMultipliersMatch1$outboundSchema.parse(
+      previewMultiAttachMultipliersMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachMultipliers1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachMultipliers1$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachMultipliers1$Outbound,
+  PreviewMultiAttachMultipliers1
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function previewMultiAttachMultipliers1ToJSON(
+  previewMultiAttachMultipliers1: PreviewMultiAttachMultipliers1,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachMultipliers1$outboundSchema.parse(
+      previewMultiAttachMultipliers1,
+    ),
+  );
+}
+
+/** @internal */
+export const PreviewMultiAttachToEnum$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachToEnum
+> = z.enum(PreviewMultiAttachToEnum);
+
+/** @internal */
+export type PreviewMultiAttachFeatureOverrideToUnion$Outbound = number | string;
+
+/** @internal */
+export const PreviewMultiAttachFeatureOverrideToUnion$outboundSchema:
+  z.ZodMiniType<
+    PreviewMultiAttachFeatureOverrideToUnion$Outbound,
+    PreviewMultiAttachFeatureOverrideToUnion
+  > = smartUnion([z.number(), PreviewMultiAttachToEnum$outboundSchema]);
+
+export function previewMultiAttachFeatureOverrideToUnionToJSON(
+  previewMultiAttachFeatureOverrideToUnion:
+    PreviewMultiAttachFeatureOverrideToUnion,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachFeatureOverrideToUnion$outboundSchema.parse(
+      previewMultiAttachFeatureOverrideToUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachFeatureOverrideTier$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachFeatureOverrideTier$outboundSchema:
+  z.ZodMiniType<
+    PreviewMultiAttachFeatureOverrideTier$Outbound,
+    PreviewMultiAttachFeatureOverrideTier
+  > = z.pipe(
+    z.object({
+      to: smartUnion([z.number(), PreviewMultiAttachToEnum$outboundSchema]),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function previewMultiAttachFeatureOverrideTierToJSON(
+  previewMultiAttachFeatureOverrideTier: PreviewMultiAttachFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachFeatureOverrideTier$outboundSchema.parse(
+      previewMultiAttachFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachCreditSchema1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | PreviewMultiAttachDimensions1$Outbound
+      | PreviewMultiAttachDimensions2$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: PreviewMultiAttachMultipliers1$Outbound }
+    | undefined;
   tier_behavior: "graduated";
-  tiers: Array<any>;
+  tiers: Array<PreviewMultiAttachFeatureOverrideTier$Outbound>;
 };
 
 /** @internal */
@@ -1664,8 +2520,21 @@ export const PreviewMultiAttachCreditSchema1$outboundSchema: z.ZodMiniType<
   z.object({
     meteredFeatureId: z.string(),
     billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => PreviewMultiAttachDimensions1$outboundSchema),
+        z.lazy(() => PreviewMultiAttachDimensions2$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => PreviewMultiAttachMultipliers1$outboundSchema),
+    )),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(z.any()),
+    tiers: z.array(z.lazy(() =>
+      PreviewMultiAttachFeatureOverrideTier$outboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1711,6 +2580,110 @@ export function previewMultiAttachCreditSchemaUnionToJSON(
 }
 
 /** @internal */
+export type PreviewMultiAttachProviderMarkups$Outbound = {
+  markup: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachProviderMarkups$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachProviderMarkups$Outbound,
+  PreviewMultiAttachProviderMarkups
+> = z.object({
+  markup: z.number(),
+});
+
+export function previewMultiAttachProviderMarkupsToJSON(
+  previewMultiAttachProviderMarkups: PreviewMultiAttachProviderMarkups,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachProviderMarkups$outboundSchema.parse(
+      previewMultiAttachProviderMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachModelMarkups$Outbound = {
+  markup?: number | undefined;
+  input_cost?: number | undefined;
+  output_cost?: number | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachModelMarkups$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachModelMarkups$Outbound,
+  PreviewMultiAttachModelMarkups
+> = z.pipe(
+  z.object({
+    markup: z.optional(z.number()),
+    inputCost: z.optional(z.number()),
+    outputCost: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      inputCost: "input_cost",
+      outputCost: "output_cost",
+    });
+  }),
+);
+
+export function previewMultiAttachModelMarkupsToJSON(
+  previewMultiAttachModelMarkups: PreviewMultiAttachModelMarkups,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachModelMarkups$outboundSchema.parse(
+      previewMultiAttachModelMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachMarkups$Outbound = {
+  default_markup?: number | undefined;
+  provider_markups?:
+    | { [k: string]: PreviewMultiAttachProviderMarkups$Outbound }
+    | null
+    | undefined;
+  model_markups?:
+    | { [k: string]: PreviewMultiAttachModelMarkups$Outbound }
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachMarkups$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachMarkups$Outbound,
+  PreviewMultiAttachMarkups
+> = z.pipe(
+  z.object({
+    defaultMarkup: z.optional(z.number()),
+    providerMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => PreviewMultiAttachProviderMarkups$outboundSchema),
+    ))),
+    modelMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => PreviewMultiAttachModelMarkups$outboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      defaultMarkup: "default_markup",
+      providerMarkups: "provider_markups",
+      modelMarkups: "model_markups",
+    });
+  }),
+);
+
+export function previewMultiAttachMarkupsToJSON(
+  previewMultiAttachMarkups: PreviewMultiAttachMarkups,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachMarkups$outboundSchema.parse(previewMultiAttachMarkups),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachFeatureOverride$Outbound = {
   credit_schema?:
     | Array<
@@ -1718,6 +2691,7 @@ export type PreviewMultiAttachFeatureOverride$Outbound = {
       | PreviewMultiAttachCreditSchema2$Outbound
     >
     | undefined;
+  markups?: PreviewMultiAttachMarkups$Outbound | undefined;
 };
 
 /** @internal */
@@ -1732,6 +2706,9 @@ export const PreviewMultiAttachFeatureOverride$outboundSchema: z.ZodMiniType<
         PreviewMultiAttachCreditSchema2$outboundSchema
       ),
     ]))),
+    markups: z.optional(z.lazy(() =>
+      PreviewMultiAttachMarkups$outboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {

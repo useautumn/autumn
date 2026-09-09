@@ -15,15 +15,15 @@ export const multiAttachItemAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
-export const multiAttachToSchema = z.union([z.number(), z.string()]);
+export const multiAttachPriceToSchema = z.union([z.number(), z.string()]);
 
 export const multiAttachTierAdditionalCurrencySchema = z.object({
-	currency: z.union([z.any(), z.undefined()]).optional(),
-	amount: z.union([z.any(), z.undefined()]).optional(),
-	flatAmount: z.union([z.any(), z.undefined()]).optional(),
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const multiAttachTierSchema = z.object({
+export const multiAttachPriceTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
@@ -32,36 +32,89 @@ export const multiAttachTierSchema = z.object({
 		.optional(),
 });
 
-export const multiAttachCreditSchema2Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+export const multiAttachDimensionsMatch4Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachDimensions4Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
 	creditCost: z.number(),
 });
 
-export const multiAttachCreditSchema1Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	tierBehavior: z.literal("graduated"),
-	tiers: z.array(z.any()),
-});
-
-export const multiAttachCreditSchemaUnionSchema = z.union([
-	multiAttachCreditSchema1Schema,
-	multiAttachCreditSchema2Schema,
+export const multiAttachDimensionsMatch3Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
 ]);
 
-export const multiAttachFeatureOverrideSchema = z.object({
-	creditSchema: z
+export const multiAttachMultipliersMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const multiAttachDimensionsMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachDimensions2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const multiAttachDimensionsMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachMultipliersMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const multiAttachProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const multiAttachModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const multiAttachMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
 		.union([
-			z.array(
-				z.union([
-					multiAttachCreditSchema1Schema,
-					multiAttachCreditSchema2Schema,
-				]),
-			),
+			z.record(z.string(), multiAttachProviderMarkupsSchema),
 			z.undefined(),
 		])
-		.optional(),
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([z.record(z.string(), multiAttachModelMarkupsSchema), z.undefined()])
+		.optional()
+		.nullable(),
 });
 
 export const multiAttachFeatureQuantitySchema = z.object({
@@ -149,15 +202,18 @@ export const multiAttachItemAdditionalCurrencyOutboundSchema = z.object({
 	amount: z.number(),
 });
 
-export const multiAttachToOutboundSchema = z.union([z.number(), z.string()]);
+export const multiAttachPriceToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
 
 export const multiAttachTierAdditionalCurrencyOutboundSchema = z.object({
-	currency: z.union([z.any(), z.undefined()]).optional(),
-	amount: z.union([z.any(), z.undefined()]).optional(),
-	flat_amount: z.union([z.any(), z.undefined()]).optional(),
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const multiAttachTierOutboundSchema = z.object({
+export const multiAttachPriceTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
@@ -178,7 +234,7 @@ export const multiAttachPriceOutboundSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(multiAttachTierOutboundSchema), z.undefined()])
+		.union([z.array(multiAttachPriceTierOutboundSchema), z.undefined()])
 		.optional(),
 	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.string(),
@@ -200,23 +256,201 @@ export const multiAttachRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const multiAttachDimensionsMatch4OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachDimensions4OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const multiAttachDimensionsMatch3OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachDimensionsToUnion2OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const multiAttachDimensionsTier2OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const multiAttachDimensions3OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(multiAttachDimensionsTier2OutboundSchema),
+});
+
+export const multiAttachDimensionsUnion2OutboundSchema = z.union([
+	multiAttachDimensions3OutboundSchema,
+	multiAttachDimensions4OutboundSchema,
+]);
+
+export const multiAttachMultipliersMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachMultipliers2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const multiAttachCreditSchema2OutboundSchema = z.object({
 	metered_feature_id: z.string(),
 	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					multiAttachDimensions3OutboundSchema,
+					multiAttachDimensions4OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), multiAttachMultipliers2OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	credit_cost: z.number(),
+});
+
+export const multiAttachDimensionsMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachDimensions2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const multiAttachDimensionsMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachDimensionsToUnion1OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const multiAttachDimensionsTier1OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const multiAttachDimensions1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(multiAttachDimensionsTier1OutboundSchema),
+});
+
+export const multiAttachDimensionsUnion1OutboundSchema = z.union([
+	multiAttachDimensions1OutboundSchema,
+	multiAttachDimensions2OutboundSchema,
+]);
+
+export const multiAttachMultipliersMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const multiAttachMultipliers1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const multiAttachFeatureOverrideToUnionOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const multiAttachFeatureOverrideTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
 	credit_cost: z.number(),
 });
 
 export const multiAttachCreditSchema1OutboundSchema = z.object({
 	metered_feature_id: z.string(),
 	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					multiAttachDimensions1OutboundSchema,
+					multiAttachDimensions2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), multiAttachMultipliers1OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tier_behavior: z.literal("graduated"),
-	tiers: z.array(z.any()),
+	tiers: z.array(multiAttachFeatureOverrideTierOutboundSchema),
 });
 
 export const multiAttachCreditSchemaUnionOutboundSchema = z.union([
 	multiAttachCreditSchema1OutboundSchema,
 	multiAttachCreditSchema2OutboundSchema,
 ]);
+
+export const multiAttachProviderMarkupsOutboundSchema = z.object({
+	markup: z.number(),
+});
+
+export const multiAttachModelMarkupsOutboundSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	input_cost: z.union([z.number(), z.undefined()]).optional(),
+	output_cost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const multiAttachMarkupsOutboundSchema = z.object({
+	default_markup: z.union([z.number(), z.undefined()]).optional(),
+	provider_markups: z
+		.union([
+			z.record(z.string(), multiAttachProviderMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	model_markups: z
+		.union([
+			z.record(z.string(), multiAttachModelMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
 
 export const multiAttachFeatureOverrideOutboundSchema = z.object({
 	credit_schema: z
@@ -229,6 +463,9 @@ export const multiAttachFeatureOverrideOutboundSchema = z.object({
 			),
 			z.undefined(),
 		])
+		.optional(),
+	markups: z
+		.union([multiAttachMarkupsOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -421,7 +658,9 @@ export const multiAttachPriceSchema = z.object({
 	additionalCurrencies: z
 		.union([z.array(multiAttachItemAdditionalCurrencySchema), z.undefined()])
 		.optional(),
-	tiers: z.union([z.array(multiAttachTierSchema), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(multiAttachPriceTierSchema), z.undefined()])
+		.optional(),
 	tierBehavior: z
 		.union([multiAttachTierBehaviorSchema, z.undefined()])
 		.optional(),
@@ -448,6 +687,123 @@ export const multiAttachRolloverSchema = z.object({
 	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: multiAttachExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const multiAttachDimensionsToEnum2Schema = closedEnumSchema;
+
+export const multiAttachDimensionsToUnion2Schema = z.union([
+	z.number(),
+	multiAttachDimensionsToEnum2Schema,
+]);
+
+export const multiAttachDimensionsTier2Schema = z.object({
+	to: z.union([z.number(), multiAttachDimensionsToEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const multiAttachDimensions3Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(multiAttachDimensionsTier2Schema),
+});
+
+export const multiAttachDimensionsUnion2Schema = z.union([
+	multiAttachDimensions3Schema,
+	multiAttachDimensions4Schema,
+]);
+
+export const multiAttachCreditSchema2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([multiAttachDimensions3Schema, multiAttachDimensions4Schema]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([z.record(z.string(), multiAttachMultipliers2Schema), z.undefined()])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const multiAttachDimensionsToEnum1Schema = closedEnumSchema;
+
+export const multiAttachDimensionsToUnion1Schema = z.union([
+	z.number(),
+	multiAttachDimensionsToEnum1Schema,
+]);
+
+export const multiAttachDimensionsTier1Schema = z.object({
+	to: z.union([z.number(), multiAttachDimensionsToEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const multiAttachDimensions1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(multiAttachDimensionsTier1Schema),
+});
+
+export const multiAttachDimensionsUnion1Schema = z.union([
+	multiAttachDimensions1Schema,
+	multiAttachDimensions2Schema,
+]);
+
+export const multiAttachToEnumSchema = closedEnumSchema;
+
+export const multiAttachFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	multiAttachToEnumSchema,
+]);
+
+export const multiAttachFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), multiAttachToEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const multiAttachCreditSchema1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([multiAttachDimensions1Schema, multiAttachDimensions2Schema]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([z.record(z.string(), multiAttachMultipliers1Schema), z.undefined()])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(multiAttachFeatureOverrideTierSchema),
+});
+
+export const multiAttachCreditSchemaUnionSchema = z.union([
+	multiAttachCreditSchema1Schema,
+	multiAttachCreditSchema2Schema,
+]);
+
+export const multiAttachFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					multiAttachCreditSchema1Schema,
+					multiAttachCreditSchema2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z.union([multiAttachMarkupsSchema, z.undefined()]).optional(),
 });
 
 export const multiAttachPlanItemSchema = z.object({

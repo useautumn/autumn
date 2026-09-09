@@ -438,6 +438,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                           Number of metered-feature units priced together. Defaults to one when omitted.
                         </ParamField>
 
+                        <ParamField body="dimensions.{key}" type="object">
+                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                          <Expandable title="properties">
+                            <ParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </ParamField>
+
+                            <ParamField body="priority" type="integer">
+                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                            </ParamField>
+
+                            <ParamField body="tier_behavior" type="string" required />
+
+                            <ParamField body="tiers" type="object[]" required>
+                              <Expandable title="properties">
+                                <ParamField body="to" type="number" required>
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number" required>
+                                  Credits consumed per billing-unit group within this tier.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="multipliers.{key}" type="object">
+                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                          <Expandable title="properties">
+                            <ParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </ParamField>
+
+                            <ParamField body="factor" type="number">
+                              Multiplies the matched rate. All matching multipliers stack.
+                            </ParamField>
+
+                            <ParamField body="add" type="number">
+                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="tier_behavior" type="string" />
 
                         <ParamField body="tiers" type="object[]">
@@ -455,6 +502,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                         <ParamField body="credit_cost" type="number">
                           Credits consumed per billing-unit group.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="markups" type="object">
+                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                      <Expandable title="properties">
+                        <ParamField body="default_markup" type="number">
+                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                        </ParamField>
+
+                        <ParamField body="provider_markups.{key}" type="object | null">
+                          Per-provider markup percentages for customers on this plan.
+                          <Expandable title="properties">
+                            <ParamField body="markup" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="model_markups.{key}" type="object | null">
+                          Per-model markup overrides for customers on this plan.
+                          <Expandable title="properties">
+                            <ParamField body="markup" type="number" />
+
+                            <ParamField body="input_cost" type="number" />
+
+                            <ParamField body="output_cost" type="number" />
+
+                          </Expandable>
                         </ParamField>
 
                       </Expandable>
@@ -949,6 +1026,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Number of metered-feature units priced together. Defaults to one when omitted.
                                 </ParamField>
 
+                                <ParamField body="dimensions.{key}" type="object">
+                                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="priority" type="integer">
+                                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                    </ParamField>
+
+                                    <ParamField body="tier_behavior" type="string" required />
+
+                                    <ParamField body="tiers" type="object[]" required>
+                                      <Expandable title="properties">
+                                        <ParamField body="to" type="number" required>
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number" required>
+                                          Credits consumed per billing-unit group within this tier.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="multipliers.{key}" type="object">
+                                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="factor" type="number">
+                                      Multiplies the matched rate. All matching multipliers stack.
+                                    </ParamField>
+
+                                    <ParamField body="add" type="number">
+                                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="tier_behavior" type="string" />
 
                                 <ParamField body="tiers" type="object[]">
@@ -966,6 +1090,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                 <ParamField body="credit_cost" type="number">
                                   Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="markups" type="object">
+                              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                              <Expandable title="properties">
+                                <ParamField body="default_markup" type="number">
+                                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                </ParamField>
+
+                                <ParamField body="provider_markups.{key}" type="object | null">
+                                  Per-provider markup percentages for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="model_markups.{key}" type="object | null">
+                                  Per-model markup overrides for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" />
+
+                                    <ParamField body="input_cost" type="number" />
+
+                                    <ParamField body="output_cost" type="number" />
+
+                                  </Expandable>
                                 </ParamField>
 
                               </Expandable>
@@ -1393,6 +1547,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                           Number of metered-feature units priced together. Defaults to one when omitted.
                                         </ParamField>
 
+                                        <ParamField body="dimensions.{key}" type="object">
+                                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                          <Expandable title="properties">
+                                            <ParamField body="match.{key}" type="string" required>
+                                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                            </ParamField>
+
+                                            <ParamField body="priority" type="integer">
+                                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                            </ParamField>
+
+                                            <ParamField body="tier_behavior" type="string" required />
+
+                                            <ParamField body="tiers" type="object[]" required>
+                                              <Expandable title="properties">
+                                                <ParamField body="to" type="number" required>
+                                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                </ParamField>
+
+                                                <ParamField body="credit_cost" type="number" required>
+                                                  Credits consumed per billing-unit group within this tier.
+                                                </ParamField>
+
+                                              </Expandable>
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="multipliers.{key}" type="object">
+                                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                          <Expandable title="properties">
+                                            <ParamField body="match.{key}" type="string" required>
+                                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                            </ParamField>
+
+                                            <ParamField body="factor" type="number">
+                                              Multiplies the matched rate. All matching multipliers stack.
+                                            </ParamField>
+
+                                            <ParamField body="add" type="number">
+                                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
                                         <ParamField body="tier_behavior" type="string" />
 
                                         <ParamField body="tiers" type="object[]">
@@ -1410,6 +1611,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                         <ParamField body="credit_cost" type="number">
                                           Credits consumed per billing-unit group.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                    <ParamField body="markups" type="object">
+                                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                                      <Expandable title="properties">
+                                        <ParamField body="default_markup" type="number">
+                                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                        </ParamField>
+
+                                        <ParamField body="provider_markups.{key}" type="object | null">
+                                          Per-provider markup percentages for customers on this plan.
+                                          <Expandable title="properties">
+                                            <ParamField body="markup" type="number" required />
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="model_markups.{key}" type="object | null">
+                                          Per-model markup overrides for customers on this plan.
+                                          <Expandable title="properties">
+                                            <ParamField body="markup" type="number" />
+
+                                            <ParamField body="input_cost" type="number" />
+
+                                            <ParamField body="output_cost" type="number" />
+
+                                          </Expandable>
                                         </ParamField>
 
                                       </Expandable>
@@ -1474,31 +1705,31 @@ openapi: "api/openapi.yml webhook billing.updated"
         <ParamField body="previous_attributes" type="object | null" required>
           Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new.
           <Expandable title="properties">
-            <ParamField body="id" type="string">
+            <ParamField body="id" type="string | null">
               Unique identifier for the plan.
             </ParamField>
 
-            <ParamField body="name" type="string">
+            <ParamField body="name" type="string | null">
               Display name of the plan.
             </ParamField>
 
-            <ParamField body="description" type="string | null">
+            <ParamField body="description" type="string | null | null">
               Optional description of the plan.
             </ParamField>
 
-            <ParamField body="group" type="string | null">
+            <ParamField body="group" type="string | null | null">
               Group identifier for organizing related plans. Plans in the same group are mutually exclusive.
             </ParamField>
 
-            <ParamField body="add_on" type="boolean">
+            <ParamField body="add_on" type="boolean | null">
               Whether this is an add-on plan that can be attached alongside a main plan.
             </ParamField>
 
-            <ParamField body="auto_enable" type="boolean">
+            <ParamField body="auto_enable" type="boolean | null">
               If true, this plan is automatically attached when a customer is created. Used for free plans.
             </ParamField>
 
-            <ParamField body="config" type="object">
+            <ParamField body="config" type="object | null">
               Miscellaneous plan-level configuration flags.
               <Expandable title="properties">
                 <ParamField body="ignore_past_due" type="boolean" required>
@@ -1508,11 +1739,15 @@ openapi: "api/openapi.yml webhook billing.updated"
               </Expandable>
             </ParamField>
 
-            <ParamField body="archived" type="boolean">
+            <ParamField body="active" type="boolean | null">
+              Whether this is the active version of the plan. At most one version is active.
+            </ParamField>
+
+            <ParamField body="archived" type="boolean | null">
               Whether the plan is archived. Archived plans cannot be attached to new customers.
             </ParamField>
 
-            <ParamField body="metadata" type="object">
+            <ParamField body="metadata" type="object | null">
               Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
             </ParamField>
 
@@ -1583,9 +1818,9 @@ openapi: "api/openapi.yml webhook billing.updated"
             </ParamField>
 
             <ParamField body="billing_controls" type="object | null">
-              Sparse previous billing_controls — only keys that changed. Null when unset.
+              Sparse previous billing_controls — only keys that changed. Null when unset; a null lane was unset before.
               <Expandable title="properties">
-                <ParamField body="auto_topups" type="object[]">
+                <ParamField body="auto_topups" type="object[] | null">
                   List of auto top-up configurations per feature.
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string" required>
@@ -1629,7 +1864,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
-                <ParamField body="spend_limits" type="object[]">
+                <ParamField body="spend_limits" type="object[] | null">
                   List of overage spend limits per feature (caps overage spend).
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string">
@@ -1655,7 +1890,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
-                <ParamField body="usage_limits" type="object[]">
+                <ParamField body="usage_limits" type="object[] | null">
                   List of hard usage caps per feature (max units per interval).
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string" required>
@@ -1689,7 +1924,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
-                <ParamField body="usage_alerts" type="object[]">
+                <ParamField body="usage_alerts" type="object[] | null">
                   List of usage alert configurations per feature.
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string">
@@ -1727,7 +1962,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                   </Expandable>
                 </ParamField>
 
-                <ParamField body="overage_allowed" type="object[]">
+                <ParamField body="overage_allowed" type="object[] | null">
                   List of overage allowed controls per feature. When enabled, usage can exceed balance.
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string" required>
@@ -1750,8 +1985,8 @@ openapi: "api/openapi.yml webhook billing.updated"
         <ParamField body="price_change" type="object">
           Present when the plan's price changed.
           <Expandable title="properties">
-            <ParamField body="previous" type="object | null" required>
-              The plan's price before the change.
+            <ParamField body="previous" type="object | null | null" required>
+              Base recurring price for the plan. Null for free plans or usage-only plans.
               <Expandable title="properties">
                 <ParamField body="amount" type="number" required>
                   Base price amount for the plan, in major currency units (e.g. dollars).
@@ -2159,6 +2394,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                           Number of metered-feature units priced together. Defaults to one when omitted.
                         </ParamField>
 
+                        <ParamField body="dimensions.{key}" type="object">
+                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                          <Expandable title="properties">
+                            <ParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </ParamField>
+
+                            <ParamField body="priority" type="integer">
+                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                            </ParamField>
+
+                            <ParamField body="tier_behavior" type="string" required />
+
+                            <ParamField body="tiers" type="object[]" required>
+                              <Expandable title="properties">
+                                <ParamField body="to" type="number" required>
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number" required>
+                                  Credits consumed per billing-unit group within this tier.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="multipliers.{key}" type="object">
+                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                          <Expandable title="properties">
+                            <ParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </ParamField>
+
+                            <ParamField body="factor" type="number">
+                              Multiplies the matched rate. All matching multipliers stack.
+                            </ParamField>
+
+                            <ParamField body="add" type="number">
+                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="tier_behavior" type="string" />
 
                         <ParamField body="tiers" type="object[]">
@@ -2176,6 +2458,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                         <ParamField body="credit_cost" type="number">
                           Credits consumed per billing-unit group.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="markups" type="object">
+                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                      <Expandable title="properties">
+                        <ParamField body="default_markup" type="number">
+                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                        </ParamField>
+
+                        <ParamField body="provider_markups.{key}" type="object | null">
+                          Per-provider markup percentages for customers on this plan.
+                          <Expandable title="properties">
+                            <ParamField body="markup" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="model_markups.{key}" type="object | null">
+                          Per-model markup overrides for customers on this plan.
+                          <Expandable title="properties">
+                            <ParamField body="markup" type="number" />
+
+                            <ParamField body="input_cost" type="number" />
+
+                            <ParamField body="output_cost" type="number" />
+
+                          </Expandable>
                         </ParamField>
 
                       </Expandable>
@@ -2383,6 +2695,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                           Number of metered-feature units priced together. Defaults to one when omitted.
                         </ParamField>
 
+                        <ParamField body="dimensions.{key}" type="object">
+                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                          <Expandable title="properties">
+                            <ParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </ParamField>
+
+                            <ParamField body="priority" type="integer">
+                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                            </ParamField>
+
+                            <ParamField body="tier_behavior" type="string" required />
+
+                            <ParamField body="tiers" type="object[]" required>
+                              <Expandable title="properties">
+                                <ParamField body="to" type="number" required>
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </ParamField>
+
+                                <ParamField body="credit_cost" type="number" required>
+                                  Credits consumed per billing-unit group within this tier.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="multipliers.{key}" type="object">
+                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                          <Expandable title="properties">
+                            <ParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </ParamField>
+
+                            <ParamField body="factor" type="number">
+                              Multiplies the matched rate. All matching multipliers stack.
+                            </ParamField>
+
+                            <ParamField body="add" type="number">
+                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="tier_behavior" type="string" />
 
                         <ParamField body="tiers" type="object[]">
@@ -2400,6 +2759,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                         <ParamField body="credit_cost" type="number">
                           Credits consumed per billing-unit group.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="markups" type="object">
+                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                      <Expandable title="properties">
+                        <ParamField body="default_markup" type="number">
+                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                        </ParamField>
+
+                        <ParamField body="provider_markups.{key}" type="object | null">
+                          Per-provider markup percentages for customers on this plan.
+                          <Expandable title="properties">
+                            <ParamField body="markup" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="model_markups.{key}" type="object | null">
+                          Per-model markup overrides for customers on this plan.
+                          <Expandable title="properties">
+                            <ParamField body="markup" type="number" />
+
+                            <ParamField body="input_cost" type="number" />
+
+                            <ParamField body="output_cost" type="number" />
+
+                          </Expandable>
                         </ParamField>
 
                       </Expandable>
@@ -2827,6 +3216,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Number of metered-feature units priced together. Defaults to one when omitted.
                                 </ParamField>
 
+                                <ParamField body="dimensions.{key}" type="object">
+                                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="priority" type="integer">
+                                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                    </ParamField>
+
+                                    <ParamField body="tier_behavior" type="string" required />
+
+                                    <ParamField body="tiers" type="object[]" required>
+                                      <Expandable title="properties">
+                                        <ParamField body="to" type="number" required>
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number" required>
+                                          Credits consumed per billing-unit group within this tier.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="multipliers.{key}" type="object">
+                                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="factor" type="number">
+                                      Multiplies the matched rate. All matching multipliers stack.
+                                    </ParamField>
+
+                                    <ParamField body="add" type="number">
+                                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="tier_behavior" type="string" />
 
                                 <ParamField body="tiers" type="object[]">
@@ -2844,6 +3280,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                 <ParamField body="credit_cost" type="number">
                                   Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="markups" type="object">
+                              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                              <Expandable title="properties">
+                                <ParamField body="default_markup" type="number">
+                                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                </ParamField>
+
+                                <ParamField body="provider_markups.{key}" type="object | null">
+                                  Per-provider markup percentages for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="model_markups.{key}" type="object | null">
+                                  Per-model markup overrides for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" />
+
+                                    <ParamField body="input_cost" type="number" />
+
+                                    <ParamField body="output_cost" type="number" />
+
+                                  </Expandable>
                                 </ParamField>
 
                               </Expandable>
@@ -2916,6 +3382,10 @@ openapi: "api/openapi.yml webhook billing.updated"
 
             <ParamField body="included" type="number" required>
               Number of license assignments included with this plan for free.
+            </ParamField>
+
+            <ParamField body="metadata" type="object">
+              Arbitrary key-value metadata defined by you on this link.
             </ParamField>
 
             <ParamField body="plan" type="object">
@@ -3241,6 +3711,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Number of metered-feature units priced together. Defaults to one when omitted.
                             </ParamField>
 
+                            <ParamField body="dimensions.{key}" type="object">
+                              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                              <Expandable title="properties">
+                                <ParamField body="match.{key}" type="string" required>
+                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                </ParamField>
+
+                                <ParamField body="priority" type="integer">
+                                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                </ParamField>
+
+                                <ParamField body="tier_behavior" type="string" required />
+
+                                <ParamField body="tiers" type="object[]" required>
+                                  <Expandable title="properties">
+                                    <ParamField body="to" type="number" required>
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </ParamField>
+
+                                    <ParamField body="credit_cost" type="number" required>
+                                      Credits consumed per billing-unit group within this tier.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="multipliers.{key}" type="object">
+                              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                              <Expandable title="properties">
+                                <ParamField body="match.{key}" type="string" required>
+                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                </ParamField>
+
+                                <ParamField body="factor" type="number">
+                                  Multiplies the matched rate. All matching multipliers stack.
+                                </ParamField>
+
+                                <ParamField body="add" type="number">
+                                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
                             <ParamField body="tier_behavior" type="string" />
 
                             <ParamField body="tiers" type="object[]">
@@ -3258,6 +3775,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                             <ParamField body="credit_cost" type="number">
                               Credits consumed per billing-unit group.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="markups" type="object">
+                          For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                          <Expandable title="properties">
+                            <ParamField body="default_markup" type="number">
+                              Default percentage markup for customers on this plan. Use -100 to make usage free.
+                            </ParamField>
+
+                            <ParamField body="provider_markups.{key}" type="object | null">
+                              Per-provider markup percentages for customers on this plan.
+                              <Expandable title="properties">
+                                <ParamField body="markup" type="number" required />
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="model_markups.{key}" type="object | null">
+                              Per-model markup overrides for customers on this plan.
+                              <Expandable title="properties">
+                                <ParamField body="markup" type="number" />
+
+                                <ParamField body="input_cost" type="number" />
+
+                                <ParamField body="output_cost" type="number" />
+
+                              </Expandable>
                             </ParamField>
 
                           </Expandable>
@@ -3752,6 +4299,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                       Number of metered-feature units priced together. Defaults to one when omitted.
                                     </ParamField>
 
+                                    <ParamField body="dimensions.{key}" type="object">
+                                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                      <Expandable title="properties">
+                                        <ParamField body="match.{key}" type="string" required>
+                                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                        </ParamField>
+
+                                        <ParamField body="priority" type="integer">
+                                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                        </ParamField>
+
+                                        <ParamField body="tier_behavior" type="string" required />
+
+                                        <ParamField body="tiers" type="object[]" required>
+                                          <Expandable title="properties">
+                                            <ParamField body="to" type="number" required>
+                                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                            </ParamField>
+
+                                            <ParamField body="credit_cost" type="number" required>
+                                              Credits consumed per billing-unit group within this tier.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                    <ParamField body="multipliers.{key}" type="object">
+                                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                      <Expandable title="properties">
+                                        <ParamField body="match.{key}" type="string" required>
+                                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                        </ParamField>
+
+                                        <ParamField body="factor" type="number">
+                                          Multiplies the matched rate. All matching multipliers stack.
+                                        </ParamField>
+
+                                        <ParamField body="add" type="number">
+                                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
                                     <ParamField body="tier_behavior" type="string" />
 
                                     <ParamField body="tiers" type="object[]">
@@ -3769,6 +4363,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                     <ParamField body="credit_cost" type="number">
                                       Credits consumed per billing-unit group.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="markups" type="object">
+                                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                                  <Expandable title="properties">
+                                    <ParamField body="default_markup" type="number">
+                                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                    </ParamField>
+
+                                    <ParamField body="provider_markups.{key}" type="object | null">
+                                      Per-provider markup percentages for customers on this plan.
+                                      <Expandable title="properties">
+                                        <ParamField body="markup" type="number" required />
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                    <ParamField body="model_markups.{key}" type="object | null">
+                                      Per-model markup overrides for customers on this plan.
+                                      <Expandable title="properties">
+                                        <ParamField body="markup" type="number" />
+
+                                        <ParamField body="input_cost" type="number" />
+
+                                        <ParamField body="output_cost" type="number" />
+
+                                      </Expandable>
                                     </ParamField>
 
                                   </Expandable>
@@ -4196,6 +4820,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                               Number of metered-feature units priced together. Defaults to one when omitted.
                                             </ParamField>
 
+                                            <ParamField body="dimensions.{key}" type="object">
+                                              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                              <Expandable title="properties">
+                                                <ParamField body="match.{key}" type="string" required>
+                                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                </ParamField>
+
+                                                <ParamField body="priority" type="integer">
+                                                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                </ParamField>
+
+                                                <ParamField body="tier_behavior" type="string" required />
+
+                                                <ParamField body="tiers" type="object[]" required>
+                                                  <Expandable title="properties">
+                                                    <ParamField body="to" type="number" required>
+                                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                    </ParamField>
+
+                                                    <ParamField body="credit_cost" type="number" required>
+                                                      Credits consumed per billing-unit group within this tier.
+                                                    </ParamField>
+
+                                                  </Expandable>
+                                                </ParamField>
+
+                                              </Expandable>
+                                            </ParamField>
+
+                                            <ParamField body="multipliers.{key}" type="object">
+                                              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                              <Expandable title="properties">
+                                                <ParamField body="match.{key}" type="string" required>
+                                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                </ParamField>
+
+                                                <ParamField body="factor" type="number">
+                                                  Multiplies the matched rate. All matching multipliers stack.
+                                                </ParamField>
+
+                                                <ParamField body="add" type="number">
+                                                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                                                </ParamField>
+
+                                              </Expandable>
+                                            </ParamField>
+
                                             <ParamField body="tier_behavior" type="string" />
 
                                             <ParamField body="tiers" type="object[]">
@@ -4213,6 +4884,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                             <ParamField body="credit_cost" type="number">
                                               Credits consumed per billing-unit group.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="markups" type="object">
+                                          For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                                          <Expandable title="properties">
+                                            <ParamField body="default_markup" type="number">
+                                              Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                            </ParamField>
+
+                                            <ParamField body="provider_markups.{key}" type="object | null">
+                                              Per-provider markup percentages for customers on this plan.
+                                              <Expandable title="properties">
+                                                <ParamField body="markup" type="number" required />
+
+                                              </Expandable>
+                                            </ParamField>
+
+                                            <ParamField body="model_markups.{key}" type="object | null">
+                                              Per-model markup overrides for customers on this plan.
+                                              <Expandable title="properties">
+                                                <ParamField body="markup" type="number" />
+
+                                                <ParamField body="input_cost" type="number" />
+
+                                                <ParamField body="output_cost" type="number" />
+
+                                              </Expandable>
                                             </ParamField>
 
                                           </Expandable>
@@ -4622,6 +5323,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Number of metered-feature units priced together. Defaults to one when omitted.
                                 </ParamField>
 
+                                <ParamField body="dimensions.{key}" type="object">
+                                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="priority" type="integer">
+                                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                    </ParamField>
+
+                                    <ParamField body="tier_behavior" type="string" required />
+
+                                    <ParamField body="tiers" type="object[]" required>
+                                      <Expandable title="properties">
+                                        <ParamField body="to" type="number" required>
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number" required>
+                                          Credits consumed per billing-unit group within this tier.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="multipliers.{key}" type="object">
+                                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="factor" type="number">
+                                      Multiplies the matched rate. All matching multipliers stack.
+                                    </ParamField>
+
+                                    <ParamField body="add" type="number">
+                                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="tier_behavior" type="string" />
 
                                 <ParamField body="tiers" type="object[]">
@@ -4639,6 +5387,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                 <ParamField body="credit_cost" type="number">
                                   Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="markups" type="object">
+                              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                              <Expandable title="properties">
+                                <ParamField body="default_markup" type="number">
+                                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                </ParamField>
+
+                                <ParamField body="provider_markups.{key}" type="object | null">
+                                  Per-provider markup percentages for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="model_markups.{key}" type="object | null">
+                                  Per-model markup overrides for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" />
+
+                                    <ParamField body="input_cost" type="number" />
+
+                                    <ParamField body="output_cost" type="number" />
+
+                                  </Expandable>
                                 </ParamField>
 
                               </Expandable>
@@ -5133,6 +5911,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                           Number of metered-feature units priced together. Defaults to one when omitted.
                                         </ParamField>
 
+                                        <ParamField body="dimensions.{key}" type="object">
+                                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                          <Expandable title="properties">
+                                            <ParamField body="match.{key}" type="string" required>
+                                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                            </ParamField>
+
+                                            <ParamField body="priority" type="integer">
+                                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                            </ParamField>
+
+                                            <ParamField body="tier_behavior" type="string" required />
+
+                                            <ParamField body="tiers" type="object[]" required>
+                                              <Expandable title="properties">
+                                                <ParamField body="to" type="number" required>
+                                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                </ParamField>
+
+                                                <ParamField body="credit_cost" type="number" required>
+                                                  Credits consumed per billing-unit group within this tier.
+                                                </ParamField>
+
+                                              </Expandable>
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="multipliers.{key}" type="object">
+                                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                          <Expandable title="properties">
+                                            <ParamField body="match.{key}" type="string" required>
+                                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                            </ParamField>
+
+                                            <ParamField body="factor" type="number">
+                                              Multiplies the matched rate. All matching multipliers stack.
+                                            </ParamField>
+
+                                            <ParamField body="add" type="number">
+                                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
                                         <ParamField body="tier_behavior" type="string" />
 
                                         <ParamField body="tiers" type="object[]">
@@ -5150,6 +5975,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                         <ParamField body="credit_cost" type="number">
                                           Credits consumed per billing-unit group.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                    <ParamField body="markups" type="object">
+                                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                                      <Expandable title="properties">
+                                        <ParamField body="default_markup" type="number">
+                                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                        </ParamField>
+
+                                        <ParamField body="provider_markups.{key}" type="object | null">
+                                          Per-provider markup percentages for customers on this plan.
+                                          <Expandable title="properties">
+                                            <ParamField body="markup" type="number" required />
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="model_markups.{key}" type="object | null">
+                                          Per-model markup overrides for customers on this plan.
+                                          <Expandable title="properties">
+                                            <ParamField body="markup" type="number" />
+
+                                            <ParamField body="input_cost" type="number" />
+
+                                            <ParamField body="output_cost" type="number" />
+
+                                          </Expandable>
                                         </ParamField>
 
                                       </Expandable>
@@ -5577,6 +6432,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                                   Number of metered-feature units priced together. Defaults to one when omitted.
                                                 </ParamField>
 
+                                                <ParamField body="dimensions.{key}" type="object">
+                                                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                                  <Expandable title="properties">
+                                                    <ParamField body="match.{key}" type="string" required>
+                                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                    </ParamField>
+
+                                                    <ParamField body="priority" type="integer">
+                                                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                    </ParamField>
+
+                                                    <ParamField body="tier_behavior" type="string" required />
+
+                                                    <ParamField body="tiers" type="object[]" required>
+                                                      <Expandable title="properties">
+                                                        <ParamField body="to" type="number" required>
+                                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                        </ParamField>
+
+                                                        <ParamField body="credit_cost" type="number" required>
+                                                          Credits consumed per billing-unit group within this tier.
+                                                        </ParamField>
+
+                                                      </Expandable>
+                                                    </ParamField>
+
+                                                  </Expandable>
+                                                </ParamField>
+
+                                                <ParamField body="multipliers.{key}" type="object">
+                                                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                                  <Expandable title="properties">
+                                                    <ParamField body="match.{key}" type="string" required>
+                                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                    </ParamField>
+
+                                                    <ParamField body="factor" type="number">
+                                                      Multiplies the matched rate. All matching multipliers stack.
+                                                    </ParamField>
+
+                                                    <ParamField body="add" type="number">
+                                                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                                                    </ParamField>
+
+                                                  </Expandable>
+                                                </ParamField>
+
                                                 <ParamField body="tier_behavior" type="string" />
 
                                                 <ParamField body="tiers" type="object[]">
@@ -5594,6 +6496,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                                 <ParamField body="credit_cost" type="number">
                                                   Credits consumed per billing-unit group.
+                                                </ParamField>
+
+                                              </Expandable>
+                                            </ParamField>
+
+                                            <ParamField body="markups" type="object">
+                                              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                                              <Expandable title="properties">
+                                                <ParamField body="default_markup" type="number">
+                                                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                                </ParamField>
+
+                                                <ParamField body="provider_markups.{key}" type="object | null">
+                                                  Per-provider markup percentages for customers on this plan.
+                                                  <Expandable title="properties">
+                                                    <ParamField body="markup" type="number" required />
+
+                                                  </Expandable>
+                                                </ParamField>
+
+                                                <ParamField body="model_markups.{key}" type="object | null">
+                                                  Per-model markup overrides for customers on this plan.
+                                                  <Expandable title="properties">
+                                                    <ParamField body="markup" type="number" />
+
+                                                    <ParamField body="input_cost" type="number" />
+
+                                                    <ParamField body="output_cost" type="number" />
+
+                                                  </Expandable>
                                                 </ParamField>
 
                                               </Expandable>
@@ -5658,31 +6590,31 @@ openapi: "api/openapi.yml webhook billing.updated"
                 <ParamField body="previous_attributes" type="object | null" required>
                   Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new.
                   <Expandable title="properties">
-                    <ParamField body="id" type="string">
+                    <ParamField body="id" type="string | null">
                       Unique identifier for the plan.
                     </ParamField>
 
-                    <ParamField body="name" type="string">
+                    <ParamField body="name" type="string | null">
                       Display name of the plan.
                     </ParamField>
 
-                    <ParamField body="description" type="string | null">
+                    <ParamField body="description" type="string | null | null">
                       Optional description of the plan.
                     </ParamField>
 
-                    <ParamField body="group" type="string | null">
+                    <ParamField body="group" type="string | null | null">
                       Group identifier for organizing related plans. Plans in the same group are mutually exclusive.
                     </ParamField>
 
-                    <ParamField body="add_on" type="boolean">
+                    <ParamField body="add_on" type="boolean | null">
                       Whether this is an add-on plan that can be attached alongside a main plan.
                     </ParamField>
 
-                    <ParamField body="auto_enable" type="boolean">
+                    <ParamField body="auto_enable" type="boolean | null">
                       If true, this plan is automatically attached when a customer is created. Used for free plans.
                     </ParamField>
 
-                    <ParamField body="config" type="object">
+                    <ParamField body="config" type="object | null">
                       Miscellaneous plan-level configuration flags.
                       <Expandable title="properties">
                         <ParamField body="ignore_past_due" type="boolean" required>
@@ -5692,11 +6624,15 @@ openapi: "api/openapi.yml webhook billing.updated"
                       </Expandable>
                     </ParamField>
 
-                    <ParamField body="archived" type="boolean">
+                    <ParamField body="active" type="boolean | null">
+                      Whether this is the active version of the plan. At most one version is active.
+                    </ParamField>
+
+                    <ParamField body="archived" type="boolean | null">
                       Whether the plan is archived. Archived plans cannot be attached to new customers.
                     </ParamField>
 
-                    <ParamField body="metadata" type="object">
+                    <ParamField body="metadata" type="object | null">
                       Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
                     </ParamField>
 
@@ -5767,9 +6703,9 @@ openapi: "api/openapi.yml webhook billing.updated"
                     </ParamField>
 
                     <ParamField body="billing_controls" type="object | null">
-                      Sparse previous billing_controls — only keys that changed. Null when unset.
+                      Sparse previous billing_controls — only keys that changed. Null when unset; a null lane was unset before.
                       <Expandable title="properties">
-                        <ParamField body="auto_topups" type="object[]">
+                        <ParamField body="auto_topups" type="object[] | null">
                           List of auto top-up configurations per feature.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
@@ -5813,7 +6749,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
-                        <ParamField body="spend_limits" type="object[]">
+                        <ParamField body="spend_limits" type="object[] | null">
                           List of overage spend limits per feature (caps overage spend).
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string">
@@ -5839,7 +6775,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
-                        <ParamField body="usage_limits" type="object[]">
+                        <ParamField body="usage_limits" type="object[] | null">
                           List of hard usage caps per feature (max units per interval).
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
@@ -5873,7 +6809,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
-                        <ParamField body="usage_alerts" type="object[]">
+                        <ParamField body="usage_alerts" type="object[] | null">
                           List of usage alert configurations per feature.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string">
@@ -5911,7 +6847,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           </Expandable>
                         </ParamField>
 
-                        <ParamField body="overage_allowed" type="object[]">
+                        <ParamField body="overage_allowed" type="object[] | null">
                           List of overage allowed controls per feature. When enabled, usage can exceed balance.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
@@ -5934,8 +6870,8 @@ openapi: "api/openapi.yml webhook billing.updated"
                 <ParamField body="price_change" type="object">
                   Present when the plan's price changed.
                   <Expandable title="properties">
-                    <ParamField body="previous" type="object | null" required>
-                      The plan's price before the change.
+                    <ParamField body="previous" type="object | null | null" required>
+                      Base recurring price for the plan. Null for free plans or usage-only plans.
                       <Expandable title="properties">
                         <ParamField body="amount" type="number" required>
                           Base price amount for the plan, in major currency units (e.g. dollars).
@@ -6343,6 +7279,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Number of metered-feature units priced together. Defaults to one when omitted.
                                 </ParamField>
 
+                                <ParamField body="dimensions.{key}" type="object">
+                                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="priority" type="integer">
+                                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                    </ParamField>
+
+                                    <ParamField body="tier_behavior" type="string" required />
+
+                                    <ParamField body="tiers" type="object[]" required>
+                                      <Expandable title="properties">
+                                        <ParamField body="to" type="number" required>
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number" required>
+                                          Credits consumed per billing-unit group within this tier.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="multipliers.{key}" type="object">
+                                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="factor" type="number">
+                                      Multiplies the matched rate. All matching multipliers stack.
+                                    </ParamField>
+
+                                    <ParamField body="add" type="number">
+                                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="tier_behavior" type="string" />
 
                                 <ParamField body="tiers" type="object[]">
@@ -6360,6 +7343,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                 <ParamField body="credit_cost" type="number">
                                   Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="markups" type="object">
+                              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                              <Expandable title="properties">
+                                <ParamField body="default_markup" type="number">
+                                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                </ParamField>
+
+                                <ParamField body="provider_markups.{key}" type="object | null">
+                                  Per-provider markup percentages for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="model_markups.{key}" type="object | null">
+                                  Per-model markup overrides for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" />
+
+                                    <ParamField body="input_cost" type="number" />
+
+                                    <ParamField body="output_cost" type="number" />
+
+                                  </Expandable>
                                 </ParamField>
 
                               </Expandable>
@@ -6567,6 +7580,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Number of metered-feature units priced together. Defaults to one when omitted.
                                 </ParamField>
 
+                                <ParamField body="dimensions.{key}" type="object">
+                                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="priority" type="integer">
+                                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                    </ParamField>
+
+                                    <ParamField body="tier_behavior" type="string" required />
+
+                                    <ParamField body="tiers" type="object[]" required>
+                                      <Expandable title="properties">
+                                        <ParamField body="to" type="number" required>
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number" required>
+                                          Credits consumed per billing-unit group within this tier.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="multipliers.{key}" type="object">
+                                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                  <Expandable title="properties">
+                                    <ParamField body="match.{key}" type="string" required>
+                                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                    </ParamField>
+
+                                    <ParamField body="factor" type="number">
+                                      Multiplies the matched rate. All matching multipliers stack.
+                                    </ParamField>
+
+                                    <ParamField body="add" type="number">
+                                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="tier_behavior" type="string" />
 
                                 <ParamField body="tiers" type="object[]">
@@ -6584,6 +7644,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                 <ParamField body="credit_cost" type="number">
                                   Credits consumed per billing-unit group.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="markups" type="object">
+                              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                              <Expandable title="properties">
+                                <ParamField body="default_markup" type="number">
+                                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                </ParamField>
+
+                                <ParamField body="provider_markups.{key}" type="object | null">
+                                  Per-provider markup percentages for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="model_markups.{key}" type="object | null">
+                                  Per-model markup overrides for customers on this plan.
+                                  <Expandable title="properties">
+                                    <ParamField body="markup" type="number" />
+
+                                    <ParamField body="input_cost" type="number" />
+
+                                    <ParamField body="output_cost" type="number" />
+
+                                  </Expandable>
                                 </ParamField>
 
                               </Expandable>
@@ -7055,6 +8145,53 @@ openapi: "api/openapi.yml webhook billing.updated"
                       Number of metered-feature units priced together. Defaults to one when omitted.
                     </ParamField>
 
+                    <ParamField body="dimensions.{key}" type="object">
+                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                      <Expandable title="properties">
+                        <ParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </ParamField>
+
+                        <ParamField body="priority" type="integer">
+                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                        </ParamField>
+
+                        <ParamField body="tier_behavior" type="string" required />
+
+                        <ParamField body="tiers" type="object[]" required>
+                          <Expandable title="properties">
+                            <ParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </ParamField>
+
+                            <ParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="multipliers.{key}" type="object">
+                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                      <Expandable title="properties">
+                        <ParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </ParamField>
+
+                        <ParamField body="factor" type="number">
+                          Multiplies the matched rate. All matching multipliers stack.
+                        </ParamField>
+
+                        <ParamField body="add" type="number">
+                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
                     <ParamField body="tier_behavior" type="string" />
 
                     <ParamField body="tiers" type="object[]">
@@ -7072,6 +8209,36 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                     <ParamField body="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="markups" type="object">
+                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                  <Expandable title="properties">
+                    <ParamField body="default_markup" type="number">
+                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                    </ParamField>
+
+                    <ParamField body="provider_markups.{key}" type="object | null">
+                      Per-provider markup percentages for customers on this plan.
+                      <Expandable title="properties">
+                        <ParamField body="markup" type="number" required />
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="model_markups.{key}" type="object | null">
+                      Per-model markup overrides for customers on this plan.
+                      <Expandable title="properties">
+                        <ParamField body="markup" type="number" />
+
+                        <ParamField body="input_cost" type="number" />
+
+                        <ParamField body="output_cost" type="number" />
+
+                      </Expandable>
                     </ParamField>
 
                   </Expandable>

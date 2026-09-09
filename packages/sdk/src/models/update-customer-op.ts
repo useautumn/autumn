@@ -21,7 +21,7 @@ export type UpdateCustomerGlobals = {
 /**
  * The time interval for the purchase limit window.
  */
-export const UpdateCustomerPurchaseLimitIntervalRequestBody = {
+export const UpdateCustomerAutoTopupIntervalRequestBody = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -30,8 +30,8 @@ export const UpdateCustomerPurchaseLimitIntervalRequestBody = {
 /**
  * The time interval for the purchase limit window.
  */
-export type UpdateCustomerPurchaseLimitIntervalRequestBody = ClosedEnum<
-  typeof UpdateCustomerPurchaseLimitIntervalRequestBody
+export type UpdateCustomerAutoTopupIntervalRequestBody = ClosedEnum<
+  typeof UpdateCustomerAutoTopupIntervalRequestBody
 >;
 
 /**
@@ -41,7 +41,7 @@ export type UpdateCustomerPurchaseLimitRequestBody = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: UpdateCustomerPurchaseLimitIntervalRequestBody;
+  interval: UpdateCustomerAutoTopupIntervalRequestBody;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -120,6 +120,48 @@ export type UpdateCustomerSpendLimitRequestBody = {
   skipOverageBilling?: boolean | undefined;
 };
 
+export type UpdateCustomerUsageLimitProperties2 = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdateCustomerUsageLimitFilterRequestBody2 = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateCustomerSourceRequest2 = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateCustomerSourceRequest2 = ClosedEnum<
+  typeof UpdateCustomerSourceRequest2
+>;
+
+export type UpdateCustomerUsageLimitRequestBody2 = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdateCustomerUsageLimitFilterRequestBody2 | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateCustomerSourceRequest2 | undefined;
+  /**
+   * Usage consumed in the active interval, stored in the usage-window counter.
+   */
+  usage: number;
+};
+
 /**
  * Interval for the cap, aligned to the customer's billing cycle.
  */
@@ -150,16 +192,30 @@ export type UpdateCustomerAnchorRequestBody = ClosedEnum<
   typeof UpdateCustomerAnchorRequestBody
 >;
 
-export type UpdateCustomerUsageLimitProperties = string | number | boolean;
+export type UpdateCustomerUsageLimitProperties1 = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type UpdateCustomerUsageLimitFilterRequestBody = {
+export type UpdateCustomerUsageLimitFilterRequestBody1 = {
   properties: { [k: string]: string | number | boolean };
 };
 
-export type UpdateCustomerUsageLimitRequestBody = {
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateCustomerSourceRequest1 = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateCustomerSourceRequest1 = ClosedEnum<
+  typeof UpdateCustomerSourceRequest1
+>;
+
+export type UpdateCustomerUsageLimitRequestBody1 = {
   /**
    * The feature this usage limit applies to.
    */
@@ -183,8 +239,20 @@ export type UpdateCustomerUsageLimitRequestBody = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: UpdateCustomerUsageLimitFilterRequestBody | undefined;
+  filter?: UpdateCustomerUsageLimitFilterRequestBody1 | undefined;
+  /**
+   * Usage consumed in the active interval, stored in the usage-window counter.
+   */
+  usage?: number | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateCustomerSourceRequest1 | undefined;
 };
+
+export type UpdateCustomerUsageLimitUnion =
+  | UpdateCustomerUsageLimitRequestBody1
+  | UpdateCustomerUsageLimitRequestBody2;
 
 /**
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
@@ -269,9 +337,6 @@ export type UpdateCustomerOverageAllowedRequestBody = {
   enabled?: boolean | undefined;
 };
 
-/**
- * Billing controls for the customer (auto top-ups, etc.)
- */
 export type UpdateCustomerBillingControlsRequestBody = {
   /**
    * List of auto top-up configurations per feature.
@@ -282,9 +347,14 @@ export type UpdateCustomerBillingControlsRequestBody = {
    */
   spendLimits?: Array<UpdateCustomerSpendLimitRequestBody> | undefined;
   /**
-   * List of hard usage caps per feature (max units per interval).
+   * List of hard usage caps per feature. An entry with only feature_id and usage sets the current counter without changing configuration.
    */
-  usageLimits?: Array<UpdateCustomerUsageLimitRequestBody> | undefined;
+  usageLimits?:
+    | Array<
+      | UpdateCustomerUsageLimitRequestBody1
+      | UpdateCustomerUsageLimitRequestBody2
+    >
+    | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -342,9 +412,6 @@ export type UpdateCustomerParams = {
    * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
    */
   currency?: string | null | undefined;
-  /**
-   * Billing controls for the customer (auto top-ups, etc.)
-   */
   billingControls?: UpdateCustomerBillingControlsRequestBody | undefined;
   /**
    * Miscellaneous configurations for the customer.
@@ -371,7 +438,7 @@ export type UpdateCustomerEnv = OpenEnum<typeof UpdateCustomerEnv>;
 /**
  * The time interval for the purchase limit window.
  */
-export const UpdateCustomerPurchaseLimitIntervalResponse2 = {
+export const UpdateCustomerAutoTopupIntervalResponse2 = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -380,15 +447,15 @@ export const UpdateCustomerPurchaseLimitIntervalResponse2 = {
 /**
  * The time interval for the purchase limit window.
  */
-export type UpdateCustomerPurchaseLimitIntervalResponse2 = OpenEnum<
-  typeof UpdateCustomerPurchaseLimitIntervalResponse2
+export type UpdateCustomerAutoTopupIntervalResponse2 = OpenEnum<
+  typeof UpdateCustomerAutoTopupIntervalResponse2
 >;
 
 export type UpdateCustomerPurchaseLimitResponse2 = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: UpdateCustomerPurchaseLimitIntervalResponse2;
+  interval: UpdateCustomerAutoTopupIntervalResponse2;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -399,21 +466,21 @@ export type UpdateCustomerPurchaseLimitResponse2 = {
   limit: number;
 };
 
-export const UpdateCustomerPurchaseLimitIntervalResponse1 = {
+export const UpdateCustomerAutoTopupIntervalResponse1 = {
   Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
 } as const;
-export type UpdateCustomerPurchaseLimitIntervalResponse1 = OpenEnum<
-  typeof UpdateCustomerPurchaseLimitIntervalResponse1
+export type UpdateCustomerAutoTopupIntervalResponse1 = OpenEnum<
+  typeof UpdateCustomerAutoTopupIntervalResponse1
 >;
 
 export type UpdateCustomerPurchaseLimitResponse1 = {
   /**
    * The time interval for the purchase limit window. Null when no purchase limit is configured.
    */
-  interval: UpdateCustomerPurchaseLimitIntervalResponse1 | null;
+  interval: UpdateCustomerAutoTopupIntervalResponse1 | null;
   /**
    * Number of intervals in the purchase limit window. Null when no purchase limit is configured.
    */
@@ -582,15 +649,15 @@ export type UpdateCustomerUsageLimitFilterResponse = {
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export const UpdateCustomerUsageLimitSource = {
+export const UpdateCustomerUsageLimitSourceResponse = {
   Customer: "customer",
   Plan: "plan",
 } as const;
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export type UpdateCustomerUsageLimitSource = OpenEnum<
-  typeof UpdateCustomerUsageLimitSource
+export type UpdateCustomerUsageLimitSourceResponse = OpenEnum<
+  typeof UpdateCustomerUsageLimitSourceResponse
 >;
 
 export type UpdateCustomerUsageLimitResponse = {
@@ -619,13 +686,13 @@ export type UpdateCustomerUsageLimitResponse = {
    */
   filter?: UpdateCustomerUsageLimitFilterResponse | undefined;
   /**
-   * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
+   * Usage consumed in the active interval, stored in the usage-window counter.
    */
   usage?: number | undefined;
   /**
    * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
    */
-  source?: UpdateCustomerUsageLimitSource | undefined;
+  source?: UpdateCustomerUsageLimitSourceResponse | undefined;
 };
 
 /**
@@ -940,6 +1007,78 @@ export const UpdateCustomerType = {
  */
 export type UpdateCustomerType = OpenEnum<typeof UpdateCustomerType>;
 
+export type UpdateCustomerDimensions6 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const UpdateCustomerDimensionsToEnum3 = {
+  Inf: "inf",
+} as const;
+export type UpdateCustomerDimensionsToEnum3 = ClosedEnum<
+  typeof UpdateCustomerDimensionsToEnum3
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type UpdateCustomerDimensionsToUnion3 =
+  | number
+  | UpdateCustomerDimensionsToEnum3;
+
+export type UpdateCustomerDimensionsTier3 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | UpdateCustomerDimensionsToEnum3;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type UpdateCustomerDimensions5 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<UpdateCustomerDimensionsTier3>;
+};
+
+export type UpdateCustomerDimensionsUnion3 =
+  | UpdateCustomerDimensions5
+  | UpdateCustomerDimensions6;
+
+export type UpdateCustomerMultipliers3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type UpdateCustomerCreditSchema3 = {
   meteredFeatureId: "";
   /**
@@ -947,9 +1086,91 @@ export type UpdateCustomerCreditSchema3 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: UpdateCustomerDimensions5 | UpdateCustomerDimensions6;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: UpdateCustomerMultipliers3 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type UpdateCustomerDimensions4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const UpdateCustomerDimensionsToEnum2 = {
+  Inf: "inf",
+} as const;
+export type UpdateCustomerDimensionsToEnum2 = ClosedEnum<
+  typeof UpdateCustomerDimensionsToEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type UpdateCustomerDimensionsToUnion2 =
+  | number
+  | UpdateCustomerDimensionsToEnum2;
+
+export type UpdateCustomerDimensionsTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | UpdateCustomerDimensionsToEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type UpdateCustomerDimensions3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<UpdateCustomerDimensionsTier2>;
+};
+
+export type UpdateCustomerDimensionsUnion2 =
+  | UpdateCustomerDimensions3
+  | UpdateCustomerDimensions4;
+
+export type UpdateCustomerMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export type UpdateCustomerCreditSchema2 = {
@@ -962,9 +1183,91 @@ export type UpdateCustomerCreditSchema2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: UpdateCustomerDimensions3 | UpdateCustomerDimensions4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: UpdateCustomerMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type UpdateCustomerDimensions2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const UpdateCustomerDimensionsToEnum1 = {
+  Inf: "inf",
+} as const;
+export type UpdateCustomerDimensionsToEnum1 = ClosedEnum<
+  typeof UpdateCustomerDimensionsToEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type UpdateCustomerDimensionsToUnion1 =
+  | number
+  | UpdateCustomerDimensionsToEnum1;
+
+export type UpdateCustomerDimensionsTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | UpdateCustomerDimensionsToEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type UpdateCustomerDimensions1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<UpdateCustomerDimensionsTier1>;
+};
+
+export type UpdateCustomerDimensionsUnion1 =
+  | UpdateCustomerDimensions1
+  | UpdateCustomerDimensions2;
+
+export type UpdateCustomerMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export const UpdateCustomerToEnum = {
@@ -997,6 +1300,16 @@ export type UpdateCustomerCreditSchema1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: UpdateCustomerDimensions1 | UpdateCustomerDimensions2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: UpdateCustomerMultipliers1 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<UpdateCustomerTier>;
 };
@@ -1279,9 +1592,9 @@ export type UpdateCustomerResponse = {
 };
 
 /** @internal */
-export const UpdateCustomerPurchaseLimitIntervalRequestBody$outboundSchema:
-  z.ZodMiniEnum<typeof UpdateCustomerPurchaseLimitIntervalRequestBody> = z.enum(
-    UpdateCustomerPurchaseLimitIntervalRequestBody,
+export const UpdateCustomerAutoTopupIntervalRequestBody$outboundSchema:
+  z.ZodMiniEnum<typeof UpdateCustomerAutoTopupIntervalRequestBody> = z.enum(
+    UpdateCustomerAutoTopupIntervalRequestBody,
   );
 
 /** @internal */
@@ -1299,7 +1612,7 @@ export const UpdateCustomerPurchaseLimitRequestBody$outboundSchema:
     UpdateCustomerPurchaseLimitRequestBody
   > = z.pipe(
     z.object({
-      interval: UpdateCustomerPurchaseLimitIntervalRequestBody$outboundSchema,
+      interval: UpdateCustomerAutoTopupIntervalRequestBody$outboundSchema,
       intervalCount: z._default(z.number(), 1),
       limit: z.number(),
       count: z.optional(z.number()),
@@ -1413,6 +1726,99 @@ export function updateCustomerSpendLimitRequestBodyToJSON(
 }
 
 /** @internal */
+export type UpdateCustomerUsageLimitProperties2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const UpdateCustomerUsageLimitProperties2$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageLimitProperties2$Outbound,
+  UpdateCustomerUsageLimitProperties2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function updateCustomerUsageLimitProperties2ToJSON(
+  updateCustomerUsageLimitProperties2: UpdateCustomerUsageLimitProperties2,
+): string {
+  return JSON.stringify(
+    UpdateCustomerUsageLimitProperties2$outboundSchema.parse(
+      updateCustomerUsageLimitProperties2,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerUsageLimitFilterRequestBody2$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const UpdateCustomerUsageLimitFilterRequestBody2$outboundSchema:
+  z.ZodMiniType<
+    UpdateCustomerUsageLimitFilterRequestBody2$Outbound,
+    UpdateCustomerUsageLimitFilterRequestBody2
+  > = z.object({
+    properties: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+  });
+
+export function updateCustomerUsageLimitFilterRequestBody2ToJSON(
+  updateCustomerUsageLimitFilterRequestBody2:
+    UpdateCustomerUsageLimitFilterRequestBody2,
+): string {
+  return JSON.stringify(
+    UpdateCustomerUsageLimitFilterRequestBody2$outboundSchema.parse(
+      updateCustomerUsageLimitFilterRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
+export const UpdateCustomerSourceRequest2$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerSourceRequest2
+> = z.enum(UpdateCustomerSourceRequest2);
+
+/** @internal */
+export type UpdateCustomerUsageLimitRequestBody2$Outbound = {
+  feature_id: string;
+  filter?: UpdateCustomerUsageLimitFilterRequestBody2$Outbound | undefined;
+  source?: string | undefined;
+  usage: number;
+};
+
+/** @internal */
+export const UpdateCustomerUsageLimitRequestBody2$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageLimitRequestBody2$Outbound,
+  UpdateCustomerUsageLimitRequestBody2
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    filter: z.optional(
+      z.lazy(() => UpdateCustomerUsageLimitFilterRequestBody2$outboundSchema),
+    ),
+    source: z.optional(UpdateCustomerSourceRequest2$outboundSchema),
+    usage: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function updateCustomerUsageLimitRequestBody2ToJSON(
+  updateCustomerUsageLimitRequestBody2: UpdateCustomerUsageLimitRequestBody2,
+): string {
+  return JSON.stringify(
+    UpdateCustomerUsageLimitRequestBody2$outboundSchema.parse(
+      updateCustomerUsageLimitRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
 export const UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema:
   z.ZodMiniEnum<typeof UpdateCustomerUsageLimitIntervalRequestBody> = z.enum(
     UpdateCustomerUsageLimitIntervalRequestBody,
@@ -1424,37 +1830,37 @@ export const UpdateCustomerAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdateCustomerAnchorRequestBody);
 
 /** @internal */
-export type UpdateCustomerUsageLimitProperties$Outbound =
+export type UpdateCustomerUsageLimitProperties1$Outbound =
   | string
   | number
   | boolean;
 
 /** @internal */
-export const UpdateCustomerUsageLimitProperties$outboundSchema: z.ZodMiniType<
-  UpdateCustomerUsageLimitProperties$Outbound,
-  UpdateCustomerUsageLimitProperties
+export const UpdateCustomerUsageLimitProperties1$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageLimitProperties1$Outbound,
+  UpdateCustomerUsageLimitProperties1
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function updateCustomerUsageLimitPropertiesToJSON(
-  updateCustomerUsageLimitProperties: UpdateCustomerUsageLimitProperties,
+export function updateCustomerUsageLimitProperties1ToJSON(
+  updateCustomerUsageLimitProperties1: UpdateCustomerUsageLimitProperties1,
 ): string {
   return JSON.stringify(
-    UpdateCustomerUsageLimitProperties$outboundSchema.parse(
-      updateCustomerUsageLimitProperties,
+    UpdateCustomerUsageLimitProperties1$outboundSchema.parse(
+      updateCustomerUsageLimitProperties1,
     ),
   );
 }
 
 /** @internal */
-export type UpdateCustomerUsageLimitFilterRequestBody$Outbound = {
+export type UpdateCustomerUsageLimitFilterRequestBody1$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const UpdateCustomerUsageLimitFilterRequestBody$outboundSchema:
+export const UpdateCustomerUsageLimitFilterRequestBody1$outboundSchema:
   z.ZodMiniType<
-    UpdateCustomerUsageLimitFilterRequestBody$Outbound,
-    UpdateCustomerUsageLimitFilterRequestBody
+    UpdateCustomerUsageLimitFilterRequestBody1$Outbound,
+    UpdateCustomerUsageLimitFilterRequestBody1
   > = z.object({
     properties: z.record(
       z.string(),
@@ -1462,31 +1868,38 @@ export const UpdateCustomerUsageLimitFilterRequestBody$outboundSchema:
     ),
   });
 
-export function updateCustomerUsageLimitFilterRequestBodyToJSON(
-  updateCustomerUsageLimitFilterRequestBody:
-    UpdateCustomerUsageLimitFilterRequestBody,
+export function updateCustomerUsageLimitFilterRequestBody1ToJSON(
+  updateCustomerUsageLimitFilterRequestBody1:
+    UpdateCustomerUsageLimitFilterRequestBody1,
 ): string {
   return JSON.stringify(
-    UpdateCustomerUsageLimitFilterRequestBody$outboundSchema.parse(
-      updateCustomerUsageLimitFilterRequestBody,
+    UpdateCustomerUsageLimitFilterRequestBody1$outboundSchema.parse(
+      updateCustomerUsageLimitFilterRequestBody1,
     ),
   );
 }
 
 /** @internal */
-export type UpdateCustomerUsageLimitRequestBody$Outbound = {
+export const UpdateCustomerSourceRequest1$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerSourceRequest1
+> = z.enum(UpdateCustomerSourceRequest1);
+
+/** @internal */
+export type UpdateCustomerUsageLimitRequestBody1$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: UpdateCustomerUsageLimitFilterRequestBody$Outbound | undefined;
+  filter?: UpdateCustomerUsageLimitFilterRequestBody1$Outbound | undefined;
+  usage?: number | undefined;
+  source?: string | undefined;
 };
 
 /** @internal */
-export const UpdateCustomerUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
-  UpdateCustomerUsageLimitRequestBody$Outbound,
-  UpdateCustomerUsageLimitRequestBody
+export const UpdateCustomerUsageLimitRequestBody1$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageLimitRequestBody1$Outbound,
+  UpdateCustomerUsageLimitRequestBody1
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -1495,8 +1908,10 @@ export const UpdateCustomerUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
     interval: UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema,
     anchor: z.optional(UpdateCustomerAnchorRequestBody$outboundSchema),
     filter: z.optional(
-      z.lazy(() => UpdateCustomerUsageLimitFilterRequestBody$outboundSchema),
+      z.lazy(() => UpdateCustomerUsageLimitFilterRequestBody1$outboundSchema),
     ),
+    usage: z.optional(z.number()),
+    source: z.optional(UpdateCustomerSourceRequest1$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1505,12 +1920,36 @@ export const UpdateCustomerUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateCustomerUsageLimitRequestBodyToJSON(
-  updateCustomerUsageLimitRequestBody: UpdateCustomerUsageLimitRequestBody,
+export function updateCustomerUsageLimitRequestBody1ToJSON(
+  updateCustomerUsageLimitRequestBody1: UpdateCustomerUsageLimitRequestBody1,
 ): string {
   return JSON.stringify(
-    UpdateCustomerUsageLimitRequestBody$outboundSchema.parse(
-      updateCustomerUsageLimitRequestBody,
+    UpdateCustomerUsageLimitRequestBody1$outboundSchema.parse(
+      updateCustomerUsageLimitRequestBody1,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerUsageLimitUnion$Outbound =
+  | UpdateCustomerUsageLimitRequestBody1$Outbound
+  | UpdateCustomerUsageLimitRequestBody2$Outbound;
+
+/** @internal */
+export const UpdateCustomerUsageLimitUnion$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageLimitUnion$Outbound,
+  UpdateCustomerUsageLimitUnion
+> = smartUnion([
+  z.lazy(() => UpdateCustomerUsageLimitRequestBody1$outboundSchema),
+  z.lazy(() => UpdateCustomerUsageLimitRequestBody2$outboundSchema),
+]);
+
+export function updateCustomerUsageLimitUnionToJSON(
+  updateCustomerUsageLimitUnion: UpdateCustomerUsageLimitUnion,
+): string {
+  return JSON.stringify(
+    UpdateCustomerUsageLimitUnion$outboundSchema.parse(
+      updateCustomerUsageLimitUnion,
     ),
   );
 }
@@ -1662,7 +2101,10 @@ export type UpdateCustomerBillingControlsRequestBody$Outbound = {
     | Array<UpdateCustomerSpendLimitRequestBody$Outbound>
     | undefined;
   usage_limits?:
-    | Array<UpdateCustomerUsageLimitRequestBody$Outbound>
+    | Array<
+      | UpdateCustomerUsageLimitRequestBody1$Outbound
+      | UpdateCustomerUsageLimitRequestBody2$Outbound
+    >
     | undefined;
   usage_alerts?:
     | Array<UpdateCustomerUsageAlertRequestBody$Outbound>
@@ -1690,9 +2132,12 @@ export const UpdateCustomerBillingControlsRequestBody$outboundSchema:
         ),
       ),
       usageLimits: z.optional(
-        z.array(
-          z.lazy(() => UpdateCustomerUsageLimitRequestBody$outboundSchema),
-        ),
+        z.array(smartUnion([
+          z.lazy(() => UpdateCustomerUsageLimitRequestBody1$outboundSchema),
+          z.lazy(() =>
+            UpdateCustomerUsageLimitRequestBody2$outboundSchema
+          ),
+        ])),
       ),
       usageAlerts: z.optional(
         z.array(
@@ -1825,9 +2270,9 @@ export const UpdateCustomerEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateCustomerEnv);
 
 /** @internal */
-export const UpdateCustomerPurchaseLimitIntervalResponse2$inboundSchema:
-  z.ZodMiniType<UpdateCustomerPurchaseLimitIntervalResponse2, unknown> =
-    openEnums.inboundSchema(UpdateCustomerPurchaseLimitIntervalResponse2);
+export const UpdateCustomerAutoTopupIntervalResponse2$inboundSchema:
+  z.ZodMiniType<UpdateCustomerAutoTopupIntervalResponse2, unknown> = openEnums
+    .inboundSchema(UpdateCustomerAutoTopupIntervalResponse2);
 
 /** @internal */
 export const UpdateCustomerPurchaseLimitResponse2$inboundSchema: z.ZodMiniType<
@@ -1835,7 +2280,7 @@ export const UpdateCustomerPurchaseLimitResponse2$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: UpdateCustomerPurchaseLimitIntervalResponse2$inboundSchema,
+    interval: UpdateCustomerAutoTopupIntervalResponse2$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
   }),
@@ -1858,9 +2303,9 @@ export function updateCustomerPurchaseLimitResponse2FromJSON(
 }
 
 /** @internal */
-export const UpdateCustomerPurchaseLimitIntervalResponse1$inboundSchema:
-  z.ZodMiniType<UpdateCustomerPurchaseLimitIntervalResponse1, unknown> =
-    openEnums.inboundSchema(UpdateCustomerPurchaseLimitIntervalResponse1);
+export const UpdateCustomerAutoTopupIntervalResponse1$inboundSchema:
+  z.ZodMiniType<UpdateCustomerAutoTopupIntervalResponse1, unknown> = openEnums
+    .inboundSchema(UpdateCustomerAutoTopupIntervalResponse1);
 
 /** @internal */
 export const UpdateCustomerPurchaseLimitResponse1$inboundSchema: z.ZodMiniType<
@@ -1869,7 +2314,7 @@ export const UpdateCustomerPurchaseLimitResponse1$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: types.nullable(
-      UpdateCustomerPurchaseLimitIntervalResponse1$inboundSchema,
+      UpdateCustomerAutoTopupIntervalResponse1$inboundSchema,
     ),
     interval_count: types.nullable(types.number()),
     limit: types.nullable(types.number()),
@@ -2030,10 +2475,9 @@ export function updateCustomerUsageLimitFilterResponseFromJSON(
 }
 
 /** @internal */
-export const UpdateCustomerUsageLimitSource$inboundSchema: z.ZodMiniType<
-  UpdateCustomerUsageLimitSource,
-  unknown
-> = openEnums.inboundSchema(UpdateCustomerUsageLimitSource);
+export const UpdateCustomerUsageLimitSourceResponse$inboundSchema:
+  z.ZodMiniType<UpdateCustomerUsageLimitSourceResponse, unknown> = openEnums
+    .inboundSchema(UpdateCustomerUsageLimitSourceResponse);
 
 /** @internal */
 export const UpdateCustomerUsageLimitResponse$inboundSchema: z.ZodMiniType<
@@ -2050,7 +2494,9 @@ export const UpdateCustomerUsageLimitResponse$inboundSchema: z.ZodMiniType<
       z.lazy(() => UpdateCustomerUsageLimitFilterResponse$inboundSchema),
     ),
     usage: types.optional(types.number()),
-    source: types.optional(UpdateCustomerUsageLimitSource$inboundSchema),
+    source: types.optional(
+      UpdateCustomerUsageLimitSourceResponse$inboundSchema,
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2356,6 +2802,150 @@ export const UpdateCustomerType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateCustomerType);
 
 /** @internal */
+export const UpdateCustomerDimensions6$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensions6,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateCustomerDimensions6FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensions6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensions6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensions6' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsToEnum3$inboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerDimensionsToEnum3
+> = z.enum(UpdateCustomerDimensionsToEnum3);
+
+/** @internal */
+export const UpdateCustomerDimensionsToUnion3$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsToUnion3,
+  unknown
+> = smartUnion([types.number(), UpdateCustomerDimensionsToEnum3$inboundSchema]);
+
+export function updateCustomerDimensionsToUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsToUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsToUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsToUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsTier3$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsTier3,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      UpdateCustomerDimensionsToEnum3$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateCustomerDimensionsTier3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsTier3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsTier3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsTier3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensions5$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensions5,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => UpdateCustomerDimensionsTier3$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function updateCustomerDimensions5FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensions5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensions5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensions5' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsUnion3$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsUnion3,
+  unknown
+> = smartUnion([
+  z.lazy(() => UpdateCustomerDimensions5$inboundSchema),
+  z.lazy(() => UpdateCustomerDimensions6$inboundSchema),
+]);
+
+export function updateCustomerDimensionsUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerMultipliers3$inboundSchema: z.ZodMiniType<
+  UpdateCustomerMultipliers3,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function updateCustomerMultipliers3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerMultipliers3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerMultipliers3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerMultipliers3' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerCreditSchema3$inboundSchema: z.ZodMiniType<
   UpdateCustomerCreditSchema3,
   unknown
@@ -2363,6 +2953,17 @@ export const UpdateCustomerCreditSchema3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => UpdateCustomerDimensions5$inboundSchema),
+        z.lazy(() => UpdateCustomerDimensions6$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => UpdateCustomerMultipliers3$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2385,6 +2986,150 @@ export function updateCustomerCreditSchema3FromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerDimensions4$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensions4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateCustomerDimensions4FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensions4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensions4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensions4' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsToEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerDimensionsToEnum2
+> = z.enum(UpdateCustomerDimensionsToEnum2);
+
+/** @internal */
+export const UpdateCustomerDimensionsToUnion2$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsToUnion2,
+  unknown
+> = smartUnion([types.number(), UpdateCustomerDimensionsToEnum2$inboundSchema]);
+
+export function updateCustomerDimensionsToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsTier2$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      UpdateCustomerDimensionsToEnum2$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateCustomerDimensionsTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensions3$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensions3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => UpdateCustomerDimensionsTier2$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function updateCustomerDimensions3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensions3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensions3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensions3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => UpdateCustomerDimensions3$inboundSchema),
+  z.lazy(() => UpdateCustomerDimensions4$inboundSchema),
+]);
+
+export function updateCustomerDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerMultipliers2$inboundSchema: z.ZodMiniType<
+  UpdateCustomerMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function updateCustomerMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerCreditSchema2$inboundSchema: z.ZodMiniType<
   UpdateCustomerCreditSchema2,
   unknown
@@ -2392,6 +3137,17 @@ export const UpdateCustomerCreditSchema2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => UpdateCustomerDimensions3$inboundSchema),
+        z.lazy(() => UpdateCustomerDimensions4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => UpdateCustomerMultipliers2$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2410,6 +3166,150 @@ export function updateCustomerCreditSchema2FromJSON(
     jsonString,
     (x) => UpdateCustomerCreditSchema2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'UpdateCustomerCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensions2$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensions2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateCustomerDimensions2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensions2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensions2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensions2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsToEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerDimensionsToEnum1
+> = z.enum(UpdateCustomerDimensionsToEnum1);
+
+/** @internal */
+export const UpdateCustomerDimensionsToUnion1$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsToUnion1,
+  unknown
+> = smartUnion([types.number(), UpdateCustomerDimensionsToEnum1$inboundSchema]);
+
+export function updateCustomerDimensionsToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsTier1$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      UpdateCustomerDimensionsToEnum1$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateCustomerDimensionsTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensions1$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensions1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => UpdateCustomerDimensionsTier1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function updateCustomerDimensions1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensions1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensions1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensions1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  UpdateCustomerDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => UpdateCustomerDimensions1$inboundSchema),
+  z.lazy(() => UpdateCustomerDimensions2$inboundSchema),
+]);
+
+export function updateCustomerDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerMultipliers1$inboundSchema: z.ZodMiniType<
+  UpdateCustomerMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function updateCustomerMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerMultipliers1' from JSON`,
   );
 }
 
@@ -2468,8 +3368,21 @@ export const UpdateCustomerCreditSchema1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => UpdateCustomerDimensions1$inboundSchema),
+        z.lazy(() => UpdateCustomerDimensions2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => UpdateCustomerMultipliers1$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => UpdateCustomerTier$inboundSchema)),
+    tiers: z.array(z.lazy(() =>
+      UpdateCustomerTier$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {

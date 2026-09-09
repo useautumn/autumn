@@ -22,6 +22,7 @@ import { Plans } from "./plans.js";
 import { Platform } from "./platform.js";
 import { Referrals } from "./referrals.js";
 import { Rewards } from "./rewards.js";
+import { Sandboxes } from "./sandboxes.js";
 
 export class Autumn extends ClientSDK {
   private _customers?: Customers;
@@ -87,6 +88,11 @@ export class Autumn extends ClientSDK {
   private _keys?: Keys;
   get keys(): Keys {
     return (this._keys ??= new Keys(this._options));
+  }
+
+  private _sandboxes?: Sandboxes;
+  get sandboxes(): Sandboxes {
+    return (this._sandboxes ??= new Sandboxes(this._options));
   }
 
   /**

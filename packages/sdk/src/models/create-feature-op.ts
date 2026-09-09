@@ -40,6 +40,84 @@ export type CreateFeatureDisplayRequestBody = {
   plural: string;
 };
 
+export type CreateFeatureDimensionsMatch4 = string | number | boolean;
+
+export type CreateFeatureDimensionsRequestBody4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureDimensionsMatch3 = string | number | boolean;
+
+export const CreateFeatureDimensionsToRequestBodyEnum2 = {
+  Inf: "inf",
+} as const;
+export type CreateFeatureDimensionsToRequestBodyEnum2 = ClosedEnum<
+  typeof CreateFeatureDimensionsToRequestBodyEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateFeatureDimensionsToRequestBodyUnion2 =
+  | number
+  | CreateFeatureDimensionsToRequestBodyEnum2;
+
+export type CreateFeatureDimensionsTierRequestBody2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateFeatureDimensionsToRequestBodyEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureDimensionsRequestBody3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateFeatureDimensionsTierRequestBody2>;
+};
+
+export type CreateFeatureDimensionsRequestBodyUnion2 =
+  | CreateFeatureDimensionsRequestBody3
+  | CreateFeatureDimensionsRequestBody4;
+
+export type CreateFeatureMultipliersMatch2 = string | number | boolean;
+
+export type CreateFeatureMultipliersRequestBody2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type CreateFeatureCreditSchemaRequestBody2 = {
   /**
    * ID of the metered feature that draws from this credit system.
@@ -50,9 +128,101 @@ export type CreateFeatureCreditSchemaRequestBody2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | CreateFeatureDimensionsRequestBody3
+      | CreateFeatureDimensionsRequestBody4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?:
+    | { [k: string]: CreateFeatureMultipliersRequestBody2 }
+    | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CreateFeatureDimensionsMatch2 = string | number | boolean;
+
+export type CreateFeatureDimensionsRequestBody2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureDimensionsMatch1 = string | number | boolean;
+
+export const CreateFeatureDimensionsToRequestBodyEnum1 = {
+  Inf: "inf",
+} as const;
+export type CreateFeatureDimensionsToRequestBodyEnum1 = ClosedEnum<
+  typeof CreateFeatureDimensionsToRequestBodyEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateFeatureDimensionsToRequestBodyUnion1 =
+  | number
+  | CreateFeatureDimensionsToRequestBodyEnum1;
+
+export type CreateFeatureDimensionsTierRequestBody1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateFeatureDimensionsToRequestBodyEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureDimensionsRequestBody1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateFeatureDimensionsTierRequestBody1>;
+};
+
+export type CreateFeatureDimensionsRequestBodyUnion1 =
+  | CreateFeatureDimensionsRequestBody1
+  | CreateFeatureDimensionsRequestBody2;
+
+export type CreateFeatureMultipliersMatch1 = string | number | boolean;
+
+export type CreateFeatureMultipliersRequestBody1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export const CreateFeatureToRequestBodyEnum = {
@@ -89,6 +259,20 @@ export type CreateFeatureCreditSchemaRequestBody1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | CreateFeatureDimensionsRequestBody1
+      | CreateFeatureDimensionsRequestBody2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?:
+    | { [k: string]: CreateFeatureMultipliersRequestBody1 }
+    | undefined;
   tierBehavior: "graduated";
   tiers: Array<CreateFeatureTierRequestBody>;
 };
@@ -97,13 +281,13 @@ export type CreateFeatureCreditSchemaRequestBodyUnion =
   | CreateFeatureCreditSchemaRequestBody1
   | CreateFeatureCreditSchemaRequestBody2;
 
-export type CreateFeatureModelMarkupsRequest = {
+export type CreateFeatureModelMarkupsRequestBody = {
   markup?: number | undefined;
   inputCost?: number | undefined;
   outputCost?: number | undefined;
 };
 
-export type CreateFeatureProviderMarkupsRequest = {
+export type CreateFeatureProviderMarkupsRequestBody = {
   markup: number;
 };
 
@@ -141,7 +325,7 @@ export type CreateFeatureParams = {
    * Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
    */
   modelMarkups?:
-    | { [k: string]: CreateFeatureModelMarkupsRequest }
+    | { [k: string]: CreateFeatureModelMarkupsRequestBody }
     | null
     | undefined;
   /**
@@ -152,7 +336,7 @@ export type CreateFeatureParams = {
    * Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
    */
   providerMarkups?:
-    | { [k: string]: CreateFeatureProviderMarkupsRequest }
+    | { [k: string]: CreateFeatureProviderMarkupsRequestBody }
     | null
     | undefined;
   eventNames?: Array<string> | undefined;
@@ -178,6 +362,78 @@ export type CreateFeatureTypeResponse = OpenEnum<
   typeof CreateFeatureTypeResponse
 >;
 
+export type CreateFeatureDimensionsResponse6 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CreateFeatureDimensionsToResponseEnum3 = {
+  Inf: "inf",
+} as const;
+export type CreateFeatureDimensionsToResponseEnum3 = ClosedEnum<
+  typeof CreateFeatureDimensionsToResponseEnum3
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateFeatureDimensionsToResponseUnion3 =
+  | number
+  | CreateFeatureDimensionsToResponseEnum3;
+
+export type CreateFeatureDimensionsTierResponse3 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateFeatureDimensionsToResponseEnum3;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureDimensionsResponse5 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateFeatureDimensionsTierResponse3>;
+};
+
+export type CreateFeatureDimensionsResponseUnion3 =
+  | CreateFeatureDimensionsResponse5
+  | CreateFeatureDimensionsResponse6;
+
+export type CreateFeatureMultipliersResponse3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type CreateFeatureCreditSchemaResponse3 = {
   meteredFeatureId: "";
   /**
@@ -185,9 +441,93 @@ export type CreateFeatureCreditSchemaResponse3 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | CreateFeatureDimensionsResponse5
+      | CreateFeatureDimensionsResponse6;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CreateFeatureMultipliersResponse3 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CreateFeatureDimensionsResponse4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CreateFeatureDimensionsToResponseEnum2 = {
+  Inf: "inf",
+} as const;
+export type CreateFeatureDimensionsToResponseEnum2 = ClosedEnum<
+  typeof CreateFeatureDimensionsToResponseEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateFeatureDimensionsToResponseUnion2 =
+  | number
+  | CreateFeatureDimensionsToResponseEnum2;
+
+export type CreateFeatureDimensionsTierResponse2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateFeatureDimensionsToResponseEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureDimensionsResponse3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateFeatureDimensionsTierResponse2>;
+};
+
+export type CreateFeatureDimensionsResponseUnion2 =
+  | CreateFeatureDimensionsResponse3
+  | CreateFeatureDimensionsResponse4;
+
+export type CreateFeatureMultipliersResponse2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export type CreateFeatureCreditSchemaResponse2 = {
@@ -200,9 +540,93 @@ export type CreateFeatureCreditSchemaResponse2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | CreateFeatureDimensionsResponse3
+      | CreateFeatureDimensionsResponse4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CreateFeatureMultipliersResponse2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CreateFeatureDimensionsResponse2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CreateFeatureDimensionsToResponseEnum1 = {
+  Inf: "inf",
+} as const;
+export type CreateFeatureDimensionsToResponseEnum1 = ClosedEnum<
+  typeof CreateFeatureDimensionsToResponseEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateFeatureDimensionsToResponseUnion1 =
+  | number
+  | CreateFeatureDimensionsToResponseEnum1;
+
+export type CreateFeatureDimensionsTierResponse1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateFeatureDimensionsToResponseEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureDimensionsResponse1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateFeatureDimensionsTierResponse1>;
+};
+
+export type CreateFeatureDimensionsResponseUnion1 =
+  | CreateFeatureDimensionsResponse1
+  | CreateFeatureDimensionsResponse2;
+
+export type CreateFeatureMultipliersResponse1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export const CreateFeatureToResponseEnum = {
@@ -237,6 +661,18 @@ export type CreateFeatureCreditSchemaResponse1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | CreateFeatureDimensionsResponse1
+      | CreateFeatureDimensionsResponse2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CreateFeatureMultipliersResponse1 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<CreateFeatureTierResponse>;
 };
@@ -389,9 +825,277 @@ export function createFeatureDisplayRequestBodyToJSON(
 }
 
 /** @internal */
+export type CreateFeatureDimensionsMatch4$Outbound = string | number | boolean;
+
+/** @internal */
+export const CreateFeatureDimensionsMatch4$outboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsMatch4$Outbound,
+  CreateFeatureDimensionsMatch4
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createFeatureDimensionsMatch4ToJSON(
+  createFeatureDimensionsMatch4: CreateFeatureDimensionsMatch4,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsMatch4$outboundSchema.parse(
+      createFeatureDimensionsMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsRequestBody4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateFeatureDimensionsRequestBody4$outboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsRequestBody4$Outbound,
+  CreateFeatureDimensionsRequestBody4
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function createFeatureDimensionsRequestBody4ToJSON(
+  createFeatureDimensionsRequestBody4: CreateFeatureDimensionsRequestBody4,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsRequestBody4$outboundSchema.parse(
+      createFeatureDimensionsRequestBody4,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsMatch3$Outbound = string | number | boolean;
+
+/** @internal */
+export const CreateFeatureDimensionsMatch3$outboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsMatch3$Outbound,
+  CreateFeatureDimensionsMatch3
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createFeatureDimensionsMatch3ToJSON(
+  createFeatureDimensionsMatch3: CreateFeatureDimensionsMatch3,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsMatch3$outboundSchema.parse(
+      createFeatureDimensionsMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsToRequestBodyEnum2$outboundSchema:
+  z.ZodMiniEnum<typeof CreateFeatureDimensionsToRequestBodyEnum2> = z.enum(
+    CreateFeatureDimensionsToRequestBodyEnum2,
+  );
+
+/** @internal */
+export type CreateFeatureDimensionsToRequestBodyUnion2$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const CreateFeatureDimensionsToRequestBodyUnion2$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureDimensionsToRequestBodyUnion2$Outbound,
+    CreateFeatureDimensionsToRequestBodyUnion2
+  > = smartUnion([
+    z.number(),
+    CreateFeatureDimensionsToRequestBodyEnum2$outboundSchema,
+  ]);
+
+export function createFeatureDimensionsToRequestBodyUnion2ToJSON(
+  createFeatureDimensionsToRequestBodyUnion2:
+    CreateFeatureDimensionsToRequestBodyUnion2,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsToRequestBodyUnion2$outboundSchema.parse(
+      createFeatureDimensionsToRequestBodyUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsTierRequestBody2$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateFeatureDimensionsTierRequestBody2$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureDimensionsTierRequestBody2$Outbound,
+    CreateFeatureDimensionsTierRequestBody2
+  > = z.pipe(
+    z.object({
+      to: smartUnion([
+        z.number(),
+        CreateFeatureDimensionsToRequestBodyEnum2$outboundSchema,
+      ]),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createFeatureDimensionsTierRequestBody2ToJSON(
+  createFeatureDimensionsTierRequestBody2:
+    CreateFeatureDimensionsTierRequestBody2,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsTierRequestBody2$outboundSchema.parse(
+      createFeatureDimensionsTierRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsRequestBody3$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<CreateFeatureDimensionsTierRequestBody2$Outbound>;
+};
+
+/** @internal */
+export const CreateFeatureDimensionsRequestBody3$outboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsRequestBody3$Outbound,
+  CreateFeatureDimensionsRequestBody3
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => CreateFeatureDimensionsTierRequestBody2$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function createFeatureDimensionsRequestBody3ToJSON(
+  createFeatureDimensionsRequestBody3: CreateFeatureDimensionsRequestBody3,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsRequestBody3$outboundSchema.parse(
+      createFeatureDimensionsRequestBody3,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsRequestBodyUnion2$Outbound =
+  | CreateFeatureDimensionsRequestBody3$Outbound
+  | CreateFeatureDimensionsRequestBody4$Outbound;
+
+/** @internal */
+export const CreateFeatureDimensionsRequestBodyUnion2$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureDimensionsRequestBodyUnion2$Outbound,
+    CreateFeatureDimensionsRequestBodyUnion2
+  > = smartUnion([
+    z.lazy(() => CreateFeatureDimensionsRequestBody3$outboundSchema),
+    z.lazy(() => CreateFeatureDimensionsRequestBody4$outboundSchema),
+  ]);
+
+export function createFeatureDimensionsRequestBodyUnion2ToJSON(
+  createFeatureDimensionsRequestBodyUnion2:
+    CreateFeatureDimensionsRequestBodyUnion2,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsRequestBodyUnion2$outboundSchema.parse(
+      createFeatureDimensionsRequestBodyUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureMultipliersMatch2$Outbound = string | number | boolean;
+
+/** @internal */
+export const CreateFeatureMultipliersMatch2$outboundSchema: z.ZodMiniType<
+  CreateFeatureMultipliersMatch2$Outbound,
+  CreateFeatureMultipliersMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createFeatureMultipliersMatch2ToJSON(
+  createFeatureMultipliersMatch2: CreateFeatureMultipliersMatch2,
+): string {
+  return JSON.stringify(
+    CreateFeatureMultipliersMatch2$outboundSchema.parse(
+      createFeatureMultipliersMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureMultipliersRequestBody2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const CreateFeatureMultipliersRequestBody2$outboundSchema: z.ZodMiniType<
+  CreateFeatureMultipliersRequestBody2$Outbound,
+  CreateFeatureMultipliersRequestBody2
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function createFeatureMultipliersRequestBody2ToJSON(
+  createFeatureMultipliersRequestBody2: CreateFeatureMultipliersRequestBody2,
+): string {
+  return JSON.stringify(
+    CreateFeatureMultipliersRequestBody2$outboundSchema.parse(
+      createFeatureMultipliersRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateFeatureCreditSchemaRequestBody2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | CreateFeatureDimensionsRequestBody3$Outbound
+      | CreateFeatureDimensionsRequestBody4$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: CreateFeatureMultipliersRequestBody2$Outbound }
+    | undefined;
   credit_cost: number;
 };
 
@@ -404,6 +1108,17 @@ export const CreateFeatureCreditSchemaRequestBody2$outboundSchema:
     z.object({
       meteredFeatureId: z.string(),
       billingUnits: z.optional(z.number()),
+      dimensions: z.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() => CreateFeatureDimensionsRequestBody3$outboundSchema),
+          z.lazy(() => CreateFeatureDimensionsRequestBody4$outboundSchema),
+        ]),
+      )),
+      multipliers: z.optional(z.record(
+        z.string(),
+        z.lazy(() => CreateFeatureMultipliersRequestBody2$outboundSchema),
+      )),
       creditCost: z.number(),
     }),
     z.transform((v) => {
@@ -421,6 +1136,266 @@ export function createFeatureCreditSchemaRequestBody2ToJSON(
   return JSON.stringify(
     CreateFeatureCreditSchemaRequestBody2$outboundSchema.parse(
       createFeatureCreditSchemaRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsMatch2$Outbound = string | number | boolean;
+
+/** @internal */
+export const CreateFeatureDimensionsMatch2$outboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsMatch2$Outbound,
+  CreateFeatureDimensionsMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createFeatureDimensionsMatch2ToJSON(
+  createFeatureDimensionsMatch2: CreateFeatureDimensionsMatch2,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsMatch2$outboundSchema.parse(
+      createFeatureDimensionsMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsRequestBody2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateFeatureDimensionsRequestBody2$outboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsRequestBody2$Outbound,
+  CreateFeatureDimensionsRequestBody2
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function createFeatureDimensionsRequestBody2ToJSON(
+  createFeatureDimensionsRequestBody2: CreateFeatureDimensionsRequestBody2,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsRequestBody2$outboundSchema.parse(
+      createFeatureDimensionsRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsMatch1$Outbound = string | number | boolean;
+
+/** @internal */
+export const CreateFeatureDimensionsMatch1$outboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsMatch1$Outbound,
+  CreateFeatureDimensionsMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createFeatureDimensionsMatch1ToJSON(
+  createFeatureDimensionsMatch1: CreateFeatureDimensionsMatch1,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsMatch1$outboundSchema.parse(
+      createFeatureDimensionsMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsToRequestBodyEnum1$outboundSchema:
+  z.ZodMiniEnum<typeof CreateFeatureDimensionsToRequestBodyEnum1> = z.enum(
+    CreateFeatureDimensionsToRequestBodyEnum1,
+  );
+
+/** @internal */
+export type CreateFeatureDimensionsToRequestBodyUnion1$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const CreateFeatureDimensionsToRequestBodyUnion1$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureDimensionsToRequestBodyUnion1$Outbound,
+    CreateFeatureDimensionsToRequestBodyUnion1
+  > = smartUnion([
+    z.number(),
+    CreateFeatureDimensionsToRequestBodyEnum1$outboundSchema,
+  ]);
+
+export function createFeatureDimensionsToRequestBodyUnion1ToJSON(
+  createFeatureDimensionsToRequestBodyUnion1:
+    CreateFeatureDimensionsToRequestBodyUnion1,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsToRequestBodyUnion1$outboundSchema.parse(
+      createFeatureDimensionsToRequestBodyUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsTierRequestBody1$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateFeatureDimensionsTierRequestBody1$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureDimensionsTierRequestBody1$Outbound,
+    CreateFeatureDimensionsTierRequestBody1
+  > = z.pipe(
+    z.object({
+      to: smartUnion([
+        z.number(),
+        CreateFeatureDimensionsToRequestBodyEnum1$outboundSchema,
+      ]),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createFeatureDimensionsTierRequestBody1ToJSON(
+  createFeatureDimensionsTierRequestBody1:
+    CreateFeatureDimensionsTierRequestBody1,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsTierRequestBody1$outboundSchema.parse(
+      createFeatureDimensionsTierRequestBody1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsRequestBody1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<CreateFeatureDimensionsTierRequestBody1$Outbound>;
+};
+
+/** @internal */
+export const CreateFeatureDimensionsRequestBody1$outboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsRequestBody1$Outbound,
+  CreateFeatureDimensionsRequestBody1
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => CreateFeatureDimensionsTierRequestBody1$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function createFeatureDimensionsRequestBody1ToJSON(
+  createFeatureDimensionsRequestBody1: CreateFeatureDimensionsRequestBody1,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsRequestBody1$outboundSchema.parse(
+      createFeatureDimensionsRequestBody1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureDimensionsRequestBodyUnion1$Outbound =
+  | CreateFeatureDimensionsRequestBody1$Outbound
+  | CreateFeatureDimensionsRequestBody2$Outbound;
+
+/** @internal */
+export const CreateFeatureDimensionsRequestBodyUnion1$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureDimensionsRequestBodyUnion1$Outbound,
+    CreateFeatureDimensionsRequestBodyUnion1
+  > = smartUnion([
+    z.lazy(() => CreateFeatureDimensionsRequestBody1$outboundSchema),
+    z.lazy(() => CreateFeatureDimensionsRequestBody2$outboundSchema),
+  ]);
+
+export function createFeatureDimensionsRequestBodyUnion1ToJSON(
+  createFeatureDimensionsRequestBodyUnion1:
+    CreateFeatureDimensionsRequestBodyUnion1,
+): string {
+  return JSON.stringify(
+    CreateFeatureDimensionsRequestBodyUnion1$outboundSchema.parse(
+      createFeatureDimensionsRequestBodyUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureMultipliersMatch1$Outbound = string | number | boolean;
+
+/** @internal */
+export const CreateFeatureMultipliersMatch1$outboundSchema: z.ZodMiniType<
+  CreateFeatureMultipliersMatch1$Outbound,
+  CreateFeatureMultipliersMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function createFeatureMultipliersMatch1ToJSON(
+  createFeatureMultipliersMatch1: CreateFeatureMultipliersMatch1,
+): string {
+  return JSON.stringify(
+    CreateFeatureMultipliersMatch1$outboundSchema.parse(
+      createFeatureMultipliersMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureMultipliersRequestBody1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const CreateFeatureMultipliersRequestBody1$outboundSchema: z.ZodMiniType<
+  CreateFeatureMultipliersRequestBody1$Outbound,
+  CreateFeatureMultipliersRequestBody1
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function createFeatureMultipliersRequestBody1ToJSON(
+  createFeatureMultipliersRequestBody1: CreateFeatureMultipliersRequestBody1,
+): string {
+  return JSON.stringify(
+    CreateFeatureMultipliersRequestBody1$outboundSchema.parse(
+      createFeatureMultipliersRequestBody1,
     ),
   );
 }
@@ -485,6 +1460,14 @@ export function createFeatureTierRequestBodyToJSON(
 export type CreateFeatureCreditSchemaRequestBody1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | CreateFeatureDimensionsRequestBody1$Outbound
+      | CreateFeatureDimensionsRequestBody2$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: CreateFeatureMultipliersRequestBody1$Outbound }
+    | undefined;
   tier_behavior: "graduated";
   tiers: Array<CreateFeatureTierRequestBody$Outbound>;
 };
@@ -498,8 +1481,21 @@ export const CreateFeatureCreditSchemaRequestBody1$outboundSchema:
     z.object({
       meteredFeatureId: z.string(),
       billingUnits: z.optional(z.number()),
+      dimensions: z.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() => CreateFeatureDimensionsRequestBody1$outboundSchema),
+          z.lazy(() => CreateFeatureDimensionsRequestBody2$outboundSchema),
+        ]),
+      )),
+      multipliers: z.optional(z.record(
+        z.string(),
+        z.lazy(() => CreateFeatureMultipliersRequestBody1$outboundSchema),
+      )),
       tierBehavior: z.literal("graduated"),
-      tiers: z.array(z.lazy(() => CreateFeatureTierRequestBody$outboundSchema)),
+      tiers: z.array(z.lazy(() =>
+        CreateFeatureTierRequestBody$outboundSchema
+      )),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -547,16 +1543,16 @@ export function createFeatureCreditSchemaRequestBodyUnionToJSON(
 }
 
 /** @internal */
-export type CreateFeatureModelMarkupsRequest$Outbound = {
+export type CreateFeatureModelMarkupsRequestBody$Outbound = {
   markup?: number | undefined;
   input_cost?: number | undefined;
   output_cost?: number | undefined;
 };
 
 /** @internal */
-export const CreateFeatureModelMarkupsRequest$outboundSchema: z.ZodMiniType<
-  CreateFeatureModelMarkupsRequest$Outbound,
-  CreateFeatureModelMarkupsRequest
+export const CreateFeatureModelMarkupsRequestBody$outboundSchema: z.ZodMiniType<
+  CreateFeatureModelMarkupsRequestBody$Outbound,
+  CreateFeatureModelMarkupsRequestBody
 > = z.pipe(
   z.object({
     markup: z.optional(z.number()),
@@ -571,35 +1567,37 @@ export const CreateFeatureModelMarkupsRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createFeatureModelMarkupsRequestToJSON(
-  createFeatureModelMarkupsRequest: CreateFeatureModelMarkupsRequest,
+export function createFeatureModelMarkupsRequestBodyToJSON(
+  createFeatureModelMarkupsRequestBody: CreateFeatureModelMarkupsRequestBody,
 ): string {
   return JSON.stringify(
-    CreateFeatureModelMarkupsRequest$outboundSchema.parse(
-      createFeatureModelMarkupsRequest,
+    CreateFeatureModelMarkupsRequestBody$outboundSchema.parse(
+      createFeatureModelMarkupsRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type CreateFeatureProviderMarkupsRequest$Outbound = {
+export type CreateFeatureProviderMarkupsRequestBody$Outbound = {
   markup: number;
 };
 
 /** @internal */
-export const CreateFeatureProviderMarkupsRequest$outboundSchema: z.ZodMiniType<
-  CreateFeatureProviderMarkupsRequest$Outbound,
-  CreateFeatureProviderMarkupsRequest
-> = z.object({
-  markup: z.number(),
-});
+export const CreateFeatureProviderMarkupsRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureProviderMarkupsRequestBody$Outbound,
+    CreateFeatureProviderMarkupsRequestBody
+  > = z.object({
+    markup: z.number(),
+  });
 
-export function createFeatureProviderMarkupsRequestToJSON(
-  createFeatureProviderMarkupsRequest: CreateFeatureProviderMarkupsRequest,
+export function createFeatureProviderMarkupsRequestBodyToJSON(
+  createFeatureProviderMarkupsRequestBody:
+    CreateFeatureProviderMarkupsRequestBody,
 ): string {
   return JSON.stringify(
-    CreateFeatureProviderMarkupsRequest$outboundSchema.parse(
-      createFeatureProviderMarkupsRequest,
+    CreateFeatureProviderMarkupsRequestBody$outboundSchema.parse(
+      createFeatureProviderMarkupsRequestBody,
     ),
   );
 }
@@ -618,12 +1616,12 @@ export type CreateFeatureParams$Outbound = {
     | undefined;
   invoice_credit?: boolean | undefined;
   model_markups?:
-    | { [k: string]: CreateFeatureModelMarkupsRequest$Outbound }
+    | { [k: string]: CreateFeatureModelMarkupsRequestBody$Outbound }
     | null
     | undefined;
   default_markup?: number | undefined;
   provider_markups?:
-    | { [k: string]: CreateFeatureProviderMarkupsRequest$Outbound }
+    | { [k: string]: CreateFeatureProviderMarkupsRequestBody$Outbound }
     | null
     | undefined;
   event_names?: Array<string> | undefined;
@@ -651,12 +1649,12 @@ export const CreateFeatureParams$outboundSchema: z.ZodMiniType<
     invoiceCredit: z.optional(z.boolean()),
     modelMarkups: z.optional(z.nullable(z.record(
       z.string(),
-      z.lazy(() => CreateFeatureModelMarkupsRequest$outboundSchema),
+      z.lazy(() => CreateFeatureModelMarkupsRequestBody$outboundSchema),
     ))),
     defaultMarkup: z.optional(z.number()),
     providerMarkups: z.optional(z.nullable(z.record(
       z.string(),
-      z.lazy(() => CreateFeatureProviderMarkupsRequest$outboundSchema),
+      z.lazy(() => CreateFeatureProviderMarkupsRequestBody$outboundSchema),
     ))),
     eventNames: z.optional(z.array(z.string())),
     featureId: z.string(),
@@ -689,6 +1687,162 @@ export const CreateFeatureTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreateFeatureTypeResponse);
 
 /** @internal */
+export const CreateFeatureDimensionsResponse6$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponse6,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createFeatureDimensionsResponse6FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponse6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureDimensionsResponse6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponse6' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsToResponseEnum3$inboundSchema:
+  z.ZodMiniEnum<typeof CreateFeatureDimensionsToResponseEnum3> = z.enum(
+    CreateFeatureDimensionsToResponseEnum3,
+  );
+
+/** @internal */
+export const CreateFeatureDimensionsToResponseUnion3$inboundSchema:
+  z.ZodMiniType<CreateFeatureDimensionsToResponseUnion3, unknown> = smartUnion([
+    types.number(),
+    CreateFeatureDimensionsToResponseEnum3$inboundSchema,
+  ]);
+
+export function createFeatureDimensionsToResponseUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreateFeatureDimensionsToResponseUnion3,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsToResponseUnion3$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreateFeatureDimensionsToResponseUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsTierResponse3$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsTierResponse3,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      CreateFeatureDimensionsToResponseEnum3$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createFeatureDimensionsTierResponse3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsTierResponse3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsTierResponse3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsTierResponse3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsResponse5$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponse5,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => CreateFeatureDimensionsTierResponse3$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function createFeatureDimensionsResponse5FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponse5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureDimensionsResponse5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponse5' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsResponseUnion3$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponseUnion3,
+  unknown
+> = smartUnion([
+  z.lazy(() => CreateFeatureDimensionsResponse5$inboundSchema),
+  z.lazy(() => CreateFeatureDimensionsResponse6$inboundSchema),
+]);
+
+export function createFeatureDimensionsResponseUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponseUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsResponseUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponseUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureMultipliersResponse3$inboundSchema: z.ZodMiniType<
+  CreateFeatureMultipliersResponse3,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function createFeatureMultipliersResponse3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureMultipliersResponse3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureMultipliersResponse3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureMultipliersResponse3' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateFeatureCreditSchemaResponse3$inboundSchema: z.ZodMiniType<
   CreateFeatureCreditSchemaResponse3,
   unknown
@@ -696,6 +1850,17 @@ export const CreateFeatureCreditSchemaResponse3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CreateFeatureDimensionsResponse5$inboundSchema),
+        z.lazy(() => CreateFeatureDimensionsResponse6$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CreateFeatureMultipliersResponse3$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -719,6 +1884,162 @@ export function createFeatureCreditSchemaResponse3FromJSON(
 }
 
 /** @internal */
+export const CreateFeatureDimensionsResponse4$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponse4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createFeatureDimensionsResponse4FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponse4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureDimensionsResponse4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponse4' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsToResponseEnum2$inboundSchema:
+  z.ZodMiniEnum<typeof CreateFeatureDimensionsToResponseEnum2> = z.enum(
+    CreateFeatureDimensionsToResponseEnum2,
+  );
+
+/** @internal */
+export const CreateFeatureDimensionsToResponseUnion2$inboundSchema:
+  z.ZodMiniType<CreateFeatureDimensionsToResponseUnion2, unknown> = smartUnion([
+    types.number(),
+    CreateFeatureDimensionsToResponseEnum2$inboundSchema,
+  ]);
+
+export function createFeatureDimensionsToResponseUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreateFeatureDimensionsToResponseUnion2,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsToResponseUnion2$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreateFeatureDimensionsToResponseUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsTierResponse2$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsTierResponse2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      CreateFeatureDimensionsToResponseEnum2$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createFeatureDimensionsTierResponse2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsTierResponse2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsTierResponse2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsTierResponse2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsResponse3$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponse3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => CreateFeatureDimensionsTierResponse2$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function createFeatureDimensionsResponse3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponse3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureDimensionsResponse3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponse3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsResponseUnion2$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponseUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => CreateFeatureDimensionsResponse3$inboundSchema),
+  z.lazy(() => CreateFeatureDimensionsResponse4$inboundSchema),
+]);
+
+export function createFeatureDimensionsResponseUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponseUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsResponseUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponseUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureMultipliersResponse2$inboundSchema: z.ZodMiniType<
+  CreateFeatureMultipliersResponse2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function createFeatureMultipliersResponse2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureMultipliersResponse2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureMultipliersResponse2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureMultipliersResponse2' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateFeatureCreditSchemaResponse2$inboundSchema: z.ZodMiniType<
   CreateFeatureCreditSchemaResponse2,
   unknown
@@ -726,6 +2047,17 @@ export const CreateFeatureCreditSchemaResponse2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CreateFeatureDimensionsResponse3$inboundSchema),
+        z.lazy(() => CreateFeatureDimensionsResponse4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CreateFeatureMultipliersResponse2$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -745,6 +2077,162 @@ export function createFeatureCreditSchemaResponse2FromJSON(
     (x) =>
       CreateFeatureCreditSchemaResponse2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'CreateFeatureCreditSchemaResponse2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsResponse2$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponse2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createFeatureDimensionsResponse2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponse2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureDimensionsResponse2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponse2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsToResponseEnum1$inboundSchema:
+  z.ZodMiniEnum<typeof CreateFeatureDimensionsToResponseEnum1> = z.enum(
+    CreateFeatureDimensionsToResponseEnum1,
+  );
+
+/** @internal */
+export const CreateFeatureDimensionsToResponseUnion1$inboundSchema:
+  z.ZodMiniType<CreateFeatureDimensionsToResponseUnion1, unknown> = smartUnion([
+    types.number(),
+    CreateFeatureDimensionsToResponseEnum1$inboundSchema,
+  ]);
+
+export function createFeatureDimensionsToResponseUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreateFeatureDimensionsToResponseUnion1,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsToResponseUnion1$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreateFeatureDimensionsToResponseUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsTierResponse1$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsTierResponse1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      CreateFeatureDimensionsToResponseEnum1$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createFeatureDimensionsTierResponse1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsTierResponse1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsTierResponse1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsTierResponse1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsResponse1$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponse1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => CreateFeatureDimensionsTierResponse1$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function createFeatureDimensionsResponse1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponse1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureDimensionsResponse1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponse1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureDimensionsResponseUnion1$inboundSchema: z.ZodMiniType<
+  CreateFeatureDimensionsResponseUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => CreateFeatureDimensionsResponse1$inboundSchema),
+  z.lazy(() => CreateFeatureDimensionsResponse2$inboundSchema),
+]);
+
+export function createFeatureDimensionsResponseUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureDimensionsResponseUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureDimensionsResponseUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureDimensionsResponseUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureMultipliersResponse1$inboundSchema: z.ZodMiniType<
+  CreateFeatureMultipliersResponse1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function createFeatureMultipliersResponse1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureMultipliersResponse1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureMultipliersResponse1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureMultipliersResponse1' from JSON`,
   );
 }
 
@@ -803,8 +2291,21 @@ export const CreateFeatureCreditSchemaResponse1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CreateFeatureDimensionsResponse1$inboundSchema),
+        z.lazy(() => CreateFeatureDimensionsResponse2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CreateFeatureMultipliersResponse1$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => CreateFeatureTierResponse$inboundSchema)),
+    tiers: z.array(z.lazy(() =>
+      CreateFeatureTierResponse$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {

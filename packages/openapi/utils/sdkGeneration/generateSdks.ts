@@ -70,6 +70,11 @@ export async function generateSdksInParallel({
 		throw new Error("SDK generation failed");
 	}
 
+	if (process.env.SKIP_PYTHON_SDK === "1") {
+		console.log("⤳ Skipping Python SDK generation (SKIP_PYTHON_SDK=1)");
+		return;
+	}
+
 	try {
 		await generatePythonSdkQuiet({ speakeasySdkDir, pythonSdkDir });
 		console.log("✓ Python SDK generated and patched successfully");

@@ -21,7 +21,7 @@ export const billingUpdateItemAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
-export const billingUpdateItemToSchema = z.union([z.number(), z.string()]);
+export const billingUpdateItemPriceToSchema = z.union([z.number(), z.string()]);
 
 export const billingUpdateItemTierAdditionalCurrencySchema = z.object({
 	currency: z.string(),
@@ -41,41 +41,92 @@ export const billingUpdateItemPriceTierSchema = z.object({
 		.optional(),
 });
 
-export const billingUpdateCreditSchemaItem2Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	creditCost: z.number(),
-});
-
-export const billingUpdateItemFeatureOverrideTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
-	creditCost: z.number(),
-});
-
-export const billingUpdateCreditSchemaItem1Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	tierBehavior: z.literal("graduated"),
-	tiers: z.array(billingUpdateItemFeatureOverrideTierSchema),
-});
-
-export const billingUpdateItemCreditSchemaUnionSchema = z.union([
-	billingUpdateCreditSchemaItem1Schema,
-	billingUpdateCreditSchemaItem2Schema,
+export const billingUpdateDimensionsItemMatch4Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
 ]);
 
-export const billingUpdateItemFeatureOverrideSchema = z.object({
-	creditSchema: z
+export const billingUpdateDimensionsItem4Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsItemMatch3Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateItemMultipliersMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateItemMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateDimensionsItemMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsItem2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsItemMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateItemMultipliersMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateItemMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateItemProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const billingUpdateItemModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateItemMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
 		.union([
-			z.array(
-				z.union([
-					billingUpdateCreditSchemaItem1Schema,
-					billingUpdateCreditSchemaItem2Schema,
-				]),
-			),
+			z.record(z.string(), billingUpdateItemProviderMarkupsSchema),
 			z.undefined(),
 		])
-		.optional(),
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([
+			z.record(z.string(), billingUpdateItemModelMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 });
 
 export const billingUpdateAddItemAdditionalCurrencySchema = z.object({
@@ -83,7 +134,10 @@ export const billingUpdateAddItemAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
-export const billingUpdateAddItemToSchema = z.union([z.number(), z.string()]);
+export const billingUpdateAddItemPriceToSchema = z.union([
+	z.number(),
+	z.string(),
+]);
 
 export const billingUpdateAddItemTierAdditionalCurrencySchema = z.object({
 	currency: z.string(),
@@ -103,41 +157,92 @@ export const billingUpdateAddItemPriceTierSchema = z.object({
 		.optional(),
 });
 
-export const billingUpdateCreditSchemaAddItem2Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	creditCost: z.number(),
-});
-
-export const billingUpdateAddItemFeatureOverrideTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
-	creditCost: z.number(),
-});
-
-export const billingUpdateCreditSchemaAddItem1Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	tierBehavior: z.literal("graduated"),
-	tiers: z.array(billingUpdateAddItemFeatureOverrideTierSchema),
-});
-
-export const billingUpdateAddItemCreditSchemaUnionSchema = z.union([
-	billingUpdateCreditSchemaAddItem1Schema,
-	billingUpdateCreditSchemaAddItem2Schema,
+export const billingUpdateDimensionsAddItemMatch4Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
 ]);
 
-export const billingUpdateAddItemFeatureOverrideSchema = z.object({
-	creditSchema: z
+export const billingUpdateDimensionsAddItem4Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsAddItemMatch3Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateAddItemMultipliersMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateAddItemMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateDimensionsAddItemMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsAddItem2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsAddItemMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateAddItemMultipliersMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateAddItemMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateAddItemProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const billingUpdateAddItemModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateAddItemMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
 		.union([
-			z.array(
-				z.union([
-					billingUpdateCreditSchemaAddItem1Schema,
-					billingUpdateCreditSchemaAddItem2Schema,
-				]),
-			),
+			z.record(z.string(), billingUpdateAddItemProviderMarkupsSchema),
 			z.undefined(),
 		])
-		.optional(),
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([
+			z.record(z.string(), billingUpdateAddItemModelMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 });
 
 export const billingUpdateUsageLimitPropertiesSchema = z.union([
@@ -182,43 +287,115 @@ export const billingUpdateUpsertLicenseAddItemAdditionalCurrencySchema =
 		amount: z.number(),
 	});
 
-export const billingUpdateUpsertLicenseTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
-});
-
-export const billingUpdateCreditSchemaUpsertLicense2Schema = z.object({
-	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
-	billingUnits: z.union([z.any(), z.undefined()]).optional(),
-	creditCost: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const billingUpdateCreditSchemaUpsertLicense1Schema = z.object({
-	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
-	billingUnits: z.union([z.any(), z.undefined()]).optional(),
-	tierBehavior: z.union([z.any(), z.undefined()]).optional(),
-	tiers: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const billingUpdateUpsertLicenseCreditSchemaUnionSchema = z.union([
-	billingUpdateCreditSchemaUpsertLicense1Schema,
-	billingUpdateCreditSchemaUpsertLicense2Schema,
+export const billingUpdateUpsertLicensePriceToSchema = z.union([
+	z.number(),
+	z.string(),
 ]);
 
-export const billingUpdateUpsertLicenseFeatureOverrideSchema = z.object({
-	creditSchema: z
+export const billingUpdateUpsertLicenseTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicensePriceTierSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
 		.union([
-			z.array(
-				z.union([
-					billingUpdateCreditSchemaUpsertLicense1Schema,
-					billingUpdateCreditSchemaUpsertLicense2Schema,
-				]),
-			),
+			z.array(billingUpdateUpsertLicenseTierAdditionalCurrencySchema),
 			z.undefined(),
 		])
 		.optional(),
+});
+
+export const billingUpdateDimensionsUpsertLicenseMatch4Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsUpsertLicense4Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsUpsertLicenseMatch3Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateUpsertLicenseMultipliersMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateUpsertLicenseMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateDimensionsUpsertLicenseMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsUpsertLicense2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsUpsertLicenseMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateUpsertLicenseMultipliersMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateUpsertLicenseMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const billingUpdateUpsertLicenseModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
+		.union([
+			z.record(z.string(), billingUpdateUpsertLicenseProviderMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([
+			z.record(z.string(), billingUpdateUpsertLicenseModelMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 });
 
 export const billingUpdateRemoveLicenseSchema = z.object({
@@ -305,7 +482,7 @@ export const billingUpdateItemAdditionalCurrencyOutboundSchema = z.object({
 	amount: z.number(),
 });
 
-export const billingUpdateItemToOutboundSchema = z.union([
+export const billingUpdateItemPriceToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
@@ -359,20 +536,165 @@ export const billingUpdateItemRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const billingUpdateCreditSchemaItem2OutboundSchema = z.object({
-	metered_feature_id: z.string(),
-	billing_units: z.union([z.number(), z.undefined()]).optional(),
+export const billingUpdateDimensionsItemMatch4OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsItem4OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
 	credit_cost: z.number(),
 });
 
+export const billingUpdateDimensionsItemMatch3OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsItemToUnion2OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const billingUpdateDimensionsItemTier2OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsItem3OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsItemTier2OutboundSchema),
+});
+
+export const billingUpdateItemDimensionsUnion2OutboundSchema = z.union([
+	billingUpdateDimensionsItem3OutboundSchema,
+	billingUpdateDimensionsItem4OutboundSchema,
+]);
+
+export const billingUpdateItemMultipliersMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateItemMultipliers2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateCreditSchemaItem2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsItem3OutboundSchema,
+					billingUpdateDimensionsItem4OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateItemMultipliers2OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsItemMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsItem2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsItemMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsItemToUnion1OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const billingUpdateDimensionsItemTier1OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsItem1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsItemTier1OutboundSchema),
+});
+
+export const billingUpdateItemDimensionsUnion1OutboundSchema = z.union([
+	billingUpdateDimensionsItem1OutboundSchema,
+	billingUpdateDimensionsItem2OutboundSchema,
+]);
+
+export const billingUpdateItemMultipliersMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateItemMultipliers1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateItemFeatureOverrideToUnionOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
 export const billingUpdateItemFeatureOverrideTierOutboundSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
+	to: z.union([z.number(), z.string()]),
 	credit_cost: z.number(),
 });
 
 export const billingUpdateCreditSchemaItem1OutboundSchema = z.object({
 	metered_feature_id: z.string(),
 	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsItem1OutboundSchema,
+					billingUpdateDimensionsItem2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateItemMultipliers1OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tier_behavior: z.literal("graduated"),
 	tiers: z.array(billingUpdateItemFeatureOverrideTierOutboundSchema),
 });
@@ -381,6 +703,34 @@ export const billingUpdateItemCreditSchemaUnionOutboundSchema = z.union([
 	billingUpdateCreditSchemaItem1OutboundSchema,
 	billingUpdateCreditSchemaItem2OutboundSchema,
 ]);
+
+export const billingUpdateItemProviderMarkupsOutboundSchema = z.object({
+	markup: z.number(),
+});
+
+export const billingUpdateItemModelMarkupsOutboundSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	input_cost: z.union([z.number(), z.undefined()]).optional(),
+	output_cost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateItemMarkupsOutboundSchema = z.object({
+	default_markup: z.union([z.number(), z.undefined()]).optional(),
+	provider_markups: z
+		.union([
+			z.record(z.string(), billingUpdateItemProviderMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	model_markups: z
+		.union([
+			z.record(z.string(), billingUpdateItemModelMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
 
 export const billingUpdateItemFeatureOverrideOutboundSchema = z.object({
 	credit_schema: z
@@ -393,6 +743,9 @@ export const billingUpdateItemFeatureOverrideOutboundSchema = z.object({
 			),
 			z.undefined(),
 		])
+		.optional(),
+	markups: z
+		.union([billingUpdateItemMarkupsOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -428,7 +781,7 @@ export const billingUpdateAddItemAdditionalCurrencyOutboundSchema = z.object({
 	amount: z.number(),
 });
 
-export const billingUpdateAddItemToOutboundSchema = z.union([
+export const billingUpdateAddItemPriceToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
@@ -486,20 +839,164 @@ export const billingUpdateAddItemRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const billingUpdateCreditSchemaAddItem2OutboundSchema = z.object({
-	metered_feature_id: z.string(),
-	billing_units: z.union([z.number(), z.undefined()]).optional(),
+export const billingUpdateDimensionsAddItemMatch4OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsAddItem4OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
 	credit_cost: z.number(),
 });
 
+export const billingUpdateDimensionsAddItemMatch3OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsAddItemToUnion2OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const billingUpdateDimensionsAddItemTier2OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsAddItem3OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsAddItemTier2OutboundSchema),
+});
+
+export const billingUpdateAddItemDimensionsUnion2OutboundSchema = z.union([
+	billingUpdateDimensionsAddItem3OutboundSchema,
+	billingUpdateDimensionsAddItem4OutboundSchema,
+]);
+
+export const billingUpdateAddItemMultipliersMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateAddItemMultipliers2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateCreditSchemaAddItem2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsAddItem3OutboundSchema,
+					billingUpdateDimensionsAddItem4OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateAddItemMultipliers2OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsAddItemMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsAddItem2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsAddItemMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateDimensionsAddItemToUnion1OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const billingUpdateDimensionsAddItemTier1OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsAddItem1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsAddItemTier1OutboundSchema),
+});
+
+export const billingUpdateAddItemDimensionsUnion1OutboundSchema = z.union([
+	billingUpdateDimensionsAddItem1OutboundSchema,
+	billingUpdateDimensionsAddItem2OutboundSchema,
+]);
+
+export const billingUpdateAddItemMultipliersMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateAddItemMultipliers1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateAddItemFeatureOverrideToUnionOutboundSchema = z.union(
+	[z.number(), z.string()],
+);
+
 export const billingUpdateAddItemFeatureOverrideTierOutboundSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
+	to: z.union([z.number(), z.string()]),
 	credit_cost: z.number(),
 });
 
 export const billingUpdateCreditSchemaAddItem1OutboundSchema = z.object({
 	metered_feature_id: z.string(),
 	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsAddItem1OutboundSchema,
+					billingUpdateDimensionsAddItem2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateAddItemMultipliers1OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tier_behavior: z.literal("graduated"),
 	tiers: z.array(billingUpdateAddItemFeatureOverrideTierOutboundSchema),
 });
@@ -508,6 +1005,34 @@ export const billingUpdateAddItemCreditSchemaUnionOutboundSchema = z.union([
 	billingUpdateCreditSchemaAddItem1OutboundSchema,
 	billingUpdateCreditSchemaAddItem2OutboundSchema,
 ]);
+
+export const billingUpdateAddItemProviderMarkupsOutboundSchema = z.object({
+	markup: z.number(),
+});
+
+export const billingUpdateAddItemModelMarkupsOutboundSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	input_cost: z.union([z.number(), z.undefined()]).optional(),
+	output_cost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateAddItemMarkupsOutboundSchema = z.object({
+	default_markup: z.union([z.number(), z.undefined()]).optional(),
+	provider_markups: z
+		.union([
+			z.record(z.string(), billingUpdateAddItemProviderMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	model_markups: z
+		.union([
+			z.record(z.string(), billingUpdateAddItemModelMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
 
 export const billingUpdateAddItemFeatureOverrideOutboundSchema = z.object({
 	credit_schema: z
@@ -520,6 +1045,9 @@ export const billingUpdateAddItemFeatureOverrideOutboundSchema = z.object({
 			),
 			z.undefined(),
 		])
+		.optional(),
+	markups: z
+		.union([billingUpdateAddItemMarkupsOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -692,11 +1220,28 @@ export const billingUpdateUpsertLicenseAddItemAdditionalCurrencyOutboundSchema =
 		amount: z.number(),
 	});
 
-export const billingUpdateUpsertLicenseTierOutboundSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
+export const billingUpdateUpsertLicensePriceToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const billingUpdateUpsertLicenseTierAdditionalCurrencyOutboundSchema =
+	z.object({
+		currency: z.string(),
+		amount: z.union([z.number(), z.undefined()]).optional(),
+		flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	});
+
+export const billingUpdateUpsertLicensePriceTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
-	additional_currencies: z.union([z.array(z.any()), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(billingUpdateUpsertLicenseTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const billingUpdateUpsertLicensePriceOutboundSchema = z.object({
@@ -711,7 +1256,7 @@ export const billingUpdateUpsertLicensePriceOutboundSchema = z.object({
 		.optional(),
 	tiers: z
 		.union([
-			z.array(billingUpdateUpsertLicenseTierOutboundSchema),
+			z.array(billingUpdateUpsertLicensePriceTierOutboundSchema),
 			z.undefined(),
 		])
 		.optional(),
@@ -735,17 +1280,162 @@ export const billingUpdateUpsertLicenseRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const billingUpdateCreditSchemaUpsertLicense2OutboundSchema = z.object({
-	metered_feature_id: z.union([z.any(), z.undefined()]).optional(),
-	billing_units: z.union([z.any(), z.undefined()]).optional(),
-	credit_cost: z.union([z.any(), z.undefined()]).optional(),
+export const billingUpdateDimensionsUpsertLicenseMatch4OutboundSchema = z.union(
+	[z.string(), z.number(), z.boolean()],
+);
+
+export const billingUpdateDimensionsUpsertLicense4OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
 });
 
+export const billingUpdateDimensionsUpsertLicenseMatch3OutboundSchema = z.union(
+	[z.string(), z.number(), z.boolean()],
+);
+
+export const billingUpdateDimensionsUpsertLicenseToUnion2OutboundSchema =
+	z.union([z.number(), z.string()]);
+
+export const billingUpdateDimensionsUpsertLicenseTier2OutboundSchema = z.object(
+	{
+		to: z.union([z.number(), z.string()]),
+		credit_cost: z.number(),
+	},
+);
+
+export const billingUpdateDimensionsUpsertLicense3OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsUpsertLicenseTier2OutboundSchema),
+});
+
+export const billingUpdateUpsertLicenseDimensionsUnion2OutboundSchema = z.union(
+	[
+		billingUpdateDimensionsUpsertLicense3OutboundSchema,
+		billingUpdateDimensionsUpsertLicense4OutboundSchema,
+	],
+);
+
+export const billingUpdateUpsertLicenseMultipliersMatch2OutboundSchema =
+	z.union([z.string(), z.number(), z.boolean()]);
+
+export const billingUpdateUpsertLicenseMultipliers2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateCreditSchemaUpsertLicense2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsUpsertLicense3OutboundSchema,
+					billingUpdateDimensionsUpsertLicense4OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(
+				z.string(),
+				billingUpdateUpsertLicenseMultipliers2OutboundSchema,
+			),
+			z.undefined(),
+		])
+		.optional(),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsUpsertLicenseMatch2OutboundSchema = z.union(
+	[z.string(), z.number(), z.boolean()],
+);
+
+export const billingUpdateDimensionsUpsertLicense2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const billingUpdateDimensionsUpsertLicenseMatch1OutboundSchema = z.union(
+	[z.string(), z.number(), z.boolean()],
+);
+
+export const billingUpdateDimensionsUpsertLicenseToUnion1OutboundSchema =
+	z.union([z.number(), z.string()]);
+
+export const billingUpdateDimensionsUpsertLicenseTier1OutboundSchema = z.object(
+	{
+		to: z.union([z.number(), z.string()]),
+		credit_cost: z.number(),
+	},
+);
+
+export const billingUpdateDimensionsUpsertLicense1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsUpsertLicenseTier1OutboundSchema),
+});
+
+export const billingUpdateUpsertLicenseDimensionsUnion1OutboundSchema = z.union(
+	[
+		billingUpdateDimensionsUpsertLicense1OutboundSchema,
+		billingUpdateDimensionsUpsertLicense2OutboundSchema,
+	],
+);
+
+export const billingUpdateUpsertLicenseMultipliersMatch1OutboundSchema =
+	z.union([z.string(), z.number(), z.boolean()]);
+
+export const billingUpdateUpsertLicenseMultipliers1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseFeatureOverrideToUnionOutboundSchema =
+	z.union([z.number(), z.string()]);
+
+export const billingUpdateUpsertLicenseFeatureOverrideTierOutboundSchema =
+	z.object({
+		to: z.union([z.number(), z.string()]),
+		credit_cost: z.number(),
+	});
+
 export const billingUpdateCreditSchemaUpsertLicense1OutboundSchema = z.object({
-	metered_feature_id: z.union([z.any(), z.undefined()]).optional(),
-	billing_units: z.union([z.any(), z.undefined()]).optional(),
-	tier_behavior: z.union([z.any(), z.undefined()]).optional(),
-	tiers: z.union([z.any(), z.undefined()]).optional(),
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsUpsertLicense1OutboundSchema,
+					billingUpdateDimensionsUpsertLicense2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(
+				z.string(),
+				billingUpdateUpsertLicenseMultipliers1OutboundSchema,
+			),
+			z.undefined(),
+		])
+		.optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateUpsertLicenseFeatureOverrideTierOutboundSchema),
 });
 
 export const billingUpdateUpsertLicenseCreditSchemaUnionOutboundSchema =
@@ -753,6 +1443,42 @@ export const billingUpdateUpsertLicenseCreditSchemaUnionOutboundSchema =
 		billingUpdateCreditSchemaUpsertLicense1OutboundSchema,
 		billingUpdateCreditSchemaUpsertLicense2OutboundSchema,
 	]);
+
+export const billingUpdateUpsertLicenseProviderMarkupsOutboundSchema = z.object(
+	{
+		markup: z.number(),
+	},
+);
+
+export const billingUpdateUpsertLicenseModelMarkupsOutboundSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	input_cost: z.union([z.number(), z.undefined()]).optional(),
+	output_cost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseMarkupsOutboundSchema = z.object({
+	default_markup: z.union([z.number(), z.undefined()]).optional(),
+	provider_markups: z
+		.union([
+			z.record(
+				z.string(),
+				billingUpdateUpsertLicenseProviderMarkupsOutboundSchema,
+			),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	model_markups: z
+		.union([
+			z.record(
+				z.string(),
+				billingUpdateUpsertLicenseModelMarkupsOutboundSchema,
+			),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
 
 export const billingUpdateUpsertLicenseFeatureOverrideOutboundSchema = z.object(
 	{
@@ -766,6 +1492,9 @@ export const billingUpdateUpsertLicenseFeatureOverrideOutboundSchema = z.object(
 				),
 				z.undefined(),
 			])
+			.optional(),
+		markups: z
+			.union([billingUpdateUpsertLicenseMarkupsOutboundSchema, z.undefined()])
 			.optional(),
 	},
 );
@@ -1025,6 +1754,135 @@ export const billingUpdateItemRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const billingUpdateDimensionsToItemEnum2Schema = closedEnumSchema;
+
+export const billingUpdateDimensionsItemToUnion2Schema = z.union([
+	z.number(),
+	billingUpdateDimensionsToItemEnum2Schema,
+]);
+
+export const billingUpdateDimensionsItemTier2Schema = z.object({
+	to: z.union([z.number(), billingUpdateDimensionsToItemEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsItem3Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsItemTier2Schema),
+});
+
+export const billingUpdateItemDimensionsUnion2Schema = z.union([
+	billingUpdateDimensionsItem3Schema,
+	billingUpdateDimensionsItem4Schema,
+]);
+
+export const billingUpdateCreditSchemaItem2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsItem3Schema,
+					billingUpdateDimensionsItem4Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateItemMultipliers2Schema),
+			z.undefined(),
+		])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsToItemEnum1Schema = closedEnumSchema;
+
+export const billingUpdateDimensionsItemToUnion1Schema = z.union([
+	z.number(),
+	billingUpdateDimensionsToItemEnum1Schema,
+]);
+
+export const billingUpdateDimensionsItemTier1Schema = z.object({
+	to: z.union([z.number(), billingUpdateDimensionsToItemEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsItem1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsItemTier1Schema),
+});
+
+export const billingUpdateItemDimensionsUnion1Schema = z.union([
+	billingUpdateDimensionsItem1Schema,
+	billingUpdateDimensionsItem2Schema,
+]);
+
+export const billingUpdateToItemEnumSchema = closedEnumSchema;
+
+export const billingUpdateItemFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	billingUpdateToItemEnumSchema,
+]);
+
+export const billingUpdateItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), billingUpdateToItemEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateCreditSchemaItem1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsItem1Schema,
+					billingUpdateDimensionsItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateItemMultipliers1Schema),
+			z.undefined(),
+		])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateItemFeatureOverrideTierSchema),
+});
+
+export const billingUpdateItemCreditSchemaUnionSchema = z.union([
+	billingUpdateCreditSchemaItem1Schema,
+	billingUpdateCreditSchemaItem2Schema,
+]);
+
+export const billingUpdateItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					billingUpdateCreditSchemaItem1Schema,
+					billingUpdateCreditSchemaItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z.union([billingUpdateItemMarkupsSchema, z.undefined()]).optional(),
+});
+
 export const billingUpdateItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -1095,6 +1953,137 @@ export const billingUpdateAddItemRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const billingUpdateDimensionsToAddItemEnum2Schema = closedEnumSchema;
+
+export const billingUpdateDimensionsAddItemToUnion2Schema = z.union([
+	z.number(),
+	billingUpdateDimensionsToAddItemEnum2Schema,
+]);
+
+export const billingUpdateDimensionsAddItemTier2Schema = z.object({
+	to: z.union([z.number(), billingUpdateDimensionsToAddItemEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsAddItem3Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsAddItemTier2Schema),
+});
+
+export const billingUpdateAddItemDimensionsUnion2Schema = z.union([
+	billingUpdateDimensionsAddItem3Schema,
+	billingUpdateDimensionsAddItem4Schema,
+]);
+
+export const billingUpdateCreditSchemaAddItem2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsAddItem3Schema,
+					billingUpdateDimensionsAddItem4Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateAddItemMultipliers2Schema),
+			z.undefined(),
+		])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsToAddItemEnum1Schema = closedEnumSchema;
+
+export const billingUpdateDimensionsAddItemToUnion1Schema = z.union([
+	z.number(),
+	billingUpdateDimensionsToAddItemEnum1Schema,
+]);
+
+export const billingUpdateDimensionsAddItemTier1Schema = z.object({
+	to: z.union([z.number(), billingUpdateDimensionsToAddItemEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsAddItem1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsAddItemTier1Schema),
+});
+
+export const billingUpdateAddItemDimensionsUnion1Schema = z.union([
+	billingUpdateDimensionsAddItem1Schema,
+	billingUpdateDimensionsAddItem2Schema,
+]);
+
+export const billingUpdateToAddItemEnumSchema = closedEnumSchema;
+
+export const billingUpdateAddItemFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	billingUpdateToAddItemEnumSchema,
+]);
+
+export const billingUpdateAddItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), billingUpdateToAddItemEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateCreditSchemaAddItem1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsAddItem1Schema,
+					billingUpdateDimensionsAddItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateAddItemMultipliers1Schema),
+			z.undefined(),
+		])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateAddItemFeatureOverrideTierSchema),
+});
+
+export const billingUpdateAddItemCreditSchemaUnionSchema = z.union([
+	billingUpdateCreditSchemaAddItem1Schema,
+	billingUpdateCreditSchemaAddItem2Schema,
+]);
+
+export const billingUpdateAddItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					billingUpdateCreditSchemaAddItem1Schema,
+					billingUpdateCreditSchemaAddItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z
+		.union([billingUpdateAddItemMarkupsSchema, z.undefined()])
+		.optional(),
+});
+
 export const billingUpdateAddItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -1153,10 +2142,10 @@ export const billingUpdateCustomizeFreeTrialParamsSchema = z.object({
 	onEnd: z.union([billingUpdateCustomizeOnEndSchema, z.undefined()]).optional(),
 });
 
-export const billingUpdatePurchaseLimitIntervalSchema = closedEnumSchema;
+export const billingUpdateAutoTopupIntervalSchema = closedEnumSchema;
 
 export const billingUpdatePurchaseLimitSchema = z.object({
-	interval: billingUpdatePurchaseLimitIntervalSchema,
+	interval: billingUpdateAutoTopupIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.number(),
 	count: z.union([z.number(), z.undefined()]).optional(),
@@ -1270,7 +2259,7 @@ export const billingUpdateUpsertLicensePriceSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(billingUpdateUpsertLicenseTierSchema), z.undefined()])
+		.union([z.array(billingUpdateUpsertLicensePriceTierSchema), z.undefined()])
 		.optional(),
 	tierBehavior: z
 		.union([billingUpdateUpsertLicenseTierBehaviorSchema, z.undefined()])
@@ -1299,6 +2288,139 @@ export const billingUpdateUpsertLicenseRolloverSchema = z.object({
 	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: billingUpdateUpsertLicenseExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateDimensionsToUpsertLicenseEnum2Schema =
+	closedEnumSchema;
+
+export const billingUpdateDimensionsUpsertLicenseToUnion2Schema = z.union([
+	z.number(),
+	billingUpdateDimensionsToUpsertLicenseEnum2Schema,
+]);
+
+export const billingUpdateDimensionsUpsertLicenseTier2Schema = z.object({
+	to: z.union([z.number(), billingUpdateDimensionsToUpsertLicenseEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsUpsertLicense3Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsUpsertLicenseTier2Schema),
+});
+
+export const billingUpdateUpsertLicenseDimensionsUnion2Schema = z.union([
+	billingUpdateDimensionsUpsertLicense3Schema,
+	billingUpdateDimensionsUpsertLicense4Schema,
+]);
+
+export const billingUpdateCreditSchemaUpsertLicense2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsUpsertLicense3Schema,
+					billingUpdateDimensionsUpsertLicense4Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateUpsertLicenseMultipliers2Schema),
+			z.undefined(),
+		])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsToUpsertLicenseEnum1Schema =
+	closedEnumSchema;
+
+export const billingUpdateDimensionsUpsertLicenseToUnion1Schema = z.union([
+	z.number(),
+	billingUpdateDimensionsToUpsertLicenseEnum1Schema,
+]);
+
+export const billingUpdateDimensionsUpsertLicenseTier1Schema = z.object({
+	to: z.union([z.number(), billingUpdateDimensionsToUpsertLicenseEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateDimensionsUpsertLicense1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateDimensionsUpsertLicenseTier1Schema),
+});
+
+export const billingUpdateUpsertLicenseDimensionsUnion1Schema = z.union([
+	billingUpdateDimensionsUpsertLicense1Schema,
+	billingUpdateDimensionsUpsertLicense2Schema,
+]);
+
+export const billingUpdateToUpsertLicenseEnumSchema = closedEnumSchema;
+
+export const billingUpdateUpsertLicenseFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	billingUpdateToUpsertLicenseEnumSchema,
+]);
+
+export const billingUpdateUpsertLicenseFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), billingUpdateToUpsertLicenseEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const billingUpdateCreditSchemaUpsertLicense1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					billingUpdateDimensionsUpsertLicense1Schema,
+					billingUpdateDimensionsUpsertLicense2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), billingUpdateUpsertLicenseMultipliers1Schema),
+			z.undefined(),
+		])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(billingUpdateUpsertLicenseFeatureOverrideTierSchema),
+});
+
+export const billingUpdateUpsertLicenseCreditSchemaUnionSchema = z.union([
+	billingUpdateCreditSchemaUpsertLicense1Schema,
+	billingUpdateCreditSchemaUpsertLicense2Schema,
+]);
+
+export const billingUpdateUpsertLicenseFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					billingUpdateCreditSchemaUpsertLicense1Schema,
+					billingUpdateCreditSchemaUpsertLicense2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z
+		.union([billingUpdateUpsertLicenseMarkupsSchema, z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateUpsertLicensePlanItemSchema = z.object({

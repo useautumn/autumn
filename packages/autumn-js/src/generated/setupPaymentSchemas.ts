@@ -21,7 +21,7 @@ export const setupPaymentItemAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
-export const setupPaymentItemToSchema = z.union([z.number(), z.string()]);
+export const setupPaymentItemPriceToSchema = z.union([z.number(), z.string()]);
 
 export const setupPaymentItemTierAdditionalCurrencySchema = z.object({
 	currency: z.string(),
@@ -41,41 +41,92 @@ export const setupPaymentItemPriceTierSchema = z.object({
 		.optional(),
 });
 
-export const setupPaymentCreditSchemaItem2Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	creditCost: z.number(),
-});
-
-export const setupPaymentItemFeatureOverrideTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
-	creditCost: z.number(),
-});
-
-export const setupPaymentCreditSchemaItem1Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	tierBehavior: z.literal("graduated"),
-	tiers: z.array(setupPaymentItemFeatureOverrideTierSchema),
-});
-
-export const setupPaymentItemCreditSchemaUnionSchema = z.union([
-	setupPaymentCreditSchemaItem1Schema,
-	setupPaymentCreditSchemaItem2Schema,
+export const setupPaymentDimensionsItemMatch4Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
 ]);
 
-export const setupPaymentItemFeatureOverrideSchema = z.object({
-	creditSchema: z
+export const setupPaymentDimensionsItem4Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsItemMatch3Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentItemMultipliersMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentItemMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentDimensionsItemMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsItem2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsItemMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentItemMultipliersMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentItemMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentItemProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const setupPaymentItemModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentItemMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
 		.union([
-			z.array(
-				z.union([
-					setupPaymentCreditSchemaItem1Schema,
-					setupPaymentCreditSchemaItem2Schema,
-				]),
-			),
+			z.record(z.string(), setupPaymentItemProviderMarkupsSchema),
 			z.undefined(),
 		])
-		.optional(),
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([
+			z.record(z.string(), setupPaymentItemModelMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 });
 
 export const setupPaymentAddItemAdditionalCurrencySchema = z.object({
@@ -83,7 +134,10 @@ export const setupPaymentAddItemAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
-export const setupPaymentAddItemToSchema = z.union([z.number(), z.string()]);
+export const setupPaymentAddItemPriceToSchema = z.union([
+	z.number(),
+	z.string(),
+]);
 
 export const setupPaymentAddItemTierAdditionalCurrencySchema = z.object({
 	currency: z.string(),
@@ -103,41 +157,92 @@ export const setupPaymentAddItemPriceTierSchema = z.object({
 		.optional(),
 });
 
-export const setupPaymentCreditSchemaAddItem2Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	creditCost: z.number(),
-});
-
-export const setupPaymentAddItemFeatureOverrideTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
-	creditCost: z.number(),
-});
-
-export const setupPaymentCreditSchemaAddItem1Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	tierBehavior: z.literal("graduated"),
-	tiers: z.array(setupPaymentAddItemFeatureOverrideTierSchema),
-});
-
-export const setupPaymentAddItemCreditSchemaUnionSchema = z.union([
-	setupPaymentCreditSchemaAddItem1Schema,
-	setupPaymentCreditSchemaAddItem2Schema,
+export const setupPaymentDimensionsAddItemMatch4Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
 ]);
 
-export const setupPaymentAddItemFeatureOverrideSchema = z.object({
-	creditSchema: z
+export const setupPaymentDimensionsAddItem4Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsAddItemMatch3Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentAddItemMultipliersMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentAddItemMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentDimensionsAddItemMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsAddItem2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsAddItemMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentAddItemMultipliersMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentAddItemMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const setupPaymentAddItemModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
 		.union([
-			z.array(
-				z.union([
-					setupPaymentCreditSchemaAddItem1Schema,
-					setupPaymentCreditSchemaAddItem2Schema,
-				]),
-			),
+			z.record(z.string(), setupPaymentAddItemProviderMarkupsSchema),
 			z.undefined(),
 		])
-		.optional(),
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([
+			z.record(z.string(), setupPaymentAddItemModelMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 });
 
 export const setupPaymentUsageLimitPropertiesSchema = z.union([
@@ -182,43 +287,115 @@ export const setupPaymentUpsertLicenseAddItemAdditionalCurrencySchema =
 		amount: z.number(),
 	});
 
-export const setupPaymentUpsertLicenseTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
-});
-
-export const setupPaymentCreditSchemaUpsertLicense2Schema = z.object({
-	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
-	billingUnits: z.union([z.any(), z.undefined()]).optional(),
-	creditCost: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const setupPaymentCreditSchemaUpsertLicense1Schema = z.object({
-	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
-	billingUnits: z.union([z.any(), z.undefined()]).optional(),
-	tierBehavior: z.union([z.any(), z.undefined()]).optional(),
-	tiers: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const setupPaymentUpsertLicenseCreditSchemaUnionSchema = z.union([
-	setupPaymentCreditSchemaUpsertLicense1Schema,
-	setupPaymentCreditSchemaUpsertLicense2Schema,
+export const setupPaymentUpsertLicensePriceToSchema = z.union([
+	z.number(),
+	z.string(),
 ]);
 
-export const setupPaymentUpsertLicenseFeatureOverrideSchema = z.object({
-	creditSchema: z
+export const setupPaymentUpsertLicenseTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUpsertLicensePriceTierSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
 		.union([
-			z.array(
-				z.union([
-					setupPaymentCreditSchemaUpsertLicense1Schema,
-					setupPaymentCreditSchemaUpsertLicense2Schema,
-				]),
-			),
+			z.array(setupPaymentUpsertLicenseTierAdditionalCurrencySchema),
 			z.undefined(),
 		])
 		.optional(),
+});
+
+export const setupPaymentDimensionsUpsertLicenseMatch4Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsUpsertLicense4Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsUpsertLicenseMatch3Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentUpsertLicenseMultipliersMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentUpsertLicenseMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentDimensionsUpsertLicenseMatch2Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsUpsertLicense2Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsUpsertLicenseMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentUpsertLicenseMultipliersMatch1Schema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentUpsertLicenseMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUpsertLicenseProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const setupPaymentUpsertLicenseModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUpsertLicenseMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
+		.union([
+			z.record(z.string(), setupPaymentUpsertLicenseProviderMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([
+			z.record(z.string(), setupPaymentUpsertLicenseModelMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 });
 
 export const setupPaymentRemoveLicenseSchema = z.object({
@@ -301,7 +478,7 @@ export const setupPaymentItemAdditionalCurrencyOutboundSchema = z.object({
 	amount: z.number(),
 });
 
-export const setupPaymentItemToOutboundSchema = z.union([
+export const setupPaymentItemPriceToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
@@ -355,20 +532,165 @@ export const setupPaymentItemRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentCreditSchemaItem2OutboundSchema = z.object({
-	metered_feature_id: z.string(),
-	billing_units: z.union([z.number(), z.undefined()]).optional(),
+export const setupPaymentDimensionsItemMatch4OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsItem4OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
 	credit_cost: z.number(),
 });
 
+export const setupPaymentDimensionsItemMatch3OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsItemToUnion2OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const setupPaymentDimensionsItemTier2OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsItem3OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsItemTier2OutboundSchema),
+});
+
+export const setupPaymentItemDimensionsUnion2OutboundSchema = z.union([
+	setupPaymentDimensionsItem3OutboundSchema,
+	setupPaymentDimensionsItem4OutboundSchema,
+]);
+
+export const setupPaymentItemMultipliersMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentItemMultipliers2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentCreditSchemaItem2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsItem3OutboundSchema,
+					setupPaymentDimensionsItem4OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentItemMultipliers2OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsItemMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsItem2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsItemMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsItemToUnion1OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const setupPaymentDimensionsItemTier1OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsItem1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsItemTier1OutboundSchema),
+});
+
+export const setupPaymentItemDimensionsUnion1OutboundSchema = z.union([
+	setupPaymentDimensionsItem1OutboundSchema,
+	setupPaymentDimensionsItem2OutboundSchema,
+]);
+
+export const setupPaymentItemMultipliersMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentItemMultipliers1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentItemFeatureOverrideToUnionOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
 export const setupPaymentItemFeatureOverrideTierOutboundSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
+	to: z.union([z.number(), z.string()]),
 	credit_cost: z.number(),
 });
 
 export const setupPaymentCreditSchemaItem1OutboundSchema = z.object({
 	metered_feature_id: z.string(),
 	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsItem1OutboundSchema,
+					setupPaymentDimensionsItem2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentItemMultipliers1OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tier_behavior: z.literal("graduated"),
 	tiers: z.array(setupPaymentItemFeatureOverrideTierOutboundSchema),
 });
@@ -377,6 +699,34 @@ export const setupPaymentItemCreditSchemaUnionOutboundSchema = z.union([
 	setupPaymentCreditSchemaItem1OutboundSchema,
 	setupPaymentCreditSchemaItem2OutboundSchema,
 ]);
+
+export const setupPaymentItemProviderMarkupsOutboundSchema = z.object({
+	markup: z.number(),
+});
+
+export const setupPaymentItemModelMarkupsOutboundSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	input_cost: z.union([z.number(), z.undefined()]).optional(),
+	output_cost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentItemMarkupsOutboundSchema = z.object({
+	default_markup: z.union([z.number(), z.undefined()]).optional(),
+	provider_markups: z
+		.union([
+			z.record(z.string(), setupPaymentItemProviderMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	model_markups: z
+		.union([
+			z.record(z.string(), setupPaymentItemModelMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
 
 export const setupPaymentItemFeatureOverrideOutboundSchema = z.object({
 	credit_schema: z
@@ -389,6 +739,9 @@ export const setupPaymentItemFeatureOverrideOutboundSchema = z.object({
 			),
 			z.undefined(),
 		])
+		.optional(),
+	markups: z
+		.union([setupPaymentItemMarkupsOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -424,7 +777,7 @@ export const setupPaymentAddItemAdditionalCurrencyOutboundSchema = z.object({
 	amount: z.number(),
 });
 
-export const setupPaymentAddItemToOutboundSchema = z.union([
+export const setupPaymentAddItemPriceToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
@@ -480,20 +833,165 @@ export const setupPaymentAddItemRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentCreditSchemaAddItem2OutboundSchema = z.object({
-	metered_feature_id: z.string(),
-	billing_units: z.union([z.number(), z.undefined()]).optional(),
+export const setupPaymentDimensionsAddItemMatch4OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsAddItem4OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
 	credit_cost: z.number(),
 });
 
+export const setupPaymentDimensionsAddItemMatch3OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsAddItemToUnion2OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const setupPaymentDimensionsAddItemTier2OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsAddItem3OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsAddItemTier2OutboundSchema),
+});
+
+export const setupPaymentAddItemDimensionsUnion2OutboundSchema = z.union([
+	setupPaymentDimensionsAddItem3OutboundSchema,
+	setupPaymentDimensionsAddItem4OutboundSchema,
+]);
+
+export const setupPaymentAddItemMultipliersMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentAddItemMultipliers2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentCreditSchemaAddItem2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsAddItem3OutboundSchema,
+					setupPaymentDimensionsAddItem4OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentAddItemMultipliers2OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsAddItemMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsAddItem2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsAddItemMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsAddItemToUnion1OutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const setupPaymentDimensionsAddItemTier1OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsAddItem1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsAddItemTier1OutboundSchema),
+});
+
+export const setupPaymentAddItemDimensionsUnion1OutboundSchema = z.union([
+	setupPaymentDimensionsAddItem1OutboundSchema,
+	setupPaymentDimensionsAddItem2OutboundSchema,
+]);
+
+export const setupPaymentAddItemMultipliersMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentAddItemMultipliers1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemFeatureOverrideToUnionOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
 export const setupPaymentAddItemFeatureOverrideTierOutboundSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
+	to: z.union([z.number(), z.string()]),
 	credit_cost: z.number(),
 });
 
 export const setupPaymentCreditSchemaAddItem1OutboundSchema = z.object({
 	metered_feature_id: z.string(),
 	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsAddItem1OutboundSchema,
+					setupPaymentDimensionsAddItem2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentAddItemMultipliers1OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tier_behavior: z.literal("graduated"),
 	tiers: z.array(setupPaymentAddItemFeatureOverrideTierOutboundSchema),
 });
@@ -502,6 +1000,34 @@ export const setupPaymentAddItemCreditSchemaUnionOutboundSchema = z.union([
 	setupPaymentCreditSchemaAddItem1OutboundSchema,
 	setupPaymentCreditSchemaAddItem2OutboundSchema,
 ]);
+
+export const setupPaymentAddItemProviderMarkupsOutboundSchema = z.object({
+	markup: z.number(),
+});
+
+export const setupPaymentAddItemModelMarkupsOutboundSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	input_cost: z.union([z.number(), z.undefined()]).optional(),
+	output_cost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemMarkupsOutboundSchema = z.object({
+	default_markup: z.union([z.number(), z.undefined()]).optional(),
+	provider_markups: z
+		.union([
+			z.record(z.string(), setupPaymentAddItemProviderMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	model_markups: z
+		.union([
+			z.record(z.string(), setupPaymentAddItemModelMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
 
 export const setupPaymentAddItemFeatureOverrideOutboundSchema = z.object({
 	credit_schema: z
@@ -514,6 +1040,9 @@ export const setupPaymentAddItemFeatureOverrideOutboundSchema = z.object({
 			),
 			z.undefined(),
 		])
+		.optional(),
+	markups: z
+		.union([setupPaymentAddItemMarkupsOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -686,11 +1215,28 @@ export const setupPaymentUpsertLicenseAddItemAdditionalCurrencyOutboundSchema =
 		amount: z.number(),
 	});
 
-export const setupPaymentUpsertLicenseTierOutboundSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
+export const setupPaymentUpsertLicensePriceToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const setupPaymentUpsertLicenseTierAdditionalCurrencyOutboundSchema =
+	z.object({
+		currency: z.string(),
+		amount: z.union([z.number(), z.undefined()]).optional(),
+		flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	});
+
+export const setupPaymentUpsertLicensePriceTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
-	additional_currencies: z.union([z.array(z.any()), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(setupPaymentUpsertLicenseTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const setupPaymentUpsertLicensePriceOutboundSchema = z.object({
@@ -703,7 +1249,7 @@ export const setupPaymentUpsertLicensePriceOutboundSchema = z.object({
 		.optional(),
 	tiers: z
 		.union([
-			z.array(setupPaymentUpsertLicenseTierOutboundSchema),
+			z.array(setupPaymentUpsertLicensePriceTierOutboundSchema),
 			z.undefined(),
 		])
 		.optional(),
@@ -727,17 +1273,158 @@ export const setupPaymentUpsertLicenseRolloverOutboundSchema = z.object({
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentCreditSchemaUpsertLicense2OutboundSchema = z.object({
-	metered_feature_id: z.union([z.any(), z.undefined()]).optional(),
-	billing_units: z.union([z.any(), z.undefined()]).optional(),
-	credit_cost: z.union([z.any(), z.undefined()]).optional(),
+export const setupPaymentDimensionsUpsertLicenseMatch4OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsUpsertLicense4OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
 });
 
+export const setupPaymentDimensionsUpsertLicenseMatch3OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsUpsertLicenseToUnion2OutboundSchema =
+	z.union([z.number(), z.string()]);
+
+export const setupPaymentDimensionsUpsertLicenseTier2OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsUpsertLicense3OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsUpsertLicenseTier2OutboundSchema),
+});
+
+export const setupPaymentUpsertLicenseDimensionsUnion2OutboundSchema = z.union([
+	setupPaymentDimensionsUpsertLicense3OutboundSchema,
+	setupPaymentDimensionsUpsertLicense4OutboundSchema,
+]);
+
+export const setupPaymentUpsertLicenseMultipliersMatch2OutboundSchema = z.union(
+	[z.string(), z.number(), z.boolean()],
+);
+
+export const setupPaymentUpsertLicenseMultipliers2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentCreditSchemaUpsertLicense2OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsUpsertLicense3OutboundSchema,
+					setupPaymentDimensionsUpsertLicense4OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentUpsertLicenseMultipliers2OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsUpsertLicenseMatch2OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsUpsertLicense2OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsUpsertLicenseMatch1OutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentDimensionsUpsertLicenseToUnion1OutboundSchema =
+	z.union([z.number(), z.string()]);
+
+export const setupPaymentDimensionsUpsertLicenseTier1OutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	credit_cost: z.number(),
+});
+
+export const setupPaymentDimensionsUpsertLicense1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsUpsertLicenseTier1OutboundSchema),
+});
+
+export const setupPaymentUpsertLicenseDimensionsUnion1OutboundSchema = z.union([
+	setupPaymentDimensionsUpsertLicense1OutboundSchema,
+	setupPaymentDimensionsUpsertLicense2OutboundSchema,
+]);
+
+export const setupPaymentUpsertLicenseMultipliersMatch1OutboundSchema = z.union(
+	[z.string(), z.number(), z.boolean()],
+);
+
+export const setupPaymentUpsertLicenseMultipliers1OutboundSchema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUpsertLicenseFeatureOverrideToUnionOutboundSchema =
+	z.union([z.number(), z.string()]);
+
+export const setupPaymentUpsertLicenseFeatureOverrideTierOutboundSchema =
+	z.object({
+		to: z.union([z.number(), z.string()]),
+		credit_cost: z.number(),
+	});
+
 export const setupPaymentCreditSchemaUpsertLicense1OutboundSchema = z.object({
-	metered_feature_id: z.union([z.any(), z.undefined()]).optional(),
-	billing_units: z.union([z.any(), z.undefined()]).optional(),
-	tier_behavior: z.union([z.any(), z.undefined()]).optional(),
-	tiers: z.union([z.any(), z.undefined()]).optional(),
+	metered_feature_id: z.string(),
+	billing_units: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsUpsertLicense1OutboundSchema,
+					setupPaymentDimensionsUpsertLicense2OutboundSchema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentUpsertLicenseMultipliers1OutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentUpsertLicenseFeatureOverrideTierOutboundSchema),
 });
 
 export const setupPaymentUpsertLicenseCreditSchemaUnionOutboundSchema = z.union(
@@ -746,6 +1433,37 @@ export const setupPaymentUpsertLicenseCreditSchemaUnionOutboundSchema = z.union(
 		setupPaymentCreditSchemaUpsertLicense2OutboundSchema,
 	],
 );
+
+export const setupPaymentUpsertLicenseProviderMarkupsOutboundSchema = z.object({
+	markup: z.number(),
+});
+
+export const setupPaymentUpsertLicenseModelMarkupsOutboundSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	input_cost: z.union([z.number(), z.undefined()]).optional(),
+	output_cost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUpsertLicenseMarkupsOutboundSchema = z.object({
+	default_markup: z.union([z.number(), z.undefined()]).optional(),
+	provider_markups: z
+		.union([
+			z.record(
+				z.string(),
+				setupPaymentUpsertLicenseProviderMarkupsOutboundSchema,
+			),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	model_markups: z
+		.union([
+			z.record(z.string(), setupPaymentUpsertLicenseModelMarkupsOutboundSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+});
 
 export const setupPaymentUpsertLicenseFeatureOverrideOutboundSchema = z.object({
 	credit_schema: z
@@ -758,6 +1476,9 @@ export const setupPaymentUpsertLicenseFeatureOverrideOutboundSchema = z.object({
 			),
 			z.undefined(),
 		])
+		.optional(),
+	markups: z
+		.union([setupPaymentUpsertLicenseMarkupsOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -1020,6 +1741,135 @@ export const setupPaymentItemRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const setupPaymentDimensionsToItemEnum2Schema = closedEnumSchema;
+
+export const setupPaymentDimensionsItemToUnion2Schema = z.union([
+	z.number(),
+	setupPaymentDimensionsToItemEnum2Schema,
+]);
+
+export const setupPaymentDimensionsItemTier2Schema = z.object({
+	to: z.union([z.number(), setupPaymentDimensionsToItemEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsItem3Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsItemTier2Schema),
+});
+
+export const setupPaymentItemDimensionsUnion2Schema = z.union([
+	setupPaymentDimensionsItem3Schema,
+	setupPaymentDimensionsItem4Schema,
+]);
+
+export const setupPaymentCreditSchemaItem2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsItem3Schema,
+					setupPaymentDimensionsItem4Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentItemMultipliers2Schema),
+			z.undefined(),
+		])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsToItemEnum1Schema = closedEnumSchema;
+
+export const setupPaymentDimensionsItemToUnion1Schema = z.union([
+	z.number(),
+	setupPaymentDimensionsToItemEnum1Schema,
+]);
+
+export const setupPaymentDimensionsItemTier1Schema = z.object({
+	to: z.union([z.number(), setupPaymentDimensionsToItemEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsItem1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsItemTier1Schema),
+});
+
+export const setupPaymentItemDimensionsUnion1Schema = z.union([
+	setupPaymentDimensionsItem1Schema,
+	setupPaymentDimensionsItem2Schema,
+]);
+
+export const setupPaymentToItemEnumSchema = closedEnumSchema;
+
+export const setupPaymentItemFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	setupPaymentToItemEnumSchema,
+]);
+
+export const setupPaymentItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), setupPaymentToItemEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentCreditSchemaItem1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsItem1Schema,
+					setupPaymentDimensionsItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentItemMultipliers1Schema),
+			z.undefined(),
+		])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentItemFeatureOverrideTierSchema),
+});
+
+export const setupPaymentItemCreditSchemaUnionSchema = z.union([
+	setupPaymentCreditSchemaItem1Schema,
+	setupPaymentCreditSchemaItem2Schema,
+]);
+
+export const setupPaymentItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaItem1Schema,
+					setupPaymentCreditSchemaItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z.union([setupPaymentItemMarkupsSchema, z.undefined()]).optional(),
+});
+
 export const setupPaymentItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -1088,6 +1938,137 @@ export const setupPaymentAddItemRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const setupPaymentDimensionsToAddItemEnum2Schema = closedEnumSchema;
+
+export const setupPaymentDimensionsAddItemToUnion2Schema = z.union([
+	z.number(),
+	setupPaymentDimensionsToAddItemEnum2Schema,
+]);
+
+export const setupPaymentDimensionsAddItemTier2Schema = z.object({
+	to: z.union([z.number(), setupPaymentDimensionsToAddItemEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsAddItem3Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsAddItemTier2Schema),
+});
+
+export const setupPaymentAddItemDimensionsUnion2Schema = z.union([
+	setupPaymentDimensionsAddItem3Schema,
+	setupPaymentDimensionsAddItem4Schema,
+]);
+
+export const setupPaymentCreditSchemaAddItem2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsAddItem3Schema,
+					setupPaymentDimensionsAddItem4Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentAddItemMultipliers2Schema),
+			z.undefined(),
+		])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsToAddItemEnum1Schema = closedEnumSchema;
+
+export const setupPaymentDimensionsAddItemToUnion1Schema = z.union([
+	z.number(),
+	setupPaymentDimensionsToAddItemEnum1Schema,
+]);
+
+export const setupPaymentDimensionsAddItemTier1Schema = z.object({
+	to: z.union([z.number(), setupPaymentDimensionsToAddItemEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsAddItem1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsAddItemTier1Schema),
+});
+
+export const setupPaymentAddItemDimensionsUnion1Schema = z.union([
+	setupPaymentDimensionsAddItem1Schema,
+	setupPaymentDimensionsAddItem2Schema,
+]);
+
+export const setupPaymentToAddItemEnumSchema = closedEnumSchema;
+
+export const setupPaymentAddItemFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	setupPaymentToAddItemEnumSchema,
+]);
+
+export const setupPaymentAddItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), setupPaymentToAddItemEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentCreditSchemaAddItem1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsAddItem1Schema,
+					setupPaymentDimensionsAddItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentAddItemMultipliers1Schema),
+			z.undefined(),
+		])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentAddItemFeatureOverrideTierSchema),
+});
+
+export const setupPaymentAddItemCreditSchemaUnionSchema = z.union([
+	setupPaymentCreditSchemaAddItem1Schema,
+	setupPaymentCreditSchemaAddItem2Schema,
+]);
+
+export const setupPaymentAddItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaAddItem1Schema,
+					setupPaymentCreditSchemaAddItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z
+		.union([setupPaymentAddItemMarkupsSchema, z.undefined()])
+		.optional(),
+});
+
 export const setupPaymentAddItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
@@ -1146,10 +2127,10 @@ export const setupPaymentCustomizeFreeTrialParamsSchema = z.object({
 	onEnd: z.union([setupPaymentCustomizeOnEndSchema, z.undefined()]).optional(),
 });
 
-export const setupPaymentPurchaseLimitIntervalSchema = closedEnumSchema;
+export const setupPaymentAutoTopupIntervalSchema = closedEnumSchema;
 
 export const setupPaymentPurchaseLimitSchema = z.object({
-	interval: setupPaymentPurchaseLimitIntervalSchema,
+	interval: setupPaymentAutoTopupIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.number(),
 	count: z.union([z.number(), z.undefined()]).optional(),
@@ -1263,7 +2244,7 @@ export const setupPaymentUpsertLicensePriceSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(setupPaymentUpsertLicenseTierSchema), z.undefined()])
+		.union([z.array(setupPaymentUpsertLicensePriceTierSchema), z.undefined()])
 		.optional(),
 	tierBehavior: z
 		.union([setupPaymentUpsertLicenseTierBehaviorSchema, z.undefined()])
@@ -1292,6 +2273,139 @@ export const setupPaymentUpsertLicenseRolloverSchema = z.object({
 	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: setupPaymentUpsertLicenseExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentDimensionsToUpsertLicenseEnum2Schema =
+	closedEnumSchema;
+
+export const setupPaymentDimensionsUpsertLicenseToUnion2Schema = z.union([
+	z.number(),
+	setupPaymentDimensionsToUpsertLicenseEnum2Schema,
+]);
+
+export const setupPaymentDimensionsUpsertLicenseTier2Schema = z.object({
+	to: z.union([z.number(), setupPaymentDimensionsToUpsertLicenseEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsUpsertLicense3Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsUpsertLicenseTier2Schema),
+});
+
+export const setupPaymentUpsertLicenseDimensionsUnion2Schema = z.union([
+	setupPaymentDimensionsUpsertLicense3Schema,
+	setupPaymentDimensionsUpsertLicense4Schema,
+]);
+
+export const setupPaymentCreditSchemaUpsertLicense2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsUpsertLicense3Schema,
+					setupPaymentDimensionsUpsertLicense4Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentUpsertLicenseMultipliers2Schema),
+			z.undefined(),
+		])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsToUpsertLicenseEnum1Schema =
+	closedEnumSchema;
+
+export const setupPaymentDimensionsUpsertLicenseToUnion1Schema = z.union([
+	z.number(),
+	setupPaymentDimensionsToUpsertLicenseEnum1Schema,
+]);
+
+export const setupPaymentDimensionsUpsertLicenseTier1Schema = z.object({
+	to: z.union([z.number(), setupPaymentDimensionsToUpsertLicenseEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentDimensionsUpsertLicense1Schema = z.object({
+	match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentDimensionsUpsertLicenseTier1Schema),
+});
+
+export const setupPaymentUpsertLicenseDimensionsUnion1Schema = z.union([
+	setupPaymentDimensionsUpsertLicense1Schema,
+	setupPaymentDimensionsUpsertLicense2Schema,
+]);
+
+export const setupPaymentToUpsertLicenseEnumSchema = closedEnumSchema;
+
+export const setupPaymentUpsertLicenseFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	setupPaymentToUpsertLicenseEnumSchema,
+]);
+
+export const setupPaymentUpsertLicenseFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), setupPaymentToUpsertLicenseEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const setupPaymentCreditSchemaUpsertLicense1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					setupPaymentDimensionsUpsertLicense1Schema,
+					setupPaymentDimensionsUpsertLicense2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), setupPaymentUpsertLicenseMultipliers1Schema),
+			z.undefined(),
+		])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(setupPaymentUpsertLicenseFeatureOverrideTierSchema),
+});
+
+export const setupPaymentUpsertLicenseCreditSchemaUnionSchema = z.union([
+	setupPaymentCreditSchemaUpsertLicense1Schema,
+	setupPaymentCreditSchemaUpsertLicense2Schema,
+]);
+
+export const setupPaymentUpsertLicenseFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					setupPaymentCreditSchemaUpsertLicense1Schema,
+					setupPaymentCreditSchemaUpsertLicense2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z
+		.union([setupPaymentUpsertLicenseMarkupsSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentUpsertLicensePlanItemSchema = z.object({

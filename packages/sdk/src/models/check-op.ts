@@ -18,6 +18,18 @@ export type CheckGlobals = {
 };
 
 /**
+ * How to handle a lock that exceeds the available balance. "reject" (default) returns allowed: false and reserves nothing. "cap" reserves only what fits and returns allowed: true. "overflow" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here.
+ */
+export const CheckOverageBehavior = {
+  Cap: "cap",
+  Overflow: "overflow",
+} as const;
+/**
+ * How to handle a lock that exceeds the available balance. "reject" (default) returns allowed: false and reserves nothing. "cap" reserves only what fits and returns allowed: true. "overflow" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here.
+ */
+export type CheckOverageBehavior = ClosedEnum<typeof CheckOverageBehavior>;
+
+/**
  * Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold.
  */
 export type CheckLock = {
@@ -33,6 +45,10 @@ export type CheckLock = {
    * Unix timestamp (ms) when the lock automatically expires and releases the held balance.
    */
   expiresAt?: number | undefined;
+  /**
+   * How to handle a lock that exceeds the available balance. "reject" (default) returns allowed: false and reserves nothing. "cap" reserves only what fits and returns allowed: true. "overflow" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here.
+   */
+  overageBehavior?: CheckOverageBehavior | undefined;
 };
 
 export type CheckParams = {
@@ -84,6 +100,72 @@ export const FlagType2 = {
  */
 export type FlagType2 = OpenEnum<typeof FlagType2>;
 
+export type CheckDimensions12 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CheckDimensionsToEnum6 = {
+  Inf: "inf",
+} as const;
+export type CheckDimensionsToEnum6 = ClosedEnum<typeof CheckDimensionsToEnum6>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CheckDimensionsToUnion6 = number | CheckDimensionsToEnum6;
+
+export type CheckDimensionsTier6 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CheckDimensionsToEnum6;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CheckDimensions11 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CheckDimensionsTier6>;
+};
+
+export type CheckDimensionsUnion6 = CheckDimensions11 | CheckDimensions12;
+
+export type CheckMultipliers6 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type CheckCreditSchema6 = {
   meteredFeatureId: "";
   /**
@@ -91,9 +173,85 @@ export type CheckCreditSchema6 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: CheckDimensions11 | CheckDimensions12 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CheckMultipliers6 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CheckDimensions10 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CheckDimensionsToEnum5 = {
+  Inf: "inf",
+} as const;
+export type CheckDimensionsToEnum5 = ClosedEnum<typeof CheckDimensionsToEnum5>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CheckDimensionsToUnion5 = number | CheckDimensionsToEnum5;
+
+export type CheckDimensionsTier5 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CheckDimensionsToEnum5;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CheckDimensions9 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CheckDimensionsTier5>;
+};
+
+export type CheckDimensionsUnion5 = CheckDimensions9 | CheckDimensions10;
+
+export type CheckMultipliers5 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export type CheckCreditSchema5 = {
@@ -106,9 +264,85 @@ export type CheckCreditSchema5 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: CheckDimensions9 | CheckDimensions10 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CheckMultipliers5 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CheckDimensions8 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CheckDimensionsToEnum4 = {
+  Inf: "inf",
+} as const;
+export type CheckDimensionsToEnum4 = ClosedEnum<typeof CheckDimensionsToEnum4>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CheckDimensionsToUnion4 = number | CheckDimensionsToEnum4;
+
+export type CheckDimensionsTier4 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CheckDimensionsToEnum4;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CheckDimensions7 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CheckDimensionsTier4>;
+};
+
+export type CheckDimensionsUnion4 = CheckDimensions7 | CheckDimensions8;
+
+export type CheckMultipliers4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export const CheckToEnum2 = {
@@ -141,6 +375,14 @@ export type CheckCreditSchema4 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: { [k: string]: CheckDimensions7 | CheckDimensions8 } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CheckMultipliers4 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<CheckTier2>;
 };
@@ -504,7 +746,7 @@ export type CheckFreeTrial2 = {
 /**
  * The time interval for the purchase limit window.
  */
-export const CheckPurchaseLimitInterval2 = {
+export const CheckAutoTopupInterval2 = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -513,9 +755,7 @@ export const CheckPurchaseLimitInterval2 = {
 /**
  * The time interval for the purchase limit window.
  */
-export type CheckPurchaseLimitInterval2 = OpenEnum<
-  typeof CheckPurchaseLimitInterval2
->;
+export type CheckAutoTopupInterval2 = OpenEnum<typeof CheckAutoTopupInterval2>;
 
 /**
  * Optional rate limit to cap how often auto top-ups occur.
@@ -524,7 +764,7 @@ export type CheckPurchaseLimit2 = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: CheckPurchaseLimitInterval2;
+  interval: CheckAutoTopupInterval2;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -947,6 +1187,72 @@ export const FlagType1 = {
  */
 export type FlagType1 = OpenEnum<typeof FlagType1>;
 
+export type CheckDimensions6 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CheckDimensionsToEnum3 = {
+  Inf: "inf",
+} as const;
+export type CheckDimensionsToEnum3 = ClosedEnum<typeof CheckDimensionsToEnum3>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CheckDimensionsToUnion3 = number | CheckDimensionsToEnum3;
+
+export type CheckDimensionsTier3 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CheckDimensionsToEnum3;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CheckDimensions5 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CheckDimensionsTier3>;
+};
+
+export type CheckDimensionsUnion3 = CheckDimensions5 | CheckDimensions6;
+
+export type CheckMultipliers3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type CheckCreditSchema3 = {
   meteredFeatureId: "";
   /**
@@ -954,9 +1260,83 @@ export type CheckCreditSchema3 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: { [k: string]: CheckDimensions5 | CheckDimensions6 } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CheckMultipliers3 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CheckDimensions4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CheckDimensionsToEnum2 = {
+  Inf: "inf",
+} as const;
+export type CheckDimensionsToEnum2 = ClosedEnum<typeof CheckDimensionsToEnum2>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CheckDimensionsToUnion2 = number | CheckDimensionsToEnum2;
+
+export type CheckDimensionsTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CheckDimensionsToEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CheckDimensions3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CheckDimensionsTier2>;
+};
+
+export type CheckDimensionsUnion2 = CheckDimensions3 | CheckDimensions4;
+
+export type CheckMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export type CheckCreditSchema2 = {
@@ -969,9 +1349,83 @@ export type CheckCreditSchema2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: { [k: string]: CheckDimensions3 | CheckDimensions4 } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CheckMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CheckDimensions2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CheckDimensionsToEnum1 = {
+  Inf: "inf",
+} as const;
+export type CheckDimensionsToEnum1 = ClosedEnum<typeof CheckDimensionsToEnum1>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CheckDimensionsToUnion1 = number | CheckDimensionsToEnum1;
+
+export type CheckDimensionsTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CheckDimensionsToEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CheckDimensions1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CheckDimensionsTier1>;
+};
+
+export type CheckDimensionsUnion1 = CheckDimensions1 | CheckDimensions2;
+
+export type CheckMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export const CheckToEnum1 = {
@@ -1004,6 +1458,14 @@ export type CheckCreditSchema1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: { [k: string]: CheckDimensions1 | CheckDimensions2 } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CheckMultipliers1 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<CheckTier1>;
 };
@@ -1367,7 +1829,7 @@ export type CheckFreeTrial1 = {
 /**
  * The time interval for the purchase limit window.
  */
-export const CheckPurchaseLimitInterval1 = {
+export const CheckAutoTopupInterval1 = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -1376,9 +1838,7 @@ export const CheckPurchaseLimitInterval1 = {
 /**
  * The time interval for the purchase limit window.
  */
-export type CheckPurchaseLimitInterval1 = OpenEnum<
-  typeof CheckPurchaseLimitInterval1
->;
+export type CheckAutoTopupInterval1 = OpenEnum<typeof CheckAutoTopupInterval1>;
 
 /**
  * Optional rate limit to cap how often auto top-ups occur.
@@ -1387,7 +1847,7 @@ export type CheckPurchaseLimit1 = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: CheckPurchaseLimitInterval1;
+  interval: CheckAutoTopupInterval1;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -1799,10 +2259,16 @@ export type CheckResponseBody1 = {
 export type CheckResponse = CheckResponseBody1 | CheckResponseBody2;
 
 /** @internal */
+export const CheckOverageBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof CheckOverageBehavior
+> = z.enum(CheckOverageBehavior);
+
+/** @internal */
 export type CheckLock$Outbound = {
   lock_id: string;
   enabled: true;
   expires_at?: number | undefined;
+  overage_behavior?: string | undefined;
 };
 
 /** @internal */
@@ -1814,11 +2280,13 @@ export const CheckLock$outboundSchema: z.ZodMiniType<
     lockId: z.string(),
     enabled: z.literal(true),
     expiresAt: z.optional(z.number()),
+    overageBehavior: z.optional(CheckOverageBehavior$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       lockId: "lock_id",
       expiresAt: "expires_at",
+      overageBehavior: "overage_behavior",
     });
   }),
 );
@@ -1875,6 +2343,147 @@ export const FlagType2$inboundSchema: z.ZodMiniType<FlagType2, unknown> =
   openEnums.inboundSchema(FlagType2);
 
 /** @internal */
+export const CheckDimensions12$inboundSchema: z.ZodMiniType<
+  CheckDimensions12,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensions12FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions12, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions12$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions12' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsToEnum6$inboundSchema: z.ZodMiniEnum<
+  typeof CheckDimensionsToEnum6
+> = z.enum(CheckDimensionsToEnum6);
+
+/** @internal */
+export const CheckDimensionsToUnion6$inboundSchema: z.ZodMiniType<
+  CheckDimensionsToUnion6,
+  unknown
+> = smartUnion([types.number(), CheckDimensionsToEnum6$inboundSchema]);
+
+export function checkDimensionsToUnion6FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsToUnion6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsToUnion6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsToUnion6' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsTier6$inboundSchema: z.ZodMiniType<
+  CheckDimensionsTier6,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), CheckDimensionsToEnum6$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensionsTier6FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsTier6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsTier6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsTier6' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensions11$inboundSchema: z.ZodMiniType<
+  CheckDimensions11,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CheckDimensionsTier6$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function checkDimensions11FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions11, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions11$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions11' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsUnion6$inboundSchema: z.ZodMiniType<
+  CheckDimensionsUnion6,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckDimensions11$inboundSchema),
+  z.lazy(() => CheckDimensions12$inboundSchema),
+]);
+
+export function checkDimensionsUnion6FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsUnion6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsUnion6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsUnion6' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckMultipliers6$inboundSchema: z.ZodMiniType<
+  CheckMultipliers6,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function checkMultipliers6FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckMultipliers6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckMultipliers6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckMultipliers6' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckCreditSchema6$inboundSchema: z.ZodMiniType<
   CheckCreditSchema6,
   unknown
@@ -1882,6 +2491,17 @@ export const CheckCreditSchema6$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CheckDimensions11$inboundSchema),
+        z.lazy(() => CheckDimensions12$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CheckMultipliers6$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -1904,6 +2524,147 @@ export function checkCreditSchema6FromJSON(
 }
 
 /** @internal */
+export const CheckDimensions10$inboundSchema: z.ZodMiniType<
+  CheckDimensions10,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensions10FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions10, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions10$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions10' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsToEnum5$inboundSchema: z.ZodMiniEnum<
+  typeof CheckDimensionsToEnum5
+> = z.enum(CheckDimensionsToEnum5);
+
+/** @internal */
+export const CheckDimensionsToUnion5$inboundSchema: z.ZodMiniType<
+  CheckDimensionsToUnion5,
+  unknown
+> = smartUnion([types.number(), CheckDimensionsToEnum5$inboundSchema]);
+
+export function checkDimensionsToUnion5FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsToUnion5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsToUnion5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsToUnion5' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsTier5$inboundSchema: z.ZodMiniType<
+  CheckDimensionsTier5,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), CheckDimensionsToEnum5$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensionsTier5FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsTier5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsTier5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsTier5' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensions9$inboundSchema: z.ZodMiniType<
+  CheckDimensions9,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CheckDimensionsTier5$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function checkDimensions9FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions9, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions9$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions9' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsUnion5$inboundSchema: z.ZodMiniType<
+  CheckDimensionsUnion5,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckDimensions9$inboundSchema),
+  z.lazy(() => CheckDimensions10$inboundSchema),
+]);
+
+export function checkDimensionsUnion5FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsUnion5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsUnion5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsUnion5' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckMultipliers5$inboundSchema: z.ZodMiniType<
+  CheckMultipliers5,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function checkMultipliers5FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckMultipliers5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckMultipliers5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckMultipliers5' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckCreditSchema5$inboundSchema: z.ZodMiniType<
   CheckCreditSchema5,
   unknown
@@ -1911,6 +2672,17 @@ export const CheckCreditSchema5$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CheckDimensions9$inboundSchema),
+        z.lazy(() => CheckDimensions10$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CheckMultipliers5$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -1929,6 +2701,147 @@ export function checkCreditSchema5FromJSON(
     jsonString,
     (x) => CheckCreditSchema5$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'CheckCreditSchema5' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensions8$inboundSchema: z.ZodMiniType<
+  CheckDimensions8,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensions8FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions8, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions8$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions8' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsToEnum4$inboundSchema: z.ZodMiniEnum<
+  typeof CheckDimensionsToEnum4
+> = z.enum(CheckDimensionsToEnum4);
+
+/** @internal */
+export const CheckDimensionsToUnion4$inboundSchema: z.ZodMiniType<
+  CheckDimensionsToUnion4,
+  unknown
+> = smartUnion([types.number(), CheckDimensionsToEnum4$inboundSchema]);
+
+export function checkDimensionsToUnion4FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsToUnion4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsToUnion4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsToUnion4' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsTier4$inboundSchema: z.ZodMiniType<
+  CheckDimensionsTier4,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), CheckDimensionsToEnum4$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensionsTier4FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsTier4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsTier4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsTier4' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensions7$inboundSchema: z.ZodMiniType<
+  CheckDimensions7,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CheckDimensionsTier4$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function checkDimensions7FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions7, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions7$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions7' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsUnion4$inboundSchema: z.ZodMiniType<
+  CheckDimensionsUnion4,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckDimensions7$inboundSchema),
+  z.lazy(() => CheckDimensions8$inboundSchema),
+]);
+
+export function checkDimensionsUnion4FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsUnion4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsUnion4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsUnion4' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckMultipliers4$inboundSchema: z.ZodMiniType<
+  CheckMultipliers4,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function checkMultipliers4FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckMultipliers4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckMultipliers4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckMultipliers4' from JSON`,
   );
 }
 
@@ -1984,6 +2897,17 @@ export const CheckCreditSchema4$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CheckDimensions7$inboundSchema),
+        z.lazy(() => CheckDimensions8$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CheckMultipliers4$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
     tiers: z.array(z.lazy(() => CheckTier2$inboundSchema)),
   }),
@@ -2465,10 +3389,10 @@ export function checkFreeTrial2FromJSON(
 }
 
 /** @internal */
-export const CheckPurchaseLimitInterval2$inboundSchema: z.ZodMiniType<
-  CheckPurchaseLimitInterval2,
+export const CheckAutoTopupInterval2$inboundSchema: z.ZodMiniType<
+  CheckAutoTopupInterval2,
   unknown
-> = openEnums.inboundSchema(CheckPurchaseLimitInterval2);
+> = openEnums.inboundSchema(CheckAutoTopupInterval2);
 
 /** @internal */
 export const CheckPurchaseLimit2$inboundSchema: z.ZodMiniType<
@@ -2476,7 +3400,7 @@ export const CheckPurchaseLimit2$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: CheckPurchaseLimitInterval2$inboundSchema,
+    interval: CheckAutoTopupInterval2$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
   }),
@@ -2909,6 +3833,147 @@ export const FlagType1$inboundSchema: z.ZodMiniType<FlagType1, unknown> =
   openEnums.inboundSchema(FlagType1);
 
 /** @internal */
+export const CheckDimensions6$inboundSchema: z.ZodMiniType<
+  CheckDimensions6,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensions6FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions6' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsToEnum3$inboundSchema: z.ZodMiniEnum<
+  typeof CheckDimensionsToEnum3
+> = z.enum(CheckDimensionsToEnum3);
+
+/** @internal */
+export const CheckDimensionsToUnion3$inboundSchema: z.ZodMiniType<
+  CheckDimensionsToUnion3,
+  unknown
+> = smartUnion([types.number(), CheckDimensionsToEnum3$inboundSchema]);
+
+export function checkDimensionsToUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsToUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsToUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsToUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsTier3$inboundSchema: z.ZodMiniType<
+  CheckDimensionsTier3,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), CheckDimensionsToEnum3$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensionsTier3FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsTier3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsTier3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsTier3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensions5$inboundSchema: z.ZodMiniType<
+  CheckDimensions5,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CheckDimensionsTier3$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function checkDimensions5FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions5' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsUnion3$inboundSchema: z.ZodMiniType<
+  CheckDimensionsUnion3,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckDimensions5$inboundSchema),
+  z.lazy(() => CheckDimensions6$inboundSchema),
+]);
+
+export function checkDimensionsUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckMultipliers3$inboundSchema: z.ZodMiniType<
+  CheckMultipliers3,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function checkMultipliers3FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckMultipliers3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckMultipliers3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckMultipliers3' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckCreditSchema3$inboundSchema: z.ZodMiniType<
   CheckCreditSchema3,
   unknown
@@ -2916,6 +3981,17 @@ export const CheckCreditSchema3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CheckDimensions5$inboundSchema),
+        z.lazy(() => CheckDimensions6$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CheckMultipliers3$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2938,6 +4014,147 @@ export function checkCreditSchema3FromJSON(
 }
 
 /** @internal */
+export const CheckDimensions4$inboundSchema: z.ZodMiniType<
+  CheckDimensions4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensions4FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions4' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsToEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof CheckDimensionsToEnum2
+> = z.enum(CheckDimensionsToEnum2);
+
+/** @internal */
+export const CheckDimensionsToUnion2$inboundSchema: z.ZodMiniType<
+  CheckDimensionsToUnion2,
+  unknown
+> = smartUnion([types.number(), CheckDimensionsToEnum2$inboundSchema]);
+
+export function checkDimensionsToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsTier2$inboundSchema: z.ZodMiniType<
+  CheckDimensionsTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), CheckDimensionsToEnum2$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensionsTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensions3$inboundSchema: z.ZodMiniType<
+  CheckDimensions3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CheckDimensionsTier2$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function checkDimensions3FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  CheckDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckDimensions3$inboundSchema),
+  z.lazy(() => CheckDimensions4$inboundSchema),
+]);
+
+export function checkDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckMultipliers2$inboundSchema: z.ZodMiniType<
+  CheckMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function checkMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckCreditSchema2$inboundSchema: z.ZodMiniType<
   CheckCreditSchema2,
   unknown
@@ -2945,6 +4162,17 @@ export const CheckCreditSchema2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CheckDimensions3$inboundSchema),
+        z.lazy(() => CheckDimensions4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CheckMultipliers2$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2963,6 +4191,147 @@ export function checkCreditSchema2FromJSON(
     jsonString,
     (x) => CheckCreditSchema2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'CheckCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensions2$inboundSchema: z.ZodMiniType<
+  CheckDimensions2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensions2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsToEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof CheckDimensionsToEnum1
+> = z.enum(CheckDimensionsToEnum1);
+
+/** @internal */
+export const CheckDimensionsToUnion1$inboundSchema: z.ZodMiniType<
+  CheckDimensionsToUnion1,
+  unknown
+> = smartUnion([types.number(), CheckDimensionsToEnum1$inboundSchema]);
+
+export function checkDimensionsToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsTier1$inboundSchema: z.ZodMiniType<
+  CheckDimensionsTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), CheckDimensionsToEnum1$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkDimensionsTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensions1$inboundSchema: z.ZodMiniType<
+  CheckDimensions1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CheckDimensionsTier1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function checkDimensions1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensions1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensions1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensions1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  CheckDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckDimensions1$inboundSchema),
+  z.lazy(() => CheckDimensions2$inboundSchema),
+]);
+
+export function checkDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckMultipliers1$inboundSchema: z.ZodMiniType<
+  CheckMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function checkMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckMultipliers1' from JSON`,
   );
 }
 
@@ -3018,6 +4387,17 @@ export const CheckCreditSchema1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CheckDimensions1$inboundSchema),
+        z.lazy(() => CheckDimensions2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CheckMultipliers1$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
     tiers: z.array(z.lazy(() => CheckTier1$inboundSchema)),
   }),
@@ -3499,10 +4879,10 @@ export function checkFreeTrial1FromJSON(
 }
 
 /** @internal */
-export const CheckPurchaseLimitInterval1$inboundSchema: z.ZodMiniType<
-  CheckPurchaseLimitInterval1,
+export const CheckAutoTopupInterval1$inboundSchema: z.ZodMiniType<
+  CheckAutoTopupInterval1,
   unknown
-> = openEnums.inboundSchema(CheckPurchaseLimitInterval1);
+> = openEnums.inboundSchema(CheckAutoTopupInterval1);
 
 /** @internal */
 export const CheckPurchaseLimit1$inboundSchema: z.ZodMiniType<
@@ -3510,7 +4890,7 @@ export const CheckPurchaseLimit1$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: CheckPurchaseLimitInterval1$inboundSchema,
+    interval: CheckAutoTopupInterval1$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
   }),

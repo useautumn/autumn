@@ -363,6 +363,76 @@ export type PlanItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type PlanDimensionsItem4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const PlanDimensionsToItemEnum2 = {
+  Inf: "inf",
+} as const;
+export type PlanDimensionsToItemEnum2 = ClosedEnum<
+  typeof PlanDimensionsToItemEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PlanDimensionsItemToUnion2 = number | PlanDimensionsToItemEnum2;
+
+export type PlanDimensionsItemTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PlanDimensionsToItemEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PlanDimensionsItem3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PlanDimensionsItemTier2>;
+};
+
+export type PlanItemDimensionsUnion2 =
+  | PlanDimensionsItem3
+  | PlanDimensionsItem4;
+
+export type PlanItemMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type PlanCreditSchemaItemFeatureOverride2 = {
   /**
    * ID of the metered feature that draws from this credit system.
@@ -373,26 +443,106 @@ export type PlanCreditSchemaItemFeatureOverride2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: PlanDimensionsItem3 | PlanDimensionsItem4 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PlanItemMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
 
-export const PlanToEnum = {
+export type PlanDimensionsItem2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const PlanDimensionsToItemEnum1 = {
   Inf: "inf",
 } as const;
-export type PlanToEnum = ClosedEnum<typeof PlanToEnum>;
+export type PlanDimensionsToItemEnum1 = ClosedEnum<
+  typeof PlanDimensionsToItemEnum1
+>;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type PlanFeatureOverrideToUnion = number | PlanToEnum;
+export type PlanDimensionsItemToUnion1 = number | PlanDimensionsToItemEnum1;
 
-export type PlanItemFeatureOverrideTier1 = {
+export type PlanDimensionsItemTier1 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | PlanToEnum;
+  to: number | PlanDimensionsToItemEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PlanDimensionsItem1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PlanDimensionsItemTier1>;
+};
+
+export type PlanItemDimensionsUnion1 =
+  | PlanDimensionsItem1
+  | PlanDimensionsItem2;
+
+export type PlanItemMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const PlanToItemEnum = {
+  Inf: "inf",
+} as const;
+export type PlanToItemEnum = ClosedEnum<typeof PlanToItemEnum>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PlanItemFeatureOverrideToUnion = number | PlanToItemEnum;
+
+export type PlanItemFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PlanToItemEnum;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
@@ -408,13 +558,51 @@ export type PlanCreditSchemaItemFeatureOverride1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: PlanDimensionsItem1 | PlanDimensionsItem2 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PlanItemMultipliers1 } | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PlanItemFeatureOverrideTier1>;
+  tiers: Array<PlanItemFeatureOverrideTier>;
 };
 
 export type PlanItemCreditSchemaUnion =
   | PlanCreditSchemaItemFeatureOverride1
   | PlanCreditSchemaItemFeatureOverride2;
+
+export type PlanItemProviderMarkups = {
+  markup: number;
+};
+
+export type PlanItemModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type ItemMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?: { [k: string]: PlanItemProviderMarkups } | null | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?: { [k: string]: PlanItemModelMarkups } | null | undefined;
+};
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
@@ -429,6 +617,10 @@ export type ItemFeatureOverride = {
       | PlanCreditSchemaItemFeatureOverride2
     >
     | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: ItemMarkups | undefined;
 };
 
 export type Item = {
@@ -582,7 +774,7 @@ export type PlanConfig = {
 /**
  * The time interval for the purchase limit window.
  */
-export const PlanPurchaseLimitInterval = {
+export const PlanAutoTopupInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -591,9 +783,7 @@ export const PlanPurchaseLimitInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type PlanPurchaseLimitInterval = OpenEnum<
-  typeof PlanPurchaseLimitInterval
->;
+export type PlanAutoTopupInterval = OpenEnum<typeof PlanAutoTopupInterval>;
 
 /**
  * Optional rate limit to cap how often auto top-ups occur.
@@ -602,7 +792,7 @@ export type PlanPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: PlanPurchaseLimitInterval;
+  interval: PlanAutoTopupInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -985,7 +1175,7 @@ export type AddItemAdditionalCurrency = {
   amount: number;
 };
 
-export type PlanVariantDetailsTo = number | string;
+export type PlanVariantDetailsPriceTo = number | string;
 
 export type VariantDetailsTierAdditionalCurrency = {
   /**
@@ -1002,7 +1192,7 @@ export type VariantDetailsTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type PlanVariantDetailsPriceTier1 = {
+export type PlanVariantDetailsPriceTier = {
   to: number | string;
   amount: number;
   flatAmount?: number | undefined;
@@ -1066,7 +1256,7 @@ export type PlanVariantDetailsPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<PlanVariantDetailsPriceTier1> | undefined;
+  tiers?: Array<PlanVariantDetailsPriceTier> | undefined;
   tierBehavior?: PlanVariantDetailsTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1169,6 +1359,78 @@ export type PlanVariantDetailsRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type PlanDimensionsVariantDetails4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const PlanDimensionsToVariantDetailsEnum2 = {
+  Inf: "inf",
+} as const;
+export type PlanDimensionsToVariantDetailsEnum2 = ClosedEnum<
+  typeof PlanDimensionsToVariantDetailsEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PlanDimensionsVariantDetailsToUnion2 =
+  | number
+  | PlanDimensionsToVariantDetailsEnum2;
+
+export type PlanDimensionsVariantDetailsTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PlanDimensionsToVariantDetailsEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PlanDimensionsVariantDetails3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PlanDimensionsVariantDetailsTier2>;
+};
+
+export type PlanVariantDetailsDimensionsUnion2 =
+  | PlanDimensionsVariantDetails3
+  | PlanDimensionsVariantDetails4;
+
+export type PlanVariantDetailsMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type PlanCreditSchemaVariantDetails2 = {
   /**
    * ID of the metered feature that draws from this credit system.
@@ -1179,14 +1441,116 @@ export type PlanCreditSchemaVariantDetails2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: PlanDimensionsVariantDetails3 | PlanDimensionsVariantDetails4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PlanVariantDetailsMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
 
-export type PlanVariantDetailsFeatureOverrideTier1 = {
-  to?: any | undefined;
-  creditCost?: any | undefined;
+export type PlanDimensionsVariantDetails2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const PlanDimensionsToVariantDetailsEnum1 = {
+  Inf: "inf",
+} as const;
+export type PlanDimensionsToVariantDetailsEnum1 = ClosedEnum<
+  typeof PlanDimensionsToVariantDetailsEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PlanDimensionsVariantDetailsToUnion1 =
+  | number
+  | PlanDimensionsToVariantDetailsEnum1;
+
+export type PlanDimensionsVariantDetailsTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PlanDimensionsToVariantDetailsEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PlanDimensionsVariantDetails1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PlanDimensionsVariantDetailsTier1>;
+};
+
+export type PlanVariantDetailsDimensionsUnion1 =
+  | PlanDimensionsVariantDetails1
+  | PlanDimensionsVariantDetails2;
+
+export type PlanVariantDetailsMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const PlanToVariantDetailsEnum = {
+  Inf: "inf",
+} as const;
+export type PlanToVariantDetailsEnum = ClosedEnum<
+  typeof PlanToVariantDetailsEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PlanVariantDetailsFeatureOverrideToUnion =
+  | number
+  | PlanToVariantDetailsEnum;
+
+export type PlanVariantDetailsFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PlanToVariantDetailsEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
 };
 
 export type PlanCreditSchemaVariantDetails1 = {
@@ -1198,13 +1562,57 @@ export type PlanCreditSchemaVariantDetails1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: PlanDimensionsVariantDetails1 | PlanDimensionsVariantDetails2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PlanVariantDetailsMultipliers1 } | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PlanVariantDetailsFeatureOverrideTier1>;
+  tiers: Array<PlanVariantDetailsFeatureOverrideTier>;
 };
 
-export type PlanVariantDetailsCreditSchemaUnion1 =
+export type PlanVariantDetailsCreditSchemaUnion =
   | PlanCreditSchemaVariantDetails1
   | PlanCreditSchemaVariantDetails2;
+
+export type PlanVariantDetailsProviderMarkups = {
+  markup: number;
+};
+
+export type PlanVariantDetailsModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type VariantDetailsMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: PlanVariantDetailsProviderMarkups }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?:
+    | { [k: string]: PlanVariantDetailsModelMarkups }
+    | null
+    | undefined;
+};
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
@@ -1216,6 +1624,10 @@ export type VariantDetailsFeatureOverride = {
   creditSchema?:
     | Array<PlanCreditSchemaVariantDetails1 | PlanCreditSchemaVariantDetails2>
     | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: VariantDetailsMarkups | undefined;
 };
 
 /**
@@ -1389,7 +1801,7 @@ export type FreeTrialParams = {
 /**
  * The time interval for the purchase limit window.
  */
-export const PlanVariantDetailsPurchaseLimitInterval1 = {
+export const PlanVariantDetailsAutoTopupInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -1398,8 +1810,8 @@ export const PlanVariantDetailsPurchaseLimitInterval1 = {
 /**
  * The time interval for the purchase limit window.
  */
-export type PlanVariantDetailsPurchaseLimitInterval1 = OpenEnum<
-  typeof PlanVariantDetailsPurchaseLimitInterval1
+export type PlanVariantDetailsAutoTopupInterval = OpenEnum<
+  typeof PlanVariantDetailsAutoTopupInterval
 >;
 
 /**
@@ -1409,7 +1821,7 @@ export type PlanVariantDetailsPurchaseLimit1 = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: PlanVariantDetailsPurchaseLimitInterval1;
+  interval: PlanVariantDetailsAutoTopupInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -1424,7 +1836,7 @@ export type PlanVariantDetailsPurchaseLimit1 = {
   count?: number | undefined;
 };
 
-export type PlanVariantDetailsAutoTopup1 = {
+export type PlanVariantDetailsAutoTopup = {
   /**
    * The ID of the feature (credit balance) to auto top-up.
    */
@@ -1465,7 +1877,7 @@ export type PlanVariantDetailsLimitType1 = OpenEnum<
   typeof PlanVariantDetailsLimitType1
 >;
 
-export type PlanVariantDetailsSpendLimit1 = {
+export type PlanVariantDetailsSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
    */
@@ -1491,7 +1903,7 @@ export type PlanVariantDetailsSpendLimit1 = {
 /**
  * Interval for the cap, aligned to the customer's billing cycle.
  */
-export const PlanVariantDetailsUsageLimitInterval1 = {
+export const PlanVariantDetailsUsageLimitInterval = {
   Day: "day",
   Week: "week",
   Month: "month",
@@ -1500,8 +1912,8 @@ export const PlanVariantDetailsUsageLimitInterval1 = {
 /**
  * Interval for the cap, aligned to the customer's billing cycle.
  */
-export type PlanVariantDetailsUsageLimitInterval1 = OpenEnum<
-  typeof PlanVariantDetailsUsageLimitInterval1
+export type PlanVariantDetailsUsageLimitInterval = OpenEnum<
+  typeof PlanVariantDetailsUsageLimitInterval
 >;
 
 /**
@@ -1525,7 +1937,7 @@ export type PlanVariantDetailsUsageLimitFilter1 = {
   properties: { [k: string]: string };
 };
 
-export type PlanVariantDetailsUsageLimit1 = {
+export type PlanVariantDetailsUsageLimit = {
   /**
    * The feature this usage limit applies to.
    */
@@ -1541,7 +1953,7 @@ export type PlanVariantDetailsUsageLimit1 = {
   /**
    * Interval for the cap, aligned to the customer's billing cycle.
    */
-  interval: PlanVariantDetailsUsageLimitInterval1;
+  interval: PlanVariantDetailsUsageLimitInterval;
   /**
    * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
    */
@@ -1591,7 +2003,7 @@ export type PlanVariantDetailsUsageAlertFilter1 = {
   properties: { [k: string]: string };
 };
 
-export type PlanVariantDetailsUsageAlert1 = {
+export type PlanVariantDetailsUsageAlert = {
   /**
    * The feature ID this alert applies to.
    */
@@ -1640,19 +2052,19 @@ export type PlanVariantDetailsBillingControls1 = {
   /**
    * List of auto top-up configurations per feature.
    */
-  autoTopups?: Array<PlanVariantDetailsAutoTopup1> | undefined;
+  autoTopups?: Array<PlanVariantDetailsAutoTopup> | undefined;
   /**
    * List of overage spend limits per feature (caps overage spend).
    */
-  spendLimits?: Array<PlanVariantDetailsSpendLimit1> | undefined;
+  spendLimits?: Array<PlanVariantDetailsSpendLimit> | undefined;
   /**
    * List of hard usage caps per feature (max units per interval).
    */
-  usageLimits?: Array<PlanVariantDetailsUsageLimit1> | undefined;
+  usageLimits?: Array<PlanVariantDetailsUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
-  usageAlerts?: Array<PlanVariantDetailsUsageAlert1> | undefined;
+  usageAlerts?: Array<PlanVariantDetailsUsageAlert> | undefined;
   /**
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
@@ -1713,7 +2125,7 @@ export type UpsertLicenseBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const PlanUpsertLicenseResetInterval1 = {
+export const PlanUpsertLicenseResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1727,8 +2139,8 @@ export const PlanUpsertLicenseResetInterval1 = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type PlanUpsertLicenseResetInterval1 = OpenEnum<
-  typeof PlanUpsertLicenseResetInterval1
+export type PlanUpsertLicenseResetInterval = OpenEnum<
+  typeof PlanUpsertLicenseResetInterval
 >;
 
 /**
@@ -1738,7 +2150,7 @@ export type PlanUpsertLicenseReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: PlanUpsertLicenseResetInterval1;
+  interval: PlanUpsertLicenseResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
@@ -1746,15 +2158,38 @@ export type PlanUpsertLicenseReset = {
 };
 
 export type UpsertLicenseAddItemAdditionalCurrency = {
-  currency?: any | undefined;
-  amount?: any | undefined;
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
 };
 
-export type PlanUpsertLicenseTier = {
-  to?: any | undefined;
-  amount?: any | undefined;
-  flatAmount?: any | undefined;
-  additionalCurrencies?: any | undefined;
+export type PlanUpsertLicensePriceTo = number | string;
+
+export type UpsertLicenseTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
+
+export type PlanUpsertLicensePriceTier = {
+  to: number | string;
+  amount: number;
+  flatAmount?: number | undefined;
+  additionalCurrencies?: Array<UpsertLicenseTierAdditionalCurrency> | undefined;
 };
 
 export const PlanUpsertLicenseTierBehavior = {
@@ -1768,7 +2203,7 @@ export type PlanUpsertLicenseTierBehavior = OpenEnum<
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const PlanUpsertLicenseAddItemPriceInterval1 = {
+export const PlanUpsertLicenseAddItemPriceInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1779,22 +2214,22 @@ export const PlanUpsertLicenseAddItemPriceInterval1 = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type PlanUpsertLicenseAddItemPriceInterval1 = OpenEnum<
-  typeof PlanUpsertLicenseAddItemPriceInterval1
+export type PlanUpsertLicenseAddItemPriceInterval = OpenEnum<
+  typeof PlanUpsertLicenseAddItemPriceInterval
 >;
 
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const PlanUpsertLicenseAddItemBillingMethod1 = {
+export const PlanUpsertLicenseAddItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type PlanUpsertLicenseAddItemBillingMethod1 = OpenEnum<
-  typeof PlanUpsertLicenseAddItemBillingMethod1
+export type PlanUpsertLicenseAddItemBillingMethod = OpenEnum<
+  typeof PlanUpsertLicenseAddItemBillingMethod
 >;
 
 /**
@@ -1814,12 +2249,12 @@ export type PlanUpsertLicensePrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<PlanUpsertLicenseTier> | undefined;
+  tiers?: Array<PlanUpsertLicensePriceTier> | undefined;
   tierBehavior?: PlanUpsertLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: PlanUpsertLicenseAddItemPriceInterval1;
+  interval: PlanUpsertLicenseAddItemPriceInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -1831,7 +2266,7 @@ export type PlanUpsertLicensePrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: PlanUpsertLicenseAddItemBillingMethod1;
+  billingMethod: PlanUpsertLicenseAddItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
@@ -1917,6 +2352,261 @@ export type PlanUpsertLicenseRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type PlanDimensionsUpsertLicense4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const PlanDimensionsToUpsertLicenseEnum2 = {
+  Inf: "inf",
+} as const;
+export type PlanDimensionsToUpsertLicenseEnum2 = ClosedEnum<
+  typeof PlanDimensionsToUpsertLicenseEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PlanDimensionsUpsertLicenseToUnion2 =
+  | number
+  | PlanDimensionsToUpsertLicenseEnum2;
+
+export type PlanDimensionsUpsertLicenseTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PlanDimensionsToUpsertLicenseEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PlanDimensionsUpsertLicense3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PlanDimensionsUpsertLicenseTier2>;
+};
+
+export type PlanUpsertLicenseDimensionsUnion2 =
+  | PlanDimensionsUpsertLicense3
+  | PlanDimensionsUpsertLicense4;
+
+export type PlanUpsertLicenseMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export type PlanCreditSchemaUpsertLicense2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: PlanDimensionsUpsertLicense3 | PlanDimensionsUpsertLicense4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PlanUpsertLicenseMultipliers2 } | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type PlanDimensionsUpsertLicense2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const PlanDimensionsToUpsertLicenseEnum1 = {
+  Inf: "inf",
+} as const;
+export type PlanDimensionsToUpsertLicenseEnum1 = ClosedEnum<
+  typeof PlanDimensionsToUpsertLicenseEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PlanDimensionsUpsertLicenseToUnion1 =
+  | number
+  | PlanDimensionsToUpsertLicenseEnum1;
+
+export type PlanDimensionsUpsertLicenseTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PlanDimensionsToUpsertLicenseEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PlanDimensionsUpsertLicense1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PlanDimensionsUpsertLicenseTier1>;
+};
+
+export type PlanUpsertLicenseDimensionsUnion1 =
+  | PlanDimensionsUpsertLicense1
+  | PlanDimensionsUpsertLicense2;
+
+export type PlanUpsertLicenseMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const PlanToUpsertLicenseEnum = {
+  Inf: "inf",
+} as const;
+export type PlanToUpsertLicenseEnum = ClosedEnum<
+  typeof PlanToUpsertLicenseEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PlanUpsertLicenseFeatureOverrideToUnion =
+  | number
+  | PlanToUpsertLicenseEnum;
+
+export type PlanUpsertLicenseFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PlanToUpsertLicenseEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PlanCreditSchemaUpsertLicense1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: PlanDimensionsUpsertLicense1 | PlanDimensionsUpsertLicense2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PlanUpsertLicenseMultipliers1 } | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PlanUpsertLicenseFeatureOverrideTier>;
+};
+
+export type PlanUpsertLicenseCreditSchemaUnion =
+  | PlanCreditSchemaUpsertLicense1
+  | PlanCreditSchemaUpsertLicense2;
+
+export type PlanUpsertLicenseProviderMarkups = {
+  markup: number;
+};
+
+export type PlanUpsertLicenseModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type UpsertLicenseMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: PlanUpsertLicenseProviderMarkups }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?:
+    | { [k: string]: PlanUpsertLicenseModelMarkups }
+    | null
+    | undefined;
+};
+
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
  */
@@ -1924,7 +2614,13 @@ export type UpsertLicenseFeatureOverride = {
   /**
    * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
    */
-  creditSchema?: Array<any | null> | undefined;
+  creditSchema?:
+    | Array<PlanCreditSchemaUpsertLicense1 | PlanCreditSchemaUpsertLicense2>
+    | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: UpsertLicenseMarkups | undefined;
 };
 
 /**
@@ -1972,15 +2668,15 @@ export type UpsertLicensePlanItem = {
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export const PlanUpsertLicenseRemoveItemBillingMethod1 = {
+export const PlanUpsertLicenseRemoveItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export type PlanUpsertLicenseRemoveItemBillingMethod1 = OpenEnum<
-  typeof PlanUpsertLicenseRemoveItemBillingMethod1
+export type PlanUpsertLicenseRemoveItemBillingMethod = OpenEnum<
+  typeof PlanUpsertLicenseRemoveItemBillingMethod
 >;
 
 export const PlanIntervalUpsertLicenseRemoveItemEnum2 = {
@@ -2013,7 +2709,7 @@ export type PlanIntervalUpsertLicenseRemoveItemEnum1 = OpenEnum<
 /**
  * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
  */
-export type PlanUpsertLicenseIntervalUnion1 =
+export type PlanUpsertLicenseIntervalUnion =
   | PlanIntervalUpsertLicenseRemoveItemEnum1
   | PlanIntervalUpsertLicenseRemoveItemEnum2;
 
@@ -2028,7 +2724,7 @@ export type UpsertLicensePlanItemFilter = {
   /**
    * Match items with this billing method (prepaid or usage_based).
    */
-  billingMethod?: PlanUpsertLicenseRemoveItemBillingMethod1 | undefined;
+  billingMethod?: PlanUpsertLicenseRemoveItemBillingMethod | undefined;
   /**
    * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
@@ -2706,6 +3402,147 @@ export function planItemRolloverFromJSON(
 }
 
 /** @internal */
+export const PlanDimensionsItem4$inboundSchema: z.ZodMiniType<
+  PlanDimensionsItem4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsItem4FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsItem4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsItem4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsItem4' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsToItemEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof PlanDimensionsToItemEnum2
+> = z.enum(PlanDimensionsToItemEnum2);
+
+/** @internal */
+export const PlanDimensionsItemToUnion2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsItemToUnion2,
+  unknown
+> = smartUnion([types.number(), PlanDimensionsToItemEnum2$inboundSchema]);
+
+export function planDimensionsItemToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsItemToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsItemToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsItemToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsItemTier2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsItemTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), PlanDimensionsToItemEnum2$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsItemTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsItemTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsItemTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsItemTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsItem3$inboundSchema: z.ZodMiniType<
+  PlanDimensionsItem3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => PlanDimensionsItemTier2$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function planDimensionsItem3FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsItem3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsItem3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsItem3' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanItemDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  PlanItemDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => PlanDimensionsItem3$inboundSchema),
+  z.lazy(() => PlanDimensionsItem4$inboundSchema),
+]);
+
+export function planItemDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanItemDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanItemDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanItemMultipliers2$inboundSchema: z.ZodMiniType<
+  PlanItemMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function planItemMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanItemMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanItemMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
 export const PlanCreditSchemaItemFeatureOverride2$inboundSchema: z.ZodMiniType<
   PlanCreditSchemaItemFeatureOverride2,
   unknown
@@ -2713,6 +3550,17 @@ export const PlanCreditSchemaItemFeatureOverride2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => PlanDimensionsItem3$inboundSchema),
+        z.lazy(() => PlanDimensionsItem4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => PlanItemMultipliers2$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2736,32 +3584,13 @@ export function planCreditSchemaItemFeatureOverride2FromJSON(
 }
 
 /** @internal */
-export const PlanToEnum$inboundSchema: z.ZodMiniEnum<typeof PlanToEnum> = z
-  .enum(PlanToEnum);
-
-/** @internal */
-export const PlanFeatureOverrideToUnion$inboundSchema: z.ZodMiniType<
-  PlanFeatureOverrideToUnion,
-  unknown
-> = smartUnion([types.number(), PlanToEnum$inboundSchema]);
-
-export function planFeatureOverrideToUnionFromJSON(
-  jsonString: string,
-): SafeParseResult<PlanFeatureOverrideToUnion, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => PlanFeatureOverrideToUnion$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanFeatureOverrideToUnion' from JSON`,
-  );
-}
-
-/** @internal */
-export const PlanItemFeatureOverrideTier1$inboundSchema: z.ZodMiniType<
-  PlanItemFeatureOverrideTier1,
+export const PlanDimensionsItem2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsItem2,
   unknown
 > = z.pipe(
   z.object({
-    to: smartUnion([types.number(), PlanToEnum$inboundSchema]),
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2771,13 +3600,174 @@ export const PlanItemFeatureOverrideTier1$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planItemFeatureOverrideTier1FromJSON(
+export function planDimensionsItem2FromJSON(
   jsonString: string,
-): SafeParseResult<PlanItemFeatureOverrideTier1, SDKValidationError> {
+): SafeParseResult<PlanDimensionsItem2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanItemFeatureOverrideTier1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanItemFeatureOverrideTier1' from JSON`,
+    (x) => PlanDimensionsItem2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsItem2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsToItemEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof PlanDimensionsToItemEnum1
+> = z.enum(PlanDimensionsToItemEnum1);
+
+/** @internal */
+export const PlanDimensionsItemToUnion1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsItemToUnion1,
+  unknown
+> = smartUnion([types.number(), PlanDimensionsToItemEnum1$inboundSchema]);
+
+export function planDimensionsItemToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsItemToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsItemToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsItemToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsItemTier1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsItemTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), PlanDimensionsToItemEnum1$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsItemTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsItemTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsItemTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsItemTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsItem1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsItem1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => PlanDimensionsItemTier1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function planDimensionsItem1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsItem1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsItem1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsItem1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanItemDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  PlanItemDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => PlanDimensionsItem1$inboundSchema),
+  z.lazy(() => PlanDimensionsItem2$inboundSchema),
+]);
+
+export function planItemDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanItemDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanItemDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanItemMultipliers1$inboundSchema: z.ZodMiniType<
+  PlanItemMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function planItemMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanItemMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanItemMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemMultipliers1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanToItemEnum$inboundSchema: z.ZodMiniEnum<
+  typeof PlanToItemEnum
+> = z.enum(PlanToItemEnum);
+
+/** @internal */
+export const PlanItemFeatureOverrideToUnion$inboundSchema: z.ZodMiniType<
+  PlanItemFeatureOverrideToUnion,
+  unknown
+> = smartUnion([types.number(), PlanToItemEnum$inboundSchema]);
+
+export function planItemFeatureOverrideToUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanItemFeatureOverrideToUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanItemFeatureOverrideToUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemFeatureOverrideToUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanItemFeatureOverrideTier$inboundSchema: z.ZodMiniType<
+  PlanItemFeatureOverrideTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), PlanToItemEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planItemFeatureOverrideTierFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanItemFeatureOverrideTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanItemFeatureOverrideTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemFeatureOverrideTier' from JSON`,
   );
 }
 
@@ -2789,8 +3779,19 @@ export const PlanCreditSchemaItemFeatureOverride1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => PlanDimensionsItem1$inboundSchema),
+        z.lazy(() => PlanDimensionsItem2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => PlanItemMultipliers1$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => PlanItemFeatureOverrideTier1$inboundSchema)),
+    tiers: z.array(z.lazy(() => PlanItemFeatureOverrideTier$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2832,6 +3833,85 @@ export function planItemCreditSchemaUnionFromJSON(
 }
 
 /** @internal */
+export const PlanItemProviderMarkups$inboundSchema: z.ZodMiniType<
+  PlanItemProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function planItemProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanItemProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanItemProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanItemModelMarkups$inboundSchema: z.ZodMiniType<
+  PlanItemModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function planItemModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanItemModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanItemModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const ItemMarkups$inboundSchema: z.ZodMiniType<ItemMarkups, unknown> = z
+  .pipe(
+    z.object({
+      default_markup: types.optional(types.number()),
+      provider_markups: z.optional(z.nullable(z.record(
+        z.string(),
+        z.lazy(() => PlanItemProviderMarkups$inboundSchema),
+      ))),
+      model_markups: z.optional(z.nullable(z.record(
+        z.string(),
+        z.lazy(() => PlanItemModelMarkups$inboundSchema),
+      ))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "default_markup": "defaultMarkup",
+        "provider_markups": "providerMarkups",
+        "model_markups": "modelMarkups",
+      });
+    }),
+  );
+
+export function itemMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<ItemMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ItemMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ItemMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const ItemFeatureOverride$inboundSchema: z.ZodMiniType<
   ItemFeatureOverride,
   unknown
@@ -2843,6 +3923,9 @@ export const ItemFeatureOverride$inboundSchema: z.ZodMiniType<
         PlanCreditSchemaItemFeatureOverride2$inboundSchema
       ),
     ]))),
+    markups: types.optional(z.lazy(() =>
+      ItemMarkups$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3078,10 +4161,10 @@ export function planConfigFromJSON(
 }
 
 /** @internal */
-export const PlanPurchaseLimitInterval$inboundSchema: z.ZodMiniType<
-  PlanPurchaseLimitInterval,
+export const PlanAutoTopupInterval$inboundSchema: z.ZodMiniType<
+  PlanAutoTopupInterval,
   unknown
-> = openEnums.inboundSchema(PlanPurchaseLimitInterval);
+> = openEnums.inboundSchema(PlanAutoTopupInterval);
 
 /** @internal */
 export const PlanPurchaseLimit$inboundSchema: z.ZodMiniType<
@@ -3089,7 +4172,7 @@ export const PlanPurchaseLimit$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: PlanPurchaseLimitInterval$inboundSchema,
+    interval: PlanAutoTopupInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
   }),
@@ -3513,18 +4596,18 @@ export function addItemAdditionalCurrencyFromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsTo$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsTo,
+export const PlanVariantDetailsPriceTo$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsPriceTo,
   unknown
 > = smartUnion([types.number(), types.string()]);
 
-export function planVariantDetailsToFromJSON(
+export function planVariantDetailsPriceToFromJSON(
   jsonString: string,
-): SafeParseResult<PlanVariantDetailsTo, SDKValidationError> {
+): SafeParseResult<PlanVariantDetailsPriceTo, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanVariantDetailsTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanVariantDetailsTo' from JSON`,
+    (x) => PlanVariantDetailsPriceTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsPriceTo' from JSON`,
   );
 }
 
@@ -3557,8 +4640,8 @@ export function variantDetailsTierAdditionalCurrencyFromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsPriceTier1$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsPriceTier1,
+export const PlanVariantDetailsPriceTier$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsPriceTier,
   unknown
 > = z.pipe(
   z.object({
@@ -3577,13 +4660,13 @@ export const PlanVariantDetailsPriceTier1$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planVariantDetailsPriceTier1FromJSON(
+export function planVariantDetailsPriceTierFromJSON(
   jsonString: string,
-): SafeParseResult<PlanVariantDetailsPriceTier1, SDKValidationError> {
+): SafeParseResult<PlanVariantDetailsPriceTier, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanVariantDetailsPriceTier1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanVariantDetailsPriceTier1' from JSON`,
+    (x) => PlanVariantDetailsPriceTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsPriceTier' from JSON`,
   );
 }
 
@@ -3616,7 +4699,7 @@ export const PlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => AddItemAdditionalCurrency$inboundSchema)),
     ),
     tiers: types.optional(
-      z.array(z.lazy(() => PlanVariantDetailsPriceTier1$inboundSchema)),
+      z.array(z.lazy(() => PlanVariantDetailsPriceTier$inboundSchema)),
     ),
     tier_behavior: types.optional(PlanVariantDetailsTierBehavior$inboundSchema),
     interval: PlanAddItemPriceInterval$inboundSchema,
@@ -3717,6 +4800,157 @@ export function planVariantDetailsRolloverFromJSON(
 }
 
 /** @internal */
+export const PlanDimensionsVariantDetails4$inboundSchema: z.ZodMiniType<
+  PlanDimensionsVariantDetails4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsVariantDetails4FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsVariantDetails4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsVariantDetails4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsVariantDetails4' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsToVariantDetailsEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof PlanDimensionsToVariantDetailsEnum2
+> = z.enum(PlanDimensionsToVariantDetailsEnum2);
+
+/** @internal */
+export const PlanDimensionsVariantDetailsToUnion2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsVariantDetailsToUnion2,
+  unknown
+> = smartUnion([
+  types.number(),
+  PlanDimensionsToVariantDetailsEnum2$inboundSchema,
+]);
+
+export function planDimensionsVariantDetailsToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsVariantDetailsToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanDimensionsVariantDetailsToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsVariantDetailsToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsVariantDetailsTier2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsVariantDetailsTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      PlanDimensionsToVariantDetailsEnum2$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsVariantDetailsTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsVariantDetailsTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsVariantDetailsTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsVariantDetailsTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsVariantDetails3$inboundSchema: z.ZodMiniType<
+  PlanDimensionsVariantDetails3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => PlanDimensionsVariantDetailsTier2$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function planDimensionsVariantDetails3FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsVariantDetails3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsVariantDetails3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsVariantDetails3' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanVariantDetailsDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => PlanDimensionsVariantDetails3$inboundSchema),
+  z.lazy(() => PlanDimensionsVariantDetails4$inboundSchema),
+]);
+
+export function planVariantDetailsDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanVariantDetailsDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanVariantDetailsMultipliers2$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function planVariantDetailsMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanVariantDetailsMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
 export const PlanCreditSchemaVariantDetails2$inboundSchema: z.ZodMiniType<
   PlanCreditSchemaVariantDetails2,
   unknown
@@ -3724,6 +4958,17 @@ export const PlanCreditSchemaVariantDetails2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => PlanDimensionsVariantDetails3$inboundSchema),
+        z.lazy(() => PlanDimensionsVariantDetails4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => PlanVariantDetailsMultipliers2$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -3746,27 +4991,207 @@ export function planCreditSchemaVariantDetails2FromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsFeatureOverrideTier1$inboundSchema:
-  z.ZodMiniType<PlanVariantDetailsFeatureOverrideTier1, unknown> = z.pipe(
-    z.object({
-      to: types.optional(z.any()),
-      credit_cost: types.optional(z.any()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "credit_cost": "creditCost",
-      });
-    }),
-  );
+export const PlanDimensionsVariantDetails2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsVariantDetails2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
 
-export function planVariantDetailsFeatureOverrideTier1FromJSON(
+export function planDimensionsVariantDetails2FromJSON(
   jsonString: string,
-): SafeParseResult<PlanVariantDetailsFeatureOverrideTier1, SDKValidationError> {
+): SafeParseResult<PlanDimensionsVariantDetails2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsVariantDetails2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsVariantDetails2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsToVariantDetailsEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof PlanDimensionsToVariantDetailsEnum1
+> = z.enum(PlanDimensionsToVariantDetailsEnum1);
+
+/** @internal */
+export const PlanDimensionsVariantDetailsToUnion1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsVariantDetailsToUnion1,
+  unknown
+> = smartUnion([
+  types.number(),
+  PlanDimensionsToVariantDetailsEnum1$inboundSchema,
+]);
+
+export function planDimensionsVariantDetailsToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsVariantDetailsToUnion1, SDKValidationError> {
   return safeParse(
     jsonString,
     (x) =>
-      PlanVariantDetailsFeatureOverrideTier1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanVariantDetailsFeatureOverrideTier1' from JSON`,
+      PlanDimensionsVariantDetailsToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsVariantDetailsToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsVariantDetailsTier1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsVariantDetailsTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      PlanDimensionsToVariantDetailsEnum1$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsVariantDetailsTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsVariantDetailsTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsVariantDetailsTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsVariantDetailsTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsVariantDetails1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsVariantDetails1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => PlanDimensionsVariantDetailsTier1$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function planDimensionsVariantDetails1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsVariantDetails1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsVariantDetails1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsVariantDetails1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanVariantDetailsDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => PlanDimensionsVariantDetails1$inboundSchema),
+  z.lazy(() => PlanDimensionsVariantDetails2$inboundSchema),
+]);
+
+export function planVariantDetailsDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanVariantDetailsDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanVariantDetailsMultipliers1$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function planVariantDetailsMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanVariantDetailsMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsMultipliers1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanToVariantDetailsEnum$inboundSchema: z.ZodMiniEnum<
+  typeof PlanToVariantDetailsEnum
+> = z.enum(PlanToVariantDetailsEnum);
+
+/** @internal */
+export const PlanVariantDetailsFeatureOverrideToUnion$inboundSchema:
+  z.ZodMiniType<PlanVariantDetailsFeatureOverrideToUnion, unknown> = smartUnion(
+    [types.number(), PlanToVariantDetailsEnum$inboundSchema],
+  );
+
+export function planVariantDetailsFeatureOverrideToUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  PlanVariantDetailsFeatureOverrideToUnion,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanVariantDetailsFeatureOverrideToUnion$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'PlanVariantDetailsFeatureOverrideToUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanVariantDetailsFeatureOverrideTier$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsFeatureOverrideTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), PlanToVariantDetailsEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planVariantDetailsFeatureOverrideTierFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsFeatureOverrideTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanVariantDetailsFeatureOverrideTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsFeatureOverrideTier' from JSON`,
   );
 }
 
@@ -3778,10 +5203,21 @@ export const PlanCreditSchemaVariantDetails1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => PlanDimensionsVariantDetails1$inboundSchema),
+        z.lazy(() => PlanDimensionsVariantDetails2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => PlanVariantDetailsMultipliers1$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => PlanVariantDetailsFeatureOverrideTier1$inboundSchema),
-    ),
+    tiers: z.array(z.lazy(() =>
+      PlanVariantDetailsFeatureOverrideTier$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3803,22 +5239,103 @@ export function planCreditSchemaVariantDetails1FromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsCreditSchemaUnion1$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsCreditSchemaUnion1,
+export const PlanVariantDetailsCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsCreditSchemaUnion,
   unknown
 > = smartUnion([
   z.lazy(() => PlanCreditSchemaVariantDetails1$inboundSchema),
   z.lazy(() => PlanCreditSchemaVariantDetails2$inboundSchema),
 ]);
 
-export function planVariantDetailsCreditSchemaUnion1FromJSON(
+export function planVariantDetailsCreditSchemaUnionFromJSON(
   jsonString: string,
-): SafeParseResult<PlanVariantDetailsCreditSchemaUnion1, SDKValidationError> {
+): SafeParseResult<PlanVariantDetailsCreditSchemaUnion, SDKValidationError> {
   return safeParse(
     jsonString,
     (x) =>
-      PlanVariantDetailsCreditSchemaUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanVariantDetailsCreditSchemaUnion1' from JSON`,
+      PlanVariantDetailsCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsCreditSchemaUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanVariantDetailsProviderMarkups$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function planVariantDetailsProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanVariantDetailsProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanVariantDetailsModelMarkups$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function planVariantDetailsModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanVariantDetailsModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantDetailsMarkups$inboundSchema: z.ZodMiniType<
+  VariantDetailsMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => PlanVariantDetailsProviderMarkups$inboundSchema),
+    ))),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => PlanVariantDetailsModelMarkups$inboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
+      "model_markups": "modelMarkups",
+    });
+  }),
+);
+
+export function variantDetailsMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantDetailsMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantDetailsMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantDetailsMarkups' from JSON`,
   );
 }
 
@@ -3834,6 +5351,9 @@ export const VariantDetailsFeatureOverride$inboundSchema: z.ZodMiniType<
         PlanCreditSchemaVariantDetails2$inboundSchema
       ),
     ]))),
+    markups: types.optional(z.lazy(() =>
+      VariantDetailsMarkups$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4007,9 +5527,10 @@ export function freeTrialParamsFromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsPurchaseLimitInterval1$inboundSchema:
-  z.ZodMiniType<PlanVariantDetailsPurchaseLimitInterval1, unknown> = openEnums
-    .inboundSchema(PlanVariantDetailsPurchaseLimitInterval1);
+export const PlanVariantDetailsAutoTopupInterval$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsAutoTopupInterval,
+  unknown
+> = openEnums.inboundSchema(PlanVariantDetailsAutoTopupInterval);
 
 /** @internal */
 export const PlanVariantDetailsPurchaseLimit1$inboundSchema: z.ZodMiniType<
@@ -4017,7 +5538,7 @@ export const PlanVariantDetailsPurchaseLimit1$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: PlanVariantDetailsPurchaseLimitInterval1$inboundSchema,
+    interval: PlanVariantDetailsAutoTopupInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
     count: types.optional(types.number()),
@@ -4040,8 +5561,8 @@ export function planVariantDetailsPurchaseLimit1FromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsAutoTopup1$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsAutoTopup1,
+export const PlanVariantDetailsAutoTopup$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsAutoTopup,
   unknown
 > = z.pipe(
   z.object({
@@ -4063,13 +5584,13 @@ export const PlanVariantDetailsAutoTopup1$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planVariantDetailsAutoTopup1FromJSON(
+export function planVariantDetailsAutoTopupFromJSON(
   jsonString: string,
-): SafeParseResult<PlanVariantDetailsAutoTopup1, SDKValidationError> {
+): SafeParseResult<PlanVariantDetailsAutoTopup, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanVariantDetailsAutoTopup1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanVariantDetailsAutoTopup1' from JSON`,
+    (x) => PlanVariantDetailsAutoTopup$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsAutoTopup' from JSON`,
   );
 }
 
@@ -4080,8 +5601,8 @@ export const PlanVariantDetailsLimitType1$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanVariantDetailsLimitType1);
 
 /** @internal */
-export const PlanVariantDetailsSpendLimit1$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsSpendLimit1,
+export const PlanVariantDetailsSpendLimit$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsSpendLimit,
   unknown
 > = z.pipe(
   z.object({
@@ -4101,21 +5622,21 @@ export const PlanVariantDetailsSpendLimit1$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planVariantDetailsSpendLimit1FromJSON(
+export function planVariantDetailsSpendLimitFromJSON(
   jsonString: string,
-): SafeParseResult<PlanVariantDetailsSpendLimit1, SDKValidationError> {
+): SafeParseResult<PlanVariantDetailsSpendLimit, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanVariantDetailsSpendLimit1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanVariantDetailsSpendLimit1' from JSON`,
+    (x) => PlanVariantDetailsSpendLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsSpendLimit' from JSON`,
   );
 }
 
 /** @internal */
-export const PlanVariantDetailsUsageLimitInterval1$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsUsageLimitInterval1,
+export const PlanVariantDetailsUsageLimitInterval$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsUsageLimitInterval,
   unknown
-> = openEnums.inboundSchema(PlanVariantDetailsUsageLimitInterval1);
+> = openEnums.inboundSchema(PlanVariantDetailsUsageLimitInterval);
 
 /** @internal */
 export const PlanVariantDetailsAnchor1$inboundSchema: z.ZodMiniType<
@@ -4143,15 +5664,15 @@ export function planVariantDetailsUsageLimitFilter1FromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsUsageLimit1$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsUsageLimit1,
+export const PlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsUsageLimit,
   unknown
 > = z.pipe(
   z.object({
     feature_id: types.string(),
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
-    interval: PlanVariantDetailsUsageLimitInterval1$inboundSchema,
+    interval: PlanVariantDetailsUsageLimitInterval$inboundSchema,
     anchor: types.optional(PlanVariantDetailsAnchor1$inboundSchema),
     filter: types.optional(
       z.lazy(() => PlanVariantDetailsUsageLimitFilter1$inboundSchema),
@@ -4164,13 +5685,13 @@ export const PlanVariantDetailsUsageLimit1$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planVariantDetailsUsageLimit1FromJSON(
+export function planVariantDetailsUsageLimitFromJSON(
   jsonString: string,
-): SafeParseResult<PlanVariantDetailsUsageLimit1, SDKValidationError> {
+): SafeParseResult<PlanVariantDetailsUsageLimit, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanVariantDetailsUsageLimit1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanVariantDetailsUsageLimit1' from JSON`,
+    (x) => PlanVariantDetailsUsageLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsUsageLimit' from JSON`,
   );
 }
 
@@ -4206,8 +5727,8 @@ export function planVariantDetailsUsageAlertFilter1FromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsUsageAlert1$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsUsageAlert1,
+export const PlanVariantDetailsUsageAlert$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsUsageAlert,
   unknown
 > = z.pipe(
   z.object({
@@ -4229,13 +5750,13 @@ export const PlanVariantDetailsUsageAlert1$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planVariantDetailsUsageAlert1FromJSON(
+export function planVariantDetailsUsageAlertFromJSON(
   jsonString: string,
-): SafeParseResult<PlanVariantDetailsUsageAlert1, SDKValidationError> {
+): SafeParseResult<PlanVariantDetailsUsageAlert, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanVariantDetailsUsageAlert1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanVariantDetailsUsageAlert1' from JSON`,
+    (x) => PlanVariantDetailsUsageAlert$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsUsageAlert' from JSON`,
   );
 }
 
@@ -4272,16 +5793,16 @@ export const PlanVariantDetailsBillingControls1$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     auto_topups: types.optional(
-      z.array(z.lazy(() => PlanVariantDetailsAutoTopup1$inboundSchema)),
+      z.array(z.lazy(() => PlanVariantDetailsAutoTopup$inboundSchema)),
     ),
     spend_limits: types.optional(
-      z.array(z.lazy(() => PlanVariantDetailsSpendLimit1$inboundSchema)),
+      z.array(z.lazy(() => PlanVariantDetailsSpendLimit$inboundSchema)),
     ),
     usage_limits: types.optional(
-      z.array(z.lazy(() => PlanVariantDetailsUsageLimit1$inboundSchema)),
+      z.array(z.lazy(() => PlanVariantDetailsUsageLimit$inboundSchema)),
     ),
     usage_alerts: types.optional(
-      z.array(z.lazy(() => PlanVariantDetailsUsageAlert1$inboundSchema)),
+      z.array(z.lazy(() => PlanVariantDetailsUsageAlert$inboundSchema)),
     ),
     overage_allowed: types.optional(
       z.array(z.lazy(() => PlanVariantDetailsOverageAllowed1$inboundSchema)),
@@ -4366,10 +5887,10 @@ export function upsertLicenseBasePriceFromJSON(
 }
 
 /** @internal */
-export const PlanUpsertLicenseResetInterval1$inboundSchema: z.ZodMiniType<
-  PlanUpsertLicenseResetInterval1,
+export const PlanUpsertLicenseResetInterval$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseResetInterval,
   unknown
-> = openEnums.inboundSchema(PlanUpsertLicenseResetInterval1);
+> = openEnums.inboundSchema(PlanUpsertLicenseResetInterval);
 
 /** @internal */
 export const PlanUpsertLicenseReset$inboundSchema: z.ZodMiniType<
@@ -4377,7 +5898,7 @@ export const PlanUpsertLicenseReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: PlanUpsertLicenseResetInterval1$inboundSchema,
+    interval: PlanUpsertLicenseResetInterval$inboundSchema,
     interval_count: types.optional(types.number()),
   }),
   z.transform((v) => {
@@ -4400,8 +5921,8 @@ export function planUpsertLicenseResetFromJSON(
 /** @internal */
 export const UpsertLicenseAddItemAdditionalCurrency$inboundSchema:
   z.ZodMiniType<UpsertLicenseAddItemAdditionalCurrency, unknown> = z.object({
-    currency: types.optional(z.any()),
-    amount: types.optional(z.any()),
+    currency: types.string(),
+    amount: types.number(),
   });
 
 export function upsertLicenseAddItemAdditionalCurrencyFromJSON(
@@ -4416,15 +5937,61 @@ export function upsertLicenseAddItemAdditionalCurrencyFromJSON(
 }
 
 /** @internal */
-export const PlanUpsertLicenseTier$inboundSchema: z.ZodMiniType<
-  PlanUpsertLicenseTier,
+export const PlanUpsertLicensePriceTo$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicensePriceTo,
+  unknown
+> = smartUnion([types.number(), types.string()]);
+
+export function planUpsertLicensePriceToFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicensePriceTo, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanUpsertLicensePriceTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicensePriceTo' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpsertLicenseTierAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  UpsertLicenseTierAdditionalCurrency,
   unknown
 > = z.pipe(
   z.object({
-    to: types.optional(z.any()),
-    amount: types.optional(z.any()),
-    flat_amount: types.optional(z.any()),
-    additional_currencies: types.optional(z.any()),
+    currency: types.string(),
+    amount: types.optional(types.number()),
+    flat_amount: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
+
+export function upsertLicenseTierAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<UpsertLicenseTierAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpsertLicenseTierAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpsertLicenseTierAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicensePriceTier$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicensePriceTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), types.string()]),
+    amount: types.number(),
+    flat_amount: types.optional(types.number()),
+    additional_currencies: types.optional(
+      z.array(z.lazy(() => UpsertLicenseTierAdditionalCurrency$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4434,13 +6001,13 @@ export const PlanUpsertLicenseTier$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planUpsertLicenseTierFromJSON(
+export function planUpsertLicensePriceTierFromJSON(
   jsonString: string,
-): SafeParseResult<PlanUpsertLicenseTier, SDKValidationError> {
+): SafeParseResult<PlanUpsertLicensePriceTier, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanUpsertLicenseTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanUpsertLicenseTier' from JSON`,
+    (x) => PlanUpsertLicensePriceTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicensePriceTier' from JSON`,
   );
 }
 
@@ -4451,14 +6018,16 @@ export const PlanUpsertLicenseTierBehavior$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanUpsertLicenseTierBehavior);
 
 /** @internal */
-export const PlanUpsertLicenseAddItemPriceInterval1$inboundSchema:
-  z.ZodMiniType<PlanUpsertLicenseAddItemPriceInterval1, unknown> = openEnums
-    .inboundSchema(PlanUpsertLicenseAddItemPriceInterval1);
+export const PlanUpsertLicenseAddItemPriceInterval$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseAddItemPriceInterval,
+  unknown
+> = openEnums.inboundSchema(PlanUpsertLicenseAddItemPriceInterval);
 
 /** @internal */
-export const PlanUpsertLicenseAddItemBillingMethod1$inboundSchema:
-  z.ZodMiniType<PlanUpsertLicenseAddItemBillingMethod1, unknown> = openEnums
-    .inboundSchema(PlanUpsertLicenseAddItemBillingMethod1);
+export const PlanUpsertLicenseAddItemBillingMethod$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseAddItemBillingMethod,
+  unknown
+> = openEnums.inboundSchema(PlanUpsertLicenseAddItemBillingMethod);
 
 /** @internal */
 export const PlanUpsertLicensePrice$inboundSchema: z.ZodMiniType<
@@ -4473,13 +6042,13 @@ export const PlanUpsertLicensePrice$inboundSchema: z.ZodMiniType<
       ),
     ),
     tiers: types.optional(
-      z.array(z.lazy(() => PlanUpsertLicenseTier$inboundSchema)),
+      z.array(z.lazy(() => PlanUpsertLicensePriceTier$inboundSchema)),
     ),
     tier_behavior: types.optional(PlanUpsertLicenseTierBehavior$inboundSchema),
-    interval: PlanUpsertLicenseAddItemPriceInterval1$inboundSchema,
+    interval: PlanUpsertLicenseAddItemPriceInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     billing_units: z._default(types.number(), 1),
-    billing_method: PlanUpsertLicenseAddItemBillingMethod1$inboundSchema,
+    billing_method: PlanUpsertLicenseAddItemBillingMethod$inboundSchema,
     max_purchase: z.optional(z.nullable(types.number())),
   }),
   z.transform((v) => {
@@ -4580,12 +6149,559 @@ export function planUpsertLicenseRolloverFromJSON(
 }
 
 /** @internal */
+export const PlanDimensionsUpsertLicense4$inboundSchema: z.ZodMiniType<
+  PlanDimensionsUpsertLicense4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsUpsertLicense4FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsUpsertLicense4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsUpsertLicense4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsUpsertLicense4' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsToUpsertLicenseEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof PlanDimensionsToUpsertLicenseEnum2
+> = z.enum(PlanDimensionsToUpsertLicenseEnum2);
+
+/** @internal */
+export const PlanDimensionsUpsertLicenseToUnion2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsUpsertLicenseToUnion2,
+  unknown
+> = smartUnion([
+  types.number(),
+  PlanDimensionsToUpsertLicenseEnum2$inboundSchema,
+]);
+
+export function planDimensionsUpsertLicenseToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsUpsertLicenseToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanDimensionsUpsertLicenseToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsUpsertLicenseToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsUpsertLicenseTier2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsUpsertLicenseTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      PlanDimensionsToUpsertLicenseEnum2$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsUpsertLicenseTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsUpsertLicenseTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsUpsertLicenseTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsUpsertLicenseTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsUpsertLicense3$inboundSchema: z.ZodMiniType<
+  PlanDimensionsUpsertLicense3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => PlanDimensionsUpsertLicenseTier2$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function planDimensionsUpsertLicense3FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsUpsertLicense3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsUpsertLicense3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsUpsertLicense3' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicenseDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => PlanDimensionsUpsertLicense3$inboundSchema),
+  z.lazy(() => PlanDimensionsUpsertLicense4$inboundSchema),
+]);
+
+export function planUpsertLicenseDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicenseDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanUpsertLicenseDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicenseMultipliers2$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function planUpsertLicenseMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicenseMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanUpsertLicenseMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanCreditSchemaUpsertLicense2$inboundSchema: z.ZodMiniType<
+  PlanCreditSchemaUpsertLicense2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => PlanDimensionsUpsertLicense3$inboundSchema),
+        z.lazy(() => PlanDimensionsUpsertLicense4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => PlanUpsertLicenseMultipliers2$inboundSchema),
+    )),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planCreditSchemaUpsertLicense2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanCreditSchemaUpsertLicense2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanCreditSchemaUpsertLicense2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanCreditSchemaUpsertLicense2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsUpsertLicense2$inboundSchema: z.ZodMiniType<
+  PlanDimensionsUpsertLicense2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsUpsertLicense2FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsUpsertLicense2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsUpsertLicense2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsUpsertLicense2' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsToUpsertLicenseEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof PlanDimensionsToUpsertLicenseEnum1
+> = z.enum(PlanDimensionsToUpsertLicenseEnum1);
+
+/** @internal */
+export const PlanDimensionsUpsertLicenseToUnion1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsUpsertLicenseToUnion1,
+  unknown
+> = smartUnion([
+  types.number(),
+  PlanDimensionsToUpsertLicenseEnum1$inboundSchema,
+]);
+
+export function planDimensionsUpsertLicenseToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsUpsertLicenseToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanDimensionsUpsertLicenseToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsUpsertLicenseToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsUpsertLicenseTier1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsUpsertLicenseTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      PlanDimensionsToUpsertLicenseEnum1$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planDimensionsUpsertLicenseTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsUpsertLicenseTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsUpsertLicenseTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsUpsertLicenseTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanDimensionsUpsertLicense1$inboundSchema: z.ZodMiniType<
+  PlanDimensionsUpsertLicense1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => PlanDimensionsUpsertLicenseTier1$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function planDimensionsUpsertLicense1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanDimensionsUpsertLicense1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanDimensionsUpsertLicense1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanDimensionsUpsertLicense1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicenseDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => PlanDimensionsUpsertLicense1$inboundSchema),
+  z.lazy(() => PlanDimensionsUpsertLicense2$inboundSchema),
+]);
+
+export function planUpsertLicenseDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicenseDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanUpsertLicenseDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicenseMultipliers1$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function planUpsertLicenseMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicenseMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanUpsertLicenseMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseMultipliers1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanToUpsertLicenseEnum$inboundSchema: z.ZodMiniEnum<
+  typeof PlanToUpsertLicenseEnum
+> = z.enum(PlanToUpsertLicenseEnum);
+
+/** @internal */
+export const PlanUpsertLicenseFeatureOverrideToUnion$inboundSchema:
+  z.ZodMiniType<PlanUpsertLicenseFeatureOverrideToUnion, unknown> = smartUnion([
+    types.number(),
+    PlanToUpsertLicenseEnum$inboundSchema,
+  ]);
+
+export function planUpsertLicenseFeatureOverrideToUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  PlanUpsertLicenseFeatureOverrideToUnion,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanUpsertLicenseFeatureOverrideToUnion$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'PlanUpsertLicenseFeatureOverrideToUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicenseFeatureOverrideTier$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseFeatureOverrideTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), PlanToUpsertLicenseEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function planUpsertLicenseFeatureOverrideTierFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicenseFeatureOverrideTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanUpsertLicenseFeatureOverrideTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseFeatureOverrideTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanCreditSchemaUpsertLicense1$inboundSchema: z.ZodMiniType<
+  PlanCreditSchemaUpsertLicense1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => PlanDimensionsUpsertLicense1$inboundSchema),
+        z.lazy(() => PlanDimensionsUpsertLicense2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => PlanUpsertLicenseMultipliers1$inboundSchema),
+    )),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() =>
+      PlanUpsertLicenseFeatureOverrideTier$inboundSchema
+    )),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function planCreditSchemaUpsertLicense1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanCreditSchemaUpsertLicense1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanCreditSchemaUpsertLicense1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanCreditSchemaUpsertLicense1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicenseCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseCreditSchemaUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => PlanCreditSchemaUpsertLicense1$inboundSchema),
+  z.lazy(() => PlanCreditSchemaUpsertLicense2$inboundSchema),
+]);
+
+export function planUpsertLicenseCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicenseCreditSchemaUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanUpsertLicenseCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseCreditSchemaUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicenseProviderMarkups$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function planUpsertLicenseProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicenseProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanUpsertLicenseProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanUpsertLicenseModelMarkups$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function planUpsertLicenseModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanUpsertLicenseModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanUpsertLicenseModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpsertLicenseMarkups$inboundSchema: z.ZodMiniType<
+  UpsertLicenseMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => PlanUpsertLicenseProviderMarkups$inboundSchema),
+    ))),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => PlanUpsertLicenseModelMarkups$inboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
+      "model_markups": "modelMarkups",
+    });
+  }),
+);
+
+export function upsertLicenseMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpsertLicenseMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpsertLicenseMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpsertLicenseMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpsertLicenseFeatureOverride$inboundSchema: z.ZodMiniType<
   UpsertLicenseFeatureOverride,
   unknown
 > = z.pipe(
   z.object({
-    credit_schema: types.optional(z.array(types.nullable(z.any()))),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => PlanCreditSchemaUpsertLicense1$inboundSchema),
+      z.lazy(() =>
+        PlanCreditSchemaUpsertLicense2$inboundSchema
+      ),
+    ]))),
+    markups: types.optional(z.lazy(() =>
+      UpsertLicenseMarkups$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4645,9 +6761,9 @@ export function upsertLicensePlanItemFromJSON(
 }
 
 /** @internal */
-export const PlanUpsertLicenseRemoveItemBillingMethod1$inboundSchema:
-  z.ZodMiniType<PlanUpsertLicenseRemoveItemBillingMethod1, unknown> = openEnums
-    .inboundSchema(PlanUpsertLicenseRemoveItemBillingMethod1);
+export const PlanUpsertLicenseRemoveItemBillingMethod$inboundSchema:
+  z.ZodMiniType<PlanUpsertLicenseRemoveItemBillingMethod, unknown> = openEnums
+    .inboundSchema(PlanUpsertLicenseRemoveItemBillingMethod);
 
 /** @internal */
 export const PlanIntervalUpsertLicenseRemoveItemEnum2$inboundSchema:
@@ -4660,21 +6776,21 @@ export const PlanIntervalUpsertLicenseRemoveItemEnum1$inboundSchema:
     .inboundSchema(PlanIntervalUpsertLicenseRemoveItemEnum1);
 
 /** @internal */
-export const PlanUpsertLicenseIntervalUnion1$inboundSchema: z.ZodMiniType<
-  PlanUpsertLicenseIntervalUnion1,
+export const PlanUpsertLicenseIntervalUnion$inboundSchema: z.ZodMiniType<
+  PlanUpsertLicenseIntervalUnion,
   unknown
 > = smartUnion([
   PlanIntervalUpsertLicenseRemoveItemEnum1$inboundSchema,
   PlanIntervalUpsertLicenseRemoveItemEnum2$inboundSchema,
 ]);
 
-export function planUpsertLicenseIntervalUnion1FromJSON(
+export function planUpsertLicenseIntervalUnionFromJSON(
   jsonString: string,
-): SafeParseResult<PlanUpsertLicenseIntervalUnion1, SDKValidationError> {
+): SafeParseResult<PlanUpsertLicenseIntervalUnion, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanUpsertLicenseIntervalUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanUpsertLicenseIntervalUnion1' from JSON`,
+    (x) => PlanUpsertLicenseIntervalUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanUpsertLicenseIntervalUnion' from JSON`,
   );
 }
 
@@ -4686,7 +6802,7 @@ export const UpsertLicensePlanItemFilter$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.optional(types.string()),
     billing_method: types.optional(
-      PlanUpsertLicenseRemoveItemBillingMethod1$inboundSchema,
+      PlanUpsertLicenseRemoveItemBillingMethod$inboundSchema,
     ),
     interval: types.optional(
       smartUnion([

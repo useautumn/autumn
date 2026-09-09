@@ -63514,6 +63514,22 @@ paths:
                       type: number
                       description: Unix timestamp (ms) when the lock automatically expires and
                         releases the held balance.
+                    overage_behavior:
+                      anyOf:
+                        - enum:
+                            - cap
+                            - overflow
+                          type: string
+                        - enum:
+                            - reject
+                          type: string
+                          x-internal: true
+                      description: 'How to handle a lock that exceeds the available balance. "reject"
+                        (default) returns allowed: false and reserves nothing.
+                        "cap" reserves only what fits and returns allowed: true.
+                        "overflow" reserves the full value: the balance can go
+                        negative, though spend limits still apply.
+                        balances.finalize reuses the behavior chosen here.'
                   required:
                     - lock_id
                     - enabled

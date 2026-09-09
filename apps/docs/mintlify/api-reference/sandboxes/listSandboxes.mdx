@@ -1,0 +1,59 @@
+---
+title: "List Sandboxes"
+openapi: "openapi POST /v1/sandboxes.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Your organization's sandboxes, newest first.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The sandbox's organization ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string">
+      The sandbox's name.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="slug" type="string">
+      The sandbox's slug, derived from its name.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      When the sandbox was created, ms since epoch.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="color" type="'gray' | 'blue' | 'green' | 'amber' | 'red' | 'pink'">
+      Colour the dashboard uses to label the sandbox.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="icon" type="string">
+      Icon the dashboard uses to label the sandbox.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "org_123",
+      "name": "staging",
+      "slug": "staging-abc123|org_456",
+      "created_at": 1781113864000,
+      "color": "blue",
+      "icon": "Flask"
+    }
+  ]
+}
+```
+</ResponseExample>

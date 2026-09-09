@@ -10,7 +10,7 @@ import { smartUnion } from "../types/smart-union.js";
 /**
  * The time interval for the purchase limit window.
  */
-export const CustomerDataPurchaseLimitInterval = {
+export const CustomerDataAutoTopupInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -19,8 +19,8 @@ export const CustomerDataPurchaseLimitInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type CustomerDataPurchaseLimitInterval = ClosedEnum<
-  typeof CustomerDataPurchaseLimitInterval
+export type CustomerDataAutoTopupInterval = ClosedEnum<
+  typeof CustomerDataAutoTopupInterval
 >;
 
 /**
@@ -30,7 +30,7 @@ export type CustomerDataPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: CustomerDataPurchaseLimitInterval;
+  interval: CustomerDataAutoTopupInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -343,9 +343,9 @@ export type CustomerData = {
 };
 
 /** @internal */
-export const CustomerDataPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
-  typeof CustomerDataPurchaseLimitInterval
-> = z.enum(CustomerDataPurchaseLimitInterval);
+export const CustomerDataAutoTopupInterval$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataAutoTopupInterval
+> = z.enum(CustomerDataAutoTopupInterval);
 
 /** @internal */
 export type CustomerDataPurchaseLimit$Outbound = {
@@ -361,7 +361,7 @@ export const CustomerDataPurchaseLimit$outboundSchema: z.ZodMiniType<
   CustomerDataPurchaseLimit
 > = z.pipe(
   z.object({
-    interval: CustomerDataPurchaseLimitInterval$outboundSchema,
+    interval: CustomerDataAutoTopupInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
     count: z.optional(z.number()),

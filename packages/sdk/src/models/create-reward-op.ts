@@ -62,6 +62,10 @@ export type CreateRewardCouponRequest = {
    * Promo code values must be unique.
    */
   promoCodes: Array<CreateRewardCouponPromoCode>;
+  /**
+   * Address an existing reward by its stable id. Omit when creating — the server generates one.
+   */
+  internalId?: string | undefined;
   type: CouponTypeRequestBody;
   /**
    * Percentage discounts must be at most 100; fixed discounts must be positive.
@@ -127,6 +131,10 @@ export type CreateRewardFeatureGrantRequest = {
    * Promo code values must be unique.
    */
   promoCodes: Array<CreateRewardFeatureGrantPromoCode>;
+  /**
+   * Address an existing reward by its stable id. Omit when creating — the server generates one.
+   */
+  internalId?: string | undefined;
 };
 
 export type CreateRewardParams = {
@@ -384,6 +392,7 @@ export type CreateRewardCouponRequest$Outbound = {
   duration: CreateRewardDuration$Outbound;
   plan_ids: Array<string> | null;
   promo_codes: Array<CreateRewardCouponPromoCode$Outbound>;
+  internal_id?: string | undefined;
   type: string;
   value: number;
 };
@@ -401,6 +410,7 @@ export const CreateRewardCouponRequest$outboundSchema: z.ZodMiniType<
     promoCodes: z.array(
       z.lazy(() => CreateRewardCouponPromoCode$outboundSchema),
     ),
+    internalId: z.optional(z.string()),
     type: CouponTypeRequestBody$outboundSchema,
     value: z.number(),
   }),
@@ -408,6 +418,7 @@ export const CreateRewardCouponRequest$outboundSchema: z.ZodMiniType<
     return remap$(v, {
       planIds: "plan_ids",
       promoCodes: "promo_codes",
+      internalId: "internal_id",
     });
   }),
 );
@@ -518,6 +529,7 @@ export type CreateRewardFeatureGrantRequest$Outbound = {
   name: string;
   grants: Array<CreateRewardGrant$Outbound>;
   promo_codes: Array<CreateRewardFeatureGrantPromoCode$Outbound>;
+  internal_id?: string | undefined;
 };
 
 /** @internal */
@@ -532,10 +544,12 @@ export const CreateRewardFeatureGrantRequest$outboundSchema: z.ZodMiniType<
     promoCodes: z.array(
       z.lazy(() => CreateRewardFeatureGrantPromoCode$outboundSchema),
     ),
+    internalId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
       promoCodes: "promo_codes",
+      internalId: "internal_id",
     });
   }),
 );

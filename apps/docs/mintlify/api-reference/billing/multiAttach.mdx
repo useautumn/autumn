@@ -125,11 +125,17 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                     <DynamicParamField body="additional_currencies" type="object[]">
                       Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
                       <Expandable title="properties">
-                        <DynamicParamField body="currency" type="any" />
+                        <DynamicParamField body="currency" type="string" required>
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicParamField>
 
-                        <DynamicParamField body="amount" type="any" />
+                        <DynamicParamField body="amount" type="number">
+                          Per-unit amount for this tier in this currency.
+                        </DynamicParamField>
 
-                        <DynamicParamField body="flat_amount" type="any" />
+                        <DynamicParamField body="flat_amount" type="number">
+                          Flat amount for this tier in this currency, if the tier uses one.
+                        </DynamicParamField>
 
                       </Expandable>
                     </DynamicParamField>
@@ -212,12 +218,100 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Number of metered-feature units priced together. Defaults to one when omitted.
                     </DynamicParamField>
 
+                    <DynamicParamField body="dimensions.{key}" type="object">
+                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="priority" type="integer">
+                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="tier_behavior" type="any" required />
+
+                        <DynamicParamField body="tiers" type="object[]" required>
+                          <Expandable title="properties">
+                            <DynamicParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="multipliers.{key}" type="object">
+                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                      <Expandable title="properties">
+                        <DynamicParamField body="match.{key}" type="string" required>
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="factor" type="number">
+                          Multiplies the matched rate. All matching multipliers stack.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="add" type="number">
+                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
                     <DynamicParamField body="tier_behavior" type="any" />
 
-                    <DynamicParamField body="tiers" type="any[]" />
+                    <DynamicParamField body="tiers" type="object[]">
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="number" required>
+                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number" required>
+                          Credits consumed per billing-unit group within this tier.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
 
                     <DynamicParamField body="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="markups" type="object">
+                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                  <Expandable title="properties">
+                    <DynamicParamField body="default_markup" type="number">
+                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="provider_markups.{key}" type="object | null">
+                      Per-provider markup percentages for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="markup" type="number" required />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="model_markups.{key}" type="object | null">
+                      Per-model markup overrides for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicParamField body="markup" type="number" />
+
+                        <DynamicParamField body="input_cost" type="number" />
+
+                        <DynamicParamField body="output_cost" type="number" />
+
+                      </Expandable>
                     </DynamicParamField>
 
                   </Expandable>

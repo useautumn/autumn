@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -23,395 +23,31 @@ import {
   ListPlansFreeTrial$inboundSchema,
   ListPlansItem,
   ListPlansItem$inboundSchema,
-  ListPlansLicense,
-  ListPlansLicense$inboundSchema,
   ListPlansPrice,
   ListPlansPrice$inboundSchema,
   ListPlansProcessors,
   ListPlansProcessors$inboundSchema,
-  ListPlansVariantAddItemResetInterval,
-  ListPlansVariantAddItemResetInterval$inboundSchema,
+} from "./list-plans-variant-details-upsert-license-reset-interval.js";
+import {
+  ListPlansLicense,
+  ListPlansLicense$inboundSchema,
   ListPlansVariantBasePrice,
   ListPlansVariantBasePrice$inboundSchema,
   ListPlansVariantDetails,
   ListPlansVariantDetails$inboundSchema,
-} from "./list-plans-variant-add-item-reset-interval.js";
+  ListPlansVariantFreeTrialParams,
+  ListPlansVariantFreeTrialParams$inboundSchema,
+  ListPlansVariantPlanItem,
+  ListPlansVariantPlanItem$inboundSchema,
+  ListPlansVariantPlanItemFilter,
+  ListPlansVariantPlanItemFilter$inboundSchema,
+} from "./list-plans-variant-free-trial-params.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 /**
- * Reset configuration for consumable features. Omit for non-consumable features like seats.
- */
-export type ListPlansVariantAddItemReset = {
-  /**
-   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
-   */
-  interval: ListPlansVariantAddItemResetInterval;
-  /**
-   * Number of intervals between resets. Defaults to 1.
-   */
-  intervalCount?: number | undefined;
-};
-
-export type ListPlansVariantAddItemAdditionalCurrency = {
-  currency?: any | undefined;
-  amount?: any | undefined;
-};
-
-export type ListPlansVariantAddItemTier = {
-  to?: any | undefined;
-  amount?: any | undefined;
-  flatAmount?: any | undefined;
-  additionalCurrencies?: any | undefined;
-};
-
-export const ListPlansVariantAddItemTierBehavior = {
-  Graduated: "graduated",
-  Volume: "volume",
-} as const;
-export type ListPlansVariantAddItemTierBehavior = OpenEnum<
-  typeof ListPlansVariantAddItemTierBehavior
->;
-
-/**
- * Billing interval. For consumable features, should match reset.interval.
- */
-export const ListPlansVariantAddItemPriceInterval = {
-  OneOff: "one_off",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-/**
- * Billing interval. For consumable features, should match reset.interval.
- */
-export type ListPlansVariantAddItemPriceInterval = OpenEnum<
-  typeof ListPlansVariantAddItemPriceInterval
->;
-
-/**
- * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
- */
-export const ListPlansVariantAddItemBillingMethod = {
-  Prepaid: "prepaid",
-  UsageBased: "usage_based",
-} as const;
-/**
- * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
- */
-export type ListPlansVariantAddItemBillingMethod = OpenEnum<
-  typeof ListPlansVariantAddItemBillingMethod
->;
-
-/**
- * Pricing for usage beyond included units. Omit for free features.
- */
-export type ListPlansVariantAddItemPrice = {
-  /**
-   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
-   */
-  amount?: number | undefined;
-  /**
-   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
-   */
-  additionalCurrencies?:
-    | Array<ListPlansVariantAddItemAdditionalCurrency>
-    | undefined;
-  /**
-   * Tiered pricing.  Either 'amount' or 'tiers' is required.
-   */
-  tiers?: Array<ListPlansVariantAddItemTier> | undefined;
-  tierBehavior?: ListPlansVariantAddItemTierBehavior | undefined;
-  /**
-   * Billing interval. For consumable features, should match reset.interval.
-   */
-  interval: ListPlansVariantAddItemPriceInterval;
-  /**
-   * Number of intervals per billing cycle. Defaults to 1.
-   */
-  intervalCount: number;
-  /**
-   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
-   */
-  billingUnits: number;
-  /**
-   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
-   */
-  billingMethod: ListPlansVariantAddItemBillingMethod;
-  /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
-   */
-  maxPurchase?: number | null | undefined;
-};
-
-/**
- * Billing behavior when quantity increases mid-cycle.
- */
-export const ListPlansVariantOnIncrease = {
-  BillImmediately: "bill_immediately",
-  ProrateImmediately: "prorate_immediately",
-  ProrateNextCycle: "prorate_next_cycle",
-  BillNextCycle: "bill_next_cycle",
-} as const;
-/**
- * Billing behavior when quantity increases mid-cycle.
- */
-export type ListPlansVariantOnIncrease = OpenEnum<
-  typeof ListPlansVariantOnIncrease
->;
-
-/**
- * Credit behavior when quantity decreases mid-cycle.
- */
-export const ListPlansVariantOnDecrease = {
-  Prorate: "prorate",
-  ProrateImmediately: "prorate_immediately",
-  ProrateNextCycle: "prorate_next_cycle",
-  None: "none",
-  NoProrations: "no_prorations",
-} as const;
-/**
- * Credit behavior when quantity decreases mid-cycle.
- */
-export type ListPlansVariantOnDecrease = OpenEnum<
-  typeof ListPlansVariantOnDecrease
->;
-
-/**
- * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
- */
-export type ListPlansVariantProration = {
-  /**
-   * Billing behavior when quantity increases mid-cycle.
-   */
-  onIncrease: ListPlansVariantOnIncrease;
-  /**
-   * Credit behavior when quantity decreases mid-cycle.
-   */
-  onDecrease: ListPlansVariantOnDecrease;
-};
-
-/**
- * When rolled over units expire.
- */
-export const ListPlansVariantAddItemExpiryDurationType = {
-  Month: "month",
-  Forever: "forever",
-} as const;
-/**
- * When rolled over units expire.
- */
-export type ListPlansVariantAddItemExpiryDurationType = OpenEnum<
-  typeof ListPlansVariantAddItemExpiryDurationType
->;
-
-/**
- * Rollover config for unused units. If set, unused included units carry over.
- */
-export type ListPlansVariantAddItemRollover = {
-  /**
-   * Max rollover units. Omit for unlimited rollover.
-   */
-  max?: number | undefined;
-  /**
-   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
-   */
-  maxPercentage?: number | undefined;
-  /**
-   * When rolled over units expire.
-   */
-  expiryDurationType: ListPlansVariantAddItemExpiryDurationType;
-  /**
-   * Number of periods before expiry.
-   */
-  expiryDurationLength?: number | undefined;
-};
-
-/**
- * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
- */
-export type ListPlansVariantAddItemFeatureOverride = {
-  /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
-   */
-  creditSchema?: Array<any | null> | undefined;
-};
-
-/**
- * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
- */
-export type ListPlansVariantPlanItem = {
-  /**
-   * The ID of the feature to configure.
-   */
-  featureId: string;
-  /**
-   * Number of free units included. Balance resets to this each interval for consumable features.
-   */
-  included?: number | undefined;
-  /**
-   * If true, customer has unlimited access to this feature.
-   */
-  unlimited?: boolean | undefined;
-  /**
-   * Whether entity-level grants contribute to a shared customer balance.
-   */
-  pooled: boolean;
-  /**
-   * Reset configuration for consumable features. Omit for non-consumable features like seats.
-   */
-  reset?: ListPlansVariantAddItemReset | undefined;
-  /**
-   * Pricing for usage beyond included units. Omit for free features.
-   */
-  price?: ListPlansVariantAddItemPrice | undefined;
-  /**
-   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
-   */
-  proration?: ListPlansVariantProration | undefined;
-  /**
-   * Rollover config for unused units. If set, unused included units carry over.
-   */
-  rollover?: ListPlansVariantAddItemRollover | undefined;
-  /**
-   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
-   */
-  featureOverride?: ListPlansVariantAddItemFeatureOverride | undefined;
-};
-
-/**
- * Match items with this billing method (prepaid or usage_based).
- */
-export const ListPlansVariantRemoveItemBillingMethod = {
-  Prepaid: "prepaid",
-  UsageBased: "usage_based",
-} as const;
-/**
- * Match items with this billing method (prepaid or usage_based).
- */
-export type ListPlansVariantRemoveItemBillingMethod = OpenEnum<
-  typeof ListPlansVariantRemoveItemBillingMethod
->;
-
-export const ListPlansIntervalVariantRemoveItemEnum2 = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-export type ListPlansIntervalVariantRemoveItemEnum2 = OpenEnum<
-  typeof ListPlansIntervalVariantRemoveItemEnum2
->;
-
-export const ListPlansIntervalVariantRemoveItemEnum1 = {
-  OneOff: "one_off",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-export type ListPlansIntervalVariantRemoveItemEnum1 = OpenEnum<
-  typeof ListPlansIntervalVariantRemoveItemEnum1
->;
-
-/**
- * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
- */
-export type ListPlansVariantIntervalUnion =
-  | ListPlansIntervalVariantRemoveItemEnum1
-  | ListPlansIntervalVariantRemoveItemEnum2;
-
-/**
- * Filter for matching plan items. All provided fields must match (AND).
- */
-export type ListPlansVariantPlanItemFilter = {
-  /**
-   * Match items linked to this feature.
-   */
-  featureId?: string | undefined;
-  /**
-   * Match items with this billing method (prepaid or usage_based).
-   */
-  billingMethod?: ListPlansVariantRemoveItemBillingMethod | undefined;
-  /**
-   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
-   */
-  interval?:
-    | ListPlansIntervalVariantRemoveItemEnum1
-    | ListPlansIntervalVariantRemoveItemEnum2
-    | undefined;
-  /**
-   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
-   */
-  intervalCount?: number | undefined;
-  /**
-   * Match items whose grant equals this included usage. Omitted is a wildcard.
-   */
-  included?: number | undefined;
-};
-
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export const ListPlansVariantCustomizeDurationType = {
-  Day: "day",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export type ListPlansVariantCustomizeDurationType = OpenEnum<
-  typeof ListPlansVariantCustomizeDurationType
->;
-
-/**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export const ListPlansVariantCustomizeOnEnd = {
-  Bill: "bill",
-  Revert: "revert",
-} as const;
-/**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export type ListPlansVariantCustomizeOnEnd = OpenEnum<
-  typeof ListPlansVariantCustomizeOnEnd
->;
-
-/**
- * Free trial configuration for a plan.
- */
-export type ListPlansVariantFreeTrialParams = {
-  /**
-   * Number of duration_type periods the trial lasts.
-   */
-  durationLength: number;
-  /**
-   * Unit of time for the trial ('day', 'month', 'year').
-   */
-  durationType: ListPlansVariantCustomizeDurationType;
-  /**
-   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
-   */
-  cardRequired: boolean;
-  /**
-   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-   */
-  onEnd?: ListPlansVariantCustomizeOnEnd | undefined;
-};
-
-/**
  * The time interval for the purchase limit window.
  */
-export const ListPlansVariantCustomizePurchaseLimitInterval = {
+export const ListPlansVariantCustomizeAutoTopupInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -420,8 +56,8 @@ export const ListPlansVariantCustomizePurchaseLimitInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type ListPlansVariantCustomizePurchaseLimitInterval = OpenEnum<
-  typeof ListPlansVariantCustomizePurchaseLimitInterval
+export type ListPlansVariantCustomizeAutoTopupInterval = OpenEnum<
+  typeof ListPlansVariantCustomizeAutoTopupInterval
 >;
 
 /**
@@ -431,7 +67,7 @@ export type ListPlansVariantCustomizePurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: ListPlansVariantCustomizePurchaseLimitInterval;
+  interval: ListPlansVariantCustomizeAutoTopupInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -544,7 +180,7 @@ export type ListPlansVariantCustomizeAnchor = OpenEnum<
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListPlansVariantCustomizeUsageLimitFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type ListPlansVariantCustomizeUsageLimit = {
@@ -610,7 +246,7 @@ export type ListPlansVariantCustomizeBasis = OpenEnum<
  * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
  */
 export type ListPlansVariantCustomizeUsageAlertFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type ListPlansVariantCustomizeUsageAlert = {
@@ -684,7 +320,7 @@ export type ListPlansVariantCustomizeBillingControls = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const VariantUpsertLicenseInterval = {
+export const PriceVariantUpsertLicenseInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -695,9 +331,20 @@ export const VariantUpsertLicenseInterval = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type VariantUpsertLicenseInterval = OpenEnum<
-  typeof VariantUpsertLicenseInterval
+export type PriceVariantUpsertLicenseInterval = OpenEnum<
+  typeof PriceVariantUpsertLicenseInterval
 >;
+
+export type VariantUpsertLicenseAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
 
 /**
  * Base price configuration for a plan.
@@ -710,7 +357,7 @@ export type VariantUpsertLicenseBasePrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: VariantUpsertLicenseInterval;
+  interval: PriceVariantUpsertLicenseInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -718,36 +365,613 @@ export type VariantUpsertLicenseBasePrice = {
   /**
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
-  additionalCurrencies?: Array<any | null> | undefined;
+  additionalCurrencies?:
+    | Array<VariantUpsertLicenseAdditionalCurrency>
+    | undefined;
+};
+
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export const VariantUpsertLicenseResetInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export type VariantUpsertLicenseResetInterval = OpenEnum<
+  typeof VariantUpsertLicenseResetInterval
+>;
+
+/**
+ * Reset configuration for consumable features. Omit for non-consumable features like seats.
+ */
+export type VariantUpsertLicenseReset = {
+  /**
+   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+   */
+  interval: VariantUpsertLicenseResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type VariantUpsertLicenseAddItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
+export type VariantUpsertLicensePriceTo = number | string;
+
+export type VariantUpsertLicenseTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
+
+export type VariantUpsertLicensePriceTier = {
+  to: number | string;
+  amount: number;
+  flatAmount?: number | undefined;
+  additionalCurrencies?:
+    | Array<VariantUpsertLicenseTierAdditionalCurrency>
+    | undefined;
+};
+
+export const VariantUpsertLicenseTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type VariantUpsertLicenseTierBehavior = OpenEnum<
+  typeof VariantUpsertLicenseTierBehavior
+>;
+
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export const VariantUpsertLicenseAddItemPriceInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export type VariantUpsertLicenseAddItemPriceInterval = OpenEnum<
+  typeof VariantUpsertLicenseAddItemPriceInterval
+>;
+
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export const VariantUpsertLicenseAddItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export type VariantUpsertLicenseAddItemBillingMethod = OpenEnum<
+  typeof VariantUpsertLicenseAddItemBillingMethod
+>;
+
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
+export type VariantUpsertLicensePrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
+  amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<VariantUpsertLicenseAddItemAdditionalCurrency>
+    | undefined;
+  /**
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
+   */
+  tiers?: Array<VariantUpsertLicensePriceTier> | undefined;
+  tierBehavior?: VariantUpsertLicenseTierBehavior | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
+  interval: VariantUpsertLicenseAddItemPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount: number;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
+  billingUnits: number;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
+  billingMethod: VariantUpsertLicenseAddItemBillingMethod;
+  /**
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+   */
+  maxPurchase?: number | null | undefined;
+};
+
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export const VariantUpsertLicenseOnIncrease = {
+  BillImmediately: "bill_immediately",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  BillNextCycle: "bill_next_cycle",
+} as const;
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export type VariantUpsertLicenseOnIncrease = OpenEnum<
+  typeof VariantUpsertLicenseOnIncrease
+>;
+
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export const VariantUpsertLicenseOnDecrease = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export type VariantUpsertLicenseOnDecrease = OpenEnum<
+  typeof VariantUpsertLicenseOnDecrease
+>;
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type VariantUpsertLicenseProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: VariantUpsertLicenseOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: VariantUpsertLicenseOnDecrease;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const VariantUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type VariantUpsertLicenseExpiryDurationType = OpenEnum<
+  typeof VariantUpsertLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type VariantUpsertLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: VariantUpsertLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+export type DimensionsVariantUpsertLicense4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type DimensionsVariantUpsertLicenseTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to?: any | undefined;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type DimensionsVariantUpsertLicense3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<DimensionsVariantUpsertLicenseTier2>;
+};
+
+export type VariantUpsertLicenseDimensionsUnion2 =
+  | DimensionsVariantUpsertLicense3
+  | DimensionsVariantUpsertLicense4;
+
+export type VariantUpsertLicenseMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export type CreditSchemaVariantUpsertLicense2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | DimensionsVariantUpsertLicense3
+      | DimensionsVariantUpsertLicense4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: VariantUpsertLicenseMultipliers2 } | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type DimensionsVariantUpsertLicense2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type DimensionsVariantUpsertLicenseTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to?: any | undefined;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type DimensionsVariantUpsertLicense1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<DimensionsVariantUpsertLicenseTier1>;
+};
+
+export type VariantUpsertLicenseDimensionsUnion1 =
+  | DimensionsVariantUpsertLicense1
+  | DimensionsVariantUpsertLicense2;
+
+export type VariantUpsertLicenseMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const ToVariantUpsertLicenseEnum = {
+  Inf: "inf",
+} as const;
+export type ToVariantUpsertLicenseEnum = ClosedEnum<
+  typeof ToVariantUpsertLicenseEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type VariantUpsertLicenseFeatureOverrideToUnion =
+  | number
+  | ToVariantUpsertLicenseEnum;
+
+export type VariantUpsertLicenseFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | ToVariantUpsertLicenseEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreditSchemaVariantUpsertLicense1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | DimensionsVariantUpsertLicense1
+      | DimensionsVariantUpsertLicense2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: VariantUpsertLicenseMultipliers1 } | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<VariantUpsertLicenseFeatureOverrideTier>;
+};
+
+export type VariantUpsertLicenseCreditSchemaUnion =
+  | CreditSchemaVariantUpsertLicense1
+  | CreditSchemaVariantUpsertLicense2;
+
+export type VariantUpsertLicenseProviderMarkups = {
+  markup: number;
+};
+
+export type VariantUpsertLicenseModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type VariantUpsertLicenseMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: VariantUpsertLicenseProviderMarkups }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?:
+    | { [k: string]: VariantUpsertLicenseModelMarkups }
+    | null
+    | undefined;
+};
+
+/**
+ * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+ */
+export type VariantUpsertLicenseFeatureOverride = {
+  /**
+   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   */
+  creditSchema?:
+    | Array<
+      CreditSchemaVariantUpsertLicense1 | CreditSchemaVariantUpsertLicense2
+    >
+    | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: VariantUpsertLicenseMarkups | undefined;
 };
 
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type VariantUpsertLicensePlanItem = {
-  featureId?: any | undefined;
-  included?: any | undefined;
-  unlimited?: any | undefined;
-  pooled?: any | undefined;
-  reset?: any | undefined;
-  price?: any | undefined;
-  proration?: any | undefined;
-  rollover?: any | undefined;
-  featureOverride?: any | undefined;
-  entityFeatureId?: any | undefined;
-  entitlementId?: any | undefined;
-  priceId?: any | undefined;
+  /**
+   * The ID of the feature to configure.
+   */
+  featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
+  included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
+  unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled: boolean;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
+  reset?: VariantUpsertLicenseReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
+  price?: VariantUpsertLicensePrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
+  proration?: VariantUpsertLicenseProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
+  rollover?: VariantUpsertLicenseRollover | undefined;
+  /**
+   * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+   */
+  featureOverride?: VariantUpsertLicenseFeatureOverride | undefined;
 };
+
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export const VariantUpsertLicenseRemoveItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export type VariantUpsertLicenseRemoveItemBillingMethod = OpenEnum<
+  typeof VariantUpsertLicenseRemoveItemBillingMethod
+>;
+
+export const IntervalVariantUpsertLicenseRemoveItemEnum2 = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type IntervalVariantUpsertLicenseRemoveItemEnum2 = OpenEnum<
+  typeof IntervalVariantUpsertLicenseRemoveItemEnum2
+>;
+
+export const IntervalVariantUpsertLicenseRemoveItemEnum1 = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type IntervalVariantUpsertLicenseRemoveItemEnum1 = OpenEnum<
+  typeof IntervalVariantUpsertLicenseRemoveItemEnum1
+>;
+
+/**
+ * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+ */
+export type VariantUpsertLicenseIntervalUnion =
+  | IntervalVariantUpsertLicenseRemoveItemEnum1
+  | IntervalVariantUpsertLicenseRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
  */
 export type VariantUpsertLicensePlanItemFilter = {
-  featureId?: any | undefined;
-  billingMethod?: any | undefined;
-  interval?: any | undefined;
-  intervalCount?: any | undefined;
-  included?: any | undefined;
+  /**
+   * Match items linked to this feature.
+   */
+  featureId?: string | undefined;
+  /**
+   * Match items with this billing method (prepaid or usage_based).
+   */
+  billingMethod?: VariantUpsertLicenseRemoveItemBillingMethod | undefined;
+  /**
+   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+   */
+  interval?:
+    | IntervalVariantUpsertLicenseRemoveItemEnum1
+    | IntervalVariantUpsertLicenseRemoveItemEnum2
+    | undefined;
+  /**
+   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
 };
 
 export type VariantUpsertLicenseCustomize = {
@@ -914,9 +1138,15 @@ export type VariantFeatureDisplay = {
   plural: string;
 };
 
-export type ListPlansVariantCreditSchema = {
-  meteredFeatureId?: any | undefined;
-  creditCost?: any | undefined;
+export type VariantFeatureCreditSchema = {
+  /**
+   * The ID of the metered feature (should be a single_use feature).
+   */
+  meteredFeatureId: string;
+  /**
+   * The credit cost of the metered feature.
+   */
+  creditCost: number;
 };
 
 /**
@@ -942,7 +1172,7 @@ export type VariantFeature = {
   /**
    * Credit cost schema for credit system features.
    */
-  creditSchema?: Array<ListPlansVariantCreditSchema> | null | undefined;
+  creditSchema?: Array<VariantFeatureCreditSchema> | null | undefined;
   /**
    * Whether or not the feature is archived.
    */
@@ -982,15 +1212,38 @@ export type VariantPlanReset = {
 };
 
 export type VariantItemAdditionalCurrency = {
-  currency?: any | undefined;
-  amount?: any | undefined;
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
 };
 
-export type VariantPlanTier = {
-  to?: any | undefined;
-  amount?: any | undefined;
-  flatAmount?: any | undefined;
-  additionalCurrencies?: any | undefined;
+export type PriceVariantPlanTo = number | string;
+
+export type VariantItemTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
+
+export type PriceVariantPlanTier = {
+  to: number | string;
+  amount: number;
+  flatAmount?: number | undefined;
+  additionalCurrencies?: Array<VariantItemTierAdditionalCurrency> | undefined;
 };
 
 export const VariantPlanTierBehavior = {
@@ -1032,7 +1285,10 @@ export type VariantItemBillingMethod = OpenEnum<
 >;
 
 export type VariantItemStripe = {
-  priceId?: any | undefined;
+  /**
+   * Stripe price ID. For prepaid with included > 0 this is the V2 price.
+   */
+  priceId: string;
 };
 
 /**
@@ -1054,7 +1310,7 @@ export type VariantItemPrice = {
   /**
    * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
-  tiers?: Array<VariantPlanTier> | undefined;
+  tiers?: Array<PriceVariantPlanTier> | undefined;
   tierBehavior?: VariantPlanTierBehavior | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
@@ -1132,6 +1388,254 @@ export type VariantPlanRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type DimensionsVariantPlan4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const DimensionsToVariantPlanEnum2 = {
+  Inf: "inf",
+} as const;
+export type DimensionsToVariantPlanEnum2 = ClosedEnum<
+  typeof DimensionsToVariantPlanEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type DimensionsVariantPlanToUnion2 =
+  | number
+  | DimensionsToVariantPlanEnum2;
+
+export type DimensionsVariantPlanTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | DimensionsToVariantPlanEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type DimensionsVariantPlan3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<DimensionsVariantPlanTier2>;
+};
+
+export type VariantPlanDimensionsUnion2 =
+  | DimensionsVariantPlan3
+  | DimensionsVariantPlan4;
+
+export type VariantPlanMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export type CreditSchemaVariantPlanFeatureOverride2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: DimensionsVariantPlan3 | DimensionsVariantPlan4 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: VariantPlanMultipliers2 } | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type DimensionsVariantPlan2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const DimensionsToVariantPlanEnum1 = {
+  Inf: "inf",
+} as const;
+export type DimensionsToVariantPlanEnum1 = ClosedEnum<
+  typeof DimensionsToVariantPlanEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type DimensionsVariantPlanToUnion1 =
+  | number
+  | DimensionsToVariantPlanEnum1;
+
+export type DimensionsVariantPlanTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | DimensionsToVariantPlanEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type DimensionsVariantPlan1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<DimensionsVariantPlanTier1>;
+};
+
+export type VariantPlanDimensionsUnion1 =
+  | DimensionsVariantPlan1
+  | DimensionsVariantPlan2;
+
+export type VariantPlanMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const ToVariantPlanEnum = {
+  Inf: "inf",
+} as const;
+export type ToVariantPlanEnum = ClosedEnum<typeof ToVariantPlanEnum>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type VariantPlanFeatureOverrideToUnion = number | ToVariantPlanEnum;
+
+export type VariantPlanFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | ToVariantPlanEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreditSchemaVariantPlanFeatureOverride1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: DimensionsVariantPlan1 | DimensionsVariantPlan2 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: VariantPlanMultipliers1 } | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<VariantPlanFeatureOverrideTier>;
+};
+
+export type VariantPlanCreditSchemaUnion =
+  | CreditSchemaVariantPlanFeatureOverride1
+  | CreditSchemaVariantPlanFeatureOverride2;
+
+export type VariantPlanProviderMarkups = {
+  markup: number;
+};
+
+export type VariantPlanModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type VariantPlanMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: VariantPlanProviderMarkups }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?: { [k: string]: VariantPlanModelMarkups } | null | undefined;
+};
+
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
  */
@@ -1139,7 +1643,16 @@ export type VariantPlanFeatureOverride = {
   /**
    * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
    */
-  creditSchema?: Array<any | null> | undefined;
+  creditSchema?:
+    | Array<
+      | CreditSchemaVariantPlanFeatureOverride1
+      | CreditSchemaVariantPlanFeatureOverride2
+    >
+    | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: VariantPlanMarkups | undefined;
 };
 
 export type VariantItem = {
@@ -1196,6 +1709,11 @@ export type VariantStripe = {
   additionalProductIds?: Array<string> | undefined;
 };
 
+export type VariantFeatureQuantity = {
+  featureId: string;
+  quantity?: number | undefined;
+};
+
 export type VariantProduct = {
   /**
    * RevenueCat product ID that grants this plan when purchased.
@@ -1204,7 +1722,7 @@ export type VariantProduct = {
   /**
    * Prepaid quantities granted when this specific RevenueCat product is purchased, in feature units.
    */
-  featureQuantities?: Array<any | null> | undefined;
+  featureQuantities?: Array<VariantFeatureQuantity> | undefined;
 };
 
 export type VariantRevenuecat = {
@@ -1288,7 +1806,7 @@ export type VariantConfig = {
 /**
  * The time interval for the purchase limit window.
  */
-export const VariantPlanPurchaseLimitInterval = {
+export const VariantPlanAutoTopupInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -1297,8 +1815,8 @@ export const VariantPlanPurchaseLimitInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type VariantPlanPurchaseLimitInterval = OpenEnum<
-  typeof VariantPlanPurchaseLimitInterval
+export type VariantPlanAutoTopupInterval = OpenEnum<
+  typeof VariantPlanAutoTopupInterval
 >;
 
 /**
@@ -1308,7 +1826,7 @@ export type VariantPlanPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: VariantPlanPurchaseLimitInterval;
+  interval: VariantPlanAutoTopupInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -1413,7 +1931,7 @@ export type VariantPlanAnchor = OpenEnum<typeof VariantPlanAnchor>;
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type VariantPlanUsageLimitFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type VariantPlanUsageLimit = {
@@ -1477,7 +1995,7 @@ export type VariantPlanBasis = OpenEnum<typeof VariantPlanBasis>;
  * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
  */
 export type VariantPlanUsageAlertFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type VariantPlanUsageAlert = {
@@ -1811,416 +2329,15 @@ export type ListPlansResponse = {
 };
 
 /** @internal */
-export const ListPlansVariantAddItemReset$inboundSchema: z.ZodMiniType<
-  ListPlansVariantAddItemReset,
-  unknown
-> = z.pipe(
-  z.object({
-    interval: ListPlansVariantAddItemResetInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function listPlansVariantAddItemResetFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantAddItemReset, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantAddItemReset$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantAddItemReset' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantAddItemAdditionalCurrency$inboundSchema:
-  z.ZodMiniType<ListPlansVariantAddItemAdditionalCurrency, unknown> = z.object({
-    currency: types.optional(z.any()),
-    amount: types.optional(z.any()),
-  });
-
-export function listPlansVariantAddItemAdditionalCurrencyFromJSON(
-  jsonString: string,
-): SafeParseResult<
-  ListPlansVariantAddItemAdditionalCurrency,
-  SDKValidationError
-> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      ListPlansVariantAddItemAdditionalCurrency$inboundSchema.parse(
-        JSON.parse(x),
-      ),
-    `Failed to parse 'ListPlansVariantAddItemAdditionalCurrency' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantAddItemTier$inboundSchema: z.ZodMiniType<
-  ListPlansVariantAddItemTier,
-  unknown
-> = z.pipe(
-  z.object({
-    to: types.optional(z.any()),
-    amount: types.optional(z.any()),
-    flat_amount: types.optional(z.any()),
-    additional_currencies: types.optional(z.any()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "flat_amount": "flatAmount",
-      "additional_currencies": "additionalCurrencies",
-    });
-  }),
-);
-
-export function listPlansVariantAddItemTierFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantAddItemTier, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantAddItemTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantAddItemTier' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantAddItemTierBehavior$inboundSchema: z.ZodMiniType<
-  ListPlansVariantAddItemTierBehavior,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantAddItemTierBehavior);
-
-/** @internal */
-export const ListPlansVariantAddItemPriceInterval$inboundSchema: z.ZodMiniType<
-  ListPlansVariantAddItemPriceInterval,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantAddItemPriceInterval);
-
-/** @internal */
-export const ListPlansVariantAddItemBillingMethod$inboundSchema: z.ZodMiniType<
-  ListPlansVariantAddItemBillingMethod,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantAddItemBillingMethod);
-
-/** @internal */
-export const ListPlansVariantAddItemPrice$inboundSchema: z.ZodMiniType<
-  ListPlansVariantAddItemPrice,
-  unknown
-> = z.pipe(
-  z.object({
-    amount: types.optional(types.number()),
-    additional_currencies: types.optional(z.array(z.lazy(() =>
-      ListPlansVariantAddItemAdditionalCurrency$inboundSchema
-    ))),
-    tiers: types.optional(z.array(z.lazy(() =>
-      ListPlansVariantAddItemTier$inboundSchema
-    ))),
-    tier_behavior: types.optional(
-      ListPlansVariantAddItemTierBehavior$inboundSchema,
-    ),
-    interval: ListPlansVariantAddItemPriceInterval$inboundSchema,
-    interval_count: z._default(types.number(), 1),
-    billing_units: z._default(types.number(), 1),
-    billing_method: ListPlansVariantAddItemBillingMethod$inboundSchema,
-    max_purchase: z.optional(z.nullable(types.number())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "additional_currencies": "additionalCurrencies",
-      "tier_behavior": "tierBehavior",
-      "interval_count": "intervalCount",
-      "billing_units": "billingUnits",
-      "billing_method": "billingMethod",
-      "max_purchase": "maxPurchase",
-    });
-  }),
-);
-
-export function listPlansVariantAddItemPriceFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantAddItemPrice, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantAddItemPrice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantAddItemPrice' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantOnIncrease$inboundSchema: z.ZodMiniType<
-  ListPlansVariantOnIncrease,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantOnIncrease);
-
-/** @internal */
-export const ListPlansVariantOnDecrease$inboundSchema: z.ZodMiniType<
-  ListPlansVariantOnDecrease,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantOnDecrease);
-
-/** @internal */
-export const ListPlansVariantProration$inboundSchema: z.ZodMiniType<
-  ListPlansVariantProration,
-  unknown
-> = z.pipe(
-  z.object({
-    on_increase: ListPlansVariantOnIncrease$inboundSchema,
-    on_decrease: ListPlansVariantOnDecrease$inboundSchema,
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "on_increase": "onIncrease",
-      "on_decrease": "onDecrease",
-    });
-  }),
-);
-
-export function listPlansVariantProrationFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantProration, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantProration$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantProration' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantAddItemExpiryDurationType$inboundSchema:
-  z.ZodMiniType<ListPlansVariantAddItemExpiryDurationType, unknown> = openEnums
-    .inboundSchema(ListPlansVariantAddItemExpiryDurationType);
-
-/** @internal */
-export const ListPlansVariantAddItemRollover$inboundSchema: z.ZodMiniType<
-  ListPlansVariantAddItemRollover,
-  unknown
-> = z.pipe(
-  z.object({
-    max: types.optional(types.number()),
-    max_percentage: types.optional(types.number()),
-    expiry_duration_type:
-      ListPlansVariantAddItemExpiryDurationType$inboundSchema,
-    expiry_duration_length: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "max_percentage": "maxPercentage",
-      "expiry_duration_type": "expiryDurationType",
-      "expiry_duration_length": "expiryDurationLength",
-    });
-  }),
-);
-
-export function listPlansVariantAddItemRolloverFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantAddItemRollover, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantAddItemRollover$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantAddItemRollover' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantAddItemFeatureOverride$inboundSchema:
-  z.ZodMiniType<ListPlansVariantAddItemFeatureOverride, unknown> = z.pipe(
-    z.object({
-      credit_schema: types.optional(z.array(types.nullable(z.any()))),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "credit_schema": "creditSchema",
-      });
-    }),
-  );
-
-export function listPlansVariantAddItemFeatureOverrideFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantAddItemFeatureOverride, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      ListPlansVariantAddItemFeatureOverride$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantAddItemFeatureOverride' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantPlanItem$inboundSchema: z.ZodMiniType<
-  ListPlansVariantPlanItem,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    included: types.optional(types.number()),
-    unlimited: types.optional(types.boolean()),
-    pooled: z._default(types.boolean(), false),
-    reset: types.optional(
-      z.lazy(() => ListPlansVariantAddItemReset$inboundSchema),
-    ),
-    price: types.optional(
-      z.lazy(() => ListPlansVariantAddItemPrice$inboundSchema),
-    ),
-    proration: types.optional(
-      z.lazy(() => ListPlansVariantProration$inboundSchema),
-    ),
-    rollover: types.optional(
-      z.lazy(() => ListPlansVariantAddItemRollover$inboundSchema),
-    ),
-    feature_override: types.optional(
-      z.lazy(() => ListPlansVariantAddItemFeatureOverride$inboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "feature_override": "featureOverride",
-    });
-  }),
-);
-
-export function listPlansVariantPlanItemFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantPlanItem, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantPlanItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantPlanItem' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantRemoveItemBillingMethod$inboundSchema:
-  z.ZodMiniType<ListPlansVariantRemoveItemBillingMethod, unknown> = openEnums
-    .inboundSchema(ListPlansVariantRemoveItemBillingMethod);
-
-/** @internal */
-export const ListPlansIntervalVariantRemoveItemEnum2$inboundSchema:
-  z.ZodMiniType<ListPlansIntervalVariantRemoveItemEnum2, unknown> = openEnums
-    .inboundSchema(ListPlansIntervalVariantRemoveItemEnum2);
-
-/** @internal */
-export const ListPlansIntervalVariantRemoveItemEnum1$inboundSchema:
-  z.ZodMiniType<ListPlansIntervalVariantRemoveItemEnum1, unknown> = openEnums
-    .inboundSchema(ListPlansIntervalVariantRemoveItemEnum1);
-
-/** @internal */
-export const ListPlansVariantIntervalUnion$inboundSchema: z.ZodMiniType<
-  ListPlansVariantIntervalUnion,
-  unknown
-> = smartUnion([
-  ListPlansIntervalVariantRemoveItemEnum1$inboundSchema,
-  ListPlansIntervalVariantRemoveItemEnum2$inboundSchema,
-]);
-
-export function listPlansVariantIntervalUnionFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantIntervalUnion, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantIntervalUnion$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantIntervalUnion' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantPlanItemFilter$inboundSchema: z.ZodMiniType<
-  ListPlansVariantPlanItemFilter,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    billing_method: types.optional(
-      ListPlansVariantRemoveItemBillingMethod$inboundSchema,
-    ),
-    interval: types.optional(
-      smartUnion([
-        ListPlansIntervalVariantRemoveItemEnum1$inboundSchema,
-        ListPlansIntervalVariantRemoveItemEnum2$inboundSchema,
-      ]),
-    ),
-    interval_count: types.optional(types.number()),
-    included: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "billing_method": "billingMethod",
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function listPlansVariantPlanItemFilterFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantPlanItemFilter, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantPlanItemFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantPlanItemFilter' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantCustomizeDurationType$inboundSchema: z.ZodMiniType<
-  ListPlansVariantCustomizeDurationType,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantCustomizeDurationType);
-
-/** @internal */
-export const ListPlansVariantCustomizeOnEnd$inboundSchema: z.ZodMiniType<
-  ListPlansVariantCustomizeOnEnd,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantCustomizeOnEnd);
-
-/** @internal */
-export const ListPlansVariantFreeTrialParams$inboundSchema: z.ZodMiniType<
-  ListPlansVariantFreeTrialParams,
-  unknown
-> = z.pipe(
-  z.object({
-    duration_length: types.number(),
-    duration_type: z._default(
-      ListPlansVariantCustomizeDurationType$inboundSchema,
-      "month",
-    ),
-    card_required: z._default(types.boolean(), false),
-    on_end: types.optional(ListPlansVariantCustomizeOnEnd$inboundSchema),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "duration_length": "durationLength",
-      "duration_type": "durationType",
-      "card_required": "cardRequired",
-      "on_end": "onEnd",
-    });
-  }),
-);
-
-export function listPlansVariantFreeTrialParamsFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantFreeTrialParams, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantFreeTrialParams$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantFreeTrialParams' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantCustomizePurchaseLimitInterval$inboundSchema:
-  z.ZodMiniType<ListPlansVariantCustomizePurchaseLimitInterval, unknown> =
-    openEnums.inboundSchema(ListPlansVariantCustomizePurchaseLimitInterval);
+export const ListPlansVariantCustomizeAutoTopupInterval$inboundSchema:
+  z.ZodMiniType<ListPlansVariantCustomizeAutoTopupInterval, unknown> = openEnums
+    .inboundSchema(ListPlansVariantCustomizeAutoTopupInterval);
 
 /** @internal */
 export const ListPlansVariantCustomizePurchaseLimit$inboundSchema:
   z.ZodMiniType<ListPlansVariantCustomizePurchaseLimit, unknown> = z.pipe(
     z.object({
-      interval: ListPlansVariantCustomizePurchaseLimitInterval$inboundSchema,
+      interval: ListPlansVariantCustomizeAutoTopupInterval$inboundSchema,
       interval_count: z._default(types.number(), 1),
       limit: types.number(),
       count: types.optional(types.number()),
@@ -2333,7 +2450,7 @@ export const ListPlansVariantCustomizeAnchor$inboundSchema: z.ZodMiniType<
 /** @internal */
 export const ListPlansVariantCustomizeUsageLimitFilter$inboundSchema:
   z.ZodMiniType<ListPlansVariantCustomizeUsageLimitFilter, unknown> = z.object({
-    properties: z.record(z.string(), z.any()),
+    properties: z.record(z.string(), types.string()),
   });
 
 export function listPlansVariantCustomizeUsageLimitFilterFromJSON(
@@ -2399,7 +2516,7 @@ export const ListPlansVariantCustomizeBasis$inboundSchema: z.ZodMiniType<
 /** @internal */
 export const ListPlansVariantCustomizeUsageAlertFilter$inboundSchema:
   z.ZodMiniType<ListPlansVariantCustomizeUsageAlertFilter, unknown> = z.object({
-    properties: z.record(z.string(), z.any()),
+    properties: z.record(z.string(), types.string()),
   });
 
 export function listPlansVariantCustomizeUsageAlertFilterFromJSON(
@@ -2531,10 +2648,28 @@ export function listPlansVariantCustomizeBillingControlsFromJSON(
 }
 
 /** @internal */
-export const VariantUpsertLicenseInterval$inboundSchema: z.ZodMiniType<
-  VariantUpsertLicenseInterval,
+export const PriceVariantUpsertLicenseInterval$inboundSchema: z.ZodMiniType<
+  PriceVariantUpsertLicenseInterval,
   unknown
-> = openEnums.inboundSchema(VariantUpsertLicenseInterval);
+> = openEnums.inboundSchema(PriceVariantUpsertLicenseInterval);
+
+/** @internal */
+export const VariantUpsertLicenseAdditionalCurrency$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseAdditionalCurrency, unknown> = z.object({
+    currency: types.string(),
+    amount: types.number(),
+  });
+
+export function variantUpsertLicenseAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseAdditionalCurrency' from JSON`,
+  );
+}
 
 /** @internal */
 export const VariantUpsertLicenseBasePrice$inboundSchema: z.ZodMiniType<
@@ -2543,9 +2678,13 @@ export const VariantUpsertLicenseBasePrice$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.number(),
-    interval: VariantUpsertLicenseInterval$inboundSchema,
+    interval: PriceVariantUpsertLicenseInterval$inboundSchema,
     interval_count: types.optional(types.number()),
-    additional_currencies: types.optional(z.array(types.nullable(z.any()))),
+    additional_currencies: types.optional(
+      z.array(
+        z.lazy(() => VariantUpsertLicenseAdditionalCurrency$inboundSchema),
+      ),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2566,31 +2705,829 @@ export function variantUpsertLicenseBasePriceFromJSON(
 }
 
 /** @internal */
+export const VariantUpsertLicenseResetInterval$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseResetInterval,
+  unknown
+> = openEnums.inboundSchema(VariantUpsertLicenseResetInterval);
+
+/** @internal */
+export const VariantUpsertLicenseReset$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseReset,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: VariantUpsertLicenseResetInterval$inboundSchema,
+    interval_count: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function variantUpsertLicenseResetFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseReset, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicenseReset$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseReset' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseAddItemAdditionalCurrency$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseAddItemAdditionalCurrency, unknown> = z
+    .object({
+      currency: types.string(),
+      amount: types.number(),
+    });
+
+export function variantUpsertLicenseAddItemAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  VariantUpsertLicenseAddItemAdditionalCurrency,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseAddItemAdditionalCurrency$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'VariantUpsertLicenseAddItemAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicensePriceTo$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicensePriceTo,
+  unknown
+> = smartUnion([types.number(), types.string()]);
+
+export function variantUpsertLicensePriceToFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicensePriceTo, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicensePriceTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicensePriceTo' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseTierAdditionalCurrency$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseTierAdditionalCurrency, unknown> = z.pipe(
+    z.object({
+      currency: types.string(),
+      amount: types.optional(types.number()),
+      flat_amount: types.optional(types.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "flat_amount": "flatAmount",
+      });
+    }),
+  );
+
+export function variantUpsertLicenseTierAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  VariantUpsertLicenseTierAdditionalCurrency,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseTierAdditionalCurrency$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'VariantUpsertLicenseTierAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicensePriceTier$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicensePriceTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), types.string()]),
+    amount: types.number(),
+    flat_amount: types.optional(types.number()),
+    additional_currencies: types.optional(z.array(z.lazy(() =>
+      VariantUpsertLicenseTierAdditionalCurrency$inboundSchema
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+      "additional_currencies": "additionalCurrencies",
+    });
+  }),
+);
+
+export function variantUpsertLicensePriceTierFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicensePriceTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicensePriceTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicensePriceTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseTierBehavior$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseTierBehavior,
+  unknown
+> = openEnums.inboundSchema(VariantUpsertLicenseTierBehavior);
+
+/** @internal */
+export const VariantUpsertLicenseAddItemPriceInterval$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseAddItemPriceInterval, unknown> = openEnums
+    .inboundSchema(VariantUpsertLicenseAddItemPriceInterval);
+
+/** @internal */
+export const VariantUpsertLicenseAddItemBillingMethod$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseAddItemBillingMethod, unknown> = openEnums
+    .inboundSchema(VariantUpsertLicenseAddItemBillingMethod);
+
+/** @internal */
+export const VariantUpsertLicensePrice$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicensePrice,
+  unknown
+> = z.pipe(
+  z.object({
+    amount: types.optional(types.number()),
+    additional_currencies: types.optional(z.array(z.lazy(() =>
+      VariantUpsertLicenseAddItemAdditionalCurrency$inboundSchema
+    ))),
+    tiers: types.optional(z.array(z.lazy(() =>
+      VariantUpsertLicensePriceTier$inboundSchema
+    ))),
+    tier_behavior: types.optional(
+      VariantUpsertLicenseTierBehavior$inboundSchema,
+    ),
+    interval: VariantUpsertLicenseAddItemPriceInterval$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    billing_units: z._default(types.number(), 1),
+    billing_method: VariantUpsertLicenseAddItemBillingMethod$inboundSchema,
+    max_purchase: z.optional(z.nullable(types.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "additional_currencies": "additionalCurrencies",
+      "tier_behavior": "tierBehavior",
+      "interval_count": "intervalCount",
+      "billing_units": "billingUnits",
+      "billing_method": "billingMethod",
+      "max_purchase": "maxPurchase",
+    });
+  }),
+);
+
+export function variantUpsertLicensePriceFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicensePrice, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicensePrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicensePrice' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseOnIncrease$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseOnIncrease,
+  unknown
+> = openEnums.inboundSchema(VariantUpsertLicenseOnIncrease);
+
+/** @internal */
+export const VariantUpsertLicenseOnDecrease$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseOnDecrease,
+  unknown
+> = openEnums.inboundSchema(VariantUpsertLicenseOnDecrease);
+
+/** @internal */
+export const VariantUpsertLicenseProration$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseProration,
+  unknown
+> = z.pipe(
+  z.object({
+    on_increase: VariantUpsertLicenseOnIncrease$inboundSchema,
+    on_decrease: VariantUpsertLicenseOnDecrease$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "on_increase": "onIncrease",
+      "on_decrease": "onDecrease",
+    });
+  }),
+);
+
+export function variantUpsertLicenseProrationFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseProration, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicenseProration$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseProration' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseExpiryDurationType$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseExpiryDurationType, unknown> = openEnums
+    .inboundSchema(VariantUpsertLicenseExpiryDurationType);
+
+/** @internal */
+export const VariantUpsertLicenseRollover$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseRollover,
+  unknown
+> = z.pipe(
+  z.object({
+    max: types.optional(types.number()),
+    max_percentage: types.optional(types.number()),
+    expiry_duration_type: VariantUpsertLicenseExpiryDurationType$inboundSchema,
+    expiry_duration_length: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "max_percentage": "maxPercentage",
+      "expiry_duration_type": "expiryDurationType",
+      "expiry_duration_length": "expiryDurationLength",
+    });
+  }),
+);
+
+export function variantUpsertLicenseRolloverFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseRollover, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicenseRollover$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseRollover' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantUpsertLicense4$inboundSchema: z.ZodMiniType<
+  DimensionsVariantUpsertLicense4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function dimensionsVariantUpsertLicense4FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantUpsertLicense4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantUpsertLicense4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantUpsertLicense4' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantUpsertLicenseTier2$inboundSchema: z.ZodMiniType<
+  DimensionsVariantUpsertLicenseTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: types.optional(z.any()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function dimensionsVariantUpsertLicenseTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantUpsertLicenseTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      DimensionsVariantUpsertLicenseTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantUpsertLicenseTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantUpsertLicense3$inboundSchema: z.ZodMiniType<
+  DimensionsVariantUpsertLicense3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => DimensionsVariantUpsertLicenseTier2$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function dimensionsVariantUpsertLicense3FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantUpsertLicense3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantUpsertLicense3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantUpsertLicense3' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => DimensionsVariantUpsertLicense3$inboundSchema),
+  z.lazy(() => DimensionsVariantUpsertLicense4$inboundSchema),
+]);
+
+export function variantUpsertLicenseDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseMultipliers2$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function variantUpsertLicenseMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicenseMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreditSchemaVariantUpsertLicense2$inboundSchema: z.ZodMiniType<
+  CreditSchemaVariantUpsertLicense2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => DimensionsVariantUpsertLicense3$inboundSchema),
+        z.lazy(() => DimensionsVariantUpsertLicense4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => VariantUpsertLicenseMultipliers2$inboundSchema),
+    )),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function creditSchemaVariantUpsertLicense2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreditSchemaVariantUpsertLicense2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreditSchemaVariantUpsertLicense2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreditSchemaVariantUpsertLicense2' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantUpsertLicense2$inboundSchema: z.ZodMiniType<
+  DimensionsVariantUpsertLicense2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function dimensionsVariantUpsertLicense2FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantUpsertLicense2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantUpsertLicense2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantUpsertLicense2' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantUpsertLicenseTier1$inboundSchema: z.ZodMiniType<
+  DimensionsVariantUpsertLicenseTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: types.optional(z.any()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function dimensionsVariantUpsertLicenseTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantUpsertLicenseTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      DimensionsVariantUpsertLicenseTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantUpsertLicenseTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantUpsertLicense1$inboundSchema: z.ZodMiniType<
+  DimensionsVariantUpsertLicense1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => DimensionsVariantUpsertLicenseTier1$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function dimensionsVariantUpsertLicense1FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantUpsertLicense1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantUpsertLicense1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantUpsertLicense1' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => DimensionsVariantUpsertLicense1$inboundSchema),
+  z.lazy(() => DimensionsVariantUpsertLicense2$inboundSchema),
+]);
+
+export function variantUpsertLicenseDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseMultipliers1$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function variantUpsertLicenseMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicenseMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseMultipliers1' from JSON`,
+  );
+}
+
+/** @internal */
+export const ToVariantUpsertLicenseEnum$inboundSchema: z.ZodMiniEnum<
+  typeof ToVariantUpsertLicenseEnum
+> = z.enum(ToVariantUpsertLicenseEnum);
+
+/** @internal */
+export const VariantUpsertLicenseFeatureOverrideToUnion$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseFeatureOverrideToUnion, unknown> =
+    smartUnion([types.number(), ToVariantUpsertLicenseEnum$inboundSchema]);
+
+export function variantUpsertLicenseFeatureOverrideToUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  VariantUpsertLicenseFeatureOverrideToUnion,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseFeatureOverrideToUnion$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'VariantUpsertLicenseFeatureOverrideToUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseFeatureOverrideTier$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseFeatureOverrideTier, unknown> = z.pipe(
+    z.object({
+      to: smartUnion([
+        types.number(),
+        ToVariantUpsertLicenseEnum$inboundSchema,
+      ]),
+      credit_cost: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "credit_cost": "creditCost",
+      });
+    }),
+  );
+
+export function variantUpsertLicenseFeatureOverrideTierFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  VariantUpsertLicenseFeatureOverrideTier,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseFeatureOverrideTier$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'VariantUpsertLicenseFeatureOverrideTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreditSchemaVariantUpsertLicense1$inboundSchema: z.ZodMiniType<
+  CreditSchemaVariantUpsertLicense1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => DimensionsVariantUpsertLicense1$inboundSchema),
+        z.lazy(() => DimensionsVariantUpsertLicense2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => VariantUpsertLicenseMultipliers1$inboundSchema),
+    )),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() =>
+      VariantUpsertLicenseFeatureOverrideTier$inboundSchema
+    )),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function creditSchemaVariantUpsertLicense1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreditSchemaVariantUpsertLicense1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreditSchemaVariantUpsertLicense1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreditSchemaVariantUpsertLicense1' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseCreditSchemaUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => CreditSchemaVariantUpsertLicense1$inboundSchema),
+  z.lazy(() => CreditSchemaVariantUpsertLicense2$inboundSchema),
+]);
+
+export function variantUpsertLicenseCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseCreditSchemaUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseCreditSchemaUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseProviderMarkups$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function variantUpsertLicenseProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseModelMarkups$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function variantUpsertLicenseModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicenseModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseMarkups$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => VariantUpsertLicenseProviderMarkups$inboundSchema),
+    ))),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => VariantUpsertLicenseModelMarkups$inboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
+      "model_markups": "modelMarkups",
+    });
+  }),
+);
+
+export function variantUpsertLicenseMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicenseMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantUpsertLicenseFeatureOverride$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseFeatureOverride,
+  unknown
+> = z.pipe(
+  z.object({
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => CreditSchemaVariantUpsertLicense1$inboundSchema),
+      z.lazy(() =>
+        CreditSchemaVariantUpsertLicense2$inboundSchema
+      ),
+    ]))),
+    markups: types.optional(z.lazy(() =>
+      VariantUpsertLicenseMarkups$inboundSchema
+    )),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function variantUpsertLicenseFeatureOverrideFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseFeatureOverride, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantUpsertLicenseFeatureOverride$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseFeatureOverride' from JSON`,
+  );
+}
+
+/** @internal */
 export const VariantUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
   VariantUpsertLicensePlanItem,
   unknown
 > = z.pipe(
   z.object({
-    feature_id: types.optional(z.any()),
-    included: types.optional(z.any()),
-    unlimited: types.optional(z.any()),
-    pooled: types.optional(z.any()),
-    reset: types.optional(z.any()),
-    price: types.optional(z.any()),
-    proration: types.optional(z.any()),
-    rollover: types.optional(z.any()),
-    feature_override: types.optional(z.any()),
-    entity_feature_id: types.optional(z.any()),
-    entitlement_id: types.optional(z.any()),
-    price_id: types.optional(z.any()),
+    feature_id: types.string(),
+    included: types.optional(types.number()),
+    unlimited: types.optional(types.boolean()),
+    pooled: z._default(types.boolean(), false),
+    reset: types.optional(
+      z.lazy(() => VariantUpsertLicenseReset$inboundSchema),
+    ),
+    price: types.optional(
+      z.lazy(() => VariantUpsertLicensePrice$inboundSchema),
+    ),
+    proration: types.optional(
+      z.lazy(() => VariantUpsertLicenseProration$inboundSchema),
+    ),
+    rollover: types.optional(
+      z.lazy(() => VariantUpsertLicenseRollover$inboundSchema),
+    ),
+    feature_override: types.optional(
+      z.lazy(() => VariantUpsertLicenseFeatureOverride$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "feature_override": "featureOverride",
-      "entity_feature_id": "entityFeatureId",
-      "entitlement_id": "entitlementId",
-      "price_id": "priceId",
     });
   }),
 );
@@ -2606,16 +3543,57 @@ export function variantUpsertLicensePlanItemFromJSON(
 }
 
 /** @internal */
+export const VariantUpsertLicenseRemoveItemBillingMethod$inboundSchema:
+  z.ZodMiniType<VariantUpsertLicenseRemoveItemBillingMethod, unknown> =
+    openEnums.inboundSchema(VariantUpsertLicenseRemoveItemBillingMethod);
+
+/** @internal */
+export const IntervalVariantUpsertLicenseRemoveItemEnum2$inboundSchema:
+  z.ZodMiniType<IntervalVariantUpsertLicenseRemoveItemEnum2, unknown> =
+    openEnums.inboundSchema(IntervalVariantUpsertLicenseRemoveItemEnum2);
+
+/** @internal */
+export const IntervalVariantUpsertLicenseRemoveItemEnum1$inboundSchema:
+  z.ZodMiniType<IntervalVariantUpsertLicenseRemoveItemEnum1, unknown> =
+    openEnums.inboundSchema(IntervalVariantUpsertLicenseRemoveItemEnum1);
+
+/** @internal */
+export const VariantUpsertLicenseIntervalUnion$inboundSchema: z.ZodMiniType<
+  VariantUpsertLicenseIntervalUnion,
+  unknown
+> = smartUnion([
+  IntervalVariantUpsertLicenseRemoveItemEnum1$inboundSchema,
+  IntervalVariantUpsertLicenseRemoveItemEnum2$inboundSchema,
+]);
+
+export function variantUpsertLicenseIntervalUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantUpsertLicenseIntervalUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantUpsertLicenseIntervalUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantUpsertLicenseIntervalUnion' from JSON`,
+  );
+}
+
+/** @internal */
 export const VariantUpsertLicensePlanItemFilter$inboundSchema: z.ZodMiniType<
   VariantUpsertLicensePlanItemFilter,
   unknown
 > = z.pipe(
   z.object({
-    feature_id: types.optional(z.any()),
-    billing_method: types.optional(z.any()),
-    interval: types.optional(z.any()),
-    interval_count: types.optional(z.any()),
-    included: types.optional(z.any()),
+    feature_id: types.optional(types.string()),
+    billing_method: types.optional(
+      VariantUpsertLicenseRemoveItemBillingMethod$inboundSchema,
+    ),
+    interval: types.optional(
+      smartUnion([
+        IntervalVariantUpsertLicenseRemoveItemEnum1$inboundSchema,
+        IntervalVariantUpsertLicenseRemoveItemEnum2$inboundSchema,
+      ]),
+    ),
+    interval_count: types.optional(types.number()),
+    included: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2737,14 +3715,12 @@ export const ListPlansVariantCustomize$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     price: z.optional(z.nullable(ListPlansVariantBasePrice$inboundSchema)),
-    add_items: types.optional(
-      z.array(z.lazy(() => ListPlansVariantPlanItem$inboundSchema)),
-    ),
+    add_items: types.optional(z.array(ListPlansVariantPlanItem$inboundSchema)),
     remove_items: types.optional(
-      z.array(z.lazy(() => ListPlansVariantPlanItemFilter$inboundSchema)),
+      z.array(ListPlansVariantPlanItemFilter$inboundSchema),
     ),
     free_trial: z.optional(
-      z.nullable(z.lazy(() => ListPlansVariantFreeTrialParams$inboundSchema)),
+      z.nullable(ListPlansVariantFreeTrialParams$inboundSchema),
     ),
     billing_controls: types.optional(
       z.lazy(() => ListPlansVariantCustomizeBillingControls$inboundSchema),
@@ -2934,13 +3910,13 @@ export function variantFeatureDisplayFromJSON(
 }
 
 /** @internal */
-export const ListPlansVariantCreditSchema$inboundSchema: z.ZodMiniType<
-  ListPlansVariantCreditSchema,
+export const VariantFeatureCreditSchema$inboundSchema: z.ZodMiniType<
+  VariantFeatureCreditSchema,
   unknown
 > = z.pipe(
   z.object({
-    metered_feature_id: types.optional(z.any()),
-    credit_cost: types.optional(z.any()),
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2950,13 +3926,13 @@ export const ListPlansVariantCreditSchema$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listPlansVariantCreditSchemaFromJSON(
+export function variantFeatureCreditSchemaFromJSON(
   jsonString: string,
-): SafeParseResult<ListPlansVariantCreditSchema, SDKValidationError> {
+): SafeParseResult<VariantFeatureCreditSchema, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListPlansVariantCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantCreditSchema' from JSON`,
+    (x) => VariantFeatureCreditSchema$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantFeatureCreditSchema' from JSON`,
   );
 }
 
@@ -2972,9 +3948,11 @@ export const VariantFeature$inboundSchema: z.ZodMiniType<
     display: z.optional(
       z.nullable(z.lazy(() => VariantFeatureDisplay$inboundSchema)),
     ),
-    credit_schema: z.optional(z.nullable(z.array(z.lazy(() =>
-      ListPlansVariantCreditSchema$inboundSchema
-    )))),
+    credit_schema: z.optional(
+      z.nullable(
+        z.array(z.lazy(() => VariantFeatureCreditSchema$inboundSchema)),
+      ),
+    ),
     archived: z.optional(z.nullable(types.boolean())),
   }),
   z.transform((v) => {
@@ -3031,8 +4009,8 @@ export const VariantItemAdditionalCurrency$inboundSchema: z.ZodMiniType<
   VariantItemAdditionalCurrency,
   unknown
 > = z.object({
-  currency: types.optional(z.any()),
-  amount: types.optional(z.any()),
+  currency: types.string(),
+  amount: types.number(),
 });
 
 export function variantItemAdditionalCurrencyFromJSON(
@@ -3046,15 +4024,60 @@ export function variantItemAdditionalCurrencyFromJSON(
 }
 
 /** @internal */
-export const VariantPlanTier$inboundSchema: z.ZodMiniType<
-  VariantPlanTier,
+export const PriceVariantPlanTo$inboundSchema: z.ZodMiniType<
+  PriceVariantPlanTo,
+  unknown
+> = smartUnion([types.number(), types.string()]);
+
+export function priceVariantPlanToFromJSON(
+  jsonString: string,
+): SafeParseResult<PriceVariantPlanTo, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PriceVariantPlanTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PriceVariantPlanTo' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantItemTierAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  VariantItemTierAdditionalCurrency,
   unknown
 > = z.pipe(
   z.object({
-    to: types.optional(z.any()),
-    amount: types.optional(z.any()),
-    flat_amount: types.optional(z.any()),
-    additional_currencies: types.optional(z.any()),
+    currency: types.string(),
+    amount: types.optional(types.number()),
+    flat_amount: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
+
+export function variantItemTierAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantItemTierAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantItemTierAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantItemTierAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
+export const PriceVariantPlanTier$inboundSchema: z.ZodMiniType<
+  PriceVariantPlanTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), types.string()]),
+    amount: types.number(),
+    flat_amount: types.optional(types.number()),
+    additional_currencies: types.optional(
+      z.array(z.lazy(() => VariantItemTierAdditionalCurrency$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3064,13 +4087,13 @@ export const VariantPlanTier$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantPlanTierFromJSON(
+export function priceVariantPlanTierFromJSON(
   jsonString: string,
-): SafeParseResult<VariantPlanTier, SDKValidationError> {
+): SafeParseResult<PriceVariantPlanTier, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => VariantPlanTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'VariantPlanTier' from JSON`,
+    (x) => PriceVariantPlanTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PriceVariantPlanTier' from JSON`,
   );
 }
 
@@ -3098,7 +4121,7 @@ export const VariantItemStripe$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    price_id: types.optional(z.any()),
+    price_id: types.string(),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3145,7 +4168,9 @@ export const VariantItemPrice$inboundSchema: z.ZodMiniType<
     additional_currencies: types.optional(
       z.array(z.lazy(() => VariantItemAdditionalCurrency$inboundSchema)),
     ),
-    tiers: types.optional(z.array(z.lazy(() => VariantPlanTier$inboundSchema))),
+    tiers: types.optional(
+      z.array(z.lazy(() => PriceVariantPlanTier$inboundSchema)),
+    ),
     tier_behavior: types.optional(VariantPlanTierBehavior$inboundSchema),
     interval: PriceVariantItemInterval$inboundSchema,
     interval_count: types.optional(types.number()),
@@ -3242,12 +4267,546 @@ export function variantPlanRolloverFromJSON(
 }
 
 /** @internal */
+export const DimensionsVariantPlan4$inboundSchema: z.ZodMiniType<
+  DimensionsVariantPlan4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function dimensionsVariantPlan4FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantPlan4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantPlan4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantPlan4' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsToVariantPlanEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof DimensionsToVariantPlanEnum2
+> = z.enum(DimensionsToVariantPlanEnum2);
+
+/** @internal */
+export const DimensionsVariantPlanToUnion2$inboundSchema: z.ZodMiniType<
+  DimensionsVariantPlanToUnion2,
+  unknown
+> = smartUnion([types.number(), DimensionsToVariantPlanEnum2$inboundSchema]);
+
+export function dimensionsVariantPlanToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantPlanToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantPlanToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantPlanToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantPlanTier2$inboundSchema: z.ZodMiniType<
+  DimensionsVariantPlanTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      DimensionsToVariantPlanEnum2$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function dimensionsVariantPlanTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantPlanTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantPlanTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantPlanTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantPlan3$inboundSchema: z.ZodMiniType<
+  DimensionsVariantPlan3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => DimensionsVariantPlanTier2$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function dimensionsVariantPlan3FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantPlan3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantPlan3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantPlan3' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  VariantPlanDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => DimensionsVariantPlan3$inboundSchema),
+  z.lazy(() => DimensionsVariantPlan4$inboundSchema),
+]);
+
+export function variantPlanDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanMultipliers2$inboundSchema: z.ZodMiniType<
+  VariantPlanMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function variantPlanMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreditSchemaVariantPlanFeatureOverride2$inboundSchema:
+  z.ZodMiniType<CreditSchemaVariantPlanFeatureOverride2, unknown> = z.pipe(
+    z.object({
+      metered_feature_id: types.string(),
+      billing_units: types.optional(types.number()),
+      dimensions: types.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() => DimensionsVariantPlan3$inboundSchema),
+          z.lazy(() => DimensionsVariantPlan4$inboundSchema),
+        ]),
+      )),
+      multipliers: types.optional(z.record(
+        z.string(),
+        z.lazy(() => VariantPlanMultipliers2$inboundSchema),
+      )),
+      credit_cost: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "metered_feature_id": "meteredFeatureId",
+        "billing_units": "billingUnits",
+        "credit_cost": "creditCost",
+      });
+    }),
+  );
+
+export function creditSchemaVariantPlanFeatureOverride2FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreditSchemaVariantPlanFeatureOverride2,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreditSchemaVariantPlanFeatureOverride2$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreditSchemaVariantPlanFeatureOverride2' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantPlan2$inboundSchema: z.ZodMiniType<
+  DimensionsVariantPlan2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function dimensionsVariantPlan2FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantPlan2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantPlan2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantPlan2' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsToVariantPlanEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof DimensionsToVariantPlanEnum1
+> = z.enum(DimensionsToVariantPlanEnum1);
+
+/** @internal */
+export const DimensionsVariantPlanToUnion1$inboundSchema: z.ZodMiniType<
+  DimensionsVariantPlanToUnion1,
+  unknown
+> = smartUnion([types.number(), DimensionsToVariantPlanEnum1$inboundSchema]);
+
+export function dimensionsVariantPlanToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantPlanToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantPlanToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantPlanToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantPlanTier1$inboundSchema: z.ZodMiniType<
+  DimensionsVariantPlanTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      DimensionsToVariantPlanEnum1$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function dimensionsVariantPlanTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantPlanTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantPlanTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantPlanTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const DimensionsVariantPlan1$inboundSchema: z.ZodMiniType<
+  DimensionsVariantPlan1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => DimensionsVariantPlanTier1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function dimensionsVariantPlan1FromJSON(
+  jsonString: string,
+): SafeParseResult<DimensionsVariantPlan1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => DimensionsVariantPlan1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'DimensionsVariantPlan1' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  VariantPlanDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => DimensionsVariantPlan1$inboundSchema),
+  z.lazy(() => DimensionsVariantPlan2$inboundSchema),
+]);
+
+export function variantPlanDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanMultipliers1$inboundSchema: z.ZodMiniType<
+  VariantPlanMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function variantPlanMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanMultipliers1' from JSON`,
+  );
+}
+
+/** @internal */
+export const ToVariantPlanEnum$inboundSchema: z.ZodMiniEnum<
+  typeof ToVariantPlanEnum
+> = z.enum(ToVariantPlanEnum);
+
+/** @internal */
+export const VariantPlanFeatureOverrideToUnion$inboundSchema: z.ZodMiniType<
+  VariantPlanFeatureOverrideToUnion,
+  unknown
+> = smartUnion([types.number(), ToVariantPlanEnum$inboundSchema]);
+
+export function variantPlanFeatureOverrideToUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanFeatureOverrideToUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanFeatureOverrideToUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanFeatureOverrideToUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanFeatureOverrideTier$inboundSchema: z.ZodMiniType<
+  VariantPlanFeatureOverrideTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), ToVariantPlanEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function variantPlanFeatureOverrideTierFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanFeatureOverrideTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanFeatureOverrideTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanFeatureOverrideTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreditSchemaVariantPlanFeatureOverride1$inboundSchema:
+  z.ZodMiniType<CreditSchemaVariantPlanFeatureOverride1, unknown> = z.pipe(
+    z.object({
+      metered_feature_id: types.string(),
+      billing_units: types.optional(types.number()),
+      dimensions: types.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() => DimensionsVariantPlan1$inboundSchema),
+          z.lazy(() => DimensionsVariantPlan2$inboundSchema),
+        ]),
+      )),
+      multipliers: types.optional(z.record(
+        z.string(),
+        z.lazy(() => VariantPlanMultipliers1$inboundSchema),
+      )),
+      tier_behavior: types.literal("graduated"),
+      tiers: z.array(z.lazy(() =>
+        VariantPlanFeatureOverrideTier$inboundSchema
+      )),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "metered_feature_id": "meteredFeatureId",
+        "billing_units": "billingUnits",
+        "tier_behavior": "tierBehavior",
+      });
+    }),
+  );
+
+export function creditSchemaVariantPlanFeatureOverride1FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreditSchemaVariantPlanFeatureOverride1,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreditSchemaVariantPlanFeatureOverride1$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreditSchemaVariantPlanFeatureOverride1' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  VariantPlanCreditSchemaUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => CreditSchemaVariantPlanFeatureOverride1$inboundSchema),
+  z.lazy(() => CreditSchemaVariantPlanFeatureOverride2$inboundSchema),
+]);
+
+export function variantPlanCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanCreditSchemaUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanCreditSchemaUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanProviderMarkups$inboundSchema: z.ZodMiniType<
+  VariantPlanProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function variantPlanProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanModelMarkups$inboundSchema: z.ZodMiniType<
+  VariantPlanModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function variantPlanModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanMarkups$inboundSchema: z.ZodMiniType<
+  VariantPlanMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => VariantPlanProviderMarkups$inboundSchema),
+    ))),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => VariantPlanModelMarkups$inboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
+      "model_markups": "modelMarkups",
+    });
+  }),
+);
+
+export function variantPlanMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const VariantPlanFeatureOverride$inboundSchema: z.ZodMiniType<
   VariantPlanFeatureOverride,
   unknown
 > = z.pipe(
   z.object({
-    credit_schema: types.optional(z.array(types.nullable(z.any()))),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => CreditSchemaVariantPlanFeatureOverride1$inboundSchema),
+      z.lazy(() =>
+        CreditSchemaVariantPlanFeatureOverride2$inboundSchema
+      ),
+    ]))),
+    markups: types.optional(z.lazy(() =>
+      VariantPlanMarkups$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3329,13 +4888,41 @@ export function variantStripeFromJSON(
 }
 
 /** @internal */
+export const VariantFeatureQuantity$inboundSchema: z.ZodMiniType<
+  VariantFeatureQuantity,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    quantity: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function variantFeatureQuantityFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantFeatureQuantity, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantFeatureQuantity$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantFeatureQuantity' from JSON`,
+  );
+}
+
+/** @internal */
 export const VariantProduct$inboundSchema: z.ZodMiniType<
   VariantProduct,
   unknown
 > = z.pipe(
   z.object({
     product_id: types.string(),
-    feature_quantities: types.optional(z.array(types.nullable(z.any()))),
+    feature_quantities: types.optional(
+      z.array(z.lazy(() => VariantFeatureQuantity$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3467,10 +5054,10 @@ export function variantConfigFromJSON(
 }
 
 /** @internal */
-export const VariantPlanPurchaseLimitInterval$inboundSchema: z.ZodMiniType<
-  VariantPlanPurchaseLimitInterval,
+export const VariantPlanAutoTopupInterval$inboundSchema: z.ZodMiniType<
+  VariantPlanAutoTopupInterval,
   unknown
-> = openEnums.inboundSchema(VariantPlanPurchaseLimitInterval);
+> = openEnums.inboundSchema(VariantPlanAutoTopupInterval);
 
 /** @internal */
 export const VariantPlanPurchaseLimit$inboundSchema: z.ZodMiniType<
@@ -3478,7 +5065,7 @@ export const VariantPlanPurchaseLimit$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: VariantPlanPurchaseLimitInterval$inboundSchema,
+    interval: VariantPlanAutoTopupInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
   }),
@@ -3588,7 +5175,7 @@ export const VariantPlanUsageLimitFilter$inboundSchema: z.ZodMiniType<
   VariantPlanUsageLimitFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function variantPlanUsageLimitFilterFromJSON(
@@ -3650,7 +5237,7 @@ export const VariantPlanUsageAlertFilter$inboundSchema: z.ZodMiniType<
   VariantPlanUsageAlertFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function variantPlanUsageAlertFilterFromJSON(

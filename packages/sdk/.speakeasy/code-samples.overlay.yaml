@@ -1663,3 +1663,89 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/sandboxes.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.sandboxes.create({
+                name: "staging",
+                color: "blue",
+                icon: "Flask",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/sandboxes.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.sandboxes.delete({
+                id: "org_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/sandboxes.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.sandboxes.list({});
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/sandboxes.reset"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.sandboxes.reset({});
+
+              console.log(result);
+            }
+
+            run();

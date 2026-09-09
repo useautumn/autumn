@@ -48,9 +48,9 @@ export const listPlansItemAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
-export const listPlansToSchema = z.union([z.number(), z.string()]);
+export const listPlansPriceItemToSchema = z.union([z.number(), z.string()]);
 
-export const listPlansTierAdditionalCurrencySchema = z.object({
+export const listPlansItemTierAdditionalCurrencySchema = z.object({
 	currency: z.string(),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
@@ -61,7 +61,7 @@ export const listPlansPriceItemTierSchema = z.object({
 	amount: z.number(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 	additionalCurrencies: z
-		.union([z.array(listPlansTierAdditionalCurrencySchema), z.undefined()])
+		.union([z.array(listPlansItemTierAdditionalCurrencySchema), z.undefined()])
 		.optional(),
 });
 
@@ -81,41 +81,56 @@ export const listPlansItemDisplaySchema = z.object({
 	secondaryText: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const listPlansCreditSchemaItemFeatureOverride2Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+export const listPlansDimensionsItem4Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	priority: z.union([z.number(), z.undefined()]).optional(),
 	creditCost: z.number(),
 });
 
-export const listPlansFeatureOverrideTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
-	creditCost: z.union([z.any(), z.undefined()]).optional(),
+export const listPlansItemMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const listPlansCreditSchemaItemFeatureOverride1Schema = z.object({
-	meteredFeatureId: z.string(),
-	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	tierBehavior: z.literal("graduated"),
-	tiers: z.array(listPlansFeatureOverrideTierSchema),
+export const listPlansDimensionsItem2Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
 });
 
-export const listPlansItemCreditSchemaUnionSchema = z.union([
-	listPlansCreditSchemaItemFeatureOverride1Schema,
-	listPlansCreditSchemaItemFeatureOverride2Schema,
-]);
+export const listPlansItemMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
 
-export const listPlansItemFeatureOverrideSchema = z.object({
-	creditSchema: z
+export const listPlansItemProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const listPlansItemModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const listPlansItemMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
 		.union([
-			z.array(
-				z.union([
-					listPlansCreditSchemaItemFeatureOverride1Schema,
-					listPlansCreditSchemaItemFeatureOverride2Schema,
-				]),
-			),
+			z.record(z.string(), listPlansItemProviderMarkupsSchema),
 			z.undefined(),
 		])
-		.optional(),
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([
+			z.record(z.string(), listPlansItemModelMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 });
 
 export const listPlansStripeSchema = z.object({
@@ -176,45 +191,79 @@ export const listPlansVariantDetailsAddItemAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
-export const listPlansVariantDetailsTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
+export const listPlansVariantDetailsPriceToSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const listPlansVariantDetailsTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const listPlansVariantDetailsPriceTierSchema = z.object({
+	to: z.union([z.number(), z.string()]),
 	amount: z.number(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 	additionalCurrencies: z
-		.union([z.array(z.any().nullable()), z.undefined()])
-		.optional(),
-});
-
-export const listPlansCreditSchemaVariantDetails2Schema = z.object({
-	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
-	billingUnits: z.union([z.any(), z.undefined()]).optional(),
-	creditCost: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansCreditSchemaVariantDetails1Schema = z.object({
-	meteredFeatureId: z.union([z.any(), z.undefined()]).optional(),
-	billingUnits: z.union([z.any(), z.undefined()]).optional(),
-	tierBehavior: z.union([z.any(), z.undefined()]).optional(),
-	tiers: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansVariantDetailsCreditSchemaUnionSchema = z.union([
-	listPlansCreditSchemaVariantDetails1Schema,
-	listPlansCreditSchemaVariantDetails2Schema,
-]);
-
-export const listPlansVariantDetailsFeatureOverrideSchema = z.object({
-	creditSchema: z
 		.union([
-			z.array(
-				z.union([
-					listPlansCreditSchemaVariantDetails1Schema,
-					listPlansCreditSchemaVariantDetails2Schema,
-				]),
-			),
+			z.array(listPlansVariantDetailsTierAdditionalCurrencySchema),
 			z.undefined(),
 		])
 		.optional(),
+});
+
+export const listPlansDimensionsVariantDetails4Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const listPlansVariantDetailsMultipliers2Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const listPlansDimensionsVariantDetails2Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	creditCost: z.number(),
+});
+
+export const listPlansVariantDetailsMultipliers1Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	factor: z.union([z.number(), z.undefined()]).optional(),
+	add: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const listPlansVariantDetailsProviderMarkupsSchema = z.object({
+	markup: z.number(),
+});
+
+export const listPlansVariantDetailsModelMarkupsSchema = z.object({
+	markup: z.union([z.number(), z.undefined()]).optional(),
+	inputCost: z.union([z.number(), z.undefined()]).optional(),
+	outputCost: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const listPlansVariantDetailsMarkupsSchema = z.object({
+	defaultMarkup: z.union([z.number(), z.undefined()]).optional(),
+	providerMarkups: z
+		.union([
+			z.record(z.string(), listPlansVariantDetailsProviderMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
+	modelMarkups: z
+		.union([
+			z.record(z.string(), listPlansVariantDetailsModelMarkupsSchema),
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 });
 
 export const listPlansVariantDetailsUsageLimitFilterSchema = z.object({
@@ -230,94 +279,11 @@ export const listPlansVariantDetailsOverageAllowedSchema = z.object({
 	enabled: z.boolean(),
 });
 
-export const listPlansUpsertLicenseAdditionalCurrencySchema = z.object({
-	currency: z.union([z.any(), z.undefined()]).optional(),
-	amount: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansUpsertLicenseResetSchema = z.object({
-	interval: z.union([z.any(), z.undefined()]).optional(),
-	intervalCount: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansUpsertLicensePriceSchema = z.object({
-	stripePriceId: z.union([z.any(), z.undefined()]).optional(),
-	amount: z.union([z.any(), z.undefined()]).optional(),
-	additionalCurrencies: z.union([z.any(), z.undefined()]).optional(),
-	tiers: z.union([z.any(), z.undefined()]).optional(),
-	tierBehavior: z.union([z.any(), z.undefined()]).optional(),
-	interval: z.union([z.any(), z.undefined()]).optional(),
-	intervalCount: z.union([z.any(), z.undefined()]).optional(),
-	billingUnits: z.union([z.any(), z.undefined()]).optional(),
-	billingMethod: z.union([z.any(), z.undefined()]).optional(),
-	maxPurchase: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansUpsertLicenseProrationSchema = z.object({
-	onIncrease: z.union([z.any(), z.undefined()]).optional(),
-	onDecrease: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansUpsertLicenseRolloverSchema = z.object({
-	max: z.union([z.any(), z.undefined()]).optional(),
-	maxPercentage: z.union([z.any(), z.undefined()]).optional(),
-	expiryDurationType: z.union([z.any(), z.undefined()]).optional(),
-	expiryDurationLength: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansUpsertLicenseFeatureOverrideSchema = z.object({
-	creditSchema: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansVariantDetailsUpsertLicensePlanItemSchema = z.object({
-	featureId: z.string(),
-	included: z.union([z.number(), z.undefined()]).optional(),
-	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-	pooled: z.boolean(),
-	reset: z.union([listPlansUpsertLicenseResetSchema, z.undefined()]).optional(),
-	price: z.union([listPlansUpsertLicensePriceSchema, z.undefined()]).optional(),
-	proration: z
-		.union([listPlansUpsertLicenseProrationSchema, z.undefined()])
-		.optional(),
-	rollover: z
-		.union([listPlansUpsertLicenseRolloverSchema, z.undefined()])
-		.optional(),
-	featureOverride: z
-		.union([listPlansUpsertLicenseFeatureOverrideSchema, z.undefined()])
-		.optional(),
-});
-
-export const listPlansVariantDetailsRemoveLicenseSchema = z.object({
-	licensePlanId: z.string(),
-});
-
-export const listPlansLicenseAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
-export const listPlansLicenseAddItemAdditionalCurrencySchema = z.object({
-	currency: z.union([z.any(), z.undefined()]).optional(),
-	amount: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansLicenseTierSchema = z.object({
-	to: z.union([z.any(), z.undefined()]).optional(),
-	amount: z.union([z.any(), z.undefined()]).optional(),
-	flatAmount: z.union([z.any(), z.undefined()]).optional(),
-	additionalCurrencies: z.union([z.any(), z.undefined()]).optional(),
-});
-
-export const listPlansLicenseFeatureOverrideSchema = z.object({
-	creditSchema: z
-		.union([z.array(z.any().nullable()), z.undefined()])
-		.optional(),
-});
-
-export const listPlansVariantCustomizeAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
+export const listPlansVariantDetailsUpsertLicenseAdditionalCurrencySchema =
+	z.object({
+		currency: z.string(),
+		amount: z.number(),
+	});
 
 export const listPlansParamsOutboundSchema = z.object({
 	customer_id: z.union([z.string(), z.undefined()]).optional(),
@@ -328,7 +294,7 @@ export const listPlansParamsOutboundSchema = z.object({
 
 const openEnumSchema = z.any();
 
-const planSchema = z.any();
+const closedEnumSchema = z.any();
 
 export const listPlansPriceIntervalSchema = openEnumSchema;
 
@@ -405,6 +371,135 @@ export const listPlansItemRolloverSchema = z.object({
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const listPlansDimensionsToItemEnum2Schema = closedEnumSchema;
+
+export const listPlansDimensionsItemToUnion2Schema = z.union([
+	z.number(),
+	listPlansDimensionsToItemEnum2Schema,
+]);
+
+export const listPlansDimensionsItemTier2Schema = z.object({
+	to: z.union([z.number(), listPlansDimensionsToItemEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const listPlansDimensionsItem3Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(listPlansDimensionsItemTier2Schema),
+});
+
+export const listPlansItemDimensionsUnion2Schema = z.union([
+	listPlansDimensionsItem3Schema,
+	listPlansDimensionsItem4Schema,
+]);
+
+export const listPlansCreditSchemaItemFeatureOverride2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					listPlansDimensionsItem3Schema,
+					listPlansDimensionsItem4Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), listPlansItemMultipliers2Schema),
+			z.undefined(),
+		])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const listPlansDimensionsToItemEnum1Schema = closedEnumSchema;
+
+export const listPlansDimensionsItemToUnion1Schema = z.union([
+	z.number(),
+	listPlansDimensionsToItemEnum1Schema,
+]);
+
+export const listPlansDimensionsItemTier1Schema = z.object({
+	to: z.union([z.number(), listPlansDimensionsToItemEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const listPlansDimensionsItem1Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(listPlansDimensionsItemTier1Schema),
+});
+
+export const listPlansItemDimensionsUnion1Schema = z.union([
+	listPlansDimensionsItem1Schema,
+	listPlansDimensionsItem2Schema,
+]);
+
+export const listPlansToItemEnumSchema = closedEnumSchema;
+
+export const listPlansItemFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	listPlansToItemEnumSchema,
+]);
+
+export const listPlansItemFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), listPlansToItemEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const listPlansCreditSchemaItemFeatureOverride1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					listPlansDimensionsItem1Schema,
+					listPlansDimensionsItem2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), listPlansItemMultipliers1Schema),
+			z.undefined(),
+		])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(listPlansItemFeatureOverrideTierSchema),
+});
+
+export const listPlansItemCreditSchemaUnionSchema = z.union([
+	listPlansCreditSchemaItemFeatureOverride1Schema,
+	listPlansCreditSchemaItemFeatureOverride2Schema,
+]);
+
+export const listPlansItemFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					listPlansCreditSchemaItemFeatureOverride1Schema,
+					listPlansCreditSchemaItemFeatureOverride2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z.union([listPlansItemMarkupsSchema, z.undefined()]).optional(),
+});
+
 export const listPlansItemSchema = z.object({
 	featureId: z.string(),
 	feature: z.union([listPlansFeatureSchema, z.undefined()]).optional(),
@@ -433,10 +528,10 @@ export const listPlansFreeTrialSchema = z.object({
 
 export const listPlansEnvSchema = openEnumSchema;
 
-export const listPlansPurchaseLimitIntervalSchema = openEnumSchema;
+export const listPlansAutoTopupIntervalSchema = openEnumSchema;
 
 export const listPlansPurchaseLimitSchema = z.object({
-	interval: listPlansPurchaseLimitIntervalSchema,
+	interval: listPlansAutoTopupIntervalSchema,
 	intervalCount: z.number(),
 	limit: z.number(),
 });
@@ -555,7 +650,7 @@ export const listPlansVariantDetailsPriceSchema = z.object({
 		])
 		.optional(),
 	tiers: z
-		.union([z.array(listPlansVariantDetailsTierSchema), z.undefined()])
+		.union([z.array(listPlansVariantDetailsPriceTierSchema), z.undefined()])
 		.optional(),
 	tierBehavior: z
 		.union([listPlansVariantDetailsTierBehaviorSchema, z.undefined()])
@@ -583,6 +678,137 @@ export const listPlansVariantDetailsRolloverSchema = z.object({
 	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: listPlansVariantDetailsExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const listPlansDimensionsToVariantDetailsEnum2Schema = closedEnumSchema;
+
+export const listPlansDimensionsVariantDetailsToUnion2Schema = z.union([
+	z.number(),
+	listPlansDimensionsToVariantDetailsEnum2Schema,
+]);
+
+export const listPlansDimensionsVariantDetailsTier2Schema = z.object({
+	to: z.union([z.number(), listPlansDimensionsToVariantDetailsEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const listPlansDimensionsVariantDetails3Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(listPlansDimensionsVariantDetailsTier2Schema),
+});
+
+export const listPlansVariantDetailsDimensionsUnion2Schema = z.union([
+	listPlansDimensionsVariantDetails3Schema,
+	listPlansDimensionsVariantDetails4Schema,
+]);
+
+export const listPlansCreditSchemaVariantDetails2Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					listPlansDimensionsVariantDetails3Schema,
+					listPlansDimensionsVariantDetails4Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), listPlansVariantDetailsMultipliers2Schema),
+			z.undefined(),
+		])
+		.optional(),
+	creditCost: z.number(),
+});
+
+export const listPlansDimensionsToVariantDetailsEnum1Schema = closedEnumSchema;
+
+export const listPlansDimensionsVariantDetailsToUnion1Schema = z.union([
+	z.number(),
+	listPlansDimensionsToVariantDetailsEnum1Schema,
+]);
+
+export const listPlansDimensionsVariantDetailsTier1Schema = z.object({
+	to: z.union([z.number(), listPlansDimensionsToVariantDetailsEnum1Schema]),
+	creditCost: z.number(),
+});
+
+export const listPlansDimensionsVariantDetails1Schema = z.object({
+	match: z.record(z.string(), z.string()),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(listPlansDimensionsVariantDetailsTier1Schema),
+});
+
+export const listPlansVariantDetailsDimensionsUnion1Schema = z.union([
+	listPlansDimensionsVariantDetails1Schema,
+	listPlansDimensionsVariantDetails2Schema,
+]);
+
+export const listPlansToVariantDetailsEnumSchema = closedEnumSchema;
+
+export const listPlansVariantDetailsFeatureOverrideToUnionSchema = z.union([
+	z.number(),
+	listPlansToVariantDetailsEnumSchema,
+]);
+
+export const listPlansVariantDetailsFeatureOverrideTierSchema = z.object({
+	to: z.union([z.number(), listPlansToVariantDetailsEnumSchema]),
+	creditCost: z.number(),
+});
+
+export const listPlansCreditSchemaVariantDetails1Schema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	dimensions: z
+		.union([
+			z.record(
+				z.string(),
+				z.union([
+					listPlansDimensionsVariantDetails1Schema,
+					listPlansDimensionsVariantDetails2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	multipliers: z
+		.union([
+			z.record(z.string(), listPlansVariantDetailsMultipliers1Schema),
+			z.undefined(),
+		])
+		.optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(listPlansVariantDetailsFeatureOverrideTierSchema),
+});
+
+export const listPlansVariantDetailsCreditSchemaUnionSchema = z.union([
+	listPlansCreditSchemaVariantDetails1Schema,
+	listPlansCreditSchemaVariantDetails2Schema,
+]);
+
+export const listPlansVariantDetailsFeatureOverrideSchema = z.object({
+	creditSchema: z
+		.union([
+			z.array(
+				z.union([
+					listPlansCreditSchemaVariantDetails1Schema,
+					listPlansCreditSchemaVariantDetails2Schema,
+				]),
+			),
+			z.undefined(),
+		])
+		.optional(),
+	markups: z
+		.union([listPlansVariantDetailsMarkupsSchema, z.undefined()])
+		.optional(),
 });
 
 export const listPlansVariantDetailsPlanItemSchema = z.object({
@@ -653,11 +879,10 @@ export const listPlansVariantDetailsFreeTrialParamsSchema = z.object({
 		.optional(),
 });
 
-export const listPlansVariantDetailsPurchaseLimitIntervalSchema =
-	openEnumSchema;
+export const listPlansVariantDetailsAutoTopupIntervalSchema = openEnumSchema;
 
 export const listPlansVariantDetailsPurchaseLimitSchema = z.object({
-	interval: listPlansVariantDetailsPurchaseLimitIntervalSchema,
+	interval: listPlansVariantDetailsAutoTopupIntervalSchema,
 	intervalCount: z.number(),
 	limit: z.number(),
 	count: z.union([z.number(), z.undefined()]).optional(),
@@ -740,244 +965,20 @@ export const listPlansVariantDetailsBillingControlsSchema = z.object({
 		.optional(),
 });
 
-export const listPlansVariantDetailsUpsertLicenseIntervalSchema =
+export const listPlansPriceVariantDetailsUpsertLicenseIntervalSchema =
 	openEnumSchema;
 
 export const listPlansVariantDetailsUpsertLicenseBasePriceSchema = z.object({
 	amount: z.number(),
-	interval: listPlansVariantDetailsUpsertLicenseIntervalSchema,
+	interval: listPlansPriceVariantDetailsUpsertLicenseIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	additionalCurrencies: z
 		.union([
-			z.array(listPlansUpsertLicenseAdditionalCurrencySchema),
+			z.array(listPlansVariantDetailsUpsertLicenseAdditionalCurrencySchema),
 			z.undefined(),
 		])
 		.optional(),
 });
 
-export const listPlansUpsertLicenseBillingMethodSchema = openEnumSchema;
-
-export const listPlansVariantDetailsUpsertLicensePlanItemFilterSchema =
-	z.object({
-		featureId: z.union([z.string(), z.undefined()]).optional(),
-		billingMethod: z
-			.union([listPlansUpsertLicenseBillingMethodSchema, z.undefined()])
-			.optional(),
-		interval: z.union([z.any(), z.undefined()]).optional(),
-		intervalCount: z.union([z.number(), z.undefined()]).optional(),
-		included: z.union([z.number(), z.undefined()]).optional(),
-	});
-
-export const listPlansVariantDetailsUpsertLicenseCustomizeSchema = z.object({
-	price: z
-		.union([listPlansVariantDetailsUpsertLicenseBasePriceSchema, z.undefined()])
-		.optional()
-		.nullable(),
-	addItems: z
-		.union([
-			z.array(listPlansVariantDetailsUpsertLicensePlanItemSchema),
-			z.undefined(),
-		])
-		.optional(),
-	removeItems: z
-		.union([
-			z.array(listPlansVariantDetailsUpsertLicensePlanItemFilterSchema),
-			z.undefined(),
-		])
-		.optional(),
-});
-
-export const listPlansVariantDetailsUpsertLicenseSchema = z.object({
-	licensePlanId: z.string(),
-	versionSlug: z.union([z.string(), z.undefined()]).optional(),
-	included: z.union([z.number(), z.undefined()]).optional(),
-	prepaidOnly: z.union([z.boolean(), z.undefined()]).optional(),
-	customize: z
-		.union([listPlansVariantDetailsUpsertLicenseCustomizeSchema, z.undefined()])
-		.optional()
-		.nullable(),
-	metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
-});
-
-export const listPlansVariantDetailsCustomizeSchema = z.object({
-	price: z
-		.union([listPlansVariantDetailsBasePriceSchema, z.undefined()])
-		.optional()
-		.nullable(),
-	addItems: z
-		.union([z.array(listPlansVariantDetailsPlanItemSchema), z.undefined()])
-		.optional(),
-	removeItems: z
-		.union([
-			z.array(listPlansVariantDetailsPlanItemFilterSchema),
-			z.undefined(),
-		])
-		.optional(),
-	freeTrial: z
-		.union([listPlansVariantDetailsFreeTrialParamsSchema, z.undefined()])
-		.optional()
-		.nullable(),
-	billingControls: z
-		.union([listPlansVariantDetailsBillingControlsSchema, z.undefined()])
-		.optional(),
-	upsertLicenses: z
-		.union([z.array(listPlansVariantDetailsUpsertLicenseSchema), z.undefined()])
-		.optional(),
-	removeLicenses: z
-		.union([z.array(listPlansVariantDetailsRemoveLicenseSchema), z.undefined()])
-		.optional(),
-});
-
-export const listPlansVariantDetailsSchema = z.object({
-	basePlanId: z.string(),
-	customize: z
-		.union([listPlansVariantDetailsCustomizeSchema, z.undefined()])
-		.optional(),
-});
-
-export const listPlansPriceLicenseIntervalSchema = openEnumSchema;
-
-export const listPlansLicenseBasePriceSchema = z.object({
-	amount: z.number(),
-	interval: listPlansPriceLicenseIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(listPlansLicenseAdditionalCurrencySchema), z.undefined()])
-		.optional(),
-});
-
-export const listPlansLicenseResetIntervalSchema = openEnumSchema;
-
-export const listPlansLicenseResetSchema = z.object({
-	interval: listPlansLicenseResetIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-});
-
-export const listPlansLicenseTierBehaviorSchema = openEnumSchema;
-
-export const listPlansLicenseAddItemPriceIntervalSchema = openEnumSchema;
-
-export const listPlansLicenseAddItemBillingMethodSchema = openEnumSchema;
-
-export const listPlansLicensePriceSchema = z.object({
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([
-			z.array(listPlansLicenseAddItemAdditionalCurrencySchema),
-			z.undefined(),
-		])
-		.optional(),
-	tiers: z
-		.union([z.array(listPlansLicenseTierSchema), z.undefined()])
-		.optional(),
-	tierBehavior: z
-		.union([listPlansLicenseTierBehaviorSchema, z.undefined()])
-		.optional(),
-	interval: listPlansLicenseAddItemPriceIntervalSchema,
-	intervalCount: z.number(),
-	billingUnits: z.number(),
-	billingMethod: listPlansLicenseAddItemBillingMethodSchema,
-	maxPurchase: z.union([z.number(), z.undefined()]).optional().nullable(),
-});
-
-export const listPlansLicenseOnIncreaseSchema = openEnumSchema;
-
-export const listPlansLicenseOnDecreaseSchema = openEnumSchema;
-
-export const listPlansLicenseProrationSchema = z.object({
-	onIncrease: listPlansLicenseOnIncreaseSchema,
-	onDecrease: listPlansLicenseOnDecreaseSchema,
-});
-
-export const listPlansLicenseExpiryDurationTypeSchema = openEnumSchema;
-
-export const listPlansLicenseRolloverSchema = z.object({
-	max: z.union([z.number(), z.undefined()]).optional(),
-	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
-	expiryDurationType: listPlansLicenseExpiryDurationTypeSchema,
-	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
-});
-
-export const listPlansLicensePlanItemSchema = z.object({
-	featureId: z.string(),
-	included: z.union([z.number(), z.undefined()]).optional(),
-	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-	pooled: z.boolean(),
-	reset: z.union([listPlansLicenseResetSchema, z.undefined()]).optional(),
-	price: z.union([listPlansLicensePriceSchema, z.undefined()]).optional(),
-	proration: z
-		.union([listPlansLicenseProrationSchema, z.undefined()])
-		.optional(),
-	rollover: z.union([listPlansLicenseRolloverSchema, z.undefined()]).optional(),
-	featureOverride: z
-		.union([listPlansLicenseFeatureOverrideSchema, z.undefined()])
-		.optional(),
-});
-
-export const listPlansLicenseRemoveItemBillingMethodSchema = openEnumSchema;
-
-export const listPlansIntervalLicenseRemoveItemEnum2Schema = openEnumSchema;
-
-export const listPlansIntervalLicenseRemoveItemEnum1Schema = openEnumSchema;
-
-export const listPlansLicenseIntervalUnionSchema = z.union([
-	listPlansIntervalLicenseRemoveItemEnum1Schema,
-	listPlansIntervalLicenseRemoveItemEnum2Schema,
-]);
-
-export const listPlansLicensePlanItemFilterSchema = z.object({
-	featureId: z.union([z.string(), z.undefined()]).optional(),
-	billingMethod: z
-		.union([listPlansLicenseRemoveItemBillingMethodSchema, z.undefined()])
-		.optional(),
-	interval: z
-		.union([
-			listPlansIntervalLicenseRemoveItemEnum1Schema,
-			listPlansIntervalLicenseRemoveItemEnum2Schema,
-			z.undefined(),
-		])
-		.optional(),
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	included: z.union([z.number(), z.undefined()]).optional(),
-});
-
-export const listPlansLicenseCustomizeSchema = z.object({
-	price: z
-		.union([listPlansLicenseBasePriceSchema, z.undefined()])
-		.optional()
-		.nullable(),
-	addItems: z
-		.union([z.array(listPlansLicensePlanItemSchema), z.undefined()])
-		.optional(),
-	removeItems: z
-		.union([z.array(listPlansLicensePlanItemFilterSchema), z.undefined()])
-		.optional(),
-});
-
-export const listPlansLicenseSchema = z.object({
-	licensePlanId: z.string(),
-	version: z.number(),
-	versionSlug: z.union([z.string(), z.undefined()]).optional(),
-	included: z.number(),
-	prepaidOnly: z.boolean(),
-	customize: z
-		.union([listPlansLicenseCustomizeSchema, z.undefined()])
-		.optional(),
-	plan: z.union([planSchema, z.undefined()]).optional(),
-});
-
-export const listPlansPriceVariantCustomizeIntervalSchema = openEnumSchema;
-
-export const listPlansVariantBasePriceSchema = z.object({
-	amount: z.number(),
-	interval: listPlansPriceVariantCustomizeIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([
-			z.array(listPlansVariantCustomizeAdditionalCurrencySchema),
-			z.undefined(),
-		])
-		.optional(),
-});
-
-export const listPlansVariantAddItemResetIntervalSchema = openEnumSchema;
+export const listPlansVariantDetailsUpsertLicenseResetIntervalSchema =
+	openEnumSchema;

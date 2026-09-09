@@ -331,7 +331,7 @@
     },
     "packages/atmn-nightly": {
       "name": "atmn-nightly",
-      "version": "3.0.0-nightly.1",
+      "version": "3.0.0-nightly.2",
       "bin": {
         "atmn-nightly": "dist/bin.js",
       },

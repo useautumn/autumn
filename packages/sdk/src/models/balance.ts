@@ -26,6 +26,74 @@ export const BalanceType = {
  */
 export type BalanceType = OpenEnum<typeof BalanceType>;
 
+export type BalanceDimensions6 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const BalanceDimensionsToEnum3 = {
+  Inf: "inf",
+} as const;
+export type BalanceDimensionsToEnum3 = ClosedEnum<
+  typeof BalanceDimensionsToEnum3
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type BalanceDimensionsToUnion3 = number | BalanceDimensionsToEnum3;
+
+export type BalanceDimensionsTier3 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | BalanceDimensionsToEnum3;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type BalanceDimensions5 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<BalanceDimensionsTier3>;
+};
+
+export type BalanceDimensionsUnion3 = BalanceDimensions5 | BalanceDimensions6;
+
+export type BalanceMultipliers3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type BalanceCreditSchema3 = {
   meteredFeatureId: "";
   /**
@@ -33,9 +101,87 @@ export type BalanceCreditSchema3 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: BalanceDimensions5 | BalanceDimensions6 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: BalanceMultipliers3 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type BalanceDimensions4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const BalanceDimensionsToEnum2 = {
+  Inf: "inf",
+} as const;
+export type BalanceDimensionsToEnum2 = ClosedEnum<
+  typeof BalanceDimensionsToEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type BalanceDimensionsToUnion2 = number | BalanceDimensionsToEnum2;
+
+export type BalanceDimensionsTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | BalanceDimensionsToEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type BalanceDimensions3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<BalanceDimensionsTier2>;
+};
+
+export type BalanceDimensionsUnion2 = BalanceDimensions3 | BalanceDimensions4;
+
+export type BalanceMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export type BalanceCreditSchema2 = {
@@ -48,9 +194,87 @@ export type BalanceCreditSchema2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: BalanceDimensions3 | BalanceDimensions4 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: BalanceMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type BalanceDimensions2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const BalanceDimensionsToEnum1 = {
+  Inf: "inf",
+} as const;
+export type BalanceDimensionsToEnum1 = ClosedEnum<
+  typeof BalanceDimensionsToEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type BalanceDimensionsToUnion1 = number | BalanceDimensionsToEnum1;
+
+export type BalanceDimensionsTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | BalanceDimensionsToEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type BalanceDimensions1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<BalanceDimensionsTier1>;
+};
+
+export type BalanceDimensionsUnion1 = BalanceDimensions1 | BalanceDimensions2;
+
+export type BalanceMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export const BalanceToEnum = {
@@ -83,6 +307,16 @@ export type BalanceCreditSchema1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?:
+    | { [k: string]: BalanceDimensions1 | BalanceDimensions2 }
+    | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: BalanceMultipliers1 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<BalanceFeatureTier>;
 };
@@ -396,6 +630,147 @@ export const BalanceType$inboundSchema: z.ZodMiniType<BalanceType, unknown> =
   openEnums.inboundSchema(BalanceType);
 
 /** @internal */
+export const BalanceDimensions6$inboundSchema: z.ZodMiniType<
+  BalanceDimensions6,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function balanceDimensions6FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensions6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensions6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensions6' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsToEnum3$inboundSchema: z.ZodMiniEnum<
+  typeof BalanceDimensionsToEnum3
+> = z.enum(BalanceDimensionsToEnum3);
+
+/** @internal */
+export const BalanceDimensionsToUnion3$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsToUnion3,
+  unknown
+> = smartUnion([types.number(), BalanceDimensionsToEnum3$inboundSchema]);
+
+export function balanceDimensionsToUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsToUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsToUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsToUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsTier3$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsTier3,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), BalanceDimensionsToEnum3$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function balanceDimensionsTier3FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsTier3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsTier3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsTier3' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensions5$inboundSchema: z.ZodMiniType<
+  BalanceDimensions5,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => BalanceDimensionsTier3$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function balanceDimensions5FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensions5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensions5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensions5' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsUnion3$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsUnion3,
+  unknown
+> = smartUnion([
+  z.lazy(() => BalanceDimensions5$inboundSchema),
+  z.lazy(() => BalanceDimensions6$inboundSchema),
+]);
+
+export function balanceDimensionsUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceMultipliers3$inboundSchema: z.ZodMiniType<
+  BalanceMultipliers3,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function balanceMultipliers3FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceMultipliers3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceMultipliers3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceMultipliers3' from JSON`,
+  );
+}
+
+/** @internal */
 export const BalanceCreditSchema3$inboundSchema: z.ZodMiniType<
   BalanceCreditSchema3,
   unknown
@@ -403,6 +778,17 @@ export const BalanceCreditSchema3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => BalanceDimensions5$inboundSchema),
+        z.lazy(() => BalanceDimensions6$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => BalanceMultipliers3$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -425,6 +811,147 @@ export function balanceCreditSchema3FromJSON(
 }
 
 /** @internal */
+export const BalanceDimensions4$inboundSchema: z.ZodMiniType<
+  BalanceDimensions4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function balanceDimensions4FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensions4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensions4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensions4' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsToEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof BalanceDimensionsToEnum2
+> = z.enum(BalanceDimensionsToEnum2);
+
+/** @internal */
+export const BalanceDimensionsToUnion2$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsToUnion2,
+  unknown
+> = smartUnion([types.number(), BalanceDimensionsToEnum2$inboundSchema]);
+
+export function balanceDimensionsToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsTier2$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), BalanceDimensionsToEnum2$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function balanceDimensionsTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensions3$inboundSchema: z.ZodMiniType<
+  BalanceDimensions3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => BalanceDimensionsTier2$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function balanceDimensions3FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensions3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensions3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensions3' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => BalanceDimensions3$inboundSchema),
+  z.lazy(() => BalanceDimensions4$inboundSchema),
+]);
+
+export function balanceDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceMultipliers2$inboundSchema: z.ZodMiniType<
+  BalanceMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function balanceMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
 export const BalanceCreditSchema2$inboundSchema: z.ZodMiniType<
   BalanceCreditSchema2,
   unknown
@@ -432,6 +959,17 @@ export const BalanceCreditSchema2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => BalanceDimensions3$inboundSchema),
+        z.lazy(() => BalanceDimensions4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => BalanceMultipliers2$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -450,6 +988,147 @@ export function balanceCreditSchema2FromJSON(
     jsonString,
     (x) => BalanceCreditSchema2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'BalanceCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensions2$inboundSchema: z.ZodMiniType<
+  BalanceDimensions2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function balanceDimensions2FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensions2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensions2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensions2' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsToEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof BalanceDimensionsToEnum1
+> = z.enum(BalanceDimensionsToEnum1);
+
+/** @internal */
+export const BalanceDimensionsToUnion1$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsToUnion1,
+  unknown
+> = smartUnion([types.number(), BalanceDimensionsToEnum1$inboundSchema]);
+
+export function balanceDimensionsToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsTier1$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), BalanceDimensionsToEnum1$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function balanceDimensionsTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensions1$inboundSchema: z.ZodMiniType<
+  BalanceDimensions1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => BalanceDimensionsTier1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function balanceDimensions1FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensions1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensions1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensions1' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  BalanceDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => BalanceDimensions1$inboundSchema),
+  z.lazy(() => BalanceDimensions2$inboundSchema),
+]);
+
+export function balanceDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceMultipliers1$inboundSchema: z.ZodMiniType<
+  BalanceMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function balanceMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceMultipliers1' from JSON`,
   );
 }
 
@@ -507,6 +1186,17 @@ export const BalanceCreditSchema1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => BalanceDimensions1$inboundSchema),
+        z.lazy(() => BalanceDimensions2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => BalanceMultipliers1$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
     tiers: z.array(z.lazy(() => BalanceFeatureTier$inboundSchema)),
   }),
