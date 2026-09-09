@@ -333,7 +333,7 @@ export const UsageLimitRow = ({
 						label: "Usage",
 						value:
 							usage != null
-								? `${usage.toLocaleString()} / ${usageLimit.limit.toLocaleString()} this ${usageLimit.interval}`
+								? `${usage.toLocaleString()} / ${usageLimit.limit.toLocaleString()}`
 								: null,
 					},
 				]}

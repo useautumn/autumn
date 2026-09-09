@@ -98,6 +98,7 @@ export const handleGetCustomer = createRoute({
 				rewards: rewards ?? undefined,
 				entities: entities ?? fullCus.entities,
 				usage_limits: usageLimitsWithUsage?.customer ?? fullCus.usage_limits,
+				plan_usage_limits: usageLimitsWithUsage?.plan,
 				products_page: productsPage,
 			},
 			test_clock_frozen_time_ms: testClockFrozenTimeMs,

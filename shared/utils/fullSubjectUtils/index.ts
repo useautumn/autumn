@@ -6,9 +6,9 @@ export { fullSubjectToApiCustomerProducts } from "./fullSubjectToApiCustomerProd
 export { fullSubjectToApiUsageLimits } from "./fullSubjectToApiUsageLimits.js";
 export { fullSubjectToCreditSystems } from "./fullSubjectToCreditSystems.js";
 export { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
-export { fullSubjectToRelevantFeatures } from "./fullSubjectToRelevantFeatures.js";
 export { fullSubjectToFullCustomer } from "./fullSubjectToFullCustomer.js";
 export { fullSubjectToOverageAllowedByFeatureId } from "./fullSubjectToOverageAllowed.js";
+export { fullSubjectToRelevantFeatures } from "./fullSubjectToRelevantFeatures.js";
 export {
 	fullSubjectToSpendLimitByFeatureId,
 	fullSubjectToUsageBasedCusEntsByFeatureId,
@@ -16,6 +16,7 @@ export {
 export { fullSubjectToUsageWindowLimits } from "./fullSubjectToUsageWindowLimits.js";
 export { logFullSubject } from "./logFullSubject.js";
 export {
+	decorateInheritedPlanUsageLimits,
 	mergeCustomerBillingControlsForCheck,
 	mergePlanBillingControlsForCheck,
 } from "./mergeCustomerBillingControlsForCheck.js";

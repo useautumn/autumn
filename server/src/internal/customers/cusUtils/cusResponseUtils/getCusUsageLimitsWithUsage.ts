@@ -1,7 +1,9 @@
 import {
 	type ApiUsageLimit,
+	decorateInheritedPlanUsageLimits,
 	type FullCustomer,
 	fullSubjectToApiUsageLimits,
+	getPlanBillingControlProducts,
 	orgToInStatuses,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -9,6 +11,7 @@ import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubjec
 
 export type UsageLimitsWithUsage = {
 	customer?: ApiUsageLimit[];
+	plan?: ApiUsageLimit[];
 	byInternalEntityId: Record<string, ApiUsageLimit[]>;
 };
 
@@ -20,9 +23,9 @@ const SOURCE = "dashboard_usage_limits";
  * hash, so we read each scope via getOrSetCachedFullSubject (which rehydrates
  * it) — a DB-only read returns a stale/zero counter.
  *
- * Done for the customer AND every entity with caps, because the dashboard
- * payload carries both and the client may fetch either scope, so usage must
- * not hinge on the request's entity_id. Returns undefined when no caps exist.
+ * Done for the customer, its plan-inherited caps, AND every entity with caps,
+ * because the dashboard payload carries all scopes and the client may render
+ * any of them. Returns undefined when no caps exist anywhere.
  */
 export const getCusUsageLimitsWithUsage = async ({
 	ctx,
@@ -35,7 +38,11 @@ export const getCusUsageLimitsWithUsage = async ({
 		(entity) => (entity.usage_limits?.length ?? 0) > 0,
 	);
 	const customerHasCaps = (fullCus.usage_limits?.length ?? 0) > 0;
-	if (!customerHasCaps && entitiesWithCaps.length === 0) {
+	const planUsageLimits = getPlanBillingControlProducts({
+		customerProducts: fullCus.customer_products ?? [],
+	}).flatMap((planProduct) => planProduct.product.usage_limits ?? []);
+	const planHasCaps = planUsageLimits.length > 0;
+	if (!customerHasCaps && !planHasCaps && entitiesWithCaps.length === 0) {
 		return undefined;
 	}
 
@@ -43,17 +50,9 @@ export const getCusUsageLimitsWithUsage = async ({
 	const inStatuses = orgToInStatuses({ org: ctx.org });
 	const customerId = fullCus.internal_id;
 
-	const [customer, entityEntries] = await Promise.all([
-		customerHasCaps
-			? getOrSetCachedFullSubject({ ctx, customerId, source: SOURCE }).then(
-					(fullSubject) =>
-						fullSubjectToApiUsageLimits({
-							fullSubject,
-							features,
-							inStatuses,
-							source: "customer",
-						}),
-				)
+	const [customerFullSubject, entityEntries] = await Promise.all([
+		customerHasCaps || planHasCaps
+			? getOrSetCachedFullSubject({ ctx, customerId, source: SOURCE })
 			: Promise.resolve(undefined),
 		Promise.all(
 			entitiesWithCaps.map(async (entity) => {
@@ -74,10 +73,29 @@ export const getCusUsageLimitsWithUsage = async ({
 		),
 	]);
 
+	const customer =
+		customerHasCaps && customerFullSubject
+			? fullSubjectToApiUsageLimits({
+					fullSubject: customerFullSubject,
+					features,
+					inStatuses,
+					source: "customer",
+				})
+			: undefined;
+
+	const plan =
+		planHasCaps && customerFullSubject
+			? decorateInheritedPlanUsageLimits({
+					usageLimits: planUsageLimits,
+					fullSubject: customerFullSubject,
+					features,
+				}).map((usageLimit) => ({ ...usageLimit, source: "plan" as const }))
+			: undefined;
+
 	const byInternalEntityId: Record<string, ApiUsageLimit[]> = {};
 	for (const [internalEntityId, decorated] of entityEntries) {
 		if (decorated) byInternalEntityId[internalEntityId] = decorated;
 	}
 
-	return { customer, byInternalEntityId };
+	return { customer, plan, byInternalEntityId };
 };
