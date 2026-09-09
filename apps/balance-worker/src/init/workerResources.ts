@@ -1,7 +1,11 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { MeteringIdentity } from "@autumn/balance-engine";
-import { createKafkaClient, meteringIdentityToPartition } from "@autumn/kafka";
+import {
+	createKafkaClient,
+	createKafkaTransport,
+	meteringIdentityToPartition,
+} from "@autumn/kafka";
 import { Kafka } from "kafkajs";
 import {
 	openSqliteBalanceStateStore,
@@ -30,7 +34,10 @@ export async function openWorkerResources({
 		createKafkaClient({
 			clientId: `balance-worker-${crypto.randomUUID()}`,
 			brokers: env.KAFKA_BROKERS,
-			transport: {},
+			transport: createKafkaTransport({
+				authMode: env.KAFKA_AUTH_MODE,
+				region: env.AWS_REGION,
+			}),
 			limits: {
 				connectionTimeoutMs: 5000,
 				requestTimeoutMs: 30000,

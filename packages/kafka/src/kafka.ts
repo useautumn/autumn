@@ -3,6 +3,7 @@ export {
 	createConsumerGroupConfig,
 } from "./client/createConsumerGroupConfig.js";
 export { createKafkaClient } from "./client/createKafkaClient.js";
+export { createKafkaTransport } from "./client/createKafkaTransport.js";
 export {
 	InvalidKafkaOffsetError,
 	KafkaBatchNotCommittedError,
