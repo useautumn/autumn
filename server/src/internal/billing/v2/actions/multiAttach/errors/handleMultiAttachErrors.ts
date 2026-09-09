@@ -3,10 +3,10 @@ import type {
 	MultiAttachBillingContext,
 	MultiAttachParamsV0,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleRevertTrialErrors } from "@/internal/billing/v2/actions/attach/errors/handleRevertTrialErrors";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
+import { handlePendingPlanConflictErrors } from "@/internal/billing/v2/common/errors/handlePendingPlanConflictErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleMultiAttachBillingCycleAnchorErrors } from "./handleMultiAttachBillingCycleAnchorErrors";
@@ -16,21 +16,32 @@ import { handleMultiAttachStartDateErrors } from "./handleMultiAttachStartDateEr
 
 /** Runs all multi-attach validation checks. */
 export const handleMultiAttachErrors = async ({
-	db,
+	ctx,
 	billingContext,
 	redirectMode,
 	params,
+	preview,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	billingContext: MultiAttachBillingContext;
 	redirectMode: string;
 	params: MultiAttachParamsV0;
+	preview: boolean;
 }) => {
 	handleMultiAttachStartDateErrors({ billingContext, params });
 
 	handleMultiAttachCurrentProductErrors({
 		productContexts: billingContext.productContexts,
 	});
+
+	for (const productContext of billingContext.productContexts) {
+		await handlePendingPlanConflictErrors({
+			ctx,
+			fullCustomer: productContext.fullCustomer,
+			attachProduct: productContext.fullProduct,
+			preview,
+		});
+	}
 
 	handleMultiAttachRedirectErrors({
 		redirectMode,
@@ -43,7 +54,7 @@ export const handleMultiAttachErrors = async ({
 
 	// Subscription ID uniqueness
 	await handleSubscriptionIdErrors({
-		db,
+		db: ctx.db,
 		internalCustomerId: billingContext.fullCustomer.internal_id,
 		subscriptionIds: billingContext.productContexts.map((pc) => pc.externalId),
 	});
