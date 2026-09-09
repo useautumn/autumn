@@ -9,6 +9,7 @@ import { runReset } from "./actions/reset/runReset";
 import { runSandboxCreate } from "./actions/sandbox/createSandbox";
 import { runSandboxDelete } from "./actions/sandbox/deleteSandbox";
 import { runSandboxList } from "./actions/sandbox/listSandboxes";
+import { runSandboxUse } from "./actions/sandbox/useSandbox";
 import { withSandboxScopeHint } from "./actions/sandbox/withSandboxScopeHint";
 import { assertSandboxTarget } from "./env/assertSandboxTarget";
 import { loadEnvFiles } from "./env/loadEnv";
@@ -96,6 +97,31 @@ const clientFor = ({ target }: { target: Target }) =>
 /** `sandbox *` is an organization operation: never the sandbox's own key. */
 const sandboxClientFor = ({ target }: { target: Target }) =>
 	clientFor({ target: managementTarget({ target }) });
+
+/** The pinned sandbox's name for the copy; nothing when the main key cannot list. */
+const pinnedSandboxName = async ({
+	target,
+}: {
+	target: Target;
+}): Promise<{ sandboxName?: string }> => {
+	if (target.sandboxId === undefined) return {};
+	try {
+		const { list } = await sandboxClientFor({ target }).listSandboxes({});
+		const name = list.find((row) => row.id === target.sandboxId)?.name;
+		return name === undefined ? {} : { sandboxName: name };
+	} catch {
+		return {};
+	}
+};
+
+/** `/organization/me` for the main key: what `sandbox use` and `init` report the org as. */
+const mainOrgInfo = ({ target }: { target: Target }) => {
+	const main = managementTarget({ target });
+	return fetchOrgInfo({
+		baseUrl: targetBaseUrl({ target: main }),
+		secretKey: requireSecretKey({ target: main }),
+	});
+};
 
 export const buildProgram = (): Command => {
 	const program = new Command();
@@ -193,6 +219,7 @@ export const buildProgram = (): Command => {
 				await runReset({
 					client: clientFor({ target }),
 					target,
+					...(await pinnedSandboxName({ target })),
 					yes: options.yes === true,
 				});
 			} catch (error) {
@@ -218,6 +245,37 @@ export const buildProgram = (): Command => {
 				json: options.json === true,
 			});
 		});
+
+	sandbox
+		.command("use")
+		.description(
+			"target a sandbox by name or id; --clear returns to the main one",
+		)
+		.argument("[query]", "the sandbox's name or id")
+		.option("--clear", "drop the pin so commands target the main sandbox")
+		.option("--json", "print the result as JSON")
+		.action(
+			async (
+				query: string | undefined,
+				options: { clear?: boolean; json?: boolean },
+				command: Command,
+			) => {
+				const target = prepareTarget({ command });
+				try {
+					await runSandboxUse({
+						client: sandboxClientFor({ target }),
+						org: await mainOrgInfo({ target }),
+						...(query === undefined ? {} : { query }),
+						clear: options.clear === true,
+						json: options.json === true,
+						envDirs: projectOf({ command }).envDirs,
+						prompter: prompterFor({ command }),
+					});
+				} catch (error) {
+					throw withSandboxScopeHint({ error });
+				}
+			},
+		);
 
 	sandbox
 		.command("create")

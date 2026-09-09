@@ -6,5 +6,11 @@ export type SandboxClient = Pick<
 	"createSandbox" | "listSandboxes" | "deleteSandbox"
 >;
 
+/** What `atmn sandbox use` needs: the list to pick from, and a key when none is on disk. */
+export type UseSandboxClient = Pick<
+	AutumnClient,
+	"listSandboxes" | "createSandboxKey"
+>;
+
 /** Where a command writes its progress. Injected so tests can capture it. */
 export type WriteLine = (text: string) => void;

@@ -71,7 +71,7 @@ test("without --yes it says what goes and sends nothing", async () => {
 	expect(result.wiped).toBe(false);
 	expect(calls).toEqual([]);
 	expect(output.text()).toBe(
-		"This wipes your default sandbox: every customer, plan, feature and migration draft. Keys and settings stay. Re-run with --yes to wipe.\n",
+		"This wipes your main sandbox: every customer, plan, feature and migration draft. Keys and settings stay. Re-run with --yes to wipe.\n",
 	);
 });
 
@@ -108,7 +108,7 @@ test("--yes with nothing pinned wipes the org's default sandbox", async () => {
 
 	expect(calls.length).toBe(1);
 	expect(output.text()).toBe(
-		"Wiped your default sandbox. Run atmn push to rebuild it from your config.\n",
+		"Wiped your main sandbox. Run atmn push to rebuild it from your config.\n",
 	);
 });
 
