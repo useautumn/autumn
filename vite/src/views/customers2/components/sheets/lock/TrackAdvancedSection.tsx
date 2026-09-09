@@ -47,6 +47,7 @@ export function TrackAdvancedSection({
 					expanded={finalize.enabled}
 					action={
 						<Switch
+							aria-label="Finalize a lock"
 							checked={finalize.enabled}
 							onCheckedChange={(enabled) =>
 								onFinalizeChange({ ...finalize, enabled })

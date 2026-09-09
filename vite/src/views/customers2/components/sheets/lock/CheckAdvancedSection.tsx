@@ -44,6 +44,7 @@ export function CheckAdvancedSection({
 					expanded={lock.enabled}
 					action={
 						<Switch
+							aria-label="Lock balance"
 							checked={lock.enabled}
 							onCheckedChange={(enabled) =>
 								onLockChange({

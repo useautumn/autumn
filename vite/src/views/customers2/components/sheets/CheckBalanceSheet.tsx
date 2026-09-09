@@ -2,7 +2,7 @@ import type { Entity, FullCustomer } from "@autumn/shared";
 import { LATEST_VERSION } from "@autumn/shared";
 import { Button, FormLabel, Input, ShortcutButton } from "@autumn/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	CodeGroup,
@@ -53,6 +53,21 @@ export function CheckBalanceSheet() {
 	const [lock, setLock] = useState<CheckLockConfig>(DEFAULT_CHECK_LOCK_CONFIG);
 	const [response, setResponse] = useState<unknown>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const requestSeq = useRef(0);
+
+	// A stale response for different inputs reads as the result of the next check.
+	const updateRequiredBalance = (value: string) => {
+		setRequiredBalance(value);
+		setResponse(null);
+	};
+	const updateLock = (next: CheckLockConfig) => {
+		setLock(next);
+		setResponse(null);
+	};
+	const updateScope = (entityId: string | undefined) => {
+		setScopeEntityId(entityId);
+		setResponse(null);
+	};
 
 	const handleSubmit = async () => {
 		if (!customerId || !featureId) return;
@@ -82,9 +97,11 @@ export function CheckBalanceSheet() {
 			};
 		}
 
+		const seq = ++requestSeq.current;
 		setIsSubmitting(true);
 		try {
 			const { data } = await axiosInstance.post("/v1/check", params);
+			if (seq !== requestSeq.current) return;
 			setResponse(data);
 			if (lock.enabled) {
 				toast.success(
@@ -119,7 +136,7 @@ export function CheckBalanceSheet() {
 					<EntityScopeSelector
 						entities={entities}
 						scopeEntityId={scopeEntityId}
-						onScopeChange={setScopeEntityId}
+						onScopeChange={updateScope}
 					/>
 				)}
 
@@ -129,11 +146,11 @@ export function CheckBalanceSheet() {
 						placeholder="1"
 						type="number"
 						value={requiredBalance}
-						onChange={(e) => setRequiredBalance(e.target.value)}
+						onChange={(e) => updateRequiredBalance(e.target.value)}
 					/>
 				</SheetSection>
 
-				<CheckAdvancedSection lock={lock} onLockChange={setLock} />
+				<CheckAdvancedSection lock={lock} onLockChange={updateLock} />
 
 				<div className="flex-1 overflow-hidden flex flex-col px-4 py-4">
 					{response ? (
