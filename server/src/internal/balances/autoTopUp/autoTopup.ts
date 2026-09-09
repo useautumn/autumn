@@ -34,8 +34,8 @@ const isThresholdBilling = (autoTopupContext: AutoTopupContext) =>
 	Boolean(
 		(
 			cusEntToCusPrice({ cusEnt: autoTopupContext.customerEntitlement })?.price
-				.config as { threshold_billing?: unknown }
-		).threshold_billing,
+				.config as { threshold_billing?: unknown } | undefined
+		)?.threshold_billing,
 	);
 
 /** Workflow handler for auto top-ups. */

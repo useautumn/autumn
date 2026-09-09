@@ -15,10 +15,10 @@ import {
 
 const getThreshold = (cusEnt: FullCusEntWithFullCusProduct) =>
 	(
-		cusEntToCusPrice({ cusEnt })?.price.config as {
-			threshold_billing?: { threshold?: number };
-		}
-	).threshold_billing?.threshold;
+		cusEntToCusPrice({ cusEnt })?.price.config as
+			| { threshold_billing?: { threshold?: number } }
+			| undefined
+	)?.threshold_billing?.threshold;
 
 const isThresholdEntitlement = (cusEnt: FullCusEntWithFullCusProduct) =>
 	getThreshold(cusEnt) !== undefined;
