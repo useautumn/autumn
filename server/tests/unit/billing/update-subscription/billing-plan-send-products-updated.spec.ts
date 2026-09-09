@@ -141,6 +141,29 @@ describe(chalk.yellowBright("billingPlanToSendProductsUpdated"), () => {
 		expect(calls).toHaveLength(0);
 	});
 
+	test("queues expired webhook for status=expired updates", async () => {
+		const calls = await runPlan({
+			updateCustomerProduct: {
+				customerProduct: customerProducts.create({
+					id: "cus_prod_trial",
+				}),
+				updates: { status: CusProductStatus.Expired },
+			},
+			insertCustomerProducts: [
+				customerProducts.create({
+					id: "cus_prod_hobby",
+					productId: "prod_hobby",
+				}),
+			],
+		});
+
+		expect(calls).toHaveLength(2);
+		expect(calls[0]?.customerProductId).toBe("cus_prod_trial");
+		expect(calls[0]?.scenario).toBe(AttachScenario.Expired);
+		expect(calls[1]?.customerProductId).toBe("cus_prod_hobby");
+		expect(calls[1]?.scenario).toBe(AttachScenario.Upgrade);
+	});
+
 	test("matches each inserted product to its own expired counterpart", async () => {
 		const calls = await runPlan({
 			updateCustomerProducts: [
@@ -207,10 +230,14 @@ describe(chalk.yellowBright("billingPlanToSendProductsUpdated"), () => {
 			],
 		});
 
-		expect(calls).toHaveLength(2);
-		expect(calls[0]?.customerProductId).toBe("cus_prod_new_1");
-		expect(calls[0]?.scenario).toBe(AttachScenario.Upgrade);
-		expect(calls[1]?.customerProductId).toBe("cus_prod_new_2");
-		expect(calls[1]?.scenario).toBe(AttachScenario.New);
+		expect(calls).toHaveLength(4);
+		expect(calls[0]?.customerProductId).toBe("cus_prod_expired_1");
+		expect(calls[0]?.scenario).toBe(AttachScenario.Expired);
+		expect(calls[1]?.customerProductId).toBe("cus_prod_expired_2");
+		expect(calls[1]?.scenario).toBe(AttachScenario.Expired);
+		expect(calls[2]?.customerProductId).toBe("cus_prod_new_1");
+		expect(calls[2]?.scenario).toBe(AttachScenario.Upgrade);
+		expect(calls[3]?.customerProductId).toBe("cus_prod_new_2");
+		expect(calls[3]?.scenario).toBe(AttachScenario.New);
 	});
 });
