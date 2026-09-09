@@ -7,7 +7,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import {
 	buildOrgLimitsJsonText,
-	DEFAULT_AUTO_TOPUP_ATTEMPTS,
 	DEFAULT_CUS_PRODUCT_LIMIT,
 	getEntryRows,
 	getStatusMessage,
@@ -26,20 +25,11 @@ const isBlankOrPositiveInt = (value: string) =>
 
 const parseEntry = ({
 	limit,
-	attempts,
 }: {
 	limit: string;
-	attempts: string;
 }): OrgLimitsEntry | undefined => {
 	const maxCusProducts = parsePositiveInt(limit);
-	const maxAutoTopupAttempts = parsePositiveInt(attempts);
-	if (maxCusProducts === undefined && maxAutoTopupAttempts === undefined) {
-		return undefined;
-	}
-	return {
-		...(maxCusProducts !== undefined ? { maxCusProducts } : {}),
-		...(maxAutoTopupAttempts !== undefined ? { maxAutoTopupAttempts } : {}),
-	};
+	return maxCusProducts === undefined ? undefined : { maxCusProducts };
 };
 
 export const OrgLimitsConfigForm = ({
@@ -59,7 +49,6 @@ export const OrgLimitsConfigForm = ({
 	const [syncSource, setSyncSource] = useState<"form" | "json">("form");
 	const [newOrgId, setNewOrgId] = useState("");
 	const [newLimit, setNewLimit] = useState("");
-	const [newAttempts, setNewAttempts] = useState("");
 
 	const mutation = useMutation({
 		mutationFn: async (payload: unknown) => {
@@ -105,7 +94,7 @@ export const OrgLimitsConfigForm = ({
 
 	const addEntry = () => {
 		const orgId = newOrgId.trim();
-		const entry = parseEntry({ limit: newLimit, attempts: newAttempts });
+		const entry = parseEntry({ limit: newLimit });
 
 		if (!orgId || !entry) return;
 
@@ -116,7 +105,6 @@ export const OrgLimitsConfigForm = ({
 		}));
 		setNewOrgId("");
 		setNewLimit("");
-		setNewAttempts("");
 	};
 
 	const removeEntry = ({ orgId }: { orgId: string }) => {
@@ -175,14 +163,6 @@ export const OrgLimitsConfigForm = ({
 								onChange={(event) => setNewLimit(event.target.value)}
 								className="tabular-nums"
 							/>
-							<Input
-								placeholder="Auto top-up attempts per 10 min (e.g. 10)"
-								type="number"
-								min={1}
-								value={newAttempts}
-								onChange={(event) => setNewAttempts(event.target.value)}
-								className="tabular-nums"
-							/>
 							<Button
 								variant="secondary"
 								size="sm"
@@ -190,8 +170,7 @@ export const OrgLimitsConfigForm = ({
 								disabled={
 									!newOrgId.trim() ||
 									!isBlankOrPositiveInt(newLimit) ||
-									!isBlankOrPositiveInt(newAttempts) ||
-									!parseEntry({ limit: newLimit, attempts: newAttempts })
+									!parseEntry({ limit: newLimit })
 								}
 							>
 								Add org limit
@@ -215,10 +194,6 @@ export const OrgLimitsConfigForm = ({
 										</div>
 										<div className="text-xs tabular-nums text-muted-foreground">
 											Max customer products: {entry.maxCusProducts}
-										</div>
-										<div className="text-xs tabular-nums text-muted-foreground">
-											Auto top-up attempts per 10 min:{" "}
-											{entry.maxAutoTopupAttempts}
 										</div>
 									</div>
 									<Button

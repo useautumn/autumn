@@ -15,7 +15,7 @@ export const RateLimitOverridesConfigSchema = z.object({
 });
 
 export type OrgRateLimitOverride = {
-	limits: Partial<Record<RateLimitType, number>>;
+	limits: Record<string, number>;
 };
 export type RateLimitOverridesConfig = {
 	orgs: Record<string, OrgRateLimitOverride>;

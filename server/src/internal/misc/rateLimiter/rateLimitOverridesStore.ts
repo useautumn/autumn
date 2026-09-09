@@ -1,7 +1,6 @@
 import { ADMIN_RATE_LIMIT_OVERRIDES_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
-import type { RateLimitType } from "./rateLimitConfigs.js";
 import {
 	type RateLimitOverridesConfig,
 	RateLimitOverridesConfigSchema,
@@ -31,7 +30,7 @@ export const getOrgRateLimitOverride = ({
 }: {
 	orgId?: string;
 	orgSlug?: string;
-	type: RateLimitType;
+	type: string;
 }): number | undefined => {
 	const orgs = store.get().orgs;
 	const orgConfig =
