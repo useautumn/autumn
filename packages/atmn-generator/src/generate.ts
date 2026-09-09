@@ -10,6 +10,7 @@ import {
 import { emitEmitModule } from "./emit/emitEmitModule";
 import { emitLabelsModule } from "./emit/emitLabelsModule";
 import { emitSingletonModule } from "./emit/emitSingleton";
+import { emitSkillsModule } from "./emit/emitSkills";
 import { emitWireModule } from "./emit/emitWire";
 import { renamedPaths, wirePathHints, withRenames } from "./emit/freeFormPaths";
 import { emitLintRulesModule } from "./lint/emitLintRules";
@@ -321,6 +322,8 @@ export const generate = async (): Promise<string[]> => {
 			overlay: OVERLAY,
 		}),
 	});
+
+	write({ name: "skills.ts", source: await emitSkillsModule() });
 
 	await formatWithBiome({ paths: written });
 	return written;
