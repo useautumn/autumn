@@ -30,10 +30,12 @@ export function usePlanUsageDraft({
 	);
 
 	const customerId = customer?.id ?? customer?.internal_id;
-	const isNegative = draftUsage !== undefined && draftUsage < 0;
+	const isInvalid =
+		draftUsage !== undefined &&
+		(!Number.isFinite(draftUsage) || draftUsage < 0);
 	const isChanged = draftUsage !== undefined && draftUsage !== currentUsage;
 	const pendingUpdate: UsageUpdate | undefined =
-		usageLimit && customerId && isChanged && !isNegative
+		usageLimit && customerId && isChanged && !isInvalid
 			? {
 					customerId,
 					featureId: usageLimit.feature_id,
@@ -72,7 +74,7 @@ export function usePlanUsageDraft({
 	return {
 		draftUsage,
 		setDraftUsage,
-		isNegative,
+		isInvalid,
 		canSave: pendingUpdate !== undefined,
 		isSaving: mutation.isPending,
 		save,

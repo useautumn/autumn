@@ -6,13 +6,13 @@ export function PlanUsageField({
 	usageLimit,
 	draftUsage,
 	onDraftChange,
-	isNegative,
+	isInvalid,
 	onSubmit,
 }: {
 	usageLimit: ApiUsageLimit;
 	draftUsage: number | undefined;
 	onDraftChange: (value: number | undefined) => void;
-	isNegative: boolean;
+	isInvalid: boolean;
 	onSubmit: () => void;
 }) {
 	return (
@@ -22,7 +22,7 @@ export function PlanUsageField({
 				<NumericDraftInput
 					aria-label="Current usage"
 					className="w-full pr-16"
-					variant={isNegative ? "destructive" : undefined}
+					variant={isInvalid ? "destructive" : undefined}
 					value={draftUsage}
 					onCommit={onDraftChange}
 					allowUndefined

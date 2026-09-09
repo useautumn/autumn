@@ -5,6 +5,7 @@ import {
 	fullSubjectToApiUsageLimits,
 	getPlanBillingControlProducts,
 	orgToInStatuses,
+	usageLimitIdentity,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
@@ -16,6 +17,19 @@ export type UsageLimitsWithUsage = {
 };
 
 const SOURCE = "dashboard_usage_limits";
+
+/** Most recent plan wins per (feature, filter), matching the dashboard's row selection. */
+const uniqueByIdentity = <T extends Parameters<typeof usageLimitIdentity>[0]>(
+	usageLimits: T[],
+): T[] => {
+	const seen = new Set<string>();
+	return usageLimits.filter((usageLimit) => {
+		const identity = usageLimitIdentity(usageLimit);
+		if (seen.has(identity)) return false;
+		seen.add(identity);
+		return true;
+	});
+};
 
 /**
  * Decorate usage limits with `usage` (consumed in the active window) the same
@@ -38,9 +52,11 @@ export const getCusUsageLimitsWithUsage = async ({
 		(entity) => (entity.usage_limits?.length ?? 0) > 0,
 	);
 	const customerHasCaps = (fullCus.usage_limits?.length ?? 0) > 0;
-	const planUsageLimits = getPlanBillingControlProducts({
-		customerProducts: fullCus.customer_products ?? [],
-	}).flatMap((planProduct) => planProduct.product.usage_limits ?? []);
+	const planUsageLimits = uniqueByIdentity(
+		getPlanBillingControlProducts({
+			customerProducts: fullCus.customer_products ?? [],
+		}).flatMap((planProduct) => planProduct.product.usage_limits ?? []),
+	);
 	const planHasCaps = planUsageLimits.length > 0;
 	if (!customerHasCaps && !planHasCaps && entitiesWithCaps.length === 0) {
 		return undefined;
