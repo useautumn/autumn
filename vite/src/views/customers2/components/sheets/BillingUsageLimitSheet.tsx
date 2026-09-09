@@ -102,6 +102,7 @@ export function BillingUsageLimitSheet() {
 	const [usageLimit, setUsageLimit] = useState(
 		existingItem?.limit?.toString() ?? "",
 	);
+	const [usage, setUsage] = useState("");
 	const [selectedInterval, setSelectedInterval] = useState<string>(
 		existingItem?.interval ?? ResetInterval.Month,
 	);
@@ -168,6 +169,14 @@ export function BillingUsageLimitSheet() {
 			anchorUtc,
 			filter,
 		});
+		const parsedUsage = usage.trim() === "" ? undefined : Number(usage);
+		if (
+			parsedUsage !== undefined &&
+			(!Number.isFinite(parsedUsage) || parsedUsage < 0)
+		) {
+			toast.error("Please enter a valid current usage");
+			return;
+		}
 
 		const usageLimits = getCurrentUsageLimits();
 		const itemIdentity = usageLimitIdentity(item);
@@ -186,9 +195,15 @@ export function BillingUsageLimitSheet() {
 		}
 
 		if (isEdit && existingIndex !== undefined) {
-			usageLimits[existingIndex] = item;
+			usageLimits[existingIndex] = {
+				...item,
+				...(parsedUsage !== undefined && { usage: parsedUsage }),
+			} as DbUsageLimit;
 		} else {
-			usageLimits.push(item);
+			usageLimits.push({
+				...item,
+				...(parsedUsage !== undefined && { usage: parsedUsage }),
+			} as DbUsageLimit);
 		}
 
 		setIsSaving(true);
@@ -261,6 +276,16 @@ export function BillingUsageLimitSheet() {
 								type="number"
 								value={usageLimit}
 								onChange={(e) => setUsageLimit(e.target.value)}
+							/>
+						</div>
+						<div>
+							<FormLabel>Current usage</FormLabel>
+							<Input
+								type="number"
+								min="0"
+								value={usage}
+								onChange={(e) => setUsage(e.target.value)}
+								placeholder="Leave blank to keep unchanged"
 							/>
 						</div>
 

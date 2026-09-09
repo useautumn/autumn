@@ -1,5 +1,6 @@
 import { ProductSchema } from "@models/productModels/productModels.js";
 import { z } from "zod/v4";
+import type { ApiUsageLimit } from "../../api/billingControls/usageLimit.js";
 import type { CustomerProductsPage } from "../../api/customers/cusPlans/listCustomerProductsParams.js";
 import {
 	type FullCustomerEntitlement,
@@ -82,6 +83,8 @@ export type FullCustomer = Customer & {
 	/** Monthly-normalized base price total; dashboard list hydration only. */
 	base_price_total?: number;
 	products_page?: CustomerProductsPage;
+	/** Plan-inherited caps decorated with live usage; dashboard hydration only. */
+	plan_usage_limits?: ApiUsageLimit[];
 	entities: Entity[];
 	entity?: Entity;
 	trials_used?: {

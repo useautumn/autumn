@@ -3,6 +3,7 @@ import {
 	type BillingControlKey,
 	billingControlsFromColumns,
 	type CustomerBillingControls,
+	type DbUsageLimit,
 	type Entity,
 	type Feature,
 	type FullCustomer,
@@ -29,6 +30,7 @@ import { Table } from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../customer/CustomerContext";
+import { decoratePlanUsageLimits } from "./decoratePlanUsageLimits";
 import { EmptyState } from "./table/EmptyState";
 
 const PlanBadge = ({ planName }: { planName: string }) => (
@@ -128,7 +130,14 @@ export function CustomerBillingControlsSection() {
 						.filter((control) =>
 							planControlSource.has(`${key}:${control.feature_id ?? ""}`),
 						);
-			const items = [...customerItems, ...planItems];
+			const inheritedItems =
+				key === "usage_limits"
+					? decoratePlanUsageLimits({
+							planUsageLimits: planItems as DbUsageLimit[],
+							decoratedPlanUsageLimits: fullCustomer?.plan_usage_limits,
+						})
+					: planItems;
+			const items = [...customerItems, ...inheritedItems];
 			if (items.length) {
 				merged[key] = items as CustomerBillingControls[typeof key];
 			}
@@ -137,6 +146,7 @@ export function CustomerBillingControlsSection() {
 	}, [
 		billingControls,
 		fullCustomer?.customer_products,
+		fullCustomer?.plan_usage_limits,
 		isEntityView,
 		planControlSource,
 	]);
