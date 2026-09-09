@@ -40,6 +40,7 @@ import {
 	createPrompter,
 	NeedsInputError,
 	type Prompter,
+	releaseStdin,
 } from "./prompt/prompt";
 import { previewIsEmpty } from "./render/renderPreview";
 import { version } from "./version";
@@ -112,11 +113,7 @@ const pullInChildProcess = ({
 		[...process.execArgv, process.argv[1] ?? "", "--headless", "pull"],
 		{
 			cwd: configDir,
-			env: Object.fromEntries(
-				Object.entries(process.env).filter(
-					([key]) => key !== "AUTUMN_SANDBOX_ID",
-				),
-			),
+			env: { ...process.env, AUTUMN_SANDBOX_ID: "" },
 			encoding: "utf8",
 		},
 	);
@@ -513,6 +510,8 @@ export const run = async ({ argv }: { argv: string[] }): Promise<void> => {
 		// needs; that is a normal end, not a failure.
 		if (error instanceof NeedsInputError) return;
 		throw error;
+	} finally {
+		releaseStdin();
 	}
 };
 

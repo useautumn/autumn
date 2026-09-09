@@ -29,16 +29,33 @@ export class NeedsInputError extends Error {
 	}
 }
 
-export const defaultReadLine = async (): Promise<string | null> => {
-	const { createInterface } = await import("node:readline");
-	const rl = createInterface({ input: process.stdin, output: process.stdout });
-	return new Promise((resolve) => {
-		rl.once("close", () => resolve(null));
-		rl.question("", (answer) => {
-			rl.close();
-			resolve(answer);
+/**
+ * A fresh readline per question loses keys typed before it opened; one
+ * interface per process keeps them. The prompt text is the caller's, so the
+ * question passed here is empty.
+ */
+export const defaultReadLine = (() => {
+	let rl: import("node:readline").Interface | undefined;
+	return async (): Promise<string | null> => {
+		if (rl === undefined) {
+			const { createInterface } = await import("node:readline");
+			rl = createInterface({ input: process.stdin, output: process.stdout });
+		}
+		const active = rl;
+		return new Promise((resolve) => {
+			const onClose = () => resolve(null);
+			active.once("close", onClose);
+			active.question("", (answer) => {
+				active.off("close", onClose);
+				resolve(answer);
+			});
 		});
-	});
+	};
+})();
+
+/** Nothing else reads stdin after the last question; without this the process waits on it. */
+export const releaseStdin = (): void => {
+	process.stdin.pause();
 };
 
 export const createPrompter = ({

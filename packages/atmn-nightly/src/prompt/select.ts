@@ -130,7 +130,8 @@ const interactiveSelect = async ({
 			else if (key === "\u007f" || key === "\b") {
 				filter = filter.slice(0, -1);
 				cursor = 0;
-			} else if (key.length === 1 && key >= " ") {
+			} else if (!key.startsWith(ESC) && [...key].every((c) => c >= " ")) {
+				// A paste arrives as one chunk; typing as one char at a time.
 				filter += key;
 				cursor = 0;
 			}

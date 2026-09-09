@@ -71,8 +71,13 @@ export const resolveTarget = ({
 	}
 	// `--prod` overrides a pinned sandbox rather than combining with it: keeping
 	// the pin would make the flag silently address the sandbox anyway.
+	// An empty pin is "no pin": how a parent process addresses the main
+	// sandbox for a child without editing the .env the child will read.
+	const pinned = process.env[SANDBOX_PIN_NAME];
 	const sandboxId =
-		prod === true ? undefined : (sandbox ?? process.env[SANDBOX_PIN_NAME]);
+		prod === true
+			? undefined
+			: (sandbox ?? (pinned === "" ? undefined : pinned));
 
 	const identity: Omit<Target, "baseUrl"> = {
 		secretKeyName: secretKeyNameFor({ prod: prod === true, sandboxId }),
