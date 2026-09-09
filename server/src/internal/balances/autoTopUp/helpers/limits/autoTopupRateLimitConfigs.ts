@@ -1,5 +1,7 @@
 import type { AutoTopup, Organization } from "@autumn/shared";
-import { getOrgAutoTopupAttemptLimit } from "@/internal/misc/edgeConfig/orgLimitsStore.js";
+import { getOrgRateLimitOverride } from "@/internal/misc/rateLimiter/rateLimitOverridesStore.js";
+
+export const AUTO_TOPUP_ATTEMPTS_RATE_LIMIT = "auto_topup_attempts";
 
 export type AutoTopupWindowLimitConfig = {
 	limit: number;
@@ -32,8 +34,11 @@ export const getAutoTopupRateLimitConfigs = ({
 		attemptLimit: {
 			...DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT,
 			limit:
-				getOrgAutoTopupAttemptLimit({ orgId: org.id, orgSlug: org.slug }) ??
-				DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT.limit,
+				getOrgRateLimitOverride({
+					orgId: org.id,
+					orgSlug: org.slug,
+					type: AUTO_TOPUP_ATTEMPTS_RATE_LIMIT,
+				}) ?? DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT.limit,
 		},
 		failedAttemptLimit: DEFAULT_AUTO_TOPUP_FAILED_ATTEMPT_LIMIT,
 	};

@@ -56,19 +56,6 @@ export const getOrgEntitiesLimit = ({
 	return orgConfig?.maxEntities ?? DEFAULT_ENTITIES_LIMIT;
 };
 
-export const getOrgAutoTopupAttemptLimit = ({
-	orgId,
-	orgSlug,
-}: {
-	orgId?: string;
-	orgSlug?: string;
-}): number | undefined => {
-	const orgs = store.get().orgs;
-	const orgConfig =
-		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined);
-	return orgConfig?.maxAutoTopupAttempts;
-};
-
 const defaultMaxLimit = ({
 	type,
 	apiVersion,

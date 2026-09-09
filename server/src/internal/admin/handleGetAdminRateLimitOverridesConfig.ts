@@ -1,5 +1,9 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import {
+	AUTO_TOPUP_ATTEMPTS_RATE_LIMIT,
+	DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT,
+} from "@/internal/balances/autoTopUp/helpers/limits/autoTopupRateLimitConfigs.js";
 import { RATE_LIMIT_CONFIGS } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import {
 	getRateLimitOverridesFromSource,
@@ -22,6 +26,11 @@ export const handleGetAdminRateLimitOverridesConfig = createRoute({
 				},
 			]),
 		);
+		defaults[AUTO_TOPUP_ATTEMPTS_RATE_LIMIT] = {
+			limit: DEFAULT_AUTO_TOPUP_ATTEMPT_LIMIT.limit,
+			windowMs: 10 * 60 * 1000,
+			scope: "customer",
+		};
 
 		return c.json({
 			...config,
