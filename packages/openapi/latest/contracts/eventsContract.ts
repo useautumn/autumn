@@ -6,8 +6,8 @@ import {
 } from "@api/events/aggregate/eventsAggregateResponseV1.js";
 import { ApiEventsListV2_3ParamsSchema } from "@api/events/list/eventsListParamsV2_3.js";
 import {
-	EVENTS_LIST_V2_3_EXAMPLE,
 	ApiEventsListV2_3ResponseSchema,
+	EVENTS_LIST_V2_3_EXAMPLE,
 } from "@api/events/list/eventsListResponseV2_3.js";
 import { oc } from "@orpc/contract";
 

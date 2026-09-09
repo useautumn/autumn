@@ -1,4 +1,6 @@
 import {
+	CreateSandboxKeyParamsSchema,
+	CreateSandboxKeyResponseSchema,
 	CreateSandboxParamsSchema,
 	CreateSandboxResponseSchema,
 	DeleteSandboxParamsSchema,
@@ -11,6 +13,7 @@ import {
 import { oc } from "@orpc/contract";
 import {
 	createSandboxJsDoc,
+	createSandboxKeyJsDoc,
 	deleteSandboxJsDoc,
 	listSandboxesJsDoc,
 	resetSandboxJsDoc,
@@ -97,6 +100,38 @@ export const deleteSandboxContract = oc
 		DeleteSandboxResponseSchema.meta({
 			title: "DeleteSandboxResponse",
 			examples: [{ success: true }],
+		}),
+	);
+
+export const createSandboxKeyContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/sandboxes.create_key",
+		operationId: "createSandboxKey",
+		tags: ["sandboxes"],
+		description: createSandboxKeyJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "createKey",
+		}),
+	})
+	.input(
+		CreateSandboxKeyParamsSchema.meta({
+			title: "CreateSandboxKeyParams",
+			examples: [{ id: "org_123" }],
+		}),
+	)
+	.output(
+		CreateSandboxKeyResponseSchema.meta({
+			title: "CreateSandboxKeyResponse",
+			examples: [
+				{
+					id: "org_123",
+					name: "staging",
+					slug: "staging-abc123|org_456",
+					secret_key: "am_sk_test_abc123",
+				},
+			],
 		}),
 	);
 

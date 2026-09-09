@@ -273,6 +273,12 @@ export const generate = async (): Promise<string[]> => {
 				requestTypeName: "DeleteSandboxParams",
 			},
 			{
+				name: "createSandboxKey",
+				path: "/v1/sandboxes.create_key",
+				responseTypeName: "CreateSandboxKeyResponse",
+				requestTypeName: "CreateSandboxKeyParams",
+			},
+			{
 				name: "resetSandbox",
 				path: "/v1/sandboxes.reset",
 				responseTypeName: "ResetSandboxResponse",

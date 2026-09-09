@@ -73,6 +73,22 @@ export const DeleteSandboxResponseSchema = z.object({
 		.describe("Always true when the sandbox was deleted."),
 });
 
+export const CreateSandboxKeyParamsSchema = z.object({
+	id: z.string().min(1).describe("The ID of the sandbox to mint a key for."),
+});
+
+export const CreateSandboxKeyResponseSchema = z.object({
+	id: z.string().describe("The sandbox's organization ID."),
+	name: z.string().describe("The sandbox's name."),
+	slug: z.string().describe("The sandbox's slug, derived from its name."),
+	secret_key: z
+		.string()
+		.describe(
+			"A new secret key for the sandbox, carrying the calling key's scopes. Shown once, here.",
+		)
+		.readonly(),
+});
+
 export const ResetSandboxParamsSchema = z
 	.object({})
 	.describe(
@@ -88,4 +104,10 @@ export type CreateSandboxResponse = z.infer<typeof CreateSandboxResponseSchema>;
 export type Sandbox = z.infer<typeof SandboxSchema>;
 export type ListSandboxesResponse = z.infer<typeof ListSandboxesResponseSchema>;
 export type DeleteSandboxParams = z.infer<typeof DeleteSandboxParamsSchema>;
+export type CreateSandboxKeyParams = z.infer<
+	typeof CreateSandboxKeyParamsSchema
+>;
+export type CreateSandboxKeyResponse = z.infer<
+	typeof CreateSandboxKeyResponseSchema
+>;
 export type ResetSandboxParams = z.infer<typeof ResetSandboxParamsSchema>;

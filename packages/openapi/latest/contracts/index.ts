@@ -101,6 +101,7 @@ import {
 } from "./referralsContract.js";
 import {
 	createSandboxContract,
+	createSandboxKeyContract,
 	deleteSandboxContract,
 	listSandboxesContract,
 	resetSandboxContract,
@@ -221,6 +222,10 @@ export const v2_3InternalContractRouter = oc.router({
 	catalogV2Get: catalogV2GetContract,
 	catalogV2PreviewUpdate: catalogV2PreviewUpdateContract,
 	catalogV2Update: catalogV2UpdateContract,
+
+	// sandbox key minting (internal — the CLI's `sandbox use` needs it; the
+	// public surface keeps `sandboxes.create` as the only key-returning route)
+	sandboxesCreateKey: createSandboxKeyContract,
 
 	// organization settings (internal — see organizationContract.ts)
 	organizationPreviewUpdate: organizationPreviewUpdateContract,

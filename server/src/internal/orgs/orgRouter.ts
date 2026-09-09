@@ -91,6 +91,10 @@ honoOrgRouter.get("/me", async (c) => {
 		name: org.name,
 		slug: org.slug,
 		env,
+		// A sandbox's key answers as the sandbox; the CLI needs to tell that
+		// apart from the main organization's key.
+		is_sandbox: org.is_sandbox === true,
+		created_by: org.created_by ?? null,
 		user: authUser
 			? {
 					id: authUser.id,

@@ -16,7 +16,7 @@ export const handleCreateSandbox = createRoute({
 	body: CreateSandboxParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org: masterOrg, user, authType } = ctx;
+		const { db, org: masterOrg, user, authType, scopes } = ctx;
 
 		assertNotSandboxContext(masterOrg);
 		const actorUser = await resolveSandboxActor({
@@ -34,6 +34,7 @@ export const handleCreateSandbox = createRoute({
 			name,
 			color,
 			icon,
+			scopes,
 		});
 
 		return c.json({
