@@ -27,12 +27,12 @@ export const handleStripeInvoicePaid = async ({
 		return;
 	}
 
-	if (
+	const isThresholdBillingInvoice =
 		invoicePaidContext.stripeInvoice.metadata?.autumn_action_source ===
-			"threshold_billing" &&
-		ctx.fullCustomer
-	) {
-		for (const customerProduct of ctx.fullCustomer.customer_products) {
+		"threshold_billing";
+	const fullCustomer = ctx.fullCustomer;
+	if (isThresholdBillingInvoice && fullCustomer) {
+		for (const customerProduct of fullCustomer.customer_products) {
 			const thresholdProduct = customerProduct.customer_prices.some(
 				(customerPrice) =>
 					"threshold_billing" in customerPrice.price.config &&

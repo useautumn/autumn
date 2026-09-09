@@ -45,6 +45,14 @@ export const computeAutoTopupPlan = ({
 	const priceConfig = cusPrice.price.config as UsagePriceConfig;
 	const billingUnits = priceConfig.billing_units || 1;
 	const topUpPacks = new Decimal(quantity).div(billingUnits).toNumber();
+	const updateCustomerProduct = isThresholdBilling
+		? undefined
+		: {
+				customerProduct: cusProduct,
+				updates: {
+					options: buildUpdatedOptions({ cusProduct, feature, topUpPacks }),
+				},
+			};
 
 	const inlineCusEnt = isThresholdBilling
 		? { ...customerEntitlement, balance: -quantity }
@@ -99,16 +107,7 @@ export const computeAutoTopupPlan = ({
 		lineItems: [lineItem],
 		updateCustomerEntitlements: [],
 		autoTopupRebalance: { deltas },
-		...(isThresholdBilling
-			? {}
-			: {
-					updateCustomerProduct: {
-						customerProduct: cusProduct,
-						updates: {
-							options: buildUpdatedOptions({ cusProduct, feature, topUpPacks }),
-						},
-					},
-				}),
+		...(updateCustomerProduct ? { updateCustomerProduct } : {}),
 	};
 
 	// D. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)

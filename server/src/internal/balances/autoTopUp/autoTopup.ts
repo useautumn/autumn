@@ -197,13 +197,13 @@ export const autoTopup = async ({
 		const isCustomPm = autoTopupContext.paymentMethod?.type === "custom";
 		const isPaymentProcessing =
 			billingResult.stripe?.requiredAction?.code === "payment_processing";
-
-		if (
+		const shouldVoidInvoice =
 			!isInvoiceMode &&
 			!isCustomPm &&
 			invoiceStatus !== "paid" &&
-			!isPaymentProcessing
-		) {
+			!isPaymentProcessing;
+
+		if (shouldVoidInvoice) {
 			try {
 				await voidStripeInvoiceIfOpen({
 					ctx,
