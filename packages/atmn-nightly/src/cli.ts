@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { Command } from "commander";
 import { runEnv } from "./actions/env";
 import { fetchOrgInfo } from "./actions/env/fetchOrgInfo";
+import { runInit } from "./actions/init/runInit";
 import { runLogin } from "./actions/login";
 import { runPull } from "./actions/pull";
 import { runPush } from "./actions/push";
@@ -150,6 +151,50 @@ export const buildProgram = (): Command => {
 			.version(`atmn-nightly v${version}`, "-V, --version", "print the version")
 			.showHelpAfterError(),
 	);
+
+	program
+		.command("init")
+		.description(
+			"set up this repo: log in, place the config, pull your catalog, install the skills",
+		)
+		.option("--path <dir>", "folder for the Autumn package (monorepos)")
+		.option("--name <name>", "the package's name (monorepos)")
+		.option("--login", "log in when no main sandbox key is on disk")
+		.action(
+			async (
+				options: { path?: string; name?: string; login?: boolean },
+				command: Command,
+			) => {
+				const flags = command.optsWithGlobals<GlobalFlags>();
+				const baseUrl = targetBaseUrl({
+					target: resolveTarget({ ...flags, sandbox: undefined }),
+				});
+				await runInit({
+					...(options.path === undefined ? {} : { path: options.path }),
+					...(options.name === undefined ? {} : { name: options.name }),
+					...(options.login === undefined ? {} : { login: options.login }),
+					prompter: prompterFor({ command }),
+					deps: {
+						fetchOrgInfo: ({ secretKey }) =>
+							fetchOrgInfo({ baseUrl, secretKey }),
+						login: ({ envDirs }) =>
+							runLogin({
+								cwd: envDirs[0],
+								target: resolveTarget({ ...flags, sandbox: undefined }),
+							}),
+						pull: ({ configDir }) =>
+							runPull({
+								client: clientFor({
+									target: managementTarget({ target: resolveTarget(flags) }),
+								}),
+								cwd: configDir,
+								configPath: join(configDir, "autumn.config.ts"),
+								write: () => {},
+							}),
+					},
+				});
+			},
+		);
 
 	program
 		.command("login")

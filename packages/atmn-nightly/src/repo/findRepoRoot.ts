@@ -18,6 +18,8 @@ export type RepoLayout = {
 	packageRoot: string;
 	/** True when repoRoot shows a workspace marker and differs from packageRoot. */
 	isMonorepo: boolean;
+	/** True when the root declares workspaces at all: where init offers a package of its own. */
+	hasWorkspaces: boolean;
 };
 
 const gitToplevel = ({ cwd }: { cwd: string }): string | null => {
@@ -72,5 +74,6 @@ export const findRepoLayout = ({
 		repoRoot,
 		packageRoot,
 		isMonorepo: hasMarker && repoRoot !== packageRoot,
+		hasWorkspaces: hasMarker,
 	};
 };
