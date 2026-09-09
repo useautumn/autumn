@@ -1,4 +1,7 @@
-import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral";
+import {
+	ApiCusReferralSchema,
+	ApiCusReferredBySchema,
+} from "@api/customers/components/apiCusReferral";
 import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpcomingInvoice";
 import { ApiTrialsUsedV0Schema } from "@api/customers/components/apiTrialsUsed/prevVersions/apiTrialsUsedV0";
 import { ApiCusFeatureV2Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV2";
@@ -51,6 +54,7 @@ export const ApiCustomerV2Schema = z.object({
 	metadata: z.record(z.any(), z.any()).default({}),
 	entities: z.array(ApiBaseEntitySchema).optional(),
 	referrals: z.array(ApiCusReferralSchema).optional(),
+	referred_by: z.array(ApiCusReferredBySchema).optional(),
 	upcoming_invoice: ApiCusUpcomingInvoiceSchema.nullish(),
 	payment_method: z.any().nullish(),
 });

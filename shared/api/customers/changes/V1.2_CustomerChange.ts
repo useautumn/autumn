@@ -115,6 +115,7 @@ export const V1_2_CustomerChange = defineVersionChange({
 				) ?? undefined,
 			rewards: input.rewards ?? undefined,
 			referrals: input.referrals ?? undefined,
+			referred_by: input.referred_by ?? undefined,
 			payment_method: input.payment_method ?? undefined,
 		} satisfies z.infer<typeof ApiCustomerV3Schema>;
 	},

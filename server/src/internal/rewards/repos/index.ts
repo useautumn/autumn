@@ -5,6 +5,7 @@ import { getCustomerRewardRedemption } from "./getCustomerRewardRedemption.js";
 import { getPromoCodeRedemptionCount } from "./getPromoCodeRedemptionCount.js";
 import { getRedemptionById } from "./getRedemptionById.js";
 import { getRedemptionsByCustomer } from "./getRedemptionsByCustomer.js";
+import { getRedemptionsByRedeemer } from "./getRedemptionsByRedeemer.js";
 import { getRedemptionsByReferrer } from "./getRedemptionsByReferrer.js";
 import { getReferralCode } from "./getReferralCode.js";
 import { getReferralCodeByCustomerAndProgram } from "./getReferralCodeByCustomerAndProgram.js";
@@ -61,6 +62,7 @@ export const redemptionRepo = {
 	getById: getRedemptionById,
 	getByCustomer: getRedemptionsByCustomer,
 	getByReferrer: getRedemptionsByReferrer,
+	getByRedeemer: getRedemptionsByRedeemer,
 	getByCustomerAndReward: getCustomerRewardRedemption,
 	getPromoCodeRedemptionCount: getPromoCodeRedemptionCount,
 	insert: insertRedemption,
