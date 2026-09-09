@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { findDuplicateBillingControlIssue } from "../../models/cusModels/billingControls/duplicates/findDuplicateBillingControlIssue.js";
+import { rejectDuplicateBillingControls } from "../../models/cusModels/billingControls/duplicates/rejectDuplicateBillingControls.js";
 import { DbOverageAllowedSchema } from "../../models/cusModels/billingControls/overageAllowed.js";
 import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
 import { DbUsageAlertSchema } from "../../models/cusModels/billingControls/usageAlert.js";
@@ -7,7 +7,7 @@ import { DbUsageLimitSchema } from "../../models/cusModels/billingControls/usage
 import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
 import { ApiUsageAlertSchema } from "./usageAlert.js";
-import { ApiUsageLimitSchema } from "./usageLimit.js";
+import { ApiUsageLimitSchema, WritableUsageLimitsShape } from "./usageLimit.js";
 
 export const ApiEntityBillingControlsSchema = z.object({
 	spend_limits: z.array(ApiSpendLimitSchema).optional().meta({
@@ -46,10 +46,15 @@ const ApiEntityBillingControlsParamsBaseSchema = z.object({
 });
 
 export const ApiEntityBillingControlsParamsSchema =
-	ApiEntityBillingControlsParamsBaseSchema.check((ctx) => {
-		const issue = findDuplicateBillingControlIssue(ctx.value);
-		if (issue) ctx.issues.push(issue);
-	});
+	ApiEntityBillingControlsParamsBaseSchema.check(
+		rejectDuplicateBillingControls,
+	);
+
+/** Update-request variant: usage limits may also be counter-only writes. */
+export const ApiEntityBillingControlsUpdateSchema =
+	ApiEntityBillingControlsParamsBaseSchema.extend(
+		WritableUsageLimitsShape,
+	).check(rejectDuplicateBillingControls);
 
 export type ApiEntityBillingControls = z.infer<
 	typeof ApiEntityBillingControlsSchema

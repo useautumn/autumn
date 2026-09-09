@@ -1,9 +1,11 @@
 import { z } from "zod/v4";
+import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls.js";
+import { rejectDuplicateBillingControls } from "../../models/cusModels/billingControls/duplicates/rejectDuplicateBillingControls.js";
 import { ApiAutoTopupSchema } from "./autoTopup.js";
 import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
 import { ApiUsageAlertSchema } from "./usageAlert.js";
-import { ApiUsageLimitSchema } from "./usageLimit.js";
+import { ApiUsageLimitSchema, WritableUsageLimitsShape } from "./usageLimit.js";
 
 /**
  * Response-only variant of CustomerBillingControlsSchema: `auto_topups` may
@@ -35,3 +37,9 @@ export const CustomerBillingControlsResponseSchema = z.object({
 export type CustomerBillingControlsResponse = z.infer<
 	typeof CustomerBillingControlsResponseSchema
 >;
+
+/** Update-request variant: usage limits may also be counter-only writes. */
+export const CustomerBillingControlsUpdateSchema =
+	CustomerBillingControlsParamsSchema.extend(WritableUsageLimitsShape).check(
+		rejectDuplicateBillingControls,
+	);

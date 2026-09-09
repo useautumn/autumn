@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { findDuplicateBillingControlIssue } from "./duplicates/findDuplicateBillingControlIssue.js";
+import { rejectDuplicateBillingControls } from "./duplicates/rejectDuplicateBillingControls.js";
 import {
 	type EntityBillingControls,
 	type EntityBillingControlsParams,
@@ -274,10 +274,7 @@ export const CustomerBillingControlsParamsSchema =
 		auto_topups: z.array(AutoTopupParamsSchema).optional().meta({
 			description: "List of auto top-up configurations per feature.",
 		}),
-	}).check((ctx) => {
-		const issue = findDuplicateBillingControlIssue(ctx.value);
-		if (issue) ctx.issues.push(issue);
-	});
+	}).check(rejectDuplicateBillingControls);
 
 export type CustomerBillingControlsParams = z.input<
 	typeof CustomerBillingControlsParamsSchema
