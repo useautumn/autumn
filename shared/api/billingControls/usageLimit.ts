@@ -9,9 +9,23 @@ import { BillingControlSourceSchema } from "./billingControlSource.js";
 export const ApiUsageLimitSchema = DbUsageLimitSchema.extend({
 	usage: z.number().min(0).optional().meta({
 		description:
-			"Current usage already consumed in the active interval. Response-only; not stored on billing controls.",
+			"Usage consumed in the active interval, stored in the usage-window counter.",
 	}),
 	source: BillingControlSourceSchema.optional(),
 });
 
 export type ApiUsageLimit = z.infer<typeof ApiUsageLimitSchema>;
+
+export const UsageLimitUpdateSchema = z.union([
+	ApiUsageLimitSchema,
+	ApiUsageLimitSchema.pick({
+		feature_id: true,
+		filter: true,
+		source: true,
+		usage: true,
+	})
+		.required({ usage: true })
+		.strict(),
+]);
+
+export type UsageLimitUpdate = z.input<typeof UsageLimitUpdateSchema>;
