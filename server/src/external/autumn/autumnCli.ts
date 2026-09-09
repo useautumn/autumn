@@ -65,11 +65,18 @@ import {
 	type UpdateCatalogResponse,
 	type UpdateSubscriptionV0Params,
 	type UpdateSubscriptionV1Params,
+	type UsageLimitUpdate,
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
 import { timeout } from "@tests/utils/genUtils";
 import type { TinybirdMigrationItemEvent } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
 import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
+
+/** Update-request billing controls: usage limits may be counter-only writes. */
+type WritableBillingControls<T extends { usage_limits?: unknown }> = Omit<
+	T,
+	"usage_limits"
+> & { usage_limits?: UsageLimitUpdate[] };
 
 export default class AutumnError extends Error {
 	message: string;
@@ -579,7 +586,7 @@ export class AutumnInt {
 				email?: string;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
-				billing_controls?: CustomerBillingControlsParams;
+				billing_controls?: WritableBillingControls<CustomerBillingControlsParams>;
 				config?: CustomerData["config"];
 			},
 		) => {
@@ -600,7 +607,7 @@ export class AutumnInt {
 				email?: string;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
-				billing_controls?: CustomerBillingControlsParams;
+				billing_controls?: WritableBillingControls<CustomerBillingControlsParams>;
 				config?: CustomerData["config"];
 			},
 		) => {
@@ -698,7 +705,7 @@ export class AutumnInt {
 			customerId: string,
 			entityId: string,
 			updates: {
-				billing_controls?: ApiEntityBillingControlsParams;
+				billing_controls?: WritableBillingControls<ApiEntityBillingControlsParams>;
 			},
 		) => {
 			const data = await this.post(`/entities.update`, {

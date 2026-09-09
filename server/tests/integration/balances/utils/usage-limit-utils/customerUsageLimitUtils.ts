@@ -1,11 +1,16 @@
 import {
 	type ApiCustomerV5,
+	type ApiUsageLimit,
 	type CustomerBillingControls,
 	type DbUsageLimit,
 	ResetInterval,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
-import { expectUsageLimitCorrect } from "@tests/integration/utils/expectUsageLimitCorrect.js";
+import {
+	expectUsageLimitAbsent,
+	expectUsageLimitCorrect,
+} from "@tests/integration/utils/expectUsageLimitCorrect.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 
@@ -70,7 +75,8 @@ export const expectCustomerBalance = async ({
 /**
  * Fetches the customer and asserts the usage_limits entry's current window
  * `usage` (and optionally the configured limit). `skipCache` reads through to
- * Postgres, verifying the synced counter rather than the Redis one.
+ * Postgres, verifying the synced counter rather than the Redis one. Polls until
+ * the assertion holds, since counters sync from Redis lazily.
  */
 export const expectCustomerUsageLimit = async ({
 	autumn,
@@ -78,6 +84,7 @@ export const expectCustomerUsageLimit = async ({
 	featureId,
 	usage,
 	limit,
+	source,
 	filterProperties,
 	skipCache = false,
 }: {
@@ -86,18 +93,40 @@ export const expectCustomerUsageLimit = async ({
 	featureId: string;
 	usage?: number;
 	limit?: number;
+	source?: ApiUsageLimit["source"];
 	filterProperties?: Record<string, string> | null;
 	skipCache?: boolean;
 }) => {
-	const customer = await autumn.customers.get<ApiCustomerV5>(
-		customerId,
-		skipCache ? { skip_cache: "true" } : undefined,
-	);
-	expectUsageLimitCorrect({
-		customer,
-		featureId,
-		usage,
-		limit,
-		filterProperties,
+	await pollUntilAsserted({
+		fetch: () =>
+			autumn.customers.get<ApiCustomerV5>(
+				customerId,
+				skipCache ? { skip_cache: "true" } : undefined,
+			),
+		assert: (customer) =>
+			expectUsageLimitCorrect({
+				customer,
+				featureId,
+				usage,
+				limit,
+				source,
+				filterProperties,
+			}),
 	});
+};
+
+/** Fetches the customer through to Postgres and asserts the feature has no usage_limits entry. */
+export const expectCustomerUsageLimitAbsent = async ({
+	autumn,
+	customerId,
+	featureId,
+}: {
+	autumn: AutumnInt;
+	customerId: string;
+	featureId: string;
+}) => {
+	const customer = await autumn.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expectUsageLimitAbsent({ customer, featureId });
 };
