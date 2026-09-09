@@ -64,6 +64,8 @@ function readsBalanceWorkerEnvironment() {
 		BALANCE_WORKER_REQUEST_TIMEOUT_MS: "2500",
 	});
 	expect(env).toEqual({
+		KAFKA_AUTH_MODE: "none",
+		AWS_REGION: undefined,
 		BALANCE_WORKER_ROLLOUT_ENABLED: true,
 		KAFKA_BROKERS: ["127.0.0.1:19092", "localhost:29092"],
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "test-ownership",

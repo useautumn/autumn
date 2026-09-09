@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createKafkaAuthEnv } from "./kafkaAuth.js";
 
 const positiveInteger = z.coerce.number().int().positive().safe();
 const topicName = z
@@ -133,6 +134,7 @@ export function createBalanceWorkerEnv(
 		env.BALANCE_WORKER_HOST === "::1" ? "[::1]" : env.BALANCE_WORKER_HOST;
 	return {
 		...env,
+		...createKafkaAuthEnv({ runtimeEnv }),
 		BALANCE_WORKER_ENDPOINT: env.BALANCE_WORKER_ENDPOINT
 			? new URL(env.BALANCE_WORKER_ENDPOINT).origin
 			: `http://${host}:${env.BALANCE_WORKER_PORT}`,
