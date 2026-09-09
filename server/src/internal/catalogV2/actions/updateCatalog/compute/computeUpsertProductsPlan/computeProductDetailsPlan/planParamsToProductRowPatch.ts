@@ -50,10 +50,6 @@ export const planParamsToProductRowPatch = ({
 				planParams.config.ignore_past_due ??
 				current?.config?.ignore_past_due ??
 				false,
-			allow_overdue_entitlements:
-				planParams.config.allow_overdue_entitlements ??
-				current?.config?.allow_overdue_entitlements ??
-				false,
 		};
 	}
 	if (planParams.metadata !== undefined) patch.metadata = planParams.metadata;

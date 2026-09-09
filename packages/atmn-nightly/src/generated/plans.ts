@@ -310,8 +310,6 @@ export type Plan = {
 	config?: {
 		/** If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state. */
 		ignorePastDue?: boolean;
-		/** If true, this plan's entitlements remain usable while past due, overriding the organization's overdue entitlement block without changing cancellation or reset behavior. */
-		allowOverdueEntitlements?: boolean;
 	};
 	/** Plan-level billing controls used as customer defaults. */
 	billingControls?: {

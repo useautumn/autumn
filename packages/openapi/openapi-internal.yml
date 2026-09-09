@@ -2794,12 +2794,6 @@ components:
                 schedule even when the customer's product is in a past_due
                 state.
               default: false
-            allow_overdue_entitlements:
-              type: boolean
-              description: If true, this plan's entitlements remain usable while past due,
-                overriding the organization's overdue entitlement block without
-                changing cancellation or reset behavior.
-              default: false
           description: Miscellaneous plan-level configuration flags.
         billing_controls:
           type: object
@@ -12489,11 +12483,6 @@ paths:
                       description: If true, entitlements attached to this plan will still reset on
                         schedule even when the customer's product is in a
                         past_due state.
-                    allow_overdue_entitlements:
-                      type: boolean
-                      description: If true, this plan's entitlements remain usable while past due,
-                        overriding the organization's overdue entitlement block
-                        without changing cancellation or reset behavior.
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -13685,12 +13674,6 @@ paths:
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
-                        default: false
-                      allow_overdue_entitlements:
-                        type: boolean
-                        description: If true, this plan's entitlements remain usable while past due,
-                          overriding the organization's overdue entitlement
-                          block without changing cancellation or reset behavior.
                         default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
@@ -16793,12 +16776,6 @@ paths:
                           schedule even when the customer's product is in a
                           past_due state.
                         default: false
-                      allow_overdue_entitlements:
-                        type: boolean
-                        description: If true, this plan's entitlements remain usable while past due,
-                          overriding the organization's overdue entitlement
-                          block without changing cancellation or reset behavior.
-                        default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
                     type: object
@@ -19883,13 +19860,6 @@ paths:
                               description: If true, entitlements attached to this plan will still reset on
                                 schedule even when the customer's product is in
                                 a past_due state.
-                              default: false
-                            allow_overdue_entitlements:
-                              type: boolean
-                              description: If true, this plan's entitlements remain usable while past due,
-                                overriding the organization's overdue
-                                entitlement block without changing cancellation
-                                or reset behavior.
                               default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
@@ -25419,13 +25389,6 @@ paths:
                                           schedule even when the customer's
                                           product is in a past_due state.
                                         default: false
-                                      allow_overdue_entitlements:
-                                        type: boolean
-                                        description: If true, this plan's entitlements remain usable while past due,
-                                          overriding the organization's overdue
-                                          entitlement block without changing
-                                          cancellation or reset behavior.
-                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -27316,11 +27279,6 @@ paths:
                       description: If true, entitlements attached to this plan will still reset on
                         schedule even when the customer's product is in a
                         past_due state.
-                    allow_overdue_entitlements:
-                      type: boolean
-                      description: If true, this plan's entitlements remain usable while past due,
-                        overriding the organization's overdue entitlement block
-                        without changing cancellation or reset behavior.
                   description: Miscellaneous plan-level configuration flags.
                 billing_controls:
                   type: object
@@ -29661,12 +29619,6 @@ paths:
                         description: If true, entitlements attached to this plan will still reset on
                           schedule even when the customer's product is in a
                           past_due state.
-                        default: false
-                      allow_overdue_entitlements:
-                        type: boolean
-                        description: If true, this plan's entitlements remain usable while past due,
-                          overriding the organization's overdue entitlement
-                          block without changing cancellation or reset behavior.
                         default: false
                     description: Miscellaneous plan-level configuration flags.
                   billing_controls:
@@ -78310,13 +78262,6 @@ paths:
                                 schedule even when the customer's product is in
                                 a past_due state.
                               default: false
-                            allow_overdue_entitlements:
-                              type: boolean
-                              description: If true, this plan's entitlements remain usable while past due,
-                                overriding the organization's overdue
-                                entitlement block without changing cancellation
-                                or reset behavior.
-                              default: false
                           description: Miscellaneous plan-level configuration flags.
                         billing_controls:
                           type: object
@@ -83845,13 +83790,6 @@ paths:
                                           schedule even when the customer's
                                           product is in a past_due state.
                                         default: false
-                                      allow_overdue_entitlements:
-                                        type: boolean
-                                        description: If true, this plan's entitlements remain usable while past due,
-                                          overriding the organization's overdue
-                                          entitlement block without changing
-                                          cancellation or reset behavior.
-                                        default: false
                                     description: Miscellaneous plan-level configuration flags.
                                   billing_controls:
                                     type: object
@@ -85717,12 +85655,6 @@ paths:
                             description: If true, entitlements attached to this plan will still reset on
                               schedule even when the customer's product is in a
                               past_due state.
-                          allow_overdue_entitlements:
-                            type: boolean
-                            description: If true, this plan's entitlements remain usable while past due,
-                              overriding the organization's overdue entitlement
-                              block without changing cancellation or reset
-                              behavior.
                         description: Miscellaneous plan-level configuration flags.
                       billing_controls:
                         type: object
@@ -89995,15 +89927,6 @@ paths:
                                                     customer's product is in a
                                                     past_due state.
                                                   default: false
-                                                allow_overdue_entitlements:
-                                                  type: boolean
-                                                  description: If true, this plan's entitlements remain usable while past due,
-                                                    overriding the
-                                                    organization's overdue
-                                                    entitlement block without
-                                                    changing cancellation or
-                                                    reset behavior.
-                                                  default: false
                                               description: Miscellaneous plan-level configuration flags.
                                             - type: "null"
                                         active:
@@ -93952,17 +93875,6 @@ paths:
                                                                   product is in a
                                                                   past_due state.
                                                                 default: false
-                                                              allow_overdue_entitlements:
-                                                                type: boolean
-                                                                description: If true, this plan's entitlements remain usable while past due,
-                                                                  overriding the
-                                                                  organization's
-                                                                  overdue entitlement
-                                                                  block without
-                                                                  changing
-                                                                  cancellation or
-                                                                  reset behavior.
-                                                                default: false
                                                             description: Miscellaneous plan-level configuration flags.
                                                           - type: "null"
                                                       active:
@@ -96722,16 +96634,6 @@ paths:
                                                           customer's product is
                                                           in a past_due state.
                                                         default: false
-                                                      allow_overdue_entitlements:
-                                                        type: boolean
-                                                        description: If true, this plan's entitlements remain usable while past due,
-                                                          overriding the
-                                                          organization's overdue
-                                                          entitlement block
-                                                          without changing
-                                                          cancellation or reset
-                                                          behavior.
-                                                        default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
                                               active:
@@ -100690,17 +100592,6 @@ paths:
                                                                         the customer's
                                                                         product is in a
                                                                         past_due state.
-                                                                      default: false
-                                                                    allow_overdue_entitlements:
-                                                                      type: boolean
-                                                                      description: If true, this plan's entitlements remain usable while past due,
-                                                                        overriding the
-                                                                        organization's
-                                                                        overdue entitlement
-                                                                        block without
-                                                                        changing
-                                                                        cancellation or
-                                                                        reset behavior.
                                                                       default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
@@ -103445,17 +103336,6 @@ paths:
                                                                 product is in a
                                                                 past_due state.
                                                               default: false
-                                                            allow_overdue_entitlements:
-                                                              type: boolean
-                                                              description: If true, this plan's entitlements remain usable while past due,
-                                                                overriding the
-                                                                organization's
-                                                                overdue entitlement
-                                                                block without
-                                                                changing
-                                                                cancellation or
-                                                                reset behavior.
-                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
                                                     active:
@@ -107307,17 +107187,6 @@ paths:
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
-                                                                            default: false
-                                                                          allow_overdue_entitlements:
-                                                                            type: boolean
-                                                                            description: If true, this plan's entitlements remain usable while past due,
-                                                                              overriding the
-                                                                              organization's
-                                                                              overdue entitlement
-                                                                              block without
-                                                                              changing
-                                                                              cancellation or
-                                                                              reset behavior.
                                                                             default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
@@ -109921,17 +109790,6 @@ paths:
                                                                       product is in a
                                                                       past_due state.
                                                                     default: false
-                                                                  allow_overdue_entitlements:
-                                                                    type: boolean
-                                                                    description: If true, this plan's entitlements remain usable while past due,
-                                                                      overriding the
-                                                                      organization's
-                                                                      overdue entitlement
-                                                                      block without
-                                                                      changing
-                                                                      cancellation or
-                                                                      reset behavior.
-                                                                    default: false
                                                                 description: Miscellaneous plan-level configuration flags.
                                                               - type: "null"
                                                           active:
@@ -113486,17 +113344,6 @@ paths:
                                                                                     product is in a
                                                                                     past_due state.
                                                                                   default: false
-                                                                                allow_overdue_entitlements:
-                                                                                  type: boolean
-                                                                                  description: If true, this plan's entitlements remain usable while past due,
-                                                                                    overriding the
-                                                                                    organization's
-                                                                                    overdue entitlement
-                                                                                    block without
-                                                                                    changing
-                                                                                    cancellation or
-                                                                                    reset behavior.
-                                                                                  default: false
                                                                               description: Miscellaneous plan-level configuration flags.
                                                                             - type: "null"
                                                                         active:
@@ -115880,17 +115727,6 @@ paths:
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
-                                                              default: false
-                                                            allow_overdue_entitlements:
-                                                              type: boolean
-                                                              description: If true, this plan's entitlements remain usable while past due,
-                                                                overriding the
-                                                                organization's
-                                                                overdue entitlement
-                                                                block without
-                                                                changing
-                                                                cancellation or
-                                                                reset behavior.
                                                               default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
@@ -119744,17 +119580,6 @@ paths:
                                                                               product is in a
                                                                               past_due state.
                                                                             default: false
-                                                                          allow_overdue_entitlements:
-                                                                            type: boolean
-                                                                            description: If true, this plan's entitlements remain usable while past due,
-                                                                              overriding the
-                                                                              organization's
-                                                                              overdue entitlement
-                                                                              block without
-                                                                              changing
-                                                                              cancellation or
-                                                                              reset behavior.
-                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
                                                                   active:
@@ -122352,17 +122177,6 @@ paths:
                                                                       the customer's
                                                                       product is in a
                                                                       past_due state.
-                                                                    default: false
-                                                                  allow_overdue_entitlements:
-                                                                    type: boolean
-                                                                    description: If true, this plan's entitlements remain usable while past due,
-                                                                      overriding the
-                                                                      organization's
-                                                                      overdue entitlement
-                                                                      block without
-                                                                      changing
-                                                                      cancellation or
-                                                                      reset behavior.
                                                                     default: false
                                                                 description: Miscellaneous plan-level configuration flags.
                                                               - type: "null"
@@ -125918,17 +125732,6 @@ paths:
                                                                                     product is in a
                                                                                     past_due state.
                                                                                   default: false
-                                                                                allow_overdue_entitlements:
-                                                                                  type: boolean
-                                                                                  description: If true, this plan's entitlements remain usable while past due,
-                                                                                    overriding the
-                                                                                    organization's
-                                                                                    overdue entitlement
-                                                                                    block without
-                                                                                    changing
-                                                                                    cancellation or
-                                                                                    reset behavior.
-                                                                                  default: false
                                                                               description: Miscellaneous plan-level configuration flags.
                                                                             - type: "null"
                                                                         active:
@@ -128334,16 +128137,6 @@ paths:
                                                           schedule even when the
                                                           customer's product is
                                                           in a past_due state.
-                                                        default: false
-                                                      allow_overdue_entitlements:
-                                                        type: boolean
-                                                        description: If true, this plan's entitlements remain usable while past due,
-                                                          overriding the
-                                                          organization's overdue
-                                                          entitlement block
-                                                          without changing
-                                                          cancellation or reset
-                                                          behavior.
                                                         default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
@@ -132303,17 +132096,6 @@ paths:
                                                                         the customer's
                                                                         product is in a
                                                                         past_due state.
-                                                                      default: false
-                                                                    allow_overdue_entitlements:
-                                                                      type: boolean
-                                                                      description: If true, this plan's entitlements remain usable while past due,
-                                                                        overriding the
-                                                                        organization's
-                                                                        overdue entitlement
-                                                                        block without
-                                                                        changing
-                                                                        cancellation or
-                                                                        reset behavior.
                                                                       default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
@@ -135107,17 +134889,6 @@ paths:
                                                                 product is in a
                                                                 past_due state.
                                                               default: false
-                                                            allow_overdue_entitlements:
-                                                              type: boolean
-                                                              description: If true, this plan's entitlements remain usable while past due,
-                                                                overriding the
-                                                                organization's
-                                                                overdue entitlement
-                                                                block without
-                                                                changing
-                                                                cancellation or
-                                                                reset behavior.
-                                                              default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
                                                     active:
@@ -138970,17 +138741,6 @@ paths:
                                                                               product is in a
                                                                               past_due state.
                                                                             default: false
-                                                                          allow_overdue_entitlements:
-                                                                            type: boolean
-                                                                            description: If true, this plan's entitlements remain usable while past due,
-                                                                              overriding the
-                                                                              organization's
-                                                                              overdue entitlement
-                                                                              block without
-                                                                              changing
-                                                                              cancellation or
-                                                                              reset behavior.
-                                                                            default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
                                                                   active:
@@ -141556,16 +141316,6 @@ paths:
                                                           schedule even when the
                                                           customer's product is
                                                           in a past_due state.
-                                                        default: false
-                                                      allow_overdue_entitlements:
-                                                        type: boolean
-                                                        description: If true, this plan's entitlements remain usable while past due,
-                                                          overriding the
-                                                          organization's overdue
-                                                          entitlement block
-                                                          without changing
-                                                          cancellation or reset
-                                                          behavior.
                                                         default: false
                                                     description: Miscellaneous plan-level configuration flags.
                                                   - type: "null"
@@ -145526,17 +145276,6 @@ paths:
                                                                         product is in a
                                                                         past_due state.
                                                                       default: false
-                                                                    allow_overdue_entitlements:
-                                                                      type: boolean
-                                                                      description: If true, this plan's entitlements remain usable while past due,
-                                                                        overriding the
-                                                                        organization's
-                                                                        overdue entitlement
-                                                                        block without
-                                                                        changing
-                                                                        cancellation or
-                                                                        reset behavior.
-                                                                      default: false
                                                                   description: Miscellaneous plan-level configuration flags.
                                                                 - type: "null"
                                                             active:
@@ -148325,17 +148064,6 @@ paths:
                                                                 the customer's
                                                                 product is in a
                                                                 past_due state.
-                                                              default: false
-                                                            allow_overdue_entitlements:
-                                                              type: boolean
-                                                              description: If true, this plan's entitlements remain usable while past due,
-                                                                overriding the
-                                                                organization's
-                                                                overdue entitlement
-                                                                block without
-                                                                changing
-                                                                cancellation or
-                                                                reset behavior.
                                                               default: false
                                                           description: Miscellaneous plan-level configuration flags.
                                                         - type: "null"
@@ -152188,17 +151916,6 @@ paths:
                                                                               the customer's
                                                                               product is in a
                                                                               past_due state.
-                                                                            default: false
-                                                                          allow_overdue_entitlements:
-                                                                            type: boolean
-                                                                            description: If true, this plan's entitlements remain usable while past due,
-                                                                              overriding the
-                                                                              organization's
-                                                                              overdue entitlement
-                                                                              block without
-                                                                              changing
-                                                                              cancellation or
-                                                                              reset behavior.
                                                                             default: false
                                                                         description: Miscellaneous plan-level configuration flags.
                                                                       - type: "null"
@@ -163270,12 +162987,6 @@ paths:
                             description: If true, entitlements attached to this plan will still reset on
                               schedule even when the customer's product is in a
                               past_due state.
-                          allow_overdue_entitlements:
-                            type: boolean
-                            description: If true, this plan's entitlements remain usable while past due,
-                              overriding the organization's overdue entitlement
-                              block without changing cancellation or reset
-                              behavior.
                         description: Miscellaneous plan-level configuration flags.
                       billing_controls:
                         type: object

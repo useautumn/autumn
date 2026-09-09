@@ -183,62 +183,6 @@ test.concurrent(
 	},
 );
 
-test("catalogV2 update details: overdue access and cancellation flags stay independent", async () => {
-	const { autumnV2_4: autumn, ctx } = await initScenario({
-		setup: [],
-		actions: [],
-	});
-	const planId = uniqueTestId("cv2_overdue_flags");
-	try {
-		await autumn.catalogV2.update({
-			plans: [
-				{
-					plan_id: planId,
-					name: "Overdue flag test",
-					config: { ignore_past_due: true, allow_overdue_entitlements: true },
-				},
-			],
-		});
-		await expectCatalogPlansCorrect({
-			autumn,
-			expected: [
-				{
-					id: planId,
-					config: { ignore_past_due: true, allow_overdue_entitlements: true },
-				},
-			],
-		});
-		await autumn.catalogV2.update({
-			plans: [
-				{ plan_id: planId, config: { allow_overdue_entitlements: false } },
-			],
-		});
-		await expectCatalogPlansCorrect({
-			autumn,
-			expected: [
-				{
-					id: planId,
-					config: { ignore_past_due: true, allow_overdue_entitlements: false },
-				},
-			],
-		});
-		await autumn.catalogV2.update({
-			plans: [{ plan_id: planId, config: { ignore_past_due: false } }],
-		});
-		await expectCatalogPlansCorrect({
-			autumn,
-			expected: [
-				{
-					id: planId,
-					config: { ignore_past_due: false, allow_overdue_entitlements: false },
-				},
-			],
-		});
-	} finally {
-		await deleteDbPlans({ ctx, planIds: [planId] });
-	}
-});
-
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 update details: billing_controls patch persists / identical → none")}`,
 	async () => {

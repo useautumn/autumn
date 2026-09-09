@@ -17,7 +17,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
-test("overdue entitlements: visible balances, plan exemption, mixed deductions and payment recovery", async () => {
+test("overdue entitlements: visible balances, mixed deductions and payment recovery", async () => {
 	const overdue = products.base({
 		id: "overdue",
 		items: [items.monthlyMessages({ includedUsage: 100 }), items.dashboard()],
@@ -28,10 +28,7 @@ test("overdue entitlements: visible balances, plan exemption, mixed deductions a
 		items: [items.free({ featureId: TestFeature.Workflows, includedUsage: 7 })],
 	});
 	overdue.config = { ignore_past_due: true };
-	enterprise.config = {
-		ignore_past_due: false,
-		allow_overdue_entitlements: true,
-	};
+	enterprise.config = { ignore_past_due: false };
 	const active = products.base({
 		id: "active",
 		isAddOn: true,
@@ -154,7 +151,7 @@ test("overdue entitlements: visible balances, plan exemption, mixed deductions a
 				feature_id: TestFeature.Workflows,
 				send_event: true,
 			}),
-		).toMatchObject({ allowed: true, balance: { remaining: 6 } });
+		).toMatchObject({ allowed: false, balance: { remaining: 7 } });
 
 		await autumn.track({
 			customer_id: customerId,
