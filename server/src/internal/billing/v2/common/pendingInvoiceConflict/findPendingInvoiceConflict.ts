@@ -11,7 +11,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -20,11 +20,13 @@ import { MetadataService } from "@/internal/metadata/MetadataService";
 type PendingInvoiceCandidate = {
 	customerProduct: FullCusProduct;
 	metadataId: string;
-	stripeInvoice: Stripe.Invoice;
+	stripeInvoiceId: string;
+	/** Undefined when Stripe reports the invoice missing (stale pending row). */
+	stripeInvoice?: Stripe.Invoice;
 };
 
 const isPayable = (candidate: PendingInvoiceCandidate) =>
-	candidate.stripeInvoice.status === "open" &&
+	candidate.stripeInvoice?.status === "open" &&
 	Boolean(candidate.stripeInvoice.hosted_invoice_url);
 
 const byEarliestCreated = (
@@ -32,17 +34,38 @@ const byEarliestCreated = (
 	b: PendingInvoiceCandidate,
 ) =>
 	(a.customerProduct.created_at ?? 0) - (b.customerProduct.created_at ?? 0) ||
-	a.stripeInvoice.id.localeCompare(b.stripeInvoice.id);
+	a.stripeInvoiceId.localeCompare(b.stripeInvoiceId);
 
 const unpayableInvoiceMessage = ({
 	customerProduct,
 	stripeInvoice,
 }: PendingInvoiceCandidate) => {
-	const reason =
-		stripeInvoice.status === "open"
+	const reason = !stripeInvoice
+		? "invoice is missing"
+		: stripeInvoice.status === "open"
 			? "invoice has no payment page"
 			: `invoice is ${stripeInvoice.status}`;
 	return `The pending plan '${customerProduct.product.name}' cannot be paid (${reason}). Cancel or review the pending plan before attaching another plan.`;
+};
+
+const isStripeResourceMissing = (error: unknown) =>
+	error instanceof Stripe.errors.StripeInvalidRequestError &&
+	error.code === "resource_missing";
+
+/** Only a confirmed-missing invoice is skipped; any other failure must fail closed. */
+const retrieveInvoiceIfExists = async ({
+	stripeCli,
+	stripeInvoiceId,
+}: {
+	stripeCli: Stripe;
+	stripeInvoiceId: string;
+}): Promise<Stripe.Invoice | undefined> => {
+	try {
+		return await stripeCli.invoices.retrieve(stripeInvoiceId);
+	} catch (error) {
+		if (isStripeResourceMissing(error)) return undefined;
+		throw error;
+	}
 };
 
 /** Uncapped: fullCustomer.customer_products is limited and orders pending rows last. */
@@ -98,13 +121,14 @@ const listPendingInvoiceCandidates = async ({
 		if (seenInvoiceIds.has(metadata.stripe_invoice_id)) continue;
 		seenInvoiceIds.add(metadata.stripe_invoice_id);
 
-		const stripeInvoice = await stripeCli.invoices.retrieve(
-			metadata.stripe_invoice_id,
-		);
 		candidates.push({
 			customerProduct,
 			metadataId: metadata.id,
-			stripeInvoice,
+			stripeInvoiceId: metadata.stripe_invoice_id,
+			stripeInvoice: await retrieveInvoiceIfExists({
+				stripeCli,
+				stripeInvoiceId: metadata.stripe_invoice_id,
+			}),
 		});
 	}
 
@@ -136,7 +160,7 @@ export const findPendingInvoiceConflict = async ({
 	if (candidates.length === 0) return;
 
 	const paid = candidates.find(
-		(candidate) => candidate.stripeInvoice.status === "paid",
+		(candidate) => candidate.stripeInvoice?.status === "paid",
 	);
 	if (paid) {
 		throw new RecaseError({
@@ -147,7 +171,7 @@ export const findPendingInvoiceConflict = async ({
 	}
 
 	const payable = candidates.find(isPayable);
-	if (!payable) {
+	if (!payable?.stripeInvoice) {
 		throw new RecaseError({
 			code: ErrCode.PendingPlanConflict,
 			message: unpayableInvoiceMessage(candidates[0]),

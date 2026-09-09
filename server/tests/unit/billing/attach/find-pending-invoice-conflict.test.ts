@@ -14,9 +14,10 @@ import {
 } from "@autumn/shared";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
+import Stripe from "stripe";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
-type InvoiceStatus = "open" | "paid" | "void";
+type InvoiceStatus = "open" | "paid" | "void" | "missing";
 
 const state = {
 	invoices: {} as Record<string, { status: InvoiceStatus; url: string | null }>,
@@ -30,6 +31,12 @@ await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 				state.retrievedInvoiceIds.push(id);
 				const invoice = state.invoices[id];
 				if (!invoice) throw new Error(`No such invoice: ${id}`);
+				if (invoice.status === "missing")
+					throw new Stripe.errors.StripeInvalidRequestError({
+						type: "invalid_request_error",
+						code: "resource_missing",
+						message: `No such invoice: '${id}'`,
+					});
 				return {
 					id,
 					status: invoice.status,
@@ -189,6 +196,31 @@ test("equal created_at: the lower invoice id wins in either row order", async ()
 		});
 		expect(billingResult?.stripe.stripeInvoice?.id).toBe("in_a");
 	}
+});
+
+test("a missing invoice is skipped and the open one is resumed", async () => {
+	withInvoices({ in_gone: { status: "missing" }, in_open: { status: "open" } });
+
+	const billingResult = await findPendingInvoiceConflict({
+		ctx,
+		fullCustomer,
+		attachProduct,
+		loadPendingCustomerProducts: async () => [
+			pendingRow({ invoiceId: "in_gone", createdAt: 1 }),
+			pendingRow({ invoiceId: "in_open", createdAt: 2 }),
+		],
+	});
+
+	expect(billingResult?.stripe.stripeInvoice?.id).toBe("in_open");
+});
+
+test("all invoices missing: blocks instead of minting a fresh invoice", async () => {
+	withInvoices({ in_gone: { status: "missing" } });
+
+	await expectConflict({
+		rows: [pendingRow({ invoiceId: "in_gone", createdAt: 1 })],
+		messageIncludes: "invoice is missing",
+	});
 });
 
 test("a failed invoice retrieve propagates and never offers another payment", async () => {
