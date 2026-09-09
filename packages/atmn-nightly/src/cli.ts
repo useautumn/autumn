@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { join } from "node:path";
 import { Command } from "commander";
 import { runEnv } from "./actions/env";
 import { fetchOrgInfo } from "./actions/env/fetchOrgInfo";
@@ -11,6 +12,15 @@ import { runSandboxDelete } from "./actions/sandbox/deleteSandbox";
 import { runSandboxList } from "./actions/sandbox/listSandboxes";
 import { runSandboxUse } from "./actions/sandbox/useSandbox";
 import { withSandboxScopeHint } from "./actions/sandbox/withSandboxScopeHint";
+import {
+	installSkills,
+	linkSkills,
+	printSkill,
+	renderSkillsList,
+	SKILLS_DIR_NAME,
+	staleSkillsHint,
+	updateSkills,
+} from "./actions/skills/skills";
 import { assertSandboxTarget } from "./env/assertSandboxTarget";
 import { loadEnvFiles } from "./env/loadEnv";
 import {
@@ -78,6 +88,13 @@ const projectOf = ({ command }: { command: Command }): Project =>
 
 const configFlagOf = ({ command }: { command: Command }): string | undefined =>
 	command.optsWithGlobals<GlobalFlags>().config;
+
+const writeStaleSkillsHint = ({ command }: { command: Command }): void => {
+	const stale = staleSkillsHint({
+		dir: join(projectOf({ command }).configDir, SKILLS_DIR_NAME),
+	});
+	if (stale !== null) process.stdout.write(`${stale}\n`);
+};
 
 /** `--headless` forces the hint path; a pipe or CI log gets it by default. */
 const prompterFor = ({ command }: { command: Command }): Prompter =>
@@ -182,14 +199,70 @@ export const buildProgram = (): Command => {
 					configPath: configFlagOf({ command }),
 					dryRun: !apply,
 				});
-				if (apply || previewIsEmpty({ preview: result.preview })) return;
-				process.stdout.write(
-					options.dryRun === true
-						? "\nDry run — nothing applied.\n"
-						: "\nNothing applied. Re-run with --yes to apply these changes.\n",
-				);
+				if (!apply && !previewIsEmpty({ preview: result.preview }))
+					process.stdout.write(
+						options.dryRun === true
+							? "\nDry run — nothing applied.\n"
+							: "\nNothing applied. Re-run with --yes to apply these changes.\n",
+					);
+				writeStaleSkillsHint({ command });
 			},
 		);
+
+	const skills = program
+		.command("skills")
+		.description("the skills this CLI carries: list, print, install, update")
+		.argument("[name]", "print this skill's SKILL.md")
+		.option("--ref <path>", "print one of the skill's references instead")
+		.option("--json", "print the skill as JSON")
+		.action(
+			(name: string | undefined, options: { ref?: string; json?: boolean }) => {
+				if (name === undefined) {
+					process.stdout.write(`${renderSkillsList()}\n`);
+					return;
+				}
+				printSkill({
+					name,
+					...(options.ref === undefined ? {} : { ref: options.ref }),
+					json: options.json === true,
+					write: (text) => process.stdout.write(text),
+				});
+			},
+		);
+
+	skills
+		.command("install")
+		.description(
+			"write the skills next to your config; --link runs npx skills add",
+		)
+		.option("--dir <dir>", "write here instead of <config folder>/skills")
+		.option("--link", "run `npx skills add <dir> --all` afterwards")
+		.action(
+			async (options: { dir?: string; link?: boolean }, command: Command) => {
+				const dir =
+					options.dir ??
+					join(projectOf({ command }).configDir, SKILLS_DIR_NAME);
+				installSkills({ dir, write: (text) => process.stdout.write(text) });
+				if (options.link === true)
+					await linkSkills({
+						dir,
+						write: (text) => process.stdout.write(text),
+					});
+			},
+		);
+
+	skills
+		.command("update")
+		.description("rewrite installed skills older than this CLI's")
+		.option(
+			"--dir <dir>",
+			"the install to update; <config folder>/skills by default",
+		)
+		.action((options: { dir?: string }, command: Command) => {
+			const dir =
+				options.dir ?? join(projectOf({ command }).configDir, SKILLS_DIR_NAME);
+			updateSkills({ dir, write: (text) => process.stdout.write(text) });
+		});
 
 	program
 		.command("pull")
@@ -203,6 +276,7 @@ export const buildProgram = (): Command => {
 					configPath: configFlagOf({ command }),
 					includeMappings: options.includeMappings === true,
 				});
+				writeStaleSkillsHint({ command });
 			},
 		);
 
