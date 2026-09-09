@@ -18,6 +18,9 @@ import { z } from "zod/v4";
 
 export const ApiPlanItemV0Schema = z
 	.object({
+		threshold_billing: z
+			.object({ threshold: z.number().finite().positive() })
+			.nullish(),
 		feature_id: z.string(),
 		feature: ApiFeatureV0Schema.optional(),
 
