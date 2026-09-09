@@ -383,6 +383,7 @@ then
       expires_at = lock.expires_at or cjson.null,
       created_at = lock.created_at or cjson.null,
       properties = lock.properties or cjson.null,
+      overage_behavior = lock.overage_behavior or cjson.null,
     },
     mutation_logs = mutation_logs,
     ttl_at = lock.ttl_at or cjson.null,

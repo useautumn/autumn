@@ -72,5 +72,6 @@ export type PreparedFeatureDeduction = {
 		created_at: number;
 		ttl_at: number;
 		properties?: Record<string, unknown> | null;
+		overage_behavior?: DeductionOptions["overageBehaviour"];
 	};
 };

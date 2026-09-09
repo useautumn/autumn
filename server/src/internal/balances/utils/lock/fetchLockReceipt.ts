@@ -2,6 +2,7 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import { getRedisV2LockReceiptCandidates } from "@/external/redis/orgRedisUtils/orgRedisMigrationUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchAndClaimLockReceiptV2 } from "@/internal/balances/utils/lockV2/fetchAndClaimLockReceiptV2.js";
+import type { DeductionOptions } from "@/internal/balances/utils/types/deductionTypes.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 
 export type LockReceipt = {
@@ -13,6 +14,7 @@ export type LockReceipt = {
 	region?: string | null;
 	overrideLockValue?: number | null;
 	properties?: Record<string, unknown> | null;
+	overage_behavior?: DeductionOptions["overageBehaviour"] | null;
 	items: MutationLogItem[];
 };
 
