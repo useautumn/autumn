@@ -194,7 +194,6 @@ export const autoTopup = async ({
 		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
 		const isCustomPm = autoTopupContext.paymentMethod?.type === "custom";
 		const isPaymentProcessing =
-			isThresholdBilling(autoTopupContext) &&
 			billingResult.stripe?.requiredAction?.code === "payment_processing";
 		const shouldVoidInvoice =
 			!isInvoiceMode &&
