@@ -55,18 +55,22 @@ export function CheckBalanceSheet() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const requestSeq = useRef(0);
 
-	// A stale response for different inputs reads as the result of the next check.
+	// A stale or in-flight response for different inputs reads as the result of the next check.
+	const discardResponse = () => {
+		requestSeq.current += 1;
+		setResponse(null);
+	};
 	const updateRequiredBalance = (value: string) => {
 		setRequiredBalance(value);
-		setResponse(null);
+		discardResponse();
 	};
 	const updateLock = (next: CheckLockConfig) => {
 		setLock(next);
-		setResponse(null);
+		discardResponse();
 	};
 	const updateScope = (entityId: string | undefined) => {
 		setScopeEntityId(entityId);
-		setResponse(null);
+		discardResponse();
 	};
 
 	const handleSubmit = async () => {
