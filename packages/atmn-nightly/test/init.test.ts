@@ -104,7 +104,7 @@ const deps = ({
 	/** secret key → what /me says for it. */
 	keyAnswers?: Record<string, typeof org | typeof sub>;
 } = {}) => {
-	const calls = { login: 0, pull: [] as string[] };
+	const calls = { login: 0, pull: [] as string[], install: [] as string[] };
 	const answers = { ...keyAnswers };
 	const fake: InitDeps = {
 		fetchOrgInfo: async ({ secretKey }) => {
@@ -130,6 +130,10 @@ const deps = ({
 				orgId: "org_main",
 				writtenKeys: ["AUTUMN_SECRET_KEY", "AUTUMN_PROD_SECRET_KEY"],
 			};
+		},
+		install: async ({ manager }) => {
+			calls.install.push(manager);
+			return true;
 		},
 		pull: async ({ configDir }) => {
 			calls.pull.push(configDir);
@@ -159,6 +163,7 @@ test("single repo, valid key: no questions, config in cwd, skills beside it", as
 	});
 
 	expect(calls.login).toBe(0);
+	expect(calls.install).toEqual([]);
 	expect(calls.pull).toEqual([root]);
 	expect(result.configDir).toBe(root);
 	expect(existsSync(join(root, "autumn.config.ts"))).toBe(true);
@@ -281,13 +286,17 @@ test("monorepo, headless: hints --path, then --name, then does everything", asyn
 	expect(second.lines.join("")).toContain("→ Package name?");
 
 	const third = capture();
+	const { deps: thirdDeps, calls } = deps({
+		keyAnswers: { am_sk_test_main: org },
+	});
 	const result = await runInit({
 		cwd: root,
 		path: "packages/autumn",
 		name: "@acme/autumn",
-		deps: d(),
+		deps: thirdDeps,
 		prompter: createPrompter({ interactive: false, write: third.write }),
 	});
+	expect(calls.install).toEqual(["npm"]);
 
 	const pkgDir = join(root, "packages/autumn");
 	expect(result.configDir).toBe(pkgDir);
@@ -311,7 +320,7 @@ test("monorepo, headless: hints --path, then --name, then does everything", asyn
 	expect(text).toContain("✓ Name @acme/autumn");
 	expect(text).toContain("✓ Wrote packages/autumn/package.json");
 	expect(text).toContain('✓ Wrote "atmn" script and marker to package.json');
-	expect(text).toContain("npm install");
+	expect(text).toContain("✓ Installed with npm");
 	expect(text).toContain("npx atmn push");
 });
 

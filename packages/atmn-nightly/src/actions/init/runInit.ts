@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import {
 	loadEnvFiles,
 	removeEnvValues,
@@ -31,10 +31,20 @@ export type InitDeps = {
 	}: {
 		configDir: string;
 	}) => Promise<{ appended: string[]; replaced: string[]; deleted: string[] }>;
+	/** `<manager> install` at the root, so the new package's config can import the CLI before pull. */
+	install: ({
+		manager,
+		repoRoot,
+	}: {
+		manager: string;
+		repoRoot: string;
+	}) => Promise<boolean>;
 };
 
 export type InitOptions = {
 	cwd?: string;
+	/** What the new package depends on for the builders; the published CLI by default. */
+	dependencySpec?: string;
 	/** Folder for the Autumn package, repo-root relative; asked for in a monorepo. */
 	path?: string;
 	/** The package's name; asked for in a monorepo. */
@@ -164,13 +174,15 @@ const writeJson = (path: string, value: Record<string, unknown>): void =>
 
 const packageJsonFor = ({
 	name,
+	dependencySpec,
 }: {
 	name: string;
+	dependencySpec: string;
 }): Record<string, unknown> => ({
 	name,
 	private: true,
 	type: "module",
-	dependencies: { [PACKAGE_NAME]: `^${version}` },
+	dependencies: { [PACKAGE_NAME]: dependencySpec },
 });
 
 /** The root's marker and script, added beside whatever is already there. */
@@ -223,6 +235,7 @@ const runnerFor = (manager: string): string =>
  */
 export const runInit = async ({
 	cwd = process.cwd(),
+	dependencySpec = `^${version}`,
 	path,
 	name,
 	login,
@@ -237,11 +250,17 @@ export const runInit = async ({
 
 	let configDir = cwd;
 	let packageName: string | undefined;
+	// A repo init already placed keeps its answer: the marker is the path.
+	const marker = readMarker({ repoRoot });
 	if (hasWorkspaces) {
 		prompter.write(`${done("Monorepo detected")}\n`);
 		const chosen = await ask({
 			prompter,
-			value: path,
+			value:
+				path ??
+				(marker === null
+					? undefined
+					: dirname(resolve(repoRoot, marker.config))),
 			question: "Where should the Autumn package live?",
 			flag: "--path <dir>",
 			example: `--path ${DEFAULT_PACKAGE_DIR}`,
@@ -249,9 +268,12 @@ export const runInit = async ({
 		});
 		configDir = resolve(repoRoot, chosen);
 		prompter.write(`${done(`Path ${relative(repoRoot, configDir) || "."}`)}\n`);
+		const existingName = existsSync(join(configDir, "package.json"))
+			? (readJson(join(configDir, "package.json")).name as string | undefined)
+			: undefined;
 		packageName = await ask({
 			prompter,
-			value: name,
+			value: name ?? existingName,
 			question: "Package name?",
 			flag: "--name <name>",
 			example: "--name @acme/autumn",
@@ -266,7 +288,10 @@ export const runInit = async ({
 	if (packageName !== undefined) {
 		const manifestPath = join(configDir, "package.json");
 		if (!existsSync(manifestPath)) {
-			writeJson(manifestPath, packageJsonFor({ name: packageName }));
+			writeJson(
+				manifestPath,
+				packageJsonFor({ name: packageName, dependencySpec }),
+			);
 			wrote.push(`${relative(repoRoot, manifestPath)}`);
 		}
 	}
@@ -281,6 +306,19 @@ export const runInit = async ({
 			`${done('Wrote "atmn" script and marker to package.json')}\n`,
 		);
 
+	const manager = packageManager({ repoRoot });
+	const runner = runnerFor(manager);
+	// The scaffolded config imports the CLI; a package written a moment ago
+	// cannot resolve it until its dependency is installed.
+	if (wrote.some((file) => file.endsWith("package.json"))) {
+		const installed = await deps.install({ manager, repoRoot });
+		if (!installed)
+			throw new Error(
+				`${manager} install failed; run it yourself, then atmn init again.`,
+			);
+		prompter.write(`${done(`Installed with ${manager}`)}\n`);
+	}
+
 	const pulled = await deps.pull({ configDir });
 	const count =
 		pulled.appended.length + pulled.replaced.length + pulled.deleted.length;
@@ -294,11 +332,7 @@ export const runInit = async ({
 		`${done(`Skills: ${relative(repoRoot, skillsDir)}/${written.join(", ")}`)}\n`,
 	);
 
-	const manager = packageManager({ repoRoot });
-	const runner = runnerFor(manager);
 	prompter.write("\nNext:\n");
-	if (packageName !== undefined)
-		prompter.write(`${hint(`${manager} install`)}\n`);
 	prompter.write(
 		`${hint(`${runner} atmn push`)}          preview your catalog against the sandbox\n`,
 	);

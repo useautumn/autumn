@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { Command } from "commander";
 import { runEnv } from "./actions/env";
@@ -97,6 +98,47 @@ const writeStaleSkillsHint = ({ command }: { command: Command }): void => {
 	if (stale !== null) process.stdout.write(`${stale}\n`);
 };
 
+const PULL_EDIT_LINE = /^([+~-]) (\S+)$/;
+
+/** `atmn pull` in a child, its edit lines read back. Only the pin travels:
+ * init always pulls the main sandbox. */
+const pullInChildProcess = ({
+	configDir,
+}: {
+	configDir: string;
+}): { appended: string[]; replaced: string[]; deleted: string[] } => {
+	const result = spawnSync(
+		process.execPath,
+		[...process.execArgv, process.argv[1] ?? "", "--headless", "pull"],
+		{
+			cwd: configDir,
+			env: Object.fromEntries(
+				Object.entries(process.env).filter(
+					([key]) => key !== "AUTUMN_SANDBOX_ID",
+				),
+			),
+			encoding: "utf8",
+		},
+	);
+	if (result.status !== 0)
+		throw new Error(`${result.stdout}${result.stderr}`.trim());
+	const edits = {
+		appended: [] as string[],
+		replaced: [] as string[],
+		deleted: [] as string[],
+	};
+	for (const raw of result.stdout.split("\n")) {
+		const match = PULL_EDIT_LINE.exec(raw.trim());
+		if (!match) continue;
+		const [, symbol, id] = match;
+		if (id === undefined) continue;
+		if (symbol === "+") edits.appended.push(id);
+		else if (symbol === "~") edits.replaced.push(id);
+		else edits.deleted.push(id);
+	}
+	return edits;
+};
+
 /** `--headless` forces the hint path; a pipe or CI log gets it by default. */
 const prompterFor = ({ command }: { command: Command }): Prompter =>
 	createPrompter({
@@ -169,7 +211,11 @@ export const buildProgram = (): Command => {
 				const baseUrl = targetBaseUrl({
 					target: resolveTarget({ ...flags, sandbox: undefined }),
 				});
+				// Tests run the CLI from source, where the package is not published:
+				// they point new packages at the checkout instead.
+				const dependencySpec = process.env.ATMN_INIT_DEPENDENCY;
 				await runInit({
+					...(dependencySpec === undefined ? {} : { dependencySpec }),
 					...(options.path === undefined ? {} : { path: options.path }),
 					...(options.name === undefined ? {} : { name: options.name }),
 					...(options.login === undefined ? {} : { login: options.login }),
@@ -182,15 +228,14 @@ export const buildProgram = (): Command => {
 								cwd: envDirs[0],
 								target: resolveTarget({ ...flags, sandbox: undefined }),
 							}),
-						pull: ({ configDir }) =>
-							runPull({
-								client: clientFor({
-									target: managementTarget({ target: resolveTarget(flags) }),
-								}),
-								cwd: configDir,
-								configPath: join(configDir, "autumn.config.ts"),
-								write: () => {},
-							}),
+						install: async ({ manager, repoRoot }) =>
+							spawnSync(manager, ["install"], {
+								cwd: repoRoot,
+								stdio: "inherit",
+							}).status === 0,
+						// A fresh process: the config imports a package that was
+						// installed a moment ago, which this process cannot resolve.
+						pull: async ({ configDir }) => pullInChildProcess({ configDir }),
 					},
 				});
 			},

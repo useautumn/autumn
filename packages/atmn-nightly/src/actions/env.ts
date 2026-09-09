@@ -24,9 +24,11 @@ export const envJson = ({
 }) => {
 	const isMaster = isMainSandboxKey({ info });
 	const notes: string[] = [];
-	if (!isMaster)
+	// A pinned sandbox is meant to answer as itself; only the org's own key
+	// answering as a sandbox is the mistake worth flagging.
+	if (!isMaster && target.secretKeyName === "AUTUMN_SECRET_KEY")
 		notes.push(
-			`${target.secretKeyName} belongs to sandbox "${info.name}" (${info.id}), not your main sandbox. Sandbox commands need the main key: run atmn login.`,
+			`AUTUMN_SECRET_KEY belongs to sandbox "${info.name}" (${info.id}), not your main sandbox. Sandbox commands need the main key: run atmn login.`,
 		);
 	if (target.sandboxId !== undefined && target.sandboxId !== info.id)
 		notes.push(
