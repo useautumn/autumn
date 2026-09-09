@@ -37,9 +37,8 @@ export const computeAutoTopupPlan = ({
 	const feature = customerEntitlement.entitlement.feature;
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement })!;
 	const quantity = autoTopupConfig.quantity;
-	const isThresholdBilling = Boolean(
-		(cusPrice.price.config as UsagePriceConfig).threshold_billing,
-	);
+	const isThresholdBilling =
+		autoTopupContext.actionSource === "threshold_billing";
 
 	// A. Convert credits to packs (billing units)
 	const priceConfig = cusPrice.price.config as UsagePriceConfig;

@@ -53,7 +53,8 @@ export const fullCustomerToAutoTopupObjects = ({
 		matches: (config) => config.feature_id === featureId,
 	});
 
-	let autoTopupConfig = resolved?.control;
+	const configuredAutoTopup = resolved?.control;
+	if (configuredAutoTopup && !configuredAutoTopup.enabled) return null;
 
 	// 2. Find cusEnts for this feature
 	const cusEnts = fullCustomerToCustomerEntitlements({
@@ -62,19 +63,23 @@ export const fullCustomerToAutoTopupObjects = ({
 	});
 
 	if (cusEnts.length === 0) return null;
-	if (!autoTopupConfig) {
-		const thresholdEntitlement = cusEnts.find(isThresholdEntitlement);
-		const threshold = thresholdEntitlement
-			? (getThreshold(thresholdEntitlement) ?? 0)
-			: 0;
-		if (!thresholdEntitlement || threshold <= 0) return null;
-		autoTopupConfig = {
-			feature_id: featureId,
-			enabled: true,
-			threshold: -threshold,
-			quantity: threshold,
-		};
-	}
+	const thresholdEntitlement = configuredAutoTopup
+		? undefined
+		: cusEnts.find(isThresholdEntitlement);
+	const threshold = thresholdEntitlement
+		? getThreshold(thresholdEntitlement)
+		: undefined;
+	if (
+		!configuredAutoTopup &&
+		(!thresholdEntitlement || !threshold || threshold <= 0)
+	)
+		return null;
+	const autoTopupConfig = configuredAutoTopup ?? {
+		feature_id: featureId,
+		enabled: true,
+		threshold: -threshold!,
+		quantity: threshold!,
+	};
 
 	// 3. Find the one-off prepaid cusEnt whose price the top-up charges.
 	const sourceProductInternalId =
@@ -101,21 +106,17 @@ export const fullCustomerToAutoTopupObjects = ({
 	}
 
 	if (!customerEntitlement || !customerEntitlement.customer_product) {
-		const thresholdCustomerEntitlement = cusEnts.find(isThresholdEntitlement);
-		if (thresholdCustomerEntitlement?.customer_product) {
-			customerEntitlement = thresholdCustomerEntitlement;
-		} else {
-			return null;
-		}
+		if (thresholdEntitlement?.customer_product)
+			customerEntitlement = thresholdEntitlement;
+		else return null;
 	}
 
 	// 4. Check balance against threshold
-	const thresholdPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
-	const thresholdBilling = getThreshold(customerEntitlement);
+	const thresholdBilling = thresholdEntitlement ? threshold : undefined;
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
 	const balanceBelowThreshold = thresholdBilling
 		? cusEntToInvoiceOverage({ cusEnt: customerEntitlement }) >=
-			thresholdBilling.threshold
+			thresholdBilling
 		: remainingBalance <= autoTopupConfig.threshold;
 
 	return { autoTopupConfig, customerEntitlement, balanceBelowThreshold };

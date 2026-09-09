@@ -1,4 +1,4 @@
-import { AppEnv, cusEntToCusPrice, ms } from "@autumn/shared";
+import { AppEnv, ms } from "@autumn/shared";
 import {
 	clearAutoTopupPendingKey,
 	keepAutoTopupPendingKey,
@@ -31,12 +31,7 @@ import { sendAutoTopupSucceededWebhook } from "./webhooks/sendAutoTopupSucceeded
 const AUTO_TOPUP_RETRY_SUPPRESSION_MS = ms.minutes(10);
 
 const isThresholdBilling = (autoTopupContext: AutoTopupContext) =>
-	Boolean(
-		(
-			cusEntToCusPrice({ cusEnt: autoTopupContext.customerEntitlement })?.price
-				.config as { threshold_billing?: unknown } | undefined
-		)?.threshold_billing,
-	);
+	autoTopupContext.actionSource === "threshold_billing";
 
 /** Workflow handler for auto top-ups. */
 export const autoTopup = async ({
@@ -187,7 +182,10 @@ export const autoTopup = async ({
 		) {
 			await markThresholdProductPastDue({ autoTopupContext });
 		}
-		if (billingResult.stripe?.deferred) {
+		if (
+			isThresholdBilling(autoTopupContext) &&
+			billingResult.stripe?.deferred
+		) {
 			pendingTtlMs = AUTO_TOPUP_RETRY_SUPPRESSION_MS;
 			return;
 		}
@@ -196,6 +194,7 @@ export const autoTopup = async ({
 		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
 		const isCustomPm = autoTopupContext.paymentMethod?.type === "custom";
 		const isPaymentProcessing =
+			isThresholdBilling(autoTopupContext) &&
 			billingResult.stripe?.requiredAction?.code === "payment_processing";
 		const shouldVoidInvoice =
 			!isInvoiceMode &&
