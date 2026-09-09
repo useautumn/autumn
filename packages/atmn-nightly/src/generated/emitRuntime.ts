@@ -16,6 +16,8 @@ export type CollectionSpec = {
 	readonly required?: readonly string[];
 	/** Every fixture path a config may state, collection-relative (no `entitlementId`, `versioning`, …). */
 	readonly paths: readonly string[];
+	/** Objects the server always answers with; a pull leaves one out at this value. */
+	readonly omitWhenDefault?: readonly { path: string; default: unknown }[];
 	/** Config key holding past versions, when the collection has history. */
 	readonly historyKey?: string;
 	/** Whether pull can address entries by idField alone. */
@@ -81,6 +83,7 @@ const branchSpecOf = ({
 	required: branch.required,
 	paths: branch.paths,
 	branches: undefined,
+	omitWhenDefault: undefined,
 });
 
 /** Every shape an entry of the collection can take; just itself when unbranched. */
@@ -260,6 +263,7 @@ const rowValueOf = ({
 	if (key === "archived") return undefined;
 	if (key === "processors" && !includeMappings) return undefined;
 	const value = row[key];
+	if (isOmittedDefault({ spec, key, value })) return undefined;
 	if (key === "display") return displayOf(value);
 	if (key === "creditSchema") return creditSchemaOf(value);
 	// Membership in `plans` stamps true; only a draft's `false` is fixture-worthy.
@@ -273,6 +277,42 @@ const rowValueOf = ({
 		return undefined;
 	return value;
 };
+
+const valuesEqual = (left: unknown, right: unknown): boolean => {
+	if (Object.is(left, right)) return true;
+	if (
+		typeof left !== "object" ||
+		typeof right !== "object" ||
+		left === null ||
+		right === null
+	)
+		return false;
+	if (Array.isArray(left) !== Array.isArray(right)) return false;
+	const leftRecord = left as Record<string, unknown>;
+	const rightRecord = right as Record<string, unknown>;
+	const keys = new Set([
+		...Object.keys(leftRecord),
+		...Object.keys(rightRecord),
+	]);
+	for (const key of keys) {
+		if (!valuesEqual(leftRecord[key], rightRecord[key])) return false;
+	}
+	return true;
+};
+
+/** An object the row carries but a fixture reads the same without. */
+const isOmittedDefault = ({
+	spec,
+	key,
+	value,
+}: {
+	spec: CollectionSpec;
+	key: string;
+	value: unknown;
+}): boolean =>
+	(spec.omitWhenDefault ?? []).some(
+		(entry) => entry.path === key && valuesEqual(value, entry.default),
+	);
 
 const isDeprecatedKey = ({
 	spec,

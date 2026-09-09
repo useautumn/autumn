@@ -830,6 +830,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.versionSlug",
 			"versionSlug",
 		],
+		omitWhenDefault: [{ path: "config", default: { ignorePastDue: false } }],
 		historyKey: "planVersions",
 		pull: true,
 		deprecated: [
