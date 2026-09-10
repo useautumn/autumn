@@ -34,6 +34,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import chalk from "chalk";
+import type { OrgInfo } from "../src/actions/env/types/orgInfo";
 import { type InitDeps, runInit } from "../src/actions/init/runInit";
 import { sandboxKeyName } from "../src/env/sandboxKeyName";
 import { AutumnApiError } from "../src/generated/client";
@@ -77,14 +78,14 @@ const repo = ({
 	return root;
 };
 
-const org = {
+const org: OrgInfo = {
 	id: "org_main",
 	name: "Acme",
 	slug: "acme",
 	env: "sandbox",
 	is_sandbox: false,
 };
-const sub = {
+const sub: OrgInfo = {
 	id: "id_pricing",
 	name: "Pricing v2",
 	slug: "pricing-v2",
@@ -140,7 +141,16 @@ const deps = ({
 		keyless: {
 			provision: async ({ name, slug }) => {
 				calls.keyless += 1;
-				answers.am_sk_test_keyless = { ...org, name, slug };
+				answers.am_sk_test_keyless = {
+					...org,
+					id: "org_keyless",
+					name,
+					slug,
+					claim_state: "pending",
+					claim_expires_at: new Date(
+						Date.now() + 14 * 86_400_000,
+					).toISOString(),
+				};
 				return {
 					organizationId: "org_keyless",
 					organizationSlug: slug,

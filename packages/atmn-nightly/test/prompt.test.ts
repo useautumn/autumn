@@ -180,3 +180,23 @@ test("choose: headless lists the flags and stops; interactive takes a number or 
 	expect(await pick("--keyless")).toBe("keyless");
 	await expect(pick("7")).rejects.toThrow(NeedsInputError);
 });
+
+test("choose: a malformed number is refused rather than truncated to a pick", async () => {
+	const pick = async (answer: string) =>
+		choose({
+			prompter: createPrompter({
+				interactive: true,
+				write: () => {},
+				readLine: async () => answer,
+			}),
+			value: undefined,
+			question: "How?",
+			options: [
+				{ value: "login", flag: "--login", label: "sign in" },
+				{ value: "keyless", flag: "--keyless", label: "no account" },
+			] as const,
+			defaultValue: "login",
+		});
+	await expect(pick("2foo")).rejects.toThrow(NeedsInputError);
+	await expect(pick("1.5")).rejects.toThrow(NeedsInputError);
+});

@@ -21,6 +21,8 @@ const CLAIM_TTL_MS = 72 * 60 * 60 * 1000;
 /** Stripe requires a contact email; a keyless org has no owner until it's claimed. */
 const AGENT_ORG_CONTACT_EMAIL = "support@useautumn.com";
 
+const SLUG_ATTEMPTS = 5;
+
 const randomSlugSuffix = (): string =>
 	String(Math.floor(10000000 + Math.random() * 90000000));
 
@@ -72,14 +74,20 @@ export const provisionAgentOrg = async ({
 			return { organization, apiKey };
 		});
 
-	// Slugs come from package names, so two agents on "app" collide; the
-	// second gets a suffix, the same way a signup does.
-	const { organization, apiKey } = await createOrgAndKey(slug).catch(
-		(error: unknown) => {
-			if (!isUniqueConstraintError(error)) throw error;
-			return createOrgAndKey(`${slug}_${randomSlugSuffix()}`);
-		},
-	);
+	// Slugs come from package names, so two agents on "app" collide; each retry
+	// gets a fresh suffix, the same way a signup does.
+	const { organization, apiKey } = await (async () => {
+		for (let attempt = 0; ; attempt++) {
+			try {
+				return await createOrgAndKey(
+					attempt === 0 ? slug : `${slug}_${randomSlugSuffix()}`,
+				);
+			} catch (error: unknown) {
+				if (!isUniqueConstraintError(error) || attempt >= SLUG_ATTEMPTS)
+					throw error;
+			}
+		}
+	})();
 
 	// Stripe account, svix apps and pkeys — the same bring-up a signed-up org
 	// gets. Strict so a partial failure rolls back rather than handing the agent

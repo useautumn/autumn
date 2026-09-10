@@ -60,9 +60,13 @@ const deps = () => {
 	return { deps: fake, calls };
 };
 
-test("slugFor lowercases, strips the scope and joins with dashes", () => {
+test("slugFor lowercases, strips the scope, joins with dashes and stays under the cap", () => {
 	expect(slugFor("@acme/Billing App")).toBe("billing-app");
 	expect(slugFor("  ")).toBe("autumn");
+	// The server refuses more than 100 characters, and a trailing dash.
+	const long = slugFor(`${"a".repeat(99)} tail`);
+	expect(long).toHaveLength(99);
+	expect(long.endsWith("-")).toBe(false);
 });
 
 test("projectNameFor prefers the root package name, else the folder", () => {

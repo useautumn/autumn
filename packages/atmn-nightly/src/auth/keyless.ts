@@ -74,7 +74,7 @@ export const provisionKeylessOrg = async ({
 	const body = await post({
 		baseUrl,
 		path: "/agent.provision",
-		body: { name, slug },
+		body: { name: name.slice(0, MAX_NAME_LENGTH), slug },
 		fetch,
 	});
 	return {
@@ -135,9 +135,14 @@ export const verifyClaim = async ({
 };
 
 /** A slug the server accepts: lowercase alphanumerics, `-` or `_` between words. */
+/** The server caps a name and a slug at 100 characters. */
+const MAX_NAME_LENGTH = 100;
+
 export const slugFor = (name: string): string =>
 	name
 		.toLowerCase()
 		.replace(/^@[^/]+\//, "")
 		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "") || "autumn";
+		.replace(/^-+|-+$/g, "")
+		.slice(0, MAX_NAME_LENGTH)
+		.replace(/-+$/, "") || "autumn";

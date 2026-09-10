@@ -290,9 +290,17 @@ Linking a keyless org to an account:
 				options: { keyless?: boolean; claim?: string; otp?: string },
 				command: Command,
 			) => {
+				if (options.keyless && options.claim !== undefined)
+					throw new Error("Pick one of --keyless and --claim.");
+				if (options.otp !== undefined && options.claim === undefined)
+					throw new Error("--otp answers --claim; pass --claim <email> too.");
 				const target = prepareTarget({ command });
 				const prompter = prompterFor({ command });
-				const mainTarget = managementTarget({ target });
+				// A keyless org lives in sandbox, so its key is the main sandbox one
+				// whatever --prod or a sandbox pin says.
+				const mainTarget = managementTarget({
+					target: { ...target, secretKeyName: "AUTUMN_SECRET_KEY" },
+				});
 				if (options.keyless) {
 					const project = projectOf({ command });
 					await runKeylessLogin({

@@ -11,7 +11,7 @@ import {
 } from "../../auth/keyless";
 import { writeEnvValues } from "../../env/loadEnv";
 import { type Target, targetBaseUrl } from "../../env/resolveTarget";
-import { ask, done, hint, type Prompter } from "../../prompt/prompt";
+import { ask, done, type Prompter } from "../../prompt/prompt";
 
 /** The one place the two ways in are described; help text and hints both read it. */
 export const CONNECT_OPTIONS = {
@@ -21,13 +21,6 @@ export const CONNECT_OPTIONS = {
 } as const;
 
 export const CONNECT_QUESTION = "How do you want to connect to Autumn?";
-
-/** The headless hint under the question. */
-export const connectHint = (): string =>
-	[
-		hint(`--login      ${CONNECT_OPTIONS.login}`),
-		hint(`--keyless    ${CONNECT_OPTIONS.keyless}`),
-	].join("\n");
 
 export type KeylessDeps = {
 	provision: (params: {

@@ -175,9 +175,11 @@ export const choose = async <T extends string>({
 			await prompter.readLine(`  ${chalk.dim(`[${defaultIndex + 1}]`)}: `)
 		)?.trim() ?? "";
 	if (answer === "") return defaultValue;
-	const picked =
-		options[Number.parseInt(answer, 10) - 1] ??
-		options.find((option) => option.value === answer || option.flag === answer);
+	const picked = /^\d+$/.test(answer)
+		? options[Number(answer) - 1]
+		: options.find(
+				(option) => option.value === answer || option.flag === answer,
+			);
 	if (picked === undefined)
 		throw new NeedsInputError(`Unknown answer ${JSON.stringify(answer)}`);
 	return picked.value;

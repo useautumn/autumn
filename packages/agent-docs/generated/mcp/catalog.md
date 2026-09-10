@@ -665,15 +665,15 @@ Structure agreed — now finish it. Four moves, in order.
 
 The sweep exists so the user hears what's configurable without being marched through every item. Behind it, check every knob yourself — this list is internal, never show it:
 
-- per plan: base price · trial (length, unit, card — all explicit) · default plan · group · billing controls (guardrails answered → `billingControls(...)` on the plan)
+- per plan: base price · trial (length, unit, card — all explicit) · default plan · group · billing controls (guardrails answered → `billingControls` on the plan)
 - per item: billing method · included · price or tiers (tier behavior explicit) · reset · rollover · pooled (if Shape chose shared balances) · purchase caps · the one-off item auto-recharge needs
 
-Landing a guardrail answer means picking the right control — windowed cap vs overage ceiling vs alert vs allow-past-balance vs auto-recharge are different knobs with different fields. What each one is, the three overage knobs, and the plan→customer inheritance are the `autumn-concepts` skill's billing-controls reference — read it before writing `billingControls(...)`. The flow rules here:
+Landing a guardrail answer means picking the right control — windowed cap vs overage ceiling vs alert vs allow-past-balance vs auto-recharge are different knobs with different fields. What each one is, the three overage knobs, and the plan→customer inheritance are the `autumn-concepts` skill's billing-controls reference — read it before writing `billingControls`. The flow rules here:
 
 - Plan-level controls are defaults every subscriber inherits — the right home for anything true of the whole plan ("free users max 20 emails/day"). Per-customer exceptions are a billing/customer operation, not catalog work.
 - A cap stated alongside an allowance ("1,000 a month but never more than 20 a day") is a usage limit on the plan, not a second item or a smaller allowance.
 - "Track it but don't bill it" / "let them run over, we'll invoice manually" → overage knobs on the plan, not a $0 price.
-- Auto-recharge needs its one-off prepaid item (already on the per-item list) AND the `auto_topups` control.
+- Auto-recharge needs its one-off prepaid item (already on the per-item list) AND the `autoTopups` control.
 
 **4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push` (a preview; nothing is applied until `--yes`), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
 
