@@ -1,11 +1,15 @@
 import {
 	type BillingContext,
+	cusPriceToCusEntWithCusProduct,
 	type FullCusProduct,
+	isConsumablePrice,
+	isFixedPrice,
 	isOneOffPrice,
 	type StripeItemSpec,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { cusPriceToStripeItemSpec } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/cusPriceToStripeItemSpec/cusPriceToStripeItemSpec";
+import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils.js";
 import { customerLicenseToStripeItemSpecs } from "./customerLicenseToStripeItemSpecs";
 
 /**
@@ -28,6 +32,7 @@ export const customerProductToStripeItemSpecs = ({
 } => {
 	const recurringItems: StripeItemSpec[] = [];
 	const oneOffItems: StripeItemSpec[] = [];
+	const invoiceCreditItems = new Set<StripeItemSpec>();
 
 	for (const cusPrice of customerProduct.customer_prices) {
 		const spec = cusPriceToStripeItemSpec({
@@ -39,6 +44,20 @@ export const customerProductToStripeItemSpecs = ({
 		});
 
 		if (!spec) continue;
+		if (isConsumablePrice(cusPrice.price)) {
+			const customerEntitlement = cusPriceToCusEntWithCusProduct({
+				cusProduct: customerProduct,
+				cusPrice,
+				cusEnts: customerProduct.customer_entitlements,
+			});
+			if (
+				isInvoiceCreditFeature({
+					feature: customerEntitlement?.entitlement.feature,
+				})
+			) {
+				invoiceCreditItems.add(spec);
+			}
+		}
 
 		if (isOneOffPrice(cusPrice.price)) {
 			oneOffItems.push(spec);
@@ -58,5 +77,22 @@ export const customerProductToStripeItemSpecs = ({
 		}
 	}
 
-	return { recurringItems, oneOffItems };
+	return {
+		recurringItems: recurringItems.filter((item) => {
+			if (!invoiceCreditItems.has(item)) return true;
+			const creditConfig = item.autumnPrice!.config;
+			// Source debits settle credits; retain the meter only when it supplies the renewal cadence.
+			return !recurringItems.some((candidate) => {
+				const price = candidate.autumnPrice;
+				return (
+					price &&
+					isFixedPrice(price) &&
+					price.config.interval === creditConfig.interval &&
+					(price.config.interval_count ?? 1) ===
+						(creditConfig.interval_count ?? 1)
+				);
+			});
+		}),
+		oneOffItems,
+	};
 };
