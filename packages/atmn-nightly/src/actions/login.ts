@@ -15,7 +15,7 @@ import {
 	type Target,
 	targetBaseUrl,
 } from "../env/resolveTarget";
-import { configSearchDirs } from "./push";
+import { resolveProject } from "../project/resolveProject";
 
 export type Authorize = ({
 	onAuthorizationUrl,
@@ -31,6 +31,7 @@ export type CreateApiKeys = ({
 
 export type LoginOptions = {
 	cwd?: string;
+	configPath?: string;
 	/** Where to write progress. Injected so tests can capture it. */
 	write?: (text: string) => void;
 	openBrowser?: BrowserOpener;
@@ -78,13 +79,14 @@ const keysToEnvValues = ({
  */
 export const runLogin = async ({
 	cwd = process.cwd(),
+	configPath,
 	target,
 	write = (text) => process.stdout.write(text),
 	openBrowser = openSystemBrowser,
 	authorize,
 	createApiKeys,
 }: LoginOptions = {}): Promise<LoginResult> => {
-	const dirs = configSearchDirs({ cwd });
+	const dirs = resolveProject({ cwd, configFlag: configPath }).envDirs;
 	loadEnvFiles({ dirs });
 	// The same target every other command resolves: a local server or a
 	// staging URL authenticates against itself, never against production.

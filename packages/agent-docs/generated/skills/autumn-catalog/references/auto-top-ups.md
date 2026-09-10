@@ -1,0 +1,174 @@
+## Auto Top-Ups
+
+Auto top-ups automatically purchase additional balance for a customer when their usage drops below a configured threshold. This prevents service interruptions for customers who don't want to manually manage their balance.
+
+> **Example** <br />
+> A customer on the Standard plan gets 5,000 credits per month. When their balance drops below 500, Autumn automatically purchases 1,000 more credits at $10 using the plan's one-off prepaid price.
+
+## Prerequisites
+
+Auto top-ups require:
+1. A plan with a [one-off prepaid](/documentation/modelling-pricing/one-off-purchases) item for the feature you want to auto top-up
+2. The customer must have a saved payment method on file
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Auto top-ups are configured per customer, not in `autumn.config.ts`. Your plan needs a one-off prepaid item for the feature you want to auto top-up:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const credits = feature({
+  id: 'credits',
+  name: 'Credits',
+  type: 'metered',
+  consumable: true,
+});
+
+export const standard = plan({
+  id: 'standard',
+  name: 'Standard',
+  price: { amount: 50, interval: 'month' },
+  items: [
+    item({
+      featureId: credits.id,
+      included: 5000,
+      reset: { interval: 'month' },
+    }),
+    item({
+      featureId: credits.id,
+      price: {
+        amount: 10,
+        billingUnits: 1000,
+        interval: 'one_off',
+        billingMethod: 'prepaid',
+      },
+    }),
+  ],
+});
+```
+
+The one-off prepaid item (`$10 per 1,000 credits`) is what Autumn uses to replenish the balance. Configure auto top-ups per customer via the API (see below).
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to the **Plans** page and select (or create) the plan you want to add auto top-ups to
+2. Add a new item for the feature with:
+   - **Interval** set to **One-Off**
+   - **Billing method** set to **Prepaid**
+   - Configure the price and billing units (e.g. $10 per 1,000 credits)
+3. Configure auto top-ups per customer via the API (see below)
+
+The same feature can appear as multiple items on a plan. For example, you might have a monthly allowance of 5,000 credits **and** a one-off prepaid item for top-ups — both referencing the same feature.
+
+</Tab>
+</Tabs>
+
+## Configuring auto top-ups via API
+
+Set up auto top-ups for a customer by updating their billing controls:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    autoTopups: [{
+      featureId: "credits",
+      enabled: true,
+      threshold: 500,
+      quantity: 1000,
+    }],
+  },
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "auto_topups": [{
+            "feature_id": "credits",
+            "enabled": True,
+            "threshold": 500,
+            "quantity": 1000,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "auto_topups": [{
+        "feature_id": "credits",
+        "enabled": true,
+        "threshold": 500,
+        "quantity": 1000
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Auto top-up configuration
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature to monitor |
+| `enabled` | boolean | Whether auto top-up is active |
+| `threshold` | number | Balance level that triggers a top-up |
+| `quantity` | number | How many units to purchase each time |
+| `purchase_limit` | object | Optional limit on how often top-ups can occur |
+
+### Purchase limits
+
+To prevent runaway spending, you can set a purchase limit:
+
+```json
+{
+  "purchase_limit": {
+    "interval": "month",
+    "interval_count": 1,
+    "limit": 5
+  }
+}
+```
+
+This limits the customer to 5 auto top-ups per month. Supported intervals: `hour`, `day`, `week`, `month`.
+
+## How it works
+
+1. After every usage event (via `track`), Autumn checks the customer's remaining balance
+2. If the balance falls below the configured `threshold`, an auto top-up is triggered
+3. Autumn creates an invoice for the configured `quantity` using the one-off prepaid price from the customer's plan
+4. The invoice is charged to the customer's saved payment method
+5. The balance is replenished with the purchased amount
+
+Auto top-ups use burst suppression to prevent duplicate purchases when multiple track events happen in quick succession. There's a 30-second cooldown between top-ups for the same feature.
+
+## Notifications
+
+Subscribe to the [`billing.auto_topup_succeeded`](/api-reference/webhooks/billingAutoTopupSucceeded) webhook to be notified when a top-up grants credits. The payload includes the granted quantity, the new balance, and the underlying invoice — useful for sending receipts, updating internal ledgers, or reconciling balance after a recharge.
+
+Subscribe to [`billing.auto_topup_failed`](/api-reference/webhooks/billingAutoTopupFailed) to monitor auto top-ups that are blocked, declined, or fail before granting balance. The payload includes a machine-readable `reason` and any available provider error details.
+
+Limit-blocked failure webhooks are suppressed per blocking window to avoid duplicate notifications while the same limit remains active.

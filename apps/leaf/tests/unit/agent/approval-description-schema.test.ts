@@ -29,6 +29,8 @@ test("the schema itself tells the agent what to write", () => {
 });
 
 test("the billing playbook carries the billing params", () => {
-	const billingSkill = leafSkills.find((skill) => skill.name === "billing");
+	const billingSkill = leafSkills.find(
+		(skill) => skill.name === "autumn-billing",
+	);
 	expect(billingSkill && skillToText(billingSkill)).toContain("invoice mode");
 });

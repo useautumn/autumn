@@ -1,8 +1,8 @@
 import { Lang, parse } from "@ast-grep/napi";
+import { configPackageName } from "../config/configPackageName";
 
 const NAMED_IMPORT = /^import\s+\{([^}]*)\}\s*from\s*["']([^"']+)["']/;
 const GENERATED_MODULE = /\/generated\/[A-Za-z]+$/;
-const PACKAGE_NAME = "atmn-nightly";
 
 /**
  * A file that gains an inline `plan({...})` must import `plan`. The specifier
@@ -39,9 +39,8 @@ export const ensureBuilderImport = ({
 	);
 	if (imported) return source;
 
-	const packageImport = parsed.find(
-		(entry) => entry.specifier === PACKAGE_NAME,
-	);
+	const packageName = configPackageName();
+	const packageImport = parsed.find((entry) => entry.specifier === packageName);
 	if (packageImport !== undefined) {
 		const text = packageImport.statement.text();
 		const widened = text.replace(/\{\s*/, `{ ${builder}, `);
@@ -58,7 +57,7 @@ export const ensureBuilderImport = ({
 	);
 	const line =
 		generated === undefined
-			? `import { ${builder} } from "${PACKAGE_NAME}";\n`
+			? `import { ${builder} } from "${packageName}";\n`
 			: `import { ${builder} } from "${generated.specifier.replace(GENERATED_MODULE, `/generated/${collection}`)}";\n`;
 	const anchor = generated?.statement ?? statements[0];
 	const at = anchor === undefined ? 0 : anchor.range().end.index + 1;

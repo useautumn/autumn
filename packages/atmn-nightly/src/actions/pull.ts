@@ -5,6 +5,7 @@ import { loadEnvFiles } from "../env/loadEnv";
 import type { AutumnClient } from "../generated/client";
 import { COLLECTIONS, SINGLETONS } from "../generated/emit";
 import { splitWire } from "../generated/wire";
+import { resolveProject } from "../project/resolveProject";
 import type { SettingsPreview } from "../render/renderPreview";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { applySettingsPreview } from "./pull/applySettingsPreview";
@@ -26,6 +27,8 @@ export type PullResult = {
 export type PullOptions = {
 	client: AutumnClient;
 	cwd?: string;
+	/** `-c`: the config file or its folder; found from cwd or the root marker otherwise. */
+	configPath?: string;
 	/** Keep processor mappings (Stripe product/meter ids) in pulled fixtures. */
 	includeMappings?: boolean;
 	/** Where to write progress. Injected so tests can capture it. */
@@ -38,21 +41,31 @@ export type PullOptions = {
 const loadOrScaffold = async ({
 	dirs,
 	cwd,
+	configPath,
 	imports,
 	write,
 }: {
 	dirs: string[];
 	cwd: string;
+	/** `-c`: an exact file; scaffolded there when missing. */
+	configPath?: string;
 	imports: ConfigImports | undefined;
 	write: (text: string) => void;
 }) => {
 	try {
-		return await loadConfig({ dirs });
+		return await loadConfig({
+			dirs,
+			...(configPath === undefined ? {} : { configPath }),
+		});
 	} catch (error) {
 		if (!(error instanceof ConfigNotFoundError)) throw error;
-		const configPath = scaffoldConfig({ directory: cwd, imports });
-		write(`Scaffolded ${configPath}\n`);
-		return loadConfig({ dirs: [cwd] });
+		const scaffolded = scaffoldConfig({
+			directory: cwd,
+			...(configPath === undefined ? {} : { configPath }),
+			imports,
+		});
+		write(`Scaffolded ${scaffolded}\n`);
+		return loadConfig({ dirs: [cwd], configPath: scaffolded });
 	}
 };
 
@@ -117,16 +130,21 @@ const withVariantIdentity = (
 export const runPull = async ({
 	client,
 	cwd = process.cwd(),
+	configPath: configFlag,
 	includeMappings = false,
 	write = (text) => process.stdout.write(text),
 	imports,
 }: PullOptions): Promise<PullResult> => {
-	const dirs = configSearchDirs({ cwd });
-	loadEnvFiles({ dirs });
+	const project = resolveProject({ cwd, configFlag });
+	const dirs = configSearchDirs({ cwd, configPath: configFlag });
+	loadEnvFiles({ dirs: project.envDirs });
 
 	const { path: configPath, wire: document } = await loadOrScaffold({
 		dirs,
-		cwd,
+		cwd: project.configDir,
+		...(project.source === "flag" && project.configPath !== null
+			? { configPath: project.configPath }
+			: {}),
 		imports,
 		write,
 	});

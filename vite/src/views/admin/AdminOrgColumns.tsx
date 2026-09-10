@@ -1,7 +1,11 @@
-import { Badge, Button, MiniCopyButton } from "@autumn/ui";
+import type { OrgClaimState } from "@autumn/shared";
+import { Button, MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { User } from "better-auth";
 import { format } from "date-fns";
+import { AdminOrgNameCell } from "./components/AdminOrgNameCell";
+import { AdminOrgStatusCell } from "./components/AdminOrgStatusCell";
+import { AdminOrgUsersCell } from "./components/AdminOrgUsersCell";
 import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminOrg = {
@@ -9,6 +13,7 @@ export type AdminOrg = {
 	name: string;
 	slug: string;
 	createdAt: string;
+	claim_state: OrgClaimState | null;
 	users: User[];
 	requestBlockSummary: {
 		blockAll: boolean;
@@ -20,6 +25,9 @@ export type AdminOrg = {
 	} | null;
 };
 
+// AdminOrgNameCell renders the whole mobile card, so nothing else joins it.
+const hiddenOnMobile = { mobileCard: "hidden" as const };
+
 export const createAdminOrgColumns = ({
 	onManageRequestBlocks,
 	onManageRedis,
@@ -28,135 +36,88 @@ export const createAdminOrgColumns = ({
 	onManageRedis: (org: AdminOrg) => void;
 }): ColumnDef<AdminOrg, unknown>[] => [
 	{
-		id: "id",
-		header: "ID",
-		accessorKey: "id",
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const value = row.getValue("id") as string;
-			return (
-				<div className="font-mono justify-start flex w-full group">
-					<MiniCopyButton text={value} />
-				</div>
-			);
-		},
-	},
-	{
 		id: "name",
 		header: "Name",
 		accessorKey: "name",
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const value = row.getValue("name") as string;
-			return <div className="font-medium text-foreground">{value}</div>;
-		},
-	},
-	{
-		id: "slug",
-		header: "Slug",
-		accessorKey: "slug",
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const value = row.getValue("slug") as string;
-			return (
-				<div className="truncate">
-					<MiniCopyButton text={value} />
-				</div>
-			);
-		},
-	},
-	{
-		id: "createdAt",
-		header: "Created At",
-		accessorKey: "createdAt",
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const value = row.getValue("createdAt") as string;
-			return (
-				<div className="text-xs text-subtle whitespace-nowrap">
-					{format(new Date(value), "dd MMM HH:mm")}
-				</div>
-			);
-		},
+		size: 200,
+		cell: ({ row }: { row: Row<AdminOrg> }) => (
+			<AdminOrgNameCell org={row.original} />
+		),
 	},
 	{
 		id: "users",
 		header: "Users",
 		accessorKey: "users",
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const users = row.getValue("users") as User[];
-			return (
-				<div className="text-xs text-tertiary-foreground truncate">
-					{users.map((user) => user.email).join(", ")}
-				</div>
-			);
-		},
+		size: 300,
+		meta: hiddenOnMobile,
+		cell: ({ row }: { row: Row<AdminOrg> }) => (
+			<AdminOrgUsersCell users={row.original.users} />
+		),
 	},
 	{
-		id: "requestBlock",
-		header: "Request blocks",
-		accessorKey: "requestBlockSummary",
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const summary = row.original.requestBlockSummary;
-
-			if (summary.blockAll) {
-				return (
-					<Badge className="bg-red-50 text-red-700 border-red-200">
-						Blocked
-					</Badge>
-				);
-			}
-
-			if (summary.ruleCount > 0) {
-				return (
-					<Badge className="bg-amber-50 text-amber-700 border-amber-200">
-						{summary.ruleCount} rule{summary.ruleCount === 1 ? "" : "s"}
-					</Badge>
-				);
-			}
-
-			return <Badge variant="muted">Open</Badge>;
-		},
+		id: "status",
+		header: "Status",
+		size: 120,
+		enableSorting: false,
+		meta: hiddenOnMobile,
+		cell: ({ row }: { row: Row<AdminOrg> }) => (
+			<AdminOrgStatusCell org={row.original} />
+		),
 	},
 	{
-		id: "redisConfig",
-		header: "Redis",
-		accessorKey: "redis_config",
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const cfg = row.original.redis_config;
-			if (!cfg) return <Badge variant="muted">Shared V2</Badge>;
-			if (cfg.migrationPercent === 0) {
-				return (
-					<Badge className="bg-amber-50 text-amber-700 border-amber-200">
-						Configured (0%)
-					</Badge>
-				);
-			}
-			if (cfg.migrationPercent === 100) {
-				return (
-					<Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-						100% routed
-					</Badge>
-				);
-			}
-			return (
-				<Badge className="bg-blue-50 text-blue-700 border-blue-200">
-					{cfg.migrationPercent}% routed
-				</Badge>
-			);
-		},
+		id: "slug",
+		header: "Slug",
+		accessorKey: "slug",
+		size: 150,
+		meta: hiddenOnMobile,
+		cell: ({ row }: { row: Row<AdminOrg> }) => (
+			<MiniCopyButton text={row.original.slug} innerClassName="text-xs" />
+		),
 	},
 	{
-		id: "impersonate",
+		id: "createdAt",
+		header: "Created",
+		accessorKey: "createdAt",
+		size: 92,
+		meta: hiddenOnMobile,
+		cell: ({ row }: { row: Row<AdminOrg> }) => (
+			<span className="whitespace-nowrap text-subtle text-xs">
+				{format(new Date(row.original.createdAt), "dd MMM HH:mm")}
+			</span>
+		),
+	},
+	{
+		id: "id",
+		header: "ID",
+		accessorKey: "id",
+		size: 140,
+		meta: hiddenOnMobile,
+		cell: ({ row }: { row: Row<AdminOrg> }) => (
+			<div className="group flex w-full font-mono">
+				<MiniCopyButton text={row.original.id} innerClassName="text-xs" />
+			</div>
+		),
+	},
+	{
+		// Deliberately not `actions`: that id makes mobile cards pin the buttons
+		// into the card header, squeezing out the org name.
+		id: "orgActions",
 		header: "Actions",
+		size: 200,
 		enableSorting: false,
 		enableHiding: false,
+		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const users = row.original.users;
-			const firstNonAdminUser = users.find((user) => user.role !== "admin");
+			const firstNonAdminUser = row.original.users.find(
+				(user) => user.role !== "admin",
+			);
 
 			// Org-level admin actions (Block, Redis) must remain reachable even when
 			// the org has only admin users — gating them on `firstNonAdminUser`
 			// would silently hide them. Only `ImpersonateButton` requires a
 			// non-admin user to target.
 			return (
-				<div onClick={(e) => e.stopPropagation()} className="flex gap-2">
+				<div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
 					<Button
 						variant="secondary"
 						size="sm"

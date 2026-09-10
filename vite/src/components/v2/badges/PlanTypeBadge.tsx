@@ -9,7 +9,7 @@ import { DefaultIcon } from "@/components/v2/icons/AutumnIcons";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-	"inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-sm text-tertiary-foreground font-medium w-fit shrink-0 bg-muted",
+	"inline-flex items-center gap-1 rounded-[6px] text-tertiary-foreground font-medium w-fit shrink-0 bg-muted",
 	{
 		variants: {
 			variant: {
@@ -18,9 +18,14 @@ const badgeVariants = cva(
 				addon: "bg-muted",
 				autoTrial: "bg-muted",
 			},
+			size: {
+				default: "px-1.5 py-0.5 text-sm",
+				sm: "px-1 py-0 text-tiny gap-0.5",
+			},
 		},
 		defaultVariants: {
 			variant: "default",
+			size: "default",
 		},
 	},
 );
@@ -33,28 +38,36 @@ interface PlanTypeBadgeProps extends VariantProps<typeof badgeVariants> {
 
 export const PlanTypeBadge = ({
 	variant,
+	size,
 	className,
 	iconOnly,
 	noIcon,
 }: PlanTypeBadgeProps) => {
+	const isSmall = size === "sm";
+	const iconSize = isSmall ? 11 : 14;
+
 	const getIcon = () => {
 		switch (variant) {
 			case "default":
 				return (
 					<RadioButtonIcon
-						size={14}
+						size={iconSize}
 						className="text-subtle mt-0.25"
 						weight="fill"
 					/>
 				);
 			case "freeTrial":
 				return (
-					<ClockIcon size={13} className="text-subtle mt-0.25" weight="fill" />
+					<ClockIcon
+						size={iconSize - 1}
+						className="text-subtle mt-0.25"
+						weight="fill"
+					/>
 				);
 			case "addon":
 				return (
 					<PlusCircleIcon
-						size={13}
+						size={iconSize - 1}
 						className="text-subtle mt-0.25"
 						weight="fill"
 					/>
@@ -63,19 +76,19 @@ export const PlanTypeBadge = ({
 				return (
 					<>
 						<RadioButtonIcon
-							size={14}
+							size={iconSize}
 							className="text-subtle mt-0.25"
 							weight="fill"
 						/>
 						<ClockIcon
-							size={13}
+							size={iconSize - 1}
 							className="text-subtle mt-0.25"
 							weight="fill"
 						/>
 					</>
 				);
 			default:
-				return <DefaultIcon size={14} color="#666666" hideTitle />;
+				return <DefaultIcon size={iconSize} color="#666666" hideTitle />;
 		}
 	};
 
@@ -111,7 +124,11 @@ export const PlanTypeBadge = ({
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<div
-					className={cn(badgeVariants({ variant }), className, "select-none")}
+					className={cn(
+						badgeVariants({ variant, size }),
+						className,
+						"select-none",
+					)}
 				>
 					{!noIcon && getIcon()}
 					{!iconOnly && <span>{getLabel()}</span>}

@@ -1,4 +1,17 @@
-import { Button, Skeleton } from "@autumn/ui";
+import {
+	Button,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuPortal,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+	Skeleton,
+} from "@autumn/ui";
 import {
 	ChevronDown,
 	Monitor,
@@ -11,18 +24,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuPortal,
-	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg, useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import {
@@ -73,7 +74,9 @@ export const OrgDropdown = () => {
 	if (!org || error) return null;
 
 	return (
-		<div className={cn("flex", expanded ? "px-3" : "px-2")}>
+		// px-2 in both states so the logo keeps the nav rows' inset instead of
+		// stepping inwards when the sidebar expands.
+		<div className="flex px-2">
 			<CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -89,17 +92,19 @@ export const OrgDropdown = () => {
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"bg-transparent! gap-2 rounded-md items-center transition-all duration-200 cursor-pointer",
-								expanded
-									? "h-7 min-w-28 p-0.5 justify-start shimmer-hover"
-									: "h-7 w-full px-2 justify-center hover:bg-transparent",
+								// Always left-aligned: centring when collapsed made the logo
+								// slide across as the name shrank to zero width.
+								// px-2 + gap-2 mirrors NavButton exactly, so the logo shares the
+								// nav icons' vertical line.
+								"bg-transparent! h-7 w-full gap-2 rounded-md items-center justify-start px-2 cursor-pointer",
+								expanded ? "shimmer-hover" : "hover:bg-transparent",
 							)}
 							variant="skeleton"
 						>
 							<OrgLogo org={org} />
 							<div
 								className={cn(
-									"flex items-center gap-1 transition-all duration-200",
+									"flex items-center gap-1 transition-[opacity,transform] duration-200",
 									expanded
 										? "opacity-100 translate-x-0"
 										: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",

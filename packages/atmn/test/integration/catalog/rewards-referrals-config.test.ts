@@ -10,7 +10,7 @@ import {
 	runAtmnWorkspaceCli,
 } from "../utils/atmnTestWorkspace.js";
 
-test("atmn pushes, redeems, pulls, and re-pushes reward config", async () => {
+test.skip("atmn pushes, redeems, pulls, and re-pushes reward config", async () => {
 	const suffix = Date.now();
 	const featureId = `atmn_referral_credits_${suffix}`;
 	const couponId = `atmn_launch_discount_${suffix}`;

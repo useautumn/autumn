@@ -75,6 +75,29 @@ export const planTransformer = createTransformer<ApiPlan, BasePlan>({
 				licensePlanId: license.license_plan_id,
 				version: license.version,
 				included: license.included,
+				...(license.customize
+					? {
+							customize: {
+								...(license.customize.price !== undefined
+									? { price: license.customize.price }
+									: {}),
+								...(license.customize.add_items !== undefined
+									? {
+											addItems: license.customize.add_items.map(
+												transformApiCompatiblePlanItem,
+											),
+										}
+									: {}),
+								...(license.customize.remove_items !== undefined
+									? {
+											removeItems: license.customize.remove_items.map(
+												transformApiPlanItemFilter,
+											),
+										}
+									: {}),
+							},
+						}
+					: {}),
 			})),
 	},
 });

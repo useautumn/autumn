@@ -83,7 +83,7 @@ export const listCustomersContract = oc
 		operationId: "listCustomers",
 		tags: ["customers"],
 		description:
-			"Lists customers with cursor pagination and optional filters. Pass `start_cursor: \"\"` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.",
+			'Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.',
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "list",

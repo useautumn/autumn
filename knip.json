@@ -96,6 +96,18 @@
 			"entry": ["**/*.test.ts", "scripts/**/*.ts"],
 			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		},
+		"packages/ax-evals": {
+			"entry": [
+				"cases/**/*.eval.ts",
+				"tests/**/*.test.ts",
+				"src/grading/inspectWorkspaceConfigScript.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"cases/**/*.ts",
+				"tests/**/*.ts"
+			]
+		},
 		"packages/gateway": {
 			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]

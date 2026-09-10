@@ -165,7 +165,10 @@ const MainContent = ({
 							"w-full h-full overflow-auto flex justify-center bg-background relative",
 						)}
 					>
-						<div className="w-full h-full justify-center">
+						{/* min-h-full, not h-full: content taller than the viewport (zoomed
+						    in, or a long page) must extend the scroll area rather than be
+						    clipped inside a fixed-height child. */}
+						<div className="w-full min-h-full justify-center">
 							{showLoading ? (
 								<LoadingScreen />
 							) : (

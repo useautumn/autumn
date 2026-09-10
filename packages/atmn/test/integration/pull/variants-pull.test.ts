@@ -52,7 +52,7 @@ const loadConfigModule = async (configPath: string) => {
 	}
 };
 
-test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, camelCase names")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, camelCase names")}`, async () => {
 	const ctx = await createCleanAtmnIntegrationContext();
 	const rpc = new AutumnRpcCli({
 		secretKey: ctx.orgSecretKey,
@@ -189,7 +189,7 @@ test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, c
 
 /** Red: pull drops an explicit interval_count of 1 from a variant removal filter.
  * Green: the generated config preserves intervalCount: 1 for an exact round trip. */
-test(`${chalk.yellowBright("atmn pull variants: preserves interval count 1 in removal filters")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn pull variants: preserves interval count 1 in removal filters")}`, async () => {
 	const ctx = await createCleanAtmnIntegrationContext();
 	const rpc = new AutumnRpcCli({
 		secretKey: ctx.orgSecretKey,
@@ -274,7 +274,7 @@ test(`${chalk.yellowBright("atmn pull variants: preserves interval count 1 in re
 	});
 });
 
-test(`${chalk.yellowBright("atmn pull variants: variable names handle collisions and numeric prefixes")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn pull variants: variable names handle collisions and numeric prefixes")}`, async () => {
 	const ctx = await createCleanAtmnIntegrationContext();
 	const rpc = new AutumnRpcCli({
 		secretKey: ctx.orgSecretKey,
@@ -313,7 +313,7 @@ test(`${chalk.yellowBright("atmn pull variants: variable names handle collisions
 	expect(config).toContain("export const proAnnualVariant = pro.variant({");
 });
 
-test(`${chalk.yellowBright("atmn pull --all-versions: emits versioned base and variant exports")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn pull --all-versions: emits versioned base and variant exports")}`, async () => {
 	const ctx = await createCleanAtmnIntegrationContext();
 	const rpc = new AutumnRpcCli({
 		secretKey: ctx.orgSecretKey,

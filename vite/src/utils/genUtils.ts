@@ -6,6 +6,7 @@ import {
 	sandboxBasePath,
 	stripSandboxPrefix,
 } from "@/hooks/sandbox/sandboxUrl";
+import { readDismissed } from "@/views/onboarding/hooks/onboardingSnapshot";
 
 const compareStatus = (statusA: string, statusB: string) => {
 	const statusOrder = ["scheduled", "active", "past_due", "expired"];
@@ -52,10 +53,18 @@ export const getEnvFromPath = (path: string) => {
 	return AppEnv.Live;
 };
 
+/**
+ * Where "/" lands. An org that hasn't gone to production is still setting up,
+ * so onboarding is the more useful home — unless they've dismissed it, which
+ * says they'd rather get on with the dashboard.
+ */
 export const getDefaultOrgPath = (
 	org?: { deployed?: boolean } | null,
 	path = "/products?tab=products",
-) => (org?.deployed ? path : `/sandbox${path}`);
+) => {
+	if (org?.deployed) return path;
+	return readDismissed() ? `/sandbox${path}` : "/sandbox/onboarding";
+};
 
 export const getSafeNextPath = (searchParams: URLSearchParams) => {
 	const next = searchParams.get("next");

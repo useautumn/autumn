@@ -80,6 +80,10 @@ export type DeleteSandboxParams = {
 /** The ID of the sandbox to delete. */
 id: string;
 };
+export type CreateSandboxKeyParams = {
+/** The ID of the sandbox to mint a key for. */
+id: string;
+};
 export type ResetSandboxParams = {
 
 };
@@ -26435,6 +26439,16 @@ export type DeleteSandboxResponse = {
 /** Always true when the sandbox was deleted. */
 success: true;
 };
+export type CreateSandboxKeyResponse = {
+/** The sandbox's organization ID. */
+id: string;
+/** The sandbox's name. */
+name: string;
+/** The sandbox's slug, derived from its name. */
+slug: string;
+/** A new secret key for the sandbox, carrying the calling key's scopes. Shown once, here. */
+secretKey: string;
+};
 export type ResetSandboxResponse = {
 /** Always true when the sandbox was reset. */
 success: true;
@@ -26450,6 +26464,11 @@ const LISTSANDBOXES_REQUEST_HINTS = hintsOf({
 	renamedPaths: {},
 });
 const DELETESANDBOX_REQUEST_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const CREATESANDBOXKEY_REQUEST_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
 	renamedPaths: {},
@@ -26495,6 +26514,11 @@ const LISTSANDBOXES_RESPONSE_HINTS = hintsOf({
 	renamedPaths: {},
 });
 const DELETESANDBOX_RESPONSE_HINTS = hintsOf({
+	recordPaths: [],
+	frozenPaths: [],
+	renamedPaths: {},
+});
+const CREATESANDBOXKEY_RESPONSE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
 	renamedPaths: {},
@@ -26570,6 +26594,14 @@ export const createClient = (options: ClientOptions) => ({
 			path: "",
 			hints: DELETESANDBOX_RESPONSE_HINTS,
 		}) as DeleteSandboxResponse,
+	createSandboxKey: async (
+		body: CreateSandboxKeyParams,
+	): Promise<CreateSandboxKeyResponse> =>
+		toFixture({
+			value: await post({ options, path: "/v1/sandboxes.create_key", body: toWire({ value: body, path: "", hints: CREATESANDBOXKEY_REQUEST_HINTS }) }),
+			path: "",
+			hints: CREATESANDBOXKEY_RESPONSE_HINTS,
+		}) as CreateSandboxKeyResponse,
 	resetSandbox: async (
 		body: ResetSandboxParams,
 	): Promise<ResetSandboxResponse> =>

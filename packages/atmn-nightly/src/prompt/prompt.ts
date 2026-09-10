@@ -1,0 +1,186 @@
+import chalk from "chalk";
+
+/** Where a command writes its lines. Injected so tests can capture it. */
+export type WriteLine = (text: string) => void;
+
+/**
+ * Every prompt has a flag. In a terminal the question is asked inline; with
+ * `--headless`, or no TTY, the same line is printed as a hint and the command
+ * stops there, so an agent reads what to pass and runs again.
+ */
+export type Prompter = {
+	interactive: boolean;
+	write: WriteLine;
+	/** Reads one answer, showing `prompt` at the cursor; injected for tests. */
+	readLine: (prompt: string) => Promise<string | null>;
+};
+
+export const done = (text: string): string => `${chalk.green("✓")} ${text}`;
+export const needs = (text: string): string => `${chalk.cyan("→")} ${text}`;
+export const soft = (text: string): string => `${chalk.yellow("!")} ${text}`;
+export const same = (text: string): string => `${chalk.dim("=")} ${text}`;
+export const hint = (text: string): string => `  ${chalk.cyan(text)}`;
+
+/** Thrown when a headless run stops at a prompt; the CLI exits 0 on it. */
+export class NeedsInputError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "NeedsInputError";
+	}
+}
+
+/**
+ * A fresh readline per question loses keys typed before it opened; one
+ * interface per process keeps them. Readline owns the prompt text: it redraws
+ * the line on every keystroke, so anything written beside it would vanish.
+ */
+export const defaultReadLine = (() => {
+	let rl: import("node:readline").Interface | undefined;
+	return async (prompt: string): Promise<string | null> => {
+		if (rl === undefined) {
+			const { createInterface } = await import("node:readline");
+			rl = createInterface({ input: process.stdin, output: process.stdout });
+		}
+		const active = rl;
+		return new Promise((resolve) => {
+			const onClose = () => resolve(null);
+			active.once("close", onClose);
+			active.question(prompt, (answer) => {
+				active.off("close", onClose);
+				resolve(answer);
+			});
+		});
+	};
+})();
+
+/** Nothing else reads stdin after the last question; without this the process waits on it. */
+export const releaseStdin = (): void => {
+	process.stdin.pause();
+};
+
+export const createPrompter = ({
+	interactive,
+	write = (text) => process.stdout.write(text),
+	readLine = defaultReadLine,
+}: {
+	interactive: boolean;
+	write?: WriteLine;
+	readLine?: (prompt: string) => Promise<string | null>;
+}): Prompter => ({ interactive, write, readLine });
+
+/**
+ * A value the command needs. Given → returned as is. Absent and interactive →
+ * asked, the flag's example as the placeholder. Absent and headless → the
+ * `→` line and the flag hint are printed and the run stops.
+ */
+export const ask = async ({
+	prompter,
+	value,
+	question,
+	flag,
+	example,
+	defaultValue,
+}: {
+	prompter: Prompter;
+	value: string | undefined;
+	question: string;
+	/** `--path <dir>`: what a headless caller passes. */
+	flag: string;
+	example?: string;
+	/** Enter with nothing typed picks this; headless never assumes it. */
+	defaultValue?: string;
+}): Promise<string> => {
+	if (value !== undefined && value !== "") return value;
+	const flagHint = `Provide ${flag}${example === undefined ? "" : `, e.g. ${example}`}`;
+	if (!prompter.interactive) {
+		prompter.write(`${needs(question)}\n${hint(flagHint)}\n`);
+		throw new NeedsInputError(flagHint);
+	}
+	const placeholder =
+		defaultValue !== undefined
+			? chalk.dim(` (${defaultValue})`)
+			: example !== undefined
+				? chalk.dim(` (e.g. ${example})`)
+				: "";
+	const answer =
+		(await prompter.readLine(`${needs(question)}${placeholder} `))?.trim() ??
+		"";
+	if (answer !== "") return answer;
+	if (defaultValue !== undefined) return defaultValue;
+	throw new NeedsInputError(flagHint);
+};
+
+/** A yes/no. Headless prints the hint for the flag that says yes and stops. */
+export const confirm = async ({
+	prompter,
+	value,
+	question,
+	flag,
+}: {
+	prompter: Prompter;
+	value: boolean | undefined;
+	question: string;
+	flag: string;
+}): Promise<boolean> => {
+	if (value !== undefined) return value;
+	if (!prompter.interactive) {
+		prompter.write(`${needs(question)}\n${hint(`Pass ${flag} to continue`)}\n`);
+		throw new NeedsInputError(`Pass ${flag} to continue`);
+	}
+	const answer =
+		(await prompter.readLine(`${needs(question)} ${chalk.dim("[Y/n]")} `))
+			?.trim()
+			.toLowerCase() ?? "";
+	return answer === "" || answer === "y" || answer === "yes";
+};
+
+/**
+ * One question, a short list of flags as answers. Headless prints the
+ * question and one line per flag; interactive numbers them and reads a pick.
+ */
+export const choose = async <T extends string>({
+	prompter,
+	value,
+	question,
+	options,
+	defaultValue,
+}: {
+	prompter: Prompter;
+	/** The option already picked by flag, when one was. */
+	value: T | undefined;
+	question: string;
+	options: readonly { value: T; flag: string; label: string }[];
+	defaultValue: T;
+}): Promise<T> => {
+	if (value !== undefined) return value;
+	const width = Math.max(...options.map((option) => option.flag.length));
+	if (!prompter.interactive) {
+		prompter.write(
+			`${needs(question)}\n${options
+				.map((option) => hint(`${option.flag.padEnd(width)}  ${option.label}`))
+				.join("\n")}\n`,
+		);
+		throw new NeedsInputError(
+			`Pass ${options.map((option) => option.flag).join(" or ")}`,
+		);
+	}
+	const defaultIndex = options.findIndex(
+		(option) => option.value === defaultValue,
+	);
+	prompter.write(`${needs(question)}\n`);
+	for (const [index, option] of options.entries())
+		prompter.write(`  ${index + 1}) ${option.label}\n`);
+	const answer =
+		(
+			await prompter.readLine(`  ${chalk.dim(`[${defaultIndex + 1}]`)}: `)
+		)?.trim() ?? "";
+	if (answer === "") return defaultValue;
+	const picked = /^\d+$/.test(answer)
+		? options[Number(answer) - 1]
+		: options.find(
+				(option) => option.value === answer || option.flag === answer,
+			);
+	if (picked === undefined)
+		throw new NeedsInputError(`Unknown answer ${JSON.stringify(answer)}`);
+	return picked.value;
+};

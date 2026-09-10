@@ -60,6 +60,11 @@ export const renderEnv = ({
 			}),
 		]);
 	}
+	if (info.claim_state === "pending")
+		rows.push([
+			"Owner",
+			`${chalk.yellow("unclaimed")} ${chalk.dim("(link with atmn login --claim <email>)")}`,
+		]);
 	if (info.user?.email !== undefined)
 		rows.push(["User", stripTerminalControls(info.user.email)]);
 	rows.push(["Key", secretKeyName]);

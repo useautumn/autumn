@@ -15,22 +15,31 @@ Organization
 Configuration model:
 Feature
 - referenced by -> Plan Item
+- credit_system type: maps actions to credit costs (flat or tiered)
 
 Plan
 - items[] -> Plan Item
   - feature_id -> Feature
   - optional price -> usage_based or prepaid feature price
 - price -> base recurring or one-off price
+- versions[] -> parallel definitions of this plan; ONE is active
+- variants[] -> Plan (a derived plan storing only its differences)
+- licenses[] -> Plan (a seat plan this plan hands out per seat)
+- aliases -> old plan ids that still resolve after a rename
 
 Plan Item
 - feature_id -> Feature
 - optional price -> usage_based or prepaid feature price
+- pooled? -> entity grants combine into one shared customer balance
 
 Runtime model:
 Customer
-- subscriptions[] -> Subscription -> Plan
+- subscriptions[] -> Subscription -> Plan (a specific version of it)
 - purchases[] -> Purchase -> Plan
 - balances[feature_id] -> Balance -> Feature
+  - pooled balance: fed by entity grants, spent by any entity
+  - rollover, expiry, usage windows live here
+- license pools[license] -> seats granted / assigned / remaining
 - flags[feature_id] -> Flag -> Feature
 - billing_controls -> customer-level usage controls
 - entities[] -> Entity -> same runtime shape scoped under Customer
@@ -41,13 +50,20 @@ Entity
 - purchases[] -> Purchase -> Plan
 - balances[feature_id] -> Balance -> Feature
 - flags[feature_id] -> Flag -> Feature
-- billing_controls -> entity-level controls where supported
+- license assignment -> holds one seat from the customer's pool
 
 From config to customer state:
 Plan + Customer --billing.attach--> Subscription or Purchase
 Plan + Customer + entity_id --billing.attach--> Entity-scoped Subscription or Purchase
+Parent plan's licenses --licenses.attach--> seat assigned to an Entity
 Subscription/Purchase -> Balance or Flag provisioning
 ```
+
+Two relationships changed recently — worth stating plainly because older docs describe the old way:
+
+**Versions are groups of customers, not history.** A plan's versions used to be numbered steps in time, and the newest was always live. Now each version is a definition that some group of customers lives on, and one version is marked **active** — the one new customers get. You promote a version to active deliberately, when it's ready. Why it works this way: change a plan for *everyone* (say, add a feature to all versions) and that's an edit, not a new version. Change the terms so existing customers keep the old deal (say, raise the base price) and that's a new version — the old customers stay on theirs. Non-active versions are also how you stage plans during a migration from another billing setup.
+
+**Plans connect to other plans.** A plan can have variants (an annual twin storing only its differences), and it can offer licenses (a small seat plan it hands out per seat). So plans form a graph, not a flat list.
 
 Use these definitions as the mental model when designing or changing Autumn
 pricing. Reason in terms of features, plans, plan items, customers/entities, and
@@ -88,6 +104,9 @@ Load the matching definition when reasoning about that object.
 <credit-systems>
 
 - Classic `credit_system`: one shared balance for several metered features; `credit_schema` maps each `metered_feature_id` to a `credit_cost`. Track via the underlying `feature_id`.
+- A schema entry's cost can be flat (`credit_cost`) or a graduated rate card: `tier_behavior: "graduated"` with tiers, so an action costs fewer credits at higher volume. Useful for enterprise credit deals.
+- `invoice_credit`: credits that appear as line items on the invoice; requires a price of exactly one currency unit per credit. Activation is currently gated — confirm before promising it.
+- Direct balances always drain before credit-system balances, whatever their intervals.
 - `ai_credit_system`: a monetary balance (units = dollars) for AI/LLM token usage; no `credit_schema`. Cost = Models.dev model pricing + markup.
   - Markups, low to high priority: `default_markup` (global %), `provider_markups` (keyed by the model id's provider prefix), `model_markups` (per model). No markup = Models.dev base cost; `-100` = free (recorded, not deducted).
   - Model ids are `provider/model` (e.g. `anthropic/claude-opus-4-5`, `openrouter/anthropic/...`, `custom/...`). Standard models auto-price from Models.dev; `custom/...` models must set `input_cost`/`output_cost` ($/M tokens) and bill input/output only.
@@ -133,6 +152,7 @@ Load the matching definition when reasoning about that object.
 - `Subscription -> Plan`: recurring or free plan attached to a customer or entity.
 - `Purchase -> Plan`: one-off plan attached to a customer or entity.
 - `Customer/Entity + Plan --billing.attach--> Subscription/Purchase`: attach turns plan configuration into customer state.
+- Plans also connect to plans, both edges built on customize: a **variant** is a derived plan storing its diff from a base; a **license** is a parent's link to a child plan it hands out per seat, optionally customized per parent. See the variants section below and the Licenses concept.
 
 </relationships>
 
@@ -166,6 +186,17 @@ Load the matching definition when reasoning about that object.
 
 </default-behavior>
 
+<versions>
+
+- A plan's versions are parallel definitions that different groups of customers live on — not a timeline. One version is marked **active**; that's what new customers get.
+- Versions used to be numbered steps where the newest was automatically live. That changed: now you create a version and **promote** it to active when it's ready.
+- When is a change a new version? If it applies to everyone (adding a feature to all versions), it's an edit, not a version. If existing customers should keep their old terms (a base price increase with grandfathering), it's a new version — old customers stay on theirs.
+- Non-active versions have a second use: staging plans during a migration from another billing setup, holding those customer groups before cutover.
+- Each version has a `version_slug` (a user-facing name); renaming a slug does not create a new version.
+- A plan can also have **aliases**: after a plan id rename, the old id still resolves to the plan.
+
+</versions>
+
 <variants>
 
 - Variants group related plans under one base definition and store each variant's diff as `variant_details.customize`.
@@ -173,6 +204,7 @@ Load the matching definition when reasoning about that object.
 - In `catalog.preview_update` / `catalog.update`, define or customize variants under the base plan's `plans[n].variants`.
 - Updating a base plan can propagate its diff to selected variants through the catalog update flow.
 - Common variant uses: billing intervals, A/B price packages, and volume ladders.
+- A variant's stored diff can change the price, add or remove items, and change the trial — it cannot replace the whole item list, and a variant cannot be the default plan or have variants of its own.
 
 Annual interval variant:
 
@@ -385,15 +417,22 @@ Metered volume variant:
   { "feature_id": "storage_gb", "included": 100, "reset": null, "price": { "amount": 0.05, "interval": "month", "billing_units": 1, "billing_method": "usage_based" } }
   ```
   Use when persistent usage is measured through the cycle and invoiced in arrears.
+- Pooled entity grant:
+  ```json
+  { "feature_id": "AI_CREDITS", "included": 10000, "reset": { "interval": "month" }, "pooled": true, "price": null }
+  ```
+  On a plan attached per entity (workspace, project): each entity's 10k joins one shared customer balance that any entity — or the customer directly — can spend. Without `pooled`, each entity keeps its own separate balance.
 
 ## Advanced
 
-- `rollover`: for consumable features with reset intervals; unused balance can carry forward subject to cap and expiry rules.
+- `rollover`: for consumable features with reset intervals; unused balance can carry forward subject to cap (absolute `max` or `max_percentage` of the grant) and expiry rules. Rollovers remember the originally granted amount, not just what's left.
 - For paid consumable items, `price.interval` determines both the billing cycle and the reset cycle.
 - `proration`: mainly relevant to prepaid quantity changes, especially non-consumable or seat-like items.
 - `max_purchase`: less common cap on purchasable units; customer billing controls are often used for spend or purchase limits.
-- `entity_feature_id`: legacy/deprecated per-entity balance scoping; prefer entity-scoped plan attachments.
+- `pooled`: on entity-attached plans, the item's grant joins one shared customer balance instead of a per-entity one (`pooled: true` on the item, in config and API alike). Rollovers on the contributing item carry into the pool. Customer-level purchases (credit packs, overage — often an add-on plan) stack beside the pool and are spendable by all entities. A per-entity cap on a pooled balance is a usage limit (billing control), not a separate balance. Not allowed on license plans.
+- `entity_feature_id`: legacy/deprecated per-entity balance scoping; prefer entity-scoped plan attachments. Never mention it unless the user's config already has it.
 - Auto top-ups require a one-off prepaid item for the feature; customer billing controls configure threshold and quantity.
+- Balances can carry an `expires_at`; expired balances stop counting. Tracked usage can also be windowed (UTC usage windows) for time-boxed caps.
 
 # Customize
 
@@ -534,6 +573,7 @@ Updating or ending a trial
   - `granted` is included grant plus prepaid grant.
   - `remaining` is the positive balance left from included/prepaid grants and never goes below 0.
   - `usage` is how much has been used; if usage exceeds granted, the subject is in overage.
+  - A pooled balance is one customer-level balance fed by entity-attached plans whose items have `pooled: true`. Every entity — and the customer — sees the same number, and any of them can spend it. Customer-level purchases (packs, overage) stack beside the pool.
   - Other balance fields, such as reset timing and unlimited status, are usually self-explanatory from the API reference.
 
   </balances>
@@ -557,6 +597,8 @@ Updating or ending a trial
 
 - Entity-level balances: one customer subscription grants per-entity limits, useful when all entities get the same features and limits.
 - Entity-level subscriptions: attach plans with `entity_id`, useful when each entity can have its own tier.
+- Pooled balances: entity-attached plans with pooled items feed one shared customer balance any entity can spend — see the pooled-balances concept.
+- License seats: an entity can hold one seat from the customer's license pool — see the licenses concept.
 - Entity-level controls can override customer-level controls for that entity where supported.
 
 </entity-patterns>
@@ -589,37 +631,83 @@ Updating or ending a trial
 
 ### Billing Controls
 
-- Billing controls are runtime policy on a customer or entity.
-- They do not define what a plan grants; they change how usage is allowed, capped, alerted, or topped up.
-- They are often exposed as customer-facing settings, except `overage_allowed` which is usually product/admin controlled.
+- Billing controls are policy on top of what a plan grants: they change how usage is capped, alerted, allowed past the balance, or topped up — never what the plan includes.
+- They live at three levels: on a **plan** (defaults every subscriber inherits), on a **customer** (their own settings), and on an **entity** (per seat/workspace overrides). Plan-level controls are part of the catalog.
+- Each control is a per-feature list entry: at most one entry per feature (usage limits: per feature + filter combination).
 
 </intro>
 
 <control-types>
 
-- `overage_allowed`: whether usage can continue after granted balance is exhausted.
-- `spend_limits`: cap overage in feature units, not dollars.
-- `usage_limits`: hard usage caps over a time window.
-  - Useful when a plan grants multiple balances, e.g. 5/day and 5/month, but the customer also needs a separate 100/month cap.
-  - Useful for credit systems when credits are shared, but one mapped action needs its own cap, e.g. 10 `action_1` calls/day.
-- `usage_alerts`: notify when usage crosses a threshold; alerts do not block usage.
-- `auto_topups`: automatically buy prepaid quantity when balance drops below a threshold.
+- `usage_limits`: a hard cap over a time window, independent of balance — "1,000 emails a month, but never more than 200 a day". Fields: `feature_id`, `limit`, `interval` (`day`/`week`/`month`/`year`), optional `anchor` (`billing_cycle` default, or `utc` calendar windows), optional `filter` on event properties (only matching events count — the tool for capping one action inside a shared credit system, e.g. 10 `action_1` calls/day). The cap's window is independent of the allowance's reset cadence (a daily cap on a monthly grant), and an entity-level entry is how you cap one entity's draw on a pooled balance (100 shared credits, 10 per workspace).
+- `spend_limits`: caps and controls **overage** for a feature. `overage_limit` is how much overage may accrue past the balance — in feature units (`limit_type: "absolute"`) or as a percent of the main-plan allowance (`limit_type: "usage_percentage"`). `skip_overage_billing: true` lets overage accrue but never invoices it.
+- `usage_alerts`: notify at a threshold; never block. `threshold_type` is `usage`, `usage_percentage`, `remaining`, or `remaining_percentage`; `threshold` is a count for the absolute types, a percent otherwise. An escalation ladder of several alerts on one feature (80% / 100% / 120%) is normal — give each a `name`.
+- `overage_allowed`: whether usage may continue past the granted balance at all. Enabled with no overage price = uncapped, unbilled overage; explicitly disabled = hard stop even where an overage price exists.
+- `auto_topups`: automatically buy prepaid quantity when the balance drops below `threshold` — buys `quantity` units, optionally rate-limited by `purchase_limit` (N top-ups per hour/day/week/month) and `invoice_mode` (send an invoice instead of charging the card). Requires the feature to have a one-off prepaid purchase item on some plan. Customer and plan level only — never on entities. Repeated card failures suspend it and emit a `billing.auto_topup_failed` webhook.
 
 </control-types>
 
-<scope>
+<the-three-overage-knobs>
 
-- Customer-level controls apply to the customer.
-- Entity-level controls can override customer-level controls for that entity.
-- Auto top-ups are customer-level only.
+Three controls sound alike but answer different questions — conflating them is the common failure:
 
-</scope>
+| Question | Knob |
+|---|---|
+| Can usage go past the balance at all? | `overage_allowed.enabled` |
+| How far past? | `spend_limits.overage_limit` |
+| Do we invoice what we let them incur? | `spend_limits.skip_overage_billing` |
+
+Every overage behavior is a combination of the three:
+
+| They want | The combination |
+|---|---|
+| Hard stop at the balance | nothing — the default when no overage price exists |
+| Billed overage, up to a ceiling | `overage_limit` on top of the item's overage price |
+| A free buffer past the grant, then stop | `enabled: true` + `skip_overage_billing: true` + `overage_limit` for the buffer size |
+| Overage allowed, never billed, uncapped | `overage_allowed.enabled: true` with no overage price |
+| End-user "bill me for overage" toggle | one spend-limits entry per state: toggle off = the free-buffer row; toggle on = `skip_overage_billing: false` (or drop the entry) |
+
+**Where overage capability comes from — read the item, not the vibe.** When a plan item carries a usage-based price, overage capability ships on the plan: every subscriber can run past the grant and is billed at the item's rate, and controls only modulate that (`overage_limit` caps it, `skip_overage_billing` stops invoicing it). When the item is a pure grant (no usage price), zero balance is a hard stop by default; the capability must be granted per customer with `overage_allowed.enabled: true` — and because no price exists, that overage is **permitted, not billed**, so pair it with a `spend_limits.overage_limit` to cap how far the unbilled run goes. Billing the excess is a catalog decision (add a usage price to the item), not a billing-control one.
+
+**The two percentage bases — the standing numeric trap.** A spend limit's `usage_percentage` measures the *overage* against the allowance: on 3,000 credits, `overage_limit: 20` = 300 units of headroom, 3,300 total — "20% over" is `20`, never `120`. An alert's `usage_percentage` measures *total usage*: `threshold: 120` fires at 3,600.
+
+</the-three-overage-knobs>
+
+<hierarchy>
+
+- Plan-level controls are **inherited defaults**, resolved when access is checked — they are never copied onto the customer. Changing the plan's controls changes every subscriber that hasn't set their own.
+- Precedence per feature: **entity > customer > plan**. A customer's entry for a feature shadows the plan's entry wholesale — there is no field-level merging.
+- When several attached plans carry an entry for the same feature: the **most restrictive** wins for `usage_limits`, `spend_limits`, and `overage_allowed`; for `auto_topups` and `usage_alerts` the most recently attached plan wins.
+- Customer API responses tag each control with its `source` (`plan` or `customer`) so you can tell an inherited default from an explicit setting.
+
+</hierarchy>
+
+<wire-shape>
+
+Plan create/update and catalog params take `billing_controls` with the five snake_case lists:
+
+```json
+{
+  "billing_controls": {
+    "usage_limits": [{ "feature_id": "emails", "limit": 200, "interval": "day" }],
+    "spend_limits": [{ "feature_id": "emails", "enabled": true, "overage_limit": 500 }],
+    "usage_alerts": [{ "feature_id": "emails", "threshold": 80, "threshold_type": "usage_percentage" }],
+    "overage_allowed": [{ "feature_id": "emails", "enabled": true }],
+    "auto_topups": [{ "feature_id": "credits", "enabled": true, "threshold": 100, "quantity": 1000 }]
+  }
+}
+```
+
+In `autumn.config.ts` the same shape goes through the `billingControls()` builder on a plan. Updates replace per control list, not per entry — sending `usage_limits` replaces all usage limits, other lists untouched.
+
+</wire-shape>
 
 <agent-rules>
 
-- Inspect current customer/entity state before changing billing controls.
-- For auto top-ups, verify the feature has a one-off prepaid purchase path.
-- Do not describe alerts as blocking usage or spend limits as dollar limits unless the feature units are dollars.
+- Inspect current customer/entity state before changing runtime billing controls; check the plan's controls before assuming a customer needs their own.
+- Prefer plan-level controls for anything true of every subscriber; reach for customer/entity entries only for per-customer exceptions.
+- For auto top-ups, verify the feature has a one-off prepaid purchase path first.
+- Alerts never block; spend limits are feature units (or percent), not dollars, unless the feature's units are dollars.
 
 </agent-rules>
 
@@ -630,3 +718,61 @@ Updating or ending a trial
 - Spend limits and usage alerts: https://docs.useautumn.com/documentation/modelling-pricing/spend-limits
 
 </useful-docs>
+
+# Licenses
+
+A license lets a parent plan hand out another plan per seat. "Team is $40/seat, each seat gets 100 summaries" → the seat is its own plan, and the team plan offers it through a license.
+
+## The three objects
+
+- **Child plan** — the actual product for the child: an ordinary plan whose items are what one seat gets. It needs its own `group`, otherwise attaching it would replace its parent.
+- **License** — the link plus the customized definition: the parent's `licenses: [{ license_plan_id, included }]` entry. `included` is how many seats come free with the parent. The license can also customize the child *for this parent only* — a different price, items added or removed — while the child plan itself stays shared.
+- **CustomerLicense** — the runtime record per customer: how many seats they have (`granted` = included + paid), how many are assigned to entities, how many are free. Its identity (`link_id`) is stable across plan versions, so seats never jump around when plans change.
+
+```json
+{
+  "plan_id": "team",
+  "licenses": [
+    {
+      "license_plan_id": "seat",
+      "included": 2,
+      "customize": { "price": { "amount": 40, "interval": "month" } }
+    }
+  ]
+}
+```
+
+## Why the license is a customization, not a copy
+
+The child plan is defined once; each parent's license describes its own take on it. That buys three things:
+
+- **Sharing** — Team and Enterprise can both offer `seat`, one at $40 and one at $30, without two seat plans:
+
+```json
+[
+  { "plan_id": "team", "licenses": [{ "license_plan_id": "seat", "included": 2 }] },
+  { "plan_id": "scale", "licenses": [{ "license_plan_id": "seat", "included": 2, "customize": { "price": { "amount": 30, "interval": "month" } } }] }
+]
+```
+
+- **Propagation** — edit the child (add a boolean feature to `seat`) and the change can follow upward to every parent that offers it. Each parent chooses: follow the update, or pin its current version. A parent's own declared customize wins over what propagates.
+- **Clean transitions** — a customer moving from Team to Scale, both offering `seat`: each seat assignment carries over intuitively, because the license identity is stable and both parents point at the same child.
+
+A license's customize can change the price and add/remove items — nothing else, and licenses don't nest (a child plan can't offer licenses of its own).
+
+## How seats move
+
+- **Buy** — seat count is set on the *parent* (`license_quantities` on attach/update). The quantity is the total, including the free `included` seats. Buying a priced license attaches it at the customer level automatically.
+- **Assign** — `licenses.attach` gives a seat to an entity (creating it if you pass a `feature_id`). Idempotent; errors when no seats are free.
+- **Release** — `licenses.release` frees the seat. It does **not** change what the customer pays — they still own the seat, it's just unassigned.
+
+Empty seats are normal — that's the point: capacity is bought before you know who fills it.
+
+## When licenses are the right model
+
+One question: **does a seat grant anything?** A seat that carries its own allowance or plan → license. Seats that are only a count you bill → per-unit priced item, no entities. Entities that appear one by one, each picking its own plan → attach plans per entity, no license.
+
+## Not yet available
+
+- Overflow billing (`prepaid_only: false` — auto-billing seats beyond the bought pool) is not available yet.
+- License plans can't contain pooled items.

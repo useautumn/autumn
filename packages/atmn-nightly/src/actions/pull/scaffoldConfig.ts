@@ -1,13 +1,14 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { configPackageName } from "../../config/configPackageName";
 import { COLLECTIONS } from "../../generated/emit";
 
 /** Where a config imports from: the published package, or generated files in-repo. */
 export type ConfigImports = { atmn: string; builders: string };
 
-export const PACKAGE_IMPORTS: ConfigImports = {
-	atmn: "atmn-nightly",
-	builders: "atmn-nightly",
+export const packageImports = (): ConfigImports => {
+	const name = configPackageName();
+	return { atmn: name, builders: name };
 };
 
 const importLines = ({ imports }: { imports: ConfigImports }): string[] => {
@@ -33,12 +34,15 @@ const importLines = ({ imports }: { imports: ConfigImports }): string[] => {
  */
 export const scaffoldConfig = ({
 	directory,
-	imports = PACKAGE_IMPORTS,
+	configPath = join(directory, "autumn.config.ts"),
+	imports = packageImports(),
 }: {
 	directory: string;
+	/** `-c` may name the file; the folder is created when missing. */
+	configPath?: string;
 	imports?: ConfigImports;
 }): string => {
-	const configPath = join(directory, "autumn.config.ts");
+	mkdirSync(directory, { recursive: true });
 	const collections = Object.entries(COLLECTIONS).flatMap(([name, spec]) => [
 		`\t${name}: [],`,
 		...(spec.historyKey ? [`\t${spec.historyKey}: [],`] : []),
