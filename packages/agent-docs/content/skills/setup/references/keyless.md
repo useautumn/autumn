@@ -2,7 +2,7 @@
 
 A keyless org is a real sandbox org with no owner yet. One call creates it and hands back a secret key; pushing a catalog, creating customers, and billing all work normally. The user links their account later, and the key stays the same.
 
-Check `atmn --help` first: if the CLI has a command for provisioning or linking, use it. The HTTP calls below are the fallback and are what such a command would do anyway. Base URL is `https://api.useautumn.com`, and none of these routes need auth except where noted.
+The CLI does both: `atmn init --keyless` (or `atmn login --keyless`) provisions, and `atmn login --claim <email> [--otp <code>]` links. Use those. The HTTP calls below are what they do underneath, for when you need to know the fields or limits. Base URL is `https://api.useautumn.com`, and none of these routes need auth except where noted.
 
 ## Provision
 
