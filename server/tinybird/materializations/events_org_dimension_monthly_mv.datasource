@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Org-level UTC monthly states for customer, entity, and plan grouping, collapsed from
+    events_org_dimension_hourly_mv. Serves the complete months of an org-wide bin_size=month
+    window; the partial months at either end stay on the hourly rollup.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `event_name` String,
+    `dimension` String,
+    `group_value` String,
+    `month` DateTime,
+    `total_value` AggregateFunction(sum, Float64),
+    `event_count` AggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(month)"
+ENGINE_SORTING_KEY "org_id, env, dimension, event_name, month, group_value"
