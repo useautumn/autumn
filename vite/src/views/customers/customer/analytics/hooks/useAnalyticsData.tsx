@@ -6,9 +6,9 @@ import type {
 import { ErrCode } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useAnalyticsFilterState } from "./useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useSelectedEventNames } from "./useSelectedEventNames";
 
@@ -29,11 +29,13 @@ export const useAnalyticsData = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const [searchParams] = useSearchParams();
-	const customerId = searchParams.get("customer_id");
-	const entityId = searchParams.get("entity_id");
-	const groupBy = searchParams.get("group_by");
-	const maxGroups = Number(searchParams.get("max_groups")) || 10;
+	const { filterStates } = useAnalyticsFilterState();
+	const {
+		customer_id: customerId,
+		entity_id: entityId,
+		group_by: groupBy,
+		max_groups: maxGroups,
+	} = filterStates;
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, bin_size: binSize, start, end } = queryStates;
@@ -141,9 +143,8 @@ export const useRawAnalyticsData = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const [searchParams] = useSearchParams();
-	const customerId = searchParams.get("customer_id");
-	const entityId = searchParams.get("entity_id");
+	const { filterStates } = useAnalyticsFilterState();
+	const { customer_id: customerId, entity_id: entityId } = filterStates;
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;
