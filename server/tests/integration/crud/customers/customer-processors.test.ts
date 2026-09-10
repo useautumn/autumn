@@ -31,12 +31,16 @@ import { generateId } from "@/utils/genUtils.js";
 //
 // Behaviors:
 //   - no signals (no customer.processor.id, no customer.processors.vercel,
-//     no active RC cusProduct) ⇒ processors === undefined (key omitted entirely)
+//     no processors.revenuecat, no active RC cusProduct)
+//                                      ⇒ processors === undefined (key omitted entirely)
 //   - stripe.id present                ⇒ { stripe: { id } }
 //   - customer.processors.vercel set   ⇒ { vercel: { installation_id, account_id } }
 //                                        NEVER includes access_token or
 //                                        custom_payment_method_id
-//   - ≥1 ACTIVE RC cusProduct          ⇒ { revenuecat: { id: customer.id ?? null } }
+//   - customer.processors.revenuecat set
+//                                      ⇒ { revenuecat: { id: processors.revenuecat.id } }
+//                                        (even with no active RC cusProduct)
+//   - else ≥1 ACTIVE RC cusProduct     ⇒ { revenuecat: { id: customer.id ?? null } }
 //                                        Inactive-only RC products do NOT trigger.
 //   - multi-PSP                        ⇒ all applicable keys present together
 //   - earlier API versions             ⇒ no `processors` key at all
@@ -259,7 +263,7 @@ test.concurrent(`${chalk.yellowBright("customer processors: vercel customer expo
 	expect(dbVercel?.custom_payment_method_id).toBe("pm_test_xxx");
 });
 
-// 4a. Active RC cusProduct — seeded directly via DB.
+// 4a. Active RC cusProduct, no processors.revenuecat row — falls back to customer.id.
 test.concurrent(`${chalk.yellowBright("customer processors: active RevenueCat cusProduct surfaces revenuecat.id = customer.id")}`, async () => {
 	const customerId = "customer-processors-rc-active";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -319,6 +323,108 @@ test.concurrent(`${chalk.yellowBright("customer processors: active RevenueCat cu
 			cp.status === CusProductStatus.Active,
 	);
 	expect(rcRows.length).toBeGreaterThan(0);
+});
+
+// 4a2. Stored processors.revenuecat — surfaces even with no active RC product.
+test.concurrent(`${chalk.yellowBright("customer processors: stored processors.revenuecat surfaces without active RC cusProduct")}`, async () => {
+	const customerId = "customer-processors-rc-stored";
+	const revenueCatId = "rc-app-user-stored";
+
+	const { autumnV2_1, ctx } = await initScenario({
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	await autumnV2_1.customers.create({
+		id: customerId,
+		name: "RC Stored",
+		email: `${customerId}@example.com`,
+	});
+
+	await CusService.update({
+		ctx,
+		idOrInternalId: customerId,
+		update: {
+			processors: {
+				revenuecat: { id: revenueCatId, aliases: [] },
+			},
+		},
+	});
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId,
+		source: "test:rc-stored-seed",
+	});
+
+	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cached.processors?.revenuecat).toEqual({ id: revenueCatId });
+	expect(cached.processors?.vercel).toBeUndefined();
+
+	const uncached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expect(uncached.processors?.revenuecat).toEqual({ id: revenueCatId });
+});
+
+// 4a3. Stored processors.revenuecat wins over the active-RC customer.id fallback.
+test.concurrent(`${chalk.yellowBright("customer processors: stored processors.revenuecat id preferred over customer.id fallback")}`, async () => {
+	const customerId = "customer-processors-rc-prefer-stored";
+	const revenueCatId = "rc-app-user-prefer-stored";
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({
+		id: "rc-prefer-stored-pro",
+		items: [messagesItem],
+	});
+
+	const { autumnV2_1, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({}), s.products({ list: [pro] })],
+		actions: [],
+	});
+
+	const customer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const product = await ProductService.get({
+		db: ctx.db,
+		id: pro.id,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	expect(product).toBeDefined();
+
+	await CusService.update({
+		ctx,
+		idOrInternalId: customerId,
+		update: {
+			processors: {
+				revenuecat: { id: revenueCatId, aliases: [] },
+			},
+		},
+	});
+	await seedCusProduct({
+		ctx,
+		internalCustomerId: customer.internal_id,
+		internalProductId: product!.internal_id,
+		productId: product!.id,
+		customerId,
+		status: CusProductStatus.Active,
+		processorType: ProcessorType.RevenueCat,
+	});
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId,
+		source: "test:rc-prefer-stored-seed",
+	});
+
+	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cached.processors?.revenuecat).toEqual({ id: revenueCatId });
+
+	const uncached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expect(uncached.processors?.revenuecat).toEqual({ id: revenueCatId });
 });
 
 // 4b. Expired-only RC cusProduct — must NOT surface revenuecat.
