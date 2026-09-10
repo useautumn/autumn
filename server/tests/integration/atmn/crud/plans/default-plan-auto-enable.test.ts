@@ -21,15 +21,14 @@ test.concurrent("default plan / auto enable", async () => {
 		plan({
 			planId: "starter",
 			name: "Starter",
-			isDefault: true,
+			autoEnable: true,
 			items: [],
 		}),
 		plan({
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },
-			// auto_enable falls back into is_default absent an explicit isDefault,
-			// so a paid auto-enable plan needs a cardless trial to pass that rule.
+			// A paid auto-enable plan needs a cardless trial to pass the default-plan rule.
 			freeTrial: { durationLength: 14, durationType: "day", cardRequired: false },
 			autoEnable: true,
 			items: [],
@@ -38,14 +37,16 @@ test.concurrent("default plan / auto enable", async () => {
 	});
 
 	try {
-		const { freshWire } = await expectRoundTrip({ scenario });
+		const { freshFiles, freshWire } = await expectRoundTrip({ scenario });
 		const plans = freshWire.plans as Array<Record<string, unknown>>;
 		const starter = plans.find((plan) => plan.plan_id === "starter");
 		const pro = plans.find((plan) => plan.plan_id === "pro");
-		// isDefault and autoEnable both write the same underlying flag; the catalog
-		// only ever reports it back as auto_enable, never is_default.
 		expect(starter).toEqual(expect.objectContaining({ auto_enable: true }));
 		expect(pro).toEqual(expect.objectContaining({ auto_enable: true }));
+		// The deprecated twin never reaches a fixture; the stated flag does.
+		const config = freshFiles.get("autumn.config.ts") ?? "";
+		expect(config).not.toContain("isDefault");
+		expect(config.match(/autoEnable: true/g)).toHaveLength(2);
 	} finally {
 		scenario.cleanup();
 	}

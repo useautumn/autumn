@@ -12,12 +12,10 @@ export type Plan = {
 	description?: string | null;
 	/** Group identifier for mutually exclusive plans. */
 	group?: string;
-	/** Whether the plan is an add-on. */
+	/** Whether the plan is an add-on. Defaults to false. */
 	addOn?: boolean;
-	/** Whether the plan is automatically enabled for new customers. */
+	/** Whether the plan is automatically enabled for new customers. Defaults to false. */
 	autoEnable?: boolean;
-	/** Whether this is the org's default plan. */
-	isDefault?: boolean;
 	/** Archive or unarchive the plan. */
 	archived?: boolean;
 	/** Take the active pointer. On `new_version`, omit to mint a draft; `true` promotes the minted row immediately. */
@@ -68,6 +66,10 @@ export type Plan = {
 	} | null;
 	/** Feature configurations for this plan. */
 	items?: Array<{
+		/** Bills this many feature units when outstanding overage reaches it. */
+		thresholdBilling?: {
+			threshold: number;
+		} | null;
 		/** The ID of the feature to configure. */
 		featureId: string;
 		/** Number of free units included. Balance resets to this each interval for consumable features. */
@@ -313,7 +315,7 @@ export type Plan = {
 	};
 	/** Plan-level billing controls used as customer defaults. */
 	billingControls?: {
-		/** List of auto top-up configurations per feature. */
+		/** List of auto top-up configurations per feature. Defaults to []. */
 		autoTopups?: Array<{
 			/** The ID of the feature (credit balance) to auto top-up. */
 			featureId: string;
@@ -337,7 +339,7 @@ export type Plan = {
 			/** When true, auto top-up creates a send_invoice invoice instead of auto-charging. */
 			invoiceMode?: boolean;
 		}>;
-		/** List of overage spend limits per feature (caps overage spend). */
+		/** List of overage spend limits per feature (caps overage spend). Defaults to []. */
 		spendLimits?: Array<{
 			/** Optional feature ID this spend limit applies to. */
 			featureId?: string;
@@ -350,7 +352,7 @@ export type Plan = {
 			/** When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally. */
 			skipOverageBilling?: boolean;
 		}>;
-		/** List of hard usage caps per feature (max units per interval). */
+		/** List of hard usage caps per feature (max units per interval). Defaults to []. */
 		usageLimits?: Array<{
 			/** The feature this usage limit applies to. */
 			featureId: string;
@@ -367,7 +369,7 @@ export type Plan = {
 				properties: Record<string, string | number | boolean>;
 			};
 		}>;
-		/** List of usage alert configurations per feature. */
+		/** List of usage alert configurations per feature. Defaults to []. */
 		usageAlerts?: Array<{
 			/** The feature ID this alert applies to. */
 			featureId?: string;
@@ -390,7 +392,7 @@ export type Plan = {
 			/** Optional user-defined label to distinguish multiple alerts on the same feature. */
 			name?: string;
 		}>;
-		/** List of overage allowed controls per feature. When enabled, usage can exceed balance. */
+		/** List of overage allowed controls per feature. When enabled, usage can exceed balance. Defaults to []. */
 		overageAllowed?: Array<{
 			/** The feature ID this overage allowed control applies to. */
 			featureId: string;
@@ -398,7 +400,7 @@ export type Plan = {
 			enabled?: boolean;
 		}>;
 	};
-	/** Arbitrary key-value metadata shared across all versions. */
+	/** Arbitrary key-value metadata shared across all versions. Defaults to {}. */
 	metadata?: Record<string, unknown>;
 	/** Target this version row by slug. At most one of `version` / `version_slug`; omit both to target the active row. Defaults to "vN", N being the server's version number, which counts in creation order; state it explicitly on every history row so a nuke-and-repush or a sandbox-to-prod push keeps the same names even though the numbers may differ. */
 	versionSlug?: string;
@@ -469,6 +471,10 @@ export type Plan = {
 			} | null;
 			/** Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items. */
 			items?: Array<{
+				/** Bills this many feature units when outstanding overage reaches it. */
+				thresholdBilling?: {
+					threshold: number;
+				} | null;
 				/** The ID of the feature to configure. */
 				featureId: string;
 				/** Number of free units included. Balance resets to this each interval for consumable features. */
@@ -690,6 +696,10 @@ export type Plan = {
 			}>;
 			/** Items to add to the plan. */
 			addItems?: Array<{
+				/** Bills this many feature units when outstanding overage reaches it. */
+				thresholdBilling?: {
+					threshold: number;
+				} | null;
 				/** The ID of the feature to configure. */
 				featureId: string;
 				/** Number of free units included. Balance resets to this each interval for consumable features. */
@@ -950,7 +960,7 @@ export type Plan = {
 			} | null;
 			/** Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer. */
 			billingControls?: {
-				/** List of auto top-up configurations per feature. */
+				/** List of auto top-up configurations per feature. Defaults to []. */
 				autoTopups?: Array<{
 					/** The ID of the feature (credit balance) to auto top-up. */
 					featureId: string;
@@ -974,7 +984,7 @@ export type Plan = {
 					/** When true, auto top-up creates a send_invoice invoice instead of auto-charging. */
 					invoiceMode?: boolean;
 				}>;
-				/** List of overage spend limits per feature (caps overage spend). */
+				/** List of overage spend limits per feature (caps overage spend). Defaults to []. */
 				spendLimits?: Array<{
 					/** Optional feature ID this spend limit applies to. */
 					featureId?: string;
@@ -987,7 +997,7 @@ export type Plan = {
 					/** When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally. */
 					skipOverageBilling?: boolean;
 				}>;
-				/** List of hard usage caps per feature (max units per interval). */
+				/** List of hard usage caps per feature (max units per interval). Defaults to []. */
 				usageLimits?: Array<{
 					/** The feature this usage limit applies to. */
 					featureId: string;
@@ -1004,7 +1014,7 @@ export type Plan = {
 						properties: Record<string, string | number | boolean>;
 					};
 				}>;
-				/** List of usage alert configurations per feature. */
+				/** List of usage alert configurations per feature. Defaults to []. */
 				usageAlerts?: Array<{
 					/** The feature ID this alert applies to. */
 					featureId?: string;
@@ -1027,7 +1037,7 @@ export type Plan = {
 					/** Optional user-defined label to distinguish multiple alerts on the same feature. */
 					name?: string;
 				}>;
-				/** List of overage allowed controls per feature. When enabled, usage can exceed balance. */
+				/** List of overage allowed controls per feature. When enabled, usage can exceed balance. Defaults to []. */
 				overageAllowed?: Array<{
 					/** The feature ID this overage allowed control applies to. */
 					featureId: string;
@@ -1063,6 +1073,10 @@ export type Plan = {
 						}>;
 					} | null;
 					addItems?: Array<{
+						/** Bills this many feature units when outstanding overage reaches it. */
+						thresholdBilling?: {
+							threshold: number;
+						} | null;
 						/** The ID of the feature to configure. */
 						featureId: string;
 						/** Number of free units included. Balance resets to this each interval for consumable features. */
@@ -1346,6 +1360,10 @@ export type Plan = {
 				}>;
 			} | null;
 			addItems?: Array<{
+				/** Bills this many feature units when outstanding overage reaches it. */
+				thresholdBilling?: {
+					threshold: number;
+				} | null;
 				/** The ID of the feature to configure. */
 				featureId: string;
 				/** Number of free units included. Balance resets to this each interval for consumable features. */

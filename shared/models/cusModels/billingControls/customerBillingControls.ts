@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { withSpecDefault } from "../../../utils/common/withSpecDefault.js";
 import { rejectDuplicateBillingControls } from "./duplicates/rejectDuplicateBillingControls.js";
 import {
 	type EntityBillingControls,
@@ -269,12 +270,47 @@ export const mergeBillingControls = (
 	});
 };
 
-export const CustomerBillingControlsParamsSchema =
-	CustomerBillingControlsSchema.extend({
-		auto_topups: z.array(AutoTopupParamsSchema).optional().meta({
+/** Each lane is PATCH-shaped (omitted = keep), so its default rides the spec only. */
+const laneParam = <T extends z.ZodType>({
+	schema,
+	description,
+}: {
+	schema: T;
+	description: string;
+}) =>
+	withSpecDefault({
+		schema: z.array(schema).optional(),
+		defaultValue: [],
+		description,
+	});
+
+export const CustomerBillingControlsParamsSchema = z
+	.object({
+		auto_topups: laneParam({
+			schema: AutoTopupParamsSchema,
 			description: "List of auto top-up configurations per feature.",
 		}),
-	}).check(rejectDuplicateBillingControls);
+		spend_limits: laneParam({
+			schema: DbSpendLimitSchema,
+			description:
+				"List of overage spend limits per feature (caps overage spend).",
+		}),
+		usage_limits: laneParam({
+			schema: DbUsageLimitSchema,
+			description:
+				"List of hard usage caps per feature (max units per interval).",
+		}),
+		usage_alerts: laneParam({
+			schema: DbUsageAlertSchema,
+			description: "List of usage alert configurations per feature.",
+		}),
+		overage_allowed: laneParam({
+			schema: DbOverageAllowedSchema,
+			description:
+				"List of overage allowed controls per feature. When enabled, usage can exceed balance.",
+		}),
+	})
+	.check(rejectDuplicateBillingControls);
 
 export type CustomerBillingControlsParams = z.input<
 	typeof CustomerBillingControlsParamsSchema

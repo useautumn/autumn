@@ -28,6 +28,10 @@ export type License = {
 			}>;
 		} | null;
 		addItems?: Array<{
+			/** Bills this many feature units when outstanding overage reaches it. */
+			thresholdBilling?: {
+				threshold: number;
+			} | null;
 			/** The ID of the feature to configure. */
 			featureId: string;
 			/** Number of free units included. Balance resets to this each interval for consumable features. */

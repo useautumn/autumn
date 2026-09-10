@@ -1,4 +1,5 @@
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
+import { withSpecDefault } from "@utils/common/withSpecDefault";
 import { z } from "zod/v4";
 import { AdditionalCurrencyPriceArraySchema } from "../additionalCurrencies";
 import { DisplaySchema } from "../display";
@@ -29,7 +30,9 @@ export const BasePriceParamsSchema = BasePriceSchema.omit({
 	display: true,
 })
 	.extend({
-		interval_count: z.number().optional().meta({
+		interval_count: withSpecDefault({
+			schema: z.number().optional(),
+			defaultValue: 1,
 			description: "Number of intervals per billing cycle. Defaults to 1.",
 		}),
 
