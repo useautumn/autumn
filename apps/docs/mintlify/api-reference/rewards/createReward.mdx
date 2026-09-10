@@ -42,6 +42,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       </Expandable>
     </DynamicParamField>
 
+    <DynamicParamField body="internal_id" type="string">
+      Address an existing reward by its stable id. Omit when creating — the server generates one.
+    </DynamicParamField>
+
     <DynamicParamField body="type" type="'percentage_discount' | 'fixed_discount'" required />
 
     <DynamicParamField body="value" type="number" required>
@@ -93,6 +97,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicParamField>
 
       </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="internal_id" type="string">
+      Address an existing reward by its stable id. Omit when creating — the server generates one.
     </DynamicParamField>
 
   </Expandable>

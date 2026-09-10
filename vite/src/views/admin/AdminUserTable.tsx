@@ -74,8 +74,9 @@ export const AdminUserTable = () => {
 			enableSorting,
 			isLoading,
 			emptyStateText: "No users found.",
-			rowClassName: "h-10",
+			rowClassName: "h-9",
 			flexibleTableColumns: true,
+			mobileCards: true,
 		}),
 		[table, columns.length, enableSorting, isLoading],
 	);
@@ -97,7 +98,7 @@ export const AdminUserTable = () => {
 
 			<Table.Provider config={tableConfig}>
 				<Table.Container>
-					<Table.Content className="w-fit">
+					<Table.Content className="w-full">
 						<Table.Header />
 						<Table.Body />
 					</Table.Content>

@@ -408,6 +408,78 @@ export const CreateEntityType = {
  */
 export type CreateEntityType = OpenEnum<typeof CreateEntityType>;
 
+export type CreateEntityDimensions6 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CreateEntityDimensionsToEnum3 = {
+  Inf: "inf",
+} as const;
+export type CreateEntityDimensionsToEnum3 = ClosedEnum<
+  typeof CreateEntityDimensionsToEnum3
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateEntityDimensionsToUnion3 =
+  | number
+  | CreateEntityDimensionsToEnum3;
+
+export type CreateEntityDimensionsTier3 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateEntityDimensionsToEnum3;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateEntityDimensions5 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateEntityDimensionsTier3>;
+};
+
+export type CreateEntityDimensionsUnion3 =
+  | CreateEntityDimensions5
+  | CreateEntityDimensions6;
+
+export type CreateEntityMultipliers3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type CreateEntityCreditSchema3 = {
   meteredFeatureId: "";
   /**
@@ -415,9 +487,91 @@ export type CreateEntityCreditSchema3 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: CreateEntityDimensions5 | CreateEntityDimensions6;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CreateEntityMultipliers3 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CreateEntityDimensions4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CreateEntityDimensionsToEnum2 = {
+  Inf: "inf",
+} as const;
+export type CreateEntityDimensionsToEnum2 = ClosedEnum<
+  typeof CreateEntityDimensionsToEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateEntityDimensionsToUnion2 =
+  | number
+  | CreateEntityDimensionsToEnum2;
+
+export type CreateEntityDimensionsTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateEntityDimensionsToEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateEntityDimensions3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateEntityDimensionsTier2>;
+};
+
+export type CreateEntityDimensionsUnion2 =
+  | CreateEntityDimensions3
+  | CreateEntityDimensions4;
+
+export type CreateEntityMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export type CreateEntityCreditSchema2 = {
@@ -430,9 +584,91 @@ export type CreateEntityCreditSchema2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: CreateEntityDimensions3 | CreateEntityDimensions4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CreateEntityMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type CreateEntityDimensions2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CreateEntityDimensionsToEnum1 = {
+  Inf: "inf",
+} as const;
+export type CreateEntityDimensionsToEnum1 = ClosedEnum<
+  typeof CreateEntityDimensionsToEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateEntityDimensionsToUnion1 =
+  | number
+  | CreateEntityDimensionsToEnum1;
+
+export type CreateEntityDimensionsTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateEntityDimensionsToEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateEntityDimensions1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateEntityDimensionsTier1>;
+};
+
+export type CreateEntityDimensionsUnion1 =
+  | CreateEntityDimensions1
+  | CreateEntityDimensions2;
+
+export type CreateEntityMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export const CreateEntityToEnum = {
@@ -465,6 +701,16 @@ export type CreateEntityCreditSchema1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: CreateEntityDimensions1 | CreateEntityDimensions2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: CreateEntityMultipliers1 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<CreateEntityTier>;
 };
@@ -738,7 +984,7 @@ export type CreateEntityUsageLimitResponse = {
    */
   filter?: CreateEntityUsageLimitFilterResponse | undefined;
   /**
-   * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
+   * Usage consumed in the active interval, stored in the usage-window counter.
    */
   usage?: number | undefined;
   /**
@@ -1471,6 +1717,150 @@ export const CreateEntityType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreateEntityType);
 
 /** @internal */
+export const CreateEntityDimensions6$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensions6,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createEntityDimensions6FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensions6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensions6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensions6' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsToEnum3$inboundSchema: z.ZodMiniEnum<
+  typeof CreateEntityDimensionsToEnum3
+> = z.enum(CreateEntityDimensionsToEnum3);
+
+/** @internal */
+export const CreateEntityDimensionsToUnion3$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsToUnion3,
+  unknown
+> = smartUnion([types.number(), CreateEntityDimensionsToEnum3$inboundSchema]);
+
+export function createEntityDimensionsToUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsToUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsToUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsToUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsTier3$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsTier3,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      CreateEntityDimensionsToEnum3$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createEntityDimensionsTier3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsTier3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsTier3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsTier3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensions5$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensions5,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CreateEntityDimensionsTier3$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function createEntityDimensions5FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensions5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensions5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensions5' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsUnion3$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsUnion3,
+  unknown
+> = smartUnion([
+  z.lazy(() => CreateEntityDimensions5$inboundSchema),
+  z.lazy(() => CreateEntityDimensions6$inboundSchema),
+]);
+
+export function createEntityDimensionsUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityMultipliers3$inboundSchema: z.ZodMiniType<
+  CreateEntityMultipliers3,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function createEntityMultipliers3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityMultipliers3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityMultipliers3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityMultipliers3' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateEntityCreditSchema3$inboundSchema: z.ZodMiniType<
   CreateEntityCreditSchema3,
   unknown
@@ -1478,6 +1868,17 @@ export const CreateEntityCreditSchema3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CreateEntityDimensions5$inboundSchema),
+        z.lazy(() => CreateEntityDimensions6$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CreateEntityMultipliers3$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -1500,6 +1901,150 @@ export function createEntityCreditSchema3FromJSON(
 }
 
 /** @internal */
+export const CreateEntityDimensions4$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensions4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createEntityDimensions4FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensions4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensions4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensions4' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsToEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof CreateEntityDimensionsToEnum2
+> = z.enum(CreateEntityDimensionsToEnum2);
+
+/** @internal */
+export const CreateEntityDimensionsToUnion2$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsToUnion2,
+  unknown
+> = smartUnion([types.number(), CreateEntityDimensionsToEnum2$inboundSchema]);
+
+export function createEntityDimensionsToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsTier2$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      CreateEntityDimensionsToEnum2$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createEntityDimensionsTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensions3$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensions3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CreateEntityDimensionsTier2$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function createEntityDimensions3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensions3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensions3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensions3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => CreateEntityDimensions3$inboundSchema),
+  z.lazy(() => CreateEntityDimensions4$inboundSchema),
+]);
+
+export function createEntityDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityMultipliers2$inboundSchema: z.ZodMiniType<
+  CreateEntityMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function createEntityMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateEntityCreditSchema2$inboundSchema: z.ZodMiniType<
   CreateEntityCreditSchema2,
   unknown
@@ -1507,6 +2052,17 @@ export const CreateEntityCreditSchema2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CreateEntityDimensions3$inboundSchema),
+        z.lazy(() => CreateEntityDimensions4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CreateEntityMultipliers2$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -1525,6 +2081,150 @@ export function createEntityCreditSchema2FromJSON(
     jsonString,
     (x) => CreateEntityCreditSchema2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'CreateEntityCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensions2$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensions2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createEntityDimensions2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensions2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensions2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensions2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsToEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof CreateEntityDimensionsToEnum1
+> = z.enum(CreateEntityDimensionsToEnum1);
+
+/** @internal */
+export const CreateEntityDimensionsToUnion1$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsToUnion1,
+  unknown
+> = smartUnion([types.number(), CreateEntityDimensionsToEnum1$inboundSchema]);
+
+export function createEntityDimensionsToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsTier1$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      CreateEntityDimensionsToEnum1$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createEntityDimensionsTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensions1$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensions1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CreateEntityDimensionsTier1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function createEntityDimensions1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensions1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensions1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensions1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  CreateEntityDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => CreateEntityDimensions1$inboundSchema),
+  z.lazy(() => CreateEntityDimensions2$inboundSchema),
+]);
+
+export function createEntityDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityMultipliers1$inboundSchema: z.ZodMiniType<
+  CreateEntityMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function createEntityMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityMultipliers1' from JSON`,
   );
 }
 
@@ -1583,6 +2283,17 @@ export const CreateEntityCreditSchema1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => CreateEntityDimensions1$inboundSchema),
+        z.lazy(() => CreateEntityDimensions2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CreateEntityMultipliers1$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
     tiers: z.array(z.lazy(() => CreateEntityTier$inboundSchema)),
   }),

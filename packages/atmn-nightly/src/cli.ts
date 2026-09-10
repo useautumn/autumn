@@ -23,6 +23,7 @@ import {
 	staleSkillsHint,
 	updateSkills,
 } from "./actions/skills/skills";
+import { configPackageName } from "./config/configPackageName";
 import { assertSandboxTarget } from "./env/assertSandboxTarget";
 import { loadEnvFiles } from "./env/loadEnv";
 import {
@@ -183,11 +184,12 @@ const mainOrgInfo = ({ target }: { target: Target }) => {
 export const buildProgram = (): Command => {
 	const program = new Command();
 
+	const name = configPackageName();
 	withTargetFlags(
 		program
-			.name("atmn-nightly")
-			.description("Autumn CLI — nightly")
-			.version(`atmn-nightly v${version}`, "-V, --version", "print the version")
+			.name(name)
+			.description("Autumn CLI")
+			.version(`${name} v${version}`, "-V, --version", "print the version")
 			.showHelpAfterError(),
 	);
 

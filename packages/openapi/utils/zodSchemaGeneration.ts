@@ -17,7 +17,7 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 	},
 	{ sdkFile: "attach-op.ts", outputFile: "attachSchemas.ts" },
 	{
-		sdkFile: "preview-attach-op.ts",
+		sdkFile: "preview-attach-response.ts",
 		outputFile: "previewAttachSchemas.ts",
 	},
 	{
@@ -25,7 +25,7 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		outputFile: "updateSubscriptionSchemas.ts",
 	},
 	{
-		sdkFile: "preview-update-op.ts",
+		sdkFile: "preview-update-response.ts",
 		outputFile: "previewUpdateSubscriptionSchemas.ts",
 	},
 	{
@@ -40,7 +40,7 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 	},
 	{ sdkFile: "list-plans-response.ts", outputFile: "listPlansSchemas.ts" },
 	{
-		sdkFile: "list-plans-variant-add-item-reset-interval.ts",
+		sdkFile: "list-plans-variant-details-upsert-license-reset-interval.ts",
 		outputFile: "listPlansParamsSchemas.ts",
 	},
 	{ sdkFile: "list-events-op.ts", outputFile: "listEventsSchemas.ts" },

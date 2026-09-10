@@ -57,6 +57,9 @@ export const PriceCurrencyConfigSchema = z.object({
 export type PriceCurrencyConfig = z.infer<typeof PriceCurrencyConfigSchema>;
 
 export const UsagePriceConfigSchema = z.object({
+	threshold_billing: z
+		.object({ threshold: z.number().finite().positive() })
+		.nullish(),
 	type: z.string(),
 	bill_when: z.nativeEnum(BillWhen),
 	billing_units: z.number().nullish(),

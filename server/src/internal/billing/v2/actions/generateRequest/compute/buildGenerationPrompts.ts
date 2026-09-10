@@ -4,9 +4,9 @@ import {
 	generationRegistry,
 } from "../generationSchemas";
 
-/** The billing skill bundle (billing + concepts, with references inlined) —
- * the same single source Leaf runs on. */
-const SHARED_PARAM_DOCS = leafSkillBundle(["billing"])
+/** The billing skill bundle, references inlined — the same single source Leaf
+ * runs on. */
+const SHARED_PARAM_DOCS = leafSkillBundle(["autumn-billing"])
 	.map(skillToText)
 	.join("\n\n");
 

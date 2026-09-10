@@ -293,11 +293,58 @@ const response = await autumn.billing.update({
                   Number of metered-feature units priced together. Defaults to one when omitted.
                 </DynamicParamField>
 
+                <DynamicParamField body="dimensions.{key}" type="object">
+                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                  <Expandable title="properties">
+                    <DynamicParamField body="match.{key}" type="string" required>
+                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="priority" type="integer">
+                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="any" required />
+
+                    <DynamicParamField body="tiers" type="object[]" required>
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="number" required>
+                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number" required>
+                          Credits consumed per billing-unit group within this tier.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="multipliers.{key}" type="object">
+                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                  <Expandable title="properties">
+                    <DynamicParamField body="match.{key}" type="string" required>
+                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="factor" type="number">
+                      Multiplies the matched rate. All matching multipliers stack.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="add" type="number">
+                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
                 <DynamicParamField body="tier_behavior" type="any" />
 
                 <DynamicParamField body="tiers" type="object[]">
                   <Expandable title="properties">
-                    <DynamicParamField body="to" type="any">
+                    <DynamicParamField body="to" type="number" required>
                       Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
                     </DynamicParamField>
 
@@ -310,6 +357,36 @@ const response = await autumn.billing.update({
 
                 <DynamicParamField body="credit_cost" type="number">
                   Credits consumed per billing-unit group.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="markups" type="object">
+              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+              <Expandable title="properties">
+                <DynamicParamField body="default_markup" type="number">
+                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                </DynamicParamField>
+
+                <DynamicParamField body="provider_markups.{key}" type="object | null">
+                  Per-provider markup percentages for customers on this plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="markup" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="model_markups.{key}" type="object | null">
+                  Per-model markup overrides for customers on this plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="markup" type="number" />
+
+                    <DynamicParamField body="input_cost" type="number" />
+
+                    <DynamicParamField body="output_cost" type="number" />
+
+                  </Expandable>
                 </DynamicParamField>
 
               </Expandable>
@@ -480,11 +557,58 @@ const response = await autumn.billing.update({
                   Number of metered-feature units priced together. Defaults to one when omitted.
                 </DynamicParamField>
 
+                <DynamicParamField body="dimensions.{key}" type="object">
+                  Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                  <Expandable title="properties">
+                    <DynamicParamField body="match.{key}" type="string" required>
+                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="priority" type="integer">
+                      Breaks ties between dimensions that match the same number of keys. Higher wins.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="any" required />
+
+                    <DynamicParamField body="tiers" type="object[]" required>
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="number" required>
+                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number" required>
+                          Credits consumed per billing-unit group within this tier.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="multipliers.{key}" type="object">
+                  Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                  <Expandable title="properties">
+                    <DynamicParamField body="match.{key}" type="string" required>
+                      Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="factor" type="number">
+                      Multiplies the matched rate. All matching multipliers stack.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="add" type="number">
+                      Added to the rate after every factor is applied, in credits per billing-unit group.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
                 <DynamicParamField body="tier_behavior" type="any" />
 
                 <DynamicParamField body="tiers" type="object[]">
                   <Expandable title="properties">
-                    <DynamicParamField body="to" type="any">
+                    <DynamicParamField body="to" type="number" required>
                       Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
                     </DynamicParamField>
 
@@ -497,6 +621,36 @@ const response = await autumn.billing.update({
 
                 <DynamicParamField body="credit_cost" type="number">
                   Credits consumed per billing-unit group.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="markups" type="object">
+              For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+              <Expandable title="properties">
+                <DynamicParamField body="default_markup" type="number">
+                  Default percentage markup for customers on this plan. Use -100 to make usage free.
+                </DynamicParamField>
+
+                <DynamicParamField body="provider_markups.{key}" type="object | null">
+                  Per-provider markup percentages for customers on this plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="markup" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="model_markups.{key}" type="object | null">
+                  Per-model markup overrides for customers on this plan.
+                  <Expandable title="properties">
+                    <DynamicParamField body="markup" type="number" />
+
+                    <DynamicParamField body="input_cost" type="number" />
+
+                    <DynamicParamField body="output_cost" type="number" />
+
+                  </Expandable>
                 </DynamicParamField>
 
               </Expandable>
@@ -823,14 +977,28 @@ const response = await autumn.billing.update({
                     <DynamicParamField body="tiers" type="object[]">
                       Tiered pricing. Either 'amount' or 'tiers' is required.
                       <Expandable title="properties">
-                        <DynamicParamField body="to" type="any" />
+                        <DynamicParamField body="to" type="number" required />
 
                         <DynamicParamField body="amount" type="number" />
 
                         <DynamicParamField body="flat_amount" type="number" />
 
-                        <DynamicParamField body="additional_currencies" type="any[]">
+                        <DynamicParamField body="additional_currencies" type="object[]">
                           Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                          <Expandable title="properties">
+                            <DynamicParamField body="currency" type="string" required>
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicParamField>
+
+                            <DynamicParamField body="amount" type="number">
+                              Per-unit amount for this tier in this currency.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="flat_amount" type="number">
+                              Flat amount for this tier in this currency, if the tier uses one.
+                            </DynamicParamField>
+
+                          </Expandable>
                         </DynamicParamField>
 
                       </Expandable>
@@ -903,15 +1071,109 @@ const response = await autumn.billing.update({
                     <DynamicParamField body="credit_schema" type="object | object[]">
                       For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
                       <Expandable title="properties">
-                        <DynamicParamField body="metered_feature_id" type="any" />
+                        <DynamicParamField body="metered_feature_id" type="string">
+                          ID of the metered feature that draws from this credit system.
+                        </DynamicParamField>
 
-                        <DynamicParamField body="billing_units" type="any" />
+                        <DynamicParamField body="billing_units" type="number">
+                          Number of metered-feature units priced together. Defaults to one when omitted.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="dimensions.{key}" type="object">
+                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                          <Expandable title="properties">
+                            <DynamicParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="priority" type="integer">
+                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="tier_behavior" type="any" required />
+
+                            <DynamicParamField body="tiers" type="object[]" required>
+                              <Expandable title="properties">
+                                <DynamicParamField body="to" type="number" required>
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </DynamicParamField>
+
+                                <DynamicParamField body="credit_cost" type="number" required>
+                                  Credits consumed per billing-unit group within this tier.
+                                </DynamicParamField>
+
+                              </Expandable>
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="multipliers.{key}" type="object">
+                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                          <Expandable title="properties">
+                            <DynamicParamField body="match.{key}" type="string" required>
+                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="factor" type="number">
+                              Multiplies the matched rate. All matching multipliers stack.
+                            </DynamicParamField>
+
+                            <DynamicParamField body="add" type="number">
+                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
 
                         <DynamicParamField body="tier_behavior" type="any" />
 
-                        <DynamicParamField body="tiers" type="any" />
+                        <DynamicParamField body="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicParamField body="to" type="number" required>
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicParamField>
 
-                        <DynamicParamField body="credit_cost" type="any" />
+                            <DynamicParamField body="credit_cost" type="number" required>
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicParamField>
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="credit_cost" type="number">
+                          Credits consumed per billing-unit group.
+                        </DynamicParamField>
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="markups" type="object">
+                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                      <Expandable title="properties">
+                        <DynamicParamField body="default_markup" type="number">
+                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="provider_markups.{key}" type="object | null">
+                          Per-provider markup percentages for customers on this plan.
+                          <Expandable title="properties">
+                            <DynamicParamField body="markup" type="number" required />
+
+                          </Expandable>
+                        </DynamicParamField>
+
+                        <DynamicParamField body="model_markups.{key}" type="object | null">
+                          Per-model markup overrides for customers on this plan.
+                          <Expandable title="properties">
+                            <DynamicParamField body="markup" type="number" />
+
+                            <DynamicParamField body="input_cost" type="number" />
+
+                            <DynamicParamField body="output_cost" type="number" />
+
+                          </Expandable>
+                        </DynamicParamField>
 
                       </Expandable>
                     </DynamicParamField>

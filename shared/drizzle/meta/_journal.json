@@ -526,6 +526,13 @@
       "when": 1788345004085,
       "tag": "0074_sparkling_mordo",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1788531508069,
+      "tag": "0075_gorgeous_hobgoblin",
+      "breakpoints": true
     }
   ]
 }

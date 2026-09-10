@@ -1,6 +1,6 @@
 {
 	"name": "atmn-nightly",
-	"version": "3.0.0-nightly.2",
+	"version": "3.0.0-nightly.3",
 	"license": "MIT",
 	"description": "Autumn CLI nightly.",
 	"bin": {

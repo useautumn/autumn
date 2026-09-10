@@ -12,8 +12,13 @@ const stripeResourceFields = [
 
 export type PriceStripeObjectField = (typeof stripeResourceFields)[number];
 
-const readField = (price: Price, field: PriceStripeObjectField): string | null => {
-	const config = price.config as Partial<Record<PriceStripeObjectField, string | null>>;
+const readField = (
+	price: Price,
+	field: PriceStripeObjectField,
+): string | null => {
+	const config = price.config as Partial<
+		Record<PriceStripeObjectField, string | null>
+	>;
 	return config[field] ?? null;
 };
 

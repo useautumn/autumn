@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { configPackageName } from "../../config/configPackageName";
 import {
 	loadEnvFiles,
 	removeEnvValues,
@@ -65,7 +66,7 @@ export type InitResult = {
 
 const DEFAULT_PACKAGE_DIR = "packages/autumn";
 const DEFAULT_PACKAGE_NAME = "autumn";
-const PACKAGE_NAME = "atmn-nightly";
+const PACKAGE_NAME = configPackageName();
 
 type KeyCheck =
 	| { kind: "main"; info: OrgInfo }

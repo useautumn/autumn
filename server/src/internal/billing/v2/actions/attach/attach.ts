@@ -13,6 +13,10 @@ import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/error
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
+import {
+	findPendingInvoiceConflict,
+	listPendingCustomerProducts,
+} from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -129,6 +133,53 @@ export async function attach({
 		billingContext.checkoutMode === "stripe_checkout" &&
 		!skipAutumnCheckout;
 
+	const autumnCheckoutParams = params.long_lived_checkout
+		? { ...params, long_lived_checkout: false }
+		: params;
+
+	const arbitrateCheckoutLock = () =>
+		checkCheckoutSessionLock({
+			ctx,
+			params: autumnCheckoutParams,
+			billingContext,
+			billingPlan,
+			existingLock: checkoutReservation,
+		});
+
+	// 5. Checkout session lock (skip for confirm flows)
+	if (!skipAutumnCheckout && !shouldCreateLongLivedCheckout) {
+		const cachedResult = await arbitrateCheckoutLock();
+		if (cachedResult) {
+			preserveSubjectCache({ ctx });
+			return cachedResult;
+		}
+	}
+
+	const pendingInvoiceResult = await findPendingInvoiceConflict({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+		attachProduct: billingContext.attachProduct,
+		loadPendingCustomerProducts: () =>
+			listPendingCustomerProducts({
+				ctx,
+				fullCustomer: billingContext.fullCustomer,
+			}),
+	});
+	if (pendingInvoiceResult) {
+		preserveSubjectCache({ ctx });
+		// Long-lived skipped the lock above; a completed session must still win.
+		const cachedResult = shouldCreateLongLivedCheckout
+			? await arbitrateCheckoutLock()
+			: null;
+		return (
+			cachedResult ?? {
+				billingContext,
+				billingPlan,
+				billingResult: pendingInvoiceResult,
+			}
+		);
+	}
+
 	if (shouldCreateLongLivedCheckout) {
 		// Creating a checkout changes no Autumn balance state. Keep any accepted
 		// Redis-only tracks for the later confirmation request to consume.
@@ -141,26 +192,6 @@ export async function attach({
 			billingPlan,
 			expiresInMs: LONG_LIVED_CHECKOUT_EXPIRY_MS,
 		});
-	}
-
-	const autumnCheckoutParams = params.long_lived_checkout
-		? { ...params, long_lived_checkout: false }
-		: params;
-
-	// 5. Checkout session lock (skip for confirm flows)
-	if (!skipAutumnCheckout) {
-		const cachedResult = await checkCheckoutSessionLock({
-			ctx,
-			params: autumnCheckoutParams,
-			billingContext,
-			billingPlan,
-			existingLock: checkoutReservation,
-		});
-
-		if (cachedResult) {
-			preserveSubjectCache({ ctx });
-			return cachedResult;
-		}
 	}
 
 	if (

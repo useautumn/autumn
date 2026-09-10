@@ -7,6 +7,8 @@
  * generated skill fails `bun generate`, so the list cannot go stale silently.
  */
 export const SKILL_ALLOWLIST: readonly string[] = [
-	"autumn-concepts",
+	"autumn-setup",
 	"autumn-catalog",
+	"autumn-integrate",
+	"autumn-concepts",
 ];

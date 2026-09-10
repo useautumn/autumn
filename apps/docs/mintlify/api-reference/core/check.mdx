@@ -80,6 +80,10 @@ const { allowed } = await autumn.check({
       Unix timestamp (ms) when the lock automatically expires and releases the held balance.
     </DynamicParamField>
 
+    <DynamicParamField body="overage_behavior" type="'cap' | 'overflow'">
+      How to handle a lock that exceeds the available balance. "reject" (default) returns allowed: false and reserves nothing. "cap" reserves only what fits and returns allowed: true. "overflow" reserves the full value: the balance can go negative, though spend limits still apply. balances.finalize reuses the behavior chosen here.
+    </DynamicParamField>
+
   </Expandable>
 </DynamicParamField>
 
@@ -145,6 +149,53 @@ const { allowed } = await autumn.check({
 
             <DynamicResponseField name="billing_units" type="number">
               Number of metered-feature units priced together. Defaults to one when omitted.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="dimensions.{key}" type="object">
+              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="priority" type="integer">
+                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="tier_behavior" type="any" />
+
+                <DynamicResponseField name="tiers" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="to" type="number">
+                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="credit_cost" type="number">
+                      Credits consumed per billing-unit group within this tier.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="multipliers.{key}" type="object">
+              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="factor" type="number">
+                  Multiplies the matched rate. All matching multipliers stack.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="add" type="number">
+                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                </DynamicResponseField>
+
+              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="any" />
@@ -419,6 +470,53 @@ const { allowed } = await autumn.check({
 
             <DynamicResponseField name="billing_units" type="number">
               Number of metered-feature units priced together. Defaults to one when omitted.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="dimensions.{key}" type="object">
+              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="priority" type="integer">
+                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="tier_behavior" type="any" />
+
+                <DynamicResponseField name="tiers" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="to" type="number">
+                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="credit_cost" type="number">
+                      Credits consumed per billing-unit group within this tier.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="multipliers.{key}" type="object">
+              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="factor" type="number">
+                  Multiplies the matched rate. All matching multipliers stack.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="add" type="number">
+                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                </DynamicResponseField>
+
+              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="any" />
@@ -705,6 +803,53 @@ const { allowed } = await autumn.check({
 
             <DynamicResponseField name="billing_units" type="number">
               Number of metered-feature units priced together. Defaults to one when omitted.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="dimensions.{key}" type="object">
+              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="priority" type="integer">
+                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="tier_behavior" type="any" />
+
+                <DynamicResponseField name="tiers" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="to" type="number">
+                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="credit_cost" type="number">
+                      Credits consumed per billing-unit group within this tier.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="multipliers.{key}" type="object">
+              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="factor" type="number">
+                  Multiplies the matched rate. All matching multipliers stack.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="add" type="number">
+                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                </DynamicResponseField>
+
+              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="any" />

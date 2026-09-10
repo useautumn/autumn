@@ -45,6 +45,14 @@ export default defineConfig({
 			skill: { file: "skills/concepts/concepts.mdx" },
 		},
 	},
+	setup: {
+		title: "Setup",
+		description:
+			"First-run Autumn setup — install the skill pack, then model pricing.",
+		formats: {
+			skill: { file: "skills/setup/setup.mdx" },
+		},
+	},
 	catalog: {
 		title: "Catalog",
 		description:
@@ -56,6 +64,14 @@ export default defineConfig({
 				document: "skills/catalog/catalog.mdx",
 			},
 			skill: { file: "skills/catalog/catalog.mdx" },
+		},
+	},
+	integrate: {
+		title: "Integrate",
+		description:
+			"Integrating Autumn into an app's backend — customers, billing flows, gating, usage.",
+		formats: {
+			skill: { file: "skills/integrate/integrate.mdx" },
 		},
 	},
 	billing: {

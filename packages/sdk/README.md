@@ -865,6 +865,13 @@ const response = await client.features.delete({ featureId: "old-feature" });
 * [delete](docs/sdks/rewards/README.md#delete) - Delete a coupon or feature grant.
 * [redeemCode](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
 
+### [Sandboxes](docs/sdks/sandboxes/README.md)
+
+* [create](docs/sdks/sandboxes/README.md#create) - Creates a sandbox: an isolated copy of your organization with its own catalog, customers and secret key. Returns the sandbox's secret key once, in this response — store it, it cannot be read back. Authenticated with your organization's secret key (a sandbox's own key cannot create sandboxes).
+* [list](docs/sdks/sandboxes/README.md#list) - Lists every sandbox belonging to your organization, newest first. Secret keys are never returned here — only `sandboxes.create` shows one.
+* [delete](docs/sdks/sandboxes/README.md#delete) - Permanently deletes a sandbox and everything inside it: its catalog, customers and secret key. Cannot be undone.
+* [reset](docs/sdks/sandboxes/README.md#reset) - Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.
+
 </details>
 <!-- End Available Resources and Operations [operations] -->
 
@@ -1498,6 +1505,10 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`rewardsList`](docs/sdks/rewards/README.md#list) - List the coupons and feature grants configured for the org.
 - [`rewardsRedeemCode`](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
 - [`rewardsUpdate`](docs/sdks/rewards/README.md#update) - Update a coupon or feature grant. Omitted fields keep their current value.
+- [`sandboxesCreate`](docs/sdks/sandboxes/README.md#create) - Creates a sandbox: an isolated copy of your organization with its own catalog, customers and secret key. Returns the sandbox's secret key once, in this response — store it, it cannot be read back. Authenticated with your organization's secret key (a sandbox's own key cannot create sandboxes).
+- [`sandboxesDelete`](docs/sdks/sandboxes/README.md#delete) - Permanently deletes a sandbox and everything inside it: its catalog, customers and secret key. Cannot be undone.
+- [`sandboxesList`](docs/sdks/sandboxes/README.md#list) - Lists every sandbox belonging to your organization, newest first. Secret keys are never returned here — only `sandboxes.create` shows one.
+- [`sandboxesReset`](docs/sdks/sandboxes/README.md#reset) - Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.
 - [`track`](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.

@@ -179,7 +179,7 @@ export type SetupPaymentItemAdditionalCurrency = {
   amount: number;
 };
 
-export type SetupPaymentItemTo = number | string;
+export type SetupPaymentItemPriceTo = number | string;
 
 export type SetupPaymentItemTierAdditionalCurrency = {
   /**
@@ -370,6 +370,84 @@ export type SetupPaymentItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type SetupPaymentDimensionsItemMatch4 = string | number | boolean;
+
+export type SetupPaymentDimensionsItem4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsItemMatch3 = string | number | boolean;
+
+export const SetupPaymentDimensionsToItemEnum2 = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentDimensionsToItemEnum2 = ClosedEnum<
+  typeof SetupPaymentDimensionsToItemEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentDimensionsItemToUnion2 =
+  | number
+  | SetupPaymentDimensionsToItemEnum2;
+
+export type SetupPaymentDimensionsItemTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | SetupPaymentDimensionsToItemEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsItem3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsItemTier2>;
+};
+
+export type SetupPaymentItemDimensionsUnion2 =
+  | SetupPaymentDimensionsItem3
+  | SetupPaymentDimensionsItem4;
+
+export type SetupPaymentItemMultipliersMatch2 = string | number | boolean;
+
+export type SetupPaymentItemMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type SetupPaymentCreditSchemaItem2 = {
   /**
    * ID of the metered feature that draws from this credit system.
@@ -380,16 +458,116 @@ export type SetupPaymentCreditSchemaItem2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: SetupPaymentDimensionsItem3 | SetupPaymentDimensionsItem4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: SetupPaymentItemMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
 
+export type SetupPaymentDimensionsItemMatch2 = string | number | boolean;
+
+export type SetupPaymentDimensionsItem2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsItemMatch1 = string | number | boolean;
+
+export const SetupPaymentDimensionsToItemEnum1 = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentDimensionsToItemEnum1 = ClosedEnum<
+  typeof SetupPaymentDimensionsToItemEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentDimensionsItemToUnion1 =
+  | number
+  | SetupPaymentDimensionsToItemEnum1;
+
+export type SetupPaymentDimensionsItemTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | SetupPaymentDimensionsToItemEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsItem1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsItemTier1>;
+};
+
+export type SetupPaymentItemDimensionsUnion1 =
+  | SetupPaymentDimensionsItem1
+  | SetupPaymentDimensionsItem2;
+
+export type SetupPaymentItemMultipliersMatch1 = string | number | boolean;
+
+export type SetupPaymentItemMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const SetupPaymentToItemEnum = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentToItemEnum = ClosedEnum<typeof SetupPaymentToItemEnum>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentItemFeatureOverrideToUnion =
+  | number
+  | SetupPaymentToItemEnum;
+
 export type SetupPaymentItemFeatureOverrideTier = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to?: any | undefined;
+  to: number | SetupPaymentToItemEnum;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
@@ -405,6 +583,16 @@ export type SetupPaymentCreditSchemaItem1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: SetupPaymentDimensionsItem1 | SetupPaymentDimensionsItem2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: SetupPaymentItemMultipliers1 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<SetupPaymentItemFeatureOverrideTier>;
 };
@@ -412,6 +600,40 @@ export type SetupPaymentCreditSchemaItem1 = {
 export type SetupPaymentItemCreditSchemaUnion =
   | SetupPaymentCreditSchemaItem1
   | SetupPaymentCreditSchemaItem2;
+
+export type SetupPaymentItemProviderMarkups = {
+  markup: number;
+};
+
+export type SetupPaymentItemModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type SetupPaymentItemMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: SetupPaymentItemProviderMarkups }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?:
+    | { [k: string]: SetupPaymentItemModelMarkups }
+    | null
+    | undefined;
+};
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
@@ -423,6 +645,10 @@ export type SetupPaymentItemFeatureOverride = {
   creditSchema?:
     | Array<SetupPaymentCreditSchemaItem1 | SetupPaymentCreditSchemaItem2>
     | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: SetupPaymentItemMarkups | undefined;
 };
 
 /**
@@ -513,7 +739,7 @@ export type SetupPaymentAddItemAdditionalCurrency = {
   amount: number;
 };
 
-export type SetupPaymentAddItemTo = number | string;
+export type SetupPaymentAddItemPriceTo = number | string;
 
 export type SetupPaymentAddItemTierAdditionalCurrency = {
   /**
@@ -706,6 +932,84 @@ export type SetupPaymentAddItemRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type SetupPaymentDimensionsAddItemMatch4 = string | number | boolean;
+
+export type SetupPaymentDimensionsAddItem4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsAddItemMatch3 = string | number | boolean;
+
+export const SetupPaymentDimensionsToAddItemEnum2 = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentDimensionsToAddItemEnum2 = ClosedEnum<
+  typeof SetupPaymentDimensionsToAddItemEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentDimensionsAddItemToUnion2 =
+  | number
+  | SetupPaymentDimensionsToAddItemEnum2;
+
+export type SetupPaymentDimensionsAddItemTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | SetupPaymentDimensionsToAddItemEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsAddItem3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsAddItemTier2>;
+};
+
+export type SetupPaymentAddItemDimensionsUnion2 =
+  | SetupPaymentDimensionsAddItem3
+  | SetupPaymentDimensionsAddItem4;
+
+export type SetupPaymentAddItemMultipliersMatch2 = string | number | boolean;
+
+export type SetupPaymentAddItemMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type SetupPaymentCreditSchemaAddItem2 = {
   /**
    * ID of the metered feature that draws from this credit system.
@@ -716,16 +1020,120 @@ export type SetupPaymentCreditSchemaAddItem2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsAddItem3
+      | SetupPaymentDimensionsAddItem4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: SetupPaymentAddItemMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
 
+export type SetupPaymentDimensionsAddItemMatch2 = string | number | boolean;
+
+export type SetupPaymentDimensionsAddItem2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsAddItemMatch1 = string | number | boolean;
+
+export const SetupPaymentDimensionsToAddItemEnum1 = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentDimensionsToAddItemEnum1 = ClosedEnum<
+  typeof SetupPaymentDimensionsToAddItemEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentDimensionsAddItemToUnion1 =
+  | number
+  | SetupPaymentDimensionsToAddItemEnum1;
+
+export type SetupPaymentDimensionsAddItemTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | SetupPaymentDimensionsToAddItemEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsAddItem1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsAddItemTier1>;
+};
+
+export type SetupPaymentAddItemDimensionsUnion1 =
+  | SetupPaymentDimensionsAddItem1
+  | SetupPaymentDimensionsAddItem2;
+
+export type SetupPaymentAddItemMultipliersMatch1 = string | number | boolean;
+
+export type SetupPaymentAddItemMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const SetupPaymentToAddItemEnum = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentToAddItemEnum = ClosedEnum<
+  typeof SetupPaymentToAddItemEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentAddItemFeatureOverrideToUnion =
+  | number
+  | SetupPaymentToAddItemEnum;
+
 export type SetupPaymentAddItemFeatureOverrideTier = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to?: any | undefined;
+  to: number | SetupPaymentToAddItemEnum;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
@@ -741,6 +1149,18 @@ export type SetupPaymentCreditSchemaAddItem1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsAddItem1
+      | SetupPaymentDimensionsAddItem2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: SetupPaymentAddItemMultipliers1 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<SetupPaymentAddItemFeatureOverrideTier>;
 };
@@ -748,6 +1168,40 @@ export type SetupPaymentCreditSchemaAddItem1 = {
 export type SetupPaymentAddItemCreditSchemaUnion =
   | SetupPaymentCreditSchemaAddItem1
   | SetupPaymentCreditSchemaAddItem2;
+
+export type SetupPaymentAddItemProviderMarkups = {
+  markup: number;
+};
+
+export type SetupPaymentAddItemModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type SetupPaymentAddItemMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: SetupPaymentAddItemProviderMarkups }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?:
+    | { [k: string]: SetupPaymentAddItemModelMarkups }
+    | null
+    | undefined;
+};
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
@@ -759,6 +1213,10 @@ export type SetupPaymentAddItemFeatureOverride = {
   creditSchema?:
     | Array<SetupPaymentCreditSchemaAddItem1 | SetupPaymentCreditSchemaAddItem2>
     | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: SetupPaymentAddItemMarkups | undefined;
 };
 
 /**
@@ -934,7 +1392,7 @@ export type SetupPaymentCustomizeFreeTrialParams = {
 /**
  * The time interval for the purchase limit window.
  */
-export const SetupPaymentPurchaseLimitInterval = {
+export const SetupPaymentAutoTopupInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -943,8 +1401,8 @@ export const SetupPaymentPurchaseLimitInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type SetupPaymentPurchaseLimitInterval = ClosedEnum<
-  typeof SetupPaymentPurchaseLimitInterval
+export type SetupPaymentAutoTopupInterval = ClosedEnum<
+  typeof SetupPaymentAutoTopupInterval
 >;
 
 /**
@@ -954,7 +1412,7 @@ export type SetupPaymentPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: SetupPaymentPurchaseLimitInterval;
+  interval: SetupPaymentAutoTopupInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -1301,14 +1759,33 @@ export type SetupPaymentUpsertLicenseAddItemAdditionalCurrency = {
   amount: number;
 };
 
-export type SetupPaymentUpsertLicenseTier = {
-  to?: any | undefined;
+export type SetupPaymentUpsertLicensePriceTo = number | string;
+
+export type SetupPaymentUpsertLicenseTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
+
+export type SetupPaymentUpsertLicensePriceTier = {
+  to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
   /**
    * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
    */
-  additionalCurrencies?: Array<any> | undefined;
+  additionalCurrencies?:
+    | Array<SetupPaymentUpsertLicenseTierAdditionalCurrency>
+    | undefined;
 };
 
 export const SetupPaymentUpsertLicenseTierBehavior = {
@@ -1368,7 +1845,7 @@ export type SetupPaymentUpsertLicensePrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<SetupPaymentUpsertLicenseTier> | undefined;
+  tiers?: Array<SetupPaymentUpsertLicensePriceTier> | undefined;
   tierBehavior?: SetupPaymentUpsertLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1475,22 +1952,298 @@ export type SetupPaymentUpsertLicenseRollover = {
   expiryDurationLength?: number | undefined;
 };
 
+export type SetupPaymentDimensionsUpsertLicenseMatch4 =
+  | string
+  | number
+  | boolean;
+
+export type SetupPaymentDimensionsUpsertLicense4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsUpsertLicenseMatch3 =
+  | string
+  | number
+  | boolean;
+
+export const SetupPaymentDimensionsToUpsertLicenseEnum2 = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentDimensionsToUpsertLicenseEnum2 = ClosedEnum<
+  typeof SetupPaymentDimensionsToUpsertLicenseEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentDimensionsUpsertLicenseToUnion2 =
+  | number
+  | SetupPaymentDimensionsToUpsertLicenseEnum2;
+
+export type SetupPaymentDimensionsUpsertLicenseTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | SetupPaymentDimensionsToUpsertLicenseEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsUpsertLicense3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsUpsertLicenseTier2>;
+};
+
+export type SetupPaymentUpsertLicenseDimensionsUnion2 =
+  | SetupPaymentDimensionsUpsertLicense3
+  | SetupPaymentDimensionsUpsertLicense4;
+
+export type SetupPaymentUpsertLicenseMultipliersMatch2 =
+  | string
+  | number
+  | boolean;
+
+export type SetupPaymentUpsertLicenseMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type SetupPaymentCreditSchemaUpsertLicense2 = {
-  meteredFeatureId?: any | undefined;
-  billingUnits?: any | undefined;
-  creditCost?: any | undefined;
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsUpsertLicense3
+      | SetupPaymentDimensionsUpsertLicense4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?:
+    | { [k: string]: SetupPaymentUpsertLicenseMultipliers2 }
+    | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsUpsertLicenseMatch2 =
+  | string
+  | number
+  | boolean;
+
+export type SetupPaymentDimensionsUpsertLicense2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsUpsertLicenseMatch1 =
+  | string
+  | number
+  | boolean;
+
+export const SetupPaymentDimensionsToUpsertLicenseEnum1 = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentDimensionsToUpsertLicenseEnum1 = ClosedEnum<
+  typeof SetupPaymentDimensionsToUpsertLicenseEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentDimensionsUpsertLicenseToUnion1 =
+  | number
+  | SetupPaymentDimensionsToUpsertLicenseEnum1;
+
+export type SetupPaymentDimensionsUpsertLicenseTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | SetupPaymentDimensionsToUpsertLicenseEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type SetupPaymentDimensionsUpsertLicense1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsUpsertLicenseTier1>;
+};
+
+export type SetupPaymentUpsertLicenseDimensionsUnion1 =
+  | SetupPaymentDimensionsUpsertLicense1
+  | SetupPaymentDimensionsUpsertLicense2;
+
+export type SetupPaymentUpsertLicenseMultipliersMatch1 =
+  | string
+  | number
+  | boolean;
+
+export type SetupPaymentUpsertLicenseMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string | number | boolean };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export const SetupPaymentToUpsertLicenseEnum = {
+  Inf: "inf",
+} as const;
+export type SetupPaymentToUpsertLicenseEnum = ClosedEnum<
+  typeof SetupPaymentToUpsertLicenseEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type SetupPaymentUpsertLicenseFeatureOverrideToUnion =
+  | number
+  | SetupPaymentToUpsertLicenseEnum;
+
+export type SetupPaymentUpsertLicenseFeatureOverrideTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | SetupPaymentToUpsertLicenseEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
 };
 
 export type SetupPaymentCreditSchemaUpsertLicense1 = {
-  meteredFeatureId?: any | undefined;
-  billingUnits?: any | undefined;
-  tierBehavior?: any | undefined;
-  tiers?: any | undefined;
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsUpsertLicense1
+      | SetupPaymentDimensionsUpsertLicense2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?:
+    | { [k: string]: SetupPaymentUpsertLicenseMultipliers1 }
+    | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<SetupPaymentUpsertLicenseFeatureOverrideTier>;
 };
 
 export type SetupPaymentUpsertLicenseCreditSchemaUnion =
   | SetupPaymentCreditSchemaUpsertLicense1
   | SetupPaymentCreditSchemaUpsertLicense2;
+
+export type SetupPaymentUpsertLicenseProviderMarkups = {
+  markup: number;
+};
+
+export type SetupPaymentUpsertLicenseModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type SetupPaymentUpsertLicenseMarkups = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: SetupPaymentUpsertLicenseProviderMarkups }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?:
+    | { [k: string]: SetupPaymentUpsertLicenseModelMarkups }
+    | null
+    | undefined;
+};
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
@@ -1505,6 +2258,10 @@ export type SetupPaymentUpsertLicenseFeatureOverride = {
       | SetupPaymentCreditSchemaUpsertLicense2
     >
     | undefined;
+  /**
+   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+   */
+  markups?: SetupPaymentUpsertLicenseMarkups | undefined;
 };
 
 /**
@@ -2104,19 +2861,19 @@ export function setupPaymentItemAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type SetupPaymentItemTo$Outbound = number | string;
+export type SetupPaymentItemPriceTo$Outbound = number | string;
 
 /** @internal */
-export const SetupPaymentItemTo$outboundSchema: z.ZodMiniType<
-  SetupPaymentItemTo$Outbound,
-  SetupPaymentItemTo
+export const SetupPaymentItemPriceTo$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemPriceTo$Outbound,
+  SetupPaymentItemPriceTo
 > = smartUnion([z.number(), z.string()]);
 
-export function setupPaymentItemToToJSON(
-  setupPaymentItemTo: SetupPaymentItemTo,
+export function setupPaymentItemPriceToToJSON(
+  setupPaymentItemPriceTo: SetupPaymentItemPriceTo,
 ): string {
   return JSON.stringify(
-    SetupPaymentItemTo$outboundSchema.parse(setupPaymentItemTo),
+    SetupPaymentItemPriceTo$outboundSchema.parse(setupPaymentItemPriceTo),
   );
 }
 
@@ -2348,9 +3105,274 @@ export function setupPaymentItemRolloverToJSON(
 }
 
 /** @internal */
+export type SetupPaymentDimensionsItemMatch4$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsItemMatch4$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItemMatch4$Outbound,
+  SetupPaymentDimensionsItemMatch4
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsItemMatch4ToJSON(
+  setupPaymentDimensionsItemMatch4: SetupPaymentDimensionsItemMatch4,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItemMatch4$outboundSchema.parse(
+      setupPaymentDimensionsItemMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsItem4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsItem4$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItem4$Outbound,
+  SetupPaymentDimensionsItem4
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsItem4ToJSON(
+  setupPaymentDimensionsItem4: SetupPaymentDimensionsItem4,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItem4$outboundSchema.parse(
+      setupPaymentDimensionsItem4,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsItemMatch3$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsItemMatch3$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItemMatch3$Outbound,
+  SetupPaymentDimensionsItemMatch3
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsItemMatch3ToJSON(
+  setupPaymentDimensionsItemMatch3: SetupPaymentDimensionsItemMatch3,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItemMatch3$outboundSchema.parse(
+      setupPaymentDimensionsItemMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentDimensionsToItemEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentDimensionsToItemEnum2
+> = z.enum(SetupPaymentDimensionsToItemEnum2);
+
+/** @internal */
+export type SetupPaymentDimensionsItemToUnion2$Outbound = number | string;
+
+/** @internal */
+export const SetupPaymentDimensionsItemToUnion2$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItemToUnion2$Outbound,
+  SetupPaymentDimensionsItemToUnion2
+> = smartUnion([z.number(), SetupPaymentDimensionsToItemEnum2$outboundSchema]);
+
+export function setupPaymentDimensionsItemToUnion2ToJSON(
+  setupPaymentDimensionsItemToUnion2: SetupPaymentDimensionsItemToUnion2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItemToUnion2$outboundSchema.parse(
+      setupPaymentDimensionsItemToUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsItemTier2$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsItemTier2$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItemTier2$Outbound,
+  SetupPaymentDimensionsItemTier2
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      SetupPaymentDimensionsToItemEnum2$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsItemTier2ToJSON(
+  setupPaymentDimensionsItemTier2: SetupPaymentDimensionsItemTier2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItemTier2$outboundSchema.parse(
+      setupPaymentDimensionsItemTier2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsItem3$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsItemTier2$Outbound>;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsItem3$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItem3$Outbound,
+  SetupPaymentDimensionsItem3
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => SetupPaymentDimensionsItemTier2$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsItem3ToJSON(
+  setupPaymentDimensionsItem3: SetupPaymentDimensionsItem3,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItem3$outboundSchema.parse(
+      setupPaymentDimensionsItem3,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemDimensionsUnion2$Outbound =
+  | SetupPaymentDimensionsItem3$Outbound
+  | SetupPaymentDimensionsItem4$Outbound;
+
+/** @internal */
+export const SetupPaymentItemDimensionsUnion2$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemDimensionsUnion2$Outbound,
+  SetupPaymentItemDimensionsUnion2
+> = smartUnion([
+  z.lazy(() => SetupPaymentDimensionsItem3$outboundSchema),
+  z.lazy(() => SetupPaymentDimensionsItem4$outboundSchema),
+]);
+
+export function setupPaymentItemDimensionsUnion2ToJSON(
+  setupPaymentItemDimensionsUnion2: SetupPaymentItemDimensionsUnion2,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemDimensionsUnion2$outboundSchema.parse(
+      setupPaymentItemDimensionsUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemMultipliersMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentItemMultipliersMatch2$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemMultipliersMatch2$Outbound,
+  SetupPaymentItemMultipliersMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentItemMultipliersMatch2ToJSON(
+  setupPaymentItemMultipliersMatch2: SetupPaymentItemMultipliersMatch2,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemMultipliersMatch2$outboundSchema.parse(
+      setupPaymentItemMultipliersMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemMultipliers2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentItemMultipliers2$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemMultipliers2$Outbound,
+  SetupPaymentItemMultipliers2
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function setupPaymentItemMultipliers2ToJSON(
+  setupPaymentItemMultipliers2: SetupPaymentItemMultipliers2,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemMultipliers2$outboundSchema.parse(
+      setupPaymentItemMultipliers2,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentCreditSchemaItem2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsItem3$Outbound
+      | SetupPaymentDimensionsItem4$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: SetupPaymentItemMultipliers2$Outbound }
+    | undefined;
   credit_cost: number;
 };
 
@@ -2362,6 +3384,17 @@ export const SetupPaymentCreditSchemaItem2$outboundSchema: z.ZodMiniType<
   z.object({
     meteredFeatureId: z.string(),
     billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => SetupPaymentDimensionsItem3$outboundSchema),
+        z.lazy(() => SetupPaymentDimensionsItem4$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentItemMultipliers2$outboundSchema),
+    )),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -2384,8 +3417,291 @@ export function setupPaymentCreditSchemaItem2ToJSON(
 }
 
 /** @internal */
+export type SetupPaymentDimensionsItemMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsItemMatch2$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItemMatch2$Outbound,
+  SetupPaymentDimensionsItemMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsItemMatch2ToJSON(
+  setupPaymentDimensionsItemMatch2: SetupPaymentDimensionsItemMatch2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItemMatch2$outboundSchema.parse(
+      setupPaymentDimensionsItemMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsItem2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsItem2$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItem2$Outbound,
+  SetupPaymentDimensionsItem2
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsItem2ToJSON(
+  setupPaymentDimensionsItem2: SetupPaymentDimensionsItem2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItem2$outboundSchema.parse(
+      setupPaymentDimensionsItem2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsItemMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsItemMatch1$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItemMatch1$Outbound,
+  SetupPaymentDimensionsItemMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsItemMatch1ToJSON(
+  setupPaymentDimensionsItemMatch1: SetupPaymentDimensionsItemMatch1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItemMatch1$outboundSchema.parse(
+      setupPaymentDimensionsItemMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentDimensionsToItemEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentDimensionsToItemEnum1
+> = z.enum(SetupPaymentDimensionsToItemEnum1);
+
+/** @internal */
+export type SetupPaymentDimensionsItemToUnion1$Outbound = number | string;
+
+/** @internal */
+export const SetupPaymentDimensionsItemToUnion1$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItemToUnion1$Outbound,
+  SetupPaymentDimensionsItemToUnion1
+> = smartUnion([z.number(), SetupPaymentDimensionsToItemEnum1$outboundSchema]);
+
+export function setupPaymentDimensionsItemToUnion1ToJSON(
+  setupPaymentDimensionsItemToUnion1: SetupPaymentDimensionsItemToUnion1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItemToUnion1$outboundSchema.parse(
+      setupPaymentDimensionsItemToUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsItemTier1$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsItemTier1$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItemTier1$Outbound,
+  SetupPaymentDimensionsItemTier1
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      SetupPaymentDimensionsToItemEnum1$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsItemTier1ToJSON(
+  setupPaymentDimensionsItemTier1: SetupPaymentDimensionsItemTier1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItemTier1$outboundSchema.parse(
+      setupPaymentDimensionsItemTier1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsItem1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsItemTier1$Outbound>;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsItem1$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsItem1$Outbound,
+  SetupPaymentDimensionsItem1
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => SetupPaymentDimensionsItemTier1$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsItem1ToJSON(
+  setupPaymentDimensionsItem1: SetupPaymentDimensionsItem1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsItem1$outboundSchema.parse(
+      setupPaymentDimensionsItem1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemDimensionsUnion1$Outbound =
+  | SetupPaymentDimensionsItem1$Outbound
+  | SetupPaymentDimensionsItem2$Outbound;
+
+/** @internal */
+export const SetupPaymentItemDimensionsUnion1$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemDimensionsUnion1$Outbound,
+  SetupPaymentItemDimensionsUnion1
+> = smartUnion([
+  z.lazy(() => SetupPaymentDimensionsItem1$outboundSchema),
+  z.lazy(() => SetupPaymentDimensionsItem2$outboundSchema),
+]);
+
+export function setupPaymentItemDimensionsUnion1ToJSON(
+  setupPaymentItemDimensionsUnion1: SetupPaymentItemDimensionsUnion1,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemDimensionsUnion1$outboundSchema.parse(
+      setupPaymentItemDimensionsUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemMultipliersMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentItemMultipliersMatch1$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemMultipliersMatch1$Outbound,
+  SetupPaymentItemMultipliersMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentItemMultipliersMatch1ToJSON(
+  setupPaymentItemMultipliersMatch1: SetupPaymentItemMultipliersMatch1,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemMultipliersMatch1$outboundSchema.parse(
+      setupPaymentItemMultipliersMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemMultipliers1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentItemMultipliers1$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemMultipliers1$Outbound,
+  SetupPaymentItemMultipliers1
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function setupPaymentItemMultipliers1ToJSON(
+  setupPaymentItemMultipliers1: SetupPaymentItemMultipliers1,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemMultipliers1$outboundSchema.parse(
+      setupPaymentItemMultipliers1,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentToItemEnum$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentToItemEnum
+> = z.enum(SetupPaymentToItemEnum);
+
+/** @internal */
+export type SetupPaymentItemFeatureOverrideToUnion$Outbound = number | string;
+
+/** @internal */
+export const SetupPaymentItemFeatureOverrideToUnion$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentItemFeatureOverrideToUnion$Outbound,
+    SetupPaymentItemFeatureOverrideToUnion
+  > = smartUnion([z.number(), SetupPaymentToItemEnum$outboundSchema]);
+
+export function setupPaymentItemFeatureOverrideToUnionToJSON(
+  setupPaymentItemFeatureOverrideToUnion:
+    SetupPaymentItemFeatureOverrideToUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemFeatureOverrideToUnion$outboundSchema.parse(
+      setupPaymentItemFeatureOverrideToUnion,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentItemFeatureOverrideTier$Outbound = {
-  to?: any | undefined;
+  to: number | string;
   credit_cost: number;
 };
 
@@ -2395,7 +3711,7 @@ export const SetupPaymentItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
   SetupPaymentItemFeatureOverrideTier
 > = z.pipe(
   z.object({
-    to: z.optional(z.any()),
+    to: smartUnion([z.number(), SetupPaymentToItemEnum$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -2419,6 +3735,14 @@ export function setupPaymentItemFeatureOverrideTierToJSON(
 export type SetupPaymentCreditSchemaItem1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsItem1$Outbound
+      | SetupPaymentDimensionsItem2$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: SetupPaymentItemMultipliers1$Outbound }
+    | undefined;
   tier_behavior: "graduated";
   tiers: Array<SetupPaymentItemFeatureOverrideTier$Outbound>;
 };
@@ -2431,10 +3755,21 @@ export const SetupPaymentCreditSchemaItem1$outboundSchema: z.ZodMiniType<
   z.object({
     meteredFeatureId: z.string(),
     billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => SetupPaymentDimensionsItem1$outboundSchema),
+        z.lazy(() => SetupPaymentDimensionsItem2$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentItemMultipliers1$outboundSchema),
+    )),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => SetupPaymentItemFeatureOverrideTier$outboundSchema),
-    ),
+    tiers: z.array(z.lazy(() =>
+      SetupPaymentItemFeatureOverrideTier$outboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2480,6 +3815,110 @@ export function setupPaymentItemCreditSchemaUnionToJSON(
 }
 
 /** @internal */
+export type SetupPaymentItemProviderMarkups$Outbound = {
+  markup: number;
+};
+
+/** @internal */
+export const SetupPaymentItemProviderMarkups$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemProviderMarkups$Outbound,
+  SetupPaymentItemProviderMarkups
+> = z.object({
+  markup: z.number(),
+});
+
+export function setupPaymentItemProviderMarkupsToJSON(
+  setupPaymentItemProviderMarkups: SetupPaymentItemProviderMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemProviderMarkups$outboundSchema.parse(
+      setupPaymentItemProviderMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemModelMarkups$Outbound = {
+  markup?: number | undefined;
+  input_cost?: number | undefined;
+  output_cost?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentItemModelMarkups$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemModelMarkups$Outbound,
+  SetupPaymentItemModelMarkups
+> = z.pipe(
+  z.object({
+    markup: z.optional(z.number()),
+    inputCost: z.optional(z.number()),
+    outputCost: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      inputCost: "input_cost",
+      outputCost: "output_cost",
+    });
+  }),
+);
+
+export function setupPaymentItemModelMarkupsToJSON(
+  setupPaymentItemModelMarkups: SetupPaymentItemModelMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemModelMarkups$outboundSchema.parse(
+      setupPaymentItemModelMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentItemMarkups$Outbound = {
+  default_markup?: number | undefined;
+  provider_markups?:
+    | { [k: string]: SetupPaymentItemProviderMarkups$Outbound }
+    | null
+    | undefined;
+  model_markups?:
+    | { [k: string]: SetupPaymentItemModelMarkups$Outbound }
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentItemMarkups$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemMarkups$Outbound,
+  SetupPaymentItemMarkups
+> = z.pipe(
+  z.object({
+    defaultMarkup: z.optional(z.number()),
+    providerMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentItemProviderMarkups$outboundSchema),
+    ))),
+    modelMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentItemModelMarkups$outboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      defaultMarkup: "default_markup",
+      providerMarkups: "provider_markups",
+      modelMarkups: "model_markups",
+    });
+  }),
+);
+
+export function setupPaymentItemMarkupsToJSON(
+  setupPaymentItemMarkups: SetupPaymentItemMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemMarkups$outboundSchema.parse(setupPaymentItemMarkups),
+  );
+}
+
+/** @internal */
 export type SetupPaymentItemFeatureOverride$Outbound = {
   credit_schema?:
     | Array<
@@ -2487,6 +3926,7 @@ export type SetupPaymentItemFeatureOverride$Outbound = {
       | SetupPaymentCreditSchemaItem2$Outbound
     >
     | undefined;
+  markups?: SetupPaymentItemMarkups$Outbound | undefined;
 };
 
 /** @internal */
@@ -2501,6 +3941,9 @@ export const SetupPaymentItemFeatureOverride$outboundSchema: z.ZodMiniType<
         SetupPaymentCreditSchemaItem2$outboundSchema
       ),
     ]))),
+    markups: z.optional(z.lazy(() =>
+      SetupPaymentItemMarkups$outboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2630,19 +4073,19 @@ export function setupPaymentAddItemAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type SetupPaymentAddItemTo$Outbound = number | string;
+export type SetupPaymentAddItemPriceTo$Outbound = number | string;
 
 /** @internal */
-export const SetupPaymentAddItemTo$outboundSchema: z.ZodMiniType<
-  SetupPaymentAddItemTo$Outbound,
-  SetupPaymentAddItemTo
+export const SetupPaymentAddItemPriceTo$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemPriceTo$Outbound,
+  SetupPaymentAddItemPriceTo
 > = smartUnion([z.number(), z.string()]);
 
-export function setupPaymentAddItemToToJSON(
-  setupPaymentAddItemTo: SetupPaymentAddItemTo,
+export function setupPaymentAddItemPriceToToJSON(
+  setupPaymentAddItemPriceTo: SetupPaymentAddItemPriceTo,
 ): string {
   return JSON.stringify(
-    SetupPaymentAddItemTo$outboundSchema.parse(setupPaymentAddItemTo),
+    SetupPaymentAddItemPriceTo$outboundSchema.parse(setupPaymentAddItemPriceTo),
   );
 }
 
@@ -2883,9 +4326,278 @@ export function setupPaymentAddItemRolloverToJSON(
 }
 
 /** @internal */
+export type SetupPaymentDimensionsAddItemMatch4$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsAddItemMatch4$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItemMatch4$Outbound,
+  SetupPaymentDimensionsAddItemMatch4
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsAddItemMatch4ToJSON(
+  setupPaymentDimensionsAddItemMatch4: SetupPaymentDimensionsAddItemMatch4,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItemMatch4$outboundSchema.parse(
+      setupPaymentDimensionsAddItemMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsAddItem4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsAddItem4$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItem4$Outbound,
+  SetupPaymentDimensionsAddItem4
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsAddItem4ToJSON(
+  setupPaymentDimensionsAddItem4: SetupPaymentDimensionsAddItem4,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItem4$outboundSchema.parse(
+      setupPaymentDimensionsAddItem4,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsAddItemMatch3$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsAddItemMatch3$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItemMatch3$Outbound,
+  SetupPaymentDimensionsAddItemMatch3
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsAddItemMatch3ToJSON(
+  setupPaymentDimensionsAddItemMatch3: SetupPaymentDimensionsAddItemMatch3,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItemMatch3$outboundSchema.parse(
+      setupPaymentDimensionsAddItemMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentDimensionsToAddItemEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentDimensionsToAddItemEnum2
+> = z.enum(SetupPaymentDimensionsToAddItemEnum2);
+
+/** @internal */
+export type SetupPaymentDimensionsAddItemToUnion2$Outbound = number | string;
+
+/** @internal */
+export const SetupPaymentDimensionsAddItemToUnion2$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsAddItemToUnion2$Outbound,
+    SetupPaymentDimensionsAddItemToUnion2
+  > = smartUnion([
+    z.number(),
+    SetupPaymentDimensionsToAddItemEnum2$outboundSchema,
+  ]);
+
+export function setupPaymentDimensionsAddItemToUnion2ToJSON(
+  setupPaymentDimensionsAddItemToUnion2: SetupPaymentDimensionsAddItemToUnion2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItemToUnion2$outboundSchema.parse(
+      setupPaymentDimensionsAddItemToUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsAddItemTier2$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsAddItemTier2$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItemTier2$Outbound,
+  SetupPaymentDimensionsAddItemTier2
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      SetupPaymentDimensionsToAddItemEnum2$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsAddItemTier2ToJSON(
+  setupPaymentDimensionsAddItemTier2: SetupPaymentDimensionsAddItemTier2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItemTier2$outboundSchema.parse(
+      setupPaymentDimensionsAddItemTier2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsAddItem3$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsAddItemTier2$Outbound>;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsAddItem3$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItem3$Outbound,
+  SetupPaymentDimensionsAddItem3
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => SetupPaymentDimensionsAddItemTier2$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsAddItem3ToJSON(
+  setupPaymentDimensionsAddItem3: SetupPaymentDimensionsAddItem3,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItem3$outboundSchema.parse(
+      setupPaymentDimensionsAddItem3,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemDimensionsUnion2$Outbound =
+  | SetupPaymentDimensionsAddItem3$Outbound
+  | SetupPaymentDimensionsAddItem4$Outbound;
+
+/** @internal */
+export const SetupPaymentAddItemDimensionsUnion2$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemDimensionsUnion2$Outbound,
+  SetupPaymentAddItemDimensionsUnion2
+> = smartUnion([
+  z.lazy(() => SetupPaymentDimensionsAddItem3$outboundSchema),
+  z.lazy(() => SetupPaymentDimensionsAddItem4$outboundSchema),
+]);
+
+export function setupPaymentAddItemDimensionsUnion2ToJSON(
+  setupPaymentAddItemDimensionsUnion2: SetupPaymentAddItemDimensionsUnion2,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemDimensionsUnion2$outboundSchema.parse(
+      setupPaymentAddItemDimensionsUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemMultipliersMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentAddItemMultipliersMatch2$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemMultipliersMatch2$Outbound,
+  SetupPaymentAddItemMultipliersMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentAddItemMultipliersMatch2ToJSON(
+  setupPaymentAddItemMultipliersMatch2: SetupPaymentAddItemMultipliersMatch2,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemMultipliersMatch2$outboundSchema.parse(
+      setupPaymentAddItemMultipliersMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemMultipliers2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemMultipliers2$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemMultipliers2$Outbound,
+  SetupPaymentAddItemMultipliers2
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function setupPaymentAddItemMultipliers2ToJSON(
+  setupPaymentAddItemMultipliers2: SetupPaymentAddItemMultipliers2,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemMultipliers2$outboundSchema.parse(
+      setupPaymentAddItemMultipliers2,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentCreditSchemaAddItem2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsAddItem3$Outbound
+      | SetupPaymentDimensionsAddItem4$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: SetupPaymentAddItemMultipliers2$Outbound }
+    | undefined;
   credit_cost: number;
 };
 
@@ -2897,6 +4609,17 @@ export const SetupPaymentCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
   z.object({
     meteredFeatureId: z.string(),
     billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => SetupPaymentDimensionsAddItem3$outboundSchema),
+        z.lazy(() => SetupPaymentDimensionsAddItem4$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentAddItemMultipliers2$outboundSchema),
+    )),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -2919,8 +4642,297 @@ export function setupPaymentCreditSchemaAddItem2ToJSON(
 }
 
 /** @internal */
+export type SetupPaymentDimensionsAddItemMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsAddItemMatch2$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItemMatch2$Outbound,
+  SetupPaymentDimensionsAddItemMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsAddItemMatch2ToJSON(
+  setupPaymentDimensionsAddItemMatch2: SetupPaymentDimensionsAddItemMatch2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItemMatch2$outboundSchema.parse(
+      setupPaymentDimensionsAddItemMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsAddItem2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsAddItem2$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItem2$Outbound,
+  SetupPaymentDimensionsAddItem2
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsAddItem2ToJSON(
+  setupPaymentDimensionsAddItem2: SetupPaymentDimensionsAddItem2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItem2$outboundSchema.parse(
+      setupPaymentDimensionsAddItem2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsAddItemMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsAddItemMatch1$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItemMatch1$Outbound,
+  SetupPaymentDimensionsAddItemMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsAddItemMatch1ToJSON(
+  setupPaymentDimensionsAddItemMatch1: SetupPaymentDimensionsAddItemMatch1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItemMatch1$outboundSchema.parse(
+      setupPaymentDimensionsAddItemMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentDimensionsToAddItemEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentDimensionsToAddItemEnum1
+> = z.enum(SetupPaymentDimensionsToAddItemEnum1);
+
+/** @internal */
+export type SetupPaymentDimensionsAddItemToUnion1$Outbound = number | string;
+
+/** @internal */
+export const SetupPaymentDimensionsAddItemToUnion1$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsAddItemToUnion1$Outbound,
+    SetupPaymentDimensionsAddItemToUnion1
+  > = smartUnion([
+    z.number(),
+    SetupPaymentDimensionsToAddItemEnum1$outboundSchema,
+  ]);
+
+export function setupPaymentDimensionsAddItemToUnion1ToJSON(
+  setupPaymentDimensionsAddItemToUnion1: SetupPaymentDimensionsAddItemToUnion1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItemToUnion1$outboundSchema.parse(
+      setupPaymentDimensionsAddItemToUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsAddItemTier1$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsAddItemTier1$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItemTier1$Outbound,
+  SetupPaymentDimensionsAddItemTier1
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      z.number(),
+      SetupPaymentDimensionsToAddItemEnum1$outboundSchema,
+    ]),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsAddItemTier1ToJSON(
+  setupPaymentDimensionsAddItemTier1: SetupPaymentDimensionsAddItemTier1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItemTier1$outboundSchema.parse(
+      setupPaymentDimensionsAddItemTier1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsAddItem1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsAddItemTier1$Outbound>;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsAddItem1$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsAddItem1$Outbound,
+  SetupPaymentDimensionsAddItem1
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => SetupPaymentDimensionsAddItemTier1$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsAddItem1ToJSON(
+  setupPaymentDimensionsAddItem1: SetupPaymentDimensionsAddItem1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsAddItem1$outboundSchema.parse(
+      setupPaymentDimensionsAddItem1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemDimensionsUnion1$Outbound =
+  | SetupPaymentDimensionsAddItem1$Outbound
+  | SetupPaymentDimensionsAddItem2$Outbound;
+
+/** @internal */
+export const SetupPaymentAddItemDimensionsUnion1$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemDimensionsUnion1$Outbound,
+  SetupPaymentAddItemDimensionsUnion1
+> = smartUnion([
+  z.lazy(() => SetupPaymentDimensionsAddItem1$outboundSchema),
+  z.lazy(() => SetupPaymentDimensionsAddItem2$outboundSchema),
+]);
+
+export function setupPaymentAddItemDimensionsUnion1ToJSON(
+  setupPaymentAddItemDimensionsUnion1: SetupPaymentAddItemDimensionsUnion1,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemDimensionsUnion1$outboundSchema.parse(
+      setupPaymentAddItemDimensionsUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemMultipliersMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentAddItemMultipliersMatch1$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemMultipliersMatch1$Outbound,
+  SetupPaymentAddItemMultipliersMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentAddItemMultipliersMatch1ToJSON(
+  setupPaymentAddItemMultipliersMatch1: SetupPaymentAddItemMultipliersMatch1,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemMultipliersMatch1$outboundSchema.parse(
+      setupPaymentAddItemMultipliersMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemMultipliers1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemMultipliers1$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemMultipliers1$Outbound,
+  SetupPaymentAddItemMultipliers1
+> = z.object({
+  match: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+  factor: z.optional(z.number()),
+  add: z.optional(z.number()),
+});
+
+export function setupPaymentAddItemMultipliers1ToJSON(
+  setupPaymentAddItemMultipliers1: SetupPaymentAddItemMultipliers1,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemMultipliers1$outboundSchema.parse(
+      setupPaymentAddItemMultipliers1,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentToAddItemEnum$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentToAddItemEnum
+> = z.enum(SetupPaymentToAddItemEnum);
+
+/** @internal */
+export type SetupPaymentAddItemFeatureOverrideToUnion$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const SetupPaymentAddItemFeatureOverrideToUnion$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentAddItemFeatureOverrideToUnion$Outbound,
+    SetupPaymentAddItemFeatureOverrideToUnion
+  > = smartUnion([z.number(), SetupPaymentToAddItemEnum$outboundSchema]);
+
+export function setupPaymentAddItemFeatureOverrideToUnionToJSON(
+  setupPaymentAddItemFeatureOverrideToUnion:
+    SetupPaymentAddItemFeatureOverrideToUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemFeatureOverrideToUnion$outboundSchema.parse(
+      setupPaymentAddItemFeatureOverrideToUnion,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentAddItemFeatureOverrideTier$Outbound = {
-  to?: any | undefined;
+  to: number | string;
   credit_cost: number;
 };
 
@@ -2931,7 +4943,7 @@ export const SetupPaymentAddItemFeatureOverrideTier$outboundSchema:
     SetupPaymentAddItemFeatureOverrideTier
   > = z.pipe(
     z.object({
-      to: z.optional(z.any()),
+      to: smartUnion([z.number(), SetupPaymentToAddItemEnum$outboundSchema]),
       creditCost: z.number(),
     }),
     z.transform((v) => {
@@ -2956,6 +4968,14 @@ export function setupPaymentAddItemFeatureOverrideTierToJSON(
 export type SetupPaymentCreditSchemaAddItem1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsAddItem1$Outbound
+      | SetupPaymentDimensionsAddItem2$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: SetupPaymentAddItemMultipliers1$Outbound }
+    | undefined;
   tier_behavior: "graduated";
   tiers: Array<SetupPaymentAddItemFeatureOverrideTier$Outbound>;
 };
@@ -2968,10 +4988,21 @@ export const SetupPaymentCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
   z.object({
     meteredFeatureId: z.string(),
     billingUnits: z.optional(z.number()),
+    dimensions: z.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => SetupPaymentDimensionsAddItem1$outboundSchema),
+        z.lazy(() => SetupPaymentDimensionsAddItem2$outboundSchema),
+      ]),
+    )),
+    multipliers: z.optional(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentAddItemMultipliers1$outboundSchema),
+    )),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => SetupPaymentAddItemFeatureOverrideTier$outboundSchema),
-    ),
+    tiers: z.array(z.lazy(() =>
+      SetupPaymentAddItemFeatureOverrideTier$outboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3017,6 +5048,110 @@ export function setupPaymentAddItemCreditSchemaUnionToJSON(
 }
 
 /** @internal */
+export type SetupPaymentAddItemProviderMarkups$Outbound = {
+  markup: number;
+};
+
+/** @internal */
+export const SetupPaymentAddItemProviderMarkups$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemProviderMarkups$Outbound,
+  SetupPaymentAddItemProviderMarkups
+> = z.object({
+  markup: z.number(),
+});
+
+export function setupPaymentAddItemProviderMarkupsToJSON(
+  setupPaymentAddItemProviderMarkups: SetupPaymentAddItemProviderMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemProviderMarkups$outboundSchema.parse(
+      setupPaymentAddItemProviderMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemModelMarkups$Outbound = {
+  markup?: number | undefined;
+  input_cost?: number | undefined;
+  output_cost?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemModelMarkups$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemModelMarkups$Outbound,
+  SetupPaymentAddItemModelMarkups
+> = z.pipe(
+  z.object({
+    markup: z.optional(z.number()),
+    inputCost: z.optional(z.number()),
+    outputCost: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      inputCost: "input_cost",
+      outputCost: "output_cost",
+    });
+  }),
+);
+
+export function setupPaymentAddItemModelMarkupsToJSON(
+  setupPaymentAddItemModelMarkups: SetupPaymentAddItemModelMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemModelMarkups$outboundSchema.parse(
+      setupPaymentAddItemModelMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemMarkups$Outbound = {
+  default_markup?: number | undefined;
+  provider_markups?:
+    | { [k: string]: SetupPaymentAddItemProviderMarkups$Outbound }
+    | null
+    | undefined;
+  model_markups?:
+    | { [k: string]: SetupPaymentAddItemModelMarkups$Outbound }
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemMarkups$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemMarkups$Outbound,
+  SetupPaymentAddItemMarkups
+> = z.pipe(
+  z.object({
+    defaultMarkup: z.optional(z.number()),
+    providerMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentAddItemProviderMarkups$outboundSchema),
+    ))),
+    modelMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentAddItemModelMarkups$outboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      defaultMarkup: "default_markup",
+      providerMarkups: "provider_markups",
+      modelMarkups: "model_markups",
+    });
+  }),
+);
+
+export function setupPaymentAddItemMarkupsToJSON(
+  setupPaymentAddItemMarkups: SetupPaymentAddItemMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemMarkups$outboundSchema.parse(setupPaymentAddItemMarkups),
+  );
+}
+
+/** @internal */
 export type SetupPaymentAddItemFeatureOverride$Outbound = {
   credit_schema?:
     | Array<
@@ -3024,6 +5159,7 @@ export type SetupPaymentAddItemFeatureOverride$Outbound = {
       | SetupPaymentCreditSchemaAddItem2$Outbound
     >
     | undefined;
+  markups?: SetupPaymentAddItemMarkups$Outbound | undefined;
 };
 
 /** @internal */
@@ -3038,6 +5174,9 @@ export const SetupPaymentAddItemFeatureOverride$outboundSchema: z.ZodMiniType<
         SetupPaymentCreditSchemaAddItem2$outboundSchema
       ),
     ]))),
+    markups: z.optional(z.lazy(() =>
+      SetupPaymentAddItemMarkups$outboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3242,9 +5381,9 @@ export function setupPaymentCustomizeFreeTrialParamsToJSON(
 }
 
 /** @internal */
-export const SetupPaymentPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentPurchaseLimitInterval
-> = z.enum(SetupPaymentPurchaseLimitInterval);
+export const SetupPaymentAutoTopupInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentAutoTopupInterval
+> = z.enum(SetupPaymentAutoTopupInterval);
 
 /** @internal */
 export type SetupPaymentPurchaseLimit$Outbound = {
@@ -3260,7 +5399,7 @@ export const SetupPaymentPurchaseLimit$outboundSchema: z.ZodMiniType<
   SetupPaymentPurchaseLimit
 > = z.pipe(
   z.object({
-    interval: SetupPaymentPurchaseLimitInterval$outboundSchema,
+    interval: SetupPaymentAutoTopupInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
     count: z.optional(z.number()),
@@ -3787,23 +5926,82 @@ export function setupPaymentUpsertLicenseAddItemAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type SetupPaymentUpsertLicenseTier$Outbound = {
-  to?: any | undefined;
+export type SetupPaymentUpsertLicensePriceTo$Outbound = number | string;
+
+/** @internal */
+export const SetupPaymentUpsertLicensePriceTo$outboundSchema: z.ZodMiniType<
+  SetupPaymentUpsertLicensePriceTo$Outbound,
+  SetupPaymentUpsertLicensePriceTo
+> = smartUnion([z.number(), z.string()]);
+
+export function setupPaymentUpsertLicensePriceToToJSON(
+  setupPaymentUpsertLicensePriceTo: SetupPaymentUpsertLicensePriceTo,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicensePriceTo$outboundSchema.parse(
+      setupPaymentUpsertLicensePriceTo,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseTierAdditionalCurrency$Outbound = {
+  currency: string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
-  additional_currencies?: Array<any> | undefined;
 };
 
 /** @internal */
-export const SetupPaymentUpsertLicenseTier$outboundSchema: z.ZodMiniType<
-  SetupPaymentUpsertLicenseTier$Outbound,
-  SetupPaymentUpsertLicenseTier
+export const SetupPaymentUpsertLicenseTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseTierAdditionalCurrency$Outbound,
+    SetupPaymentUpsertLicenseTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function setupPaymentUpsertLicenseTierAdditionalCurrencyToJSON(
+  setupPaymentUpsertLicenseTierAdditionalCurrency:
+    SetupPaymentUpsertLicenseTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseTierAdditionalCurrency$outboundSchema.parse(
+      setupPaymentUpsertLicenseTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicensePriceTier$Outbound = {
+  to: number | string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentUpsertLicenseTierAdditionalCurrency$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicensePriceTier$outboundSchema: z.ZodMiniType<
+  SetupPaymentUpsertLicensePriceTier$Outbound,
+  SetupPaymentUpsertLicensePriceTier
 > = z.pipe(
   z.object({
-    to: z.optional(z.any()),
+    to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
-    additionalCurrencies: z.optional(z.array(z.any())),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      SetupPaymentUpsertLicenseTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3813,12 +6011,12 @@ export const SetupPaymentUpsertLicenseTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentUpsertLicenseTierToJSON(
-  setupPaymentUpsertLicenseTier: SetupPaymentUpsertLicenseTier,
+export function setupPaymentUpsertLicensePriceTierToJSON(
+  setupPaymentUpsertLicensePriceTier: SetupPaymentUpsertLicensePriceTier,
 ): string {
   return JSON.stringify(
-    SetupPaymentUpsertLicenseTier$outboundSchema.parse(
-      setupPaymentUpsertLicenseTier,
+    SetupPaymentUpsertLicensePriceTier$outboundSchema.parse(
+      setupPaymentUpsertLicensePriceTier,
     ),
   );
 }
@@ -3847,7 +6045,7 @@ export type SetupPaymentUpsertLicensePrice$Outbound = {
   additional_currencies?:
     | Array<SetupPaymentUpsertLicenseAddItemAdditionalCurrency$Outbound>
     | undefined;
-  tiers?: Array<SetupPaymentUpsertLicenseTier$Outbound> | undefined;
+  tiers?: Array<SetupPaymentUpsertLicensePriceTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -3867,7 +6065,7 @@ export const SetupPaymentUpsertLicensePrice$outboundSchema: z.ZodMiniType<
       SetupPaymentUpsertLicenseAddItemAdditionalCurrency$outboundSchema
     ))),
     tiers: z.optional(z.array(z.lazy(() =>
-      SetupPaymentUpsertLicenseTier$outboundSchema
+      SetupPaymentUpsertLicensePriceTier$outboundSchema
     ))),
     tierBehavior: z.optional(
       SetupPaymentUpsertLicenseTierBehavior$outboundSchema,
@@ -3989,10 +6187,294 @@ export function setupPaymentUpsertLicenseRolloverToJSON(
 }
 
 /** @internal */
+export type SetupPaymentDimensionsUpsertLicenseMatch4$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicenseMatch4$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsUpsertLicenseMatch4$Outbound,
+    SetupPaymentDimensionsUpsertLicenseMatch4
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsUpsertLicenseMatch4ToJSON(
+  setupPaymentDimensionsUpsertLicenseMatch4:
+    SetupPaymentDimensionsUpsertLicenseMatch4,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicenseMatch4$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicenseMatch4,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicense4$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicense4$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsUpsertLicense4$Outbound,
+  SetupPaymentDimensionsUpsertLicense4
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsUpsertLicense4ToJSON(
+  setupPaymentDimensionsUpsertLicense4: SetupPaymentDimensionsUpsertLicense4,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicense4$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicense4,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicenseMatch3$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicenseMatch3$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsUpsertLicenseMatch3$Outbound,
+    SetupPaymentDimensionsUpsertLicenseMatch3
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsUpsertLicenseMatch3ToJSON(
+  setupPaymentDimensionsUpsertLicenseMatch3:
+    SetupPaymentDimensionsUpsertLicenseMatch3,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicenseMatch3$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicenseMatch3,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentDimensionsToUpsertLicenseEnum2$outboundSchema:
+  z.ZodMiniEnum<typeof SetupPaymentDimensionsToUpsertLicenseEnum2> = z.enum(
+    SetupPaymentDimensionsToUpsertLicenseEnum2,
+  );
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicenseToUnion2$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicenseToUnion2$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsUpsertLicenseToUnion2$Outbound,
+    SetupPaymentDimensionsUpsertLicenseToUnion2
+  > = smartUnion([
+    z.number(),
+    SetupPaymentDimensionsToUpsertLicenseEnum2$outboundSchema,
+  ]);
+
+export function setupPaymentDimensionsUpsertLicenseToUnion2ToJSON(
+  setupPaymentDimensionsUpsertLicenseToUnion2:
+    SetupPaymentDimensionsUpsertLicenseToUnion2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicenseToUnion2$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicenseToUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicenseTier2$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicenseTier2$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsUpsertLicenseTier2$Outbound,
+    SetupPaymentDimensionsUpsertLicenseTier2
+  > = z.pipe(
+    z.object({
+      to: smartUnion([
+        z.number(),
+        SetupPaymentDimensionsToUpsertLicenseEnum2$outboundSchema,
+      ]),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function setupPaymentDimensionsUpsertLicenseTier2ToJSON(
+  setupPaymentDimensionsUpsertLicenseTier2:
+    SetupPaymentDimensionsUpsertLicenseTier2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicenseTier2$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicenseTier2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicense3$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsUpsertLicenseTier2$Outbound>;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicense3$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsUpsertLicense3$Outbound,
+  SetupPaymentDimensionsUpsertLicense3
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => SetupPaymentDimensionsUpsertLicenseTier2$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsUpsertLicense3ToJSON(
+  setupPaymentDimensionsUpsertLicense3: SetupPaymentDimensionsUpsertLicense3,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicense3$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicense3,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseDimensionsUnion2$Outbound =
+  | SetupPaymentDimensionsUpsertLicense3$Outbound
+  | SetupPaymentDimensionsUpsertLicense4$Outbound;
+
+/** @internal */
+export const SetupPaymentUpsertLicenseDimensionsUnion2$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseDimensionsUnion2$Outbound,
+    SetupPaymentUpsertLicenseDimensionsUnion2
+  > = smartUnion([
+    z.lazy(() => SetupPaymentDimensionsUpsertLicense3$outboundSchema),
+    z.lazy(() => SetupPaymentDimensionsUpsertLicense4$outboundSchema),
+  ]);
+
+export function setupPaymentUpsertLicenseDimensionsUnion2ToJSON(
+  setupPaymentUpsertLicenseDimensionsUnion2:
+    SetupPaymentUpsertLicenseDimensionsUnion2,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseDimensionsUnion2$outboundSchema.parse(
+      setupPaymentUpsertLicenseDimensionsUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseMultipliersMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentUpsertLicenseMultipliersMatch2$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseMultipliersMatch2$Outbound,
+    SetupPaymentUpsertLicenseMultipliersMatch2
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentUpsertLicenseMultipliersMatch2ToJSON(
+  setupPaymentUpsertLicenseMultipliersMatch2:
+    SetupPaymentUpsertLicenseMultipliersMatch2,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseMultipliersMatch2$outboundSchema.parse(
+      setupPaymentUpsertLicenseMultipliersMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseMultipliers2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseMultipliers2$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseMultipliers2$Outbound,
+    SetupPaymentUpsertLicenseMultipliers2
+  > = z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    factor: z.optional(z.number()),
+    add: z.optional(z.number()),
+  });
+
+export function setupPaymentUpsertLicenseMultipliers2ToJSON(
+  setupPaymentUpsertLicenseMultipliers2: SetupPaymentUpsertLicenseMultipliers2,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseMultipliers2$outboundSchema.parse(
+      setupPaymentUpsertLicenseMultipliers2,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentCreditSchemaUpsertLicense2$Outbound = {
-  metered_feature_id?: any | undefined;
-  billing_units?: any | undefined;
-  credit_cost?: any | undefined;
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsUpsertLicense3$Outbound
+      | SetupPaymentDimensionsUpsertLicense4$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: SetupPaymentUpsertLicenseMultipliers2$Outbound }
+    | undefined;
+  credit_cost: number;
 };
 
 /** @internal */
@@ -4002,9 +6484,20 @@ export const SetupPaymentCreditSchemaUpsertLicense2$outboundSchema:
     SetupPaymentCreditSchemaUpsertLicense2
   > = z.pipe(
     z.object({
-      meteredFeatureId: z.optional(z.any()),
-      billingUnits: z.optional(z.any()),
-      creditCost: z.optional(z.any()),
+      meteredFeatureId: z.string(),
+      billingUnits: z.optional(z.number()),
+      dimensions: z.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() => SetupPaymentDimensionsUpsertLicense3$outboundSchema),
+          z.lazy(() => SetupPaymentDimensionsUpsertLicense4$outboundSchema),
+        ]),
+      )),
+      multipliers: z.optional(z.record(
+        z.string(),
+        z.lazy(() => SetupPaymentUpsertLicenseMultipliers2$outboundSchema),
+      )),
+      creditCost: z.number(),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -4027,11 +6520,360 @@ export function setupPaymentCreditSchemaUpsertLicense2ToJSON(
 }
 
 /** @internal */
+export type SetupPaymentDimensionsUpsertLicenseMatch2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicenseMatch2$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsUpsertLicenseMatch2$Outbound,
+    SetupPaymentDimensionsUpsertLicenseMatch2
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsUpsertLicenseMatch2ToJSON(
+  setupPaymentDimensionsUpsertLicenseMatch2:
+    SetupPaymentDimensionsUpsertLicenseMatch2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicenseMatch2$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicenseMatch2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicense2$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicense2$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsUpsertLicense2$Outbound,
+  SetupPaymentDimensionsUpsertLicense2
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsUpsertLicense2ToJSON(
+  setupPaymentDimensionsUpsertLicense2: SetupPaymentDimensionsUpsertLicense2,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicense2$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicense2,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicenseMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicenseMatch1$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsUpsertLicenseMatch1$Outbound,
+    SetupPaymentDimensionsUpsertLicenseMatch1
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentDimensionsUpsertLicenseMatch1ToJSON(
+  setupPaymentDimensionsUpsertLicenseMatch1:
+    SetupPaymentDimensionsUpsertLicenseMatch1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicenseMatch1$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicenseMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentDimensionsToUpsertLicenseEnum1$outboundSchema:
+  z.ZodMiniEnum<typeof SetupPaymentDimensionsToUpsertLicenseEnum1> = z.enum(
+    SetupPaymentDimensionsToUpsertLicenseEnum1,
+  );
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicenseToUnion1$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicenseToUnion1$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsUpsertLicenseToUnion1$Outbound,
+    SetupPaymentDimensionsUpsertLicenseToUnion1
+  > = smartUnion([
+    z.number(),
+    SetupPaymentDimensionsToUpsertLicenseEnum1$outboundSchema,
+  ]);
+
+export function setupPaymentDimensionsUpsertLicenseToUnion1ToJSON(
+  setupPaymentDimensionsUpsertLicenseToUnion1:
+    SetupPaymentDimensionsUpsertLicenseToUnion1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicenseToUnion1$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicenseToUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicenseTier1$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicenseTier1$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentDimensionsUpsertLicenseTier1$Outbound,
+    SetupPaymentDimensionsUpsertLicenseTier1
+  > = z.pipe(
+    z.object({
+      to: smartUnion([
+        z.number(),
+        SetupPaymentDimensionsToUpsertLicenseEnum1$outboundSchema,
+      ]),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function setupPaymentDimensionsUpsertLicenseTier1ToJSON(
+  setupPaymentDimensionsUpsertLicenseTier1:
+    SetupPaymentDimensionsUpsertLicenseTier1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicenseTier1$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicenseTier1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentDimensionsUpsertLicense1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentDimensionsUpsertLicenseTier1$Outbound>;
+};
+
+/** @internal */
+export const SetupPaymentDimensionsUpsertLicense1$outboundSchema: z.ZodMiniType<
+  SetupPaymentDimensionsUpsertLicense1$Outbound,
+  SetupPaymentDimensionsUpsertLicense1
+> = z.pipe(
+  z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    priority: z.optional(z.int()),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => SetupPaymentDimensionsUpsertLicenseTier1$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function setupPaymentDimensionsUpsertLicense1ToJSON(
+  setupPaymentDimensionsUpsertLicense1: SetupPaymentDimensionsUpsertLicense1,
+): string {
+  return JSON.stringify(
+    SetupPaymentDimensionsUpsertLicense1$outboundSchema.parse(
+      setupPaymentDimensionsUpsertLicense1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseDimensionsUnion1$Outbound =
+  | SetupPaymentDimensionsUpsertLicense1$Outbound
+  | SetupPaymentDimensionsUpsertLicense2$Outbound;
+
+/** @internal */
+export const SetupPaymentUpsertLicenseDimensionsUnion1$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseDimensionsUnion1$Outbound,
+    SetupPaymentUpsertLicenseDimensionsUnion1
+  > = smartUnion([
+    z.lazy(() => SetupPaymentDimensionsUpsertLicense1$outboundSchema),
+    z.lazy(() => SetupPaymentDimensionsUpsertLicense2$outboundSchema),
+  ]);
+
+export function setupPaymentUpsertLicenseDimensionsUnion1ToJSON(
+  setupPaymentUpsertLicenseDimensionsUnion1:
+    SetupPaymentUpsertLicenseDimensionsUnion1,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseDimensionsUnion1$outboundSchema.parse(
+      setupPaymentUpsertLicenseDimensionsUnion1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseMultipliersMatch1$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const SetupPaymentUpsertLicenseMultipliersMatch1$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseMultipliersMatch1$Outbound,
+    SetupPaymentUpsertLicenseMultipliersMatch1
+  > = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentUpsertLicenseMultipliersMatch1ToJSON(
+  setupPaymentUpsertLicenseMultipliersMatch1:
+    SetupPaymentUpsertLicenseMultipliersMatch1,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseMultipliersMatch1$outboundSchema.parse(
+      setupPaymentUpsertLicenseMultipliersMatch1,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseMultipliers1$Outbound = {
+  match: { [k: string]: string | number | boolean };
+  factor?: number | undefined;
+  add?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseMultipliers1$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseMultipliers1$Outbound,
+    SetupPaymentUpsertLicenseMultipliers1
+  > = z.object({
+    match: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+    factor: z.optional(z.number()),
+    add: z.optional(z.number()),
+  });
+
+export function setupPaymentUpsertLicenseMultipliers1ToJSON(
+  setupPaymentUpsertLicenseMultipliers1: SetupPaymentUpsertLicenseMultipliers1,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseMultipliers1$outboundSchema.parse(
+      setupPaymentUpsertLicenseMultipliers1,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentToUpsertLicenseEnum$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentToUpsertLicenseEnum
+> = z.enum(SetupPaymentToUpsertLicenseEnum);
+
+/** @internal */
+export type SetupPaymentUpsertLicenseFeatureOverrideToUnion$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const SetupPaymentUpsertLicenseFeatureOverrideToUnion$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseFeatureOverrideToUnion$Outbound,
+    SetupPaymentUpsertLicenseFeatureOverrideToUnion
+  > = smartUnion([z.number(), SetupPaymentToUpsertLicenseEnum$outboundSchema]);
+
+export function setupPaymentUpsertLicenseFeatureOverrideToUnionToJSON(
+  setupPaymentUpsertLicenseFeatureOverrideToUnion:
+    SetupPaymentUpsertLicenseFeatureOverrideToUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseFeatureOverrideToUnion$outboundSchema.parse(
+      setupPaymentUpsertLicenseFeatureOverrideToUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseFeatureOverrideTier$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseFeatureOverrideTier$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseFeatureOverrideTier$Outbound,
+    SetupPaymentUpsertLicenseFeatureOverrideTier
+  > = z.pipe(
+    z.object({
+      to: smartUnion([
+        z.number(),
+        SetupPaymentToUpsertLicenseEnum$outboundSchema,
+      ]),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function setupPaymentUpsertLicenseFeatureOverrideTierToJSON(
+  setupPaymentUpsertLicenseFeatureOverrideTier:
+    SetupPaymentUpsertLicenseFeatureOverrideTier,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseFeatureOverrideTier$outboundSchema.parse(
+      setupPaymentUpsertLicenseFeatureOverrideTier,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentCreditSchemaUpsertLicense1$Outbound = {
-  metered_feature_id?: any | undefined;
-  billing_units?: any | undefined;
-  tier_behavior?: any | undefined;
-  tiers?: any | undefined;
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  dimensions?: {
+    [k: string]:
+      | SetupPaymentDimensionsUpsertLicense1$Outbound
+      | SetupPaymentDimensionsUpsertLicense2$Outbound;
+  } | undefined;
+  multipliers?:
+    | { [k: string]: SetupPaymentUpsertLicenseMultipliers1$Outbound }
+    | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<SetupPaymentUpsertLicenseFeatureOverrideTier$Outbound>;
 };
 
 /** @internal */
@@ -4041,10 +6883,23 @@ export const SetupPaymentCreditSchemaUpsertLicense1$outboundSchema:
     SetupPaymentCreditSchemaUpsertLicense1
   > = z.pipe(
     z.object({
-      meteredFeatureId: z.optional(z.any()),
-      billingUnits: z.optional(z.any()),
-      tierBehavior: z.optional(z.any()),
-      tiers: z.optional(z.any()),
+      meteredFeatureId: z.string(),
+      billingUnits: z.optional(z.number()),
+      dimensions: z.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() => SetupPaymentDimensionsUpsertLicense1$outboundSchema),
+          z.lazy(() => SetupPaymentDimensionsUpsertLicense2$outboundSchema),
+        ]),
+      )),
+      multipliers: z.optional(z.record(
+        z.string(),
+        z.lazy(() => SetupPaymentUpsertLicenseMultipliers1$outboundSchema),
+      )),
+      tierBehavior: z.literal("graduated"),
+      tiers: z.array(z.lazy(() =>
+        SetupPaymentUpsertLicenseFeatureOverrideTier$outboundSchema
+      )),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -4093,6 +6948,115 @@ export function setupPaymentUpsertLicenseCreditSchemaUnionToJSON(
 }
 
 /** @internal */
+export type SetupPaymentUpsertLicenseProviderMarkups$Outbound = {
+  markup: number;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseProviderMarkups$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseProviderMarkups$Outbound,
+    SetupPaymentUpsertLicenseProviderMarkups
+  > = z.object({
+    markup: z.number(),
+  });
+
+export function setupPaymentUpsertLicenseProviderMarkupsToJSON(
+  setupPaymentUpsertLicenseProviderMarkups:
+    SetupPaymentUpsertLicenseProviderMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseProviderMarkups$outboundSchema.parse(
+      setupPaymentUpsertLicenseProviderMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseModelMarkups$Outbound = {
+  markup?: number | undefined;
+  input_cost?: number | undefined;
+  output_cost?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseModelMarkups$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseModelMarkups$Outbound,
+    SetupPaymentUpsertLicenseModelMarkups
+  > = z.pipe(
+    z.object({
+      markup: z.optional(z.number()),
+      inputCost: z.optional(z.number()),
+      outputCost: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        inputCost: "input_cost",
+        outputCost: "output_cost",
+      });
+    }),
+  );
+
+export function setupPaymentUpsertLicenseModelMarkupsToJSON(
+  setupPaymentUpsertLicenseModelMarkups: SetupPaymentUpsertLicenseModelMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseModelMarkups$outboundSchema.parse(
+      setupPaymentUpsertLicenseModelMarkups,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUpsertLicenseMarkups$Outbound = {
+  default_markup?: number | undefined;
+  provider_markups?:
+    | { [k: string]: SetupPaymentUpsertLicenseProviderMarkups$Outbound }
+    | null
+    | undefined;
+  model_markups?:
+    | { [k: string]: SetupPaymentUpsertLicenseModelMarkups$Outbound }
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseMarkups$outboundSchema: z.ZodMiniType<
+  SetupPaymentUpsertLicenseMarkups$Outbound,
+  SetupPaymentUpsertLicenseMarkups
+> = z.pipe(
+  z.object({
+    defaultMarkup: z.optional(z.number()),
+    providerMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentUpsertLicenseProviderMarkups$outboundSchema),
+    ))),
+    modelMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => SetupPaymentUpsertLicenseModelMarkups$outboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      defaultMarkup: "default_markup",
+      providerMarkups: "provider_markups",
+      modelMarkups: "model_markups",
+    });
+  }),
+);
+
+export function setupPaymentUpsertLicenseMarkupsToJSON(
+  setupPaymentUpsertLicenseMarkups: SetupPaymentUpsertLicenseMarkups,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseMarkups$outboundSchema.parse(
+      setupPaymentUpsertLicenseMarkups,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentUpsertLicenseFeatureOverride$Outbound = {
   credit_schema?:
     | Array<
@@ -4100,6 +7064,7 @@ export type SetupPaymentUpsertLicenseFeatureOverride$Outbound = {
       | SetupPaymentCreditSchemaUpsertLicense2$Outbound
     >
     | undefined;
+  markups?: SetupPaymentUpsertLicenseMarkups$Outbound | undefined;
 };
 
 /** @internal */
@@ -4115,6 +7080,9 @@ export const SetupPaymentUpsertLicenseFeatureOverride$outboundSchema:
           SetupPaymentCreditSchemaUpsertLicense2$outboundSchema
         ),
       ]))),
+      markups: z.optional(z.lazy(() =>
+        SetupPaymentUpsertLicenseMarkups$outboundSchema
+      )),
     }),
     z.transform((v) => {
       return remap$(v, {

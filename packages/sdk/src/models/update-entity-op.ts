@@ -55,6 +55,48 @@ export type UpdateEntitySpendLimitRequestBody = {
   skipOverageBilling?: boolean | undefined;
 };
 
+export type UpdateEntityUsageLimitProperties2 = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdateEntityUsageLimitFilterRequestBody2 = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateEntitySourceRequest2 = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateEntitySourceRequest2 = ClosedEnum<
+  typeof UpdateEntitySourceRequest2
+>;
+
+export type UpdateEntityUsageLimitRequestBody2 = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdateEntityUsageLimitFilterRequestBody2 | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateEntitySourceRequest2 | undefined;
+  /**
+   * Usage consumed in the active interval, stored in the usage-window counter.
+   */
+  usage: number;
+};
+
 /**
  * Interval for the cap, aligned to the customer's billing cycle.
  */
@@ -85,16 +127,30 @@ export type UpdateEntityAnchorRequestBody = ClosedEnum<
   typeof UpdateEntityAnchorRequestBody
 >;
 
-export type UpdateEntityUsageLimitProperties = string | number | boolean;
+export type UpdateEntityUsageLimitProperties1 = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type UpdateEntityUsageLimitFilterRequestBody = {
+export type UpdateEntityUsageLimitFilterRequestBody1 = {
   properties: { [k: string]: string | number | boolean };
 };
 
-export type UpdateEntityUsageLimitRequestBody = {
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateEntitySourceRequest1 = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateEntitySourceRequest1 = ClosedEnum<
+  typeof UpdateEntitySourceRequest1
+>;
+
+export type UpdateEntityUsageLimitRequestBody1 = {
   /**
    * The feature this usage limit applies to.
    */
@@ -118,8 +174,20 @@ export type UpdateEntityUsageLimitRequestBody = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: UpdateEntityUsageLimitFilterRequestBody | undefined;
+  filter?: UpdateEntityUsageLimitFilterRequestBody1 | undefined;
+  /**
+   * Usage consumed in the active interval, stored in the usage-window counter.
+   */
+  usage?: number | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateEntitySourceRequest1 | undefined;
 };
+
+export type UpdateEntityUsageLimitUnion =
+  | UpdateEntityUsageLimitRequestBody1
+  | UpdateEntityUsageLimitRequestBody2;
 
 /**
  * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
@@ -213,9 +281,13 @@ export type UpdateEntityBillingControlsRequestBody = {
    */
   spendLimits?: Array<UpdateEntitySpendLimitRequestBody> | undefined;
   /**
-   * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   * List of hard usage caps per feature. An entry with only feature_id and usage sets the current counter without changing configuration.
    */
-  usageLimits?: Array<UpdateEntityUsageLimitRequestBody> | undefined;
+  usageLimits?:
+    | Array<
+      UpdateEntityUsageLimitRequestBody1 | UpdateEntityUsageLimitRequestBody2
+    >
+    | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -391,6 +463,78 @@ export const UpdateEntityType = {
  */
 export type UpdateEntityType = OpenEnum<typeof UpdateEntityType>;
 
+export type UpdateEntityDimensions6 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const UpdateEntityDimensionsToEnum3 = {
+  Inf: "inf",
+} as const;
+export type UpdateEntityDimensionsToEnum3 = ClosedEnum<
+  typeof UpdateEntityDimensionsToEnum3
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type UpdateEntityDimensionsToUnion3 =
+  | number
+  | UpdateEntityDimensionsToEnum3;
+
+export type UpdateEntityDimensionsTier3 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | UpdateEntityDimensionsToEnum3;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type UpdateEntityDimensions5 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<UpdateEntityDimensionsTier3>;
+};
+
+export type UpdateEntityDimensionsUnion3 =
+  | UpdateEntityDimensions5
+  | UpdateEntityDimensions6;
+
+export type UpdateEntityMultipliers3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
 export type UpdateEntityCreditSchema3 = {
   meteredFeatureId: "";
   /**
@@ -398,9 +542,91 @@ export type UpdateEntityCreditSchema3 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: UpdateEntityDimensions5 | UpdateEntityDimensions6;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: UpdateEntityMultipliers3 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type UpdateEntityDimensions4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const UpdateEntityDimensionsToEnum2 = {
+  Inf: "inf",
+} as const;
+export type UpdateEntityDimensionsToEnum2 = ClosedEnum<
+  typeof UpdateEntityDimensionsToEnum2
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type UpdateEntityDimensionsToUnion2 =
+  | number
+  | UpdateEntityDimensionsToEnum2;
+
+export type UpdateEntityDimensionsTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | UpdateEntityDimensionsToEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type UpdateEntityDimensions3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<UpdateEntityDimensionsTier2>;
+};
+
+export type UpdateEntityDimensionsUnion2 =
+  | UpdateEntityDimensions3
+  | UpdateEntityDimensions4;
+
+export type UpdateEntityMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export type UpdateEntityCreditSchema2 = {
@@ -413,9 +639,91 @@ export type UpdateEntityCreditSchema2 = {
    */
   billingUnits?: number | undefined;
   /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: UpdateEntityDimensions3 | UpdateEntityDimensions4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: UpdateEntityMultipliers2 } | undefined;
+  /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
+};
+
+export type UpdateEntityDimensions2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const UpdateEntityDimensionsToEnum1 = {
+  Inf: "inf",
+} as const;
+export type UpdateEntityDimensionsToEnum1 = ClosedEnum<
+  typeof UpdateEntityDimensionsToEnum1
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type UpdateEntityDimensionsToUnion1 =
+  | number
+  | UpdateEntityDimensionsToEnum1;
+
+export type UpdateEntityDimensionsTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | UpdateEntityDimensionsToEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type UpdateEntityDimensions1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<UpdateEntityDimensionsTier1>;
+};
+
+export type UpdateEntityDimensionsUnion1 =
+  | UpdateEntityDimensions1
+  | UpdateEntityDimensions2;
+
+export type UpdateEntityMultipliers1 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
 };
 
 export const UpdateEntityToEnum = {
@@ -448,6 +756,16 @@ export type UpdateEntityCreditSchema1 = {
    * Number of metered-feature units priced together. Defaults to one when omitted.
    */
   billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]: UpdateEntityDimensions1 | UpdateEntityDimensions2;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: UpdateEntityMultipliers1 } | undefined;
   tierBehavior: "graduated";
   tiers: Array<UpdateEntityTier>;
 };
@@ -684,15 +1002,15 @@ export type UpdateEntityUsageLimitFilterResponse = {
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export const UpdateEntityUsageLimitSource = {
+export const UpdateEntityUsageLimitSourceResponse = {
   Customer: "customer",
   Plan: "plan",
 } as const;
 /**
  * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
  */
-export type UpdateEntityUsageLimitSource = OpenEnum<
-  typeof UpdateEntityUsageLimitSource
+export type UpdateEntityUsageLimitSourceResponse = OpenEnum<
+  typeof UpdateEntityUsageLimitSourceResponse
 >;
 
 export type UpdateEntityUsageLimitResponse = {
@@ -721,13 +1039,13 @@ export type UpdateEntityUsageLimitResponse = {
    */
   filter?: UpdateEntityUsageLimitFilterResponse | undefined;
   /**
-   * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
+   * Usage consumed in the active interval, stored in the usage-window counter.
    */
   usage?: number | undefined;
   /**
    * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
    */
-  source?: UpdateEntityUsageLimitSource | undefined;
+  source?: UpdateEntityUsageLimitSourceResponse | undefined;
 };
 
 /**
@@ -1007,6 +1325,99 @@ export function updateEntitySpendLimitRequestBodyToJSON(
 }
 
 /** @internal */
+export type UpdateEntityUsageLimitProperties2$Outbound =
+  | string
+  | number
+  | boolean;
+
+/** @internal */
+export const UpdateEntityUsageLimitProperties2$outboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitProperties2$Outbound,
+  UpdateEntityUsageLimitProperties2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function updateEntityUsageLimitProperties2ToJSON(
+  updateEntityUsageLimitProperties2: UpdateEntityUsageLimitProperties2,
+): string {
+  return JSON.stringify(
+    UpdateEntityUsageLimitProperties2$outboundSchema.parse(
+      updateEntityUsageLimitProperties2,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateEntityUsageLimitFilterRequestBody2$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const UpdateEntityUsageLimitFilterRequestBody2$outboundSchema:
+  z.ZodMiniType<
+    UpdateEntityUsageLimitFilterRequestBody2$Outbound,
+    UpdateEntityUsageLimitFilterRequestBody2
+  > = z.object({
+    properties: z.record(
+      z.string(),
+      smartUnion([z.string(), z.number(), z.boolean()]),
+    ),
+  });
+
+export function updateEntityUsageLimitFilterRequestBody2ToJSON(
+  updateEntityUsageLimitFilterRequestBody2:
+    UpdateEntityUsageLimitFilterRequestBody2,
+): string {
+  return JSON.stringify(
+    UpdateEntityUsageLimitFilterRequestBody2$outboundSchema.parse(
+      updateEntityUsageLimitFilterRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
+export const UpdateEntitySourceRequest2$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateEntitySourceRequest2
+> = z.enum(UpdateEntitySourceRequest2);
+
+/** @internal */
+export type UpdateEntityUsageLimitRequestBody2$Outbound = {
+  feature_id: string;
+  filter?: UpdateEntityUsageLimitFilterRequestBody2$Outbound | undefined;
+  source?: string | undefined;
+  usage: number;
+};
+
+/** @internal */
+export const UpdateEntityUsageLimitRequestBody2$outboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitRequestBody2$Outbound,
+  UpdateEntityUsageLimitRequestBody2
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    filter: z.optional(
+      z.lazy(() => UpdateEntityUsageLimitFilterRequestBody2$outboundSchema),
+    ),
+    source: z.optional(UpdateEntitySourceRequest2$outboundSchema),
+    usage: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function updateEntityUsageLimitRequestBody2ToJSON(
+  updateEntityUsageLimitRequestBody2: UpdateEntityUsageLimitRequestBody2,
+): string {
+  return JSON.stringify(
+    UpdateEntityUsageLimitRequestBody2$outboundSchema.parse(
+      updateEntityUsageLimitRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
 export const UpdateEntityIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
   typeof UpdateEntityIntervalRequestBody
 > = z.enum(UpdateEntityIntervalRequestBody);
@@ -1017,37 +1428,37 @@ export const UpdateEntityAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdateEntityAnchorRequestBody);
 
 /** @internal */
-export type UpdateEntityUsageLimitProperties$Outbound =
+export type UpdateEntityUsageLimitProperties1$Outbound =
   | string
   | number
   | boolean;
 
 /** @internal */
-export const UpdateEntityUsageLimitProperties$outboundSchema: z.ZodMiniType<
-  UpdateEntityUsageLimitProperties$Outbound,
-  UpdateEntityUsageLimitProperties
+export const UpdateEntityUsageLimitProperties1$outboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitProperties1$Outbound,
+  UpdateEntityUsageLimitProperties1
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function updateEntityUsageLimitPropertiesToJSON(
-  updateEntityUsageLimitProperties: UpdateEntityUsageLimitProperties,
+export function updateEntityUsageLimitProperties1ToJSON(
+  updateEntityUsageLimitProperties1: UpdateEntityUsageLimitProperties1,
 ): string {
   return JSON.stringify(
-    UpdateEntityUsageLimitProperties$outboundSchema.parse(
-      updateEntityUsageLimitProperties,
+    UpdateEntityUsageLimitProperties1$outboundSchema.parse(
+      updateEntityUsageLimitProperties1,
     ),
   );
 }
 
 /** @internal */
-export type UpdateEntityUsageLimitFilterRequestBody$Outbound = {
+export type UpdateEntityUsageLimitFilterRequestBody1$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const UpdateEntityUsageLimitFilterRequestBody$outboundSchema:
+export const UpdateEntityUsageLimitFilterRequestBody1$outboundSchema:
   z.ZodMiniType<
-    UpdateEntityUsageLimitFilterRequestBody$Outbound,
-    UpdateEntityUsageLimitFilterRequestBody
+    UpdateEntityUsageLimitFilterRequestBody1$Outbound,
+    UpdateEntityUsageLimitFilterRequestBody1
   > = z.object({
     properties: z.record(
       z.string(),
@@ -1055,31 +1466,38 @@ export const UpdateEntityUsageLimitFilterRequestBody$outboundSchema:
     ),
   });
 
-export function updateEntityUsageLimitFilterRequestBodyToJSON(
-  updateEntityUsageLimitFilterRequestBody:
-    UpdateEntityUsageLimitFilterRequestBody,
+export function updateEntityUsageLimitFilterRequestBody1ToJSON(
+  updateEntityUsageLimitFilterRequestBody1:
+    UpdateEntityUsageLimitFilterRequestBody1,
 ): string {
   return JSON.stringify(
-    UpdateEntityUsageLimitFilterRequestBody$outboundSchema.parse(
-      updateEntityUsageLimitFilterRequestBody,
+    UpdateEntityUsageLimitFilterRequestBody1$outboundSchema.parse(
+      updateEntityUsageLimitFilterRequestBody1,
     ),
   );
 }
 
 /** @internal */
-export type UpdateEntityUsageLimitRequestBody$Outbound = {
+export const UpdateEntitySourceRequest1$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateEntitySourceRequest1
+> = z.enum(UpdateEntitySourceRequest1);
+
+/** @internal */
+export type UpdateEntityUsageLimitRequestBody1$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
   anchor?: string | undefined;
-  filter?: UpdateEntityUsageLimitFilterRequestBody$Outbound | undefined;
+  filter?: UpdateEntityUsageLimitFilterRequestBody1$Outbound | undefined;
+  usage?: number | undefined;
+  source?: string | undefined;
 };
 
 /** @internal */
-export const UpdateEntityUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
-  UpdateEntityUsageLimitRequestBody$Outbound,
-  UpdateEntityUsageLimitRequestBody
+export const UpdateEntityUsageLimitRequestBody1$outboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitRequestBody1$Outbound,
+  UpdateEntityUsageLimitRequestBody1
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -1088,8 +1506,10 @@ export const UpdateEntityUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
     interval: UpdateEntityIntervalRequestBody$outboundSchema,
     anchor: z.optional(UpdateEntityAnchorRequestBody$outboundSchema),
     filter: z.optional(
-      z.lazy(() => UpdateEntityUsageLimitFilterRequestBody$outboundSchema),
+      z.lazy(() => UpdateEntityUsageLimitFilterRequestBody1$outboundSchema),
     ),
+    usage: z.optional(z.number()),
+    source: z.optional(UpdateEntitySourceRequest1$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1098,12 +1518,36 @@ export const UpdateEntityUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateEntityUsageLimitRequestBodyToJSON(
-  updateEntityUsageLimitRequestBody: UpdateEntityUsageLimitRequestBody,
+export function updateEntityUsageLimitRequestBody1ToJSON(
+  updateEntityUsageLimitRequestBody1: UpdateEntityUsageLimitRequestBody1,
 ): string {
   return JSON.stringify(
-    UpdateEntityUsageLimitRequestBody$outboundSchema.parse(
-      updateEntityUsageLimitRequestBody,
+    UpdateEntityUsageLimitRequestBody1$outboundSchema.parse(
+      updateEntityUsageLimitRequestBody1,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateEntityUsageLimitUnion$Outbound =
+  | UpdateEntityUsageLimitRequestBody1$Outbound
+  | UpdateEntityUsageLimitRequestBody2$Outbound;
+
+/** @internal */
+export const UpdateEntityUsageLimitUnion$outboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitUnion$Outbound,
+  UpdateEntityUsageLimitUnion
+> = smartUnion([
+  z.lazy(() => UpdateEntityUsageLimitRequestBody1$outboundSchema),
+  z.lazy(() => UpdateEntityUsageLimitRequestBody2$outboundSchema),
+]);
+
+export function updateEntityUsageLimitUnionToJSON(
+  updateEntityUsageLimitUnion: UpdateEntityUsageLimitUnion,
+): string {
+  return JSON.stringify(
+    UpdateEntityUsageLimitUnion$outboundSchema.parse(
+      updateEntityUsageLimitUnion,
     ),
   );
 }
@@ -1249,7 +1693,12 @@ export function updateEntityOverageAllowedRequestBodyToJSON(
 /** @internal */
 export type UpdateEntityBillingControlsRequestBody$Outbound = {
   spend_limits?: Array<UpdateEntitySpendLimitRequestBody$Outbound> | undefined;
-  usage_limits?: Array<UpdateEntityUsageLimitRequestBody$Outbound> | undefined;
+  usage_limits?:
+    | Array<
+      | UpdateEntityUsageLimitRequestBody1$Outbound
+      | UpdateEntityUsageLimitRequestBody2$Outbound
+    >
+    | undefined;
   usage_alerts?: Array<UpdateEntityUsageAlertRequestBody$Outbound> | undefined;
   overage_allowed?:
     | Array<UpdateEntityOverageAllowedRequestBody$Outbound>
@@ -1266,12 +1715,15 @@ export const UpdateEntityBillingControlsRequestBody$outboundSchema:
       spendLimits: z.optional(
         z.array(z.lazy(() => UpdateEntitySpendLimitRequestBody$outboundSchema)),
       ),
-      usageLimits: z.optional(
-        z.array(z.lazy(() => UpdateEntityUsageLimitRequestBody$outboundSchema)),
-      ),
-      usageAlerts: z.optional(
-        z.array(z.lazy(() => UpdateEntityUsageAlertRequestBody$outboundSchema)),
-      ),
+      usageLimits: z.optional(z.array(smartUnion([
+        z.lazy(() => UpdateEntityUsageLimitRequestBody1$outboundSchema),
+        z.lazy(() =>
+          UpdateEntityUsageLimitRequestBody2$outboundSchema
+        ),
+      ]))),
+      usageAlerts: z.optional(z.array(z.lazy(() =>
+        UpdateEntityUsageAlertRequestBody$outboundSchema
+      ))),
       overageAllowed: z.optional(z.array(z.lazy(() =>
         UpdateEntityOverageAllowedRequestBody$outboundSchema
       ))),
@@ -1446,6 +1898,150 @@ export const UpdateEntityType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateEntityType);
 
 /** @internal */
+export const UpdateEntityDimensions6$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensions6,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateEntityDimensions6FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensions6, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensions6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensions6' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsToEnum3$inboundSchema: z.ZodMiniEnum<
+  typeof UpdateEntityDimensionsToEnum3
+> = z.enum(UpdateEntityDimensionsToEnum3);
+
+/** @internal */
+export const UpdateEntityDimensionsToUnion3$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsToUnion3,
+  unknown
+> = smartUnion([types.number(), UpdateEntityDimensionsToEnum3$inboundSchema]);
+
+export function updateEntityDimensionsToUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsToUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsToUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsToUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsTier3$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsTier3,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      UpdateEntityDimensionsToEnum3$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateEntityDimensionsTier3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsTier3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsTier3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsTier3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensions5$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensions5,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => UpdateEntityDimensionsTier3$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function updateEntityDimensions5FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensions5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensions5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensions5' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsUnion3$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsUnion3,
+  unknown
+> = smartUnion([
+  z.lazy(() => UpdateEntityDimensions5$inboundSchema),
+  z.lazy(() => UpdateEntityDimensions6$inboundSchema),
+]);
+
+export function updateEntityDimensionsUnion3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsUnion3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsUnion3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsUnion3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityMultipliers3$inboundSchema: z.ZodMiniType<
+  UpdateEntityMultipliers3,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function updateEntityMultipliers3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityMultipliers3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityMultipliers3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityMultipliers3' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateEntityCreditSchema3$inboundSchema: z.ZodMiniType<
   UpdateEntityCreditSchema3,
   unknown
@@ -1453,6 +2049,17 @@ export const UpdateEntityCreditSchema3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => UpdateEntityDimensions5$inboundSchema),
+        z.lazy(() => UpdateEntityDimensions6$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => UpdateEntityMultipliers3$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -1475,6 +2082,150 @@ export function updateEntityCreditSchema3FromJSON(
 }
 
 /** @internal */
+export const UpdateEntityDimensions4$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensions4,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateEntityDimensions4FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensions4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensions4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensions4' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsToEnum2$inboundSchema: z.ZodMiniEnum<
+  typeof UpdateEntityDimensionsToEnum2
+> = z.enum(UpdateEntityDimensionsToEnum2);
+
+/** @internal */
+export const UpdateEntityDimensionsToUnion2$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsToUnion2,
+  unknown
+> = smartUnion([types.number(), UpdateEntityDimensionsToEnum2$inboundSchema]);
+
+export function updateEntityDimensionsToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsTier2$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsTier2,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      UpdateEntityDimensionsToEnum2$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateEntityDimensionsTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensions3$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensions3,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => UpdateEntityDimensionsTier2$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function updateEntityDimensions3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensions3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensions3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensions3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsUnion2$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => UpdateEntityDimensions3$inboundSchema),
+  z.lazy(() => UpdateEntityDimensions4$inboundSchema),
+]);
+
+export function updateEntityDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityMultipliers2$inboundSchema: z.ZodMiniType<
+  UpdateEntityMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function updateEntityMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateEntityCreditSchema2$inboundSchema: z.ZodMiniType<
   UpdateEntityCreditSchema2,
   unknown
@@ -1482,6 +2233,17 @@ export const UpdateEntityCreditSchema2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => UpdateEntityDimensions3$inboundSchema),
+        z.lazy(() => UpdateEntityDimensions4$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => UpdateEntityMultipliers2$inboundSchema),
+    )),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -1500,6 +2262,150 @@ export function updateEntityCreditSchema2FromJSON(
     jsonString,
     (x) => UpdateEntityCreditSchema2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'UpdateEntityCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensions2$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensions2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateEntityDimensions2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensions2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensions2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensions2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsToEnum1$inboundSchema: z.ZodMiniEnum<
+  typeof UpdateEntityDimensionsToEnum1
+> = z.enum(UpdateEntityDimensionsToEnum1);
+
+/** @internal */
+export const UpdateEntityDimensionsToUnion1$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsToUnion1,
+  unknown
+> = smartUnion([types.number(), UpdateEntityDimensionsToEnum1$inboundSchema]);
+
+export function updateEntityDimensionsToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsTier1$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsTier1,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([
+      types.number(),
+      UpdateEntityDimensionsToEnum1$inboundSchema,
+    ]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateEntityDimensionsTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsTier1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensions1$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensions1,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => UpdateEntityDimensionsTier1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function updateEntityDimensions1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensions1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensions1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensions1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityDimensionsUnion1$inboundSchema: z.ZodMiniType<
+  UpdateEntityDimensionsUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => UpdateEntityDimensions1$inboundSchema),
+  z.lazy(() => UpdateEntityDimensions2$inboundSchema),
+]);
+
+export function updateEntityDimensionsUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityDimensionsUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityDimensionsUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityMultipliers1$inboundSchema: z.ZodMiniType<
+  UpdateEntityMultipliers1,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function updateEntityMultipliers1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityMultipliers1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityMultipliers1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityMultipliers1' from JSON`,
   );
 }
 
@@ -1558,6 +2464,17 @@ export const UpdateEntityCreditSchema1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
+    dimensions: types.optional(z.record(
+      z.string(),
+      smartUnion([
+        z.lazy(() => UpdateEntityDimensions1$inboundSchema),
+        z.lazy(() => UpdateEntityDimensions2$inboundSchema),
+      ]),
+    )),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => UpdateEntityMultipliers1$inboundSchema),
+    )),
     tier_behavior: types.literal("graduated"),
     tiers: z.array(z.lazy(() => UpdateEntityTier$inboundSchema)),
   }),
@@ -1876,10 +2793,10 @@ export function updateEntityUsageLimitFilterResponseFromJSON(
 }
 
 /** @internal */
-export const UpdateEntityUsageLimitSource$inboundSchema: z.ZodMiniType<
-  UpdateEntityUsageLimitSource,
+export const UpdateEntityUsageLimitSourceResponse$inboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitSourceResponse,
   unknown
-> = openEnums.inboundSchema(UpdateEntityUsageLimitSource);
+> = openEnums.inboundSchema(UpdateEntityUsageLimitSourceResponse);
 
 /** @internal */
 export const UpdateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
@@ -1896,7 +2813,7 @@ export const UpdateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
       z.lazy(() => UpdateEntityUsageLimitFilterResponse$inboundSchema),
     ),
     usage: types.optional(types.number()),
-    source: types.optional(UpdateEntityUsageLimitSource$inboundSchema),
+    source: types.optional(UpdateEntityUsageLimitSourceResponse$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {

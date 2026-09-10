@@ -18,6 +18,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCheckSubject } from "@/internal/balances/check/getCheckSubject.js";
+import { isThresholdBillingProduct } from "@/internal/balances/thresholdBilling/isThresholdBillingProduct.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -47,8 +48,19 @@ export const prepareFeatureDeductionV2 = ({
 	const { org, env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
+	const hasPastDueProduct = fullSubject.customer_products.some(
+		(customerProduct) =>
+			customerProduct.status === "past_due" &&
+			!customerProduct.product.config?.ignore_past_due &&
+			isThresholdBillingProduct({ customerProduct }) &&
+			customerProduct.customer_entitlements.some(
+				(customerEntitlement) =>
+					customerEntitlement.entitlement.feature.id === feature.id,
+			),
+	);
 	const blockOverdueUsage =
-		deduction.enforceOverdueBlock && org.config.block_overdue_entitlements;
+		(deduction.enforceOverdueBlock && org.config.block_overdue_entitlements) ||
+		hasPastDueProduct;
 	if (blockOverdueUsage) {
 		fullSubject = getCheckSubject({ ctx, fullSubject });
 	}

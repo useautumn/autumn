@@ -16,6 +16,7 @@ export const createReferralProgramParamsOutboundSchema = z.object({
 		.optional()
 		.nullable(),
 	exclude_trial: z.union([z.boolean(), z.undefined()]).optional().nullable(),
+	internal_id: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -37,6 +38,7 @@ export const createReferralProgramParamsSchema = z.object({
 		.optional()
 		.nullable(),
 	excludeTrial: z.union([z.boolean(), z.undefined()]).optional().nullable(),
+	internalId: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const createReferralProgramRedeemOnResponseSchema = openEnumSchema;

@@ -84,13 +84,15 @@ const planItemV0ToItemConfig = ({
 	const featureOverride = planItemV0.feature_override
 		? apiFeatureOverrideToDb(planItemV0.feature_override)
 		: undefined;
+	const thresholdBilling = planItemV0.threshold_billing ?? undefined;
 
-	if (rollover || proration || featureOverride) {
+	if (rollover || proration || featureOverride || thresholdBilling) {
 		return {
 			rollover,
 			on_increase: proration?.on_increase,
 			on_decrease: proration?.on_decrease,
 			feature_override: featureOverride,
+			threshold_billing: thresholdBilling,
 		} satisfies ProductItemConfig;
 	}
 	return undefined;

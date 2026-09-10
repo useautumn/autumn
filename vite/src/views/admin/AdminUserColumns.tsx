@@ -1,6 +1,7 @@
 import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { format } from "date-fns";
+import { AdminUserEmailCell } from "./components/AdminUserEmailCell";
 import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminUser = {
@@ -8,61 +9,59 @@ export type AdminUser = {
 	name: string;
 	email: string;
 	createdAt: string;
-	lastSignedIn: string;
 };
+
+// AdminUserEmailCell renders the whole mobile card, so nothing else joins it.
+const hiddenOnMobile = { mobileCard: "hidden" as const };
 
 export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
 	{
-		id: "id",
-		header: "ID",
-		accessorKey: "id",
-		cell: ({ row }: { row: Row<AdminUser> }) => {
-			const value = row.getValue("id") as string;
-			return (
-				<div className="font-mono justify-start flex w-full group">
-					<MiniCopyButton text={value} />
-				</div>
-			);
-		},
+		id: "email",
+		header: "Email",
+		accessorKey: "email",
+		size: 300,
+		cell: ({ row }: { row: Row<AdminUser> }) => (
+			<AdminUserEmailCell user={row.original} />
+		),
 	},
 	{
 		id: "name",
 		header: "Name",
 		accessorKey: "name",
-		cell: ({ row }: { row: Row<AdminUser> }) => {
-			const value = row.getValue("name") as string;
-			return <div className="font-medium text-foreground">{value}</div>;
-		},
-	},
-	{
-		id: "email",
-		header: "Email",
-		accessorKey: "email",
-		cell: ({ row }: { row: Row<AdminUser> }) => {
-			const value = row.getValue("email") as string;
-			return (
-				<div className="truncate">
-					<MiniCopyButton text={value} />
-				</div>
-			);
-		},
+		size: 160,
+		meta: hiddenOnMobile,
+		cell: ({ row }: { row: Row<AdminUser> }) => (
+			<span className="truncate">{row.original.name}</span>
+		),
 	},
 	{
 		id: "createdAt",
-		header: "Created At",
+		header: "Created",
 		accessorKey: "createdAt",
-		cell: ({ row }: { row: Row<AdminUser> }) => {
-			const value = row.getValue("createdAt") as string;
-			return (
-				<div className="text-xs text-subtle whitespace-nowrap">
-					{format(new Date(value), "dd MMM HH:mm")}
-				</div>
-			);
-		},
+		size: 100,
+		meta: hiddenOnMobile,
+		cell: ({ row }: { row: Row<AdminUser> }) => (
+			<span className="whitespace-nowrap text-subtle text-xs">
+				{format(new Date(row.original.createdAt), "dd MMM HH:mm")}
+			</span>
+		),
 	},
 	{
-		id: "impersonate",
+		id: "id",
+		header: "ID",
+		accessorKey: "id",
+		size: 140,
+		meta: hiddenOnMobile,
+		cell: ({ row }: { row: Row<AdminUser> }) => (
+			<div className="group flex w-full font-mono">
+				<MiniCopyButton text={row.original.id} innerClassName="text-xs" />
+			</div>
+		),
+	},
+	{
+		id: "actions",
 		header: "Actions",
+		size: 120,
 		enableSorting: false,
 		enableHiding: false,
 		cell: ({ row }: { row: Row<AdminUser> }) => (

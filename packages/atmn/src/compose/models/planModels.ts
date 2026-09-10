@@ -284,10 +284,26 @@ export const FreeTrialSchema = z.object({
 
 export const BillingControlsSchema = z.custom<BillingControls>();
 
+export type LicenseItemFilter = {
+	featureId?: string;
+	billingMethod?: BillingMethod;
+	interval?: BillingInterval | ResetInterval;
+	intervalCount?: number;
+};
+
+/** Diff applied to the license plan for THIS parent only — the child plan
+ * itself stays shared. */
+export const LicenseCustomizeSchema = z.object({
+	price: BasePriceParamsSchema.nullable().optional(),
+	addItems: z.array(PlanItemSchema).optional(),
+	removeItems: z.array(z.custom<LicenseItemFilter>()).optional(),
+});
+
 export const PlanLicenseSchema = z.object({
 	licensePlanId: z.string().nonempty(),
 	version: z.number().int().min(1).optional(),
 	included: z.number().int().min(0).optional(),
+	customize: LicenseCustomizeSchema.optional(),
 });
 
 export const PlanSchema = z.object({
@@ -513,7 +529,21 @@ export type PlanItem = PlanItemWithReset | PlanItemWithPrice | PlanItemNoReset;
 // Override Plan type to use PlanItem discriminated union
 type PlanBase = z.infer<typeof PlanSchema>;
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;
-export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
+
+// Overridden like Plan.items: the zod schema infers the snake_case wire
+// shape, but `item()` produces the camelCase PlanItem union.
+export type LicenseCustomize = {
+	price?: z.infer<typeof BasePriceParamsSchema> | null;
+	addItems?: PlanItem[];
+	removeItems?: LicenseItemFilter[];
+};
+
+export type PlanLicense = Omit<
+	z.infer<typeof PlanLicenseSchema>,
+	"customize"
+> & {
+	customize?: LicenseCustomize;
+};
 
 export type Plan = {
 	/** Unique identifier for the plan. */

@@ -10,7 +10,8 @@ export const createConnectAccount = async ({
 	metadata,
 }: {
 	org: Organization;
-	user: User;
+	/** Only the contact email is used, so ownerless orgs can pass a stand-in. */
+	user: Pick<User, "email">;
 	metadata?: Record<string, string>;
 }) => {
 	// For v2 API, need to use specific API version

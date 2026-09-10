@@ -66,6 +66,10 @@ export type CreateReferralProgramParams = {
    * Whether checkouts that start a trial should skip granting the reward.
    */
   excludeTrial?: boolean | null | undefined;
+  /**
+   * Address an existing referral program by its stable id. Omit when creating — the server generates one.
+   */
+  internalId?: string | undefined;
 };
 
 /**
@@ -154,6 +158,7 @@ export type CreateReferralProgramParams$Outbound = {
   max_redemptions?: number | null | undefined;
   plan_ids?: Array<string> | null | undefined;
   exclude_trial?: boolean | null | undefined;
+  internal_id?: string | undefined;
 };
 
 /** @internal */
@@ -169,6 +174,7 @@ export const CreateReferralProgramParams$outboundSchema: z.ZodMiniType<
     maxRedemptions: z.optional(z.nullable(z.int())),
     planIds: z.optional(z.nullable(z.array(z.string()))),
     excludeTrial: z.optional(z.nullable(z.boolean())),
+    internalId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -178,6 +184,7 @@ export const CreateReferralProgramParams$outboundSchema: z.ZodMiniType<
       maxRedemptions: "max_redemptions",
       planIds: "plan_ids",
       excludeTrial: "exclude_trial",
+      internalId: "internal_id",
     });
   }),
 );

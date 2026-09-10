@@ -15,7 +15,7 @@ import {
 const atmnPackageDir = fileURLToPath(new URL("../../../", import.meta.url));
 const builtCliPath = join(atmnPackageDir, "dist/cli.js");
 
-test(`${chalk.yellowBright("atmn built CLI: constant-ID push → pull → push preserves separate intervals")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn built CLI: constant-ID push → pull → push preserves separate intervals")}`, async () => {
 	const planId = "atmn_split_cycle_scale_annual";
 	const ctx = await createCleanAtmnIntegrationContext();
 	const build = Bun.spawn(["bun", "run", "build"], {

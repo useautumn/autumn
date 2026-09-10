@@ -373,6 +373,53 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Number of metered-feature units priced together. Defaults to one when omitted.
                     </DynamicResponseField>
 
+                    <DynamicResponseField name="dimensions.{key}" type="object">
+                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="match.{key}" type="string">
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="priority" type="integer">
+                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="tier_behavior" type="any" />
+
+                        <DynamicResponseField name="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="to" type="number">
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="credit_cost" type="number">
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="multipliers.{key}" type="object">
+                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="match.{key}" type="string">
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="factor" type="number">
+                          Multiplies the matched rate. All matching multipliers stack.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="add" type="number">
+                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
                     <DynamicResponseField name="tier_behavior" type="any" />
 
                     <DynamicResponseField name="tiers" type="object[]">
@@ -390,6 +437,36 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="markups" type="object">
+                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="default_markup" type="number">
+                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="provider_markups.{key}" type="object | null">
+                      Per-provider markup percentages for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="markup" type="number" />
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="model_markups.{key}" type="object | null">
+                      Per-model markup overrides for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="markup" type="number" />
+
+                        <DynamicResponseField name="input_cost" type="number" />
+
+                        <DynamicResponseField name="output_cost" type="number" />
+
+                      </Expandable>
                     </DynamicResponseField>
 
                   </Expandable>
@@ -884,19 +961,100 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                               Number of metered-feature units priced together. Defaults to one when omitted.
                             </DynamicResponseField>
 
+                            <DynamicResponseField name="dimensions.{key}" type="object">
+                              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="match.{key}" type="string">
+                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="priority" type="integer">
+                                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="tier_behavior" type="any" />
+
+                                <DynamicResponseField name="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="to" type="number">
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="credit_cost" type="number">
+                                      Credits consumed per billing-unit group within this tier.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="multipliers.{key}" type="object">
+                              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="match.{key}" type="string">
+                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="factor" type="number">
+                                  Multiplies the matched rate. All matching multipliers stack.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="add" type="number">
+                                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
                             <DynamicResponseField name="tier_behavior" type="any" />
 
                             <DynamicResponseField name="tiers" type="object[]">
                               <Expandable title="properties">
-                                <DynamicResponseField name="to" type="any" />
+                                <DynamicResponseField name="to" type="number">
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </DynamicResponseField>
 
-                                <DynamicResponseField name="credit_cost" type="any" />
+                                <DynamicResponseField name="credit_cost" type="number">
+                                  Credits consumed per billing-unit group within this tier.
+                                </DynamicResponseField>
 
                               </Expandable>
                             </DynamicResponseField>
 
                             <DynamicResponseField name="credit_cost" type="number">
                               Credits consumed per billing-unit group.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="markups" type="object">
+                          For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                          <Expandable title="properties">
+                            <DynamicResponseField name="default_markup" type="number">
+                              Default percentage markup for customers on this plan. Use -100 to make usage free.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="provider_markups.{key}" type="object | null">
+                              Per-provider markup percentages for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="markup" type="number" />
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="model_markups.{key}" type="object | null">
+                              Per-model markup overrides for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="markup" type="number" />
+
+                                <DynamicResponseField name="input_cost" type="number" />
+
+                                <DynamicResponseField name="output_cost" type="number" />
+
+                              </Expandable>
                             </DynamicResponseField>
 
                           </Expandable>
@@ -1209,9 +1367,13 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                 <DynamicResponseField name="additional_currencies" type="object[]">
                                   Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
                                   <Expandable title="properties">
-                                    <DynamicResponseField name="currency" type="any" />
+                                    <DynamicResponseField name="currency" type="string">
+                                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    </DynamicResponseField>
 
-                                    <DynamicResponseField name="amount" type="any" />
+                                    <DynamicResponseField name="amount" type="number">
+                                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                    </DynamicResponseField>
 
                                   </Expandable>
                                 </DynamicResponseField>
@@ -1219,13 +1381,28 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                 <DynamicResponseField name="tiers" type="object[]">
                                   Tiered pricing. Either 'amount' or 'tiers' is required.
                                   <Expandable title="properties">
-                                    <DynamicResponseField name="to" type="any" />
+                                    <DynamicResponseField name="to" type="number" />
 
-                                    <DynamicResponseField name="amount" type="any" />
+                                    <DynamicResponseField name="amount" type="number" />
 
-                                    <DynamicResponseField name="flat_amount" type="any" />
+                                    <DynamicResponseField name="flat_amount" type="number" />
 
-                                    <DynamicResponseField name="additional_currencies" type="any" />
+                                    <DynamicResponseField name="additional_currencies" type="object[]">
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="currency" type="string">
+                                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="amount" type="number">
+                                          Per-unit amount for this tier in this currency.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="flat_amount" type="number">
+                                          Flat amount for this tier in this currency, if the tier uses one.
+                                        </DynamicResponseField>
+
+                                      </Expandable>
+                                    </DynamicResponseField>
 
                                   </Expandable>
                                 </DynamicResponseField>
@@ -1294,8 +1471,114 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                             <DynamicResponseField name="feature_override" type="object">
                               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                               <Expandable title="properties">
-                                <DynamicResponseField name="credit_schema" type="any | any[]">
+                                <DynamicResponseField name="credit_schema" type="object | object[]">
                                   For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="metered_feature_id" type="string">
+                                      ID of the metered feature that draws from this credit system.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="billing_units" type="number">
+                                      Number of metered-feature units priced together. Defaults to one when omitted.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="dimensions.{key}" type="object">
+                                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="match.{key}" type="string">
+                                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="priority" type="integer">
+                                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="tier_behavior" type="any" />
+
+                                        <DynamicResponseField name="tiers" type="object[]">
+                                          <Expandable title="properties">
+                                            <DynamicResponseField name="to" type="number">
+                                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                            </DynamicResponseField>
+
+                                            <DynamicResponseField name="credit_cost" type="number">
+                                              Credits consumed per billing-unit group within this tier.
+                                            </DynamicResponseField>
+
+                                          </Expandable>
+                                        </DynamicResponseField>
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="multipliers.{key}" type="object">
+                                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="match.{key}" type="string">
+                                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="factor" type="number">
+                                          Multiplies the matched rate. All matching multipliers stack.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="add" type="number">
+                                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                                        </DynamicResponseField>
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="tier_behavior" type="any" />
+
+                                    <DynamicResponseField name="tiers" type="object[]">
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="to" type="number">
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="credit_cost" type="number">
+                                          Credits consumed per billing-unit group within this tier.
+                                        </DynamicResponseField>
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="credit_cost" type="number">
+                                      Credits consumed per billing-unit group.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="markups" type="object">
+                                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="default_markup" type="number">
+                                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="provider_markups.{key}" type="object | null">
+                                      Per-provider markup percentages for customers on this plan.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="markup" type="number" />
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="model_markups.{key}" type="object | null">
+                                      Per-model markup overrides for customers on this plan.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="markup" type="number" />
+
+                                        <DynamicResponseField name="input_cost" type="number" />
+
+                                        <DynamicResponseField name="output_cost" type="number" />
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                  </Expandable>
                                 </DynamicResponseField>
 
                               </Expandable>
@@ -1734,6 +2017,53 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Number of metered-feature units priced together. Defaults to one when omitted.
                     </DynamicResponseField>
 
+                    <DynamicResponseField name="dimensions.{key}" type="object">
+                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="match.{key}" type="string">
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="priority" type="integer">
+                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="tier_behavior" type="any" />
+
+                        <DynamicResponseField name="tiers" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="to" type="number">
+                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="credit_cost" type="number">
+                              Credits consumed per billing-unit group within this tier.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="multipliers.{key}" type="object">
+                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="match.{key}" type="string">
+                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="factor" type="number">
+                          Multiplies the matched rate. All matching multipliers stack.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="add" type="number">
+                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
                     <DynamicResponseField name="tier_behavior" type="any" />
 
                     <DynamicResponseField name="tiers" type="object[]">
@@ -1751,6 +2081,36 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="markups" type="object">
+                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="default_markup" type="number">
+                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="provider_markups.{key}" type="object | null">
+                      Per-provider markup percentages for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="markup" type="number" />
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="model_markups.{key}" type="object | null">
+                      Per-model markup overrides for customers on this plan.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="markup" type="number" />
+
+                        <DynamicResponseField name="input_cost" type="number" />
+
+                        <DynamicResponseField name="output_cost" type="number" />
+
+                      </Expandable>
                     </DynamicResponseField>
 
                   </Expandable>
@@ -2245,19 +2605,100 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                               Number of metered-feature units priced together. Defaults to one when omitted.
                             </DynamicResponseField>
 
+                            <DynamicResponseField name="dimensions.{key}" type="object">
+                              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="match.{key}" type="string">
+                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="priority" type="integer">
+                                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="tier_behavior" type="any" />
+
+                                <DynamicResponseField name="tiers" type="object[]">
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="to" type="number">
+                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="credit_cost" type="number">
+                                      Credits consumed per billing-unit group within this tier.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="multipliers.{key}" type="object">
+                              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="match.{key}" type="string">
+                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="factor" type="number">
+                                  Multiplies the matched rate. All matching multipliers stack.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="add" type="number">
+                                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
                             <DynamicResponseField name="tier_behavior" type="any" />
 
                             <DynamicResponseField name="tiers" type="object[]">
                               <Expandable title="properties">
-                                <DynamicResponseField name="to" type="any" />
+                                <DynamicResponseField name="to" type="number">
+                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                </DynamicResponseField>
 
-                                <DynamicResponseField name="credit_cost" type="any" />
+                                <DynamicResponseField name="credit_cost" type="number">
+                                  Credits consumed per billing-unit group within this tier.
+                                </DynamicResponseField>
 
                               </Expandable>
                             </DynamicResponseField>
 
                             <DynamicResponseField name="credit_cost" type="number">
                               Credits consumed per billing-unit group.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="markups" type="object">
+                          For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                          <Expandable title="properties">
+                            <DynamicResponseField name="default_markup" type="number">
+                              Default percentage markup for customers on this plan. Use -100 to make usage free.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="provider_markups.{key}" type="object | null">
+                              Per-provider markup percentages for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="markup" type="number" />
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="model_markups.{key}" type="object | null">
+                              Per-model markup overrides for customers on this plan.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="markup" type="number" />
+
+                                <DynamicResponseField name="input_cost" type="number" />
+
+                                <DynamicResponseField name="output_cost" type="number" />
+
+                              </Expandable>
                             </DynamicResponseField>
 
                           </Expandable>
@@ -2570,9 +3011,13 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                 <DynamicResponseField name="additional_currencies" type="object[]">
                                   Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
                                   <Expandable title="properties">
-                                    <DynamicResponseField name="currency" type="any" />
+                                    <DynamicResponseField name="currency" type="string">
+                                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    </DynamicResponseField>
 
-                                    <DynamicResponseField name="amount" type="any" />
+                                    <DynamicResponseField name="amount" type="number">
+                                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                    </DynamicResponseField>
 
                                   </Expandable>
                                 </DynamicResponseField>
@@ -2580,13 +3025,28 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                 <DynamicResponseField name="tiers" type="object[]">
                                   Tiered pricing. Either 'amount' or 'tiers' is required.
                                   <Expandable title="properties">
-                                    <DynamicResponseField name="to" type="any" />
+                                    <DynamicResponseField name="to" type="number" />
 
-                                    <DynamicResponseField name="amount" type="any" />
+                                    <DynamicResponseField name="amount" type="number" />
 
-                                    <DynamicResponseField name="flat_amount" type="any" />
+                                    <DynamicResponseField name="flat_amount" type="number" />
 
-                                    <DynamicResponseField name="additional_currencies" type="any" />
+                                    <DynamicResponseField name="additional_currencies" type="object[]">
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="currency" type="string">
+                                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="amount" type="number">
+                                          Per-unit amount for this tier in this currency.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="flat_amount" type="number">
+                                          Flat amount for this tier in this currency, if the tier uses one.
+                                        </DynamicResponseField>
+
+                                      </Expandable>
+                                    </DynamicResponseField>
 
                                   </Expandable>
                                 </DynamicResponseField>
@@ -2655,8 +3115,114 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                             <DynamicResponseField name="feature_override" type="object">
                               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                               <Expandable title="properties">
-                                <DynamicResponseField name="credit_schema" type="any | any[]">
+                                <DynamicResponseField name="credit_schema" type="object | object[]">
                                   For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="metered_feature_id" type="string">
+                                      ID of the metered feature that draws from this credit system.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="billing_units" type="number">
+                                      Number of metered-feature units priced together. Defaults to one when omitted.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="dimensions.{key}" type="object">
+                                      Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="match.{key}" type="string">
+                                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="priority" type="integer">
+                                          Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="tier_behavior" type="any" />
+
+                                        <DynamicResponseField name="tiers" type="object[]">
+                                          <Expandable title="properties">
+                                            <DynamicResponseField name="to" type="number">
+                                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                            </DynamicResponseField>
+
+                                            <DynamicResponseField name="credit_cost" type="number">
+                                              Credits consumed per billing-unit group within this tier.
+                                            </DynamicResponseField>
+
+                                          </Expandable>
+                                        </DynamicResponseField>
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="multipliers.{key}" type="object">
+                                      Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="match.{key}" type="string">
+                                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="factor" type="number">
+                                          Multiplies the matched rate. All matching multipliers stack.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="add" type="number">
+                                          Added to the rate after every factor is applied, in credits per billing-unit group.
+                                        </DynamicResponseField>
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="tier_behavior" type="any" />
+
+                                    <DynamicResponseField name="tiers" type="object[]">
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="to" type="number">
+                                          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                        </DynamicResponseField>
+
+                                        <DynamicResponseField name="credit_cost" type="number">
+                                          Credits consumed per billing-unit group within this tier.
+                                        </DynamicResponseField>
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="credit_cost" type="number">
+                                      Credits consumed per billing-unit group.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="markups" type="object">
+                                  For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="default_markup" type="number">
+                                      Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="provider_markups.{key}" type="object | null">
+                                      Per-provider markup percentages for customers on this plan.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="markup" type="number" />
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="model_markups.{key}" type="object | null">
+                                      Per-model markup overrides for customers on this plan.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="markup" type="number" />
+
+                                        <DynamicResponseField name="input_cost" type="number" />
+
+                                        <DynamicResponseField name="output_cost" type="number" />
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                  </Expandable>
                                 </DynamicResponseField>
 
                               </Expandable>
@@ -2776,6 +3342,53 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicResponseField name="billing_units" type="number">
               Number of metered-feature units priced together. Defaults to one when omitted.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="dimensions.{key}" type="object">
+              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="priority" type="integer">
+                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="tier_behavior" type="any" />
+
+                <DynamicResponseField name="tiers" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="to" type="number">
+                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="credit_cost" type="number">
+                      Credits consumed per billing-unit group within this tier.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="multipliers.{key}" type="object">
+              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="factor" type="number">
+                  Multiplies the matched rate. All matching multipliers stack.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="add" type="number">
+                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                </DynamicResponseField>
+
+              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="any" />
@@ -3063,6 +3676,53 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Number of metered-feature units priced together. Defaults to one when omitted.
             </DynamicResponseField>
 
+            <DynamicResponseField name="dimensions.{key}" type="object">
+              Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="priority" type="integer">
+                  Breaks ties between dimensions that match the same number of keys. Higher wins.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="tier_behavior" type="any" />
+
+                <DynamicResponseField name="tiers" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="to" type="number">
+                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="credit_cost" type="number">
+                      Credits consumed per billing-unit group within this tier.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="multipliers.{key}" type="object">
+              Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+              <Expandable title="properties">
+                <DynamicResponseField name="match.{key}" type="string">
+                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="factor" type="number">
+                  Multiplies the matched rate. All matching multipliers stack.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="add" type="number">
+                  Added to the rate after every factor is applied, in credits per billing-unit group.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
             <DynamicResponseField name="tier_behavior" type="any" />
 
             <DynamicResponseField name="tiers" type="object[]">
@@ -3221,7 +3881,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicResponseField>
 
         <DynamicResponseField name="usage" type="number">
-          Current usage already consumed in the active interval. Response-only; not stored on billing controls.
+          Usage consumed in the active interval, stored in the usage-window counter.
         </DynamicResponseField>
 
         <DynamicResponseField name="source" type="'customer' | 'plan'">

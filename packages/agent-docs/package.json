@@ -16,6 +16,8 @@
 	],
 	"scripts": {
 		"gen": "bun run scripts/generate.ts",
+		"skills:check": "bun run scripts/checkPublicSkills.ts",
+		"skills:mirror": "bun run scripts/mirrorPublicSkills.ts",
 		"build": "bun run gen && tsc",
 		"test": "bun test",
 		"ts": "tsc --noEmit"

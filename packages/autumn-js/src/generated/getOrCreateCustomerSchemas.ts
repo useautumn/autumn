@@ -183,10 +183,10 @@ const closedEnumSchema = z.any();
 
 const customerExpandSchema = z.any();
 
-export const getOrCreateCustomerPurchaseLimitIntervalSchema = closedEnumSchema;
+export const getOrCreateCustomerAutoTopupIntervalSchema = closedEnumSchema;
 
 export const getOrCreateCustomerPurchaseLimitSchema = z.object({
-	interval: getOrCreateCustomerPurchaseLimitIntervalSchema,
+	interval: getOrCreateCustomerAutoTopupIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.number(),
 	count: z.union([z.number(), z.undefined()]).optional(),

@@ -18,7 +18,7 @@ export type GetOrCreateCustomerGlobals = {
 /**
  * The time interval for the purchase limit window.
  */
-export const GetOrCreateCustomerPurchaseLimitInterval = {
+export const GetOrCreateCustomerAutoTopupInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -27,8 +27,8 @@ export const GetOrCreateCustomerPurchaseLimitInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type GetOrCreateCustomerPurchaseLimitInterval = ClosedEnum<
-  typeof GetOrCreateCustomerPurchaseLimitInterval
+export type GetOrCreateCustomerAutoTopupInterval = ClosedEnum<
+  typeof GetOrCreateCustomerAutoTopupInterval
 >;
 
 /**
@@ -38,7 +38,7 @@ export type GetOrCreateCustomerPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: GetOrCreateCustomerPurchaseLimitInterval;
+  interval: GetOrCreateCustomerAutoTopupInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -359,10 +359,9 @@ export type GetOrCreateCustomerParams = {
 };
 
 /** @internal */
-export const GetOrCreateCustomerPurchaseLimitInterval$outboundSchema:
-  z.ZodMiniEnum<typeof GetOrCreateCustomerPurchaseLimitInterval> = z.enum(
-    GetOrCreateCustomerPurchaseLimitInterval,
-  );
+export const GetOrCreateCustomerAutoTopupInterval$outboundSchema: z.ZodMiniEnum<
+  typeof GetOrCreateCustomerAutoTopupInterval
+> = z.enum(GetOrCreateCustomerAutoTopupInterval);
 
 /** @internal */
 export type GetOrCreateCustomerPurchaseLimit$Outbound = {
@@ -378,7 +377,7 @@ export const GetOrCreateCustomerPurchaseLimit$outboundSchema: z.ZodMiniType<
   GetOrCreateCustomerPurchaseLimit
 > = z.pipe(
   z.object({
-    interval: GetOrCreateCustomerPurchaseLimitInterval$outboundSchema,
+    interval: GetOrCreateCustomerAutoTopupInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
     count: z.optional(z.number()),

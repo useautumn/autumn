@@ -1,72 +1,302 @@
 ---
-name: autumn-catalog
-description: Designing or changing an Autumn pricing model — features, plans, plan items, and how usage is granted or billed (in autumn.config.ts, the API, or the dashboard). Use when the user discusses pricing, plans, tiers, credits, seats, overage, prepaid, or trials.
+name: catalog
+description: Modeling a user's pricing into an Autumn catalog — deciding the structure (plans, variants, add-ons, licenses, credit systems, pooled balances) before writing config, then filling in the numbers. Use when the user describes their pricing or asks to model, change, or push a catalog.
 ---
 
 # Catalog
 
 <skill name="autumn-concepts" reason="it defines Autumn's data model — features, plans, plan items, balances — which every modeling decision builds on" />
 
-## Approach
+## STRICT RULES — re-read before every config write
 
-- Modeling is iterative: translate the user's intended pricing into Autumn's model (features + plans + plan items). Ask clarifying questions and never assume behavior — confirm, for example, whether a paid item is usage-based or prepaid, and at what interval a metered allowance resets.
+1. **Amounts are in major units (e.g. dollars), never minor units (cents).** $180/month is `amount: 180`. $0.01 per credit is `amount: 0.01`. If any amount you wrote is 100× the user's number, it is wrong.
+2. **Never invent a price, limit, or plan name** — a missing number is a question.
+3. **One definition per real thing.** One feature per resource, one child plan per license pattern (parents customize their license, never get their own copy), one add-on per offer (sizes are tiers, not plans).
+
+**Building, or iterating on a live catalog?** What matters is whether customers are on these plans — not whether a config file exists. Still setting up (even across sessions, with a half-built `autumn.config.ts`) → the workflow below; edit the draft freely. Already running Autumn with customers, now changing prices/plans → that's an update with real stakes (versioning, migrations, grandfathering) — read `references/catalog-update.md` first. Unsure → check for customers (`atmn pull` / the org) or ask.
+
+Turning pricing into a catalog is two jobs:
+
+- **Shape** — decide the structure: which plans exist, what's a variant, what's an add-on, where balances live. Decided by relationships in their pricing, not by amounts.
+- **Fill** — put in the numbers and per-item details, then write and validate the config.
+
+Do Shape fully before Fill. Take numbers whenever the user mentions them, but never chase numbers during Shape — the one exception is "is this the same on every plan?", which is a structure question.
+
+## Progress (what the user sees)
+
+Copy this checklist into your first message and keep it up to date. It is the **only** structure the user ever sees — never say "step", "pass", "decide", or "fork" to them. If you skip an item, say why in one line.
+
+- [ ] 1 Your plans and prices
+- [ ] 2 What's included in each plan
+- [ ] 3 How billing behaves (signup, trials, limits)
+- [ ] 4 Licenses — paid seats, workspaces, projects (if any)
+- [ ] 5 Structure agreed
+- [ ] 6 Config written and checked
+
+## How to ask
+
+- One topic per message. Two questions at most, and only if both belong to that topic. Never mix topics in one message.
 - If one ambiguity changes which other questions apply, resolve it first before asking those.
-- For a new codebase-managed catalog, ask whether the user wants to use `atmn` to create, pull, preview, and push their catalog. Recommend `atmn` unless they explicitly want dashboard/API-first changes.
-- For an existing project, check whether `autumn.config.ts` exists. If it does, treat it as the local catalog source and prefer `atmn`; otherwise use MCP/API tools directly or ask whether to initialize/pull config first.
-- Use stable lowercase IDs with underscores (`pro_plan`, `chat_messages`).
-- Never create duplicate features for one resource; vary allowance, interval, or price via plan items instead (one `tokens` feature, not `monthly_tokens` + `one_time_tokens`).
-- Keep it simple to start: if there are many features, build the most important (prioritise metered ones) and confirm before adding more.
+- Attach your guess to each question — "does the trial need a card? I'd guess no" — a wrong guess gets corrected faster than a blank gets answered.
+- Assert the obvious instead of asking. "500 messages a month" resets monthly — state it as an assumption, don't ask. Questions are only for facts that change the structure and can't be guessed.
+- Skip anything they already told you. A good message to answer is a nod, not homework.
+- Never announce what you'll do next ("once I get those three, I'll restate…") — just work the current topic.
+- The restate (step 5) is the safety net: wrong assumptions get caught there cheaply, which is what makes fewer questions safe.
 
-## Updating a catalog
+## Shape: collect, then decide
 
-Follow the same preview-decision-apply shape as `atmn` and the dashboard:
+Work the four steps below in order, one at a time — each says when it's done. While collecting, make only the small calls each step allows; leave the big ones (marked ↦ Decide) for after.
 
-1. Build or edit the desired catalog shape.
-2. Preview it: use `atmn` for `autumn.config.ts` projects, or `catalog.preview_update` for MCP/API flows.
-3. Summarize feature changes first: created, updated, skipped, deleted/archived, and blocked updates.
-4. For each changed base plan or plan family, surface the plan diff, customer impact, versioning choices, variants, conflicts, and migration option.
-5. If the user changes any decision, revise the config or params and preview again.
-6. Apply only the exact previewed update, following the global write approval rules for `catalog.update` or `atmn --headless push --yes`.
+### Step 1 — Plans
 
-For plan families with customers or variants, ask decisions in this order:
+- What are the plans? ("Free, Pro $20/mo, Growth $50/mo")
+- Free tier? → a plan with no price that every new customer starts on automatically.
+- Anything bought *alongside* a plan rather than instead of it (packs, extra storage)? → note it ↦ Decide (add-on).
+- Enterprise tier? Ask. If it exists, model the base enterprise plan in the catalog, and tell the user: custom terms per customer (special prices, custom limits) are applied later when attaching, not modeled here.
 
-1. Versioning: create a new version, update the current version with `disable_version: true`, update all versions with `all_versions: true`, or skip.
-2. Variants: inspect `plan.variants[n].update_source`. `propagated` variants need a propagation choice; `direct` variants are being updated like their own plan and may need their own versioning and migration decisions.
-3. Migration: whether to create a migration draft to move existing customers onto the new plan shape.
+Done when you can list every plan they sell, including free, add-ons, and enterprise.
 
-## Rules
+### Step 2 — What each plan includes
 
-- Never give a default/auto-enabled plan a paid price: its base price must be null and its items must not contain paid prepaid or usage-based prices.
-- Per-unit pricing (e.g. "$X per seat") always pairs a base fee on `Plan.price` with a per-unit plan item — never a bare per-unit price with no base.
-- Use variants for named derivatives of a base plan: annual/monthly intervals, A/B price packages, or different volume ladders.
-- Ignore "Enterprise"/custom plans here — those are created per-customer in the dashboard.
+Have them describe what they charge for or limit, in their own words. Pick a type per feature:
+
+| They say | Feature type |
+|---|---|
+| "Pro has SSO" | boolean (on/off) |
+| "500 messages a month" | metered, resets |
+| "10 team members" | metered, no reset (held, not used up) |
+| "credits" / "tokens" / "wallet" | credit system — always, even if only one action uses it today. They will add more actions; a single mapped action is fine. Their app tracks the actions (chat, image), never the credit balance itself. |
+
+Note top-ups ("buy more when you run out", "auto-recharge") ↦ Decide (top-up placement).
+
+### Step 3 — How billing behaves
+
+This step usually means explaining Autumn to the user in plain words. Do.
+
+- **Signup**: every new customer automatically gets the default plan — usually the free one. One default per group. A default can carry no prices at all — a "$0" plan with paid items (per-seat charges, prepaid packs) is a paid plan, not a default. If every plan bills something, there is no default; customers subscribe.
+- **Trials**: ask "does the trial need a card?" (guess from their motion — PLG usually no). Card → `free_trial` on the paid plan. No card → a **separate free trial plan** (`pro_trial`: no price, the paid plan's items, auto-enabled when everyone starts on it); the paid plan stays untouched, since a default plan can never be paid. <pointer file="../concepts/references/plan.md" when="trial modeling details — trial-behavior on plans" />
+- **What is a plan attached to?** The customer, or each thing they own (workspace, project, site)? "Pro is $200 per workspace" → attached per entity. Pin this down — it changes everything downstream.
+- **Who uses each metered feature?** The customer as a whole, or each entity? If entities: one shared balance or separate ones? "Shared across…" → shared ↦ Decide (balances).
+
+Done when you know what attaches where, who consumes what, and how trials and signup work.
+
+### Step 4 — Licenses
+
+Triggered whenever the customer pays per unit of some entity — seats, workspaces, projects, sites, members: "each X is $10/month", "comes with 3 X". When you see one, always ask: **what does one X come with?** Never skip this because the user didn't say "seat". <pointer file="../concepts/references/licenses.md" when="modeling a license — the concept: child plan, license link, customize" />
+
+- Nothing of its own ("$10 per seat", just a count) → a per-unit priced item on the plan. No entities. The common case.
+- The unit gets something of its own ("each seat gets 100 credits", "every workspace has its own allowance") → a **license**: a small plan of its own that the parent plan hands out per unit.
+- Units must be assigned, reassigned, or sit empty → also licenses. Rare — confirm they need it.
+
+<part file="references/fork-licenses.md" when="deciding between a per-unit item, licenses, and entity-attached plans for a countable paid unit" />
+
+### Before deciding: restate
+
+Only after your questions are answered — never announce it in advance, and never restate facts nobody has confirmed yet. One short message: the plans, what's metered, what attaches where, who shares what. Let the user correct it. A wrong fact here is much cheaper than a wrong structure later.
+
+If the user gave you everything up front and you asked nothing, skip the separate restate — the structure message (checklist item 5) does that job.
+
+## Decide
+
+Resolve these with all facts in hand. Each has a default — when the facts genuinely don't settle it, show both options in one line each and ask.
+
+**Variant or separate plan?**
+A variant can change the price, swap items in or out, and change the trial — nothing else.
+
+- "Pro monthly / Pro annual, same features" → variant. (Annual usually still resets allowances monthly — billing and reset intervals are independent. Confirm.)
+- Volume buckets/tiers — one question decides: **is each bucket the subscription itself (→ a variant per bucket) or a purchase on top of one (→ a prepaid item)?**
+- Different features per tier → separate plans. One plan per tier is normal, not a smell.
+
+<part file="references/fork-variants.md" when="deciding whether volume buckets/tiers are variants of the plan or one prepaid volume-tiered item — the tells, the trap, when variants are forced" />
+
+**Add-on, or part of the plan?** Two independent questions: is the purchase priced/bundled per plan (→ item on each plan) or one offer across plans (→ one add-on plan, sizes as tiers on its prepaid item)? And does a plan exist at the level its balance is shared at (→ item there) or are all plans entity-attached (→ a customer-level add-on is forced)? Auto-recharge needs the prepaid item to exist — add it in Shape, it's structural.
+
+<part file="references/fork-addon.md" when="modeling packs, top-ups, or any purchase bought on top of a plan — add-on vs plan item, and what level it sits at" />
+
+**Where do balances and purchases live?**
+The rule: **purchases and balance at the customer; usage tracking and caps at the entity.** Grants "shared across…" entities → pooled (`pooled: true` on the item); separate per-entity balances → no pooling; overage stays on the entity's plan either way.
+
+<part file="references/fork-pooled.md" when="deciding where balances and purchases live — pooled grants, per-entity balances, customer-level packs, overage placement" />
+
+**Groups?**
+Can one customer hold two plans at once from different lines (a support plan AND a sales plan)? → one group per line. Within a group, attaching a plan replaces the current one; that's what makes upgrades work.
+
+**One-off?**
+"Lifetime deal", "one-time pack" → a plan with a one-off price: single invoice, no subscription, balances never reset.
+
+## Check
+
+Compare the structure against the shapes in `references/cases.md`. If their pricing matches a known shape but your structure differs, either say why or fix it.
+
+Shortcuts that are usually wrong — catch yourself before Show:
+
+| You're thinking | Check first |
+|---|---|
+| "seats + credits → licenses" | Are the credits per seat, or one shared pot? Shared → per-unit seats + pooled balance, no licenses. |
+| "annual pricing → separate plan" | Same features? → variant. |
+| "tiers → one plan with tiers" | Does overage or anything else differ per tier? → plan per tier. |
+| "they said credits but it's one action → plain meter" | Credits are always a credit system. |
+| "packs belong on the plan" | Are they shared across entities or plans? → add-on. |
+| "everyone starts on a Pro trial → trial + auto-enable on Pro" | A default plan can never be paid. → separate free `pro_trial` plan (Pro's items, no price, auto-enabled); Pro untouched. |
+| "several top-up sizes → one add-on plan per size" | Do the sizes differ only in quantity and price? → volume tiers on one prepaid item, one add-on plan. |
+| "the pack is priced per plan → an add-on per plan" | Per-plan pricing IS plan differentiation → a prepaid item on each base plan, no add-ons. Add-ons are for one offer shared across plans, or when no plan exists at the shared level. |
+| "the seat differs per plan → one seat plan per parent" | ONE child plan carrying the mainline take; each differing parent's license carries its own diff via `customize`. Never a `<parent>_seat` plan per parent. |
+
+<part file="references/cases.md" when="checking the derived structure against known-good shapes" />
+
+## Show
+
+Present the structure in the "Showing the catalog" format below — the same one used for every catalog display, catalog inside a fenced code block. Numbers you don't have yet stay open, never invented: write the line without them ("AI messages per month — amount TBD"). Structure notes go in parentheses on the line they describe. The whole message:
+
+````
+Here's the structure I'd build:
+
+```
+Features: AI credits (credit system — chat and image messages draw from it) · SSO (on/off)
+
+Free — no price, everyone starts here
+  - 100 AI credits per month
+Pro — $20/month, or annual (same features)
+  - AI credits per month — amount TBD
+  - SSO
+Credit pack (add-on) — price TBD, shared across all workspaces
+```
+
+I assumed: credits reset monthly, no rollover. Anything wrong?
+````
+
+List every assumption. Get a clear yes — "sounds good" without reading is not a yes. But if the user already told you to go ahead without review ("no need to ask", "just build it"), show the structure and keep going — don't stop to wait. If a late fact changes the structure, redo the affected decision, update the structure, and show what changed in one line.
+
+## Fill
+
+Structure agreed — now finish it. Four moves, in order.
+
+**1 — Fill in what's known.** Everything the user already said goes straight into the draft. Never re-ask a confirmed fact.
+
+**2 — Ask for missing essentials.** Values with no sane default: base prices, included amounts, per-unit prices, tier boundaries, trial length. Never invent one — a missing number is a question. Batch per the how-to-ask rules.
+
+**3 — Sweep the options.** Ask each of these **once for the whole catalog**, in plain words — never item by item. The answer distributes to every item it touches ("carry over on both plans, or just Growth?" only if they hint at a difference). Raise a bucket only when the structure makes it relevant; skip anything already answered.
+
+- **Carry-over** — any allowance that resets: "Should unused messages carry over month to month, or reset clean?"
+- **Running out** — any metered feature: "When they run out — hard stop, or keep going and bill the extra?" (often settled in Shape; skip if so)
+- **Top-ups** — credits present or buying-more mentioned: "Can they buy more before the reset?" → a one-off prepaid item
+- **Guardrails** — any plan with overage or heavy usage: "Any caps on how fast or how far usage can run — like a daily limit, or a ceiling on overage? Want customers warned as they approach limits?" → plan-level billing controls
+- **Anything else on/off** — always, it's cheap: "Any other on/off differences between plans — SSO, priority support, API access?"
+
+The sweep exists so the user hears what's configurable without being marched through every item. Behind it, check every knob yourself — this list is internal, never show it:
+
+- per plan: base price · trial (length, unit, card — all explicit) · default plan · group · billing controls (guardrails answered → `billingControls(...)` on the plan)
+- per item: billing method · included · price or tiers (tier behavior explicit) · reset · rollover · pooled (if Shape chose shared balances) · purchase caps · the one-off item auto-recharge needs
+
+Landing a guardrail answer means picking the right control — windowed cap vs overage ceiling vs alert vs allow-past-balance vs auto-recharge are different knobs with different fields. What each one is, the three overage knobs, and the plan→customer inheritance are the `autumn-concepts` skill's billing-controls reference — read it before writing `billingControls(...)`. The flow rules here:
+
+- Plan-level controls are defaults every subscriber inherits — the right home for anything true of the whole plan ("free users max 20 emails/day"). Per-customer exceptions are a billing/customer operation, not catalog work.
+- A cap stated alongside an allowance ("1,000 a month but never more than 20 a day") is a usage limit on the plan, not a second item or a smaller allowance.
+- "Track it but don't bill it" / "let them run over, we'll invoice manually" → overage knobs on the plan, not a $0 price.
+- Auto-recharge needs its one-off prepaid item (already on the per-item list) AND the `auto_topups` control.
+
+**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push`, fix what it flags, and show the final catalog — same format, no assumptions list. Note: on a clean org that command applies as it validates (see `references/atmn.md`) — that's fine, just describe it accurately. **Done means the config is written and valid — a summary is not done.**
+
+### Showing the catalog
+
+Use **exactly this format** every time you show the catalog — the Show structure message, the Fill proposal, and the done message alike. Never a markdown table, never a different layout per message. Send it as a fenced code block (```) so the indentation survives markdown rendering — plan names on bare lines otherwise get folded into the previous plan's list. It's the same grammar the dashboard renders. Features first with their kind, then plans, one line per item:
+
+```
+Features: AI messages (usage, resets) · Seats (held, not used up) · Credits (credit system — 1 message = 1 credit) · SSO (on/off)
+
+Pro — $20/month
+  - 500 AI messages per month
+      · unused carry over, up to 500, for 1 month
+  - 500 AI messages per month, then $0.01 per message
+  - $10 per 1,000 credits
+  - 5,000 credits for $50 per month
+  - 3 seats included, then $10 per seat
+  - $18 - $15 per seat
+  - Unlimited projects
+  - SSO
+  - 100 credits per seat per month
+Team — $500/month
+  - 5 seats included, then $40 per seat per month
+      each seat gets:
+      · 100 summaries per month
+      · SSO
+Credit pack (add-on) — $10 for 1,000 credits, buy anytime
+```
+
+The Features line names every feature and its kind in plain words: `(usage, resets)` for consumable meters, `(held, not used up)` for non-consumable ones like seats, `(credit system — …)` with its action mappings, `(on/off)` for boolean. Item lines, top to bottom: plain allowance · allowance with overage · pure usage price (per billing unit) · prepaid bucket · included + prepaid per-unit · tiered rate shown first-to-last · unlimited · boolean (name only, never "enabled") · per-entity grant · one-off add-on. Numbers get commas; "then …" says what happens after the included runs out; annual variants go inline ("or $200/year — messages still reset monthly").
+
+Configured item properties — carry-over, purchase caps, top-up behavior — are never their own `-` lines: indent them under the item they belong to as `·` lines, one behavior each, so the hierarchy is visible. Only show what's configured; defaults (like usage simply stopping when no overage price is set) get no line.
+
+Billing controls follow the same rule: `·` lines under the item they guard, in plain words — `· max 200 per day` · `· overage capped at 20% over` · `· overage tracked, not billed` · `· warned at 80%` · `· auto-buys 1,000 credits when below 100`. Never the schema names (usage_limits, spend_limits) in user-facing text.
+
+### Config gotchas
+
+- Amounts are plain dollars everywhere — base prices, tier `flatAmount`s, unit prices: $20 is `20`, never `2000`, and a $100 tier is `flatAmount: 100`, never `10000`. Re-check every number before writing; cents is the most common wrong config.
+- A default/auto-enabled plan can't be paid: no base price, no paid items.
+- A prepaid quantity **includes** the included amount, and so does each tier's `to` — the first tier's `to` must exceed `included`.
+- `billingUnits` rounds usage **up** when billing.
+- Set explicitly, never lean on defaults: `billingMethod`, `tierBehavior`, all three trial fields. Explicit defaults cause no spurious diffs.
+- Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
+- Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
+- `billingControls(...)` fields are snake_case (`feature_id`, `overage_limit`) unlike the rest of the config, and each control list replaces wholesale on update. The builder isn't validated at push — double-check feature ids and field names yourself.
+- Pooled balances are config: `pooled: true` on the entity plan's item. Concluding "shared across workspaces" in Shape and then omitting the flag is the classic miss.
+- Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
+- Don't write `proration` — leave it out and take server defaults.
+- Not writable in config — say so and set via API or dashboard after push: display text, trial end behavior, license customization.
+
+The config uses exactly three builders — `feature`, `plan`, `item` — as plain function calls with object arguments. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
+
+```ts
+import { feature, plan, item } from "atmn";
+
+export const credits = feature({
+  id: "credits",
+  name: "Credits",
+  type: "credit_system",
+  creditSchema: [{ meteredFeatureId: "messages", creditCost: 1 }],
+});
+
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [
+    item({ featureId: credits.id, included: 500, reset: { interval: "month" } }),
+  ],
+});
+```
+
+Pattern deep-dives, split one file per pattern under `references/` — read the matching one when filling that pattern's details:
+
+<reference url="/documentation/modelling-pricing/usage-based-pricing" when="usage overage pricing" />
+<reference url="/documentation/modelling-pricing/prepaid-pricing" when="prepaid quantities (seats, packs, buckets)" />
+<reference url="/documentation/modelling-pricing/volume-based-tiers" when="volume-tiered prices" />
+<reference url="/documentation/modelling-pricing/per-unit-pricing" when="$X per unit" />
+<reference url="/documentation/modelling-pricing/recurring" when="billing vs reset intervals" />
+<reference url="/documentation/modelling-pricing/one-off-purchases" when="one-off purchases / top-ups" />
+<reference url="/documentation/modelling-pricing/auto-top-ups" when="auto-recharge" />
+<reference url="/documentation/modelling-pricing/rollovers" when="carry-over" />
+<reference url="/documentation/modelling-pricing/trials" when="trial details" />
+<reference url="/documentation/modelling-pricing/entity-plans" when="entity plans and license attach flows" />
+<reference url="/documentation/modelling-pricing/credit-systems" when="credit schemas and mappings" />
+<reference url="/documentation/modelling-pricing/free-plans" when="default plans / auto-enable" />
+<reference url="/documentation/modelling-pricing/add-ons" when="add-on balance stacking" />
+<reference url="/documentation/modelling-pricing/plan-variants" when="what variants can change" />
+
+## Conduct
+
+- In an existing config, match its patterns: if sibling plans carry their prepaid purchases as items, the new plan does too — don't introduce a different structure for the same kind of thing.
+- Stable lowercase IDs with underscores: `pro_plan`, `chat_messages`.
+- `entityFeatureId` is deprecated. Never mention or use it unless the user's existing config already has it.
+- Per-unit pricing pairs a base fee with the per-unit item ("$X/seat" plans still have a base price, even $0).
+- Speak plainly: "plans", "what's included", "extra usage". Schema words stay in the config — say "carry over" not "rollover", "shared across workspaces" not "pooled", "paid upfront" / "billed at month end" not "prepaid" / "usage_based".
+- Never volunteer what Autumn can or can't do. Don't offer options Autumn can't model, and don't explain limitations unprompted — only address one when the user directly asks to model that specific thing, and even then lead with the closest thing that works.
+- Start simple: the most important features first, confirm before adding more.
+
+Before finishing: re-check the STRICT RULES at the top against the config you wrote.
 
 ## Catalog operations
 
-<part file="references/catalog-update.md" when="changing an existing catalog, previewing catalog changes, or deciding between versioning, in-place updates, migrations, and variant propagation" />
+<part file="references/atmn.md" when="using atmn, autumn.config.ts, or headless push flows" />
 
-<part file="references/atmn.md" when="using atmn, an autumn.config.ts file, or headless catalog push/pull flows" />
-
-<part file="../concepts/references/plan.md" when="modeling annual/monthly variants, A/B plan variants, or volume-ladder variants" />
-
-## Pricing patterns
-
-Load the matching reference when modeling that pattern.
-
-<reference url="/documentation/modelling-pricing/usage-based-pricing" when="charging for usage beyond an included allowance (pay-in-arrears overage)" />
-
-<reference url="/documentation/modelling-pricing/prepaid-pricing" when="selling a quantity bought upfront (seats, credit packs, selectable buckets)" />
-
-<reference url="/documentation/modelling-pricing/volume-based-tiers" when="pricing that changes by volume tier" />
-
-<reference url="/documentation/modelling-pricing/per-unit-pricing" when="modeling $X per unit (seat, project) — always with a base fee" />
-
-<reference url="/documentation/modelling-pricing/credit-systems" when="modeling several actions or endpoints that draw from one shared meter" />
-
-<reference url="/documentation/modelling-pricing/free-plans" when="modeling a free or default plan" />
-
-<reference url="/documentation/modelling-pricing/recurring" when="modeling a recurring subscription plan" />
-
-<reference url="/documentation/modelling-pricing/one-off-purchases" when="modeling one-off purchases or top-ups" />
-
-<reference url="/documentation/modelling-pricing/trials" when="adding a trial to a plan" />
+<part file="references/catalog-update.md" when="changing an existing catalog: previewing, versioning, migrations, variant propagation" />
