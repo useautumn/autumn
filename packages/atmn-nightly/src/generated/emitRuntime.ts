@@ -16,8 +16,8 @@ export type CollectionSpec = {
 	readonly required?: readonly string[];
 	/** Every fixture path a config may state, collection-relative (no `entitlementId`, `versioning`, …). */
 	readonly paths: readonly string[];
-	/** Objects the server always answers with; a pull leaves one out at this value. */
-	readonly omitWhenDefault?: readonly { path: string; default: unknown }[];
+	/** The spec's default at each fixture path that states one; a pulled value equal to it is left out. */
+	readonly defaults?: Readonly<Record<string, unknown>>;
 	/** Config key holding past versions, when the collection has history. */
 	readonly historyKey?: string;
 	/** Whether pull can address entries by idField alone. */
@@ -36,6 +36,7 @@ export type BranchSpec = {
 	readonly keys: readonly string[];
 	readonly required?: readonly string[];
 	readonly paths: readonly string[];
+	readonly defaults?: Readonly<Record<string, unknown>>;
 };
 
 /** The branch an entry or row states, or undefined when it states none. */
@@ -82,8 +83,8 @@ const branchSpecOf = ({
 	keys: branch.keys,
 	required: branch.required,
 	paths: branch.paths,
+	defaults: branch.defaults,
 	branches: undefined,
-	omitWhenDefault: undefined,
 });
 
 /** Every shape an entry of the collection can take; just itself when unbranched. */
@@ -229,6 +230,54 @@ const serialize = ({
 	return `{\n${items.join("\n")}\n${indent}}`;
 };
 
+/**
+ * A value at its spec default reads the same when omitted, so it is not
+ * written; a container whose every child was elided is not written either.
+ * `items` and other arrays carry no default, so an empty one still states
+ * "none". A path the type demands is kept whatever its value.
+ */
+const pruneDefaults = ({
+	value,
+	path,
+	index,
+	defaults,
+	required,
+}: {
+	value: unknown;
+	path: string;
+	index: PathIndex;
+	defaults: Readonly<Record<string, unknown>>;
+	required: ReadonlySet<string>;
+}): unknown => {
+	if (required.has(path)) return value;
+	if (path in defaults && valuesEqual(value, defaults[path])) return undefined;
+	if (value === null || typeof value !== "object") return value;
+	if (Array.isArray(value)) {
+		return value.map((entry) =>
+			pruneDefaults({ value: entry, path, index, defaults, required }),
+		);
+	}
+	const isRecord = index.records.has(path);
+	if (!isRecord && !index.parents.has(path)) return value;
+	const pruned: Record<string, unknown> = {};
+	for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+		const childPath = isRecord ? `${path}.*` : `${path}.${key}`;
+		const child = pruneDefaults({
+			value: entry,
+			path: childPath,
+			index,
+			defaults,
+			required,
+		});
+		if (child !== undefined) pruned[key] = child;
+	}
+	// An object the spec describes that ends up empty said nothing; a record
+	// (metadata) is the user's data and stays whatever it holds.
+	if (!isRecord && Object.keys(pruned).length === 0 && path !== "")
+		return undefined;
+	return pruned;
+};
+
 /** A half-nulled display would fail the config lint, so it must not be written. */
 const displayOf = (value: unknown): unknown => {
 	if (value === null || typeof value !== "object") return undefined;
@@ -263,7 +312,6 @@ const rowValueOf = ({
 	if (key === "archived") return undefined;
 	if (key === "processors" && !includeMappings) return undefined;
 	const value = row[key];
-	if (isOmittedDefault({ spec, key, value })) return undefined;
 	if (key === "display") return displayOf(value);
 	if (key === "creditSchema") return creditSchemaOf(value);
 	// Membership in `plans` stamps true; only a draft's `false` is fixture-worthy.
@@ -300,20 +348,6 @@ const valuesEqual = (left: unknown, right: unknown): boolean => {
 	return true;
 };
 
-/** An object the row carries but a fixture reads the same without. */
-const isOmittedDefault = ({
-	spec,
-	key,
-	value,
-}: {
-	spec: CollectionSpec;
-	key: string;
-	value: unknown;
-}): boolean =>
-	(spec.omitWhenDefault ?? []).some(
-		(entry) => entry.path === key && valuesEqual(value, entry.default),
-	);
-
 const isDeprecatedKey = ({
 	spec,
 	key,
@@ -344,11 +378,17 @@ export const emitFixtureProperty = ({
 		spec: collectionSpec,
 		row: collectionRow,
 	});
-	const value = rowValueOf({ spec, key, row, includeMappings });
-	if (value === undefined) return null;
 	const required = new Set(spec.required ?? []);
-	if (value === null && !required.has(key)) return null;
 	const index = pathIndexOf(spec.paths);
+	const value = pruneDefaults({
+		value: rowValueOf({ spec, key, row, includeMappings }),
+		path: key,
+		index,
+		defaults: spec.defaults ?? {},
+		required,
+	});
+	if (value === undefined) return null;
+	if (value === null && !required.has(key)) return null;
 	return serialize({
 		includeMappings,
 		required,
@@ -378,7 +418,13 @@ export const emitFixture = ({
 	const required = new Set(spec.required ?? []);
 	const lines: string[] = [`${spec.builder}({`];
 	for (const key of spec.keys) {
-		const value = rowValueOf({ spec, key, row, includeMappings });
+		const value = pruneDefaults({
+			value: rowValueOf({ spec, key, row, includeMappings }),
+			path: key,
+			index,
+			defaults: spec.defaults ?? {},
+			required,
+		});
 		if (value === undefined) continue;
 		// A required key states null rather than vanishing: the fixture type
 		// demands it, so dropping it emits source that does not compile.

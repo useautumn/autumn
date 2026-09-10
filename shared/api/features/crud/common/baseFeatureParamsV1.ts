@@ -4,6 +4,7 @@ import {
 	ProviderMarkupsSchema,
 } from "../../../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../../../models/featureModels/featureEnums";
+import { withSpecDefault } from "../../../../utils/common/withSpecDefault.js";
 import { idRegex } from "../../../../utils/utils";
 import { ApiCreditSchemaItemSchema } from "../../creditRateCard.js";
 
@@ -38,7 +39,9 @@ export const BaseFeatureV1ParamsSchema = z.object({
 				"Singular and plural display names for the feature in your user interface.",
 		}),
 
-	credit_schema: z.array(ApiCreditSchemaItemSchema).optional().meta({
+	credit_schema: withSpecDefault({
+		schema: z.array(ApiCreditSchemaItemSchema).optional(),
+		defaultValue: [],
 		description:
 			"A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.",
 	}),

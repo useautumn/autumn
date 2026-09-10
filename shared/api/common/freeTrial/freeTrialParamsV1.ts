@@ -1,4 +1,5 @@
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums";
+import { withSpecDefault } from "@utils/common/withSpecDefault";
 import { z } from "zod/v4";
 
 export const FreeTrialParamsV1Schema = z
@@ -16,7 +17,9 @@ export const FreeTrialParamsV1Schema = z
 			description:
 				"If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.",
 		}),
-		on_end: z.enum(["bill", "revert"]).optional().meta({
+		on_end: withSpecDefault({
+			schema: z.enum(["bill", "revert"]).optional(),
+			defaultValue: "bill",
 			description:
 				"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.",
 		}),

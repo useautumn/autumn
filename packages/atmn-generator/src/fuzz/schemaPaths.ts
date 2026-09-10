@@ -44,8 +44,38 @@ export const schemaPaths = ({
 	schema: JsonSchema;
 	root: JsonSchema;
 	overlay: Overlay;
-}): Map<FixturePath, Set<string>> => {
+}): Map<FixturePath, Set<string>> =>
+	schemaPathIndex({ schema, root, overlay }).enums;
+
+/**
+ * The spec's `default` at every path that states one, keyed fixture-side:
+ * a pulled value equal to it is left out of the fixture.
+ */
+export const schemaDefaults = ({
+	schema,
+	root,
+	overlay,
+}: {
+	schema: JsonSchema;
+	root: JsonSchema;
+	overlay: Overlay;
+}): Map<FixturePath, unknown> =>
+	schemaPathIndex({ schema, root, overlay }).defaults;
+
+const schemaPathIndex = ({
+	schema,
+	root,
+	overlay,
+}: {
+	schema: JsonSchema;
+	root: JsonSchema;
+	overlay: Overlay;
+}): {
+	enums: Map<FixturePath, Set<string>>;
+	defaults: Map<FixturePath, unknown>;
+} => {
 	const paths = new Map<FixturePath, Set<string>>();
+	const defaults = new Map<FixturePath, unknown>();
 
 	const visit = ({
 		schema: node,
@@ -115,6 +145,8 @@ export const schemaPaths = ({
 			const values = paths.get(childFixturePath) ?? new Set<string>();
 			for (const value of enumValuesOf(resolvedProperty)) values.add(value);
 			paths.set(childFixturePath, values);
+			if (resolvedProperty.default !== undefined)
+				defaults.set(childFixturePath, resolvedProperty.default);
 
 			// Entering a fresh top-level collection resets the item-relative wire
 			// path, matching the overlay's FieldPath convention.
@@ -136,5 +168,5 @@ export const schemaPaths = ({
 		seen: new Set(),
 	});
 
-	return paths;
+	return { enums: paths, defaults };
 };

@@ -13,6 +13,7 @@ import {
 	OnDecrease,
 	OnIncrease,
 } from "@models/productV2Models/productItemModels/productItemEnums";
+import { withSpecDefault } from "@utils/common/withSpecDefault";
 import { z } from "zod/v4";
 
 export const IncludedUsageParamsSchema = z.number().max(10_000_000_000_000, {
@@ -109,7 +110,9 @@ export const PlanItemParamsObjectSchema = z.object({
 				description:
 					"Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.",
 			}),
-			interval_count: z.number().optional().meta({
+			interval_count: withSpecDefault({
+				schema: z.number().optional(),
+				defaultValue: 1,
 				description: "Number of intervals between resets. Defaults to 1.",
 			}),
 		})

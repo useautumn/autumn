@@ -35,12 +35,23 @@ for (const cardRequired of CARD_REQUIRED) {
 				const { freshWire } = await expectRoundTrip({ scenario });
 				const plans = freshWire.plans as Array<Record<string, unknown>>;
 				const pro = plans.find((plan) => plan.plan_id === "pro");
-				expect(pro?.free_trial).toEqual(
+				// A pull elides the spec defaults: `cardRequired: false` and
+				// `onEnd: "bill"` read the same when absent.
+				expect(pro?.free_trial).toEqual({
+					duration_length: 14,
+					duration_type: "day",
+					...(cardRequired ? { card_required: true } : {}),
+				});
+				const catalog = (await scenario.client.get({})) as {
+					plans: Array<{ id: string; freeTrial?: Record<string, unknown> }>;
+				};
+				expect(
+					catalog.plans.find((plan) => plan.id === "pro")?.freeTrial,
+				).toEqual(
 					expect.objectContaining({
-						duration_length: 14,
-						duration_type: "day",
-						card_required: cardRequired,
-						on_end: "bill",
+						durationLength: 14,
+						durationType: "day",
+						cardRequired,
 					}),
 				);
 			} finally {
