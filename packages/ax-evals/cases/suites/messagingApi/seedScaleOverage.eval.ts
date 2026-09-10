@@ -57,71 +57,70 @@ export const seedScaleOverage = defineCase({
 		conduct.completed(),
 		conduct.noHarnessFriction(),
 	],
-	goldenConfig: `${messagingApiConfig()}
-export const apiScale = plan({
-	id: "api_scale",
-	name: "API Scale 500K",
-	group: "api",
-	price: { amount: 350, interval: "month" },
-	items: [
-		item({
-			featureId: messages.id,
-			included: 500000,
-			reset: { interval: "month" },
-			price: {
-				amount: 0.7,
-				billingUnits: 1000,
-				billingMethod: "usage_based",
-				interval: "month",
-			},
+	goldenConfig: messagingApiConfig({
+		extraPlans: `		plan({
+			planId: "api_scale",
+			name: "API Scale 500K",
+			group: "api",
+			price: { amount: 350, interval: "month" },
+			items: [
+				{
+					featureId: "messages",
+					included: 500000,
+					reset: { interval: "month" },
+					price: {
+						amount: 0.7,
+						billingUnits: 1000,
+						billingMethod: "usage_based",
+						interval: "month",
+					},
+				},
+			],
+			variants: [
+				variant({
+					variantPlanId: "api_scale_1m",
+					name: "API Scale 1M",
+					customize: {
+						price: { amount: 650, interval: "month" },
+						items: [
+							{
+								featureId: "messages",
+								included: 1000000,
+								reset: { interval: "month" },
+								price: {
+									amount: 0.65,
+									billingUnits: 1000,
+									billingMethod: "usage_based",
+									interval: "month",
+								},
+							},
+						],
+					},
+				}),
+				variant({
+					variantPlanId: "api_scale_2m",
+					name: "API Scale 2M",
+					customize: {
+						price: { amount: 1150, interval: "month" },
+						items: [
+							{
+								featureId: "messages",
+								included: 2000000,
+								reset: { interval: "month" },
+								price: {
+									amount: 0.55,
+									billingUnits: 1000,
+									billingMethod: "usage_based",
+									interval: "month",
+								},
+							},
+						],
+					},
+				}),
+			],
 		}),
-	],
-});
-
-export const apiScale1m = apiScale.variant({
-	id: "api_scale_1m",
-	name: "API Scale 1M",
-	customize: {
-		price: { amount: 650, interval: "month" },
-		addItems: [
-			item({
-				featureId: messages.id,
-				included: 1000000,
-				reset: { interval: "month" },
-				price: {
-					amount: 0.65,
-					billingUnits: 1000,
-					billingMethod: "usage_based",
-					interval: "month",
-				},
-			}),
-		],
-		removeItems: [{ featureId: messages.id }],
-	},
-});
-
-export const apiScale2m = apiScale.variant({
-	id: "api_scale_2m",
-	name: "API Scale 2M",
-	customize: {
-		price: { amount: 1150, interval: "month" },
-		addItems: [
-			item({
-				featureId: messages.id,
-				included: 2000000,
-				reset: { interval: "month" },
-				price: {
-					amount: 0.55,
-					billingUnits: 1000,
-					billingMethod: "usage_based",
-					interval: "month",
-				},
-			}),
-		],
-		removeItems: [{ featureId: messages.id }],
-	},
-});
 `,
+	}),
 });
 
 initAxEval({ axCase: seedScaleOverage, maxTurns: 24, timeoutMs: 480_000 });

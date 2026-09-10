@@ -453,7 +453,8 @@ export const integration = {
 		score: (output: AxRunOutput) => {
 			const probeCall = output.probe?.calls[call - 1];
 			const passed =
-				probeCall !== undefined && !pattern.test(JSON.stringify(probeCall.body));
+				probeCall !== undefined &&
+				!pattern.test(JSON.stringify(probeCall.body));
 			return {
 				name: label,
 				score: passed ? 1 : 0,

@@ -68,7 +68,9 @@ export const renderIntegrationRun = ({
 	const header = (label: string) => chalk.bold(`\n── ${label} (${arm}) `);
 	const sections = [
 		header("agent's changes") +
-			(diff.trim() ? `\n${renderDiff(diff)}` : chalk.dim("none — fixture untouched")),
+			(diff.trim()
+				? `\n${renderDiff(diff)}`
+				: chalk.dim("none — fixture untouched")),
 		header("probe") + `\n${renderProbe(probe)}`,
 		header("oracle") + `\n${renderOracle(oracle)}`,
 	];

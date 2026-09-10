@@ -146,53 +146,61 @@ test("seed-scale-overage: the seeded config alone fails the scale verdicts", asy
 });
 
 test("seed-tier-variants: siblings as standalone plan() fail the variant verdict", async () => {
-	const standalone = `${messagingApiConfig()}
-export const apiPro100k = plan({
-	id: "api_pro_100k",
-	name: "API Pro 100K",
-	group: "api",
-	price: { amount: 45, interval: "month" },
-	items: [
-		item({
-			featureId: messages.id,
-			included: 100000,
-			reset: { interval: "month" },
-			price: messageOverage,
+	const standalone = messagingApiConfig({
+		extraPlans: `		plan({
+			planId: "api_pro_100k",
+			name: "API Pro 100K",
+			group: "api",
+			price: { amount: 45, interval: "month" },
+			items: [
+				{
+					featureId: "messages",
+					included: 100000,
+					reset: { interval: "month" },
+					price: {
+						amount: 0.8,
+						billingUnits: 1000,
+						billingMethod: "usage_based",
+						interval: "month",
+					},
+				},
+			],
 		}),
-	],
-});
-
-export const apiPro200k = plan({
-	id: "api_pro_200k",
-	name: "API Pro 200K",
-	group: "api",
-	price: { amount: 80, interval: "month" },
-	items: [
-		item({
-			featureId: messages.id,
-			included: 200000,
-			reset: { interval: "month" },
-			price: messageOverage,
+		plan({
+			planId: "api_pro_200k",
+			name: "API Pro 200K",
+			group: "api",
+			price: { amount: 80, interval: "month" },
+			items: [
+				{
+					featureId: "messages",
+					included: 200000,
+					reset: { interval: "month" },
+					price: {
+						amount: 0.8,
+						billingUnits: 1000,
+						billingMethod: "usage_based",
+						interval: "month",
+					},
+				},
+			],
 		}),
-	],
-});
-
-export const campaignsPro25k = plan({
-	id: "campaigns_pro_25k",
-	name: "Campaigns Pro 25K",
-	group: "campaigns",
-	price: { amount: 150, interval: "month" },
-	items: [item({ featureId: contacts.id, included: 25000 })],
-});
-
-export const campaignsPro100k = plan({
-	id: "campaigns_pro_100k",
-	name: "Campaigns Pro 100K",
-	group: "campaigns",
-	price: { amount: 400, interval: "month" },
-	items: [item({ featureId: contacts.id, included: 100000 })],
-});
-`;
+		plan({
+			planId: "campaigns_pro_25k",
+			name: "Campaigns Pro 25K",
+			group: "campaigns",
+			price: { amount: 150, interval: "month" },
+			items: [{ featureId: "contacts", included: 25000 }],
+		}),
+		plan({
+			planId: "campaigns_pro_100k",
+			name: "Campaigns Pro 100K",
+			group: "campaigns",
+			price: { amount: 400, interval: "month" },
+			items: [{ featureId: "contacts", included: 100000 }],
+		}),
+`,
+	});
 	const scores = await scoreConfigExpectations({
 		axCase: seedTierVariants,
 		configFile: standalone,

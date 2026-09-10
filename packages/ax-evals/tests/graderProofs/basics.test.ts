@@ -106,29 +106,34 @@ test("default-trial: golden passes every catalog verdict", async () => {
 });
 
 test("default-trial: trial hung off the paid plan fails the default-plan verdict", async () => {
-	const trialOnPaid = `import { feature, plan, item } from "atmn";
+	const trialOnPaid = `import { atmn, feature, plan } from "atmn";
 
-export const aiMessages = feature({
-	id: "ai_messages",
-	name: "AI Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 30, interval: "month" },
-	freeTrial: {
-		durationType: "day",
-		durationLength: 14,
-		cardRequired: false,
-	},
-	items: [
-		item({
-			featureId: aiMessages.id,
-			included: 1000,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "ai_messages",
+			name: "AI Messages",
+			type: "metered",
+			consumable: true,
+		}),
+	],
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 30, interval: "month" },
+			freeTrial: {
+				durationType: "day",
+				durationLength: 14,
+				cardRequired: false,
+			},
+			items: [
+				{
+					featureId: "ai_messages",
+					included: 1000,
+					reset: { interval: "month" },
+				},
+			],
 		}),
 	],
 });

@@ -3,24 +3,29 @@
  * feature whose unit is a word of processed text, and one auto-enable free
  * plan with a 1,000-word monthly allowance.
  */
-export const aiWordsCatalog = `import { feature, plan, item } from "atmn";
+export const aiWordsCatalog = `import { atmn, feature, plan } from "atmn";
 
-export const words = feature({
-	id: "words",
-	name: "Words",
-	type: "metered",
-	consumable: true,
-});
-
-export const free = plan({
-	id: "free",
-	name: "Free",
-	autoEnable: true,
-	items: [
-		item({
-			featureId: words.id,
-			included: 1000,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "words",
+			name: "Words",
+			type: "metered",
+			consumable: true,
+		}),
+	],
+	plans: [
+		plan({
+			planId: "free",
+			name: "Free",
+			autoEnable: true,
+			items: [
+				{
+					featureId: "words",
+					included: 1000,
+					reset: { interval: "month" },
+				},
+			],
 		}),
 	],
 });

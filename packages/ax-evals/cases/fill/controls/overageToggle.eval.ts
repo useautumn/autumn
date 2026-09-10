@@ -58,43 +58,48 @@ export const overageToggle = defineCase({
 		conduct.noHarnessFriction(),
 		conduct.noUnapprovedPush(),
 	],
-	goldenConfig: `import { billingControls, feature, plan, item } from "atmn";
+	goldenConfig: `import { atmn, feature, plan } from "atmn";
 
-export const emails = feature({
-	id: "emails",
-	name: "Emails",
-	type: "metered",
-	consumable: true,
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 25, interval: "month" },
-	items: [
-		item({
-			featureId: emails.id,
-			included: 50000,
-			reset: { interval: "month" },
-			price: {
-				amount: 0.8,
-				billingUnits: 1000,
-				billingMethod: "usage_based",
-				interval: "month",
+export default atmn({
+	features: [
+		feature({
+			featureId: "emails",
+			name: "Emails",
+			type: "metered",
+			consumable: true,
+		}),
+	],
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 25, interval: "month" },
+			items: [
+				{
+					featureId: "emails",
+					included: 50000,
+					reset: { interval: "month" },
+					price: {
+						amount: 0.8,
+						billingUnits: 1000,
+						billingMethod: "usage_based",
+						interval: "month",
+					},
+				},
+			],
+			billingControls: {
+				spendLimits: [
+					{
+						featureId: "emails",
+						enabled: true,
+						skipOverageBilling: true,
+						limitType: "usage_percentage",
+						overageLimit: 20,
+					},
+				],
 			},
 		}),
 	],
-	billingControls: billingControls({
-		spend_limits: [
-			{
-				feature_id: "emails",
-				enabled: true,
-				skip_overage_billing: true,
-				limit_type: "usage_percentage",
-				overage_limit: 20,
-			},
-		],
-	}),
 });
 `,
 });

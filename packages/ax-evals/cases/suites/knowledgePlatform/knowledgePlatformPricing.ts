@@ -112,93 +112,142 @@ export const knowledgePlatformGoldenConfig = ({
 	withPacks = true,
 }: {
 	withPacks?: boolean;
-} = {}): string => `import { feature, plan, item } from "atmn";
+} = {}): string => `import { atmn, feature, plan } from "atmn";
 
-export const assistantMessages = feature({
-	id: "assistant_messages",
-	name: "Assistant Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const aiCredits = feature({
-	id: "ai_credits",
-	name: "AI Credits",
-	type: "credit_system",
-	creditSchema: [{ meteredFeatureId: "assistant_messages", creditCost: 1 }],
-});
-
-const includedCredits = (included: number) => [
-	item({
-		featureId: aiCredits.id,
-		included,
-		pooled: true,
-		reset: { interval: "month" },
-	}),
-	item({
-		featureId: aiCredits.id,
-		included: 0,
-		price: {
-			amount: 0.01,
-			billingUnits: 1,
-			billingMethod: "usage_based",
-			interval: "month",
-		},
-	}),
-];
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 180, interval: "month" },
-	items: includedCredits(5000),
-});
-
-export const proAnnual = plan({
-	id: "pro_annual",
-	name: "Pro (Annual)",
-	price: { amount: 1800, interval: "year" },
-	items: includedCredits(5000),
-});
-
-export const growth = plan({
-	id: "growth",
-	name: "Growth",
-	price: { amount: 500, interval: "month" },
-	items: includedCredits(10000),
-});
-
-export const growthAnnual = plan({
-	id: "growth_annual",
-	name: "Growth (Annual)",
-	price: { amount: 5000, interval: "year" },
-	items: includedCredits(10000),
-});
-${
-	withPacks
-		? `
-export const creditsPack = plan({
-	id: "credits_pack",
-	name: "Credits Pack",
-	addOn: true,
-	items: [
-		item({
-			featureId: aiCredits.id,
-			included: 0,
-			price: {
-				tiers: [
-					{ to: 10000, amount: 0, flatAmount: 100 },
-					{ to: 55000, amount: 0, flatAmount: 500 },
-					{ to: 120000, amount: 0, flatAmount: 1000 },
-				],
-				billingUnits: 1,
-				billingMethod: "prepaid",
-				tierBehavior: "volume",
-				interval: "month",
-			},
+export default atmn({
+	features: [
+		feature({
+			featureId: "assistant_messages",
+			name: "Assistant Messages",
+			type: "metered",
+			consumable: true,
+		}),
+		feature({
+			featureId: "ai_credits",
+			name: "AI Credits",
+			type: "credit_system",
+			creditSchema: [{ meteredFeatureId: "assistant_messages", creditCost: 1 }],
 		}),
 	],
-});
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 180, interval: "month" },
+			items: [
+				{
+					featureId: "ai_credits",
+					included: 5000,
+					pooled: true,
+					reset: { interval: "month" },
+				},
+				{
+					featureId: "ai_credits",
+					included: 0,
+					price: {
+						amount: 0.01,
+						billingUnits: 1,
+						billingMethod: "usage_based",
+						interval: "month",
+					},
+				},
+			],
+		}),
+		plan({
+			planId: "pro_annual",
+			name: "Pro (Annual)",
+			price: { amount: 1800, interval: "year" },
+			items: [
+				{
+					featureId: "ai_credits",
+					included: 5000,
+					pooled: true,
+					reset: { interval: "month" },
+				},
+				{
+					featureId: "ai_credits",
+					included: 0,
+					price: {
+						amount: 0.01,
+						billingUnits: 1,
+						billingMethod: "usage_based",
+						interval: "month",
+					},
+				},
+			],
+		}),
+		plan({
+			planId: "growth",
+			name: "Growth",
+			price: { amount: 500, interval: "month" },
+			items: [
+				{
+					featureId: "ai_credits",
+					included: 10000,
+					pooled: true,
+					reset: { interval: "month" },
+				},
+				{
+					featureId: "ai_credits",
+					included: 0,
+					price: {
+						amount: 0.01,
+						billingUnits: 1,
+						billingMethod: "usage_based",
+						interval: "month",
+					},
+				},
+			],
+		}),
+		plan({
+			planId: "growth_annual",
+			name: "Growth (Annual)",
+			price: { amount: 5000, interval: "year" },
+			items: [
+				{
+					featureId: "ai_credits",
+					included: 10000,
+					pooled: true,
+					reset: { interval: "month" },
+				},
+				{
+					featureId: "ai_credits",
+					included: 0,
+					price: {
+						amount: 0.01,
+						billingUnits: 1,
+						billingMethod: "usage_based",
+						interval: "month",
+					},
+				},
+			],
+		}),
+${
+	withPacks
+		? `		plan({
+			planId: "credits_pack",
+			name: "Credits Pack",
+			addOn: true,
+			items: [
+				{
+					featureId: "ai_credits",
+					included: 0,
+					price: {
+						tiers: [
+							{ to: 10000, amount: 0, flatAmount: 100 },
+							{ to: 55000, amount: 0, flatAmount: 500 },
+							{ to: 120000, amount: 0, flatAmount: 1000 },
+						],
+						billingUnits: 1,
+						billingMethod: "prepaid",
+						tierBehavior: "volume",
+						interval: "month",
+					},
+				},
+			],
+		}),
 `
 		: ""
-}`;
+}	],
+});
+`;

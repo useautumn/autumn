@@ -45,40 +45,43 @@ export const addOnFlatStated = defineCase({
 		conduct.completed(),
 		conduct.noHarnessFriction(),
 	],
-	goldenConfig: `import { feature, plan, item } from "atmn";
+	goldenConfig: `import { atmn, feature, plan } from "atmn";
 
-export const aiMessages = feature({
-	id: "ai_messages",
-	name: "AI Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const sso = feature({
-	id: "sso",
-	name: "SSO",
-	type: "boolean",
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 30, interval: "month" },
-	items: [
-		item({
-			featureId: aiMessages.id,
-			included: 1000,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "ai_messages",
+			name: "AI Messages",
+			type: "metered",
+			consumable: true,
+		}),
+		feature({
+			featureId: "sso",
+			name: "SSO",
+			type: "boolean",
 		}),
 	],
-});
-
-export const ssoAddOn = plan({
-	id: "sso_add_on",
-	name: "SSO",
-	addOn: true,
-	price: { amount: 50, interval: "month" },
-	items: [item({ featureId: sso.id })],
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 30, interval: "month" },
+			items: [
+				{
+					featureId: "ai_messages",
+					included: 1000,
+					reset: { interval: "month" },
+				},
+			],
+		}),
+		plan({
+			planId: "sso_add_on",
+			name: "SSO",
+			addOn: true,
+			price: { amount: 50, interval: "month" },
+			items: [{ featureId: "sso" }],
+		}),
+	],
 });
 `,
 });

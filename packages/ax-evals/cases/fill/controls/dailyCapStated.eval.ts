@@ -41,31 +41,36 @@ export const dailyCapStated = defineCase({
 		conduct.noHarnessFriction(),
 		conduct.noUnapprovedPush(),
 	],
-	goldenConfig: `import { billingControls, feature, plan, item } from "atmn";
+	goldenConfig: `import { atmn, feature, plan } from "atmn";
 
-export const emails = feature({
-	id: "emails",
-	name: "Emails",
-	type: "metered",
-	consumable: true,
-});
-
-export const free = plan({
-	id: "free",
-	name: "Free",
-	autoEnable: true,
-	items: [
-		item({
-			featureId: emails.id,
-			included: 3000,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "emails",
+			name: "Emails",
+			type: "metered",
+			consumable: true,
 		}),
 	],
-	billingControls: billingControls({
-		usage_limits: [
-			{ feature_id: "emails", enabled: true, limit: 200, interval: "day" },
-		],
-	}),
+	plans: [
+		plan({
+			planId: "free",
+			name: "Free",
+			autoEnable: true,
+			items: [
+				{
+					featureId: "emails",
+					included: 3000,
+					reset: { interval: "month" },
+				},
+			],
+			billingControls: {
+				usageLimits: [
+					{ featureId: "emails", enabled: true, limit: 200, interval: "day" },
+				],
+			},
+		}),
+	],
 });
 `,
 });

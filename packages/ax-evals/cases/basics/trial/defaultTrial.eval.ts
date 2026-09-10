@@ -47,42 +47,46 @@ export const defaultTrial = defineCase({
 		conduct.completed(),
 		conduct.noHarnessFriction(),
 	],
-	goldenConfig: `import { feature, plan, item } from "atmn";
+	goldenConfig: `import { atmn, feature, plan } from "atmn";
 
-export const aiMessages = feature({
-	id: "ai_messages",
-	name: "AI Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 30, interval: "month" },
-	items: [
-		item({
-			featureId: aiMessages.id,
-			included: 1000,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "ai_messages",
+			name: "AI Messages",
+			type: "metered",
+			consumable: true,
 		}),
 	],
-});
-
-export const proTrial = plan({
-	id: "pro_trial",
-	name: "Pro Trial",
-	autoEnable: true,
-	freeTrial: {
-		durationType: "day",
-		durationLength: 14,
-		cardRequired: false,
-	},
-	items: [
-		item({
-			featureId: aiMessages.id,
-			included: 1000,
-			reset: { interval: "month" },
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 30, interval: "month" },
+			items: [
+				{
+					featureId: "ai_messages",
+					included: 1000,
+					reset: { interval: "month" },
+				},
+			],
+		}),
+		plan({
+			planId: "pro_trial",
+			name: "Pro Trial",
+			autoEnable: true,
+			freeTrial: {
+				durationType: "day",
+				durationLength: 14,
+				cardRequired: false,
+			},
+			items: [
+				{
+					featureId: "ai_messages",
+					included: 1000,
+					reset: { interval: "month" },
+				},
+			],
 		}),
 	],
 });

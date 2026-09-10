@@ -47,39 +47,44 @@ export const rolloverStated = defineCase({
 		conduct.completed(),
 		conduct.noHarnessFriction(),
 	],
-	goldenConfig: `import { feature, plan, item } from "atmn";
+	goldenConfig: `import { atmn, feature, plan } from "atmn";
 
-export const messages = feature({
-	id: "messages",
-	name: "Chat Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const credits = feature({
-	id: "credits",
-	name: "Credits",
-	type: "credit_system",
-	creditSchema: [{ meteredFeatureId: "messages", creditCost: 1 }],
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 30, interval: "month" },
-	items: [
-		item({
-			featureId: credits.id,
-			included: 1000,
-			reset: { interval: "month" },
-			rollover: {
-				maxPercentage: 50,
-				expiryDurationType: "month",
-				expiryDurationLength: 2,
-			},
+export default atmn({
+	features: [
+		feature({
+			featureId: "messages",
+			name: "Chat Messages",
+			type: "metered",
+			consumable: true,
+		}),
+		feature({
+			featureId: "credits",
+			name: "Credits",
+			type: "credit_system",
+			creditSchema: [{ meteredFeatureId: "messages", creditCost: 1 }],
+		}),
+	],
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 30, interval: "month" },
+			items: [
+				{
+					featureId: "credits",
+					included: 1000,
+					reset: { interval: "month" },
+					rollover: {
+						maxPercentage: 50,
+						expiryDurationType: "month",
+						expiryDurationLength: 2,
+					},
+				},
+			],
 		}),
 	],
 });
+
 `,
 });
 

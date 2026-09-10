@@ -58,36 +58,40 @@ export const addOnPerUnitSwept = defineCase({
 		conduct.completed(),
 		conduct.noHarnessFriction(),
 	],
-	goldenConfig: `import { feature, plan, item } from "atmn";
+	goldenConfig: `import { atmn, feature, plan } from "atmn";
 
-export const domains = feature({
-	id: "domains",
-	name: "Domains",
-	type: "metered",
-	consumable: false,
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 30, interval: "month" },
-	items: [item({ featureId: domains.id, included: 5 })],
-});
-
-export const extraDomains = plan({
-	id: "extra_domains",
-	name: "Extra Domains",
-	addOn: true,
-	items: [
-		item({
-			featureId: domains.id,
-			included: 0,
-			price: {
-				amount: 10,
-				billingUnits: 1,
-				billingMethod: "prepaid",
-				interval: "month",
-			},
+export default atmn({
+	features: [
+		feature({
+			featureId: "domains",
+			name: "Domains",
+			type: "metered",
+			consumable: false,
+		}),
+	],
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 30, interval: "month" },
+			items: [{ featureId: "domains", included: 5 }],
+		}),
+		plan({
+			planId: "extra_domains",
+			name: "Extra Domains",
+			addOn: true,
+			items: [
+				{
+					featureId: "domains",
+					included: 0,
+					price: {
+						amount: 10,
+						billingUnits: 1,
+						billingMethod: "prepaid",
+						interval: "month",
+					},
+				},
+			],
 		}),
 	],
 });

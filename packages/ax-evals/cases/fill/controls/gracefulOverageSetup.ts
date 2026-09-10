@@ -38,57 +38,60 @@ export const gracefulOverageExpectations = (): Expectation[] =>
 	});
 
 export const gracefulOverageGolden =
-	(): string => `import { billingControls, feature, plan, item } from "atmn";
+	(): string => `import { atmn, feature, plan } from "atmn";
 
-export const scrapes = feature({
-	id: "scrapes",
-	name: "Scrapes",
-	type: "metered",
-	consumable: true,
-});
-
-export const credits = feature({
-	id: "credits",
-	name: "Credits",
-	type: "credit_system",
-	creditSchema: [{ meteredFeatureId: "scrapes", creditCost: 1 }],
-});
-
-export const standard = plan({
-	id: "standard",
-	name: "Standard",
-	price: { amount: 99, interval: "month" },
-	items: [
-		item({
-			featureId: credits.id,
-			included: 100000,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "scrapes",
+			name: "Scrapes",
+			type: "metered",
+			consumable: true,
+		}),
+		feature({
+			featureId: "credits",
+			name: "Credits",
+			type: "credit_system",
+			creditSchema: [{ meteredFeatureId: "scrapes", creditCost: 1 }],
 		}),
 	],
-});
-
-export const enterprise = plan({
-	id: "enterprise",
-	name: "Enterprise",
-	price: { amount: 30000, interval: "year" },
-	items: [
-		item({
-			featureId: credits.id,
-			included: 5000000,
-			reset: { interval: "month" },
+	plans: [
+		plan({
+			planId: "standard",
+			name: "Standard",
+			price: { amount: 99, interval: "month" },
+			items: [
+				{
+					featureId: "credits",
+					included: 100000,
+					reset: { interval: "month" },
+				},
+			],
 		}),
-	],
-	billingControls: billingControls({
-		overage_allowed: [{ feature_id: "credits", enabled: true }],
-		spend_limits: [
-			{
-				feature_id: "credits",
-				enabled: true,
-				skip_overage_billing: true,
-				limit_type: "usage_percentage",
-				overage_limit: 10,
+		plan({
+			planId: "enterprise",
+			name: "Enterprise",
+			price: { amount: 30000, interval: "year" },
+			items: [
+				{
+					featureId: "credits",
+					included: 5000000,
+					reset: { interval: "month" },
+				},
+			],
+			billingControls: {
+				overageAllowed: [{ featureId: "credits", enabled: true }],
+				spendLimits: [
+					{
+						featureId: "credits",
+						enabled: true,
+						skipOverageBilling: true,
+						limitType: "usage_percentage",
+						overageLimit: 10,
+					},
+				],
 			},
-		],
-	}),
+		}),
+	],
 });
 `;

@@ -101,28 +101,32 @@ test("add-on-per-unit-swept: golden passes, empty fails", async () => {
 });
 
 test("add-on-per-unit-swept: flat-fee modeling fails the per-unit verdict", async () => {
-	const flat = `import { feature, plan, item } from "atmn";
+	const flat = `import { atmn, feature, plan } from "atmn";
 
-export const domains = feature({
-	id: "domains",
-	name: "Domains",
-	type: "metered",
-	consumable: false,
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 30, interval: "month" },
-	items: [item({ featureId: domains.id, included: 5 })],
-});
-
-export const extraDomains = plan({
-	id: "extra_domains",
-	name: "Extra Domains",
-	addOn: true,
-	price: { amount: 10, interval: "month" },
-	items: [],
+export default atmn({
+	features: [
+		feature({
+			featureId: "domains",
+			name: "Domains",
+			type: "metered",
+			consumable: false,
+		}),
+	],
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 30, interval: "month" },
+			items: [{ featureId: "domains", included: 5 }],
+		}),
+		plan({
+			planId: "extra_domains",
+			name: "Extra Domains",
+			addOn: true,
+			price: { amount: 10, interval: "month" },
+			items: [],
+		}),
+	],
 });
 `;
 	const scores = await scoreConfigExpectations({
@@ -148,22 +152,22 @@ test("add-on-flat-stated: golden passes; per-unit modeling fails the flat verdic
 
 	const perUnit = addOnFlatStated.goldenConfig
 		?.replace(
-			'\taddOn: true,\n\tprice: { amount: 50, interval: "month" },\n\titems: [item({ featureId: sso.id })],',
-			`\taddOn: true,
-	items: [
-		item({
-			featureId: sso.id,
-			included: 0,
-			price: {
-				amount: 50,
-				billingUnits: 1,
-				billingMethod: "prepaid",
-				interval: "month",
-			},
-		}),
-	],`,
+			'\t\t\taddOn: true,\n\t\t\tprice: { amount: 50, interval: "month" },\n\t\t\titems: [{ featureId: "sso" }],',
+			`\t\t\taddOn: true,
+			items: [
+				{
+					featureId: "sso",
+					included: 0,
+					price: {
+						amount: 50,
+						billingUnits: 1,
+						billingMethod: "prepaid",
+						interval: "month",
+					},
+				},
+			],`,
 		)
-		.replace('type: "boolean"', 'type: "metered",\n\tconsumable: false');
+		.replace('type: "boolean"', 'type: "metered",\n\t\t\tconsumable: false');
 	const scores = await scoreConfigExpectations({
 		axCase: addOnFlatStated,
 		configFile: perUnit,
@@ -191,18 +195,29 @@ test("daily-cap-stated: golden passes, empty fails", async () => {
 
 test("daily-cap-stated: cap modeled as a second daily item fails the plan verdict", async () => {
 	const secondItem = dailyCapStated.goldenConfig
-		?.replace(/\tbillingControls: billingControls\(\{[\s\S]*?\}\),\n/, "")
+		?.replace(
+			`			billingControls: {
+				usageLimits: [
+					{ featureId: "emails", enabled: true, limit: 200, interval: "day" },
+				],
+			},
+`,
+			"",
+		)
 		.replace(
-			"\t],\n});",
-			`\t\titem({
-			featureId: emails.id,
-			included: 200,
-			reset: { interval: "day" },
-		}),
-	],
-});`,
+			`					reset: { interval: "month" },
+				},
+			],`,
+			`					reset: { interval: "month" },
+				},
+				{
+					featureId: "emails",
+					included: 200,
+					reset: { interval: "day" },
+				},
+			],`,
 		);
-	expect(secondItem).not.toContain("billingControls({");
+	expect(secondItem).not.toContain("billingControls:");
 	const scores = await scoreConfigExpectations({
 		axCase: dailyCapStated,
 		configFile: secondItem,
@@ -226,8 +241,8 @@ test("overage-toggle: golden passes; percentage-base confusion (120) fails", asy
 	});
 
 	const wrongBase = overageToggle.goldenConfig?.replace(
-		"overage_limit: 20,",
-		"overage_limit: 120,",
+		"overageLimit: 20,",
+		"overageLimit: 120,",
 	);
 	const scores = await scoreConfigExpectations({
 		axCase: overageToggle,
@@ -259,10 +274,10 @@ test("graceful-overage: golden passes every config verdict (both twins share it)
 
 test("graceful-overage: spend limit alone (overage never enabled) fails the enterprise verdict", async () => {
 	const noEnable = gracefulOverage.goldenConfig?.replace(
-		/\t\toverage_allowed: \[[^\]]*\],\n/,
+		/\toverageAllowed: \[[^\]]*\],\n/,
 		"",
 	);
-	expect(noEnable).not.toContain("overage_allowed");
+	expect(noEnable).not.toContain("overageAllowed");
 	const scores = await scoreConfigExpectations({
 		axCase: gracefulOverage,
 		configFile: noEnable,
@@ -276,39 +291,35 @@ test("graceful-overage: spend limit alone (overage never enabled) fails the ente
 test("graceful-overage: a PRICED overage item on enterprise fails the standard-pattern verdicts", async () => {
 	const pricedOverage = gracefulOverage.goldenConfig
 		?.replace(
-			`	billingControls: billingControls({
-		overage_allowed: [{ feature_id: "credits", enabled: true }],
-		spend_limits: [
-			{
-				feature_id: "credits",
-				enabled: true,
-				skip_overage_billing: true,
-				limit_type: "usage_percentage",
-				overage_limit: 10,
-			},
-		],
-	}),`,
+			`			billingControls: {
+				overageAllowed: [{ featureId: "credits", enabled: true }],
+				spendLimits: [
+					{
+						featureId: "credits",
+						enabled: true,
+						skipOverageBilling: true,
+						limitType: "usage_percentage",
+						overageLimit: 10,
+					},
+				],
+			},`,
 			"",
 		)
 		.replace(
-			`		item({
-			featureId: credits.id,
-			included: 5000000,
-			reset: { interval: "month" },
-		}),`,
-			`		item({
-			featureId: credits.id,
-			included: 5000000,
-			reset: { interval: "month" },
-			price: {
-				amount: 0.01,
-				billingUnits: 1,
-				billingMethod: "usage_based",
-				interval: "month",
-			},
-		}),`,
+			`					featureId: "credits",
+					included: 5000000,
+					reset: { interval: "month" },`,
+			`					featureId: "credits",
+					included: 5000000,
+					reset: { interval: "month" },
+					price: {
+						amount: 0.01,
+						billingUnits: 1,
+						billingMethod: "usage_based",
+						interval: "month",
+					},`,
 		);
-	expect(pricedOverage).not.toContain("billingControls(");
+	expect(pricedOverage).not.toContain("billingControls:");
 	const scores = await scoreConfigExpectations({
 		axCase: gracefulOverage,
 		configFile: pricedOverage,

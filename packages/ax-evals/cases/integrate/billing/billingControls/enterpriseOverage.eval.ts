@@ -75,9 +75,7 @@ const catalogUntouched = (): Expectation => {
 			const offending = output.toolUses.filter(
 				(tool) =>
 					((tool.name === "Write" || tool.name === "Edit") &&
-						String(tool.input.file_path ?? "").endsWith(
-							"autumn.config.ts",
-						)) ||
+						String(tool.input.file_path ?? "").endsWith("autumn.config.ts")) ||
 					(tool.name === "Bash" &&
 						/\batmn\b[^\n]*\bpush\b/.test(String(tool.input.command ?? ""))),
 			);

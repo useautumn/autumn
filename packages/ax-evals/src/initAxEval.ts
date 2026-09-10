@@ -141,10 +141,12 @@ export const initAxEval = ({
 			) {
 				await writeFile(
 					join(workspace.dir, "autumn.config.ts"),
-					`import { feature, plan, item } from "atmn";
+					`import { atmn, feature, plan } from "atmn";
 
-// Define your features and plans, then run \`atmn --headless push\`.
-// Amounts are plain dollars: $20 is 20, never 2000.
+export default atmn({
+	features: [],
+	plans: [],
+});
 `,
 				);
 			}

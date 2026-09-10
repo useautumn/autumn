@@ -1,7 +1,7 @@
+import type { IntegrationCase } from "../../../src/cases/types/integrationCase.ts";
 import { conduct } from "../../../src/grading/expectations/conductExpectations.ts";
 import { integration } from "../../../src/grading/expectations/integrationExpectations.ts";
 import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
-import type { IntegrationCase } from "../../../src/cases/types/integrationCase.ts";
 import { messagingCatalog } from "../catalogs/messagingCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 

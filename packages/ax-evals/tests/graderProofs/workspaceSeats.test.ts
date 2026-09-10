@@ -45,58 +45,61 @@ test("one-shot: empty workspace fails every config verdict", async () => {
 });
 
 test("one-shot: per-unit seats instead of a license plan fails the license verdicts", async () => {
-	const perUnitSeats = `import { feature, plan, item } from "atmn";
+	const perUnitSeats = `import { atmn, feature, plan } from "atmn";
 
-export const actionCalls = feature({
-	id: "action_calls",
-	name: "Action Calls",
-	type: "metered",
-	consumable: true,
-});
-
-export const credits = feature({
-	id: "credits",
-	name: "Credits",
-	type: "credit_system",
-	creditSchema: [{ meteredFeatureId: "action_calls", creditCost: 1 }],
-});
-
-export const seats = feature({
-	id: "seats",
-	name: "Seats",
-	type: "metered",
-	consumable: false,
-});
-
-export const team = plan({
-	id: "team",
-	name: "Team",
-	price: { amount: 600, interval: "month" },
-	items: [
-		item({
-			featureId: seats.id,
-			included: 10,
-			price: {
-				amount: 10,
-				billingUnits: 1,
-				billingMethod: "prepaid",
-				interval: "month",
-			},
+export default atmn({
+	features: [
+		feature({
+			featureId: "action_calls",
+			name: "Action Calls",
+			type: "metered",
+			consumable: true,
 		}),
-		item({
-			featureId: credits.id,
-			included: 10000,
-			reset: { interval: "month" },
+		feature({
+			featureId: "credits",
+			name: "Credits",
+			type: "credit_system",
+			creditSchema: [{ meteredFeatureId: "action_calls", creditCost: 1 }],
 		}),
-		item({
-			featureId: credits.id,
-			included: 0,
-			price: {
-				amount: 20,
-				billingUnits: 20000,
-				billingMethod: "prepaid",
-				interval: "month",
-			},
+		feature({
+			featureId: "seats",
+			name: "Seats",
+			type: "metered",
+			consumable: false,
+		}),
+	],
+	plans: [
+		plan({
+			planId: "team",
+			name: "Team",
+			price: { amount: 600, interval: "month" },
+			items: [
+				{
+					featureId: "seats",
+					included: 10,
+					price: {
+						amount: 10,
+						billingUnits: 1,
+						billingMethod: "prepaid",
+						interval: "month",
+					},
+				},
+				{
+					featureId: "credits",
+					included: 10000,
+					reset: { interval: "month" },
+				},
+				{
+					featureId: "credits",
+					included: 0,
+					price: {
+						amount: 20,
+						billingUnits: 20000,
+						billingMethod: "prepaid",
+						interval: "month",
+					},
+				},
+			],
 		}),
 	],
 });
@@ -142,54 +145,57 @@ test("seed-starter-reuse: the seeded config alone fails the starter verdicts", a
 });
 
 test("seed-starter-reuse: minting a second seat plan fails the one-license verdict", async () => {
-	const secondSeatPlan = `${workspaceSeatsConfig({ withStarter: false })}
-export const starterSeat = plan({
-	id: "starter_seat",
-	name: "Starter Seat",
-	price: { amount: 10, interval: "month" },
-	items: [
-		item({
-			featureId: credits.id,
-			included: 1000,
-			reset: { interval: "month" },
+	const secondSeatPlan = workspaceSeatsConfig({ withStarter: false }).replace(
+		"\t],\n});\n",
+		`		plan({
+			planId: "starter_seat",
+			name: "Starter Seat",
+			price: { amount: 10, interval: "month" },
+			items: [
+				{
+					featureId: "credits",
+					included: 1000,
+					reset: { interval: "month" },
+				},
+			],
+		}),
+		plan({
+			planId: "starter",
+			name: "Starter",
+			items: [
+				{
+					featureId: "credits",
+					included: 0,
+					price: {
+						amount: 60,
+						billingUnits: 20000,
+						billingMethod: "prepaid",
+						interval: "month",
+					},
+				},
+			],
+			licenses: [
+				{
+					licensePlanId: "starter_seat",
+					included: 1,
+					customize: {
+						price: { amount: 15, interval: "month" },
+						addItems: [
+							{
+								featureId: "credits",
+								included: 500,
+								reset: { interval: "month" },
+							},
+						],
+						removeItems: [{ featureId: "credits" }],
+					},
+				},
+			],
 		}),
 	],
 });
-
-export const starter = plan({
-	id: "starter",
-	name: "Starter",
-	items: [
-		item({
-			featureId: credits.id,
-			included: 0,
-			price: {
-				amount: 60,
-				billingUnits: 20000,
-				billingMethod: "prepaid",
-				interval: "month",
-			},
-		}),
-	],
-	licenses: [
-		{
-			licensePlanId: "starter_seat",
-			included: 1,
-			customize: {
-				price: { amount: 15, interval: "month" },
-				addItems: [
-					item({
-						featureId: credits.id,
-						included: 500,
-						reset: { interval: "month" },
-					}),
-				],
-				removeItems: [{ featureId: credits.id }],
-			},
-		},
-	],
-});
-`;
+`,
+	);
 	const scores = await scoreConfigExpectations({
 		axCase: seedStarterReuse,
 		configFile: secondSeatPlan,

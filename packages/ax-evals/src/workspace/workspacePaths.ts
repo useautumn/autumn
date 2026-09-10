@@ -24,5 +24,5 @@ const findRepoRoot = (): string => {
 };
 
 export const REPO_ROOT = findRepoRoot();
-export const ATMN_DIR = join(REPO_ROOT, "packages/atmn");
+export const ATMN_DIR = join(REPO_ROOT, "packages/atmn-nightly");
 export const AX_EVALS_DIR = join(REPO_ROOT, "packages/ax-evals");

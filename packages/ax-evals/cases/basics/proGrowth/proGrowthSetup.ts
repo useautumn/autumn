@@ -28,46 +28,68 @@ export const growthPlanSpec: PlanSpec = {
 	items: [{ included: 2000, reset: { interval: "month" } }],
 };
 
-export const proGrowthGoldenConfig =
-	(): string => `import { feature, plan, item } from "atmn";
+export const proGrowthGoldenConfig = ({
+	withFree = false,
+}: {
+	withFree?: boolean;
+} = {}): string => `import { atmn, feature, plan } from "atmn";
 
-export const aiMessages = feature({
-	id: "ai_messages",
-	name: "AI Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const sso = feature({
-	id: "sso",
-	name: "SSO",
-	type: "boolean",
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 20, interval: "month" },
-	items: [
-		item({
-			featureId: aiMessages.id,
-			included: 500,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "ai_messages",
+			name: "AI Messages",
+			type: "metered",
+			consumable: true,
+		}),
+		feature({
+			featureId: "sso",
+			name: "SSO",
+			type: "boolean",
 		}),
 	],
-});
-
-export const growth = plan({
-	id: "growth",
-	name: "Growth",
-	price: { amount: 50, interval: "month" },
-	items: [
-		item({
-			featureId: aiMessages.id,
-			included: 2000,
-			reset: { interval: "month" },
+	plans: [
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 20, interval: "month" },
+			items: [
+				{
+					featureId: "ai_messages",
+					included: 500,
+					reset: { interval: "month" },
+				},
+			],
 		}),
-		item({ featureId: sso.id }),
-	],
+		plan({
+			planId: "growth",
+			name: "Growth",
+			price: { amount: 50, interval: "month" },
+			items: [
+				{
+					featureId: "ai_messages",
+					included: 2000,
+					reset: { interval: "month" },
+				},
+				{ featureId: "sso" },
+			],
+		}),
+${
+	withFree
+		? `		plan({
+			planId: "free",
+			name: "Free",
+			autoEnable: true,
+			items: [
+				{
+					featureId: "ai_messages",
+					included: 50,
+					reset: { interval: "month" },
+				},
+			],
+		}),
+`
+		: ""
+}	],
 });
 `;

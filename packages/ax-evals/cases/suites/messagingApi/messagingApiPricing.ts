@@ -6,7 +6,7 @@ import type { PlanSpec } from "../../../src/grading/types/planSpec.ts";
  *   ① two product LINES held simultaneously (API sends vs Campaigns) →
  *     plan groups, one free default per group
  *   ② volume ladder as PLAN-PER-TIER — bigger versions of Pro are sibling
- *     plans in the same group written as `.variant()` of Pro, not usage
+ *     plans in the same group written as variants of Pro, not usage
  *     tiers, prepaid packs, or copy-pasted standalone plans
  *   ③ per-1,000 overage (billing_units trap: $0.80 per 1,000 ≠ $0.80 each)
  * Load-bearing anchors without dedicated cases: lifetime (non-resetting)
@@ -111,145 +111,150 @@ export const campaignsPro100kSpec: PlanSpec = {
 	items: [{ included: 100000 }],
 };
 
+const messageOverage = `{
+					amount: 0.8,
+					billingUnits: 1000,
+					billingMethod: "usage_based",
+					interval: "month",
+				}`;
+
 /** Known-correct config. withTierVariants adds the 100k/200k Pro siblings
  * (the seed case's golden); without them it's the seed workspace. */
 export const messagingApiConfig = ({
 	withTierVariants = false,
+	extraPlans = "",
 }: {
 	withTierVariants?: boolean;
-} = {}): string => `import { feature, plan, item } from "atmn";
+	extraPlans?: string;
+} = {}): string => `import { atmn, feature, plan, variant } from "atmn";
 
-export const messages = feature({
-	id: "messages",
-	name: "Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const contacts = feature({
-	id: "contacts",
-	name: "Contacts",
-	type: "metered",
-	consumable: false,
-});
-
-export const sso = feature({
-	id: "sso",
-	name: "SSO",
-	type: "boolean",
-});
-
-const messageOverage = {
-	amount: 0.8,
-	billingUnits: 1000,
-	billingMethod: "usage_based",
-	interval: "month",
-} as const;
-
-export const apiFree = plan({
-	id: "api_free",
-	name: "API Free",
-	group: "api",
-	autoEnable: true,
-	items: [
-		item({ featureId: messages.id, included: 3000, reset: { interval: "month" } }),
-	],
-});
-
-export const apiPro = plan({
-	id: "api_pro",
-	name: "API Pro",
-	group: "api",
-	price: { amount: 25, interval: "month" },
-	items: [
-		item({
-			featureId: messages.id,
-			included: 50000,
-			reset: { interval: "month" },
-			price: messageOverage,
+export default atmn({
+	features: [
+		feature({
+			featureId: "messages",
+			name: "Messages",
+			type: "metered",
+			consumable: true,
+		}),
+		feature({
+			featureId: "contacts",
+			name: "Contacts",
+			type: "metered",
+			consumable: false,
+		}),
+		feature({
+			featureId: "sso",
+			name: "SSO",
+			type: "boolean",
 		}),
 	],
-});
-
-export const campaignsFree = plan({
-	id: "campaigns_free",
-	name: "Campaigns Free",
-	group: "campaigns",
-	autoEnable: true,
-	items: [item({ featureId: contacts.id, included: 1000 })],
-});
-
-export const campaignsPro = plan({
-	id: "campaigns_pro",
-	name: "Campaigns Pro",
-	group: "campaigns",
-	price: { amount: 40, interval: "month" },
-	items: [item({ featureId: contacts.id, included: 5000 })],
-});
-
-export const ssoAddOn = plan({
-	id: "sso_add_on",
-	name: "SSO",
-	addOn: true,
-	price: { amount: 150, interval: "month" },
-	items: [item({ featureId: sso.id })],
-});
+	plans: [
+		plan({
+			planId: "api_free",
+			name: "API Free",
+			group: "api",
+			autoEnable: true,
+			items: [
+				{
+					featureId: "messages",
+					included: 3000,
+					reset: { interval: "month" },
+				},
+			],
+		}),
+		plan({
+			planId: "api_pro",
+			name: "API Pro",
+			group: "api",
+			price: { amount: 25, interval: "month" },
+			items: [
+				{
+					featureId: "messages",
+					included: 50000,
+					reset: { interval: "month" },
+					price: ${messageOverage},
+				},
+			],
 ${
 	withTierVariants
-		? `
-export const apiPro100k = apiPro.variant({
-	id: "api_pro_100k",
-	name: "API Pro 100K",
-	customize: {
-		price: { amount: 45, interval: "month" },
-		addItems: [
-			item({
-				featureId: messages.id,
-				included: 100000,
-				reset: { interval: "month" },
-				price: messageOverage,
-			}),
-		],
-		removeItems: [{ featureId: messages.id }],
-	},
-});
-
-export const apiPro200k = apiPro.variant({
-	id: "api_pro_200k",
-	name: "API Pro 200K",
-	customize: {
-		price: { amount: 80, interval: "month" },
-		addItems: [
-			item({
-				featureId: messages.id,
-				included: 200000,
-				reset: { interval: "month" },
-				price: messageOverage,
-			}),
-		],
-		removeItems: [{ featureId: messages.id }],
-	},
-});
-
-export const campaignsPro25k = campaignsPro.variant({
-	id: "campaigns_pro_25k",
-	name: "Campaigns Pro 25K",
-	customize: {
-		price: { amount: 150, interval: "month" },
-		addItems: [item({ featureId: contacts.id, included: 25000 })],
-		removeItems: [{ featureId: contacts.id }],
-	},
-});
-
-export const campaignsPro100k = campaignsPro.variant({
-	id: "campaigns_pro_100k",
-	name: "Campaigns Pro 100K",
-	customize: {
-		price: { amount: 400, interval: "month" },
-		addItems: [item({ featureId: contacts.id, included: 100000 })],
-		removeItems: [{ featureId: contacts.id }],
-	},
-});
+		? `			variants: [
+				variant({
+					variantPlanId: "api_pro_100k",
+					name: "API Pro 100K",
+					customize: {
+						price: { amount: 45, interval: "month" },
+						items: [
+							{
+								featureId: "messages",
+								included: 100000,
+								reset: { interval: "month" },
+								price: ${messageOverage},
+							},
+						],
+					},
+				}),
+				variant({
+					variantPlanId: "api_pro_200k",
+					name: "API Pro 200K",
+					customize: {
+						price: { amount: 80, interval: "month" },
+						items: [
+							{
+								featureId: "messages",
+								included: 200000,
+								reset: { interval: "month" },
+								price: ${messageOverage},
+							},
+						],
+					},
+				}),
+			],
 `
 		: ""
-}`;
+}		}),
+		plan({
+			planId: "campaigns_free",
+			name: "Campaigns Free",
+			group: "campaigns",
+			autoEnable: true,
+			items: [{ featureId: "contacts", included: 1000 }],
+		}),
+		plan({
+			planId: "campaigns_pro",
+			name: "Campaigns Pro",
+			group: "campaigns",
+			price: { amount: 40, interval: "month" },
+			items: [{ featureId: "contacts", included: 5000 }],
+${
+	withTierVariants
+		? `			variants: [
+				variant({
+					variantPlanId: "campaigns_pro_25k",
+					name: "Campaigns Pro 25K",
+					customize: {
+						price: { amount: 150, interval: "month" },
+						items: [{ featureId: "contacts", included: 25000 }],
+					},
+				}),
+				variant({
+					variantPlanId: "campaigns_pro_100k",
+					name: "Campaigns Pro 100K",
+					customize: {
+						price: { amount: 400, interval: "month" },
+						items: [{ featureId: "contacts", included: 100000 }],
+					},
+				}),
+			],
+`
+		: ""
+}		}),
+		plan({
+			planId: "sso_add_on",
+			name: "SSO",
+			addOn: true,
+			price: { amount: 150, interval: "month" },
+			items: [{ featureId: "sso" }],
+		}),
+${extraPlans}	],
+});
+`;

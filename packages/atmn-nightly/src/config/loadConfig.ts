@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { COLLECTIONS } from "../generated/emit";
 import { ConfigError, type LintIssue } from "../generated/lintRuntime";
 import { fixtureLocation } from "../surgery/fixtureLocation";
+import { configPackageName } from "./configPackageName";
 
 const CONFIG_FILENAMES = ["autumn.config.ts", "autumn.config.js"] as const;
 
@@ -14,7 +15,7 @@ export class ConfigNotFoundError extends Error {
 		super(
 			`No autumn.config.ts found. Looked in:\n${searched
 				.map((path) => `  ${path}`)
-				.join("\n")}\n\nRun \`atmn-nightly pull\` to scaffold one.`,
+				.join("\n")}\n\nRun \`${configPackageName()} pull\` to scaffold one.`,
 		);
 		this.name = "ConfigNotFoundError";
 	}

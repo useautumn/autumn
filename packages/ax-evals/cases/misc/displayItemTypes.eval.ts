@@ -78,97 +78,102 @@ export const displayItemTypes = defineCase({
 		conduct.completed(),
 		conduct.noHarnessFriction(),
 	],
-	goldenConfig: `import { feature, plan, item } from "atmn";
+	goldenConfig: `import { atmn, feature, plan, variant } from "atmn";
 
-export const messages = feature({
-	id: "messages",
-	name: "AI Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const seats = feature({
-	id: "seats",
-	name: "Seats",
-	type: "metered",
-	consumable: false,
-});
-
-export const projects = feature({
-	id: "projects",
-	name: "Projects",
-	type: "metered",
-	consumable: false,
-});
-
-export const sso = feature({
-	id: "sso",
-	name: "SSO",
-	type: "boolean",
-});
-
-export const free = plan({
-	id: "free",
-	name: "Free",
-	autoEnable: true,
-	items: [
-		item({ featureId: messages.id, included: 100, reset: { interval: "month" } }),
-	],
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 20, interval: "month" },
-	items: [
-		item({
-			featureId: messages.id,
-			included: 500,
-			reset: { interval: "month" },
-			price: {
-				amount: 0.01,
-				interval: "month",
-				billingMethod: "usage_based",
-				billingUnits: 1,
-			},
+export default atmn({
+	features: [
+		feature({
+			featureId: "messages",
+			name: "AI Messages",
+			type: "metered",
+			consumable: true,
 		}),
-		item({
-			featureId: seats.id,
-			included: 3,
-			price: {
-				amount: 10,
-				interval: "month",
-				billingMethod: "usage_based",
-				billingUnits: 1,
-			},
+		feature({
+			featureId: "seats",
+			name: "Seats",
+			type: "metered",
+			consumable: false,
 		}),
-		item({ featureId: projects.id, unlimited: true }),
-		item({ featureId: sso.id }),
+		feature({
+			featureId: "projects",
+			name: "Projects",
+			type: "metered",
+			consumable: false,
+		}),
+		feature({
+			featureId: "sso",
+			name: "SSO",
+			type: "boolean",
+		}),
 	],
-});
-
-export const proAnnual = pro.variant({
-	id: "pro_annual",
-	name: "Pro Annual",
-	customize: {
-		price: { amount: 200, interval: "year" },
-	},
-});
-
-export const messagePack = plan({
-	id: "message_pack",
-	name: "Message Pack",
-	addOn: true,
-	items: [
-		item({
-			featureId: messages.id,
-			included: 0,
-			price: {
-				amount: 10,
-				interval: "one_off",
-				billingMethod: "prepaid",
-				billingUnits: 1000,
-			},
+	plans: [
+		plan({
+			planId: "free",
+			name: "Free",
+			autoEnable: true,
+			items: [
+				{
+					featureId: "messages",
+					included: 100,
+					reset: { interval: "month" },
+				},
+			],
+		}),
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 20, interval: "month" },
+			items: [
+				{
+					featureId: "messages",
+					included: 500,
+					reset: { interval: "month" },
+					price: {
+						amount: 0.01,
+						interval: "month",
+						billingMethod: "usage_based",
+						billingUnits: 1,
+					},
+				},
+				{
+					featureId: "seats",
+					included: 3,
+					price: {
+						amount: 10,
+						interval: "month",
+						billingMethod: "usage_based",
+						billingUnits: 1,
+					},
+				},
+				{ featureId: "projects", unlimited: true },
+				{ featureId: "sso" },
+			],
+			variants: [
+				variant({
+					variantPlanId: "pro_annual",
+					name: "Pro Annual",
+					customize: {
+						price: { amount: 200, interval: "year" },
+					},
+				}),
+			],
+		}),
+		plan({
+			planId: "message_pack",
+			name: "Message Pack",
+			addOn: true,
+			items: [
+				{
+					featureId: "messages",
+					included: 0,
+					price: {
+						amount: 10,
+						interval: "one_off",
+						billingMethod: "prepaid",
+						billingUnits: 1000,
+					},
+				},
+			],
 		}),
 	],
 });

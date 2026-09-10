@@ -40,20 +40,7 @@ export const lateFact = defineCase({
 		conduct.completed(),
 		conduct.noHarnessFriction(),
 	],
-	goldenConfig: `${proGrowthGoldenConfig()}
-export const free = plan({
-	id: "free",
-	name: "Free",
-	autoEnable: true,
-	items: [
-		item({
-			featureId: aiMessages.id,
-			included: 50,
-			reset: { interval: "month" },
-		}),
-	],
-});
-`,
+	goldenConfig: proGrowthGoldenConfig({ withFree: true }),
 });
 
 initAxEval({ axCase: lateFact, maxTurns: 24, timeoutMs: 480_000 });

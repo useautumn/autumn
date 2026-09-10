@@ -15,11 +15,11 @@ import type { CompletedTurn } from "./driver/runAgentCase.ts";
 import { runCase } from "./driver/runCase.ts";
 import { probeFixtureApp } from "./grading/fixtureProbe.ts";
 import { renderIntegrationRun } from "./grading/renderIntegrationRun.ts";
+import { renderScorecard } from "./grading/renderScorecard.ts";
 import {
 	readOracleCustomer,
 	readOracleLicenseAssignments,
 } from "./grading/sandboxOracle.ts";
-import { renderScorecard } from "./grading/renderScorecard.ts";
 import type { AxScore } from "./grading/types/axScore.ts";
 import { equipAgent } from "./kit/equipAgent.ts";
 import { bareKit, integrateKit, kitUnderTest } from "./kit/kits.ts";
@@ -39,7 +39,6 @@ import {
 	seedEvalCustomer,
 } from "./workspace/evalOrg.ts";
 import { saveFixtureDiff } from "./workspace/saveFixtureDiff.ts";
-import { ATMN_DIR } from "./workspace/workspacePaths.ts";
 import { sweepStaleWorkspaces } from "./workspace/sweepStaleWorkspaces.ts";
 
 const run = promisify(execFile);
@@ -58,12 +57,14 @@ const seedCatalog = async ({
 	secretKey: string;
 }) => {
 	await writeFile(join(workspaceDir, "autumn.config.ts"), config);
-	// Without the key in env the CLI falls into interactive login and hangs.
-	await run("node", [join(ATMN_DIR, "dist/cli.js"), "--local", "--headless", "push"], {
+	// PATH already has the nightly wrapper from linkAtmn; --yes applies.
+	await run("atmn", ["push", "--yes"], {
 		cwd: workspaceDir,
 		env: {
 			...process.env,
-			ATMN_BACKEND_URL: backendUrl,
+			PATH: `${join(workspaceDir, "node_modules/.bin")}:${process.env.PATH ?? ""}`,
+			AUTUMN_BASE_URL: backendUrl,
+			ATMN_CONFIG_PACKAGE: "atmn",
 			AUTUMN_SECRET_KEY: secretKey,
 		},
 	});
@@ -153,6 +154,7 @@ export const initIntegrationEval = ({
 			label: `${integrationCase.name}-${arm}`,
 			fixture: integrationCase.fixture,
 			secretKey: org.secretKey,
+			backendUrl,
 		});
 		try {
 			await seedCatalog({
@@ -232,9 +234,7 @@ export const initIntegrationEval = ({
 				secretKey: org.secretKey,
 				customerId: integrationCase.oracleCustomerId,
 			});
-			process.stderr.write(
-				renderIntegrationRun({ arm, diff, probe, oracle }),
-			);
+			process.stderr.write(renderIntegrationRun({ arm, diff, probe, oracle }));
 			if (diffPath)
 				process.stderr.write(chalk.dim(`diff saved: ${diffPath}\n`));
 

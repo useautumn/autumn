@@ -5,24 +5,29 @@
  * Overage capability for chosen customers must come from the
  * overage_allowed billing control, not the catalog.
  */
-export const crawlCreditsCatalog = `import { feature, plan, item } from "atmn";
+export const crawlCreditsCatalog = `import { atmn, feature, plan } from "atmn";
 
-export const credits = feature({
-	id: "credits",
-	name: "Crawl Credits",
-	type: "metered",
-	consumable: true,
-});
-
-export const scale = plan({
-	id: "scale",
-	name: "Scale",
-	price: { amount: 500, interval: "month" },
-	items: [
-		item({
-			featureId: credits.id,
-			included: 100000,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "credits",
+			name: "Crawl Credits",
+			type: "metered",
+			consumable: true,
+		}),
+	],
+	plans: [
+		plan({
+			planId: "scale",
+			name: "Scale",
+			price: { amount: 500, interval: "month" },
+			items: [
+				{
+					featureId: "credits",
+					included: 100000,
+					reset: { interval: "month" },
+				},
+			],
 		}),
 	],
 });

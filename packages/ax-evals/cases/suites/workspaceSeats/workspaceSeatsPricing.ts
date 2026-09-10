@@ -90,105 +90,107 @@ export const workspaceSeatsConfig = ({
 	withStarter = true,
 }: {
 	withStarter?: boolean;
-} = {}): string => `import { feature, plan, item } from "atmn";
+} = {}): string => `import { atmn, feature, plan, variant } from "atmn";
 
-export const actionCalls = feature({
-	id: "action_calls",
-	name: "Action Calls",
-	type: "metered",
-	consumable: true,
-});
-
-export const credits = feature({
-	id: "credits",
-	name: "Credits",
-	type: "credit_system",
-	creditSchema: [{ meteredFeatureId: "action_calls", creditCost: 1 }],
-});
-
-export const workspace = plan({
-	id: "workspace",
-	name: "Workspace",
-	price: { amount: 10, interval: "month" },
-	items: [
-		item({
-			featureId: credits.id,
-			included: 1000,
-			reset: { interval: "month" },
+export default atmn({
+	features: [
+		feature({
+			featureId: "action_calls",
+			name: "Action Calls",
+			type: "metered",
+			consumable: true,
+		}),
+		feature({
+			featureId: "credits",
+			name: "Credits",
+			type: "credit_system",
+			creditSchema: [{ meteredFeatureId: "action_calls", creditCost: 1 }],
 		}),
 	],
-});
-
-export const team = plan({
-	id: "team",
-	name: "Team",
-	price: { amount: 600, interval: "month" },
-	items: [
-		item({
-			featureId: credits.id,
-			included: 0,
-			price: {
-				amount: 20,
-				billingUnits: 20000,
-				billingMethod: "prepaid",
-				interval: "month",
-			},
+	plans: [
+		plan({
+			planId: "workspace",
+			name: "Workspace",
+			price: { amount: 10, interval: "month" },
+			items: [
+				{
+					featureId: "credits",
+					included: 1000,
+					reset: { interval: "month" },
+				},
+			],
 		}),
-	],
-	licenses: [{ licensePlanId: "workspace", included: 10 }],
-});
-
-export const teamAnnual = team.variant({
-	id: "team_annual",
-	name: "Team (Annual)",
-	customize: {
-		price: { amount: 6000, interval: "year" },
-	},
-});
-
-export const enterprise = plan({
-	id: "enterprise",
-	name: "Enterprise",
-	price: { amount: 25000, interval: "year" },
-	licenses: [{ licensePlanId: "workspace", included: 0 }],
-	items: [],
-});
+		plan({
+			planId: "team",
+			name: "Team",
+			price: { amount: 600, interval: "month" },
+			items: [
+				{
+					featureId: "credits",
+					included: 0,
+					price: {
+						amount: 20,
+						billingUnits: 20000,
+						billingMethod: "prepaid",
+						interval: "month",
+					},
+				},
+			],
+			licenses: [{ licensePlanId: "workspace", included: 10 }],
+			variants: [
+				variant({
+					variantPlanId: "team_annual",
+					name: "Team (Annual)",
+					customize: {
+						price: { amount: 6000, interval: "year" },
+					},
+				}),
+			],
+		}),
+		plan({
+			planId: "enterprise",
+			name: "Enterprise",
+			price: { amount: 25000, interval: "year" },
+			licenses: [{ licensePlanId: "workspace", included: 0 }],
+			items: [],
+		}),
 ${
 	withStarter
-		? `
-export const starter = plan({
-	id: "starter",
-	name: "Starter",
-	items: [
-		item({
-			featureId: credits.id,
-			included: 0,
-			price: {
-				amount: 60,
-				billingUnits: 20000,
-				billingMethod: "prepaid",
-				interval: "month",
-			},
+		? `		plan({
+			planId: "starter",
+			name: "Starter",
+			items: [
+				{
+					featureId: "credits",
+					included: 0,
+					price: {
+						amount: 60,
+						billingUnits: 20000,
+						billingMethod: "prepaid",
+						interval: "month",
+					},
+				},
+			],
+			licenses: [
+				{
+					licensePlanId: "workspace",
+					included: 1,
+					customize: {
+						price: { amount: 15, interval: "month" },
+						addItems: [
+							{
+								featureId: "credits",
+								included: 500,
+								reset: { interval: "month" },
+							},
+						],
+						removeItems: [{ featureId: "credits" }],
+					},
+				},
+			],
 		}),
-	],
-	licenses: [
-		{
-			licensePlanId: "workspace",
-			included: 1,
-			customize: {
-				price: { amount: 15, interval: "month" },
-				addItems: [
-					item({
-						featureId: credits.id,
-						included: 500,
-						reset: { interval: "month" },
-					}),
-				],
-				removeItems: [{ featureId: credits.id }],
-			},
-		},
-	],
-});
 `
 		: ""
-}`;
+}	],
+});
+`;

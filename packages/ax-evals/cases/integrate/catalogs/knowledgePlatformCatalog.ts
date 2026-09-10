@@ -4,41 +4,55 @@
  * and annual twins, and a metered credit feature. Pushed to the case's org
  * before the agent starts.
  */
-export const knowledgePlatformCatalog = `import { feature, plan, item } from "atmn";
+export const knowledgePlatformCatalog = `import { atmn, feature, plan } from "atmn";
 
-export const aiCredits = feature({
-	id: "ai_credits",
-	name: "AI Credits",
-	type: "metered",
-	consumable: true,
-});
-
-// Default plan: every new customer starts here automatically.
-export const proTrial = plan({
-	id: "pro_trial",
-	name: "Pro Trial",
-	autoEnable: true,
-	freeTrial: { durationLength: 14, durationType: "day", cardRequired: false },
-	items: [
-		item({ featureId: aiCredits.id, included: 500, reset: { interval: "month" } }),
+export default atmn({
+	features: [
+		feature({
+			featureId: "ai_credits",
+			name: "AI Credits",
+			type: "metered",
+			consumable: true,
+		}),
 	],
-});
-
-export const pro = plan({
-	id: "pro",
-	name: "Pro",
-	price: { amount: 180, interval: "month" },
-	items: [
-		item({ featureId: aiCredits.id, included: 5000, reset: { interval: "month" } }),
-	],
-});
-
-export const proAnnual = plan({
-	id: "pro_annual",
-	name: "Pro (Annual)",
-	price: { amount: 1800, interval: "year" },
-	items: [
-		item({ featureId: aiCredits.id, included: 5000, reset: { interval: "month" } }),
+	plans: [
+		plan({
+			planId: "pro_trial",
+			name: "Pro Trial",
+			autoEnable: true,
+			freeTrial: { durationLength: 14, durationType: "day", cardRequired: false },
+			items: [
+				{
+					featureId: "ai_credits",
+					included: 500,
+					reset: { interval: "month" },
+				},
+			],
+		}),
+		plan({
+			planId: "pro",
+			name: "Pro",
+			price: { amount: 180, interval: "month" },
+			items: [
+				{
+					featureId: "ai_credits",
+					included: 5000,
+					reset: { interval: "month" },
+				},
+			],
+		}),
+		plan({
+			planId: "pro_annual",
+			name: "Pro (Annual)",
+			price: { amount: 1800, interval: "year" },
+			items: [
+				{
+					featureId: "ai_credits",
+					included: 5000,
+					reset: { interval: "month" },
+				},
+			],
+		}),
 	],
 });
 `;
