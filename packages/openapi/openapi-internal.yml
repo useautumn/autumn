@@ -32315,6 +32315,10 @@ paths:
         @param display - Singular and plural display names for the feature in
         your user interface. (optional)
 
+        @param creditSchema - A schema that maps metered feature IDs to flat or
+        graduated credit costs. For classic credit systems only — AI credit
+        systems use model_markups instead. (optional)
+
         @param invoiceCredit - Whether usage of this classic credit system
         should be itemized as invoice credits. (optional)
 
@@ -32681,7 +32685,6 @@ paths:
                   description: A schema that maps metered feature IDs to flat or graduated credit
                     costs. For classic credit systems only — AI credit systems
                     use model_markups instead.
-                  default: []
                 invoice_credit:
                   type: boolean
                   description: Whether usage of this classic credit system should be itemized as
@@ -34536,6 +34539,10 @@ paths:
         @param display - Singular and plural display names for the feature in
         your user interface. (optional)
 
+        @param creditSchema - A schema that maps metered feature IDs to flat or
+        graduated credit costs. For classic credit systems only — AI credit
+        systems use model_markups instead. (optional)
+
         @param invoiceCredit - Whether usage of this classic credit system
         should be itemized as invoice credits. (optional)
 
@@ -34909,7 +34916,6 @@ paths:
                   description: A schema that maps metered feature IDs to flat or graduated credit
                     costs. For classic credit systems only — AI credit systems
                     use model_markups instead.
-                  default: []
                 invoice_credit:
                   type: boolean
                   description: Whether usage of this classic credit system should be itemized as
@@ -85711,7 +85717,6 @@ paths:
                             description: A schema that maps metered feature IDs to flat or graduated credit
                               costs. For classic credit systems only — AI credit
                               systems use model_markups instead.
-                            default: []
                           invoice_credit:
                             type: boolean
                             description: Whether usage of this classic credit system should be itemized as
@@ -164024,7 +164029,6 @@ paths:
                             description: A schema that maps metered feature IDs to flat or graduated credit
                               costs. For classic credit systems only — AI credit
                               systems use model_markups instead.
-                            default: []
                           invoice_credit:
                             type: boolean
                             description: Whether usage of this classic credit system should be itemized as

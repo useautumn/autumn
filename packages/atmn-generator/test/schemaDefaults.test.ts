@@ -17,12 +17,13 @@ test("spec defaults are keyed fixture-side, from the catalog root", () => {
 	expect(defaults.get("plans.billingControls.usageLimits")).toEqual([]);
 	expect(defaults.get("plans.billingControls.usageLimits.enabled")).toBe(true);
 	expect(defaults.get("plans.freeTrial.onEnd")).toBe("bill");
-	expect(defaults.get("features.creditSchema")).toEqual([]);
 });
 
 test("a path without a spec default is absent, so an empty items array is never elided", () => {
 	expect(defaults.has("plans.items")).toBe(false);
 	expect(defaults.has("plans.versionSlug")).toBe(false);
+	// A classic credit system must state its schema, even as [].
+	expect(defaults.has("features.creditSchema")).toBe(false);
 });
 
 test("a hidden path carries no default", () => {

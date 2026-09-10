@@ -8,7 +8,7 @@ export type Feature = {
 	type: "boolean" | "metered" | "credit_system" | "ai_credit_system";
 	/** Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. */
 	consumable?: boolean;
-	/** A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. Defaults to []. */
+	/** A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. */
 	creditSchema?: Array<
 		| {
 				/** ID of the metered feature that draws from this credit system. */

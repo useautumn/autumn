@@ -81,7 +81,7 @@ test("the generated spec carries the defaults the emitter elides", () => {
 		"billingControls.usageLimits.enabled": true,
 	});
 	expect(COLLECTIONS.plans.defaults).not.toHaveProperty("items");
-	expect(COLLECTIONS.features.defaults).toEqual({ creditSchema: [] });
+	expect(COLLECTIONS.features.defaults).toEqual({});
 	expect(COLLECTIONS.plans.keys).not.toContain("isDefault");
 	expect(COLLECTIONS.features.keys).not.toContain("display");
 });
@@ -131,12 +131,14 @@ test("scalar defaults vanish at any depth and non-defaults stay", () => {
 	])
 		expect(text).not.toContain(absent);
 	expect(text).toContain('durationType: "day"');
-	expect(
-		emitPlan({
-			addOn: true,
-			price: { amount: 49, interval: "month", intervalCount: 3 },
-		}),
-	).toMatch(/addOn: true[\s\S]*intervalCount: 3/);
+	const stated = emitPlan({
+		addOn: true,
+		price: { amount: 49, interval: "month", intervalCount: 3 },
+	});
+	expect(stated).toMatch(/\n\taddOn: true,/);
+	expect(stated).toMatch(
+		/price: \{\n\t\tamount: 49,\n\t\tinterval: "month",\n\t\tintervalCount: 3,\n\t\}/,
+	);
 });
 
 test("billing controls: no lanes → no key; one lane → only that lane, row defaults elided", () => {
@@ -163,13 +165,19 @@ test("billing controls: no lanes → no key; one lane → only that lane, row de
 	expect(one).not.toContain("autoTopups");
 	expect(one).not.toContain("enabled");
 	expect(one).toContain("limit: 1000");
+	// An all-default row is still a row: it stays as {}, never null.
+	const bare = emitPlan({
+		billingControls: { spendLimits: [{ enabled: false }] },
+	});
+	expect(bare).toContain("spendLimits: [\n\t\t\t{},\n\t\t],");
+	expect(bare).not.toContain("null");
 });
 
 test("an empty items array is a statement and is kept", () => {
 	expect(emitPlan({ items: [] })).toContain("items: []");
 });
 
-test("a feature's empty creditSchema and its display are not written", () => {
+test("a feature's display is not written; a classic credit system keeps an empty creditSchema", () => {
 	const text = emitFixture({
 		spec: COLLECTIONS.features,
 		row: {
@@ -178,14 +186,25 @@ test("a feature's empty creditSchema and its display are not written", () => {
 			type: "metered",
 			consumable: true,
 			archived: false,
-			creditSchema: [],
 			display: { singular: "call", plural: "calls" },
 		},
 		includeMappings: false,
 		indent: "",
 	});
-	expect(text).not.toContain("creditSchema");
 	expect(text).not.toContain("display");
+	const credits = emitFixture({
+		spec: COLLECTIONS.features,
+		row: {
+			id: "credits",
+			name: "Credits",
+			type: "credit_system",
+			archived: false,
+			creditSchema: [],
+		},
+		includeMappings: false,
+		indent: "",
+	});
+	expect(credits).toContain("creditSchema: []");
 });
 
 test("a whole-fixture emit leaves config out at default and keeps it when a flag is on", () => {

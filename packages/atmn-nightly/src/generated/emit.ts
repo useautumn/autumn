@@ -80,7 +80,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"providerMarkups.*.markup",
 			"type",
 		],
-		defaults: { creditSchema: [] },
+		defaults: {},
 		pull: true,
 		deprecated: [
 			{

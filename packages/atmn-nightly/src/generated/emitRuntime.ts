@@ -252,9 +252,12 @@ const pruneDefaults = ({
 	if (required.has(path)) return value;
 	if (path in defaults && valuesEqual(value, defaults[path])) return undefined;
 	if (value === null || typeof value !== "object") return value;
+	// An entry that is all defaults still says "one row here", so it stays as {}.
 	if (Array.isArray(value)) {
-		return value.map((entry) =>
-			pruneDefaults({ value: entry, path, index, defaults, required }),
+		return value.map(
+			(entry) =>
+				pruneDefaults({ value: entry, path, index, defaults, required }) ??
+				(entry !== null && typeof entry === "object" ? {} : entry),
 		);
 	}
 	const isRecord = index.records.has(path);
