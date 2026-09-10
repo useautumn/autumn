@@ -7,6 +7,9 @@ export function getBalanceWorkerLogger(): AutumnLogger {
 		service: "balance-worker",
 		dataset: "express",
 		preset: "dual",
+		context: {
+			workerDeployment: process.env.BALANCE_WORKER_DEPLOYMENT ?? "unknown",
+		},
 	});
 	return logger;
 }
