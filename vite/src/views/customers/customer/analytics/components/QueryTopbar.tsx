@@ -50,6 +50,7 @@ const INTERVAL_GRANULARITIES: Record<string, Granularity[]> = {
 	"1bc": ["day"],
 	"90d": ["day", "week", "month"],
 	"3bc": ["day", "week", "month"],
+	custom: ["day", "week", "month"],
 };
 
 const GRANULARITY_LABELS: Record<Granularity, string> = {

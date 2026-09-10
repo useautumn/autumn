@@ -53,6 +53,9 @@ export const useAnalyticsData = ({
 	} = useSelectedEventNames();
 
 	const timezone = useMemo(() => getUserTimezone(), []);
+	// Month bins are requested in UTC so they can be served from the monthly
+	// rollups, which key on UTC month starts; a local month never aligns with one.
+	const effectiveTimezone = binSize === "month" ? "UTC" : timezone;
 
 	// Deducted mode defaults to splitting by which tracked feature caused the
 	// deduction — the story the mode exists to tell. An explicit group_by wins.
@@ -75,7 +78,7 @@ export const useAnalyticsData = ({
 		event_names: selectedEventNames,
 		group_by: formattedGroupBy,
 		bin_size: binSize || undefined,
-		timezone,
+		timezone: effectiveTimezone,
 		max_groups: formattedGroupBy ? maxGroups : undefined,
 		aggregate_on: aggregateOn,
 	};
