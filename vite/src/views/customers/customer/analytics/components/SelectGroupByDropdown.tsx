@@ -27,7 +27,10 @@ import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
-import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
+import {
+	clampMaxGroups,
+	useAnalyticsFilterState,
+} from "../hooks/useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import { groupValueLabel } from "../utils/displayLabels";
 
@@ -112,7 +115,7 @@ export const SelectGroupByDropdown = ({
 	};
 
 	const updateMaxGroups = ({ value }: { value: number }) => {
-		setFilterStates({ max_groups: Math.min(250, Math.max(1, value)) });
+		setFilterStates({ max_groups: clampMaxGroups(value) });
 	};
 
 	const filteredOptions = propertyKeys.filter((key) =>

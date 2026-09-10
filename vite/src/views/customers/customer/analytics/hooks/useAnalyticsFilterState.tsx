@@ -1,11 +1,26 @@
 import {
+	createParser,
 	parseAsArrayOf,
-	parseAsInteger,
 	parseAsString,
 	useQueryStates,
 } from "nuqs";
 
 const DEFAULT_MAX_GROUPS = 10;
+const MIN_MAX_GROUPS = 1;
+const MAX_MAX_GROUPS = 250;
+
+// The aggregate endpoint rejects anything outside 1-250, so a hand-edited or
+// bookmarked URL is clamped on the way in rather than failing the request.
+export const clampMaxGroups = (value: number) =>
+	Math.min(MAX_MAX_GROUPS, Math.max(MIN_MAX_GROUPS, value));
+
+const parseAsMaxGroups = createParser({
+	parse: (query) => {
+		const parsed = Number.parseInt(query, 10);
+		return Number.isNaN(parsed) ? null : clampMaxGroups(parsed);
+	},
+	serialize: String,
+}).withDefault(DEFAULT_MAX_GROUPS);
 
 /**
  * URL-synced state for the analytics filter controls. Every analytics reader
@@ -20,7 +35,7 @@ export const useAnalyticsFilterState = () => {
 			customer_id: parseAsString,
 			entity_id: parseAsString,
 			group_by: parseAsString,
-			max_groups: parseAsInteger.withDefault(DEFAULT_MAX_GROUPS),
+			max_groups: parseAsMaxGroups,
 			event_names: parseAsArrayOf(parseAsString),
 			feature_ids: parseAsArrayOf(parseAsString),
 		},
