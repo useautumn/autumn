@@ -10,7 +10,6 @@ function LoadingScreen({ fullPage = false }: { fullPage?: boolean }) {
 		"Forging plans",
 		"Increasing ARR",
 		"Optimizing pricing",
-		"Tung tung tunging...",
 		"Blasting competitors",
 		"Shipping faster",
 		"Stopping churn",
