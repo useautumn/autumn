@@ -105,7 +105,12 @@ const deps = ({
 	/** secret key → what /me says for it. */
 	keyAnswers?: Record<string, typeof org | typeof sub>;
 } = {}) => {
-	const calls = { login: 0, pull: [] as string[], install: [] as string[] };
+	const calls = {
+		login: 0,
+		keyless: 0,
+		pull: [] as string[],
+		install: [] as string[],
+	};
 	const answers = { ...keyAnswers };
 	const fake: InitDeps = {
 		fetchOrgInfo: async ({ secretKey }) => {
@@ -131,6 +136,26 @@ const deps = ({
 				orgId: "org_main",
 				writtenKeys: ["AUTUMN_SECRET_KEY", "AUTUMN_PROD_SECRET_KEY"],
 			};
+		},
+		keyless: {
+			provision: async ({ name, slug }) => {
+				calls.keyless += 1;
+				answers.am_sk_test_keyless = { ...org, name, slug };
+				return {
+					organizationId: "org_keyless",
+					organizationSlug: slug,
+					apiKey: "am_sk_test_keyless",
+					claimToken: "tok",
+					claimUrl: "https://app.useautumn.com/claim?token=tok",
+					claimExpiresAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
+				};
+			},
+			startClaim: async () => {
+				throw new Error("init never claims");
+			},
+			verifyClaim: async () => {
+				throw new Error("init never claims");
+			},
 		},
 		install: async ({ manager }) => {
 			calls.install.push(manager);
@@ -212,7 +237,7 @@ test("an expired key exported in the shell does not shadow the one login writes"
 
 	await runInit({
 		cwd: root,
-		login: true,
+		connect: "login",
 		deps: d,
 		prompter: createPrompter({ interactive: false, write }),
 	});
@@ -267,7 +292,7 @@ test("an existing workspace package gains the dependency instead of a new manife
 	expect(calls.install).toEqual(["npm"]);
 });
 
-test("no key, headless: hints --login and stops before touching the repo", async () => {
+test("no key, headless: hints --login / --keyless and stops before touching the repo", async () => {
 	const root = repo({ monorepo: false });
 	const { deps: d, calls } = deps();
 	const { lines, write } = capture();
@@ -278,13 +303,61 @@ test("no key, headless: hints --login and stops before touching the repo", async
 			deps: d,
 			prompter: createPrompter({ interactive: false, write }),
 		}),
-	).rejects.toThrow(/--login/);
+	).rejects.toThrow(/--login or --keyless/);
 
 	expect(calls.login).toBe(0);
+	expect(calls.keyless).toBe(0);
 	expect(calls.pull).toEqual([]);
 	expect(existsSync(join(root, "autumn.config.ts"))).toBe(false);
-	expect(lines.join("")).toContain("→ Log in to Autumn?");
-	expect(lines.join("")).toContain("Pass --login to continue");
+	const text = lines.join("");
+	expect(text).toContain("→ How do you want to connect to Autumn?");
+	expect(text).toContain("--login    ");
+	expect(text).toContain("--keyless  ");
+});
+
+test("no key, --keyless: provisions an org named after the package, then continues", async () => {
+	const root = repo({ monorepo: false });
+	const { deps: d, calls } = deps();
+	const { lines, write } = capture();
+
+	await runInit({
+		cwd: root,
+		connect: "keyless",
+		deps: d,
+		prompter: createPrompter({ interactive: false, write }),
+	});
+
+	expect(calls.keyless).toBe(1);
+	expect(calls.login).toBe(0);
+	expect(readFileSync(join(root, ".env"), "utf8")).toContain(
+		"AUTUMN_SECRET_KEY=am_sk_test_keyless",
+	);
+	expect(calls.pull).toHaveLength(1);
+	const text = lines.join("");
+	expect(text).toContain("Created sandbox org");
+	expect(text).toContain("atmn login --claim");
+	// The claim URL is for a person; headless output carries the command only.
+	expect(text).not.toContain("https://app.useautumn.com/claim");
+});
+
+test("no key, interactive: enter picks sign in", async () => {
+	const root = repo({ monorepo: false });
+	const { deps: d, calls } = deps();
+	const { lines, write } = capture();
+
+	await runInit({
+		cwd: root,
+		deps: d,
+		prompter: createPrompter({
+			interactive: true,
+			write,
+			readLine: async () => "",
+		}),
+	});
+
+	expect(calls.login).toBe(1);
+	expect(calls.keyless).toBe(0);
+	expect(lines.join("")).toContain("1) sign in on the web");
 });
 
 test("no key, --login: logs in, then continues", async () => {
@@ -294,7 +367,7 @@ test("no key, --login: logs in, then continues", async () => {
 
 	await runInit({
 		cwd: root,
-		login: true,
+		connect: "login",
 		deps: d,
 		prompter: createPrompter({ interactive: false, write }),
 	});
@@ -317,7 +390,7 @@ test("a sub-sandbox key is relocated and pinned once the main key is minted", as
 
 	await runInit({
 		cwd: root,
-		login: true,
+		connect: "login",
 		deps: d,
 		prompter: createPrompter({ interactive: false, write }),
 	});

@@ -13,7 +13,7 @@
  *       sandbox, and a push lands in the sandbox and not on the org
  *   C4  env --json reports the pin and isMaster; sandbox use --clear unpins
  *   C5  a sub-sandbox key in AUTUMN_SECRET_KEY makes init stop with the soft
- *       error and the --login hint, without touching the repo
+ *       error and the --login / --keyless hint, without touching the repo
  */
 
 import { expect, test } from "bun:test";
@@ -159,7 +159,7 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 		);
 		expect(output).toContain("✓ Pulled 1 entry");
 		expect(output).toContain(
-			"✓ Skills: skills/autumn-concepts, autumn-catalog",
+			"✓ Skills: skills/autumn-setup, autumn-catalog, autumn-integrate, autumn-concepts",
 		);
 
 		expect(readFileSync(join(root, "autumn.config.ts"), "utf8")).toContain(
@@ -316,7 +316,7 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 		expect(envValue({ cwd, key: "AUTUMN_SANDBOX_ID" })).toBeUndefined();
 		expect(envValue({ cwd, key: keyName })).toBe(sandboxKey);
 
-		// C5 — init with the sub key in AUTUMN_SECRET_KEY: soft error, login hint, no files.
+		// C5 — init with the sub key in AUTUMN_SECRET_KEY: soft error, connect hint, no files.
 		const root = makeRepo({ monorepo: false, secretKey: sandboxKey ?? "" });
 		try {
 			const before = {
@@ -328,7 +328,9 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 			expect(init.output).toContain(
 				`! AUTUMN_SECRET_KEY belongs to sandbox "${sandboxName}" (${created.id}), not your main sandbox.`,
 			);
-			expect(init.output).toContain("Pass --login to continue");
+			expect(init.output).toContain("→ How do you want to connect to Autumn?");
+			expect(init.output).toContain("--login    ");
+			expect(init.output).toContain("--keyless  ");
 			expect(existsSync(join(root, "autumn.config.ts"))).toBe(false);
 			expect(readFileSync(join(root, ".env"), "utf8")).toBe(before.env);
 			expect(readFileSync(join(root, "package.json"), "utf8")).toBe(

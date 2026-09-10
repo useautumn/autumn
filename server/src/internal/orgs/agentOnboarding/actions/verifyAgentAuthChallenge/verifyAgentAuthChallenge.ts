@@ -1,4 +1,5 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { normalizeAgentEmail } from "../../agentAuthUtils.js";
 import { commitAgentAuthEffects } from "../commitAgentAuthEffects.js";
 import {
@@ -38,6 +39,8 @@ export const verifyAgentAuthChallenge = async ({
 				now,
 			});
 			if (!committed) throw invalidAgentChallenge();
+			// The key's cached org still says pending; drop it so /me reports the claim.
+			await clearOrgCache({ db, orgId: committed.organization.id });
 
 			return {
 				organization: committed.organization,

@@ -130,3 +130,50 @@ export const confirm = async ({
 	const answer = (await prompter.readLine())?.trim().toLowerCase() ?? "";
 	return answer === "" || answer === "y" || answer === "yes";
 };
+
+/**
+ * One question, a short list of flags as answers. Headless prints the
+ * question and one line per flag; interactive numbers them and reads a pick.
+ */
+export const choose = async <T extends string>({
+	prompter,
+	value,
+	question,
+	options,
+	defaultValue,
+}: {
+	prompter: Prompter;
+	/** The option already picked by flag, when one was. */
+	value: T | undefined;
+	question: string;
+	options: readonly { value: T; flag: string; label: string }[];
+	defaultValue: T;
+}): Promise<T> => {
+	if (value !== undefined) return value;
+	const width = Math.max(...options.map((option) => option.flag.length));
+	if (!prompter.interactive) {
+		prompter.write(
+			`${needs(question)}\n${options
+				.map((option) => hint(`${option.flag.padEnd(width)}  ${option.label}`))
+				.join("\n")}\n`,
+		);
+		throw new NeedsInputError(
+			`Pass ${options.map((option) => option.flag).join(" or ")}`,
+		);
+	}
+	const defaultIndex = options.findIndex(
+		(option) => option.value === defaultValue,
+	);
+	prompter.write(`${needs(question)}\n`);
+	for (const [index, option] of options.entries())
+		prompter.write(`  ${index + 1}) ${option.label}\n`);
+	prompter.write(`  ${chalk.dim(`[${defaultIndex + 1}]`)}: `);
+	const answer = (await prompter.readLine())?.trim() ?? "";
+	if (answer === "") return defaultValue;
+	const picked =
+		options[Number.parseInt(answer, 10) - 1] ??
+		options.find((option) => option.value === answer || option.flag === answer);
+	if (picked === undefined)
+		throw new NeedsInputError(`Unknown answer ${JSON.stringify(answer)}`);
+	return picked.value;
+};

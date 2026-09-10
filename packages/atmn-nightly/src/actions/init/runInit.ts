@@ -11,7 +11,7 @@ import { AutumnApiError } from "../../generated/client";
 import { MARKER_FIELD, readMarker } from "../../project/resolveProject";
 import {
 	ask,
-	confirm,
+	choose,
 	done,
 	hint,
 	type Prompter,
@@ -21,6 +21,12 @@ import { findRepoLayout } from "../../repo/findRepoRoot";
 import { version } from "../../version";
 import type { OrgInfo } from "../env/types/orgInfo";
 import type { LoginResult } from "../login";
+import {
+	CONNECT_OPTIONS,
+	CONNECT_QUESTION,
+	type KeylessDeps,
+	runKeylessLogin,
+} from "../login/keyless";
 import { scaffoldConfig } from "../pull/scaffoldConfig";
 import { installSkills, SKILLS_DIR_NAME } from "../skills/skills";
 
@@ -28,6 +34,7 @@ import { installSkills, SKILLS_DIR_NAME } from "../skills/skills";
 export type InitDeps = {
 	fetchOrgInfo: ({ secretKey }: { secretKey: string }) => Promise<OrgInfo>;
 	login: ({ envDirs }: { envDirs: string[] }) => Promise<LoginResult>;
+	keyless: KeylessDeps;
 	pull: ({
 		configDir,
 	}: {
@@ -51,8 +58,8 @@ export type InitOptions = {
 	path?: string;
 	/** The package's name; asked for in a monorepo. */
 	name?: string;
-	/** Log in when no usable main key is on disk; asked for otherwise. */
-	login?: boolean;
+	/** How to connect when no usable main key is on disk; asked for otherwise. */
+	connect?: "login" | "keyless";
 	deps: InitDeps;
 	prompter: Prompter;
 };
@@ -121,14 +128,21 @@ const relocateSubKey = ({
 	);
 };
 
+export const CONNECT_CHOICES = [
+	{ value: "login", flag: "--login", label: CONNECT_OPTIONS.login },
+	{ value: "keyless", flag: "--keyless", label: CONNECT_OPTIONS.keyless },
+] as const;
+
 const authenticate = async ({
+	repoRoot,
 	envDirs,
-	login,
+	connect,
 	deps,
 	prompter,
 }: {
+	repoRoot: string;
 	envDirs: string[];
-	login: boolean | undefined;
+	connect: "login" | "keyless" | undefined;
 	deps: InitDeps;
 	prompter: Prompter;
 }): Promise<OrgInfo> => {
@@ -151,20 +165,24 @@ const authenticate = async ({
 		prompter.write(`${soft("No AUTUMN_SECRET_KEY found.")}\n`);
 	}
 
-	const proceed = await confirm({
+	const way = await choose({
 		prompter,
-		value: login,
-		question: "Log in to Autumn?",
-		flag: "--login",
+		value: connect,
+		question: CONNECT_QUESTION,
+		options: CONNECT_CHOICES,
+		defaultValue: "login",
 	});
-	if (!proceed) throw new Error("atmn init needs your main sandbox key.");
 
 	if (check.kind === "sub") relocateSubKey({ check, envDirs, prompter });
-	await deps.login({ envDirs });
-	// A rejected key exported in the shell would otherwise shadow the one
-	// login just wrote, since env files never override the process.
-	delete process.env.AUTUMN_SECRET_KEY;
-	loadEnvFiles({ dirs: envDirs });
+	if (way === "keyless") {
+		await runKeylessLogin({ repoRoot, envDirs, deps: deps.keyless, prompter });
+	} else {
+		await deps.login({ envDirs });
+		// A rejected key exported in the shell would otherwise shadow the one
+		// login just wrote, since env files never override the process.
+		delete process.env.AUTUMN_SECRET_KEY;
+		loadEnvFiles({ dirs: envDirs });
+	}
 
 	const after = await checkMainKey({ deps });
 	if (after.kind !== "main")
@@ -279,7 +297,7 @@ export const runInit = async ({
 	dependencySpec = `^${version}`,
 	path,
 	name,
-	login,
+	connect,
 	deps,
 	prompter,
 }: InitOptions): Promise<InitResult> => {
@@ -287,7 +305,13 @@ export const runInit = async ({
 	const envDirs = [repoRoot];
 	loadEnvFiles({ dirs: envDirs });
 
-	const org = await authenticate({ envDirs, login, deps, prompter });
+	const org = await authenticate({
+		repoRoot,
+		envDirs,
+		connect,
+		deps,
+		prompter,
+	});
 
 	let configDir = cwd;
 	let packageName: string | undefined;

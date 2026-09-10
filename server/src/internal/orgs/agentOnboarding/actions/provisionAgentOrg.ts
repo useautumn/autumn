@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { AppEnv, organizations } from "@autumn/shared";
 import { eq } from "drizzle-orm";
+import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
@@ -19,6 +20,9 @@ const CLAIM_TTL_MS = 72 * 60 * 60 * 1000;
 
 /** Stripe requires a contact email; a keyless org has no owner until it's claimed. */
 const AGENT_ORG_CONTACT_EMAIL = "support@useautumn.com";
+
+const randomSlugSuffix = (): string =>
+	String(Math.floor(10000000 + Math.random() * 90000000));
 
 const createClaimToken = (): string =>
 	crypto.randomBytes(32).toString("base64url");
@@ -42,30 +46,40 @@ export const provisionAgentOrg = async ({
 	now?: Date;
 }) => {
 	const claimToken = createClaimToken();
-	const { organization, apiKey } = await db.transaction(async (tx) => {
-		const transactionDb = tx as unknown as DrizzleCli;
-		const organization = await createPendingAgentOrg({
-			db: transactionDb,
-			org: {
-				id: generateId("org"),
-				name,
-				slug,
-				claimTokenHash: hashAgentClaimToken({ claimToken }),
-				claimExpiresAt: new Date(now.getTime() + CLAIM_TTL_MS),
-			},
-		});
-		const apiKey = await createKey({
-			db: transactionDb,
-			orgId: organization.id,
-			env: AppEnv.Sandbox,
-			name: "Agent Provisioning API Key",
-			prefix: ApiKeyPrefix.Sandbox,
-			meta: { source: AGENT_PROVISIONING_KEY_SOURCE },
-			scopes: [...AGENT_PROVISIONAL_API_KEY_SCOPES],
+	const createOrgAndKey = (orgSlug: string) =>
+		db.transaction(async (tx) => {
+			const transactionDb = tx as unknown as DrizzleCli;
+			const organization = await createPendingAgentOrg({
+				db: transactionDb,
+				org: {
+					id: generateId("org"),
+					name,
+					slug: orgSlug,
+					claimTokenHash: hashAgentClaimToken({ claimToken }),
+					claimExpiresAt: new Date(now.getTime() + CLAIM_TTL_MS),
+				},
+			});
+			const apiKey = await createKey({
+				db: transactionDb,
+				orgId: organization.id,
+				env: AppEnv.Sandbox,
+				name: "Agent Provisioning API Key",
+				prefix: ApiKeyPrefix.Sandbox,
+				meta: { source: AGENT_PROVISIONING_KEY_SOURCE },
+				scopes: [...AGENT_PROVISIONAL_API_KEY_SCOPES],
+			});
+
+			return { organization, apiKey };
 		});
 
-		return { organization, apiKey };
-	});
+	// Slugs come from package names, so two agents on "app" collide; the
+	// second gets a suffix, the same way a signup does.
+	const { organization, apiKey } = await createOrgAndKey(slug).catch(
+		(error: unknown) => {
+			if (!isUniqueConstraintError(error)) throw error;
+			return createOrgAndKey(`${slug}_${randomSlugSuffix()}`);
+		},
+	);
 
 	// Stripe account, svix apps and pkeys — the same bring-up a signed-up org
 	// gets. Strict so a partial failure rolls back rather than handing the agent

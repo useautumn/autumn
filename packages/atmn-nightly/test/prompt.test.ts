@@ -7,6 +7,7 @@ import { expect, test } from "bun:test";
 import chalk from "chalk";
 import {
 	ask,
+	choose,
 	confirm,
 	createPrompter,
 	NeedsInputError,
@@ -141,4 +142,41 @@ test("select in headless prints the table hint and returns null", async () => {
 	expect(lines.join("")).toBe(
 		"→ Which sandbox?\n  atmn sandbox use <name|id>\n",
 	);
+});
+
+test("choose: headless lists the flags and stops; interactive takes a number or enter", async () => {
+	const options = [
+		{ value: "login", flag: "--login", label: "sign in" },
+		{ value: "keyless", flag: "--keyless", label: "no account" },
+	] as const;
+	const headless = capture();
+	await expect(
+		choose({
+			prompter: createPrompter({ interactive: false, write: headless.write }),
+			value: undefined,
+			question: "How?",
+			options,
+			defaultValue: "login",
+		}),
+	).rejects.toThrow("Pass --login or --keyless");
+	expect(headless.lines.join("")).toBe(
+		"→ How?\n  --login    sign in\n  --keyless  no account\n",
+	);
+
+	const pick = async (answer: string) =>
+		choose({
+			prompter: createPrompter({
+				interactive: true,
+				write: () => {},
+				readLine: async () => answer,
+			}),
+			value: undefined,
+			question: "How?",
+			options,
+			defaultValue: "login",
+		});
+	expect(await pick("")).toBe("login");
+	expect(await pick("2")).toBe("keyless");
+	expect(await pick("--keyless")).toBe("keyless");
+	await expect(pick("7")).rejects.toThrow(NeedsInputError);
 });

@@ -6,6 +6,12 @@ import { runEnv } from "./actions/env";
 import { fetchOrgInfo } from "./actions/env/fetchOrgInfo";
 import { runInit } from "./actions/init/runInit";
 import { runLogin } from "./actions/login";
+import {
+	CONNECT_OPTIONS,
+	keylessDepsFor,
+	runClaim,
+	runKeylessLogin,
+} from "./actions/login/keyless";
 import { runPull } from "./actions/pull";
 import { runPush } from "./actions/push";
 import { runReset } from "./actions/reset/runReset";
@@ -189,6 +195,14 @@ export const buildProgram = (): Command => {
 		program
 			.name(name)
 			.description("Autumn CLI")
+			.addHelpText(
+				"before",
+				`Getting started:
+  ${name} init             set up this repo end to end (asks how to connect, or take --login / --keyless)
+  ${name} login            ${CONNECT_OPTIONS.login}
+  ${name} login --keyless  ${CONNECT_OPTIONS.keyless}
+`,
+			)
 			.version(`${name} v${version}`, "-V, --version", "print the version")
 			.showHelpAfterError(),
 	);
@@ -196,20 +210,31 @@ export const buildProgram = (): Command => {
 	program
 		.command("init")
 		.description(
-			"set up this repo: log in, place the config, pull your catalog, install the skills",
+			"set up this repo: connect to Autumn, place the config, pull your catalog, install the skills",
+		)
+		.addHelpText(
+			"after",
+			"\nWith no AUTUMN_SECRET_KEY on disk, init asks how to connect in a terminal; headless it prints --login / --keyless and stops.",
 		)
 		.option("--path <dir>", "folder for the Autumn package (monorepos)")
 		.option("--name <name>", "the package's name (monorepos)")
-		.option("--login", "log in when no main sandbox key is on disk")
+		.option("--login", CONNECT_OPTIONS.login)
+		.option("--keyless", CONNECT_OPTIONS.keyless)
 		.action(
 			async (
-				options: { path?: string; name?: string; login?: boolean },
+				options: {
+					path?: string;
+					name?: string;
+					login?: boolean;
+					keyless?: boolean;
+				},
 				command: Command,
 			) => {
+				if (options.login && options.keyless)
+					throw new Error("Pick one of --login and --keyless.");
 				const flags = command.optsWithGlobals<GlobalFlags>();
-				const baseUrl = targetBaseUrl({
-					target: resolveTarget({ ...flags, sandbox: undefined }),
-				});
+				const mainTarget = resolveTarget({ ...flags, sandbox: undefined });
+				const baseUrl = targetBaseUrl({ target: mainTarget });
 				// Tests run the CLI from source, where the package is not published:
 				// they point new packages at the checkout instead.
 				const dependencySpec = process.env.ATMN_INIT_DEPENDENCY;
@@ -217,16 +242,15 @@ export const buildProgram = (): Command => {
 					...(dependencySpec === undefined ? {} : { dependencySpec }),
 					...(options.path === undefined ? {} : { path: options.path }),
 					...(options.name === undefined ? {} : { name: options.name }),
-					...(options.login === undefined ? {} : { login: options.login }),
+					...(options.login ? { connect: "login" as const } : {}),
+					...(options.keyless ? { connect: "keyless" as const } : {}),
 					prompter: prompterFor({ command }),
 					deps: {
 						fetchOrgInfo: ({ secretKey }) =>
 							fetchOrgInfo({ baseUrl, secretKey }),
 						login: ({ envDirs }) =>
-							runLogin({
-								cwd: envDirs[0],
-								target: resolveTarget({ ...flags, sandbox: undefined }),
-							}),
+							runLogin({ cwd: envDirs[0], target: mainTarget }),
+						keyless: keylessDepsFor({ target: mainTarget }),
 						install: async ({ manager, repoRoot }) =>
 							spawnSync(manager, ["install"], {
 								cwd: repoRoot,
@@ -242,13 +266,56 @@ export const buildProgram = (): Command => {
 
 	program
 		.command("login")
-		.description("authenticate and write org keys to your .env")
-		.action(async (_options: unknown, command: Command) => {
-			await runLogin({
-				target: prepareTarget({ command }),
-				configPath: configFlagOf({ command }),
-			});
-		});
+		.description("connect to Autumn and write the org's keys to your .env")
+		.addHelpText(
+			"after",
+			`
+Two ways in:
+  atmn login                       ${CONNECT_OPTIONS.login}
+  atmn login --keyless             ${CONNECT_OPTIONS.keyless}
+Linking a keyless org to an account:
+  atmn login --claim you@acme.com  emails a one-time code; pass it back with --otp <code>`,
+		)
+		.option("--keyless", CONNECT_OPTIONS.keyless)
+		.option(
+			"--claim <email>",
+			"link the keyless org this key belongs to with an account",
+		)
+		.option(
+			"--otp <code>",
+			"the code --claim emailed (headless: run again with it)",
+		)
+		.action(
+			async (
+				options: { keyless?: boolean; claim?: string; otp?: string },
+				command: Command,
+			) => {
+				const target = prepareTarget({ command });
+				const prompter = prompterFor({ command });
+				const mainTarget = managementTarget({ target });
+				if (options.keyless) {
+					const project = projectOf({ command });
+					await runKeylessLogin({
+						repoRoot: project.repoRoot,
+						envDirs: project.envDirs,
+						deps: keylessDepsFor({ target: mainTarget }),
+						prompter,
+					});
+					return;
+				}
+				if (options.claim !== undefined) {
+					await runClaim({
+						secretKey: requireSecretKey({ target: mainTarget }),
+						email: options.claim,
+						...(options.otp === undefined ? {} : { otp: options.otp }),
+						deps: keylessDepsFor({ target: mainTarget }),
+						prompter,
+					});
+					return;
+				}
+				await runLogin({ target, configPath: configFlagOf({ command }) });
+			},
+		);
 
 	program
 		.command("env")

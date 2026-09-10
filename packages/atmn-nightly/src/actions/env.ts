@@ -34,6 +34,10 @@ export const envJson = ({
 		notes.push(
 			`AUTUMN_SANDBOX_ID points at ${target.sandboxId} but the key answers as ${info.id}; run atmn sandbox use to repair the pin.`,
 		);
+	if (info.claim_state === "pending")
+		notes.push(
+			`This org has no owner yet${info.claim_expires_at ? ` (link it before ${info.claim_expires_at})` : ""}: atmn login --claim <email>.`,
+		);
 	if (target.sandboxId !== undefined)
 		notes.push("`atmn sandbox use --clear` returns to the main sandbox.");
 	else if (isMaster)
@@ -44,6 +48,10 @@ export const envJson = ({
 		organization: { id: info.id, name: info.name, slug: info.slug },
 		env: info.env,
 		isMaster,
+		/** False while a keyless org waits to be linked; true for any owned org. */
+		claimed: info.claim_state !== "pending",
+		claimExpiresAt:
+			info.claim_state === "pending" ? (info.claim_expires_at ?? null) : null,
 		sandbox:
 			target.sandboxId === undefined
 				? null
