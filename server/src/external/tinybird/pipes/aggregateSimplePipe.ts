@@ -33,6 +33,9 @@ export const aggregateSimplePipeParamsSchema = z.object({
 	filter_value_3: z.string().optional(),
 	filter_key_4: z.string().optional(),
 	filter_value_4: z.string().optional(),
+	// UTC month bins over a window with at least one complete calendar month:
+	// complete months come from events_customer_monthly_mv, the edges stay hourly.
+	use_monthly_rollup: z.enum(["0", "1"]).optional(),
 });
 
 export type AggregateSimplePipeParams = z.infer<

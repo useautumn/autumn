@@ -79,6 +79,60 @@ export const hasCompleteUtcDay = ({
 	return firstFullDay < endDay;
 };
 
+const startOfUtcMonth = ({ timestamp }: { timestamp: number }): number => {
+	const date = new Date(timestamp);
+	return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+};
+
+const startOfNextUtcMonth = ({ timestamp }: { timestamp: number }): number => {
+	const date = new Date(timestamp);
+	return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
+};
+
+export const hasCompleteUtcMonth = ({
+	startDate,
+	endDate,
+}: {
+	startDate: string;
+	endDate: string;
+}): boolean => {
+	const startTimestamp = parseUtcTimestamp({ value: startDate });
+	const endTimestamp = parseUtcTimestamp({ value: endDate });
+	if (!Number.isFinite(startTimestamp) || !Number.isFinite(endTimestamp)) {
+		return false;
+	}
+
+	const monthStart = startOfUtcMonth({ timestamp: startTimestamp });
+	const firstFullMonth =
+		startTimestamp === monthStart
+			? monthStart
+			: startOfNextUtcMonth({ timestamp: startTimestamp });
+
+	return firstFullMonth < startOfUtcMonth({ timestamp: endTimestamp });
+};
+
+/**
+ * Monthly rollups are keyed on UTC month starts, so a non-UTC viewer's months
+ * never line up with them and keep the hourly path.
+ */
+export const shouldUseMonthlyRollup = ({
+	binSize,
+	endDate,
+	hasPropertyFilters,
+	startDate,
+	timezone,
+}: {
+	binSize: string;
+	endDate: string;
+	hasPropertyFilters: boolean;
+	startDate: string;
+	timezone: string;
+}): boolean =>
+	binSize === "month" &&
+	timezone === "UTC" &&
+	!hasPropertyFilters &&
+	hasCompleteUtcMonth({ startDate, endDate });
+
 export const shouldUsePropertyDailyRollup = ({
 	binSize,
 	endDate,
