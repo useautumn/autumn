@@ -43,6 +43,12 @@ export const updateRemainingV2 = async ({
 
 	const entityId = fullSubject.entityId;
 
+	// add_to_balance is a manual grant: record it in the granted level
+	// (adjustment) so the refund ceiling in track covers it. Setting
+	// remaining/current_balance stays a usage edit and leaves the granted
+	// level untouched.
+	const alterGrantedBalance = notNullish(addToBalance);
+
 	const { data: result, error } = await tryCatch(
 		executeRedisDeductionV2({
 			ctx,
@@ -52,7 +58,7 @@ export const updateRemainingV2 = async ({
 			deductionOptions: {
 				overageBehaviour: "allow",
 				customerEntitlementFilters,
-				alterGrantedBalance: false,
+				alterGrantedBalance,
 			},
 		}),
 	);
@@ -64,6 +70,7 @@ export const updateRemainingV2 = async ({
 			fullSubject,
 			featureDeductions,
 			customerEntitlementFilters,
+			alterGrantedBalance,
 		});
 	}
 

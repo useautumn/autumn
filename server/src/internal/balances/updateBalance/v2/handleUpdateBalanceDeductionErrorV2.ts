@@ -11,12 +11,14 @@ export const handleUpdateBalanceDeductionErrorV2 = async ({
 	fullSubject,
 	featureDeductions,
 	customerEntitlementFilters,
+	alterGrantedBalance = false,
 }: {
 	ctx: AutumnContext;
 	error: Error;
 	fullSubject: FullSubject;
 	featureDeductions: FeatureDeduction[];
 	customerEntitlementFilters?: CustomerEntitlementFilters;
+	alterGrantedBalance?: boolean;
 }) => {
 	if (!(error instanceof RedisDeductionError) || !error.shouldFallback())
 		throw error;
@@ -32,7 +34,7 @@ export const handleUpdateBalanceDeductionErrorV2 = async ({
 		options: {
 			overageBehaviour: "allow",
 			customerEntitlementFilters,
-			alterGrantedBalance: false,
+			alterGrantedBalance,
 		},
 	});
 };
