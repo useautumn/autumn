@@ -11,8 +11,8 @@ export type WriteLine = (text: string) => void;
 export type Prompter = {
 	interactive: boolean;
 	write: WriteLine;
-	/** The stdin reader used by interactive prompts; injected for tests. */
-	readLine: () => Promise<string | null>;
+	/** Reads one answer, showing `prompt` at the cursor; injected for tests. */
+	readLine: (prompt: string) => Promise<string | null>;
 };
 
 export const done = (text: string): string => `${chalk.green("✓")} ${text}`;
@@ -31,12 +31,12 @@ export class NeedsInputError extends Error {
 
 /**
  * A fresh readline per question loses keys typed before it opened; one
- * interface per process keeps them. The prompt text is the caller's, so the
- * question passed here is empty.
+ * interface per process keeps them. Readline owns the prompt text: it redraws
+ * the line on every keystroke, so anything written beside it would vanish.
  */
 export const defaultReadLine = (() => {
 	let rl: import("node:readline").Interface | undefined;
-	return async (): Promise<string | null> => {
+	return async (prompt: string): Promise<string | null> => {
 		if (rl === undefined) {
 			const { createInterface } = await import("node:readline");
 			rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -45,7 +45,7 @@ export const defaultReadLine = (() => {
 		return new Promise((resolve) => {
 			const onClose = () => resolve(null);
 			active.once("close", onClose);
-			active.question("", (answer) => {
+			active.question(prompt, (answer) => {
 				active.off("close", onClose);
 				resolve(answer);
 			});
@@ -65,7 +65,7 @@ export const createPrompter = ({
 }: {
 	interactive: boolean;
 	write?: WriteLine;
-	readLine?: () => Promise<string | null>;
+	readLine?: (prompt: string) => Promise<string | null>;
 }): Prompter => ({ interactive, write, readLine });
 
 /**
@@ -102,8 +102,9 @@ export const ask = async ({
 			: example !== undefined
 				? chalk.dim(` (e.g. ${example})`)
 				: "";
-	prompter.write(`${needs(question)}${placeholder} `);
-	const answer = (await prompter.readLine())?.trim() ?? "";
+	const answer =
+		(await prompter.readLine(`${needs(question)}${placeholder} `))?.trim() ??
+		"";
 	if (answer !== "") return answer;
 	if (defaultValue !== undefined) return defaultValue;
 	throw new NeedsInputError(flagHint);
@@ -126,8 +127,10 @@ export const confirm = async ({
 		prompter.write(`${needs(question)}\n${hint(`Pass ${flag} to continue`)}\n`);
 		throw new NeedsInputError(`Pass ${flag} to continue`);
 	}
-	prompter.write(`${needs(question)} ${chalk.dim("[Y/n]")} `);
-	const answer = (await prompter.readLine())?.trim().toLowerCase() ?? "";
+	const answer =
+		(await prompter.readLine(`${needs(question)} ${chalk.dim("[Y/n]")} `))
+			?.trim()
+			.toLowerCase() ?? "";
 	return answer === "" || answer === "y" || answer === "yes";
 };
 
@@ -167,8 +170,10 @@ export const choose = async <T extends string>({
 	prompter.write(`${needs(question)}\n`);
 	for (const [index, option] of options.entries())
 		prompter.write(`  ${index + 1}) ${option.label}\n`);
-	prompter.write(`  ${chalk.dim(`[${defaultIndex + 1}]`)}: `);
-	const answer = (await prompter.readLine())?.trim() ?? "";
+	const answer =
+		(
+			await prompter.readLine(`  ${chalk.dim(`[${defaultIndex + 1}]`)}: `)
+		)?.trim() ?? "";
 	if (answer === "") return defaultValue;
 	const picked =
 		options[Number.parseInt(answer, 10) - 1] ??
