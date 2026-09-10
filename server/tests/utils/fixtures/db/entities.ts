@@ -24,6 +24,7 @@ const create = ({
 	deleted: false,
 	feature_id: featureId,
 	internal_feature_id: internalFeatureId ?? `internal_${featureId}`,
+	metadata: {},
 });
 
 // ═══════════════════════════════════════════════════════════════════

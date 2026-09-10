@@ -12,6 +12,9 @@ export const EntityDataSchema = z
 		billing_controls: ApiEntityBillingControlsParamsSchema.optional().meta({
 			description: "Billing controls for the entity.",
 		}),
+		metadata: z.record(z.string(), z.any()).nullish().meta({
+			description: "Additional metadata for the entity.",
+		}),
 	})
 	.meta({
 		title: "EntityData",

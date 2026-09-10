@@ -21,7 +21,11 @@ export const updateCachedEntityData = async ({
 	updates: Partial<
 		Pick<
 			Entity,
-			"spend_limits" | "usage_limits" | "usage_alerts" | "overage_allowed"
+			| "spend_limits"
+			| "usage_limits"
+			| "usage_alerts"
+			| "overage_allowed"
+			| "metadata"
 		>
 	>;
 }): Promise<void> => {

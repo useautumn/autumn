@@ -9,6 +9,7 @@ const entityDescriptions = {
 	feature_id: "The feature ID this entity belongs to",
 	created_at: "Unix timestamp when the entity was created",
 	env: "The environment (sandbox/live)",
+	metadata: "Additional metadata for the entity.",
 };
 
 export const ApiBaseEntitySchema = z.object({
@@ -33,6 +34,9 @@ export const ApiBaseEntitySchema = z.object({
 	}),
 	env: z.enum(AppEnv).meta({
 		description: entityDescriptions.env,
+	}),
+	metadata: z.record(z.any(), z.any()).default({}).meta({
+		description: "Additional metadata for the entity.",
 	}),
 });
 

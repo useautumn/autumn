@@ -21,6 +21,7 @@ export const createEntityJsDoc = createJSDocDescription({
 				entityId: "seat_42",
 				featureId: "seats",
 				name: "Seat 42",
+				metadata: { provisioned_through: "aws" },
 			},
 		}),
 	],
@@ -102,7 +103,7 @@ export const updateEntityJsDoc = createJSDocDescription({
 	description:
 		"Updates an existing entity and returns the refreshed entity object.",
 	whenToUse:
-		"Use this to change entity billing controls or other mutable entity fields after the entity has already been created.",
+		"Use this to change entity metadata, billing controls, or other mutable entity fields after the entity has already been created.",
 	body: UpdateEntityParamsSchema,
 	examples: [
 		example({

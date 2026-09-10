@@ -117,6 +117,7 @@ export const V1_2_EntityChange = defineVersionChange({
 			feature_id: input.feature_id,
 			created_at: input.created_at,
 			env: input.env,
+			metadata: input.metadata ?? {},
 			products: finalCusProducts,
 			features: v0_features,
 			invoices:

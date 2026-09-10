@@ -25,6 +25,7 @@ const API_ENTITY_V2_EXAMPLE = {
 	feature_id: "seats",
 	created_at: 1771409161016,
 	env: "sandbox",
+	metadata: {},
 	subscriptions: [
 		{
 			plan_id: "pro_plan",
