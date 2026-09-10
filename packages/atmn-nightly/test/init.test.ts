@@ -532,3 +532,33 @@ test("a second init in the same repo is a no-op for the files it already wrote",
 		"// edited\n",
 	);
 });
+
+test("monorepo, --path .: the config lives at the root, in the root package", async () => {
+	const root = repo({
+		monorepo: true,
+		env: "AUTUMN_SECRET_KEY=am_sk_test_main\n",
+	});
+	const { deps: d, calls } = deps({ keyAnswers: { am_sk_test_main: org } });
+	const { lines, write } = capture();
+
+	const result = await runInit({
+		cwd: root,
+		path: ".",
+		deps: d,
+		prompter: createPrompter({ interactive: false, write }),
+	});
+
+	expect(result.configDir).toBe(root);
+	expect(existsSync(join(root, "autumn.config.ts"))).toBe(true);
+	expect(existsSync(join(root, "packages/autumn"))).toBe(false);
+	const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+	// The existing root manifest is reused: the name it already has, plus the dependency.
+	expect(rootPkg.name).toBe("app");
+	expect(rootPkg.dependencies["atmn-nightly"]).toBeDefined();
+	expect(rootPkg.atmn).toEqual({ config: "autumn.config.ts" });
+	expect(rootPkg.scripts.atmn).toBe('atmn-nightly -c "autumn.config.ts"');
+	expect(calls.pull).toEqual([root]);
+	const text = lines.join("");
+	expect(text).toContain("✓ Path .");
+	expect(text).toContain("✓ Name app");
+});
