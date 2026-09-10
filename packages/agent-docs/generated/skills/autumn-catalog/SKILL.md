@@ -195,7 +195,7 @@ Landing a guardrail answer means picking the right control — windowed cap vs o
 - "Track it but don't bill it" / "let them run over, we'll invoice manually" → overage knobs on the plan, not a $0 price.
 - Auto-recharge needs its one-off prepaid item (already on the per-item list) AND the `auto_topups` control.
 
-**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push`, fix what it flags, and show the final catalog — same format, no assumptions list. Note: on a clean org that command applies as it validates (see `references/atmn.md`) — that's fine, just describe it accurately. **Done means the config is written and valid — a summary is not done.**
+**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push` (a preview; nothing is applied until `--yes`), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
 
 ### Showing the catalog
 
@@ -238,32 +238,35 @@ Billing controls follow the same rule: `·` lines under the item they guard, in 
 - Set explicitly, never lean on defaults: `billingMethod`, `tierBehavior`, all three trial fields. Explicit defaults cause no spurious diffs.
 - Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
 - Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
-- `billingControls(...)` fields are snake_case (`feature_id`, `overage_limit`) unlike the rest of the config, and each control list replaces wholesale on update. The builder isn't validated at push — double-check feature ids and field names yourself.
+- `billingControls` is a plain object on the plan with camelCase fields like the rest of the config (`featureId`, `overageLimit`); each control list replaces wholesale on update.
 - Pooled balances are config: `pooled: true` on the entity plan's item. Concluding "shared across workspaces" in Shape and then omitting the flag is the classic miss.
 - Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
 - Don't write `proration` — leave it out and take server defaults.
-- Not writable in config — say so and set via API or dashboard after push: display text, trial end behavior, license customization.
+- Trial end behavior is `freeTrial.onEnd` (`"bill"` default, `"revert"`). Not writable in config — say so and set via the dashboard after push: item display text.
 
-The config uses exactly three builders — `feature`, `plan`, `item` — as plain function calls with object arguments. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
+The config uses the builders `feature`, `plan`, `variant`, `license` as plain function calls with object arguments; items are plain objects inside a plan, and the file's default export is `atmn({...})` naming every collection. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
 
 ```ts
-import { feature, plan, item } from "atmn";
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: "credits",
+  featureId: "credits",
   name: "Credits",
   type: "credit_system",
   creditSchema: [{ meteredFeatureId: "messages", creditCost: 1 }],
 });
 
 export const pro = plan({
-  id: "pro",
+  planId: "pro",
+  versionSlug: "v1",
   name: "Pro",
   price: { amount: 20, interval: "month" },
   items: [
-    item({ featureId: credits.id, included: 500, reset: { interval: "month" } }),
+    { featureId: credits.featureId, included: 500, reset: { interval: "month" } },
   ],
 });
+
+export default atmn({ features: [credits], plans: [pro] });
 ```
 
 Pattern deep-dives, split one file per pattern under `references/` — read the matching one when filling that pattern's details:

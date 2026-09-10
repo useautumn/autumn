@@ -675,7 +675,7 @@ Landing a guardrail answer means picking the right control — windowed cap vs o
 - "Track it but don't bill it" / "let them run over, we'll invoice manually" → overage knobs on the plan, not a $0 price.
 - Auto-recharge needs its one-off prepaid item (already on the per-item list) AND the `auto_topups` control.
 
-**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push`, fix what it flags, and show the final catalog — same format, no assumptions list. Note: on a clean org that command applies as it validates (see `references/atmn.md`) — that's fine, just describe it accurately. **Done means the config is written and valid — a summary is not done.**
+**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push` (a preview; nothing is applied until `--yes`), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
 
 ### Showing the catalog
 
@@ -718,32 +718,35 @@ Billing controls follow the same rule: `·` lines under the item they guard, in 
 - Set explicitly, never lean on defaults: `billingMethod`, `tierBehavior`, all three trial fields. Explicit defaults cause no spurious diffs.
 - Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
 - Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
-- `billingControls(...)` fields are snake_case (`feature_id`, `overage_limit`) unlike the rest of the config, and each control list replaces wholesale on update. The builder isn't validated at push — double-check feature ids and field names yourself.
+- `billingControls` is a plain object on the plan with camelCase fields like the rest of the config (`featureId`, `overageLimit`); each control list replaces wholesale on update.
 - Pooled balances are config: `pooled: true` on the entity plan's item. Concluding "shared across workspaces" in Shape and then omitting the flag is the classic miss.
 - Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
 - Don't write `proration` — leave it out and take server defaults.
-- Not writable in config — say so and set via API or dashboard after push: display text, trial end behavior, license customization.
+- Trial end behavior is `freeTrial.onEnd` (`"bill"` default, `"revert"`). Not writable in config — say so and set via the dashboard after push: item display text.
 
-The config uses exactly three builders — `feature`, `plan`, `item` — as plain function calls with object arguments. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
+The config uses the builders `feature`, `plan`, `variant`, `license` as plain function calls with object arguments; items are plain objects inside a plan, and the file's default export is `atmn({...})` naming every collection. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
 
 ```ts
-import { feature, plan, item } from "atmn";
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: "credits",
+  featureId: "credits",
   name: "Credits",
   type: "credit_system",
   creditSchema: [{ meteredFeatureId: "messages", creditCost: 1 }],
 });
 
 export const pro = plan({
-  id: "pro",
+  planId: "pro",
+  versionSlug: "v1",
   name: "Pro",
   price: { amount: 20, interval: "month" },
   items: [
-    item({ featureId: credits.id, included: 500, reset: { interval: "month" } }),
+    { featureId: credits.featureId, included: 500, reset: { interval: "month" } },
   ],
 });
+
+export default atmn({ features: [credits], plans: [pro] });
 ```
 
 Pattern deep-dives, split one file per pattern under `references/` — read the matching one when filling that pattern's details:
@@ -4087,106 +4090,117 @@ Before finishing: re-check the STRICT RULES at the top against the config you wr
 
 Use `atmn` when a project has or should have an `autumn.config.ts` source of truth.
 
-Commands — these two, not `atmn preview` (that is an interactive UI):
+Commands — these two, not `atmn preview` (that does not exist):
 
 ```sh
-atmn --headless push          # validates, previews the diff — and applies when no decisions are needed
-atmn --headless push --yes    # apply, auto-confirming pending decisions
+atmn --headless push          # validates and previews the diff; applies nothing
+atmn --headless push --yes    # apply exactly what the preview showed
 ```
 
-`--headless push` without `--yes` only stops when the diff needs decisions (versioning, deletions, prod). On a clean target — a new org, a plain create — it validates and applies in one step, so treat running it as pushing, not as a dry run.
+`--headless push` without `--yes` is always a dry run, on a clean org too. Nothing reaches the server as a write until `--yes`.
 
 ## When to use it
 
-- New project: ask whether to use `atmn` to build and push the catalog. Recommend it for code-managed catalogs.
-- Existing project: if `autumn.config.ts` exists, inspect and edit it before pushing.
+- New project: run `atmn init`. It signs in (or goes keyless), places the config, pulls whatever the sandbox already holds, and installs these skills beside it.
+- Existing project: if `autumn.config.ts` exists, inspect and edit it before pushing. `atmn pull` writes the server's catalog back into it in place.
 - Use MCP/API directly when the user wants dashboard/API-first changes or there is no local config workflow.
 
 ## Config shapes
 
-`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `billingMethod`, `billingUnits`, `freeTrial`, `addItems`, `removeItems`, `intervalCount`. Follow the exported types from the package when editing config. Amounts are plain dollars: $20 is `20`, never `2000`.
+`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `planId`, `billingMethod`, `billingUnits`, `freeTrial`, `intervalCount`, `versionSlug`. Follow the exported types from the package when editing config. Amounts are plain dollars: $20 is `20`, never `2000`.
 
-Core builders:
+Core builders — `feature`, `plan`, `variant`, `license`. Items are plain objects on the plan. A variant is its own `variant({...})` fixture, listed by name in its base plan's `variants`; its `customize` carries what differs from the base (`price`, `items` to replace the list, `addItems` / `removeItems` to patch it).
 
 ```ts
 const messages = feature({
-  id: "messages",
+  featureId: "messages",
   name: "Messages",
   type: "metered",
   consumable: true,
 });
 
-const messagesItem = item({
-  featureId: messages.id,
-  included: 10000,
-  reset: { interval: "month" },
+export const proAnnual = variant({
+  variantPlanId: "pro_annual",
+  name: "Pro Annual",
+  customize: { price: { amount: 200, interval: "year" } },
 });
 
 export const pro = plan({
-  id: "pro",
+  planId: "pro",
   name: "Pro",
   price: { amount: 20, interval: "month" },
-  items: [messagesItem],
+  items: [
+    {
+      featureId: messages.featureId,
+      included: 10000,
+      reset: { interval: "month" },
+    },
+  ],
+  variants: [proAnnual],
 });
 
-export const proAnnual = pro.variant({
-  id: "pro_annual",
-  name: "Pro Annual",
-  customize: {
-    price: { amount: 200, interval: "year" },
-  },
-});
+export default atmn({ features: [messages], plans: [pro] });
 ```
 
 Usage-priced item:
 
 ```ts
-item({
-  featureId: messages.id,
+{
+  featureId: messages.featureId,
   included: 10000,
+  reset: { interval: "month" },
   price: {
     amount: 0.9,
     billingMethod: "usage_based",
     billingUnits: 1000,
     interval: "month",
   },
-});
+}
 ```
+
+The document is the whole desired catalog for every collection it states: a plan or feature missing from a stated `plans` / `features` is a deletion (archived when customers depend on it). A collection left out entirely is not managed.
+
+Two fields make a fixture addressable, and both are typed optional only because they come from the server:
+
+- `internalId` — the row's stable id. The server mints it on the first `push --yes` and the CLI writes it back into the fixture; `pull` writes it for every row that lacks one. A fixture that carries it can be renamed (`planId`, `featureId`) and the server treats that as a rename. Run `atmn pull` before editing a config that predates you, so every fixture already carries its id.
+- `versionSlug` — the version's name (`"v1"`, `"2026-q3"`). State it on every plan row you write, active or history, including the first version: it is how the config tells versions of one plan apart, and the lint refuses a second version without one.
+
+## Splitting the config
+
+`autumn.config.ts` is ordinary TypeScript, so a catalog can be laid out however the user likes: everything in one file, or fixtures exported from their own files and imported into the root arrays. A common shape is one plan per file with `planVersions/` holding the history rows, which is why `atmn init` scaffolds that folder. `pull` follows imports and edits fixtures where they live.
 
 ## Headless update loop
 
 1. Inspect or create `autumn.config.ts`.
 2. Edit the config to represent the desired catalog.
-3. Run `atmn --headless push` to preview changes and required decisions.
-4. For each affected plan family, show the user the versioning choice, variant propagation choices/conflicts, and migration draft choice.
-5. Rerun `atmn --headless push --yes` with explicit decision flags.
-6. Report created/updated/deleted/archived features and plans.
+3. Run `atmn --headless push` to preview changes.
+4. Show the user the plan diffs, the customer impact, which plans mint a new version, and the draft migrations it would create. If the versioning is not what they meant, move rows (see "Versions: code in motion") and preview again.
+5. Rerun `atmn --headless push --yes` to apply the same preview.
+6. Report created/updated/deleted/archived features and plans, and the migration links the output prints.
 
-If the user changes the catalog shape or any decision, edit `autumn.config.ts` or the flags and preview again before pushing.
+If the user changes the catalog shape, edit `autumn.config.ts` and preview again before pushing.
 
-## Decision flags
+## Versions: code in motion
 
-```sh
-atmn --headless push --yes --plan-intents '{"pro":"create_version"}'
-atmn --headless push --yes --plan-intents '{"pro":"update_current"}'
-atmn --headless push --yes --plan-intents '{"pro":"update_all_versions"}'
-atmn --headless push --yes --plan-intents '{"pro":"update_current_and_migrate"}'
-atmn --headless push --yes --plan-intents '{"pro":"update_all_versions_and_migrate"}'
-atmn --headless push --yes --migration-drafts '{"pro":true}'
-atmn --headless push --yes --variant-propagations '{"pro":["pro_annual"]}'
-atmn --headless push --yes --variant-propagations '{"pro":[]}'
-```
+There are no decision flags. Versioning is stated by where a row sits and what it says; the server derives the rest and the preview shows it. `plans` holds each plan's active version, `planVersions` its history, and every row names its version with `versionSlug`. On a plan with customers:
 
-`create_version` grandfathers existing customers. `update_current` edits the current version in place. `update_all_versions` applies the diff to historical versions too. The `*_and_migrate` shortcuts also choose a migration draft for current customers.
+- **Change every version.** Make the edit on the active row in `plans` and on each history row in `planVersions/`. Each row is updated in place; a draft migration is offered for the customers on each.
+- **Change only the active version.** Edit the row in `plans`, keep its `versionSlug`. It is updated in place, history untouched; customers on it get a draft migration.
+- **Mint a new version, leaving customers where they are.** Move the current active fixture to `planVersions/` (its file, and its entry from `plans` into `planVersions` in the root config — a row still listed in `plans` is still the active one). Write the new active row in `plans` with the same `planId`, a new `versionSlug`, and no `internalId`: an absent id is what tells the server this is a new row, and `push --yes` writes the minted one back. The preview lists it as a new version with the old one going inactive.
 
-Use keys like `pro@v1` when the prompt targets a historical version. For variants, `update_all_versions` is not valid; choose `create_version` or `update_current`.
+Variants move with their base. An in-place edit to the base reaches each variant listed under it unless that variant's `customize` overrides the field. Minting a new base version means minting a new version of every variant linked to it: the new active base row lists variant fixtures carrying the same new `versionSlug` (and no `internalId`), and the old variant fixtures move to `planVersions/` alongside the old base. A new base version that still points at the old variant rows is refused by the lint, since one variant version cannot serve two base versions.
+
+## Sandboxes
+
+- `atmn sandbox use <name>` pins a named sandbox; every command after it targets that sandbox until `atmn sandbox use --clear`.
+- `atmn reset --yes` empties the pinned sandbox; `atmn push --yes` rebuilds it from the config.
+- `atmn env --json` says which org, sandbox and key a command would hit, with `notes` on what to do when something is off.
 
 ## What to show the user
 
-- Required plan intents and whether live defaults favor creating a new version.
-- Required variant propagation choices and conflicts.
-- Required migration choices; drafts do not move customers until run.
+- Which plans mint a new version, and the draft migrations that come with them.
 - Feature/plan deletions that will archive instead because dependencies or customers exist.
+- Which sandbox is pinned before applying anything.
 
 # Catalog update flow
 

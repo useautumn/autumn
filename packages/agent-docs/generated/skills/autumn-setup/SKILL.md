@@ -12,12 +12,12 @@ Take the user from "I want billing" to pricing that is live in a sandbox org and
 These apply the whole time, not just in one phase.
 
 - CLI-first: everything happens in `autumn.config.ts` and `atmn`. The only browser moment is signing in — and the keyless path skips even that. Never send the user to the dashboard to do the work.
-
+- Never invent a price, limit, or plan name. A missing number is a question, never a guess.
 - Push only after the user approves the pricing (Phase 4), or when they already told you to go ahead without a review.
 - Sandbox by default: `AUTUMN_SECRET_KEY` is the sandbox key. Don't touch production during setup.
 - Keys: check that a key exists by its name only. Never read, print, or ask the user to paste a key into the chat. Same for a keyless org's claim token. A one-time email code is not a key — that one does come through the chat.
 - Two tries max to fix any failing command, then stop and show the error.
-- Never run `atmn nuke`, and never remove existing plans unless the user clearly asked.
+- Never run `atmn reset`, and never remove existing plans unless the user clearly asked.
 - If a step is already done, say so in one line ("Already signed in — skipping login") and move on.
 
 ## How to talk
@@ -76,30 +76,21 @@ Start with two or three sentences: what's going to happen (connect this project 
 
 Then:
 
-1. Add `atmn` as a dev dependency — the config file imports from it. Use whatever package manager the user already uses; read it off the lockfile (or the `packageManager` field in package.json):
-
-   | Lockfile | Install atmn | Run atmn |
-   |---|---|---|
-   | `bun.lock` / `bun.lockb` | `bun add -d atmn` | `bunx atmn` |
-   | `pnpm-lock.yaml` | `pnpm add -D atmn` | `pnpm exec atmn` |
-   | `yarn.lock` | `yarn add -D atmn` | `yarn atmn` |
-   | `package-lock.json` or none | `npm i -D atmn` | `npx atmn` |
-
-   Every `atmn …` command below means that run command.
-2. Key already there → connected. Say so in one line and skip to step 5.
-3. No key → ask which way to connect. One question, two options, plain words:
+1. Run `atmn init` from the project root with the user's package manager (`bunx atmn init`, `pnpm exec atmn init`, `yarn atmn init`, `npx atmn init` — read it off the lockfile). Every `atmn …` command below means that run command. One command does the whole connect step: it adds `atmn` as a dependency, places `autumn.config.ts` (its own package in a monorepo — it asks where, or takes `--path` and `--name`), pulls whatever the org already holds, and installs these skills beside the config. Each run prints what it did and, when it needs an answer, the flag to pass; run it again with the flag.
+2. Key already there → `init` says who it's connected to and moves on. Say so in one line.
+3. No key → `init` stops and asks how to connect. Ask the user the same thing, one question, two options, plain words:
 
    > Two ways to start: sign in to an Autumn account (I'll open a browser), or go keyless — I set up a sandbox for you right now and you link an account later. Which do you want?
 
-   Skip the question and go keyless when there's nobody to ask (unattended run, no browser) or the user has already told you to handle everything yourself. Either way, say in one line which one you picked.
-4. Connect the way they chose:
+   Go keyless without asking when there's nobody to ask (unattended run, no browser) or the user has already told you to handle everything yourself. Either way, say in one line which one you picked.
+4. Connect the way they chose, by running `init` again with the flag:
 
-   - **Sign in** → say a browser window is coming, then run `atmn login`. It opens the browser to sign in and create or pick an org, prints the sign-in URL, and waits — that's normal, it's not stuck. If the browser doesn't open, send the user the printed URL as-is. Keys get saved to `.env`. Fails, or there's no browser (SSH, sandbox) → retry once, then offer keyless instead, or let the user copy their own sandbox key from app.useautumn.com into `.env` as `AUTUMN_SECRET_KEY`.
-   - **Keyless** → provision a sandbox org over the API and save the key it returns to `.env` as `AUTUMN_SECRET_KEY`. No account, no browser, nothing for the user to do. The org is a real one: pushing, customers, and billing all work the same. It has no owner until Phase 7 links one, and the key doesn't change when that happens. For the endpoints, fields, and limits behind provisioning and linking, read `references/keyless.md`.
+   - **Sign in** → say a browser window is coming, then `atmn init --login`. It opens the browser to sign in and create or pick an org, prints the sign-in URL, and waits — that's normal, it's not stuck. If the browser doesn't open, send the user the printed URL as-is. Keys get saved to `.env`. Fails, or there's no browser (SSH, sandbox) → retry once, then offer keyless instead, or let the user copy their own sandbox key from app.useautumn.com into `.env` as `AUTUMN_SECRET_KEY`.
+   - **Keyless** → `atmn init --keyless`. It provisions a sandbox org and saves its key to `.env` as `AUTUMN_SECRET_KEY`. No account, no browser, nothing for the user to do. The org is a real one: pushing, customers, and billing all work the same. It has no owner until Phase 7 links one, and the key doesn't change when that happens. `init` prints the deadline for linking; note it for Phase 7. For what provisioning and linking do underneath, and their limits, read `references/keyless.md`.
 
-5. If the key was already there before this session, the org might already have plans: run `atmn pull`. If plans show up, say so and go through them with the user before changing anything. A brand-new or keyless org is empty — skip pull and let Phase 4 create the config.
+5. `init` pulled the org's catalog into the config. If plans showed up ("Pulled N entries"), say so and go through them with the user before changing anything. A brand-new or keyless org is empty; the config is a scaffold for Phase 4 to fill.
 
-Done when there's a key and you know whether the org already has plans. Say so in one line — including whether it's keyless, since that decides how you finish.
+Done when `init` finished and you know whether the org already has plans. Say so in one line — including whether it's keyless, since that decides how you finish.
 
 ## Phase 3 — Get a starting point
 
@@ -152,9 +143,9 @@ Offer once, right after they've seen the integration work, because that's when t
 
 > Want to link this to your account? Takes an email and a code, and then you can open the dashboard and see everything that just ran.
 
-No → fine, drop it and say the offer stands whenever. Yes → ask which email should own the org, start the claim, then ask them for the code that lands in their inbox. Linking makes them the owner: same key, same plans, same customers, plus the dashboard.
+No → fine, drop it and say the offer stands whenever. Yes → ask which email should own the org, run `atmn login --claim <email>`, then ask them for the code that lands in their inbox and pass it back with `--otp <code>`. Linking makes them the owner: same key, same plans, same customers, plus the dashboard. An email that already has an Autumn account works the same way; the new org is added beside their existing ones.
 
-Unclaimed orgs don't wait forever, so mention the window when you offer — as a fact, not a threat. If linking fails, nothing is lost: the key keeps working and they can try again, or sign up normally and push the same config. Commands and fields: `references/keyless.md`.
+Unclaimed orgs don't wait forever, so mention the window `init` printed when you offer — as a fact, not a threat. If linking fails, nothing is lost: the key keeps working and they can try again, or sign up normally and push the same config. What the commands do underneath: `references/keyless.md`.
 
 ## Phase 8 — Done
 
