@@ -5,7 +5,6 @@ import {
 	AdditionalCurrencyTierArraySchema,
 } from "../../../api/products/components/additionalCurrencies.js";
 import { FeatureConfigOverrideSchema } from "../../featureModels/featureConfig/creditConfig.js";
-import { EntitlementExpirySchema as ItemExpiryConfigSchema } from "../../productModels/durationTypes/entitlementDuration.js";
 import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
 import { TierBehavior } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
@@ -85,9 +84,6 @@ const ProductItemConfigSchema = z.object({
 	on_increase: z.enum(OnIncrease).nullish(),
 	on_decrease: z.enum(OnDecrease).nullish(),
 	rollover: RolloverConfigSchema.nullish(),
-	/** Purchased balance expires this long after each purchase. One-off prepaid
-	 * consumable items only — the cadence of recurring items already bounds them. */
-	expiry: ItemExpiryConfigSchema.nullish(),
 	/** Partial override of the feature's config, keyed like the feature
 	 * config itself in DB shape (schema is a full replacement when present). */
 	feature_override: FeatureConfigOverrideSchema.nullish(),

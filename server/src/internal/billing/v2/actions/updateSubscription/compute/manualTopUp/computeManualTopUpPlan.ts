@@ -22,8 +22,6 @@ import {
 	buildUpdatedOptions,
 	updateCusEntOptionsInline,
 } from "@/internal/balances/autoTopUp/helpers/autoTopUpUtils.js";
-import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/entitlementExpiry.js";
-import { routeRemainderToExpiringGrant } from "@/internal/billing/v2/utils/expiringGrants/routeRemainderToExpiringGrant.js";
 
 const findTargetCusEnt = ({
 	billingContext,
@@ -121,22 +119,12 @@ export const computeManualTopUpPlan = ({
 		lineItems = [lineItem];
 	}
 
-	const rebalance = computeRebalancedAutoTopUp({
+	const { deltas } = computeRebalancedAutoTopUp({
 		fullCustomer,
 		featureId,
 		quantity,
 		prepaidCustomerEntitlementId: prepaidCusEnt.id,
 	});
-
-	const { deltas, insertCustomerEntitlements } = routeRemainderToExpiringGrant({
-		deltas: rebalance.deltas,
-		customerEntitlement: prepaidCusEnt,
-		now: currentEpochMs ?? Date.now(),
-	});
-
-	const hasExpiry = Boolean(
-		entitlementToExpiry({ entitlement: prepaidCusEnt.entitlement }),
-	);
 
 	return {
 		customerId: fullCustomer?.id ?? "",
@@ -144,22 +132,15 @@ export const computeManualTopUpPlan = ({
 		lineItems,
 		updateCustomerEntitlements: [],
 		autoTopupRebalance: { deltas },
-		...(insertCustomerEntitlements.length
-			? { insertCustomerEntitlements }
-			: {}),
-		...(hasExpiry
-			? {}
-			: {
-					updateCustomerProduct: {
-						customerProduct,
-						updates: {
-							options: buildUpdatedOptions({
-								cusProduct: customerProduct,
-								feature,
-								topUpPacks,
-							}),
-						},
-					},
+		updateCustomerProduct: {
+			customerProduct,
+			updates: {
+				options: buildUpdatedOptions({
+					cusProduct: customerProduct,
+					feature,
+					topUpPacks,
 				}),
+			},
+		},
 	};
 };

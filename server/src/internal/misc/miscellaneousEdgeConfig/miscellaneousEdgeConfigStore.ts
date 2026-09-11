@@ -53,10 +53,6 @@ export const _setMiscellaneousEdgeConfigForTesting = ({
 	store._setRuntimeConfigForTesting(config);
 };
 
-/** Gate for the expired purchase-grant sweep. */
-export const isExpiredGrantCleanupEnabled = (): boolean =>
-	store.get().expiredGrantCleanup;
-
 /** Global sync-coalescing gate (balance syncs via Redis dirty state). */
 export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
 

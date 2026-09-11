@@ -138,10 +138,6 @@ export const normalizedEntitlementIntervalCount = (entitlement: Entitlement) =>
 const hasUnlimitedAllowanceType = (entitlement: Entitlement) =>
 	entitlement.allowance_type === AllowanceType.Unlimited;
 
-const expiriesAreSame = (ent1: Entitlement, ent2: Entitlement) =>
-	(ent1.expiry_duration ?? null) === (ent2.expiry_duration ?? null) &&
-	(ent1.expiry_length ?? null) == (ent2.expiry_length ?? null);
-
 export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 	if (ent1.internal_feature_id !== ent2.internal_feature_id) return false;
 	// Unlimited-ness is the semantic boundary (matches isUnlimitedEntitlement);
@@ -176,7 +172,6 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 			override1: ent1.feature_override,
 			override2: ent2.feature_override,
 		}),
-		expiry: !expiriesAreSame(ent1, ent2),
 	};
 
 	return !Object.values(diffs).some(Boolean);

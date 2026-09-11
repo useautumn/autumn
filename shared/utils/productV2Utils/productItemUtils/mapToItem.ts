@@ -123,12 +123,6 @@ export const toFeaturePriceItem = ({
 	if (ent.rollover) {
 		itemConfig.rollover = ent.rollover;
 	}
-	if (ent.expiry_duration && ent.expiry_length != null) {
-		itemConfig.expiry = {
-			duration: ent.expiry_duration,
-			length: ent.expiry_length,
-		};
-	}
 	if (ent.feature_override) {
 		itemConfig.feature_override = ent.feature_override;
 	}

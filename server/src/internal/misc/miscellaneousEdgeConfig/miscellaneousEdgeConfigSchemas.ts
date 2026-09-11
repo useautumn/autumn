@@ -25,10 +25,6 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	disableMotherduckCacheRefresh: z.boolean().default(false),
 	/** Global switch for Axiom response-body compaction and size caps. */
 	axiomResponseBodyReduction: z.boolean().default(true),
-	/** Deletes customer_product-linked entitlement rows whose expires_at has
-	 *  passed (expiring prepaid purchases). Dark by default — the sweep touches
-	 *  the largest table we have. */
-	expiredGrantCleanup: z.boolean().default(false),
 });
 
 export type MiscellaneousEdgeConfig = z.infer<
