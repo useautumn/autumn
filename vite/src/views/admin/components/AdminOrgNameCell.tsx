@@ -5,8 +5,6 @@ import { AdminOrgMobileSummary } from "./AdminOrgMobileSummary";
 import { AdminOrgUnclaimedDot } from "./AdminOrgUnclaimedDot";
 
 export const AdminOrgNameCell = ({ org }: { org: AdminOrg }) => {
-	// The mobile card builds itself from the title cell, so it needs the emails
-	// too; every other column opts out of the card entirely.
 	const isMobile = useIsMobile();
 	if (isMobile) return <AdminOrgMobileSummary org={org} />;
 
