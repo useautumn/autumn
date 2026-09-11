@@ -226,6 +226,7 @@ export const productItemsToPlanItemsV1 = ({
 
 			rollover,
 			proration,
+			expiry: item.config?.expiry ?? undefined,
 			feature_override: item.config?.feature_override
 				? dbFeatureOverrideToApi(item.config.feature_override)
 				: undefined,
