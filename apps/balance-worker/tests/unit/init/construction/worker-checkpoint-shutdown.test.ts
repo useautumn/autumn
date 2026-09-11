@@ -7,6 +7,7 @@ import { createSchedulerFixture } from "../../checkpoint/scheduling/scheduler-fi
 const enabledConfig = () =>
 	createWorkerCheckpointConfig({
 		env: createBalanceWorkerEnv({
+			KAFKA_AUTH_MODE: "none",
 			KAFKA_BROKERS: "localhost:19092",
 			BALANCE_WORKER_CHECKPOINT_MODE: "enabled",
 			BALANCE_WORKER_CHECKPOINT_BUCKET: "test-checkpoints",

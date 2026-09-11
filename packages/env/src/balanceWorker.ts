@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getBalanceWorkerPartitionCount } from "./balanceWorkerPartitionCount.js";
 import { createKafkaAuthEnv } from "./kafkaAuth.js";
 
 const positiveInteger = z.coerce.number().int().positive().safe();
@@ -32,7 +33,6 @@ const workerEnvironmentBaseSchema = z.object({
 	BALANCE_WORKER_OWNERSHIP_TOPIC: topicName.default(
 		"autumn-metering-ownership",
 	),
-	BALANCE_WORKER_PARTITION_COUNT: positiveInteger.default(8),
 	BALANCE_WORKER_GROUP_ID: z
 		.string()
 		.trim()
@@ -135,6 +135,9 @@ export function createBalanceWorkerEnv(
 	return {
 		...env,
 		...createKafkaAuthEnv({ runtimeEnv }),
+		BALANCE_WORKER_PARTITION_COUNT: getBalanceWorkerPartitionCount({
+			runtimeEnv,
+		}),
 		BALANCE_WORKER_ENDPOINT: env.BALANCE_WORKER_ENDPOINT
 			? new URL(env.BALANCE_WORKER_ENDPOINT).origin
 			: `http://${host}:${env.BALANCE_WORKER_PORT}`,

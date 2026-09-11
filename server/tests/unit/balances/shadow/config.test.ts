@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { parseBalanceShadowEdgeConfig } from "@/internal/balances/shadow/balanceShadowEdgeConfig.js";
 import type { BalanceShadowConfig } from "@/internal/balances/shadow/balanceShadowTypes.js";
 import { parseBalanceShadowConfig } from "@/internal/balances/shadow/parseBalanceShadowConfig.js";
 
@@ -16,6 +17,38 @@ const config: BalanceShadowConfig = {
 		},
 	],
 };
+
+test("edge controls enforce the same bounded cohort and direct-routing isolation", () => {
+	const run = { ...config, expiresAt: Date.now() + 60_000 };
+	for (const input of [
+		{ enabled: true, run: { ...run, customers: [] } },
+		{
+			enabled: true,
+			run: { ...run, customers: [run.customers[0], run.customers[0]] },
+		},
+		{
+			enabled: true,
+			run: { ...run, ownershipTopic: "autumn-metering-ownership" },
+		},
+		{ enabled: true, run: { ...run, expiresAt: Date.now() + 86_400_100 } },
+		{ enabled: false, run },
+	])
+		expect(() =>
+			parseBalanceShadowEdgeConfig({ input, runtimeEnv: {} }),
+		).toThrow();
+	expect(() =>
+		parseBalanceShadowEdgeConfig({
+			input: { enabled: true, run },
+			runtimeEnv: { BALANCE_WORKER_ROLLOUT_ENABLED: "true" },
+		}),
+	).toThrow("direct routing");
+	expect(
+		parseBalanceShadowEdgeConfig({
+			input: { enabled: false },
+			runtimeEnv: { BALANCE_WORKER_SHADOW: JSON.stringify(run) },
+		}),
+	).toBeUndefined();
+});
 
 test.concurrent(
 	"shadow defaults off and permits an explicit expiring production cohort without direct routing",

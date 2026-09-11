@@ -6,7 +6,7 @@
 	"scripts": {
 		"start": "bun --config=./bunfig.toml src/main.ts",
 		"setup:local": "bun --config=./bunfig.toml scripts/setupLocalTopics.ts",
-		"dev": "NODE_ENV=development bun run setup:local && NODE_ENV=development bun run start",
+		"dev": "NODE_ENV=development bun run setup:local && NODE_ENV=development KAFKA_AUTH_MODE=${KAFKA_AUTH_MODE:-none} bun run start",
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:kafka": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration/kafka",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",

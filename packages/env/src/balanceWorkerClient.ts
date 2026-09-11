@@ -1,3 +1,4 @@
+import { getBalanceWorkerPartitionCount } from "./balanceWorkerPartitionCount.js";
 import { createKafkaAuthEnv } from "./kafkaAuth.js";
 
 export function createBalanceWorkerClientEnv(
@@ -24,9 +25,9 @@ export function createBalanceWorkerClientEnv(
 		KAFKA_BROKERS: brokers,
 		BALANCE_WORKER_OWNERSHIP_TOPIC:
 			runtimeEnv.BALANCE_WORKER_OWNERSHIP_TOPIC ?? "autumn-metering-ownership",
-		BALANCE_WORKER_PARTITION_COUNT: Number(
-			runtimeEnv.BALANCE_WORKER_PARTITION_COUNT ?? 8,
-		),
+		BALANCE_WORKER_PARTITION_COUNT: getBalanceWorkerPartitionCount({
+			runtimeEnv,
+		}),
 		BALANCE_WORKER_REQUEST_TIMEOUT_MS: Number(
 			runtimeEnv.BALANCE_WORKER_REQUEST_TIMEOUT_MS ?? 1_000,
 		),

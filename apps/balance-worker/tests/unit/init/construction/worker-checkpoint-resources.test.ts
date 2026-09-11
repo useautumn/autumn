@@ -45,6 +45,7 @@ test.concurrent.each(["off", "restore_only", "enabled"])(
 		};
 		const config = createWorkerCheckpointConfig({
 			env: createBalanceWorkerEnv({
+				KAFKA_AUTH_MODE: "none",
 				KAFKA_BROKERS: "localhost:19092",
 				BALANCE_WORKER_CHECKPOINT_MODE: mode,
 				BALANCE_WORKER_CHECKPOINT_BUCKET: "test-checkpoints",

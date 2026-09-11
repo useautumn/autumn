@@ -19,6 +19,18 @@ function kafkaLogLevel(): void {
 }
 
 describe("local balance worker launch settings", () => {
+	test("explicitly selects plaintext authentication for local Kafka", () => {
+		expect(
+			balanceWorkerDevConfig({ worktreeNum: 50, runtimeEnv: {} })
+				.KAFKA_AUTH_MODE,
+		).toBe("none");
+		expect(
+			balanceWorkerDevConfig({
+				worktreeNum: 50,
+				runtimeEnv: { KAFKA_AUTH_MODE: "msk_iam" },
+			}).KAFKA_AUTH_MODE,
+		).toBe("msk_iam");
+	});
 	test("assigns collision-free per-worktree listener ports", () => {
 		const ports = new Set<number>();
 		for (let worktreeNum = 1; worktreeNum <= 50; worktreeNum++) {
