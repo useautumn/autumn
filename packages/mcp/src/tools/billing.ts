@@ -38,6 +38,13 @@ const createScheduleMcpSchema = CreateScheduleParamsV0Schema.check((ctx) => {
 	}
 });
 
+const attachMcpSchema = AttachParamsV1Schema.overwrite((data) =>
+	data.invoice_mode?.enabled === true &&
+	data.enable_plan_immediately === undefined
+		? { ...data, enable_plan_immediately: true }
+		: data,
+);
+
 const endpoints = {
 	previewAttach: "/v1/billing.preview_attach",
 	attach: "/v1/billing.attach",
@@ -48,8 +55,8 @@ const endpoints = {
 } as const;
 
 const schemas = {
-	previewAttach: AttachParamsV1Schema,
-	attach: AttachParamsV1Schema,
+	previewAttach: attachMcpSchema,
+	attach: attachMcpSchema,
 	previewUpdateSubscription: UpdateSubscriptionV1ParamsSchema,
 	updateSubscription: UpdateSubscriptionV1ParamsSchema,
 	previewCreateSchedule: createScheduleMcpSchema,
