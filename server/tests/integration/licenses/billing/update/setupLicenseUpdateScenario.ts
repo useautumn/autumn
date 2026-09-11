@@ -9,6 +9,8 @@ export const setupLicenseUpdateScenario = async ({
 	customerId,
 	idPrefix,
 	parentItems = [items.dashboard()],
+	pricedParent = false,
+	attachOptions,
 	seatPrice,
 	seatItems,
 	includedSeats,
@@ -18,6 +20,9 @@ export const setupLicenseUpdateScenario = async ({
 	customerId: string;
 	idPrefix: string;
 	parentItems?: ProductItem[];
+	/** `products.pro` ($20/mo base) instead of a free parent. */
+	pricedParent?: boolean;
+	attachOptions?: { feature_id: string; quantity: number }[];
 	seatPrice?: number;
 	/** Extra seat items beyond the monthly base price (e.g. a usage grant). */
 	seatItems?: ProductItem[];
@@ -25,7 +30,8 @@ export const setupLicenseUpdateScenario = async ({
 	attachedSeats: number;
 	testClock?: boolean;
 }) => {
-	const parent = products.base({
+	const parentProduct = pricedParent ? products.pro : products.base;
+	const parent = parentProduct({
 		id: `${idPrefix}-pro`,
 		items: parentItems,
 	});
@@ -54,6 +60,7 @@ export const setupLicenseUpdateScenario = async ({
 			}),
 			s.billing.attach({
 				productId: parent.id,
+				options: attachOptions,
 				licenseQuantities: [
 					{ licenseProductId: devSeat.id, quantity: attachedSeats },
 				],
