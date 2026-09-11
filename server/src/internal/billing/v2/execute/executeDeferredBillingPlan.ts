@@ -62,7 +62,6 @@ export const executeDeferredBillingPlan = async ({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		fullCustomer: billingContext.fullCustomer,
-		metadataId: metadata.id,
 	});
 
 	await executeAutumnBillingPlan({
