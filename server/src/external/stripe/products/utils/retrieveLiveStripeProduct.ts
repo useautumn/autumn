@@ -11,7 +11,8 @@ export const retrieveLiveStripeProduct = async ({
 
 	try {
 		const product = await stripeCli.products.retrieve(productId);
-		return product.active ? product : null;
+		if (product.active) return product;
+		return await stripeCli.products.update(product.id, { active: true });
 	} catch {
 		return null;
 	}
