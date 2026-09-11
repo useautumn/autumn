@@ -21,10 +21,7 @@ import {
 	patchFixtureProperty,
 } from "../../surgery/patchFixtureProperty";
 import { replaceFixture } from "../../surgery/replaceFixture";
-import {
-	appendPlanVersionFixture,
-	planVersionExportName,
-} from "./appendPlanVersionFixture";
+import { appendPlanVersionFixture } from "./appendPlanVersionFixture";
 import { changedFixtureKeys } from "./changedFixtureKeys";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
 import { resolveCollectionTarget } from "./resolveCollectionTarget";
@@ -187,6 +184,21 @@ export const applyPreview = ({
 		}
 		return join(dirname(configPath), "planVersions", `${id}.ts`);
 	};
+	const deleteExportReferences = ({ name }: { name: string }): void => {
+		const referenceFiles = new Set([configPath]);
+		for (const targetCollection of [collection, spec.historyKey]) {
+			if (targetCollection === undefined) continue;
+			const target = resolveCollectionTarget({
+				configPath,
+				files,
+				collection: targetCollection,
+			});
+			if (target !== null) referenceFiles.add(target.file);
+		}
+		for (const file of referenceFiles) {
+			files.set(file, deleteReference({ source: files.get(file) ?? "", name }));
+		}
+	};
 
 	const removeFixture = ({
 		id,
@@ -225,14 +237,8 @@ export const applyPreview = ({
 		});
 		if (removed === null) return;
 		files.set(located.file, removed.source);
-		// A removed export leaves the config importing it — drop those too.
-		if (removed.exportedName !== undefined) {
-			const configSource = files.get(configPath) ?? "";
-			files.set(
-				configPath,
-				deleteReference({ source: configSource, name: removed.exportedName }),
-			);
-		}
+		if (removed.exportedName !== undefined)
+			deleteExportReferences({ name: removed.exportedName });
 		result.deleted.push(id);
 		result.lines.push(`- ${id}`);
 	};
@@ -334,7 +340,8 @@ export const applyPreview = ({
 				files,
 				target: resolved,
 				fixtureFile: historyFileFor({ id, row }),
-				exportName: planVersionExportName({ planId: id, versionSlug }),
+				planId: id,
+				versionSlug,
 				fixture: emitFixture({
 					spec,
 					row: emitted,
@@ -507,16 +514,8 @@ export const applyPreview = ({
 				});
 				if (removed === null) return;
 				files.set(located.file, removed.source);
-				if (removed.exportedName !== undefined) {
-					const configSource = files.get(configPath) ?? "";
-					files.set(
-						configPath,
-						deleteReference({
-							source: configSource,
-							name: removed.exportedName,
-						}),
-					);
-				}
+				if (removed.exportedName !== undefined)
+					deleteExportReferences({ name: removed.exportedName });
 				const appended = appendRow({
 					id,
 					entry,

@@ -12,7 +12,7 @@ import { runPull } from "../src/actions/pull";
 const dir = `${import.meta.dir}/.tmp/pull-plans`;
 const imports = [
 	'import { feature } from "../../../src/generated/features";',
-	`import { plan } from "${import.meta.dir}/../src/generated/plans";`,
+	'import { plan } from "../../../src/generated/plans";',
 	'import { atmn } from "../../../src/generated/wire";',
 	"",
 ].join("\n");

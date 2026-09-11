@@ -1,4 +1,4 @@
-import { dirname, relative } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { Lang, parse } from "@ast-grep/napi";
 import { appendToBinding } from "../../surgery/appendToBinding";
 import { appendToCollection } from "../../surgery/appendToCollection";
@@ -42,6 +42,22 @@ const referenceSpecifier = ({
 		.replace(/\.ts$/, "");
 	return path.startsWith(".") ? path : `./${path}`;
 };
+
+const builderSpecifierForFixture = ({
+	configPath,
+	fixtureFile,
+	specifier,
+}: {
+	configPath: string;
+	fixtureFile: string;
+	specifier: string;
+}): string =>
+	specifier.startsWith(".")
+		? referenceSpecifier({
+				from: fixtureFile,
+				fixtureFile: resolve(dirname(configPath), specifier),
+			})
+		: specifier;
 
 const ensureReferenceImport = ({
 	source,
@@ -109,12 +125,54 @@ const addExport = ({
 export const planVersionExportName = ({
 	planId,
 	versionSlug,
+	takenSources = [],
 }: {
 	planId: string;
 	versionSlug: string;
+	takenSources?: string[];
 }): string => {
-	const sanitized = `${planId}_${versionSlug}`.replace(/[^A-Za-z0-9]/g, "_");
-	return /^[A-Za-z_]/.test(sanitized) ? sanitized : `_${sanitized}`;
+	const raw = `${planId}_${versionSlug}`;
+	const sanitized = raw.replace(/[^A-Za-z0-9]/g, "_");
+	const preferred = /^[A-Za-z_]/.test(sanitized) ? sanitized : `_${sanitized}`;
+	if (!takenSources.some((source) => declaresName({ source, name: preferred })))
+		return preferred;
+
+	const encoded = raw.replace(
+		/[^A-Za-z0-9]/gu,
+		(character) => `_${character.codePointAt(0)?.toString(16)}_`,
+	);
+	const fallback = /^[A-Za-z_]/.test(encoded) ? encoded : `_${encoded}`;
+	let available = fallback;
+	let suffix = 2;
+	while (
+		takenSources.some((source) => declaresName({ source, name: available }))
+	) {
+		available = `${fallback}_${suffix}`;
+		suffix += 1;
+	}
+	return available;
+};
+
+const declaresName = ({
+	source,
+	name,
+}: {
+	source: string;
+	name: string;
+}): boolean => {
+	const root = parse(Lang.TypeScript, source).root();
+	const variable = root
+		.findAll({ rule: { kind: "variable_declarator" } })
+		.some((node) => node.field("name")?.text() === name);
+	if (variable) return true;
+	return root.findAll({ rule: { kind: "import_specifier" } }).some(
+		(node) =>
+			node
+				.text()
+				.trim()
+				.split(/\s+as\s+/)
+				.at(-1) === name,
+	);
 };
 
 export const appendPlanVersionFixture = ({
@@ -122,7 +180,8 @@ export const appendPlanVersionFixture = ({
 	files,
 	target,
 	fixtureFile,
-	exportName,
+	planId,
+	versionSlug,
 	fixture,
 	builder,
 	targetCollection,
@@ -132,7 +191,8 @@ export const appendPlanVersionFixture = ({
 	files: Map<string, string>;
 	target: CollectionTarget;
 	fixtureFile: string;
-	exportName: string;
+	planId: string;
+	versionSlug: string;
 	fixture: string;
 	builder: string;
 	targetCollection: string;
@@ -140,6 +200,12 @@ export const appendPlanVersionFixture = ({
 }): boolean => {
 	const configSource = files.get(configPath) ?? "";
 	const originalFixtureSource = files.get(fixtureFile);
+	const targetSourceBefore = files.get(target.file) ?? "";
+	const exportName = planVersionExportName({
+		planId,
+		versionSlug,
+		takenSources: [targetSourceBefore, originalFixtureSource ?? ""],
+	});
 	const builderSpecifier = importSpecifierForBuilder({
 		source: configSource,
 		builder,
@@ -148,7 +214,7 @@ export const appendPlanVersionFixture = ({
 		originalFixtureSource ??
 		(builderSpecifier === null
 			? ""
-			: `import { ${builder} } from "${builderSpecifier}";\n`);
+			: `import { ${builder} } from "${builderSpecifierForFixture({ configPath, fixtureFile, specifier: builderSpecifier })}";\n`);
 	const withExport = addExport({
 		source: seededFixtureSource,
 		declaration: `export const ${exportName} = ${fixture};`,
