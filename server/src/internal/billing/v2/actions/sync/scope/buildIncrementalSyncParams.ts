@@ -9,6 +9,10 @@ import {
 import type { MatchedPlan, SubscriptionMatch } from "../detect/types";
 import { findLicenseQuantityDrifts } from "./findLicenseQuantityDrifts";
 import {
+	matchedStripePriceIdsForProduct,
+	stripeIdentifiesNewPlanVersion,
+} from "./stripeIdentifiesNewPlanVersion";
+import {
 	linkedCustomerProductsToTargetGroupMap,
 	matchedPlanToTargetGroupLink,
 } from "./targetGroupLinks";
@@ -210,8 +214,8 @@ export const buildIncrementalSyncParams = ({
 			continue;
 		}
 
-		// Main plans re-sync only when the linked target's product id changed
-		// (upgrade/downgrade); prepaid drift is not checked for them here.
+		// Main plans re-sync on product-id change (upgrade/downgrade). Version
+		// rematch only counts when Stripe uniquely identifies the new version.
 		const target = matchedPlanToTargetGroupLink({ matchedPlan, syncPlan });
 		if (!target) {
 			return {
@@ -223,7 +227,15 @@ export const buildIncrementalSyncParams = ({
 		const linkedProduct = linkedTargets.targets.get(target.key);
 		const versionChanged =
 			syncPlan.version !== undefined &&
-			linkedProduct?.product.version !== syncPlan.version;
+			linkedProduct != null &&
+			linkedProduct.product.version !== syncPlan.version &&
+			stripeIdentifiesNewPlanVersion({
+				linkedCustomerProduct: linkedProduct,
+				incomingStripePriceIds: matchedStripePriceIdsForProduct({
+					phaseMatch,
+					productId: target.productId,
+				}),
+			});
 		if (
 			!linkedProduct ||
 			linkedProduct.product.id !== target.productId ||
