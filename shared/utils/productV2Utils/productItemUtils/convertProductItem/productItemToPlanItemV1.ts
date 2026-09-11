@@ -1,14 +1,16 @@
+import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { PlanExpand } from "@api/products/components/planExpand.js";
-import { priceConfigToPriceProcessors } from "@utils/productUtils/priceUtils/convertPrice/priceConfigToPriceProcessors.js";
 import {
 	type ApiPlanItemV1,
 	ApiPlanItemV1Schema,
 } from "@api/products/items/apiPlanItemV1.js";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
 	type ProductItem,
 	UsageModel,
 } from "@models/productV2Models/productItemModels/productItemModels.js";
+import { priceConfigToPriceProcessors } from "@utils/productUtils/priceUtils/convertPrice/priceConfigToPriceProcessors.js";
 import { InternalError } from "../../../../api/models.js";
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
 import { expandIncludes } from "../../../expandUtils.js";
@@ -131,6 +133,22 @@ const itemToPlanFeaturePrice = ({
 	};
 };
 
+/** Only one-off prepaid items can carry expiry, so a value left over from an
+ * earlier pricing shape never reaches the API (where it would be rejected). */
+const itemToPlanFeatureExpiry = ({
+	item,
+}: {
+	item: ProductItem;
+}): ApiPlanItemV1["expiry"] => {
+	if (!item.config?.expiry) return undefined;
+	if (!isFeaturePriceItem(item)) return undefined;
+	if (itemToBillingMethod({ item }) !== BillingMethod.Prepaid) return undefined;
+	if (itemToBillingInterval({ item }) !== BillingInterval.OneOff) {
+		return undefined;
+	}
+	return item.config.expiry;
+};
+
 const itemToPlanFeatureRollover = ({
 	item,
 }: {
@@ -226,6 +244,7 @@ export const productItemsToPlanItemsV1 = ({
 
 			rollover,
 			proration,
+			expiry: itemToPlanFeatureExpiry({ item }),
 			feature_override: item.config?.feature_override
 				? dbFeatureOverrideToApi(item.config.feature_override)
 				: undefined,

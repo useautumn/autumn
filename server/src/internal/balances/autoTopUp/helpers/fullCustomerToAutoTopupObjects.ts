@@ -23,6 +23,12 @@ const getThreshold = (cusEnt: FullCusEntWithFullCusProduct) =>
 const isThresholdEntitlement = (cusEnt: FullCusEntWithFullCusProduct) =>
 	getThreshold(cusEnt) !== undefined;
 
+/** Grant rows share the item's price, so the charge source must be the item's
+ * own never-expiring row — otherwise a top-up could anchor to a row that is
+ * about to expire out of the subject. */
+const isChargeSource = (cusEnt: FullCusEntWithFullCusProduct) =>
+	cusEnt.expires_at == null;
+
 const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
 	const customerPrice = cusEntToCusPrice({ cusEnt });
 	return Boolean(
@@ -91,13 +97,14 @@ export const fullCustomerToAutoTopupObjects = ({
 		customerEntitlement = cusEnts.find(
 			(ce) =>
 				ce.customer_product?.internal_product_id === sourceProductInternalId &&
-				isOneOffPrepaid(ce),
+				isOneOffPrepaid(ce) &&
+				isChargeSource(ce),
 		);
 	} else {
 		// Customer-level config has no source plan, so charge the MOST RECENTLY
 		// attached plan's one-off price.
 		customerEntitlement = cusEnts
-			.filter(isOneOffPrepaid)
+			.filter((ce) => isOneOffPrepaid(ce) && isChargeSource(ce))
 			.sort(
 				(left, right) =>
 					(right.customer_product?.created_at ?? 0) -
