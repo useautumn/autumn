@@ -186,20 +186,48 @@ export const applyPreview = ({
 		}
 		return join(dirname(configPath), "planVersions", `${id}.ts`);
 	};
-	const deleteExportReferences = ({ name }: { name: string }): void => {
-		const referenceFiles = new Set([configPath]);
-		for (const targetCollection of [collection, spec.historyKey]) {
-			if (targetCollection === undefined) continue;
-			const target = resolveCollectionTarget({
-				configPath,
-				files,
-				collection: targetCollection,
-			});
-			if (target !== null) referenceFiles.add(target.file);
-		}
-		for (const file of referenceFiles) {
-			files.set(file, deleteReference({ source: files.get(file) ?? "", name }));
-		}
+	const collectionForRemoval = ({
+		id,
+		entry,
+		fixtureFile,
+	}: {
+		id: string;
+		entry: PreviewEntry;
+		fixtureFile: string;
+	}): string => {
+		const collectionTargets = [collection, spec.historyKey].flatMap(
+			(targetCollection) => {
+				if (targetCollection === undefined) return [];
+				const target = resolveCollectionTarget({
+					configPath,
+					files,
+					collection: targetCollection,
+				});
+				return target?.file === fixtureFile ? [targetCollection] : [];
+			},
+		);
+		if (collectionTargets.length === 1) return collectionTargets[0];
+		return versioned && configActiveOf({ id, entry }) === false
+			? (spec.historyKey ?? collection)
+			: collection;
+	};
+	const deleteExportReference = ({
+		name,
+		targetCollection,
+	}: {
+		name: string;
+		targetCollection: string;
+	}): void => {
+		const target = resolveCollectionTarget({
+			configPath,
+			files,
+			collection: targetCollection,
+		});
+		if (target === null) return;
+		files.set(
+			target.file,
+			deleteReference({ source: files.get(target.file) ?? "", name }),
+		);
 	};
 
 	const removeFixture = ({
@@ -240,7 +268,14 @@ export const applyPreview = ({
 		if (removed === null) return;
 		files.set(located.file, removed.source);
 		if (removed.exportedName !== undefined)
-			deleteExportReferences({ name: removed.exportedName });
+			deleteExportReference({
+				name: removed.exportedName,
+				targetCollection: collectionForRemoval({
+					id,
+					entry,
+					fixtureFile: located.file,
+				}),
+			});
 		result.deleted.push(id);
 		result.lines.push(`- ${id}`);
 	};
@@ -519,7 +554,13 @@ export const applyPreview = ({
 				if (removed === null) return;
 				files.set(located.file, removed.source);
 				if (removed.exportedName !== undefined)
-					deleteExportReferences({ name: removed.exportedName });
+					deleteExportReference({
+						name: removed.exportedName,
+						targetCollection:
+							configActive === false
+								? (spec.historyKey ?? collection)
+								: collection,
+					});
 				const appended = appendRow({
 					id,
 					entry,
