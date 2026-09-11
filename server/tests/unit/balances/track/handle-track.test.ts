@@ -50,8 +50,11 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 
 describe("handleTrack", () => {
 	let restoreQueueEnv: (() => void) | undefined;
+	let originalKafkaAuthMode: string | undefined;
 
 	beforeEach(() => {
+		originalKafkaAuthMode = process.env.KAFKA_AUTH_MODE;
+		process.env.KAFKA_AUTH_MODE = "none";
 		mockState.queueCommands = [];
 		_setAsyncTrackConfigForTesting({ config: { enabledOrgIds: [] } });
 		restoreQueueEnv = pinTrackProducerQueueToFifo({
@@ -77,6 +80,11 @@ describe("handleTrack", () => {
 		}
 		restoreQueueEnv?.();
 		restoreQueueEnv = undefined;
+		if (originalKafkaAuthMode === undefined) {
+			delete process.env.KAFKA_AUTH_MODE;
+		} else {
+			process.env.KAFKA_AUTH_MODE = originalKafkaAuthMode;
+		}
 	});
 
 	test("returns 202 success for async track", async () => {
