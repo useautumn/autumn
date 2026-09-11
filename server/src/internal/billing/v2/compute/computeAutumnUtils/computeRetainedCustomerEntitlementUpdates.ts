@@ -5,6 +5,7 @@ import {
 	cusProductToProduct,
 	featureUtils,
 	isBooleanEntitlement,
+	isLifetimeEntitlement,
 	isOneOffPrepaidConsumableCustomerEntitlement,
 	isUnlimitedEntitlement,
 	type UpdateSubscriptionBillingContext,
@@ -39,12 +40,18 @@ export const computeRetainedCustomerEntitlementUpdates = ({
 	const updates: NonNullable<AutumnBillingPlan["updateCustomerEntitlements"]> =
 		[];
 
+	const grantsOnlyCycleBoundBalances =
+		updateSubscriptionContext.requestedBillingCycleAnchor === "now";
+
 	for (const customerEntitlement of finalCustomerProduct.customer_entitlements) {
 		const { entitlement } = customerEntitlement;
+		const outlivesBillingCycle =
+			grantsOnlyCycleBoundBalances && isLifetimeEntitlement({ entitlement });
 		const resetsCustomerEntitlementUsage =
 			!isBooleanEntitlement({ entitlement }) &&
 			!isUnlimitedEntitlement({ entitlement }) &&
 			!featureUtils.isAllocated(entitlement.feature) &&
+			!outlivesBillingCycle &&
 			!isOneOffPrepaidConsumableCustomerEntitlement(
 				addCusProductToCusEnt({
 					cusEnt: customerEntitlement,
