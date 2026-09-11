@@ -143,9 +143,11 @@ test.concurrent(
 			customerId,
 			autumn: autumnV2_4,
 			featureId: TestFeature.Messages,
+			granted: NEW_PREPAID,
+			remaining: NEW_PREPAID,
 			breakdown: {
 				[BillingMethod.Prepaid]: {
-					granted: NEW_PREPAID,
+					prepaid_grant: NEW_PREPAID,
 					remaining: NEW_PREPAID,
 				},
 			},
