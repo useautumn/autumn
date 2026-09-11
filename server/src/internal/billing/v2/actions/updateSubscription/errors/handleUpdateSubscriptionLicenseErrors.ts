@@ -112,7 +112,10 @@ export const handleUpdateSubscriptionLicenseErrors = ({
 		);
 	}
 
-	if (billingContext.intent === UpdateSubscriptionIntent.UpdateLicenseQuantity)
+	if (
+		billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity &&
+		params.license_quantities?.length
+	)
 		handleLicenseQuantityErrors({ billingContext, params });
 
 	if (billingContext.intent === UpdateSubscriptionIntent.UpdatePlan)

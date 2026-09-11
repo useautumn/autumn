@@ -13,9 +13,9 @@ import type {
 import type { BillingContext, BillingVersion } from "./billingContext";
 
 export enum UpdateSubscriptionIntent {
+	/** Converge quantity dials in place — prepaid feature options and/or
+	 * license pool paid counts — with no plan restructure. */
 	UpdateQuantity = "update_quantity",
-	/** Converge license pool paid quantities in place — no plan restructure. */
-	UpdateLicenseQuantity = "update_license_quantity",
 	UpdatePlan = "update_plan",
 	CancelAction = "cancel_action",
 	/** Add credits to a one-off prepaid item hosted on a paid-recurring cusProduct. */

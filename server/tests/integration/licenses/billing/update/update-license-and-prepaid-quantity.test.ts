@@ -10,7 +10,7 @@
  * stays "Cannot update a one-off prepaid quantity alongside other subscription changes".
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
 	type ApiCustomerV5,
@@ -118,6 +118,25 @@ test.concurrent(
 			newRecurringTotal,
 			expectLineItemCount: 4,
 		});
+
+		// In-place quantity updates report the same plan as outgoing (pre-update
+		// picture) and incoming (post-update picture).
+		expect(preview.outgoing).toEqual([
+			expect.objectContaining({
+				plan_id: parent.id,
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: ATTACHED_PREPAID },
+				],
+			}),
+		]);
+		expect(preview.incoming).toEqual([
+			expect.objectContaining({
+				plan_id: parent.id,
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: NEW_PREPAID },
+				],
+			}),
+		]);
 
 		await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>(
 			updateParams,

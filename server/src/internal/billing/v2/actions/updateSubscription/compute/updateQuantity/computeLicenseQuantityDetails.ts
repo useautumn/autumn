@@ -1,5 +1,5 @@
 import type {
-	AutumnBillingPlan,
+	CustomerLicenseUpdate,
 	LineItem,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
@@ -9,54 +9,51 @@ import { convergeCustomerLicense } from "@/internal/billing/v2/utils/convergeCus
 import { customerLicenseToLineItems } from "@/internal/billing/v2/utils/lineItems/customerLicenseToLineItems";
 import { licenseInvoiceCreditFromStoredLineItems } from "@/internal/billing/v2/utils/lineItems/licenseInvoiceCreditFromStoredLineItems";
 
+export type LicenseQuantityDetails = {
+	customerLicenseUpdates: CustomerLicenseUpdate[];
+	lineItems: LineItem[];
+};
+
 /**
  * Converges pool paid counts onto the requested totals in place — the parent
  * customer product and seat anchors are untouched. Bills a refund of the full
  * previous quantity picture and a charge of the new one (one line per price,
- * like feature-quantity updates); identical pairs cancel in finalizeLineItems.
+ * like prepaid quantity updates); identical pairs cancel in finalizeLineItems.
  */
-export const computeUpdateLicenseQuantityPlan = ({
+export const computeLicenseQuantityDetails = ({
 	ctx,
-	updateSubscriptionContext,
+	billingContext,
 }: {
 	ctx: AutumnContext;
-	updateSubscriptionContext: UpdateSubscriptionBillingContext;
-}): AutumnBillingPlan => {
-	const { customerProduct, customerLicenseQuantities } =
-		updateSubscriptionContext;
+	billingContext: UpdateSubscriptionBillingContext;
+}): LicenseQuantityDetails => {
+	const { customerProduct, customerLicenseQuantities } = billingContext;
 
-	const lineItems: LineItem[] = [];
 	const changes = computeCustomerLicenseQuantityChanges({
 		customerProduct,
 		customerLicenseQuantities,
 	});
 
-	for (const { customerLicense, paidQuantity } of changes) {
-		lineItems.push(
-			...licenseInvoiceCreditFromStoredLineItems({
-				ctx,
-				billingContext: updateSubscriptionContext,
-				customerProduct,
+	const lineItems = changes.flatMap(({ customerLicense, paidQuantity }) => [
+		...licenseInvoiceCreditFromStoredLineItems({
+			ctx,
+			billingContext,
+			customerProduct,
+			customerLicense,
+		}),
+		...customerLicenseToLineItems({
+			ctx,
+			billingContext,
+			customerProduct,
+			customerLicense: convergeCustomerLicense({
 				customerLicense,
+				paidQuantity,
 			}),
-			...customerLicenseToLineItems({
-				ctx,
-				billingContext: updateSubscriptionContext,
-				customerProduct,
-				customerLicense: convergeCustomerLicense({
-					customerLicense,
-					paidQuantity,
-				}),
-				direction: "charge",
-			}),
-		);
-	}
+			direction: "charge",
+		}),
+	]);
 
 	return {
-		customerId: updateSubscriptionContext.fullCustomer?.id ?? "",
-		insertCustomerProducts: [],
-		customPrices: [],
-		customEntitlements: [],
 		customerLicenseUpdates: changes.map(({ update }) => update),
 		lineItems,
 	};

@@ -4,6 +4,7 @@ import {
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
 } from "@autumn/shared";
+import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
 
 export const handleUpdateCheckoutErrors = ({
 	billingContext,
@@ -26,6 +27,12 @@ export const handleUpdateCheckoutErrors = ({
 				featureQuantity.quantity,
 		);
 
+		const licenseQuantitiesUnchanged =
+			computeCustomerLicenseQuantityChanges({
+				customerProduct: billingContext.customerProduct,
+				customerLicenseQuantities: billingContext.customerLicenseQuantities,
+			}).length === 0;
+
 		const hasAdjustableFeature = billingContext.featureQuantities.some(
 			(featureQuantity) =>
 				billingContext.adjustableFeatureQuantities?.includes(
@@ -33,7 +40,7 @@ export const handleUpdateCheckoutErrors = ({
 				) === true,
 		);
 
-		if (quantitiesUnchanged && !hasAdjustableFeature) {
+		if (quantitiesUnchanged && licenseQuantitiesUnchanged && !hasAdjustableFeature) {
 			throw new RecaseError({
 				message:
 					"Cannot create checkout when quantities are not updated or adjustable",
