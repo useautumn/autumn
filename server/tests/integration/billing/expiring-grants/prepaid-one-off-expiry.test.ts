@@ -380,7 +380,16 @@ test.concurrent(
 		expect(after.balances[TestFeature.Messages]?.remaining ?? 0).toBe(0);
 
 		// ── Contract assertion 18: the sweep deletes the elapsed row ──────────
-		const { deleted } = await deleteExpiredGrants({ ctx });
+		// Scoped to this customer: the suite runs concurrently against a shared
+		// database, and an unscoped sweep would delete other tests' rows.
+		const scoped = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const { deleted } = await deleteExpiredGrants({
+			ctx,
+			internalCustomerId: scoped.internal_id,
+		});
 		expect(deleted).toBeGreaterThan(0);
 
 		const fullCustomer = await CusService.getFull({

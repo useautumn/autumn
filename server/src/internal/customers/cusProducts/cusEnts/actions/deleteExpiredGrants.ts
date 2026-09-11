@@ -1,5 +1,5 @@
 import { customerEntitlements } from "@autumn/shared";
-import { and, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 
 /** Bounded per tick so one sweep can never hold a long transaction on a table
@@ -19,9 +19,13 @@ const MAX_BATCHES_PER_TICK = 20;
 export const deleteExpiredGrants = async ({
 	ctx,
 	now = Date.now(),
+	internalCustomerId,
 }: {
 	ctx: CronContext;
 	now?: number;
+	/** Narrows the sweep to one customer. The cron sweeps everything; tests
+	 * scope themselves so a shared database isn't swept out from under them. */
+	internalCustomerId?: string;
 }): Promise<{ deleted: number }> => {
 	let deleted = 0;
 
@@ -34,6 +38,14 @@ export const deleteExpiredGrants = async ({
 					isNotNull(customerEntitlements.customer_product_id),
 					isNotNull(customerEntitlements.expires_at),
 					lt(customerEntitlements.expires_at, now),
+					...(internalCustomerId
+						? [
+								eq(
+									customerEntitlements.internal_customer_id,
+									internalCustomerId,
+								),
+							]
+						: []),
 				),
 			)
 			.orderBy(sql`${customerEntitlements.expires_at} ASC`)
