@@ -35,7 +35,22 @@ afterEach(() => {
 
 const authorizeWithFakeTokens: Authorize = async ({ onAuthorizationUrl }) => {
 	await onAuthorizationUrl({ url: AUTHORIZATION_URL });
-	return { accessToken: "oauth_access_token", tokenType: "Bearer" };
+	return {
+		kind: "oauth",
+		tokens: { accessToken: "oauth_access_token", tokenType: "Bearer" },
+	};
+};
+
+const authorizeAsImpersonation: Authorize = async ({ onAuthorizationUrl }) => {
+	await onAuthorizationUrl({ url: AUTHORIZATION_URL });
+	return {
+		kind: "impersonation",
+		tokens: {
+			sandboxToken: "am_oauth_sandbox",
+			liveToken: "am_oauth_live",
+			expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+		},
+	};
 };
 
 const createFakeApiKeys: CreateApiKeys = async () => ({
@@ -147,6 +162,40 @@ test("keys go into the existing env file, leaving the rest of it alone", async (
 			"",
 		].join("\n"),
 	);
+});
+
+test("an impersonating session writes the one-hour tokens and mints no api keys", async () => {
+	const cwd = makeProjectDir();
+	let output = "";
+	let mintedKeys = false;
+
+	const result = await runLogin({
+		cwd,
+		openBrowser: openerThatWorks,
+		write: (text) => {
+			output += text;
+		},
+		authorize: authorizeAsImpersonation,
+		createApiKeys: async () => {
+			mintedKeys = true;
+			return createFakeApiKeys({ accessToken: "unused" });
+		},
+	});
+
+	expect(mintedKeys).toBe(false);
+	expect(result.writtenKeys).toEqual([
+		"AUTUMN_SECRET_KEY",
+		"AUTUMN_PROD_SECRET_KEY",
+	]);
+	expect(readFileSync(result.envPath, "utf8")).toBe(
+		[
+			"AUTUMN_SECRET_KEY=am_oauth_sandbox",
+			"AUTUMN_PROD_SECRET_KEY=am_oauth_live",
+			"",
+		].join("\n"),
+	);
+	expect(output).toContain("impersonation tokens");
+	expect(output).toContain("run `atmn login` again");
 });
 
 test("a login that mints no keys fails loudly rather than writing nothing", async () => {

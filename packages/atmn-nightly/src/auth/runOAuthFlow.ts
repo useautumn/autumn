@@ -11,7 +11,8 @@ import {
 } from "./buildAuthorizationUrl";
 import { renderErrorPage, renderSuccessPage } from "./callbackPages";
 import { getTokenEndpoint, OAUTH_PORTS } from "./oauthConfig";
-import type { OAuthTokens } from "./types/oauthTokens";
+import { readImpersonationTokens } from "./types/impersonationTokens";
+import type { AuthorizationOutcome } from "./types/oauthTokens";
 
 const AUTHORIZATION_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -28,7 +29,11 @@ export type RunOAuthFlowOptions = {
 	onAuthorizationUrl: AuthorizationUrlListener;
 };
 
-type CallbackOutcome = { page: string; tokens?: OAuthTokens; error?: Error };
+type CallbackOutcome = {
+	page: string;
+	outcome?: AuthorizationOutcome;
+	error?: Error;
+};
 
 const failedCallback = ({ message }: { message: string }): CallbackOutcome => ({
 	page: renderErrorPage({ message }),
@@ -54,13 +59,16 @@ const exchangeAuthorizationCode = async ({
 		);
 		return {
 			page: renderSuccessPage(),
-			tokens: {
-				accessToken: tokens.accessToken(),
-				tokenType: "Bearer",
-				expiresInSeconds: tokens.accessTokenExpiresInSeconds(),
-				refreshToken: tokens.hasRefreshToken()
-					? tokens.refreshToken()
-					: undefined,
+			outcome: {
+				kind: "oauth",
+				tokens: {
+					accessToken: tokens.accessToken(),
+					tokenType: "Bearer",
+					expiresInSeconds: tokens.accessTokenExpiresInSeconds(),
+					refreshToken: tokens.hasRefreshToken()
+						? tokens.refreshToken()
+						: undefined,
+				},
 			},
 		};
 	} catch (error) {
@@ -95,6 +103,15 @@ const readCallback = async ({
 		return failedCallback({ message: "Invalid state — possible CSRF" });
 	}
 
+	// An impersonating dashboard session hands back tokens instead of a code.
+	const impersonation = readImpersonationTokens(callbackUrl.searchParams);
+	if (impersonation) {
+		return {
+			page: renderSuccessPage(),
+			outcome: { kind: "impersonation", tokens: impersonation },
+		};
+	}
+
 	const code = callbackUrl.searchParams.get("code");
 	if (!code) return failedCallback({ message: "Missing authorization code" });
 
@@ -119,7 +136,7 @@ const listenForCallback = ({
 		callbackUrl: URL;
 	}) => Promise<CallbackOutcome>;
 	onListening: () => void;
-}): Promise<OAuthTokens | null> =>
+}): Promise<AuthorizationOutcome | null> =>
 	new Promise((resolve, reject) => {
 		const server = createServer(async (request, response) => {
 			const callbackUrl = new URL(
@@ -131,14 +148,14 @@ const listenForCallback = ({
 				return;
 			}
 
-			const { page, tokens, error } = await onCallback({ callbackUrl });
+			const { page, outcome, error } = await onCallback({ callbackUrl });
 			clearTimeout(timeout);
 
 			// Settle only once the page is flushed — the browser's keep-alive socket
 			// would otherwise outlive the command and hang the CLI.
 			response.writeHead(200, { "Content-Type": "text/html" }).end(page, () => {
 				shutDown();
-				if (tokens) resolve(tokens);
+				if (outcome) resolve(outcome);
 				else reject(error ?? new Error("Authorization returned no tokens"));
 			});
 		});
@@ -171,7 +188,7 @@ export const runOAuthFlow = async ({
 	backendUrl,
 	scopes,
 	onAuthorizationUrl,
-}: RunOAuthFlowOptions): Promise<OAuthTokens> => {
+}: RunOAuthFlowOptions): Promise<AuthorizationOutcome> => {
 	const codeVerifier = generateCodeVerifier();
 	const state = generateState();
 
@@ -185,7 +202,7 @@ export const runOAuthFlow = async ({
 			codeVerifier,
 		});
 
-		const tokens = await listenForCallback({
+		const outcome = await listenForCallback({
 			port,
 			onCallback: ({ callbackUrl }) =>
 				readCallback({
@@ -204,7 +221,7 @@ export const runOAuthFlow = async ({
 			},
 		});
 
-		if (tokens) return tokens;
+		if (outcome) return outcome;
 	}
 
 	throw new Error(

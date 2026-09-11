@@ -20,22 +20,31 @@ Organization
 Configuration model:
 Feature
 - referenced by -> Plan Item
+- credit_system type: maps actions to credit costs (flat or tiered)
 
 Plan
 - items[] -> Plan Item
   - feature_id -> Feature
   - optional price -> usage_based or prepaid feature price
 - price -> base recurring or one-off price
+- versions[] -> parallel definitions of this plan; ONE is active
+- variants[] -> Plan (a derived plan storing only its differences)
+- licenses[] -> Plan (a seat plan this plan hands out per seat)
+- aliases -> old plan ids that still resolve after a rename
 
 Plan Item
 - feature_id -> Feature
 - optional price -> usage_based or prepaid feature price
+- pooled? -> entity grants combine into one shared customer balance
 
 Runtime model:
 Customer
-- subscriptions[] -> Subscription -> Plan
+- subscriptions[] -> Subscription -> Plan (a specific version of it)
 - purchases[] -> Purchase -> Plan
 - balances[feature_id] -> Balance -> Feature
+  - pooled balance: fed by entity grants, spent by any entity
+  - rollover, expiry, usage windows live here
+- license pools[license] -> seats granted / assigned / remaining
 - flags[feature_id] -> Flag -> Feature
 - billing_controls -> customer-level usage controls
 - entities[] -> Entity -> same runtime shape scoped under Customer
@@ -46,13 +55,20 @@ Entity
 - purchases[] -> Purchase -> Plan
 - balances[feature_id] -> Balance -> Feature
 - flags[feature_id] -> Flag -> Feature
-- billing_controls -> entity-level controls where supported
+- license assignment -> holds one seat from the customer's pool
 
 From config to customer state:
 Plan + Customer --billing.attach--> Subscription or Purchase
 Plan + Customer + entity_id --billing.attach--> Entity-scoped Subscription or Purchase
+Parent plan's licenses --licenses.attach--> seat assigned to an Entity
 Subscription/Purchase -> Balance or Flag provisioning
 ```
+
+Two relationships changed recently — worth stating plainly because older docs describe the old way:
+
+**Versions are groups of customers, not history.** A plan's versions used to be numbered steps in time, and the newest was always live. Now each version is a definition that some group of customers lives on, and one version is marked **active** — the one new customers get. You promote a version to active deliberately, when it's ready. Why it works this way: change a plan for *everyone* (say, add a feature to all versions) and that's an edit, not a new version. Change the terms so existing customers keep the old deal (say, raise the base price) and that's a new version — the old customers stay on theirs. Non-active versions are also how you stage plans during a migration from another billing setup.
+
+**Plans connect to other plans.** A plan can have variants (an annual twin storing only its differences), and it can offer licenses (a small seat plan it hands out per seat). So plans form a graph, not a flat list.
 
 Use these definitions as the mental model when designing or changing Autumn
 pricing. Reason in terms of features, plans, plan items, customers/entities, and
@@ -77,3 +93,5 @@ For reasoning about free trials and when billing begins, read `references/trials
 For distinguishing a customer from an entity (seats, sub-accounts) and their runtime billing state, read `references/customer-entity.md`.
 
 For reasoning about billing controls — runtime caps, alerts, overage, and top-ups, read `references/billing-controls.md`.
+
+For reasoning about licenses — seat plans a parent plan hands out, seat pools, assigning and releasing seats, read `references/licenses.md`.

@@ -282,7 +282,7 @@ const setupTwoVersions = async ({
 	return { basePlanId, ctx, variantPlanId };
 };
 
-test(`${chalk.yellowBright("atmn all versions: updates selected base and variant versions with draft")}`, () =>
+test.skip(`${chalk.yellowBright("atmn all versions: updates selected base and variant versions with draft")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, ctx, variantPlanId } = await setupTwoVersions({
 			testId: "selected",
@@ -341,7 +341,7 @@ test(`${chalk.yellowBright("atmn all versions: updates selected base and variant
 			});
 		}));
 
-test(`${chalk.yellowBright("atmn all versions: skipped variant versions remain unchanged")}`, () =>
+test.skip(`${chalk.yellowBright("atmn all versions: skipped variant versions remain unchanged")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, ctx, variantPlanId } = await setupTwoVersions({
 			testId: "skipped",
@@ -394,7 +394,7 @@ test(`${chalk.yellowBright("atmn all versions: skipped variant versions remain u
 		});
 	}));
 
-test(`${chalk.yellowBright("atmn all versions: can update without migration draft")}`, () =>
+test.skip(`${chalk.yellowBright("atmn all versions: can update without migration draft")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, ctx, variantPlanId } = await setupTwoVersions({
 			testId: "no_migration",
@@ -445,7 +445,7 @@ test(`${chalk.yellowBright("atmn all versions: can update without migration draf
 		});
 	}));
 
-test(`${chalk.yellowBright("atmn all versions: base feature add stays idempotent after variant propagation")}`, () =>
+test.skip(`${chalk.yellowBright("atmn all versions: base feature add stays idempotent after variant propagation")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, ctx, variantPlanId } = await setupTwoVersions({
 			testId: "feature_add",

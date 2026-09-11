@@ -6,9 +6,9 @@ import type {
 import { ErrCode } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useAnalyticsFilterState } from "./useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useSelectedEventNames } from "./useSelectedEventNames";
 
@@ -29,11 +29,13 @@ export const useAnalyticsData = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const [searchParams] = useSearchParams();
-	const customerId = searchParams.get("customer_id");
-	const entityId = searchParams.get("entity_id");
-	const groupBy = searchParams.get("group_by");
-	const maxGroups = Number(searchParams.get("max_groups")) || 10;
+	const { filterStates } = useAnalyticsFilterState();
+	const {
+		customer_id: customerId,
+		entity_id: entityId,
+		group_by: groupBy,
+		max_groups: maxGroups,
+	} = filterStates;
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, bin_size: binSize, start, end } = queryStates;
@@ -53,6 +55,9 @@ export const useAnalyticsData = ({
 	} = useSelectedEventNames();
 
 	const timezone = useMemo(() => getUserTimezone(), []);
+	// Month bins are requested in UTC so they can be served from the monthly
+	// rollups, which key on UTC month starts; a local month never aligns with one.
+	const effectiveTimezone = binSize === "month" ? "UTC" : timezone;
 
 	// Deducted mode defaults to splitting by which tracked feature caused the
 	// deduction — the story the mode exists to tell. An explicit group_by wins.
@@ -75,7 +80,7 @@ export const useAnalyticsData = ({
 		event_names: selectedEventNames,
 		group_by: formattedGroupBy,
 		bin_size: binSize || undefined,
-		timezone,
+		timezone: effectiveTimezone,
 		max_groups: formattedGroupBy ? maxGroups : undefined,
 		aggregate_on: aggregateOn,
 	};
@@ -141,9 +146,8 @@ export const useRawAnalyticsData = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const [searchParams] = useSearchParams();
-	const customerId = searchParams.get("customer_id");
-	const entityId = searchParams.get("entity_id");
+	const { filterStates } = useAnalyticsFilterState();
+	const { customer_id: customerId, entity_id: entityId } = filterStates;
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;

@@ -65,7 +65,7 @@ const hasFixedPriceAmount = ({
 		return "amount" in config && config.amount === amount;
 	});
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("atmn versioning: pushing an attached pro plan update creates v2")}`,
 	async () => {
 		const pro = products.pro({

@@ -1,5 +1,5 @@
 {
-  "id": "3aeb6ca4-2850-4b4b-a8dd-3db81ac562b9",
+  "id": "fe838c4b-2b6b-4a20-b503-f52270dd8d4f",
   "prevId": "2c730ec1-98c9-4628-ab35-ac9ed7918710",
   "version": "7",
   "dialect": "postgresql",
@@ -1989,22 +1989,6 @@
           ],
           "isUnique": false,
           "where": "\"customer_entitlements\".\"pooled_contribution_id\" IS NOT NULL",
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_customer_entitlements_expiring_grants": {
-          "name": "idx_customer_entitlements_expiring_grants",
-          "columns": [
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"customer_entitlements\".\"customer_product_id\" IS NOT NULL AND \"customer_entitlements\".\"expires_at\" IS NOT NULL",
           "concurrently": true,
           "method": "btree",
           "with": {}
@@ -7641,6 +7625,24 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "claim_state": {
+          "name": "claim_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "claim_token_hash": {
+          "name": "claim_token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "claim_expires_at": {
+          "name": "claim_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -7693,6 +7695,22 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_organizations_pending_claim_expiry": {
+          "name": "idx_organizations_pending_claim_expiry",
+          "columns": [
+            {
+              "expression": "claim_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"organizations\".\"claim_state\" = 'pending'",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -7751,6 +7769,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "slug"
+          ]
+        },
+        "organizations_claim_token_hash_key": {
+          "name": "organizations_claim_token_hash_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "claim_token_hash"
           ]
         },
         "organizations_test_pkey_key": {

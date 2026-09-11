@@ -78,6 +78,28 @@ if [[ "$resolved" == "$repo_root/packages/mcp/tests/"* && "$resolved" == *".test
 	exec bun test "$rel" "${passthrough_args[@]}"
 fi
 
+if [[ "$resolved" == "$repo_root/packages/ax-evals/"* && "$resolved" == *".eval.ts" ]]; then
+	# One case per eval file, so a cursor line number never needs a filter.
+	cd "$repo_root/packages/ax-evals"
+	rel="${resolved#$repo_root/packages/ax-evals/}"
+	strip_runner_ui_flags "$@"
+	if [[ ${#passthrough_args[@]} -gt 0 && "${passthrough_args[0]}" =~ ^[0-9]+$ ]]; then
+		passthrough_args=("${passthrough_args[@]:1}")
+	fi
+	exec env AX_EVALS_ARM=with infisical run --env=dev --recursive -- "$repo_root/packages/ax-evals/node_modules/.bin/braintrust" eval "$rel" --external-packages @anthropic-ai/claude-agent-sdk ${passthrough_args[@]+"${passthrough_args[@]}"}
+fi
+
+if [[ "$resolved" == "$repo_root/packages/ax-evals/"* && "$resolved" == *".test.ts" ]]; then
+	cd "$repo_root/packages/ax-evals"
+	rel="${resolved#$repo_root/packages/ax-evals/}"
+	strip_runner_ui_flags "$@"
+	if [[ ${#passthrough_args[@]} -gt 0 && "${passthrough_args[0]}" =~ ^[0-9]+$ ]]; then
+		test_name="$(bun "$repo_root/scripts/testScripts/getDescribeAtCursor.ts" "$resolved" "${passthrough_args[0]}")"
+		exec bun test "$rel" -t "$test_name"
+	fi
+	exec bun test "$rel" ${passthrough_args[@]+"${passthrough_args[@]}"}
+fi
+
 if [[ "$resolved" == "$repo_root/packages/atmn/test/integration/"* && "$resolved" == *".test.ts" ]]; then
 	cd "$repo_root/server"
 	rel="../${resolved#$repo_root/}"

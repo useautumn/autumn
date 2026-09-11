@@ -8,6 +8,11 @@ import { CreditDrawdownDiagram } from "./blogComponents/how-firecrawl-runs-prici
 import { HierarchyDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/HierarchyDiagram";
 import { PlanRecordDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/PlanRecordDiagram";
 import { TestimonialQuote } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/TestimonialQuote";
+import { AgentEnvironmentDiagram } from "./blogComponents/inching-towards-a-software-factory/AgentEnvironmentDiagram";
+import { BillingPathsAnimation } from "./blogComponents/inching-towards-a-software-factory/BillingPathsAnimation";
+import { CloudAgentSession } from "./blogComponents/inching-towards-a-software-factory/CloudAgentSession";
+import { ParallelTestPool } from "./blogComponents/inching-towards-a-software-factory/ParallelTestPool";
+import { SetupActionVerifyTest } from "./blogComponents/inching-towards-a-software-factory/SetupActionVerifyTest";
 import { ConfigAsCodeSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/ConfigAsCodeSimulator";
 import {
 	ConfigSim,
@@ -128,6 +133,8 @@ export const mdxComponents = {
 		</td>
 	),
 	AxiomLogLeakAnimation,
+	AgentEnvironmentDiagram,
+	BillingPathsAnimation,
 	Expand,
 	CreditsTable,
 	CreditBucketsTable,
@@ -139,6 +146,9 @@ export const mdxComponents = {
 	HierarchyDiagram,
 	HierarchyLayeredSimulator,
 	PlanRecordDiagram,
+	CloudAgentSession,
+	ParallelTestPool,
+	SetupActionVerifyTest,
 	TestimonialQuote,
 	PostgresTablesHero,
 	RelationalDbSimulator,

@@ -2,35 +2,35 @@
 
 import {
 	Button,
+	CopyTextButton,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	LongInput,
-} from "@autumn/ui";
-import { ChatCircleTextIcon, QuestionIcon } from "@phosphor-icons/react";
-import { GraduationCap } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router";
-import { toast } from "sonner";
-import { CopyTextButton } from "@autumn/ui";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	LongInput,
 } from "@autumn/ui";
+import { ChatCircleTextIcon, QuestionIcon } from "@phosphor-icons/react";
+import { GraduationCap } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboardingProgress";
+import { pushPage } from "@/utils/genUtils";
+import { useOnboardingVisibility } from "@/views/onboarding/hooks/useOnboardingProgress";
 import { NavButton } from "./NavButton";
 
 export function SidebarContact() {
 	const email = "hey@useautumn.com";
 	const env = useEnv();
+	const navigate = useNavigate();
 	const { show: showOnboardingGuide } = useOnboardingVisibility();
 	const axiosInstance = useAxiosInstance({ env });
 	const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -112,7 +112,14 @@ export function SidebarContact() {
 						Feedback
 					</DropdownMenuItem>
 					<DropdownMenuItem
-						onClick={showOnboardingGuide}
+						onClick={() => {
+							showOnboardingGuide();
+							pushPage({
+								path: "/onboarding",
+								navigate,
+								preserveParams: false,
+							});
+						}}
 						className="cursor-pointer"
 					>
 						<GraduationCap size={14} />

@@ -26,6 +26,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 import {
+	shouldUseMonthlyRollup,
 	shouldUseOrgDimensionRollup,
 	shouldUseOrgPropertyRollup,
 	shouldUsePropertyDailyRollup,
@@ -481,6 +482,13 @@ export const aggregate = async ({
 			startDate,
 			timezone,
 		});
+		const useMonthlyRollup = shouldUseMonthlyRollup({
+			binSize,
+			endDate,
+			hasPropertyFilters: Object.keys(filterParams).length > 0,
+			startDate,
+			timezone,
+		});
 
 		const pipeParams = {
 			org_id: org.id,
@@ -497,6 +505,7 @@ export const aggregate = async ({
 			...filterParams,
 			max_groups: params.max_groups,
 			use_daily_rollup: useDailyRollup ? ("1" as const) : undefined,
+			use_monthly_rollup: useMonthlyRollup ? ("1" as const) : undefined,
 			use_org_dimension_rollup: useOrgDimensionRollup
 				? ("1" as const)
 				: undefined,
@@ -576,6 +585,7 @@ export const aggregate = async ({
 		});
 	} else {
 		// Use aggregate_simple pipe for ungrouped queries
+		const filterParams = buildFilterParams({ filter_by: params.filter_by });
 		const pipeParams = {
 			org_id: org.id,
 			env,
@@ -586,7 +596,16 @@ export const aggregate = async ({
 			timezone,
 			customer_id: params.aggregateAll ? undefined : params.customer_id,
 			entity_id: params.entity_id,
-			...buildFilterParams({ filter_by: params.filter_by }),
+			...filterParams,
+			use_monthly_rollup: shouldUseMonthlyRollup({
+				binSize,
+				endDate,
+				hasPropertyFilters: Object.keys(filterParams).length > 0,
+				startDate,
+				timezone,
+			})
+				? ("1" as const)
+				: undefined,
 		};
 
 		const result = await pipes.aggregateSimple(pipeParams);

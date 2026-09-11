@@ -10,7 +10,6 @@ import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetCleanup } from "@/hooks/stores/useSheetStore";
 import LoadingScreen from "../general/LoadingScreen";
-import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { FeaturesPage } from "./features/FeaturesPage";
 import { ProductsContext } from "./ProductsContext";
 import { ProductsPage } from "./products/ProductsPage";
@@ -39,7 +38,6 @@ function ProductsView({ env: _env }: { env: AppEnv }) {
 	return (
 		<ProductsContext.Provider value={{}}>
 			<PageContainer>
-				<OnboardingGuide />
 				{tab === "products" && <ProductsPage />}
 				{tab === "features" && <FeaturesPage />}
 				{tab === "rewards" && <RewardsPage />}

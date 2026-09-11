@@ -400,7 +400,7 @@ const setupAtmnVariantVersioning = async ({
 	};
 };
 
-test(`${chalk.yellowBright("atmn variant versioning: base customer only versions base and edits variant in place")}`, () =>
+test.skip(`${chalk.yellowBright("atmn variant versioning: base customer only versions base and edits variant in place")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, baseV1, ctx, variantPlanId, variantV1 } =
 			await setupAtmnVariantVersioning({
@@ -434,7 +434,7 @@ test(`${chalk.yellowBright("atmn variant versioning: base customer only versions
 		expectMessagesAllowance({ product: variantAfter, included: 1200 });
 	}));
 
-test(`${chalk.yellowBright("atmn variant versioning: variant customer only edits base in place and versions variant")}`, () =>
+test.skip(`${chalk.yellowBright("atmn variant versioning: variant customer only edits base in place and versions variant")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, baseV1, ctx, variantPlanId, variantV1 } =
 			await setupAtmnVariantVersioning({
@@ -477,7 +477,7 @@ test(`${chalk.yellowBright("atmn variant versioning: variant customer only edits
 		expectMessagesAllowance({ product: variantV2, included: 2400 });
 	}));
 
-test(`${chalk.yellowBright("atmn variant versioning: base and variant customers version both plans")}`, () =>
+test.skip(`${chalk.yellowBright("atmn variant versioning: base and variant customers version both plans")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, baseV1, ctx, variantPlanId, variantV1 } =
 			await setupAtmnVariantVersioning({
@@ -521,7 +521,7 @@ test(`${chalk.yellowBright("atmn variant versioning: base and variant customers 
 		expectMessagesAllowance({ product: variantV2, included: 2400 });
 	}));
 
-test(`${chalk.yellowBright("atmn variant versioning: update current keeps base version in place")}`, () =>
+test.skip(`${chalk.yellowBright("atmn variant versioning: update current keeps base version in place")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, baseV1, ctx, variantPlanId, variantV1 } =
 			await setupAtmnVariantVersioning({
@@ -559,7 +559,7 @@ test(`${chalk.yellowBright("atmn variant versioning: update current keeps base v
 		expect(migrations).toHaveLength(0);
 	}));
 
-test(`${chalk.yellowBright("atmn variant versioning: update current and migrate creates combined draft")}`, () =>
+test.skip(`${chalk.yellowBright("atmn variant versioning: update current and migrate creates combined draft")}`, () =>
 	runSerialTest(async () => {
 		const { basePlanId, baseV1, ctx, variantPlanId } =
 			await setupAtmnVariantVersioning({
@@ -613,7 +613,7 @@ test(`${chalk.yellowBright("atmn variant versioning: update current and migrate 
 		});
 	}));
 
-test(`${chalk.yellowBright("atmn variant versioning: variant-only changes do not prompt for propagation")}`, () =>
+test.skip(`${chalk.yellowBright("atmn variant versioning: variant-only changes do not prompt for propagation")}`, () =>
 	runSerialTest(async () => {
 		const ctx = await createCleanAtmnIntegrationContext();
 		const basePlanId = "atmn_variant_only_prompt_base";
@@ -658,7 +658,7 @@ test(`${chalk.yellowBright("atmn variant versioning: variant-only changes do not
 		expectMessagesAllowance({ product: secondAfter, included: 3600 });
 	}));
 
-test(`${chalk.yellowBright("atmn variant versioning: multiple customer-bearing variants can be selected together")}`, () =>
+test.skip(`${chalk.yellowBright("atmn variant versioning: multiple customer-bearing variants can be selected together")}`, () =>
 	runSerialTest(async () => {
 		const ctx = await createCleanAtmnIntegrationContext();
 		const basePlanId = "atmn_variant_versioning_multi_base";

@@ -10,6 +10,8 @@ export type ResetOptions = {
 	client: ResetClient;
 	/** Which sandbox is wiped: reset acts on whatever the key belongs to. */
 	target: Target;
+	/** The pinned sandbox's name, when the CLI could look it up; the id is the fallback. */
+	sandboxName?: string;
 	/** Nothing is sent without this: the whole catalog goes. */
 	yes?: boolean;
 	write?: WriteLine;
@@ -17,21 +19,30 @@ export type ResetOptions = {
 
 export type ResetResult = { wiped: boolean };
 
-/** What the copy calls the sandbox: the pinned one, or the org's default. */
-const targetName = ({ target }: { target: Target }): string =>
+/** What the copy calls the sandbox: the pinned one by name, or the main one. */
+const targetName = ({
+	target,
+	sandboxName,
+}: {
+	target: Target;
+	sandboxName: string | undefined;
+}): string =>
 	target.sandboxId === undefined
-		? "your default sandbox"
-		: `sandbox ${target.sandboxId}`;
+		? "your main sandbox"
+		: sandboxName === undefined
+			? `sandbox ${target.sandboxId}`
+			: `sandbox ${sandboxName} (${target.sandboxId})`;
 
 export const runReset = async ({
 	client,
 	target,
+	sandboxName,
 	yes = false,
 	write = (text) => process.stdout.write(text),
 }: ResetOptions): Promise<ResetResult> => {
 	assertSandboxTarget({ target });
 
-	const name = targetName({ target });
+	const name = targetName({ target, sandboxName });
 
 	if (!yes) {
 		write(

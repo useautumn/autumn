@@ -40,18 +40,18 @@ export {
 } from "./comparePlanLicenses.js";
 export { diffPlanLicenses } from "./diffPlanLicenses.js";
 
+/**
+ * The content lane of a plan diff. Not `.strict()`: diffs travel with the
+ * license patch attached (see `DiffedCustomizePlanV1` below), and every schema
+ * built on this one — plan changes, variant params — has to accept that patch.
+ * Strictness would reject `upsert_licenses` even where it is re-declared,
+ * because a strict schema keeps rejecting the keys it omitted after `.extend()`.
+ */
 export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
-	CustomizePlanV1BaseSchema.omit({
-		items: true,
-		upsert_licenses: true,
-		remove_licenses: true,
-	}).strict(),
-	{ includeItems: false, includeLicenses: false },
+	CustomizePlanV1BaseSchema.omit({ items: true }),
+	{ includeItems: false, includeLicenses: true },
 );
 
-/** Content schema stays license-free (core / preview parse). In-memory diffs
- * carry the license patch; PlanChangeCustomizeV0Schema and VariantCustomizeSchema
- * validate it. */
 export type DiffedCustomizePlanV1 = z.infer<
 	typeof DiffedCustomizePlanV1Schema
 > & {

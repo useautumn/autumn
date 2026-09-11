@@ -1,5 +1,7 @@
-// Skills are YAML-frontmatter markdown files that follow the SKILLS standard
-// for AI coding assistants (Claude, Cursor, OpenCode, etc.)
+// DEPRECATED — do not teach or install these. Canonical skills live in
+// `@autumn/agent-docs` (`packages/agent-docs`). This corpus is stale
+// (setup/gating/billing-page/modelling) and is not the onboarding path.
+// Kept only while leftover dashboard / atmn-init copy still imports it.
 
 import autumnBillingPageContent from "./autumn-billing-page.js";
 import autumnGatingContent from "./autumn-gating.js";

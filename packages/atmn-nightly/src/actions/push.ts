@@ -1,8 +1,8 @@
-import { join } from "node:path";
 import { loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
 import type { AutumnClient } from "../generated/client";
 import { splitWire } from "../generated/wire";
+import { resolveProject } from "../project/resolveProject";
 import {
 	type CatalogPreview,
 	previewIsEmpty,
@@ -11,7 +11,6 @@ import {
 	type SettingsPreview,
 	settingsHaveWork,
 } from "../render/renderPreview";
-import { findRepoLayout } from "../repo/findRepoRoot";
 import {
 	backfillInternalIds,
 	identityRowsFromApplied,
@@ -49,6 +48,8 @@ const previewSettings = async ({
 export type PushOptions = {
 	client: AutumnClient;
 	cwd?: string;
+	/** `-c`: the config file or its folder; found from cwd or the root marker otherwise. */
+	configPath?: string;
 	dryRun?: boolean;
 	/** Where to write progress. Injected so tests can capture it. */
 	write?: (text: string) => void;
@@ -173,9 +174,15 @@ export const possibleRenameHint = ({
 };
 
 /** The directories a config may live in, nearest first. */
-export const configSearchDirs = ({ cwd }: { cwd: string }): string[] => {
-	const { packageRoot, repoRoot } = findRepoLayout({ cwd });
-	return [...new Set([cwd, join(cwd, "atmn"), packageRoot, repoRoot])];
+export const configSearchDirs = ({
+	cwd,
+	configPath,
+}: {
+	cwd: string;
+	configPath?: string;
+}): string[] => {
+	const project = resolveProject({ cwd, configFlag: configPath });
+	return [...new Set([project.configDir, cwd, ...project.envDirs])];
 };
 
 /**
@@ -186,14 +193,19 @@ export const configSearchDirs = ({ cwd }: { cwd: string }): string[] => {
 export const runPush = async ({
 	client,
 	cwd = process.cwd(),
+	configPath: configFlag,
 	dryRun = false,
 	write = (text) => process.stdout.write(text),
 	migrationLinkBase,
 }: PushOptions): Promise<PushResult> => {
-	const dirs = configSearchDirs({ cwd });
-	loadEnvFiles({ dirs });
+	const project = resolveProject({ cwd, configFlag });
+	const dirs = configSearchDirs({ cwd, configPath: configFlag });
+	loadEnvFiles({ dirs: project.envDirs });
 
-	const { path: configPath, wire: document } = await loadConfig({ dirs });
+	const { path: configPath, wire: document } = await loadConfig({
+		dirs,
+		...(project.configPath === null ? {} : { configPath: project.configPath }),
+	});
 	// One document, two operations: the catalog and each singleton go their own way.
 	const { catalog: wire, singletons } = splitWire(document);
 

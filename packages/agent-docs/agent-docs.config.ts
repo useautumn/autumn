@@ -42,7 +42,15 @@ export default defineConfig({
 				priority: 0.95,
 				document: "skills/concepts/concepts.mdx",
 			},
-			skill: { file: "skills/concepts/concepts.mdx" },
+			skill: { file: "skills/concepts/concepts.mdx", public: true },
+		},
+	},
+	setup: {
+		title: "Setup",
+		description:
+			"First-run Autumn setup — install the skill pack, then model pricing.",
+		formats: {
+			skill: { file: "skills/setup/setup.mdx", public: true },
 		},
 	},
 	catalog: {
@@ -55,7 +63,15 @@ export default defineConfig({
 				priority: 0.945,
 				document: "skills/catalog/catalog.mdx",
 			},
-			skill: { file: "skills/catalog/catalog.mdx" },
+			skill: { file: "skills/catalog/catalog.mdx", public: true },
+		},
+	},
+	integrate: {
+		title: "Integrate",
+		description:
+			"Integrating Autumn into an app's backend — customers, billing flows, gating, usage.",
+		formats: {
+			skill: { file: "skills/integrate/integrate.mdx", public: true },
 		},
 	},
 	billing: {

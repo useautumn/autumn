@@ -12,8 +12,8 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 const OWNER_ROLE = "owner";
 
-/** A secret key carries no session user, so sandbox work is attributed to the
- *  org's owner — provisioning a sandbox needs a real user (Stripe, key owner). */
+/** A secret key without a user falls back to the org's owner — provisioning a
+ *  sandbox needs a real user (Stripe, key owner). */
 const findOwnerUser = async ({
 	db,
 	orgId,
@@ -46,6 +46,9 @@ export const resolveSandboxActor = async ({
 	if (authType === AuthType.Dashboard && user) return user;
 
 	if (authType === AuthType.SecretKey) {
+		// A key minted through `atmn login` remembers who minted it; the org
+		// owner is the fallback for keys that carry no user.
+		if (user) return user;
 		const owner = await findOwnerUser({ db, orgId: org.id });
 		if (!owner) {
 			throw new RecaseError({

@@ -12,6 +12,7 @@
 - `Subscription -> Plan`: recurring or free plan attached to a customer or entity.
 - `Purchase -> Plan`: one-off plan attached to a customer or entity.
 - `Customer/Entity + Plan --billing.attach--> Subscription/Purchase`: attach turns plan configuration into customer state.
+- Plans also connect to plans, both edges built on customize: a **variant** is a derived plan storing its diff from a base; a **license** is a parent's link to a child plan it hands out per seat, optionally customized per parent. See the variants section below and the Licenses concept.
 
 </relationships>
 
@@ -45,6 +46,17 @@
 
 </default-behavior>
 
+<versions>
+
+- A plan's versions are parallel definitions that different groups of customers live on — not a timeline. One version is marked **active**; that's what new customers get.
+- Versions used to be numbered steps where the newest was automatically live. That changed: now you create a version and **promote** it to active when it's ready.
+- When is a change a new version? If it applies to everyone (adding a feature to all versions), it's an edit, not a version. If existing customers should keep their old terms (a base price increase with grandfathering), it's a new version — old customers stay on theirs.
+- Non-active versions have a second use: staging plans during a migration from another billing setup, holding those customer groups before cutover.
+- Each version has a `version_slug` (a user-facing name); renaming a slug does not create a new version.
+- A plan can also have **aliases**: after a plan id rename, the old id still resolves to the plan.
+
+</versions>
+
 <variants>
 
 - Variants group related plans under one base definition and store each variant's diff as `variant_details.customize`.
@@ -52,6 +64,7 @@
 - In `catalog.preview_update` / `catalog.update`, define or customize variants under the base plan's `plans[n].variants`.
 - Updating a base plan can propagate its diff to selected variants through the catalog update flow.
 - Common variant uses: billing intervals, A/B price packages, and volume ladders.
+- A variant's stored diff can change the price, add or remove items, and change the trial — it cannot replace the whole item list, and a variant cannot be the default plan or have variants of its own.
 
 Annual interval variant:
 

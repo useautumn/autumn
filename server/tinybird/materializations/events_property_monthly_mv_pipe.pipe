@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Collapses the gated hourly property rollup into mergeable UTC monthly states.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        entity_id,
+        event_name,
+        property_key,
+        property_value,
+        toDateTime(toStartOfMonth(hour)) as month,
+        sumState(total_value) as total_value,
+        sumState(event_count) as event_count
+    FROM events_property_mv
+    GROUP BY org_id, env, customer_id, entity_id, event_name, property_key, property_value, month
+
+TYPE materialized
+DATASOURCE events_property_monthly_mv

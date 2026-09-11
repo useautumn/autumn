@@ -1,10 +1,5 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
-import { IconButton } from "@autumn/ui";
-import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { toast } from "sonner";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -12,9 +7,14 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuLabel,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
+import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
+import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import { useEventNames } from "../hooks/useEventNames";
 
@@ -74,14 +74,8 @@ export const SelectFeatureDropdown = () => {
 	const [open, setOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
 
-	const [searchParams] = useSearchParams();
-	const navigate = useNavigate();
-	const location = useLocation();
-
-	// Read current selected event names from query parameters
-	const currentEventNames =
-		searchParams.get("event_names")?.split(",").filter(Boolean) || [];
-
+	const { filterStates, setFilterStates } = useAnalyticsFilterState();
+	const currentEventNames = filterStates.event_names ?? [];
 	// Show every ingested event; feature linkage only drives the optional label, not visibility
 	const eventOptions: EventOption[] = useMemo(() => {
 		return eventNamesData.map((item) => ({
@@ -107,40 +101,32 @@ export const SelectFeatureDropdown = () => {
 		);
 	}, [eventOptions, searchValue]);
 
-	// Helper function to update query parameters
-	const updateQueryParams = (eventNames: string[]) => {
-		const params = new URLSearchParams(location.search);
-
-		// Clear feature_ids since we're now only using event_names
-		params.delete("feature_ids");
-
-		if (eventNames.length > 0) {
-			params.set("event_names", eventNames.join(","));
-		} else {
-			params.delete("event_names");
-		}
-
-		navigate(`${location.pathname}?${params.toString()}`);
+	// Selecting events supersedes the legacy feature_ids param, so clear it.
+	const updateSelection = (eventNames: string[]) => {
+		setFilterStates({
+			event_names: eventNames.length > 0 ? eventNames : null,
+			feature_ids: null,
+		});
 	};
 
 	const numSelected = currentEventNames.length;
 
 	const handleToggleItem = (option: EventOption) => {
 		if (option.selected) {
-			updateQueryParams(
+			updateSelection(
 				currentEventNames.filter((name) => name !== option.eventName),
 			);
 		} else {
 			if (numSelected >= MAX_NUM_SELECTED) {
 				toast.error(`You can only select up to ${MAX_NUM_SELECTED} events`);
 			} else {
-				updateQueryParams([...currentEventNames, option.eventName]);
+				updateSelection([...currentEventNames, option.eventName]);
 			}
 		}
 	};
 
 	const handleClear = () => {
-		updateQueryParams([]);
+		updateSelection([]);
 		setHasCleared(true);
 	};
 

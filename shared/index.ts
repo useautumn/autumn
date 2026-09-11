@@ -28,6 +28,7 @@ export * from "./api/entities/crud/getEntityParams";
 export * from "./api/entities/crud/listEntitiesParamsV2_3";
 // Customer keys (per-customer JWTs)
 export * from "./api/keys/keysModels";
+export * from "./api/orgs/onboardingStatusModels";
 // Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
 export * from "./api/migrations/operations/index";

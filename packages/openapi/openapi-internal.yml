@@ -176126,6 +176126,67 @@ paths:
                 title: UpdateCatalogResponse
       parameters:
         - *a1
+  /v1/sandboxes.create_key:
+    post:
+      operationId: createSandboxKey
+      description: Mints a new secret key for a sandbox your organization owns,
+        carrying the scopes of the key that asked. Returns the key once, in this
+        response — store it, it cannot be read back. Authenticated with your
+        organization's secret key; a sandbox's own key cannot mint keys.
+      tags:
+        - sandboxes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  description: The ID of the sandbox to mint a key for.
+              required:
+                - id
+              title: CreateSandboxKeyParams
+              examples:
+                - id: org_123
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The sandbox's organization ID.
+                  name:
+                    type: string
+                    description: The sandbox's name.
+                  slug:
+                    type: string
+                    description: The sandbox's slug, derived from its name.
+                  secret_key:
+                    type: string
+                    description: A new secret key for the sandbox, carrying the calling key's
+                      scopes. Shown once, here.
+                    readOnly: true
+                required:
+                  - id
+                  - name
+                  - slug
+                  - secret_key
+                title: CreateSandboxKeyResponse
+                examples:
+                  - id: org_123
+                    name: staging
+                    slug: staging-abc123|org_456
+                    secret_key: am_sk_test_abc123
+      x-speakeasy-name-override: createKey
+      parameters:
+        - *a1
   /v1/organization.preview_update:
     post:
       operationId: previewUpdateOrganization

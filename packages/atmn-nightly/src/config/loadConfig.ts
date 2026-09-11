@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { COLLECTIONS } from "../generated/emit";
 import { ConfigError, type LintIssue } from "../generated/lintRuntime";
 import { fixtureLocation } from "../surgery/fixtureLocation";
+import { configPackageName } from "./configPackageName";
 
 const CONFIG_FILENAMES = ["autumn.config.ts", "autumn.config.js"] as const;
 
@@ -14,7 +15,7 @@ export class ConfigNotFoundError extends Error {
 		super(
 			`No autumn.config.ts found. Looked in:\n${searched
 				.map((path) => `  ${path}`)
-				.join("\n")}\n\nRun \`atmn-nightly pull\` to scaffold one.`,
+				.join("\n")}\n\nRun \`${configPackageName()} pull\` to scaffold one.`,
 		);
 		this.name = "ConfigNotFoundError";
 	}
@@ -100,11 +101,21 @@ const importConfigModule = async ({
 
 export const loadConfig = async ({
 	dirs,
+	configPath,
 }: {
 	dirs: string[];
+	/** `-c`: an exact file, which may be named anything. */
+	configPath?: string;
 }): Promise<{ path: string; wire: WireDocument }> => {
-	const path = findConfigPath({ dirs });
-	if (!path) throw new ConfigNotFoundError(dirs);
+	// An explicit path is the whole answer: a typo must not quietly load
+	// whichever config the search would have found instead.
+	const path =
+		configPath !== undefined
+			? existsSync(configPath)
+				? configPath
+				: null
+			: findConfigPath({ dirs });
+	if (!path) throw new ConfigNotFoundError(configPath ? [configPath] : dirs);
 
 	// Cache-busted because the module cache would otherwise pin the first read
 	// for the life of the process — irrelevant for a single `atmn push`, wrong

@@ -160,6 +160,7 @@ export const createSandboxForOrg = async ({
 	name,
 	color,
 	icon,
+	scopes,
 }: {
 	db: DrizzleCli;
 	masterOrg: Organization;
@@ -167,6 +168,8 @@ export const createSandboxForOrg = async ({
 	name: string;
 	color?: SandboxColor;
 	icon?: SandboxIcon;
+	/** The caller's scopes: a sandbox key never reaches beyond the key that minted it. */
+	scopes?: string[] | null;
 }): Promise<{ org: Organization; secret_key: string }> => {
 	assertSandboxNameValid({ name });
 	const existing = await OrgService.listSandboxes({
@@ -197,14 +200,11 @@ export const createSandboxForOrg = async ({
 	});
 
 	try {
-		const secret_key = await createKey({
+		const secret_key = await createSandboxKey({
 			db,
-			env: AppEnv.Sandbox,
-			orgId: org.id,
-			userId: actorUser.id,
-			name: "Sandbox API Key",
-			prefix: "am_sk_test",
-			meta: {},
+			sandbox: org,
+			actorUser,
+			scopes,
 		});
 
 		return { org, secret_key };
@@ -220,3 +220,26 @@ export const createSandboxForOrg = async ({
 		throw error;
 	}
 };
+
+/** A key for one sandbox, scoped no wider than the key or session that asked. */
+export const createSandboxKey = async ({
+	db,
+	sandbox,
+	actorUser,
+	scopes,
+}: {
+	db: DrizzleCli;
+	sandbox: Organization;
+	actorUser: User;
+	scopes?: string[] | null;
+}): Promise<string> =>
+	createKey({
+		db,
+		env: AppEnv.Sandbox,
+		orgId: sandbox.id,
+		userId: actorUser.id,
+		name: "Sandbox API Key",
+		prefix: "am_sk_test",
+		meta: {},
+		scopes: scopes && scopes.length > 0 ? scopes : null,
+	});

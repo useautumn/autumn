@@ -24,6 +24,7 @@ export type McpFormat = {
  */
 export type SkillFormat = {
 	file: string;
+	public?: boolean;
 };
 
 /** One translatable unit and the formats it emits. */

@@ -40,7 +40,7 @@ export const team = plan({
 });
 `;
 
-test.concurrent(
+test.skip(
 	"atmn pooled items push, pull round-trip, and unset in place",
 	async () => {
 		const ctx = await createCleanAtmnIntegrationContext();

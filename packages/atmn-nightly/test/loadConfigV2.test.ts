@@ -59,3 +59,16 @@ export default { name: "my catalog" };
 	});
 	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(/atmn v2 config/);
 });
+
+test("an explicit -c that does not exist is an error, never another config", async () => {
+	const dir = `${import.meta.dir}/.tmp/explicit-missing`;
+	mkdirSync(dir, { recursive: true });
+	writeFileSync(
+		`${dir}/autumn.config.ts`,
+		`export default { skip_deletions: false, features: [] };\n`,
+	);
+	await expect(
+		loadConfig({ dirs: [dir], configPath: `${dir}/typo.config.ts` }),
+	).rejects.toThrow(/typo\.config\.ts/);
+	rmSync(dir, { recursive: true, force: true });
+});
