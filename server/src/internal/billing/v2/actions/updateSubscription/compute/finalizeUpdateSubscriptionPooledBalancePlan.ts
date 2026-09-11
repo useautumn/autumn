@@ -7,6 +7,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { applyCustomerLicensePlanOps } from "@/internal/billing/v2/utils/billingPlan/applyCustomerLicensePlanOps";
+import { mergePooledBalancePlans } from "@/internal/billing/v2/utils/billingPlan/mergePooledBalancePlans";
 import {
 	applyCustomerProductPatch,
 	getPatchCustomerProducts,
@@ -21,10 +22,11 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
 }): AutumnBillingPlan => {
-	const isLicenseQuantityUpdate =
-		billingContext.intent === UpdateSubscriptionIntent.UpdateLicenseQuantity;
+	// Keyed on plan contents: any quantity update that moves license pool
+	// counters re-snapshots the same parent customer product in place.
+	const movesLicensePools = (plan.customerLicenseUpdates?.length ?? 0) > 0;
 	const transitionsImmediately =
-		isLicenseQuantityUpdate ||
+		movesLicensePools ||
 		billingContext.cancelAction === "cancel_immediately" ||
 		(billingContext.intent === UpdateSubscriptionIntent.UpdatePlan &&
 			billingContext.customerProduct.status !== CusProductStatus.Scheduled);
@@ -32,7 +34,7 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 
 	const updatesExistingCustomerProduct =
 		billingContext.patchContext?.mode === "existing";
-	const incomingCustomerProductSnapshots = isLicenseQuantityUpdate
+	const incomingCustomerProductSnapshots = movesLicensePools
 		? applyCustomerLicensePlanOps({
 				customerProducts: [billingContext.customerProduct],
 				autumnBillingPlan: plan,
@@ -54,7 +56,7 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
 		// Quantity update keeps the same parent CP; only license counters change.
-		outgoingCustomerProducts: isLicenseQuantityUpdate
+		outgoingCustomerProducts: movesLicensePools
 			? []
 			: [billingContext.customerProduct],
 		incomingCustomerProducts: incomingCustomerProductSnapshots,
@@ -62,12 +64,11 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 		now: billingContext.currentEpochMs,
 	});
 
-	if (updatesExistingCustomerProduct) {
-		return { ...plan, pooledBalancePlan };
-	}
-
 	return {
 		...plan,
-		pooledBalancePlan,
+		pooledBalancePlan: mergePooledBalancePlans({
+			base: plan.pooledBalancePlan,
+			incoming: pooledBalancePlan,
+		}),
 	};
 };

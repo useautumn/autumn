@@ -1,78 +1,71 @@
-import {
-	type AutumnBillingPlan,
-	findPrepaidQuantityTargetPrice,
-	isOneOffPrice,
-	notNullish,
-	type UpdateSubscriptionBillingContext,
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { emptyPooledBalancePlan } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
-import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
+import { computeLicenseQuantityDetails } from "./computeLicenseQuantityDetails";
+import {
+	computePrepaidQuantityDetails,
+	type PrepaidQuantityDetails,
+} from "./computePrepaidQuantityDetails";
 
+const untouchedPrepaidQuantities: PrepaidQuantityDetails = {
+	updatedOptions: [],
+	updateCustomerEntitlements: [],
+	lineItems: [],
+	updatePoolContributions: [],
+};
+
+/**
+ * Converges the customer product's quantity dials in place — recurring prepaid
+ * options on the parent and license pool paid counts — in one plan.
+ */
 export const computeUpdateQuantityPlan = ({
 	ctx,
-	updateSubscriptionContext,
+	billingContext,
+	params,
 }: {
 	ctx: AutumnContext;
-	updateSubscriptionContext: UpdateSubscriptionBillingContext;
+	billingContext: UpdateSubscriptionBillingContext;
+	params: UpdateSubscriptionV1Params;
 }): AutumnBillingPlan => {
-	const { customerProduct, featureQuantities } = updateSubscriptionContext;
+	const { customerProduct } = billingContext;
 
-	// One-off prepaid mutations belong to the ManualTopUp intent. Drop an option
-	// only when the feature's prepaid tie-break target is one-off — a recurring
-	// prepaid sibling of the same feature wins the quantity instead.
-	const customerPrices = customerProduct.customer_prices.map(
-		(customerPrice) => customerPrice.price,
-	);
-	const newOptions = featureQuantities.filter((option) => {
-		const targetPrice = findPrepaidQuantityTargetPrice({
-			prices: customerPrices,
-			internalFeatureId: option.internal_feature_id,
-			featureId: option.feature_id,
-		});
-		return targetPrice ? !isOneOffPrice(targetPrice) : true;
-	});
-
-	const quantityUpdateDetails = newOptions.map((updatedOptions) =>
-		computeUpdateQuantityDetails({
-			ctx,
-			updatedOptions,
-			updateSubscriptionContext,
-		}),
-	);
-
-	const lineItems = quantityUpdateDetails.flatMap((detail) => detail.lineItems);
-	const updatedOptions = quantityUpdateDetails.map(
-		(detail) => detail.updatedOptions,
-	);
-	const updatePoolContributions = quantityUpdateDetails
-		.map((detail) => detail.pooledContributionUpdate)
-		.filter(notNullish);
+	// featureQuantities always carries current options as fallback, so a
+	// seat-only request must skip the prepaid facet to leave options untouched.
+	const prepaid = isLicenseOnlyRequest({ params })
+		? untouchedPrepaidQuantities
+		: computePrepaidQuantityDetails({ ctx, billingContext });
+	const license = computeLicenseQuantityDetails({ ctx, billingContext });
 
 	return {
-		...(updatePoolContributions.length > 0
-			? {
-					pooledBalancePlan: {
-						...emptyPooledBalancePlan(),
-						updatePoolContributions,
-					},
-				}
-			: {}),
-		customerId: updateSubscriptionContext.fullCustomer?.id ?? "",
+		customerId: billingContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		customPrices: [],
 		customEntitlements: [],
-		updateCustomerProduct: {
-			customerProduct,
-			updates: {
-				options: updatedOptions,
-			},
-		},
-
-		updateCustomerEntitlements: quantityUpdateDetails.flatMap(
-			(detail) => detail.updateCustomerEntitlements,
-		),
-
-		lineItems,
+		updateCustomerProduct: isLicenseOnlyRequest({ params })
+			? undefined
+			: { customerProduct, updates: { options: prepaid.updatedOptions } },
+		updateCustomerEntitlements: prepaid.updateCustomerEntitlements,
+		customerLicenseUpdates: license.customerLicenseUpdates,
+		lineItems: [...prepaid.lineItems, ...license.lineItems],
+		...(prepaid.updatePoolContributions.length > 0
+			? {
+					pooledBalancePlan: {
+						...emptyPooledBalancePlan(),
+						updatePoolContributions: prepaid.updatePoolContributions,
+					},
+				}
+			: {}),
 	};
 };
+
+const isLicenseOnlyRequest = ({
+	params,
+}: {
+	params: UpdateSubscriptionV1Params;
+}) =>
+	(params.license_quantities?.length ?? 0) > 0 &&
+	(params.feature_quantities?.length ?? 0) === 0;

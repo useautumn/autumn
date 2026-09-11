@@ -97,6 +97,7 @@ export const expectLicenseUpdatePreviewCorrect = async ({
 	oldRecurringTotal,
 	newRecurringTotal,
 	expectQuantityLineItemPair = false,
+	expectLineItemCount,
 }: {
 	preview: LicenseBillingPreview;
 	customerId: string;
@@ -108,6 +109,8 @@ export const expectLicenseUpdatePreviewCorrect = async ({
 	expectQuantityLineItemPair?:
 		| boolean
 		| { oldQuantity?: number; newQuantity?: number };
+	/** Combined updates bill more than one refund/charge pair. */
+	expectLineItemCount?: number;
 }) => {
 	const [expectedTotal, { billingPeriod }] = await Promise.all([
 		calculateProratedDiff({
@@ -120,6 +123,9 @@ export const expectLicenseUpdatePreviewCorrect = async ({
 	]);
 
 	expect(preview.total).toEqual(expectedTotal);
+	if (expectLineItemCount !== undefined) {
+		expect(preview.line_items).toHaveLength(expectLineItemCount);
+	}
 	if (expectQuantityLineItemPair) {
 		const pairQuantities =
 			typeof expectQuantityLineItemPair === "object"

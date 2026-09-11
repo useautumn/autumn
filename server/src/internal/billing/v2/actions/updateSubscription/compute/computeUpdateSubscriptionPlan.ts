@@ -12,7 +12,6 @@ import { computeCancelPlan } from "@/internal/billing/v2/actions/updateSubscript
 import { computeCustomPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlan";
 import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
 import { computeManualTopUpPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/manualTopUp/computeManualTopUpPlan";
-import { computeUpdateLicenseQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateLicenseQuantity/computeUpdateLicenseQuantityPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeRetainedCustomerEntitlementUpdates } from "@/internal/billing/v2/compute/computeAutumnUtils/computeRetainedCustomerEntitlementUpdates";
@@ -39,16 +38,7 @@ export const computeUpdateSubscriptionPlan = async ({
 			plan = computeManualTopUpPlan({ ctx, billingContext, params });
 			break;
 		case UpdateSubscriptionIntent.UpdateQuantity:
-			plan = computeUpdateQuantityPlan({
-				ctx,
-				updateSubscriptionContext: billingContext,
-			});
-			break;
-		case UpdateSubscriptionIntent.UpdateLicenseQuantity:
-			plan = computeUpdateLicenseQuantityPlan({
-				ctx,
-				updateSubscriptionContext: billingContext,
-			});
+			plan = computeUpdateQuantityPlan({ ctx, billingContext, params });
 			break;
 		case UpdateSubscriptionIntent.UpdatePlan:
 			plan = await computeCustomPlan({

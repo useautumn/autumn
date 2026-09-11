@@ -90,7 +90,7 @@ export const handleUpdateSubscriptionErrors = async ({
 	});
 
 	// 10. Billing cycle anchor errors
-	handleUpdateSubscriptionBillingCycleAnchorErrors({ billingContext });
+	handleUpdateSubscriptionBillingCycleAnchorErrors({ billingContext, params });
 
 	// 11. Update checkout errors
 	handleUpdateCheckoutErrors({ billingContext });
