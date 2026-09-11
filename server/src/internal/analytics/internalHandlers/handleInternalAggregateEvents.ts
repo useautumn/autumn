@@ -3,6 +3,7 @@ import {
 	type EntityDisplayInfo,
 	ErrCode,
 	type FullCustomer,
+	filterCustomerProductsByActiveStatuses,
 	type RangeEnum,
 	RecaseError,
 	Scopes,
@@ -97,9 +98,9 @@ export const handleInternalAggregateEvents = createRoute({
 				});
 			}
 
-			bcExclusionFlag = customer.customer_products.every(
-				({ product }) => product.is_default,
-			);
+			bcExclusionFlag = filterCustomerProductsByActiveStatuses({
+				customerProducts: customer.customer_products,
+			}).every(({ product }) => product.is_default);
 		}
 
 		// Filter out empty strings

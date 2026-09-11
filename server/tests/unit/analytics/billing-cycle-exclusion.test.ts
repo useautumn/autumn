@@ -1,7 +1,7 @@
 // A default plan used to hide billing-cycle options even alongside a non-default plan.
 // Mixed plans must leave the options visible; default-only customers remain excluded.
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
-import type { FullCustomer } from "@autumn/shared";
+import { CusProductStatus, type FullCustomer } from "@autumn/shared";
 import { Hono } from "hono";
 import * as tinybirdUtils from "@/external/tinybird/tinybirdUtils.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -25,10 +25,23 @@ test.each([
 	{ name: "default only", defaults: [true, true], excluded: true },
 	{ name: "non-default only", defaults: [false], excluded: false },
 	{ name: "no products", defaults: [], excluded: true },
-])("billing-cycle options: $name", async ({ defaults, excluded }) => {
+	{
+		name: "scheduled non-default alongside active default",
+		defaults: [true, false],
+		statuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+		excluded: true,
+	},
+	{
+		name: "past-due non-default alongside active default",
+		defaults: [true, false],
+		statuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+		excluded: false,
+	},
+])("billing-cycle options: $name", async ({ defaults, statuses, excluded }) => {
 	const customer = {
 		id: "customer_123",
-		customer_products: defaults.map((is_default) => ({
+		customer_products: defaults.map((is_default, index) => ({
+			status: statuses?.[index] ?? CusProductStatus.Active,
 			product: { is_default },
 		})),
 	} as FullCustomer;
