@@ -27,11 +27,19 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { UsageAlertBasisSelect } from "@/components/billing-controls/UsageAlertBasisSelect";
+import {
+	type UsageLimitCondition,
+	UsageLimitConditionRows,
+} from "@/components/billing-controls/UsageLimitConditionRows";
 import { USAGE_ALERT_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
 import {
 	USAGE_ALERT_THRESHOLD_TYPE_LABELS,
 	USAGE_ALERT_THRESHOLD_TYPE_OPTIONS,
 } from "@/components/billing-controls/usageAlertThresholdTypeOptions";
+import {
+	conditionsFromFilter,
+	conditionsToFilter,
+} from "@/components/billing-controls/usageLimitFilterConditions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -46,14 +54,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
-import {
-	type UsageLimitCondition,
-	UsageLimitConditionRows,
-} from "./UsageLimitConditionRows";
-import {
-	conditionsFromFilter,
-	conditionsToFilter,
-} from "./usageLimitFilterConditions";
 import { useCustomerPropertyKeys } from "./useCustomerPropertyKeys";
 
 export function BillingUsageAlertSheet() {
