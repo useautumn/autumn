@@ -25,6 +25,11 @@ export const cusEntToPrepaidQuantity = ({
 
 	if (!cusEnt.customer_product) return 0;
 
+	// Expiring items record each purchase on its own grant row (balance +
+	// adjustment), so the product-level option quantity is billing bookkeeping
+	// only — counting it here would report every purchase twice.
+	if (cusEnt.entitlement.expiry_duration) return 0;
+
 	// Tie-break: a losing prepaid price (one-off alongside a recurring prepaid
 	// of the same feature) never owns the feature-keyed quantity.
 	const siblingPrices = cusEnt.customer_product.customer_prices.map(
