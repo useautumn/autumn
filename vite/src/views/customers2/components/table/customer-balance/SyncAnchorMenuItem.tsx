@@ -6,15 +6,13 @@ import {
 } from "@autumn/shared";
 import { DropdownMenuItem } from "@autumn/ui";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useSyncCustomerEntitlementAnchors } from "./useSyncCustomerEntitlementAnchors";
 
-export function AdminSyncAnchorMenuItem({
+export function SyncAnchorMenuItem({
 	customerEntitlements,
 }: {
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 }) {
-	const { isAdmin } = useAdmin();
 	const { mutate, isPending } = useSyncCustomerEntitlementAnchors();
 	const canSyncAnchor = customerEntitlements.some(
 		(customerEntitlement) =>
@@ -28,7 +26,7 @@ export function AdminSyncAnchorMenuItem({
 			}),
 	);
 
-	if (!isAdmin || !canSyncAnchor) return null;
+	if (!canSyncAnchor) return null;
 
 	return (
 		<DropdownMenuItem
