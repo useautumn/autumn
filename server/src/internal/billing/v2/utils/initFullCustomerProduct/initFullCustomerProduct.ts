@@ -9,11 +9,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductHasPaidLicenses } from "@/internal/billing/v2/utils/customerProductHasPaidLicenses.js";
 import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct";
 import { generateId } from "@/utils/genUtils";
+import { splitExpiringPurchaseGrants } from "../expiringGrants/splitExpiringPurchaseGrants";
 import { initCustomerEntitlement } from "./initCustomerEntitlement/initCustomerEntitlement";
 import { initCustomerLicenses } from "./initCustomerLicenses/initCustomerLicenses";
 import { initCustomerPrice } from "./initCustomerPrice";
 import { initCustomerProduct } from "./initCustomerProduct";
-import { splitExpiringPurchaseGrants } from "../expiringGrants/splitExpiringPurchaseGrants";
 
 type InitFullCustomerProductParams = {
 	ctx: AutumnContext;
@@ -75,9 +75,11 @@ export const initFullCustomerProductWithBalanceTransitions = ({
 		customerLicenseQuantities: initContext.customerLicenseQuantities,
 	});
 
+	// A scheduled product's credits start their clock when it activates, not
+	// when the request was made.
 	splitExpiringPurchaseGrants({
 		customerProduct: newFullCustomerProduct,
-		now: initContext.now,
+		now: initOptions?.startsAt ?? initContext.now,
 	});
 
 	const balanceTransitionPlan = applyExistingStatesToCustomerProduct({
