@@ -2,8 +2,8 @@ import {
 	type CustomerDisplayInfo,
 	type EntityDisplayInfo,
 	ErrCode,
-	type FullCusProduct,
 	type FullCustomer,
+	filterCustomerProductsByActiveStatuses,
 	type RangeEnum,
 	RecaseError,
 	Scopes,
@@ -101,14 +101,9 @@ export const handleInternalAggregateEvents = createRoute({
 				});
 			}
 
-			// Check for bcExclusionFlag only if we have a specific customer
-			if (customer.customer_products) {
-				customer.customer_products.forEach((product: FullCusProduct) => {
-					if (product.product.is_default) {
-						bcExclusionFlag = true;
-					}
-				});
-			}
+			bcExclusionFlag = filterCustomerProductsByActiveStatuses({
+				customerProducts: customer.customer_products,
+			}).every(({ product }) => product.is_default);
 		}
 
 		// Filter out empty strings
