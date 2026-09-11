@@ -36,6 +36,24 @@ const walkErrorChain = ({ error }: { error: unknown }): unknown[] => {
 	return chain;
 };
 
+const POSTGRES_FOREIGN_KEY_VIOLATION = "23503";
+
+/** Postgres 23503, including wrapped drivers that only keep the message. */
+export const isForeignKeyViolationError = ({
+	error,
+}: {
+	error: unknown;
+}): boolean => {
+	for (const candidate of walkErrorChain({ error })) {
+		if (getErrorCode({ error: candidate }) === POSTGRES_FOREIGN_KEY_VIOLATION) {
+			return true;
+		}
+		const message = getErrorMessage({ error: candidate });
+		if (message?.includes("violates foreign key constraint")) return true;
+	}
+	return false;
+};
+
 const messageLooksTransient = ({ message }: { message: string }): boolean => {
 	if (TRANSIENT_DB_ERROR_MESSAGES.has(message)) return true;
 	for (const known of TRANSIENT_DB_ERROR_MESSAGES) {
