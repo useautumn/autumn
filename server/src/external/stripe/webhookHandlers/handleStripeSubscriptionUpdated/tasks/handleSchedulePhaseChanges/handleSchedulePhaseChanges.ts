@@ -1,9 +1,10 @@
-import { formatMs, notNullish } from "@autumn/shared";
+import { formatMs } from "@autumn/shared";
 import { isAutumnOriginatedStripeEvent } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { addBillingChangeTag } from "../../../common";
+import { isSchedulePhaseChange } from "../../isSchedulePhaseChange";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 import { activateScheduledCustomerProducts } from "./activateScheduledCustomerProducts";
 import { expireEndedCustomerProducts } from "./expireEndedCustomerProducts";
@@ -24,7 +25,7 @@ export const handleSchedulePhaseChanges = async ({
 	ctx: StripeWebhookContext;
 	eventContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
-	const { stripeSubscription, previousAttributes, nowMs } = eventContext;
+	const { stripeSubscription, nowMs } = eventContext;
 	const { logger } = ctx;
 
 	if (isAutumnOriginatedStripeEvent({ event: ctx.stripeEvent })) {
@@ -42,16 +43,13 @@ export const handleSchedulePhaseChanges = async ({
 	// Step 1: Activate scheduled products; checkout trial-end updates have no schedule phase change.
 	await activateScheduledCustomerProducts({ ctx, eventContext });
 
-	// Check if phase possibly changed (items changed and schedule exists)
-	const phasePossiblyChanged =
-		notNullish(previousAttributes?.items) &&
-		notNullish(stripeSubscription.schedule);
-
 	// `activateScheduledCustomerProducts` can still mutate cusProducts on
 	// non-phase-change events (e.g. checkout trial-end flows). Those are
 	// NOT phase changes — only tag `phase_changed` once the canonical
 	// Stripe-schedule advance signal is confirmed below.
-	if (!phasePossiblyChanged) return;
+	if (!isSchedulePhaseChange({ subscriptionUpdatedContext: eventContext })) {
+		return;
+	}
 
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
 

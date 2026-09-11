@@ -12,6 +12,7 @@ import { isAutumnManagedSubscriptionMetadata } from "@/internal/billing/v2/provi
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import { trackCustomerProductUpdate } from "../../common/trackCustomerProductUpdate";
+import { isAutumnScheduledPhaseChange } from "../isAutumnScheduledPhaseChange";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
 const stripeProductId = (
@@ -87,6 +88,22 @@ export const autoSyncUpdatedSubscription = async ({
 		subscriptionUpdatedContext;
 
 	if (!priceOrProductChanged({ subscriptionUpdatedContext })) return;
+
+	if (isAutumnScheduledPhaseChange({ subscriptionUpdatedContext })) {
+		logger.info(
+			`sub.updated auto-sync skipping ${stripeSubscription.id}: autumn-managed schedule advanced`,
+		);
+		return;
+	}
+
+	// Pre-stamp schedules: Autumn already applied this phase (ended_at / activate).
+	if (subscriptionUpdatedContext.billingChangeTags.has("phase_changed")) {
+		logger.info(
+			`sub.updated auto-sync skipping ${stripeSubscription.id}: schedule phase already applied`,
+		);
+		return;
+	}
+
 	const metadataDecision = isAutumnManagedSubscriptionMetadata({
 		metadata: stripeSubscription.metadata,
 		requireRecent: true,

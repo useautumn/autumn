@@ -6,6 +6,7 @@ import { createStripeCli } from "@server/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@server/external/stripe/common/autumnStripeIdempotency";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type Stripe from "stripe";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { findMatchingInlinePriceIdForPhaseItem } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -141,11 +142,13 @@ const createScheduleFromSubscription = async ({
 	subscriptionId,
 	params,
 	stripeSubscription,
+	autumnMetadata,
 }: {
 	stripeCli: Stripe;
 	subscriptionId: string;
 	params: Stripe.SubscriptionScheduleUpdateParams;
 	stripeSubscription?: Stripe.Subscription;
+	autumnMetadata: Stripe.MetadataParam;
 }): Promise<Stripe.SubscriptionSchedule> => {
 	const schedule = await stripeCli.subscriptionSchedules.create(
 		{
@@ -165,6 +168,7 @@ const createScheduleFromSubscription = async ({
 		{
 			phases,
 			end_behavior: params.end_behavior,
+			metadata: autumnMetadata,
 		},
 		autumnStripeRequestOptions({ source: "schedule" }),
 	);
@@ -203,6 +207,10 @@ export const executeStripeSubscriptionScheduleAction = async ({
 }): Promise<Stripe.SubscriptionSchedule | null> => {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
+	// Marks the schedule as Autumn-owned so its phase advances are never back-synced.
+	const autumnMetadata = buildAutumnSubscriptionMetadata({
+		actionSource: billingContext.actionSource,
+	});
 
 	logSubscriptionScheduleAction({
 		ctx,
@@ -225,6 +233,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 					subscriptionId: stripeSubscription.id,
 					params,
 					stripeSubscription,
+					autumnMetadata,
 				});
 			}
 
@@ -236,6 +245,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 					phases: params.phases?.map(toCreatePhase) ?? [],
 					end_behavior: params.end_behavior,
 					start_date: startDate,
+					metadata: autumnMetadata,
 					...getStandaloneScheduleDefaults({ billingContext }),
 				},
 				autumnStripeRequestOptions({ source: billingContext.actionSource }),
@@ -254,7 +264,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 				// Update them in place instead of releasing and recreating from a sub.
 				return await stripeCli.subscriptionSchedules.update(
 					stripeSubscriptionScheduleId,
-					params,
+					{ ...params, metadata: autumnMetadata },
 					autumnStripeRequestOptions({ source: billingContext.actionSource }),
 				);
 			}
@@ -275,6 +285,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 						: subscriptionId.id,
 				params,
 				stripeSubscription,
+				autumnMetadata,
 			});
 
 			// Update existing customer products with the new schedule ID
