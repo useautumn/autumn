@@ -11,7 +11,7 @@ export type AdminUser = {
 	createdAt: string;
 };
 
-// AdminUserEmailCell renders the whole mobile card, so nothing else joins it.
+// The mobile summary already includes the name and creation time.
 const hiddenOnMobile = { mobileCard: "hidden" as const };
 
 export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
@@ -51,7 +51,6 @@ export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
 		header: "ID",
 		accessorKey: "id",
 		size: 140,
-		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminUser> }) => (
 			<div className="group flex w-full font-mono">
 				<MiniCopyButton text={row.original.id} innerClassName="text-xs" />

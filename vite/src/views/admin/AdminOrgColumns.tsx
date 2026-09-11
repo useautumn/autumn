@@ -25,9 +25,6 @@ export type AdminOrg = {
 	} | null;
 };
 
-// AdminOrgNameCell renders the whole mobile card, so nothing else joins it.
-const hiddenOnMobile = { mobileCard: "hidden" as const };
-
 export const createAdminOrgColumns = ({
 	onManageRequestBlocks,
 	onManageRedis,
@@ -49,7 +46,7 @@ export const createAdminOrgColumns = ({
 		header: "Users",
 		accessorKey: "users",
 		size: 300,
-		meta: hiddenOnMobile,
+		meta: { mobileCard: "hidden" },
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
 			<AdminOrgUsersCell users={row.original.users} />
 		),
@@ -59,7 +56,6 @@ export const createAdminOrgColumns = ({
 		header: "Status",
 		size: 120,
 		enableSorting: false,
-		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
 			<AdminOrgStatusCell org={row.original} />
 		),
@@ -69,7 +65,6 @@ export const createAdminOrgColumns = ({
 		header: "Slug",
 		accessorKey: "slug",
 		size: 150,
-		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
 			<MiniCopyButton text={row.original.slug} innerClassName="text-xs" />
 		),
@@ -79,7 +74,6 @@ export const createAdminOrgColumns = ({
 		header: "Created",
 		accessorKey: "createdAt",
 		size: 92,
-		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
 			<span className="whitespace-nowrap text-subtle text-xs">
 				{format(new Date(row.original.createdAt), "dd MMM HH:mm")}
@@ -91,7 +85,6 @@ export const createAdminOrgColumns = ({
 		header: "ID",
 		accessorKey: "id",
 		size: 140,
-		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
 			<div className="group flex w-full font-mono">
 				<MiniCopyButton text={row.original.id} innerClassName="text-xs" />
@@ -106,7 +99,7 @@ export const createAdminOrgColumns = ({
 		size: 200,
 		enableSorting: false,
 		enableHiding: false,
-		meta: hiddenOnMobile,
+		meta: { mobileCard: "full" },
 		cell: ({ row }: { row: Row<AdminOrg> }) => {
 			const firstNonAdminUser = row.original.users.find(
 				(user) => user.role !== "admin",
@@ -117,7 +110,10 @@ export const createAdminOrgColumns = ({
 			// would silently hide them. Only `ImpersonateButton` requires a
 			// non-admin user to target.
 			return (
-				<div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+				<div
+					className="flex flex-wrap gap-2"
+					onClick={(e) => e.stopPropagation()}
+				>
 					<Button
 						variant="secondary"
 						size="sm"

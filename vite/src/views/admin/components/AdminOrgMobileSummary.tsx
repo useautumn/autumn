@@ -2,10 +2,6 @@ import { OrgClaimState } from "@autumn/shared";
 import type { AdminOrg } from "../AdminOrgColumns";
 import { AdminOrgUnclaimedDot } from "./AdminOrgUnclaimedDot";
 
-/**
- * Whole mobile card body: org name over its emails, and nothing else. Rendered
- * from the title cell so the card stays two lines tall for fast scanning.
- */
 export const AdminOrgMobileSummary = ({ org }: { org: AdminOrg }) => (
 	<div className="flex min-w-0 flex-col gap-0.5">
 		<div className="flex min-w-0 items-center gap-1.5">
