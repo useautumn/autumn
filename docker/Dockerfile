@@ -34,6 +34,7 @@ COPY packages/agent-docs/package.json packages/agent-docs/
 COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-nightly/package.json packages/atmn-nightly/
 COPY packages/atmn-generator/package.json packages/atmn-generator/
+COPY packages/ax-evals/package.json packages/ax-evals/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
 COPY packages/autumn-js/package.json packages/autumn-js/
