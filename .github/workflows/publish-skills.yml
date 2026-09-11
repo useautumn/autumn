@@ -55,17 +55,18 @@ jobs:
             "$GITHUB_WORKSPACE/skills-repository" \
             "$GITHUB_SHA"
 
-      - name: Smoke install autumn-setup
+      - name: Smoke install public skill bundle
         run: |
           smoke_dir="$(mktemp -d)"
           cd "$smoke_dir"
           npx --yes --package skills@1.5.23 skills add \
             "$GITHUB_WORKSPACE/skills-repository" \
-            --skill autumn-setup \
             --agent claude-code \
             --copy \
             --yes
-          [ -f ".claude/skills/autumn-setup/SKILL.md" ]
+          for skill in autumn-setup autumn-catalog autumn-concepts autumn-integrate; do
+            [ -f ".claude/skills/$skill/SKILL.md" ]
+          done
 
       - name: Publish changed skills
         working-directory: skills-repository

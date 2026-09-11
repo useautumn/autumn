@@ -189,6 +189,8 @@
 		"kill:ts": "while pgrep -f tsgo > /dev/null; do pkill -9 -f tsgo; sleep 0.1; done",
 		"kill:dw": "bun scripts/dw/index.ts kill",
 		"atl": "bun scripts/atl.ts --",
+		"alocal": "bun scripts/atl.ts --local-server --",
+		"atl:local": "bun scripts/atl.ts --local-server --",
 		"atmn:build": "bun -F atmn build",
 		"openapi:ts": "bun -F @autumn/openapi ts",
 		"js:ts": "bun -F autumn-js ts",

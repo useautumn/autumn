@@ -57,7 +57,7 @@ Don't message the user yet — just find out where things stand.
 Four skills share this job. If any of them is missing, install them all with one command from the project root:
 
 ```bash
-npx skills add useautumn/skills --skill autumn-setup --skill autumn-catalog --skill autumn-integrate --skill autumn-concepts -y
+npx skills add useautumn/skills -y
 ```
 
 `autumn-setup` (this file) is the flow. `autumn-catalog` is how to build the pricing, plus the exact `atmn` commands — load it in Phase 4. `autumn-integrate` is how the app calls Autumn — load it in Phase 6. `autumn-concepts` explains Autumn's objects — the other two load it themselves.

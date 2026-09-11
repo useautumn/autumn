@@ -83,6 +83,7 @@ const contentFileResolver =
 
 const mcpResources: McpResource[] = [];
 const skills: Skill[] = [];
+const publicSkillNames = new Set<string>();
 const skillNameByEntryKey: Record<string, string> = {};
 
 for (const [entryKey, entry] of Object.entries(config)) {
@@ -116,7 +117,11 @@ for (const [entryKey, entry] of Object.entries(config)) {
 			resolveContentFile: contentFileResolver(file),
 		});
 		skillNameByEntryKey[entryKey] = skill.name;
-		skills.push(toSkill({ skill }));
+		const formattedSkill = toSkill({ skill });
+		skills.push(formattedSkill);
+		if (entry.formats.skill.public) {
+			publicSkillNames.add(formattedSkill.name);
+		}
 	}
 }
 
@@ -255,7 +260,7 @@ for (const resource of mcpResources) {
 }
 writePublicSkills({
 	outputDirectory: resolve(readableRoot, "skills"),
-	skills,
+	skills: skills.filter((skill) => publicSkillNames.has(skill.name)),
 });
 for (const id of agentIds) {
 	writeReadable({

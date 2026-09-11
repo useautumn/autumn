@@ -1,9 +1,49 @@
 import { clientIdsFromEnv } from "@autumn/auth/oauth";
 import { parseOAuthClientMetadata } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { generateId } from "@/utils/genUtils.js";
 import { oauthClientRepo } from "../repos/index.js";
 
 const ATMN_OAUTH_CLIENT_NAMES = new Set(["atmn", "autumn cli"]);
+
+/** The public client id every atmn release ships with (v1 and nightly). */
+const ATMN_OAUTH_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr";
+const ATMN_OAUTH_CLIENT_NAME = "atmn";
+const ATMN_REDIRECT_URIS = [31448, 31449, 31450, 31451, 31452].map(
+	(port) => `http://localhost:${port}/`,
+);
+
+/** Insert-only: a fresh DB gets the client; an existing row is left to `ensureAtmnAuthorizeScopes`. */
+export const ensureAtmnOAuthClient = async ({
+	db,
+	clientId,
+}: {
+	db: DrizzleCli;
+	clientId: string | null | undefined;
+}) => {
+	if (clientId !== ATMN_OAUTH_CLIENT_ID) return;
+	if (await oauthClientRepo.getByClientId({ db, clientId })) return;
+
+	const now = new Date();
+	await oauthClientRepo.insert({
+		db,
+		values: {
+			id: generateId("oauth_client"),
+			clientId: ATMN_OAUTH_CLIENT_ID,
+			name: ATMN_OAUTH_CLIENT_NAME,
+			redirectUris: ATMN_REDIRECT_URIS,
+			scopes: [...ATMN_OAUTH_SCOPES],
+			tokenEndpointAuthMethod: "none",
+			grantTypes: ["authorization_code", "refresh_token"],
+			responseTypes: ["code"],
+			public: true,
+			type: "native",
+			metadata: { kind: "atmn" },
+			createdAt: now,
+			updatedAt: now,
+		},
+	});
+};
 
 // Fixed scope set for first-party atmn CLI releases. Self-heal is limited so
 // unauthenticated /authorize requests cannot widen the reserved client.

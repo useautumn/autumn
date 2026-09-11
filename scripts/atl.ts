@@ -6,7 +6,7 @@
  * v1 package at packages/atmn.
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, symlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawn } from "bun";
@@ -29,10 +29,29 @@ if (!existsSync(join(workspace, "package.json"))) {
 }
 
 const args = process.argv.slice(2);
-const forwarded = args[0] === "--" ? args.slice(1) : args;
+const toWorktree = args[0] === "--local-server";
+const rest = toWorktree ? args.slice(1) : args;
+const forwarded = rest[0] === "--" ? rest.slice(1) : rest;
+
+const worktreeServerUrl = (): string => {
+	try {
+		const match = readFileSync(
+			join(repoRoot, "server/.env.local"),
+			"utf8",
+		).match(/^AUTUMN_TEST_BASE_URL=(.+)$/m);
+		if (match?.[1]?.trim()) return match[1].trim();
+	} catch {
+		// fall through
+	}
+	return "http://localhost:8080";
+};
+
+const cmd = toWorktree
+	? ["bun", join(nightly, "src/cli.ts"), "--base-url", worktreeServerUrl(), ...forwarded]
+	: ["bun", join(nightly, "src/cli.ts"), ...forwarded];
 
 const child = spawn({
-	cmd: ["bun", join(nightly, "src/cli.ts"), ...forwarded],
+	cmd,
 	cwd: workspace,
 	env: {
 		...process.env,

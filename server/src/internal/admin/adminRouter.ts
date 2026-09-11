@@ -73,6 +73,7 @@ import { handleUpsertAdminResetJobConfig } from "./handleUpsertAdminResetJobConf
 import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
+import { handleCreateImpersonationCliTokens } from "./impersonation/handleCreateImpersonationCliTokens";
 import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
@@ -237,6 +238,10 @@ honoAdminRouter.patch(
 );
 honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
+honoAdminRouter.post(
+	"/impersonation/cli-tokens",
+	...handleCreateImpersonationCliTokens,
+);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
 honoAdminRouter.get(
 	"/default-stripe-account",
