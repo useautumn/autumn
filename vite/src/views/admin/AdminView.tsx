@@ -95,7 +95,7 @@ export const AdminView = () => {
 				value={activeTab}
 				onValueChange={(value) => setActiveTab(value as AdminTab)}
 			>
-				<TabsList className="max-w-full overflow-x-auto">
+				<TabsList className="max-w-full justify-start overflow-x-auto">
 					<TabsTrigger value="orgs">Organizations</TabsTrigger>
 					<TabsTrigger value="users">Users</TabsTrigger>
 					<TabsTrigger value="slack-bot">Slack Bot</TabsTrigger>

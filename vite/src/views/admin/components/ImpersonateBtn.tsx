@@ -2,9 +2,17 @@ import { Button } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { impersonateUser } from "../adminUtils";
+import { useAdmin } from "../hooks/useAdmin";
 
-export const ImpersonateButton = ({ userId }: { userId?: string }) => {
+export const ImpersonateButton = ({
+	userId,
+	organizationId,
+}: {
+	userId?: string;
+	organizationId?: string;
+}) => {
 	const [loading, setLoading] = useState(false);
+	const { isCurrentlyImpersonating } = useAdmin();
 	if (!userId) {
 		return null;
 	}
@@ -16,7 +24,11 @@ export const ImpersonateButton = ({ userId }: { userId?: string }) => {
 			onClick={async () => {
 				setLoading(true);
 				try {
-					await impersonateUser({ userId });
+					await impersonateUser({
+						userId,
+						organizationId,
+						isCurrentlyImpersonating,
+					});
 				} catch (error: unknown) {
 					const errorMessage =
 						error instanceof Error ? error.message : "Unknown error";

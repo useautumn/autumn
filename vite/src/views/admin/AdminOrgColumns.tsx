@@ -1,7 +1,7 @@
 import type { OrgClaimState } from "@autumn/shared";
 import { Button, MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import type { User } from "better-auth";
+import type { UserWithRole } from "better-auth/plugins";
 import { format } from "date-fns";
 import { AdminOrgNameCell } from "./components/AdminOrgNameCell";
 import { AdminOrgStatusCell } from "./components/AdminOrgStatusCell";
@@ -14,7 +14,7 @@ export type AdminOrg = {
 	slug: string;
 	createdAt: string;
 	claim_state: OrgClaimState | null;
-	users: User[];
+	users: UserWithRole[];
 	requestBlockSummary: {
 		blockAll: boolean;
 		ruleCount: number;
@@ -133,7 +133,10 @@ export const createAdminOrgColumns = ({
 						Redis
 					</Button>
 					{firstNonAdminUser && (
-						<ImpersonateButton userId={firstNonAdminUser.id} />
+						<ImpersonateButton
+							userId={firstNonAdminUser.id}
+							organizationId={row.original.id}
+						/>
 					)}
 				</div>
 			);
