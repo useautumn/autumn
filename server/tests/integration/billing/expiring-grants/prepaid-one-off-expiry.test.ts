@@ -29,12 +29,16 @@ import {
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
 const EXPIRY = { duration: EntitlementDuration.Month, length: 2 };
+
+/** Auto top-up runs through SQS, so the assertions wait for the worker. */
+const AUTO_TOPUP_WAIT_MS = 20000;
 
 const expiringItem = {
 	feature_id: TestFeature.Messages,
@@ -244,6 +248,88 @@ test.concurrent(
 			),
 		);
 		expect(entitlementIds.size).toBe(1);
+		expect(customerProduct?.is_custom).toBe(false);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("prepaid one-off expiry: an auto top-up lands in its own expiring grant row")}`,
+	async () => {
+		const planId = "expiry-auto";
+		const customerId = "expiry-auto-cus";
+		const { autumnV2_1, autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ paymentMethod: "success" })],
+			actions: [],
+		});
+
+		await autumnV2_3.catalogV2.update({ plans: [expiringTopUpPlan(planId)] });
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: planId,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		});
+
+		await autumnV2_1.customers.update(customerId, {
+			billing_controls: {
+				auto_topups: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						threshold: 20,
+						quantity: 100,
+					},
+				],
+			},
+		});
+
+		// 100 - 85 = 15, below the threshold of 20 → auto top-up fires.
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 85,
+		});
+		await timeout(AUTO_TOPUP_WAIT_MS);
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const customerProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product.id === planId,
+		);
+		const rows = (customerProduct?.customer_entitlements ?? []).filter(
+			(ce) => ce.entitlement.feature.id === TestFeature.Messages,
+		);
+		const grants = rows.filter((row) => row.expires_at != null);
+
+		// ── Contract assertion 11: the top-up created a SECOND grant ──────────
+		expect(grants.length).toBe(2);
+		expect(new Set(grants.map((grant) => grant.expires_at)).size).toBe(2);
+
+		// ── Contract assertion 12: attach grant drained, top-up grant full ────
+		expect(
+			grants
+				.map((grant) => grant.balance)
+				.sort((left, right) => (left ?? 0) - (right ?? 0)),
+		).toEqual([15, 100]);
+
+		// ── Contract assertion 13: keystone untouched by the top-up ───────────
+		const keystone = rows.find((row) => row.expires_at == null);
+		expect(keystone?.balance).toBe(0);
+
+		// ── Contract assertion 14: options NOT bumped — grants are the record ─
+		const option = customerProduct?.options.find(
+			(entry) => entry.feature_id === TestFeature.Messages,
+		);
+		expect(option?.quantity).toBe(1);
+
+		// ── Contract assertion 15: balance reports one grant's worth added ────
+		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(customer.balances[TestFeature.Messages].remaining).toBe(115);
+
+		// ── Contract assertion 16: still one entitlement, still not custom ────
+		expect(new Set(rows.map((row) => row.entitlement_id)).size).toBe(1);
 		expect(customerProduct?.is_custom).toBe(false);
 	},
 );
