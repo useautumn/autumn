@@ -35,13 +35,13 @@ import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
 import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
+import { AdminSyncAnchorMenuItem } from "./AdminSyncAnchorMenuItem";
 import { CustomerBalanceFeatureCell } from "./CustomerBalanceFeatureCell";
 import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
 import {
 	canDeleteCustomerBalance,
 	canRecalculateCustomerBalances,
 } from "./customerBalanceUtils";
-import { SyncAnchorMenuItem } from "./SyncAnchorMenuItem";
 
 function getActiveRowEntitlements(
 	row: Row<CustomerBalanceRowData>,
@@ -517,7 +517,9 @@ function BalanceActionsCell({
 						</DropdownMenuItem>
 					)}
 					{isParentRow && (
-						<SyncAnchorMenuItem customerEntitlements={customerEntitlements} />
+						<AdminSyncAnchorMenuItem
+							customerEntitlements={customerEntitlements}
+						/>
 					)}
 					{canDelete && onDeleteClick && (
 						<DropdownMenuItem

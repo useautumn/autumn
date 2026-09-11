@@ -4,7 +4,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { syncCustomerEntitlementAnchors } from "@/internal/customers/cusProducts/cusEnts/actions/syncCustomerEntitlementAnchors";
 
 export const handleSyncCustomerEntitlementAnchors = createRoute({
-	scopes: [Scopes.Balances.Write],
+	scopes: [Scopes.Superuser],
 	body: z.object({
 		customer_entitlement_ids: z.array(z.string()).min(1),
 	}),

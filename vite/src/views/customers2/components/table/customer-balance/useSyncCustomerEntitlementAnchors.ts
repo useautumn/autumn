@@ -24,7 +24,7 @@ export const useSyncCustomerEntitlementAnchors = () => {
 			customerEntitlementIds: string[];
 		}) => {
 			const { data } = await axiosInstance.post<SyncAnchorsResponse>(
-				"/customers/customer-entitlements/sync-anchor",
+				"/admin/customer-entitlements/sync-anchor",
 				{ customer_entitlement_ids: customerEntitlementIds },
 			);
 			return data;
