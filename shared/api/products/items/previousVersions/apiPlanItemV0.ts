@@ -2,6 +2,7 @@ import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
 import { DisplaySchema } from "@api/products/components/display.js";
 import { ApiPriceProcessorsSchema } from "@api/products/components/processors";
+import { EntitlementExpirySchema } from "@models/productModels/durationTypes/entitlementDuration.js";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
@@ -76,6 +77,8 @@ export const ApiPlanItemV0Schema = z
 				on_decrease: z.enum(OnDecrease).optional(),
 			})
 			.optional(),
+
+		expiry: EntitlementExpirySchema.nullish(),
 
 		feature_override: ApiFeatureOverrideSchema.optional().meta({
 			internal: true,
