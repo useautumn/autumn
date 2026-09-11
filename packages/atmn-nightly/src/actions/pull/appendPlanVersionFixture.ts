@@ -165,14 +165,13 @@ const declaresName = ({
 		.findAll({ rule: { kind: "variable_declarator" } })
 		.some((node) => node.field("name")?.text() === name);
 	if (variable) return true;
-	return root.findAll({ rule: { kind: "import_specifier" } }).some(
-		(node) =>
-			node
-				.text()
-				.trim()
-				.split(/\s+as\s+/)
-				.at(-1) === name,
-	);
+	return root.findAll({ rule: { kind: "import_specifier" } }).some((node) => {
+		const names = node
+			.text()
+			.trim()
+			.split(/\s+as\s+/);
+		return names[names.length - 1] === name;
+	});
 };
 
 export const appendPlanVersionFixture = ({
