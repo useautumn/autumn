@@ -63,7 +63,7 @@ export const emitEmitModule = ({
 		Object.fromEntries(
 			[...allDefaults]
 				.filter(([path]) => path.startsWith(prefix))
-				.map(([path, value]) => [path.slice(prefix.length), value])
+				.map(([path, value]) => [path.slice(prefix.length), value] as const)
 				.sort(([left], [right]) => left.localeCompare(right)),
 		);
 	const lines: string[] = [
