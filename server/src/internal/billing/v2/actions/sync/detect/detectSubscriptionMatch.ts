@@ -6,7 +6,6 @@ import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/str
 import { findAutumnMatchForStripeItem } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnMatchForStripeItem";
 import { ProductService } from "@/internal/products/ProductService";
 import { itemDiffsToMatchedPlans } from "./itemDiffsToMatchedPlans/itemDiffsToMatchedPlans";
-import { mergePreferredProductsForDetection } from "./mergePreferredProductsForDetection";
 import { rematchFeaturesWithinAnchoredPlans } from "./rematchFeaturesWithinAnchoredPlans";
 import type { PhaseMatch, SubscriptionMatch } from "./types";
 
@@ -27,7 +26,6 @@ export const detectSubscriptionMatch = async ({
 	billingCurrency,
 	nowSec,
 	fullProducts: preloadedFullProducts,
-	preferredProducts,
 }: {
 	ctx: AutumnContext;
 	subscription?: Stripe.Subscription;
@@ -37,9 +35,6 @@ export const detectSubscriptionMatch = async ({
 	/** Optional pre-fetched catalog (callers matching many subscriptions pass
 	 * this to avoid a per-call fetch). */
 	fullProducts?: FullProduct[];
-	/** Already-linked customer products, matched before the catalog so shared
-	 * Stripe prices keep the customer's current plan version. */
-	preferredProducts?: FullProduct[];
 }): Promise<SubscriptionMatch> => {
 	if (!subscription && !schedule) {
 		throw new Error(
@@ -61,17 +56,13 @@ export const detectSubscriptionMatch = async ({
 	// 	phaseSnapshots,
 	// });
 
-	const catalog =
+	const fullProducts =
 		preloadedFullProducts ??
 		(await ProductService.listFull({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
 		}));
-	const fullProducts = mergePreferredProductsForDetection({
-		preferredProducts,
-		catalog,
-	});
 
 	const phaseMatches: PhaseMatch[] = phaseSnapshots.map((snapshot) => {
 		const itemDiffs = rematchFeaturesWithinAnchoredPlans({

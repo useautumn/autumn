@@ -1,5 +1,4 @@
 import {
-	customerProductsToProducts,
 	type FullCusProduct,
 	type FullProduct,
 	filterCustomerProductsByStripeSubscriptionId,
@@ -184,27 +183,12 @@ export const subscriptionToSyncParams = async ({
 		}
 	}
 
-	const linkedCustomerProducts = resolvedSubscription
-		? filterCustomerProductsByStripeSubscriptionId({
-				customerProducts: resolvedCustomerProducts,
-				stripeSubscriptionId: resolvedSubscription.id,
-			})
-		: [];
-
 	const match = await detectSubscriptionMatch({
 		ctx,
 		subscription: resolvedSubscription,
 		schedule: resolvedSchedule,
 		billingCurrency: fullCustomer?.currency,
 		fullProducts,
-		preferredProducts: customerProductsToProducts({
-			customerProducts: linkedCustomerProducts.filter(
-				(customerProduct) =>
-					customerProduct.product &&
-					Array.isArray(customerProduct.customer_prices) &&
-					Array.isArray(customerProduct.customer_entitlements),
-			),
-		}),
 	});
 
 	const detectedPhases: SyncPhase[] = match.phaseMatches

@@ -27,13 +27,11 @@ const product = ({
 	group = "main",
 	isAddOn = false,
 	version = 1,
-	stripePriceId,
 }: {
 	id: string;
 	group?: string | null;
 	isAddOn?: boolean;
 	version?: number;
-	stripePriceId?: string;
 }): FullProduct =>
 	({
 		id,
@@ -41,14 +39,7 @@ const product = ({
 		group,
 		is_add_on: isAddOn,
 		version,
-		prices: stripePriceId
-			? [
-					{
-						id: `pr_${id}_v${version}`,
-						config: { stripe_price_id: stripePriceId },
-					},
-				]
-			: [],
+		prices: [],
 		entitlements: [],
 		items: [],
 	}) as unknown as FullProduct;
@@ -98,39 +89,7 @@ const linkedCustomerProduct = ({
 		product_id: product.id,
 		product,
 		internal_entity_id: entityId,
-		customer_prices: (product.prices ?? []).map((price) => ({ price })),
 	}) as unknown as FullCusProduct;
-
-const matchedPriceItemDiff = ({
-	product,
-	stripePriceId,
-}: {
-	product: FullProduct;
-	stripePriceId: string;
-}): ItemDiff => ({
-	stripe: {
-		id: `si_${product.id}_${stripePriceId}`,
-		stripe_price_id: stripePriceId,
-		stripe_product_id: `prod_${product.id}`,
-		unit_amount: 2000,
-		unit_amount_decimal: null,
-		currency: "usd",
-		quantity: 1,
-		billing_scheme: "per_unit",
-		tiers_mode: null,
-		tiers: null,
-		recurring_interval: "month",
-		recurring_interval_count: null,
-		recurring_usage_type: "licensed",
-		metadata: {},
-	} as ItemDiff["stripe"],
-	match: {
-		kind: "autumn_price",
-		matched_on: { type: "stripe_price_id", stripe_price_id: stripePriceId },
-		price: product.prices[0],
-		product,
-	},
-});
 
 const unmatchedItemDiff = (id: string): ItemDiff => ({
 	stripe: {
@@ -291,107 +250,12 @@ describe("buildIncrementalSyncParams", () => {
 		});
 	});
 
-	test("does not replace a linked version when Stripe prices still match the current version", () => {
-		const sharedPriceId = "price_enterprise_shared";
-		const enterpriseV10 = product({
-			id: "enterprise",
-			version: 10,
-			stripePriceId: sharedPriceId,
-		});
-		const enterpriseV18 = product({
-			id: "enterprise",
-			version: 18,
-			stripePriceId: sharedPriceId,
-		});
-		const { match, params } = draft({
-			matchedPlans: [matchedPlan({ product: enterpriseV18 })],
-			syncPlans: [{ ...syncPlan({ productId: "enterprise" }), version: 18 }],
-			itemDiffs: [
-				matchedPriceItemDiff({
-					product: enterpriseV18,
-					stripePriceId: sharedPriceId,
-				}),
-			],
-		});
-
-		const result = buildIncrementalSyncParams({
-			match,
-			params,
-			linkedCustomerProducts: [
-				linkedCustomerProduct({ product: enterpriseV10 }),
-			],
-		});
-
-		expect(result).toMatchObject({
-			shouldSync: false,
-			reason: "no_changed_targets",
-		});
-	});
-
-	test("expires a removed add-on without replacing a shared-price main version rematch", () => {
-		const sharedPriceId = "price_enterprise_shared";
-		const enterpriseV10 = product({
-			id: "enterprise",
-			version: 10,
-			stripePriceId: sharedPriceId,
-		});
-		const enterpriseV18 = product({
-			id: "enterprise",
-			version: 18,
-			stripePriceId: sharedPriceId,
-		});
-		const creditsAddon = product({ id: "credits_addon", isAddOn: true });
-		const { match, params } = draft({
-			matchedPlans: [matchedPlan({ product: enterpriseV18 })],
-			syncPlans: [{ ...syncPlan({ productId: "enterprise" }), version: 18 }],
-			itemDiffs: [
-				matchedPriceItemDiff({
-					product: enterpriseV18,
-					stripePriceId: sharedPriceId,
-				}),
-			],
-		});
-
-		const result = buildIncrementalSyncParams({
-			match,
-			params,
-			linkedCustomerProducts: [
-				linkedCustomerProduct({ product: enterpriseV10 }),
-				linkedCustomerProduct({
-					product: creditsAddon,
-					id: "cp_credits_addon",
-				}),
-			],
-		});
-
-		expect(result.shouldSync).toBe(true);
-		if (!result.shouldSync) throw new Error(result.reason);
-		expect(result.params).toBeNull();
-		expect(result.removedCustomerProducts.map((product) => product.id)).toEqual(
-			["cp_credits_addon"],
-		);
-	});
-
-	test("replaces a linked version when Stripe items uniquely identify a newer version", () => {
-		const proV1 = product({
-			id: "pro",
-			version: 1,
-			stripePriceId: "price_pro_v1",
-		});
-		const proV2 = product({
-			id: "pro",
-			version: 2,
-			stripePriceId: "price_pro_v2",
-		});
+	test("keeps a plan when the public id matches but the version changed", () => {
+		const proV1 = product({ id: "pro", version: 1 });
+		const proV2 = product({ id: "pro", version: 2 });
 		const { match, params } = draft({
 			matchedPlans: [matchedPlan({ product: proV2 })],
 			syncPlans: [{ ...syncPlan({ productId: "pro" }), version: 2 }],
-			itemDiffs: [
-				matchedPriceItemDiff({
-					product: proV2,
-					stripePriceId: "price_pro_v2",
-				}),
-			],
 		});
 
 		const result = buildIncrementalSyncParams({
