@@ -14,16 +14,18 @@ export const listEventNames = async ({
 	ctx,
 	limit,
 	interval,
+	binSize,
 	customRange,
 }: {
 	ctx: AutumnContext;
 	limit?: number;
 	interval?: string;
+	binSize?: string;
 	customRange?: { start: number; end: number };
 }): Promise<EventNameWithCount[]> => {
 	const { org, env } = ctx;
 	const pipes = getTinybirdPipes();
-	const window = getEventRankingWindow({ interval, customRange });
+	const window = getEventRankingWindow({ interval, binSize, customRange });
 
 	const result = await pipes.listEventNames({
 		org_id: org.id,

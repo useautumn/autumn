@@ -9,7 +9,6 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
-import { sub } from "date-fns";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
@@ -20,7 +19,11 @@ import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { eventActions } from "../actions/eventActions.js";
-import { STANDARD_INTERVAL_DAYS } from "../analyticsUtils.js";
+import {
+	defaultBinSizeForRange,
+	getStandardIntervalWindow,
+	isMonthRange,
+} from "../analyticsUtils.js";
 import { collapsePlanIdGroups } from "./utils/collapsePlanIdGroups.js";
 
 const InternalAggregateEventsSchema = z.object({
@@ -111,42 +114,38 @@ export const handleInternalAggregateEvents = createRoute({
 		// Filter out empty strings
 		event_names = event_names.filter((name: string) => name !== "");
 
-		// Use provided bin_size, or default based on interval
-		const binSize = bin_size || (interval === "24h" ? "hour" : "day");
+		// Use provided bin_size, or the range's default.
+		const binSize =
+			bin_size || defaultBinSizeForRange({ interval: interval ?? undefined });
 
-		// For standard intervals, compute the window once here and pass it as
+		if (
+			isMonthRange({ interval: interval ?? undefined }) &&
+			(binSize === "day" || binSize === "hour")
+		) {
+			throw new RecaseError({
+				message: `bin_size "${binSize}" is not supported for the "${interval}" range; use "week" or "month"`,
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		// For standard ranges, compute the window once here and pass it as
 		// `custom_range` to both actions. This guarantees the chart (aggregate)
 		// and totals (getCountAndSum) use an identical window so their numbers
-		// stay aligned. Billing-cycle intervals fall through to each action's
-		// own resolution (both use the same `getBillingCycleStartDate`).
-		//
-		// The start is aligned down to the bin boundary (UTC) so the chart's
-		// `hour`-column filter and the totals' `timestamp`-column filter select
-		// the same events — otherwise the chart's first bucket would skip the
-		// sub-hour events the totals include.
-		const standardIntervalDays = interval
-			? STANDARD_INTERVAL_DAYS[interval]
-			: undefined;
+		// stay aligned. Billing-cycle ranges fall through to each action's own
+		// resolution (both use the same `getBillingCycleStartDate`).
 		const now = new UTCDate();
-		const customRange = (() => {
-			if (custom_range) return custom_range;
-			if (standardIntervalDays === undefined) return undefined;
-			const unaligned = sub(now, { days: standardIntervalDays });
-			const aligned =
-				binSize === "hour"
-					? new UTCDate(
-							unaligned.getFullYear(),
-							unaligned.getMonth(),
-							unaligned.getDate(),
-							unaligned.getHours(),
-						)
-					: new UTCDate(
-							unaligned.getFullYear(),
-							unaligned.getMonth(),
-							unaligned.getDate(),
-						);
-			return { start: aligned.getTime(), end: now.getTime() };
-		})();
+		const standardWindow = getStandardIntervalWindow({
+			interval: interval ?? undefined,
+			binSize,
+			now,
+		});
+		const customRange =
+			custom_range ??
+			(standardWindow && {
+				start: standardWindow.start.getTime(),
+				end: standardWindow.end.getTime(),
+			});
 
 		let resolvedGroupBy = group_by;
 		if (group_by === "$customer_id") {
