@@ -95,5 +95,5 @@ export function startBalanceShadowSession({
 			});
 			void stop();
 		});
-	return { config, mirror, stop };
+	return { config, mirror, stop, isStopped: () => stopped };
 }

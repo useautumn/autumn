@@ -3,7 +3,10 @@ import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { resolveWorkerAddress } from "../../../src/init/resolveWorkerAddress.js";
 import { balanceWorkerEnvToRuntimeConfig } from "../../../src/init/workerConfig.js";
 
-const localEnvironment = { KAFKA_BROKERS: "127.0.0.1:19092" };
+const localEnvironment = {
+	KAFKA_BROKERS: "127.0.0.1:19092",
+	KAFKA_AUTH_MODE: "none",
+};
 
 test(
 	"local workers derive their address without an endpoint override",

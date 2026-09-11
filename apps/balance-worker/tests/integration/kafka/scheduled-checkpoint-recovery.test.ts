@@ -132,7 +132,7 @@ const createOwner = ({
 		ctx: {
 			consumer: kafka.consumer(
 				createWorkerConsumerConfig({
-					groupId: `${environment}-${name}`,
+					groupId: `${environment}-workers`,
 					timings,
 				}),
 			),
@@ -351,10 +351,24 @@ describe("automatic checkpoint recovery", () => {
 						occurredAt: Date.now(),
 					},
 				});
-				if (tail)
+				if (tail) {
 					await firstRuntime.process((processor) =>
 						processor.track({ command }),
 					);
+					const tailEnd = BigInt(
+						(await admin.fetchTopicOffsets(topic))[0]?.high ?? "0",
+					);
+					await waitUntil({
+						ready: () =>
+							(first.group.partitions()[0]?.consumedNextOffset ?? 0n) >=
+							tailEnd,
+					});
+					const committed = await admin.fetchOffsets({
+						groupId: `${runId}-workers`,
+						topics: [topic],
+					});
+					expect(committed[0]?.partitions[0]?.offset).toBe(tailEnd.toString());
+				}
 				const expected = first.store.readState({ identity });
 				await first.group.stop();
 				await admin.deleteTopicRecords({

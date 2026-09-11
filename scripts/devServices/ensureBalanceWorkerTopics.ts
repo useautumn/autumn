@@ -14,6 +14,7 @@ export function ensureBalanceWorkerTopics({
 			env: {
 				...runtimeEnv,
 				KAFKA_BROKERS: `127.0.0.1:${kafkaPort}`,
+				KAFKA_AUTH_MODE: "none",
 				BALANCE_WORKER_DEPLOYMENT: "local",
 			},
 			stdout: "inherit",

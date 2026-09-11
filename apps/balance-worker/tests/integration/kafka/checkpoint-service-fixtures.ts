@@ -207,22 +207,25 @@ export const createCheckpointServiceFixture = async () => {
 		const port = reservation.port;
 		await reservation.stop();
 		const databasePath = join(directory, file);
-		const env = createBalanceWorkerEnv({
-			KAFKA_BROKERS: brokers,
-			BALANCE_WORKER_PORT: String(port),
-			BALANCE_WORKER_SQLITE_PATH: databasePath,
-			BALANCE_WORKER_METERING_TOPIC: topic,
-			BALANCE_WORKER_OWNERSHIP_TOPIC: ownershipTopic,
-			BALANCE_WORKER_PARTITION_COUNT: "1",
-			BALANCE_WORKER_GROUP_ID: id,
-			BALANCE_WORKER_DEPLOYMENT: id,
-			BALANCE_WORKER_CHECKPOINT_MODE: mode,
-			BALANCE_WORKER_CHECKPOINT_BUCKET: bucket,
-			BALANCE_WORKER_CHECKPOINT_REGION: "us-east-1",
-			BALANCE_WORKER_CHECKPOINT_ENDPOINT: checkpointEndpoint,
-			BALANCE_WORKER_CHECKPOINT_FORCE_PATH_STYLE: "true",
-			BALANCE_WORKER_CHECKPOINT_INTERVAL_MS: String(intervalMs),
-		});
+		const env = {
+			...createBalanceWorkerEnv({
+				KAFKA_BROKERS: brokers,
+				KAFKA_AUTH_MODE: "none",
+				BALANCE_WORKER_PORT: String(port),
+				BALANCE_WORKER_SQLITE_PATH: databasePath,
+				BALANCE_WORKER_METERING_TOPIC: topic,
+				BALANCE_WORKER_OWNERSHIP_TOPIC: ownershipTopic,
+				BALANCE_WORKER_GROUP_ID: id,
+				BALANCE_WORKER_DEPLOYMENT: id,
+				BALANCE_WORKER_CHECKPOINT_MODE: mode,
+				BALANCE_WORKER_CHECKPOINT_BUCKET: bucket,
+				BALANCE_WORKER_CHECKPOINT_REGION: "us-east-1",
+				BALANCE_WORKER_CHECKPOINT_ENDPOINT: checkpointEndpoint,
+				BALANCE_WORKER_CHECKPOINT_FORCE_PATH_STYLE: "true",
+				BALANCE_WORKER_CHECKPOINT_INTERVAL_MS: String(intervalMs),
+			}),
+			BALANCE_WORKER_PARTITION_COUNT: 1,
+		};
 		const service = await createBalanceWorker({
 			ctx: {
 				onError: ({ cause }) => {
