@@ -93,6 +93,19 @@ const entriesOf = (value: unknown): PreviewEntry[] => {
 const rowsOf = (value: unknown): Record<string, unknown>[] =>
 	Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
 
+const featureTypesOf = ({
+	rows,
+}: {
+	rows: Record<string, unknown>[];
+}): Readonly<Record<string, string>> => {
+	const featureTypes: Record<string, string> = {};
+	for (const row of rows) {
+		if (typeof row.id === "string" && typeof row.type === "string")
+			featureTypes[row.id] = row.type;
+	}
+	return featureTypes;
+};
+
 type VariantEdge = Record<string, unknown> & {
 	plan?: { internalId?: unknown; versionSlug?: unknown } | null;
 };
@@ -177,6 +190,7 @@ export const runPull = async ({
 	const unlocated: { collection: string; id: string; action: string }[] = [];
 	const previewRows = preview as unknown as Record<string, unknown>;
 	const catalogRows = catalog as unknown as Record<string, unknown>;
+	const featureTypes = featureTypesOf({ rows: rowsOf(catalogRows.features) });
 
 	for (const [collection, spec] of Object.entries(COLLECTIONS)) {
 		// Versions share an id; until internal_id lands, pull cannot address them.
@@ -190,6 +204,7 @@ export const runPull = async ({
 			configPath,
 			files,
 			includeMappings,
+			featureTypes,
 		});
 		appended.push(...applied.appended);
 		replaced.push(...applied.replaced);
