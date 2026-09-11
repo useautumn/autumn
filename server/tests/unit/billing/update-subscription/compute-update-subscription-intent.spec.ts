@@ -110,21 +110,28 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 		});
 	});
 
-	describe(chalk.cyan("UpdateLicenseQuantity intent"), () => {
-		test("wins over feature_quantities so parent prepaid can ride along", () => {
-			const params: UpdateSubscriptionV1Params = {
-				...baseParams,
-				license_quantities: [{ license_plan_id: "dev-seat", quantity: 5 }],
-				feature_quantities: [{ feature_id: "messages", quantity: 80000 }],
-			};
-
-			const result = setupUpdateSubscriptionIntent({
-				params,
+	describe(chalk.cyan("license_quantities routing"), () => {
+		test("routes to UpdateQuantity alone or with feature_quantities", () => {
+			const licenseOnly = setupUpdateSubscriptionIntent({
+				params: {
+					...baseParams,
+					license_quantities: [{ license_plan_id: "dev-seat", quantity: 5 }],
+				},
 				checkoutMode: null,
 				customerProduct,
 			});
+			expect(licenseOnly).toBe(UpdateSubscriptionIntent.UpdateQuantity);
 
-			expect(result).toBe(UpdateSubscriptionIntent.UpdateLicenseQuantity);
+			const combined = setupUpdateSubscriptionIntent({
+				params: {
+					...baseParams,
+					license_quantities: [{ license_plan_id: "dev-seat", quantity: 5 }],
+					feature_quantities: [{ feature_id: "messages", quantity: 80000 }],
+				},
+				checkoutMode: null,
+				customerProduct,
+			});
+			expect(combined).toBe(UpdateSubscriptionIntent.UpdateQuantity);
 		});
 	});
 
