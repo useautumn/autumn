@@ -4,9 +4,11 @@ import {
 	notNullish,
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
+import { checkoutProductIdsFromDeferredData } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/checkoutProductIdsFromDeferredData";
 import { createStripeScheduleFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionEnabledImmediately/createStripeScheduleFromCheckout";
 import { matchOptionalInvoiceItemsToProducts } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/matchOptionalInvoiceItemsToProducts";
 import { modifyStripeSubscriptionFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/modifyStripeSubscriptionFromCheckout";
+import { skipsDeferredCheckoutReplay } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/skipsDeferredCheckoutReplay";
 import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/syncSubscriptionItemMetadataFromCheckout";
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
 import { withClaimedCheckoutSessionMetadata } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/withClaimedCheckoutSessionMetadata";
@@ -78,6 +80,24 @@ const executeCheckoutSessionMetadataV2 = async ({
 	metadata: NonNullable<CheckoutSessionCompletedContext["metadata"]>;
 }): Promise<void> => {
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
+	const checkoutProductIds = checkoutProductIdsFromDeferredData({
+		deferredData,
+	});
+
+	if (
+		checkoutProductIds &&
+		skipsDeferredCheckoutReplay({
+			liveCustomerProducts: ctx.fullCustomer?.customer_products ?? [],
+			checkoutProductIds,
+			checkoutCreatedAtMs: checkoutContext.stripeCheckoutSession.created * 1000,
+		})
+	) {
+		ctx.logger.info(
+			`[checkout.completed] Skipping stale deferred checkout ${metadata.id}`,
+		);
+		await MetadataService.delete({ db: ctx.db, id: metadata.id });
+		return;
+	}
 
 	// 1. Sync Autumn metadata onto subscription items created by checkout
 	await syncSubscriptionItemMetadataFromCheckout({
