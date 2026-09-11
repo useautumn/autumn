@@ -133,6 +133,9 @@ export const toCreatePlanItemParams = (
 			on_decrease: item.proration.on_decrease,
 		};
 	}
+	// Carries the item's credit schema and dimension rates; dropping it turns a
+	// remove+add that means to change one field into one that deletes pricing.
+	if (item.feature_override) out.feature_override = item.feature_override;
 	return out;
 };
 
