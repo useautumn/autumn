@@ -96,6 +96,14 @@ export const autoSyncUpdatedSubscription = async ({
 		return;
 	}
 
+	// Pre-stamp schedules: Autumn already applied this phase (ended_at / activate).
+	if (subscriptionUpdatedContext.billingChangeTags.has("phase_changed")) {
+		logger.info(
+			`sub.updated auto-sync skipping ${stripeSubscription.id}: schedule phase already applied`,
+		);
+		return;
+	}
+
 	const metadataDecision = isAutumnManagedSubscriptionMetadata({
 		metadata: stripeSubscription.metadata,
 		requireRecent: true,

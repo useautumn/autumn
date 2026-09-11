@@ -34,95 +34,150 @@ const attachedVersion = ({
 	planId: string;
 }) => customer.products.find((product) => product.id === planId)?.version;
 
+const setupAddonDropWithNewerVersion = async ({
+	customerId,
+}: {
+	customerId: string;
+}) => {
+	const pro = products.pro({
+		id: "sched-addon-drop-pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const addon = products.base({
+		id: "sched-addon-drop-addon",
+		isAddOn: true,
+		items: [
+			items.monthlyPrice({ price: 10 }),
+			items.monthlyUsers({ includedUsage: 5 }),
+		],
+	});
+
+	const { autumnV1, autumnV2_3, ctx, testClockId } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, addon] }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.billing.attach({ productId: addon.id }),
+		],
+	});
+
+	// A newer pro version sharing the same base price — the bait for back-sync.
+	await autumnV2_3.catalogV2.update({
+		plans: [
+			{
+				plan_id: pro.id,
+				versioning: "new_version",
+				active: true,
+				price: { amount: 20, interval: BillingInterval.Month },
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 500,
+						reset: { interval: ResetInterval.Month },
+					},
+				],
+			},
+		],
+	});
+
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: addon.id,
+		cancel_action: "cancel_end_of_cycle",
+	});
+
+	const subscriptionId = await getSubscriptionId({
+		ctx,
+		customerId,
+		productId: pro.id,
+	});
+	const subscription = await ctx.stripeCli.subscriptions.retrieve(
+		subscriptionId,
+		{ expand: ["schedule"] },
+	);
+	const schedule = subscription.schedule as Stripe.SubscriptionSchedule;
+
+	// Cycle turns weeks later — the subscription recency window is already stale.
+	await ctx.stripeCli.subscriptions.update(subscriptionId, {
+		metadata: { [AUTUMN_STRIPE_METADATA_KEYS.managedAt]: "1" },
+	});
+
+	return { autumnV1, ctx, testClockId, pro, addon, subscriptionId, schedule };
+};
+
+const expectAddonDroppedProKeptAtV1 = async ({
+	autumnV1,
+	customerId,
+	proId,
+	addonId,
+}: {
+	autumnV1: Awaited<ReturnType<typeof initScenario>>["autumnV1"];
+	customerId: string;
+	proId: string;
+	addonId: string;
+}) => {
+	const customer = (await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		active: [proId],
+		notPresent: [addonId],
+	})) as ApiCustomerV3;
+	expect(attachedVersion({ customer, planId: proId })).toBe(1);
+};
+
 test(
 	chalk.yellowBright(
 		"sub.updated: Autumn-scheduled add-on drop keeps the customer's plan version",
 	),
 	async () => {
 		const customerId = "sub-updated-sched-addon-drop-version";
-		const pro = products.pro({
-			id: "sched-addon-drop-pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const addon = products.base({
-			id: "sched-addon-drop-addon",
-			isAddOn: true,
-			items: [
-				items.monthlyPrice({ price: 10 }),
-				items.monthlyUsers({ includedUsage: 5 }),
-			],
-		});
-
-		const { autumnV1, autumnV2_3, ctx, testClockId } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, addon] }),
-			],
-			actions: [
-				s.billing.attach({ productId: pro.id }),
-				s.billing.attach({ productId: addon.id }),
-			],
-		});
-
-		// A newer pro version sharing the same base price — the bait for back-sync.
-		await autumnV2_3.catalogV2.update({
-			plans: [
-				{
-					plan_id: pro.id,
-					versioning: "new_version",
-					active: true,
-					price: { amount: 20, interval: BillingInterval.Month },
-					items: [
-						{
-							feature_id: TestFeature.Messages,
-							included: 500,
-							reset: { interval: ResetInterval.Month },
-						},
-					],
-				},
-			],
-		});
-
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: addon.id,
-			cancel_action: "cancel_end_of_cycle",
-		});
-
-		const subscriptionId = await getSubscriptionId({
-			ctx,
-			customerId,
-			productId: pro.id,
-		});
-		const subscription = await ctx.stripeCli.subscriptions.retrieve(
-			subscriptionId,
-			{ expand: ["schedule"] },
-		);
-		const schedule = subscription.schedule as Stripe.SubscriptionSchedule;
+		const { autumnV1, ctx, testClockId, pro, addon, schedule } =
+			await setupAddonDropWithNewerVersion({ customerId });
 		expect(
 			schedule?.metadata?.[AUTUMN_STRIPE_METADATA_KEYS.managedAt],
 		).toBeDefined();
 
-		// In production the cycle turns weeks after the cancel, long past the
-		// 10-minute recency window on the subscription stamp. Age it to match.
-		await ctx.stripeCli.subscriptions.update(subscriptionId, {
-			metadata: { [AUTUMN_STRIPE_METADATA_KEYS.managedAt]: "1" },
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+		});
+		await expectAddonDroppedProKeptAtV1({
+			autumnV1,
+			customerId,
+			proId: pro.id,
+			addonId: addon.id,
+		});
+	},
+	WEBHOOK_TEST_TIMEOUT_MS,
+);
+
+test(
+	chalk.yellowBright(
+		"sub.updated: unstamped (pre-existing) schedule add-on drop still keeps the plan version",
+	),
+	async () => {
+		const customerId = "sub-updated-sched-addon-drop-unstamped";
+		const { autumnV1, ctx, testClockId, pro, addon, schedule } =
+			await setupAddonDropWithNewerVersion({ customerId });
+
+		await ctx.stripeCli.subscriptionSchedules.update(schedule.id, {
+			metadata: { [AUTUMN_STRIPE_METADATA_KEYS.managedAt]: "" },
 		});
 
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 		});
-
-		const customer = (await expectCustomerProducts({
-			autumn: autumnV1,
+		await expectAddonDroppedProKeptAtV1({
+			autumnV1,
 			customerId,
-			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
-			active: [pro.id],
-			notPresent: [addon.id],
-		})) as ApiCustomerV3;
-		expect(attachedVersion({ customer, planId: pro.id })).toBe(1);
+			proId: pro.id,
+			addonId: addon.id,
+		});
 	},
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
