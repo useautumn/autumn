@@ -11,6 +11,7 @@ export function balanceWorkerDevConfig({
 		runtimeEnv.BALANCE_WORKER_PORT ?? String(balanceWorkerPortFor(worktreeNum));
 	return {
 		KAFKA_BROKERS: runtimeEnv.KAFKA_BROKERS ?? "127.0.0.1:19092",
+		KAFKA_AUTH_MODE: runtimeEnv.KAFKA_AUTH_MODE ?? "none",
 		KAFKAJS_LOG_LEVEL: runtimeEnv.KAFKAJS_LOG_LEVEL ?? "error",
 		BALANCE_WORKER_PORT: port,
 		BALANCE_WORKER_HOST: "127.0.0.1",
@@ -19,7 +20,5 @@ export function balanceWorkerDevConfig({
 			runtimeEnv.BALANCE_WORKER_METERING_TOPIC ?? "autumn-metering",
 		BALANCE_WORKER_OWNERSHIP_TOPIC:
 			runtimeEnv.BALANCE_WORKER_OWNERSHIP_TOPIC ?? "autumn-metering-ownership",
-		BALANCE_WORKER_PARTITION_COUNT:
-			runtimeEnv.BALANCE_WORKER_PARTITION_COUNT ?? "8",
 	};
 }

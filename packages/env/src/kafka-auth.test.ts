@@ -9,15 +9,15 @@ for (const [name, createEnv] of [
 	["ownership reader", createBalanceWorkerClientEnv],
 ] as const) {
 	describe(`${name} Kafka authentication`, () => {
-		test("keeps local Kafka unauthenticated by default", () => {
-			expect(createEnv(brokers)).toHaveProperty("KAFKA_AUTH_MODE", "none");
-		});
-
-		test("does not infer IAM authentication from an AWS region", () => {
+		test("defaults to MSK IAM without a deployment auth setting", () => {
 			expect(createEnv({ ...brokers, AWS_REGION: "us-east-1" })).toHaveProperty(
 				"KAFKA_AUTH_MODE",
-				"none",
+				"msk_iam",
 			);
+		});
+
+		test("does not fall back to plaintext when the default IAM region is missing", () => {
+			expect(() => createEnv(brokers)).toThrow("requires AWS_REGION");
 		});
 
 		test("accepts explicit unauthenticated mode without AWS configuration", () => {

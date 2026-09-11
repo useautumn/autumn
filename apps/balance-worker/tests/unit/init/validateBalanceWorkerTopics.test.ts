@@ -4,10 +4,10 @@ import { validateBalanceWorkerTopics } from "../../../src/init/workerConfig.js";
 
 const env = createBalanceWorkerEnv({
 	KAFKA_BROKERS: "127.0.0.1:19092",
-	BALANCE_WORKER_PARTITION_COUNT: "2",
+	KAFKA_AUTH_MODE: "none",
 });
 const admin = ({
-	count = 2,
+	count = 8,
 	policy = "compact",
 }: {
 	count?: number;

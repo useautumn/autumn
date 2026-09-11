@@ -37,16 +37,19 @@ describe("Real balance worker HTTP service", () => {
 		});
 		const port = reservation.port;
 		await reservation.stop();
-		const env = createBalanceWorkerEnv({
-			KAFKA_BROKERS: brokers,
-			BALANCE_WORKER_PORT: String(port),
-			BALANCE_WORKER_SQLITE_PATH: databasePath,
-			BALANCE_WORKER_METERING_TOPIC: topic,
-			BALANCE_WORKER_OWNERSHIP_TOPIC: owners,
-			BALANCE_WORKER_PARTITION_COUNT: "1",
-			BALANCE_WORKER_GROUP_ID: id,
-			BALANCE_WORKER_DEPLOYMENT: id,
-		});
+		const env = {
+			...createBalanceWorkerEnv({
+				KAFKA_BROKERS: brokers,
+				KAFKA_AUTH_MODE: "none",
+				BALANCE_WORKER_PORT: String(port),
+				BALANCE_WORKER_SQLITE_PATH: databasePath,
+				BALANCE_WORKER_METERING_TOPIC: topic,
+				BALANCE_WORKER_OWNERSHIP_TOPIC: owners,
+				BALANCE_WORKER_GROUP_ID: id,
+				BALANCE_WORKER_DEPLOYMENT: id,
+			}),
+			BALANCE_WORKER_PARTITION_COUNT: 1,
+		};
 		const kafka = new Kafka({
 			clientId: id,
 			brokers: env.KAFKA_BROKERS,

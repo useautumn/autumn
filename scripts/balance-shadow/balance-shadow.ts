@@ -4,6 +4,7 @@ import { parseShadowOperatorArgs } from "./parseShadowOperatorArgs.js";
 const usage = `Usage: bun scripts/balance-shadow/balance-shadow.ts --mode initialize|compare --confirm-quiet [--execute]
 
 Reads BALANCE_WORKER_SHADOW and the existing Kafka/client environment settings.
+Use the edge config's run object here; only edge config enables API/queue copies.
 Initialize previews by default; --execute writes only to the isolated shadow worker.
 Compare only reads; an expired run is allowed. Direct routing must remain disabled.
 Pause cohort mutations and drain pending/in-flight copies on ALL processes first.

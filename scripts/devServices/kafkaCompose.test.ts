@@ -60,7 +60,7 @@ function provisionsTopicsOnTheEnvironmentBroker(): void {
 		BALANCE_WORKER_DEPLOYMENT: "production",
 		BALANCE_WORKER_METERING_TOPIC: "custom.metering",
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "custom.ownership",
-		BALANCE_WORKER_PARTITION_COUNT: "12",
+		BALANCE_WORKER_PARTITION_COUNT: "8",
 	};
 	const spawn = spyOn(Bun, "spawnSync").mockReturnValue(successfulProcess);
 	try {
@@ -77,6 +77,7 @@ function provisionsTopicsOnTheEnvironmentBroker(): void {
 					env: {
 						...runtimeEnv,
 						KAFKA_BROKERS: `127.0.0.1:${kafkaPort}`,
+						KAFKA_AUTH_MODE: "none",
 						BALANCE_WORKER_DEPLOYMENT: "local",
 					},
 					stdout: "inherit",
