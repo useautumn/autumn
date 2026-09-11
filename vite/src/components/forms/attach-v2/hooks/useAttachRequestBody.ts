@@ -47,6 +47,7 @@ export interface BuildAttachRequestBodyParams {
 	startDate: number | null;
 	endDate: number | null;
 	prorationBehavior: BillingBehavior | null;
+	refundLastPayment: "prorated" | "full" | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
 	resetBillingCycle: boolean;
@@ -85,6 +86,7 @@ export function buildAttachRequestBody({
 	startDate,
 	endDate,
 	prorationBehavior,
+	refundLastPayment,
 	redirectMode,
 	newBillingSubscription,
 	resetBillingCycle,
@@ -193,7 +195,11 @@ export function buildAttachRequestBody({
 		disableProration,
 	});
 
-	if (normalizedProrationBehavior) {
+	// A refund already implies immediate proration, and the two are mutually
+	// exclusive on the wire.
+	if (refundLastPayment) {
+		body.refund_last_payment = refundLastPayment;
+	} else if (normalizedProrationBehavior) {
 		body.billing_behavior = normalizedProrationBehavior;
 	}
 
@@ -274,6 +280,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		startDate,
 		endDate,
 		prorationBehavior,
+		refundLastPayment,
 		redirectMode,
 		newBillingSubscription,
 		resetBillingCycle,
@@ -313,6 +320,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				startDate,
 				endDate,
 				prorationBehavior,
+				refundLastPayment,
 				redirectMode,
 				newBillingSubscription,
 				resetBillingCycle,
@@ -349,6 +357,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			startDate,
 			endDate,
 			prorationBehavior,
+			refundLastPayment,
 			redirectMode,
 			newBillingSubscription,
 			resetBillingCycle,

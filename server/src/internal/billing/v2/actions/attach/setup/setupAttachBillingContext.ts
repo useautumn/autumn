@@ -364,6 +364,7 @@ export const setupAttachBillingContext = async ({
 		checkoutSessionParams: params.checkout_session_params,
 		userMetadata: params.metadata,
 		taxRateId: params.tax_rate_id,
+		refundLastPayment: params.refund_last_payment,
 
 		externalId: params.subscription_id,
 		insertPlanLicenses,

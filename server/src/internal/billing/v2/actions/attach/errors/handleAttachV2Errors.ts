@@ -11,6 +11,7 @@ import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/actions/attac
 import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
 import { handleEndDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleEndDateErrors";
 import { handleNewBillingSubscriptionErrors } from "@/internal/billing/v2/actions/attach/errors/handleNewBillingSubscriptionErrors";
+import { handleRefundLastPaymentErrors } from "@/internal/billing/v2/actions/attach/errors/handleRefundLastPaymentErrors";
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
 import { handleStartDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleStartDateErrors";
 import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach/errors/handleStripeCheckoutErrors";
@@ -80,6 +81,7 @@ export const handleAttachV2Errors = async ({
 
 	// 6. Scheduled switch with one-off prepaid quantities
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
+	handleRefundLastPaymentErrors({ billingContext, params });
 	handleBillingCycleAnchorErrors({ billingContext, params });
 	handleStartDateErrors({ billingContext, params, preview });
 	handleEndDateErrors({ billingContext, params });

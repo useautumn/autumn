@@ -43,6 +43,7 @@ const ATTACH_FIELD_READERS: FieldReaders<AttachForm> = {
 	prepaidOptions: readQuantities("options", "feature_id"),
 	productId: readString("product_id"),
 	prorationBehavior: readEnum<BillingBehavior>("billing_behavior"),
+	refundLastPayment: readEnum<"prorated" | "full">("refund_last_payment"),
 	removePlanIds: readStringArray("remove_plan_ids"),
 	startDate: readNumber("starts_at"),
 	version: readNumber("version"),
@@ -128,6 +129,11 @@ const multiAttachOverridesFromRequestBody = (
 			: {}),
 		...(typeof request.billing_behavior === "string"
 			? { prorationBehavior: request.billing_behavior as BillingBehavior }
+			: {}),
+		...(typeof request.refund_last_payment === "string"
+			? {
+					refundLastPayment: request.refund_last_payment as "prorated" | "full",
+				}
 			: {}),
 		...(typeof request.new_billing_subscription === "boolean"
 			? { newBillingSubscription: request.new_billing_subscription }
