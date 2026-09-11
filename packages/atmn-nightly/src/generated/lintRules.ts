@@ -635,6 +635,14 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.items.thresholdBilling": {
+		required: ["threshold"],
+		fields: {
+			threshold: {
+				exclusiveMinimum: 0,
+			},
+		},
+	},
 	"plans.licenses": {
 		label: "license",
 		idField: "licensePlanId",
@@ -874,6 +882,14 @@ export const LINT_RULES: LintRules = {
 		fields: {
 			expiryDurationType: {
 				enum: ["month", "forever"],
+			},
+		},
+	},
+	"plans.licenses.customize.addItems.thresholdBilling": {
+		required: ["threshold"],
+		fields: {
+			threshold: {
+				exclusiveMinimum: 0,
 			},
 		},
 	},
@@ -1255,6 +1271,14 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.addItems.thresholdBilling": {
+		required: ["threshold"],
+		fields: {
+			threshold: {
+				exclusiveMinimum: 0,
+			},
+		},
+	},
 	"plans.variants.customize.billingControls.autoTopups": {
 		required: ["featureId", "quantity", "threshold"],
 		fields: {
@@ -1582,6 +1606,14 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.items.thresholdBilling": {
+		required: ["threshold"],
+		fields: {
+			threshold: {
+				exclusiveMinimum: 0,
+			},
+		},
+	},
 	"plans.variants.customize.price": {
 		required: ["amount", "interval"],
 		fields: {
@@ -1869,6 +1901,15 @@ export const LINT_RULES: LintRules = {
 			},
 		},
 	},
+	"plans.variants.customize.upsertLicenses.customize.addItems.thresholdBilling":
+		{
+			required: ["threshold"],
+			fields: {
+				threshold: {
+					exclusiveMinimum: 0,
+				},
+			},
+		},
 	"plans.variants.customize.upsertLicenses.customize.price": {
 		required: ["amount", "interval"],
 		fields: {

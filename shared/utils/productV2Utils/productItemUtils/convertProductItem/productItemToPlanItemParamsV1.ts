@@ -72,6 +72,7 @@ export const productItemToPlanItemParamsV1 = ({
 		included: planItemV1.included,
 		unlimited: planItemV1.unlimited,
 		pooled: planItemV1.pooled ?? false,
+		threshold_billing: planItemV1.threshold_billing,
 		reset: planItemV1.reset ?? undefined,
 		price: planItemV1.price
 			? {

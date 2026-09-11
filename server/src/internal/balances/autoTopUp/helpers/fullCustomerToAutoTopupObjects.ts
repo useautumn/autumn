@@ -2,6 +2,7 @@ import {
 	type AutoTopup,
 	cusEntsToBalance,
 	cusEntToCusPrice,
+	cusEntToInvoiceOverage,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -11,6 +12,26 @@ import {
 	isVolumeBasedCusEnt,
 	resolveBillingControlWithProduct,
 } from "@autumn/shared";
+
+const getThreshold = (cusEnt: FullCusEntWithFullCusProduct) =>
+	(
+		cusEntToCusPrice({ cusEnt })?.price.config as
+			| { threshold_billing?: { threshold?: number } }
+			| undefined
+	)?.threshold_billing?.threshold;
+
+const isThresholdEntitlement = (cusEnt: FullCusEntWithFullCusProduct) =>
+	getThreshold(cusEnt) !== undefined;
+
+const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
+	const customerPrice = cusEntToCusPrice({ cusEnt });
+	return Boolean(
+		customerPrice &&
+			isOneOffPrice(customerPrice.price) &&
+			isPrepaidPrice(customerPrice.price) &&
+			!isVolumeBasedCusEnt(cusEnt),
+	);
+};
 
 /** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
 export const fullCustomerToAutoTopupObjects = ({
@@ -32,8 +53,8 @@ export const fullCustomerToAutoTopupObjects = ({
 		matches: (config) => config.feature_id === featureId,
 	});
 
-	const autoTopupConfig = resolved?.control;
-	if (!autoTopupConfig?.enabled) return null;
+	const configuredAutoTopup = resolved?.control;
+	if (configuredAutoTopup && !configuredAutoTopup.enabled) return null;
 
 	// 2. Find cusEnts for this feature
 	const cusEnts = fullCustomerToCustomerEntitlements({
@@ -42,27 +63,35 @@ export const fullCustomerToAutoTopupObjects = ({
 	});
 
 	if (cusEnts.length === 0) return null;
-
-	// 3. Find the one-off prepaid cusEnt whose price the top-up charges.
-	const sourceProductInternalId = resolved?.customerProduct?.internal_product_id;
-	const isOneOffPrepaid = (ce: FullCusEntWithFullCusProduct) => {
-		const cp = cusEntToCusPrice({ cusEnt: ce });
-		return (
-			cp &&
-			isOneOffPrice(cp.price) &&
-			isPrepaidPrice(cp.price) &&
-			!isVolumeBasedCusEnt(ce)
-		);
+	const thresholdEntitlement = configuredAutoTopup
+		? undefined
+		: cusEnts.find(isThresholdEntitlement);
+	const threshold = thresholdEntitlement
+		? getThreshold(thresholdEntitlement)
+		: undefined;
+	if (
+		!configuredAutoTopup &&
+		(!thresholdEntitlement || !threshold || threshold <= 0)
+	)
+		return null;
+	const autoTopupConfig = configuredAutoTopup ?? {
+		feature_id: featureId,
+		enabled: true,
+		threshold: -threshold!,
+		quantity: threshold!,
 	};
 
+	// 3. Find the one-off prepaid cusEnt whose price the top-up charges.
+	const sourceProductInternalId =
+		resolved?.customerProduct?.internal_product_id;
 	let customerEntitlement: FullCusEntWithFullCusProduct | undefined;
 	if (sourceProductInternalId) {
 		// Plan-scoped config charges ONLY its own plan's price — never another
 		// plan's price for the same feature, and no fallback if that plan lacks one.
 		customerEntitlement = cusEnts.find(
 			(ce) =>
-				ce.customer_product?.internal_product_id ===
-					sourceProductInternalId && isOneOffPrepaid(ce),
+				ce.customer_product?.internal_product_id === sourceProductInternalId &&
+				isOneOffPrepaid(ce),
 		);
 	} else {
 		// Customer-level config has no source plan, so charge the MOST RECENTLY
@@ -77,12 +106,18 @@ export const fullCustomerToAutoTopupObjects = ({
 	}
 
 	if (!customerEntitlement || !customerEntitlement.customer_product) {
-		return null;
+		if (thresholdEntitlement?.customer_product)
+			customerEntitlement = thresholdEntitlement;
+		else return null;
 	}
 
 	// 4. Check balance against threshold
+	const thresholdBilling = thresholdEntitlement ? threshold : undefined;
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
-	const balanceBelowThreshold = remainingBalance <= autoTopupConfig.threshold;
+	const balanceBelowThreshold = thresholdBilling
+		? cusEntToInvoiceOverage({ cusEnt: customerEntitlement }) >=
+			thresholdBilling
+		: remainingBalance <= autoTopupConfig.threshold;
 
 	return { autoTopupConfig, customerEntitlement, balanceBelowThreshold };
 };

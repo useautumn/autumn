@@ -3,10 +3,8 @@
  * nowhere else. The spec stays the single source of truth for SHAPE; the
  * overlay only says what the CLI does with a field the API already describes.
  *
- * Few verbs, deliberately. Anything needing another is a sign the difference
+ * Three verbs, deliberately. Anything needing a fourth is a sign the difference
  * belongs in the schema or the server instead — that is the project's mantra.
- * `omitWhenDefault` is the one that cannot: the API always answers with the
- * whole object, and only the fixture wants it elided.
  *
  * Entries are expected to stay few. Casing is NOT a rename: `version_slug`
  * becomes `versionSlug` by the generic mapper, so it needs no entry.
@@ -28,9 +26,6 @@ export type FieldOverlay = {
 	/** A sentence appended to the field's JSDoc: what the server's description
 	 * leaves out and a reader (or an agent) needs to know in the config. */
 	describe?: string;
-	/** An object the server always answers with but a config need not state:
-	 * pull leaves it out while every child sits at its spec default. */
-	omitWhenDefault?: true;
 	/** Why — this is documentation, and it is not optional. */
 	reason: string;
 };
@@ -122,13 +117,18 @@ export const OVERLAY: Overlay = {
 				hidden: true,
 				reason: "Deprecated by the spec itself: version_slug targets a row.",
 			},
-			config: {
-				omitWhenDefault: true,
+			is_default: {
+				hidden: true,
 				reason:
-					"Every flag defaults off and an omitted object is left alone on the wire, so a pull should not spell the defaults out on every plan.",
+					"The deprecated twin of auto_enable: both write the same flag, and a config states it once.",
 			},
 		},
 		features: {
+			display: {
+				hidden: true,
+				reason:
+					"Generated on the server from the name; a config neither states nor pulls it.",
+			},
 			new_feature_id: {
 				hidden: true,
 				reason:
@@ -224,18 +224,6 @@ export const deprecatedFieldsOf = ({
 	Object.entries(overlay.collections[collection] ?? {}).flatMap(
 		([path, field]) =>
 			field.deprecated === true ? [{ path, reason: field.reason }] : [],
-	);
-
-/** Every field of a collection pull omits at its default, wire-named and item-rooted. */
-export const omitWhenDefaultFieldsOf = ({
-	overlay,
-	collection,
-}: {
-	overlay: Overlay;
-	collection: string;
-}): FieldPath[] =>
-	Object.entries(overlay.collections[collection] ?? {}).flatMap(
-		([path, field]) => (field.omitWhenDefault === true ? [path] : []),
 	);
 
 export const isRequiredByOverlay = ({

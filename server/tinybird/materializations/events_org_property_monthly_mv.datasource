@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Org-level UTC monthly property states for aggregate-all group-bys, collapsed from
+    events_org_property_hourly_mv. Customer and entity dimensions are dropped, so an org-wide
+    property group-by over complete months reads one row per property value and month.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `event_name` String,
+    `property_key` String,
+    `property_value` String,
+    `month` DateTime,
+    `total_value` AggregateFunction(sum, Float64),
+    `event_count` AggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(month)"
+ENGINE_SORTING_KEY "org_id, env, property_key, event_name, month, property_value"

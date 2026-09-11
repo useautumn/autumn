@@ -37,17 +37,29 @@ export const computeAutoTopupPlan = ({
 	const feature = customerEntitlement.entitlement.feature;
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement })!;
 	const quantity = autoTopupConfig.quantity;
+	const isThresholdBilling =
+		autoTopupContext.actionSource === "threshold_billing";
 
 	// A. Convert credits to packs (billing units)
 	const priceConfig = cusPrice.price.config as UsagePriceConfig;
 	const billingUnits = priceConfig.billing_units || 1;
 	const topUpPacks = new Decimal(quantity).div(billingUnits).toNumber();
+	const updateCustomerProduct = isThresholdBilling
+		? undefined
+		: {
+				customerProduct: cusProduct,
+				updates: {
+					options: buildUpdatedOptions({ cusProduct, feature, topUpPacks }),
+				},
+			};
 
-	const inlineCusEnt = updateCusEntOptionsInline({
-		cusEnt: customerEntitlement,
-		feature,
-		quantity: topUpPacks,
-	});
+	const inlineCusEnt = isThresholdBilling
+		? { ...customerEntitlement, balance: -quantity }
+		: updateCusEntOptionsInline({
+				cusEnt: customerEntitlement,
+				feature,
+				quantity: topUpPacks,
+			});
 
 	// B. Build line item
 	const lineItem = usagePriceToLineItem({
@@ -94,12 +106,7 @@ export const computeAutoTopupPlan = ({
 		lineItems: [lineItem],
 		updateCustomerEntitlements: [],
 		autoTopupRebalance: { deltas },
-		updateCustomerProduct: {
-			customerProduct: cusProduct,
-			updates: {
-				options: buildUpdatedOptions({ cusProduct, feature, topUpPacks }),
-			},
-		},
+		...(updateCustomerProduct ? { updateCustomerProduct } : {}),
 	};
 
 	// D. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)

@@ -57,8 +57,9 @@ for (const billingUnits of BILLING_UNITS) {
 					const items = pro?.items as Array<Record<string, unknown>>;
 					const item = items.find((entry) => entry.feature_id === "seats");
 					const price = item?.price as Record<string, unknown> | undefined;
-					expect(price).toEqual(
-						expect.objectContaining({ billing_units: billingUnits }),
+					// A pull elides the spec default: billingUnits 1 reads the same absent.
+					expect(price?.billing_units).toBe(
+						billingUnits === 1 ? undefined : billingUnits,
 					);
 					// Pull omits a null field rather than writing it explicitly, so a
 					// null max_purchase round-trips as absent, not `max_purchase: null`.

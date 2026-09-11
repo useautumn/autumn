@@ -1,5 +1,5 @@
-import { createSchema } from "zod-openapi";
 import { z } from "zod/v4";
+import { createSchema } from "zod-openapi";
 import { webhookRegistry } from "./webhookDefinitions.js";
 
 /**

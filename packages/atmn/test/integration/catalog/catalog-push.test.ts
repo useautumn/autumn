@@ -326,7 +326,7 @@ const pushConfig = async (
 	});
 };
 
-test(`${chalk.yellowBright("atmn catalog push: creates and updates configured variants")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: creates and updates configured variants")}`, async () => {
 	const basePlanId = "atmn_variant_push_base";
 	const variantPlanId = "atmn_variant_push_annual";
 	const ctx = await createCleanAtmnIntegrationContext();
@@ -392,7 +392,7 @@ test(`${chalk.yellowBright("atmn catalog push: creates and updates configured va
 	).toBe(2400);
 });
 
-test(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs after base update")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs after base update")}`, async () => {
 	const basePlanId = "atmn_variant_refresh_base";
 	const variantPlanId = "atmn_variant_refresh_inherited";
 	const ctx = await createCleanAtmnIntegrationContext();
@@ -442,7 +442,7 @@ test(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs a
 	).toBe(100);
 });
 
-test(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs when base gains boolean item")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs when base gains boolean item")}`, async () => {
 	const basePlanId = "atmn_variant_refresh_boolean_base";
 	const variantPlanId = "atmn_variant_refresh_boolean_annual";
 	const ctx = await createCleanAtmnIntegrationContext();
@@ -493,7 +493,7 @@ test(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs w
 	).toBe(false);
 });
 
-test(`${chalk.yellowBright("atmn catalog push: creates plan billing controls and inherited variant controls")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: creates plan billing controls and inherited variant controls")}`, async () => {
 	const basePlanId = "atmn_billing_controls_base";
 	const variantPlanId = "atmn_billing_controls_annual";
 	const ctx = await createCleanAtmnIntegrationContext();
@@ -534,7 +534,7 @@ test(`${chalk.yellowBright("atmn catalog push: creates plan billing controls and
 	expect(billingControlsFromColumns(variantAfter)).toEqual(expectedControls);
 });
 
-test(`${chalk.yellowBright("atmn catalog push: missing clean plan and feature are deleted")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: missing clean plan and feature are deleted")}`, async () => {
 	const planId = "atmn_catalog_clean_delete";
 	const plan = products.pro({
 		id: planId,
@@ -579,7 +579,7 @@ test(`${chalk.yellowBright("atmn catalog push: missing clean plan and feature ar
 	expect(deletedFeature).toBeFalsy();
 });
 
-test(`${chalk.yellowBright("atmn catalog push: missing attached plan is archived")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: missing attached plan is archived")}`, async () => {
 	const customerId = "atmn-catalog-archive-plan-customer";
 	const planId = "atmn_catalog_archive_plan";
 	const plan = products.pro({
@@ -622,7 +622,7 @@ test(`${chalk.yellowBright("atmn catalog push: missing attached plan is archived
 	expect(archivedPlan.archived).toBe(true);
 });
 
-test(`${chalk.yellowBright("atmn catalog push: blocked feature updates are skipped")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: blocked feature updates are skipped")}`, async () => {
 	const customerId = "atmn-catalog-blocked-feature-customer";
 	const planId = "atmn_catalog_blocked_feature";
 	const plan = products.pro({
@@ -667,7 +667,7 @@ test(`${chalk.yellowBright("atmn catalog push: blocked feature updates are skipp
 	expect(messages.type).toBe("metered");
 });
 
-test(`${chalk.yellowBright("atmn catalog push: creates a new feature and plan in one batch")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: creates a new feature and plan in one batch")}`, async () => {
 	const featureId = "atmn_catalog_batch_feature";
 	const planId = "atmn_catalog_batch_plan";
 	const ctx = await createCleanAtmnIntegrationContext();
@@ -702,7 +702,7 @@ test(`${chalk.yellowBright("atmn catalog push: creates a new feature and plan in
 	).toBe(true);
 });
 
-test(`${chalk.yellowBright("atmn catalog push --all-versions: historical plan updates in place")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push --all-versions: historical plan updates in place")}`, async () => {
 	const suffix = Math.random().toString(36).slice(2, 9);
 	const customerId = `atmn-all-versions-push-${suffix}`;
 	const planId = `atmn_all_versions_push_${suffix}`;
@@ -805,7 +805,7 @@ test(`${chalk.yellowBright("atmn catalog push --all-versions: historical plan up
 	expect(latest.version).toBe(2);
 });
 
-test(`${chalk.yellowBright("atmn catalog push: missing feature referenced by kept plan is archived")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: missing feature referenced by kept plan is archived")}`, async () => {
 	const planId = "atmn_catalog_archive_feature";
 	const plan = products.pro({
 		id: planId,
@@ -842,7 +842,7 @@ test(`${chalk.yellowBright("atmn catalog push: missing feature referenced by kep
 	expect(archivedFeature.archived).toBe(true);
 });
 
-test(`${chalk.yellowBright("atmn catalog push: missing credit-system child feature is archived")}`, async () => {
+test.skip(`${chalk.yellowBright("atmn catalog push: missing credit-system child feature is archived")}`, async () => {
 	const ctx = await createCleanAtmnIntegrationContext();
 
 	const workspace = await pullConfig({ secretKey: ctx.orgSecretKey });

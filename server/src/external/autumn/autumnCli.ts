@@ -1007,6 +1007,7 @@ export class AutumnInt {
 			feature_id?: string | string[];
 			group_by?: string;
 			range?: string;
+			custom_range?: { start: number; end: number };
 			bin_size?: string;
 			max_groups?: number;
 			aggregate_on?: "deducted";

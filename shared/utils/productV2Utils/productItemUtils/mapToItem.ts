@@ -126,6 +126,9 @@ export const toFeaturePriceItem = ({
 	if (ent.feature_override) {
 		itemConfig.feature_override = ent.feature_override;
 	}
+	if (config.threshold_billing) {
+		itemConfig.threshold_billing = config.threshold_billing;
+	}
 
 	const item: ProductItem = {
 		feature_id: ent.feature.id,

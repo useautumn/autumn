@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Collapses the org-hour dimension states into mergeable UTC monthly states.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        event_name,
+        dimension,
+        group_value,
+        toDateTime(toStartOfMonth(hour)) as month,
+        sumMergeState(total_value) as total_value,
+        sumMergeState(event_count) as event_count
+    FROM events_org_dimension_hourly_mv
+    GROUP BY org_id, env, event_name, dimension, group_value, month
+
+TYPE materialized
+DATASOURCE events_org_dimension_monthly_mv

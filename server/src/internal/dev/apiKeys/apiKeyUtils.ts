@@ -47,7 +47,7 @@ export const createKey = async ({
 	meta,
 	scopes,
 }: {
-	db: DrizzleCli;
+	db: Pick<DrizzleCli, "insert">;
 	env: AppEnv;
 	name: string;
 	orgId: string;

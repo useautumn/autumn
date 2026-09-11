@@ -118,12 +118,19 @@
   { "feature_id": "storage_gb", "included": 100, "reset": null, "price": { "amount": 0.05, "interval": "month", "billing_units": 1, "billing_method": "usage_based" } }
   ```
   Use when persistent usage is measured through the cycle and invoiced in arrears.
+- Pooled entity grant:
+  ```json
+  { "feature_id": "AI_CREDITS", "included": 10000, "reset": { "interval": "month" }, "pooled": true, "price": null }
+  ```
+  On a plan attached per entity (workspace, project): each entity's 10k joins one shared customer balance that any entity — or the customer directly — can spend. Without `pooled`, each entity keeps its own separate balance.
 
 ## Advanced
 
-- `rollover`: for consumable features with reset intervals; unused balance can carry forward subject to cap and expiry rules.
+- `rollover`: for consumable features with reset intervals; unused balance can carry forward subject to cap (absolute `max` or `max_percentage` of the grant) and expiry rules. Rollovers remember the originally granted amount, not just what's left.
 - For paid consumable items, `price.interval` determines both the billing cycle and the reset cycle.
 - `proration`: mainly relevant to prepaid quantity changes, especially non-consumable or seat-like items.
 - `max_purchase`: less common cap on purchasable units; customer billing controls are often used for spend or purchase limits.
-- `entity_feature_id`: legacy/deprecated per-entity balance scoping; prefer entity-scoped plan attachments.
+- `pooled`: on entity-attached plans, the item's grant joins one shared customer balance instead of a per-entity one (`pooled: true` on the item, in config and API alike). Rollovers on the contributing item carry into the pool. Customer-level purchases (credit packs, overage — often an add-on plan) stack beside the pool and are spendable by all entities. A per-entity cap on a pooled balance is a usage limit (billing control), not a separate balance. Not allowed on license plans.
+- `entity_feature_id`: legacy/deprecated per-entity balance scoping; prefer entity-scoped plan attachments. Never mention it unless the user's config already has it.
 - Auto top-ups require a one-off prepaid item for the feature; customer billing controls configure threshold and quantity.
+- Balances can carry an `expires_at`; expired balances stop counting. Tracked usage can also be windowed (UTC usage windows) for time-boxed caps.

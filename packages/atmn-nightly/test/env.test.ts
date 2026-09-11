@@ -88,7 +88,7 @@ test("strips terminal controls from every server-provided string", () => {
 	expect(output.replace(/\u001b\[[0-9;]*m/g, "")).not.toMatch(/\u001b|\u0007/);
 });
 
-test("--json prints the response verbatim", async () => {
+test("--json prints the org, whether the key is the main one, the pin, and notes", async () => {
 	const { lines, write } = capture();
 	await runEnv({
 		target: resolveTarget({}),
@@ -97,7 +97,32 @@ test("--json prints the response verbatim", async () => {
 		write,
 	});
 
-	expect(JSON.parse(lines.join(""))).toEqual(ORG);
+	const parsed = JSON.parse(lines.join(""));
+	expect(parsed.organization).toEqual({
+		id: ORG.id,
+		name: ORG.name,
+		slug: ORG.slug,
+	});
+	expect(parsed.env).toBe(ORG.env);
+	expect(parsed.isMaster).toBe(true);
+	expect(parsed.sandbox).toBeNull();
+	expect(parsed.keyName).toBe("AUTUMN_SECRET_KEY");
+	expect(parsed.notes.length).toBeGreaterThan(0);
+});
+
+test("--json under a pin reports the sandbox and which org the key answered as", async () => {
+	const { lines, write } = capture();
+	await runEnv({
+		target: resolveTarget({ sandbox: "sb_1" }),
+		fetchOrgInfo: async () => ({ ...ORG, id: "sb_1", is_sandbox: true }),
+		json: true,
+		write,
+	});
+	const parsed = JSON.parse(lines.join(""));
+	expect(parsed.sandbox).toEqual({ id: "sb_1", authenticatedAs: "sb_1" });
+	expect(parsed.isMaster).toBe(false);
+	expect(parsed.keyName).toBe("AUTUMN_SANDBOX_SB_1_SECRET_KEY");
+	expect(parsed.notes.length).toBeGreaterThan(0);
 });
 
 test("renderEnv lines every value up in one column", () => {

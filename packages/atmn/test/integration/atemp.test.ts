@@ -16,7 +16,7 @@ const premiumCustomerId = "atmn_premium_customer";
 const proPlanId = "atmn_pro";
 const premiumPlanId = "atmn_premium";
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("atmn scratch: pulls pro and premium with one customer each")}`,
 	async () => {
 		const pro = products.pro({

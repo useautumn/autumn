@@ -39,9 +39,7 @@ const strictEqual =
 		left === right;
 
 /** JSONB round-trips reorder object keys; sort so compareBillingControls is stable. */
-const stabilizeBillingControlColumn = (
-	value: unknown,
-): unknown => {
+const stabilizeBillingControlColumn = (value: unknown): unknown => {
 	if (value == null) return undefined;
 	if (!Array.isArray(value)) return value;
 

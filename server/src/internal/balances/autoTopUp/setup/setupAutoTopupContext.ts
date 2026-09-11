@@ -250,6 +250,10 @@ export const setupAutoTopupContext = async ({
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 
 	const cusProduct = customerEntitlement.customer_product;
+	const thresholdBilling = Boolean(
+		(customerPrice.price.config as { threshold_billing?: unknown })
+			.threshold_billing,
+	);
 
 	if (!cusProduct) {
 		const message = `No customer product found for customer ${customerId}`;
@@ -283,6 +287,7 @@ export const setupAutoTopupContext = async ({
 			// Auto top-up specific fields
 			autoTopupConfig: normalizedAutoTopupConfig,
 			customerEntitlement,
+			actionSource: thresholdBilling ? "threshold_billing" : undefined,
 
 			limitState,
 		},

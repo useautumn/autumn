@@ -38,6 +38,7 @@ export const BaseFeatureV1ParamsSchema = z.object({
 				"Singular and plural display names for the feature in your user interface.",
 		}),
 
+	// No spec default: a classic credit system must state it, even as [].
 	credit_schema: z.array(ApiCreditSchemaItemSchema).optional().meta({
 		description:
 			"A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.",

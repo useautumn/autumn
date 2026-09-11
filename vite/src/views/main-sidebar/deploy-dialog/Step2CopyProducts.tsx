@@ -1,30 +1,10 @@
-import { AppEnv } from "@autumn/shared";
 import { Button, IconButton } from "@autumn/ui";
 import { Check } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
 import { SectionHeader } from "@/views/onboarding3/components/integration-step/SectionHeader";
+import { useCopyPlansToProd } from "./useDeployActions";
 
 export const Step2CopyProducts = () => {
-	const sandboxAxios = useAxiosInstance({ env: AppEnv.Sandbox });
-	const [isCopying, setIsCopying] = useState(false);
-	const [isCopied, setIsCopied] = useState(false);
-
-	const handleCopyProducts = async () => {
-		setIsCopying(true);
-		try {
-			const { data } = await sandboxAxios.post("/products/copy_to_production");
-			console.log("Data:", data);
-			setIsCopied(true);
-			toast.success(`Successfully copied products to production`);
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to copy products"));
-		} finally {
-			setIsCopying(false);
-		}
-	};
+	const { isCopied, isCopying, copyPlans } = useCopyPlansToProd();
 
 	return (
 		<div className="flex gap-3">
@@ -51,7 +31,7 @@ export const Step2CopyProducts = () => {
 					<div>
 						<Button
 							variant="secondary"
-							onClick={handleCopyProducts}
+							onClick={copyPlans}
 							isLoading={isCopying}
 							className="w-36"
 						>

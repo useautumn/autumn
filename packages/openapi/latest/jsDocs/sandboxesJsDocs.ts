@@ -4,4 +4,6 @@ export const listSandboxesJsDoc = `Lists every sandbox belonging to your organiz
 
 export const deleteSandboxJsDoc = `Permanently deletes a sandbox and everything inside it: its catalog, customers and secret key. Cannot be undone.`;
 
+export const createSandboxKeyJsDoc = `Mints a new secret key for a sandbox your organization owns, carrying the scopes of the key that asked. Returns the key once, in this response — store it, it cannot be read back. Authenticated with your organization's secret key; a sandbox's own key cannot mint keys.`;
+
 export const resetSandboxJsDoc = `Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.`;

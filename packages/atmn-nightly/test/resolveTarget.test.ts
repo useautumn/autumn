@@ -211,3 +211,10 @@ test("every command hits the same URL: the target's, else the spec's server", ()
 		);
 	});
 });
+
+test("an empty AUTUMN_SANDBOX_ID reads as no pin", () => {
+	process.env.AUTUMN_SANDBOX_ID = "";
+	const target = resolveTarget({});
+	expect(target.sandboxId).toBeUndefined();
+	expect(target.secretKeyName).toBe("AUTUMN_SECRET_KEY");
+});
