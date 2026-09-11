@@ -11,6 +11,8 @@
  *                               -> both share ONE entitlement_id
  *     - manual top-up           -> one more grant row, its own expires_at
  *     - expiry on a recurring / non-prepaid item -> 400
+ *     - repeated top-ups split every time, each grant staying positive
+ *     - an elapsed grant leaves the balance, and the sweep deletes it
  *     - cusProduct.is_custom stays false
  *   Side effects:
  *     - no extra rows in `entitlements` beyond the catalog item
@@ -32,7 +34,10 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { sql } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
+import { deleteExpiredGrants } from "@/internal/customers/cusProducts/cusEnts/actions/deleteExpiredGrants.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
 const EXPIRY = { duration: EntitlementDuration.Month, length: 2 };
@@ -331,5 +336,133 @@ test.concurrent(
 		// ── Contract assertion 16: still one entitlement, still not custom ────
 		expect(new Set(rows.map((row) => row.entitlement_id)).size).toBe(1);
 		expect(customerProduct?.is_custom).toBe(false);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("prepaid one-off expiry: an elapsed grant leaves the balance and the sweep deletes it")}`,
+	async () => {
+		const planId = "expiry-elapsed";
+		const customerId = "expiry-elapsed-cus";
+		const { autumnV2_1, autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ paymentMethod: "success" })],
+			actions: [],
+		});
+
+		await autumnV2_3.catalogV2.update({ plans: [expiringTopUpPlan(planId)] });
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: planId,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		});
+
+		const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(before.balances[TestFeature.Messages].remaining).toBe(100);
+
+		// Backdate the grant rather than wait two months.
+		await ctx.db.execute(sql`
+			UPDATE customer_entitlements
+			SET expires_at = ${Date.now() - 1000}
+			WHERE expires_at IS NOT NULL
+				AND customer_product_id IS NOT NULL
+				AND internal_customer_id = (
+					SELECT internal_id FROM customers
+					WHERE id = ${customerId}
+						AND org_id = ${ctx.org.id}
+						AND env = ${ctx.env}
+				)
+		`);
+		await invalidateCachedFullSubject({ ctx, customerId });
+
+		// ── Contract assertion 17: elapsed credits are not spendable ──────────
+		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(after.balances[TestFeature.Messages]?.remaining ?? 0).toBe(0);
+
+		// ── Contract assertion 18: the sweep deletes the elapsed row ──────────
+		const { deleted } = await deleteExpiredGrants({ ctx });
+		expect(deleted).toBeGreaterThan(0);
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const customerProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product.id === planId,
+		);
+		const rows = (customerProduct?.customer_entitlements ?? []).filter(
+			(ce) => ce.entitlement.feature.id === TestFeature.Messages,
+		);
+		expect(rows.every((row) => row.expires_at == null)).toBe(true);
+
+		// ── Contract assertion 19: the keystone survives the sweep ────────────
+		expect(rows.length).toBe(1);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("prepaid one-off expiry: repeated top-ups each split into their own positive grant")}`,
+	async () => {
+		const planId = "expiry-multi";
+		const customerId = "expiry-multi-cus";
+		const { autumnV2_1, autumnV2_2, autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ paymentMethod: "success" })],
+			actions: [],
+		});
+
+		await autumnV2_3.catalogV2.update({
+			plans: [expiringTopUpOnRecurringPlan(planId)],
+		});
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: planId,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		});
+
+		for (const quantity of [100, 200, 300]) {
+			await autumnV2_2.subscriptions.update({
+				customer_id: customerId,
+				plan_id: planId,
+				feature_quantities: [{ feature_id: TestFeature.Messages, quantity }],
+			});
+		}
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const customerProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product.id === planId,
+		);
+		const rows = (customerProduct?.customer_entitlements ?? []).filter(
+			(ce) => ce.entitlement.feature.id === TestFeature.Messages,
+		);
+		const grants = rows.filter((row) => row.expires_at != null);
+
+		// ── Contract assertion 20: attach + three top-ups = four grants ───────
+		expect(grants.length).toBe(4);
+
+		// ── Contract assertion 21: every grant kept its own purchase ──────────
+		expect(
+			grants
+				.map((grant) => grant.balance)
+				.sort((left, right) => (left ?? 0) - (right ?? 0)),
+		).toEqual([100, 100, 200, 300]);
+
+		// ── Contract assertion 22: none of them drained into another ──────────
+		expect(grants.every((grant) => (grant.balance ?? 0) > 0)).toBe(true);
+		expect(grants.every((grant) => (grant.expires_at ?? 0) > Date.now())).toBe(
+			true,
+		);
+
+		// ── Contract assertion 23: one keystone, one entitlement, not custom ──
+		expect(rows.filter((row) => row.expires_at == null).length).toBe(1);
+		expect(new Set(rows.map((row) => row.entitlement_id)).size).toBe(1);
+		expect(customerProduct?.is_custom).toBe(false);
+
+		// ── Contract assertion 24: the customer can spend all of it ───────────
+		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(customer.balances[TestFeature.Messages].remaining).toBe(700);
 	},
 );
