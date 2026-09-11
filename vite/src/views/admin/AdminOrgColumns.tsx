@@ -53,6 +53,7 @@ export const createAdminOrgColumns = ({
 	},
 	{
 		id: "status",
+		meta: { mobileCard: "hidden" },
 		header: "Status",
 		size: 120,
 		enableSorting: false,
@@ -62,6 +63,7 @@ export const createAdminOrgColumns = ({
 	},
 	{
 		id: "slug",
+		meta: { mobileCard: "hidden" },
 		header: "Slug",
 		accessorKey: "slug",
 		size: 150,
@@ -71,6 +73,7 @@ export const createAdminOrgColumns = ({
 	},
 	{
 		id: "createdAt",
+		meta: { mobileCard: "hidden" },
 		header: "Created",
 		accessorKey: "createdAt",
 		size: 92,
@@ -82,6 +85,7 @@ export const createAdminOrgColumns = ({
 	},
 	{
 		id: "id",
+		meta: { mobileCard: "hidden" },
 		header: "ID",
 		accessorKey: "id",
 		size: 140,
