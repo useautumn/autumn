@@ -13,6 +13,7 @@ import { initCustomerEntitlement } from "./initCustomerEntitlement/initCustomerE
 import { initCustomerLicenses } from "./initCustomerLicenses/initCustomerLicenses";
 import { initCustomerPrice } from "./initCustomerPrice";
 import { initCustomerProduct } from "./initCustomerProduct";
+import { splitExpiringPurchaseGrants } from "../expiringGrants/splitExpiringPurchaseGrants";
 
 type InitFullCustomerProductParams = {
 	ctx: AutumnContext;
@@ -72,6 +73,11 @@ export const initFullCustomerProductWithBalanceTransitions = ({
 		customerProduct: newFullCustomerProduct,
 		fullProduct,
 		customerLicenseQuantities: initContext.customerLicenseQuantities,
+	});
+
+	splitExpiringPurchaseGrants({
+		customerProduct: newFullCustomerProduct,
+		now: initContext.now,
 	});
 
 	const balanceTransitionPlan = applyExistingStatesToCustomerProduct({
