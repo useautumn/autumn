@@ -2,6 +2,7 @@ import type { Entity } from "../../../models/cusModels/entityModels/entityModels
 import { FeatureType } from "../../../models/featureModels/featureEnums";
 import {
 	AllowanceType,
+	type Entitlement,
 	type EntitlementWithFeature,
 } from "../../../models/productModels/entModels/entModels";
 import { EntInterval } from "../../../models/productModels/intervals/entitlementInterval";
@@ -34,7 +35,7 @@ export const isEntityScopedEntitlement = ({
 export const isLifetimeEntitlement = ({
 	entitlement,
 }: {
-	entitlement: EntitlementWithFeature;
+	entitlement: Entitlement;
 }) => {
 	return !entitlement.interval || entitlement.interval === EntInterval.Lifetime;
 };

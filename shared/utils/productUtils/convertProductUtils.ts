@@ -12,6 +12,7 @@ import type {
 	Product,
 } from "../../models/productModels/productModels.js";
 import type { EntitlementPrice } from "./entitlementPriceUtils/entitlementPriceTypes.js";
+import { isLifetimeEntitlement } from "./entUtils/classifyEntUtils.js";
 import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 
 // Must stay symmetric with priceToEnt: if one direction resolves a pair across
@@ -92,11 +93,17 @@ export const entToOptions = ({
 	ent: Entitlement;
 	options: FeatureOptions[];
 }) => {
-	return options.find(
+	const matches = options.filter(
 		(option) =>
 			option.internal_feature_id === ent.internal_feature_id ||
 			(ent.feature_id && option.feature_id === ent.feature_id),
 	);
+	if (matches.length <= 1) return matches[0];
+
+	// Several prepaid slots on one feature: the recurring price owns the caller's
+	// quantity, and the one-off top-up beside it stays on its own allowance.
+	if (isLifetimeEntitlement({ entitlement: ent })) return undefined;
+	return matches.find((option) => option.quantity > 0) ?? matches[0];
 };
 
 export const productToStripeId = ({
