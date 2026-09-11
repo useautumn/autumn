@@ -18,23 +18,12 @@ import { CaretDownIcon } from "@phosphor-icons/react";
 import { debounce } from "lodash";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
-import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { useAnalyticsContext } from "../AnalyticsContext";
-
-interface CustomerSearchResult {
-	id: string;
-	internal_id?: string;
-	name?: string;
-	email?: string;
-}
+import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
 
 export function CustomerComboBox() {
-	const env = useEnv();
-	const navigate = useNavigate();
-	const location = useLocation();
+	const { setFilterStates } = useAnalyticsFilterState();
 	const { customer, setHasCleared } = useAnalyticsContext();
 	const [open, setOpen] = useState(false);
 	const [value, setValue] = useState("");
@@ -120,13 +109,7 @@ export function CustomerComboBox() {
 										size="sm"
 										className="mx-auto"
 										onClick={() => {
-											const params = new URLSearchParams(location.search);
-											params.delete("customer_id");
-											const queryString = params.toString();
-											const path = queryString
-												? `/analytics?${queryString}`
-												: "/analytics";
-											navigateTo(path, navigate, env);
+											setFilterStates({ customer_id: null });
 											setOpen(false);
 											setHasCleared(false);
 										}}
@@ -145,13 +128,9 @@ export function CustomerComboBox() {
 													key={idx}
 													value={c.id || c.internal_id}
 													onSelect={() => {
-														const params = new URLSearchParams(location.search);
-														params.set(
-															"customer_id",
-															c.id || c.internal_id || "",
-														);
-														const path = `/analytics?${params.toString()}`;
-														navigateTo(path, navigate, env);
+														setFilterStates({
+															customer_id: c.id || c.internal_id || "",
+														});
 														setOpen(false);
 													}}
 													className="w-full"
