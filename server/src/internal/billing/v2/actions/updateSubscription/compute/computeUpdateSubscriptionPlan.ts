@@ -12,6 +12,7 @@ import { computeCancelPlan } from "@/internal/billing/v2/actions/updateSubscript
 import { computeCustomPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlan";
 import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
 import { computeManualTopUpPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/manualTopUp/computeManualTopUpPlan";
+import { applyParentPrepaidQuantityUpdates } from "@/internal/billing/v2/actions/updateSubscription/compute/updateLicenseQuantity/applyParentPrepaidQuantityUpdates";
 import { computeUpdateLicenseQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateLicenseQuantity/computeUpdateLicenseQuantityPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
@@ -44,12 +45,27 @@ export const computeUpdateSubscriptionPlan = async ({
 				updateSubscriptionContext: billingContext,
 			});
 			break;
-		case UpdateSubscriptionIntent.UpdateLicenseQuantity:
+		case UpdateSubscriptionIntent.UpdateLicenseQuantity: {
 			plan = computeUpdateLicenseQuantityPlan({
 				ctx,
 				updateSubscriptionContext: billingContext,
 			});
+			if (params.feature_quantities?.length) {
+				const quantityPlan = computeUpdateQuantityPlan({
+					ctx,
+					updateSubscriptionContext: billingContext,
+				});
+				const recurringPrepaidOptions =
+					quantityPlan.updateCustomerProduct?.updates?.options ?? [];
+				if (recurringPrepaidOptions.length > 0) {
+					plan = applyParentPrepaidQuantityUpdates({
+						licensePlan: plan,
+						quantityPlan,
+					});
+				}
+			}
 			break;
+		}
 		case UpdateSubscriptionIntent.UpdatePlan:
 			plan = await computeCustomPlan({
 				ctx,

@@ -1,6 +1,7 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
+	type PooledBalancePlan,
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
 } from "@autumn/shared";
@@ -62,12 +63,58 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 		now: billingContext.currentEpochMs,
 	});
 
-	if (updatesExistingCustomerProduct) {
-		return { ...plan, pooledBalancePlan };
-	}
-
 	return {
 		...plan,
-		pooledBalancePlan,
+		// License-quantity finalize replaces pooledBalancePlan; keep prepaid patches.
+		pooledBalancePlan: mergeLicenseQuantityPooledBalancePlan({
+			licensePooled: pooledBalancePlan,
+			prepaidPooled: plan.pooledBalancePlan,
+		}),
+	};
+};
+
+const mergeLicenseQuantityPooledBalancePlan = ({
+	licensePooled,
+	prepaidPooled,
+}: {
+	licensePooled?: PooledBalancePlan;
+	prepaidPooled?: PooledBalancePlan;
+}): PooledBalancePlan | undefined => {
+	if (!prepaidPooled) return licensePooled;
+	if (!licensePooled) return prepaidPooled;
+
+	return {
+		insertPoolBalances: [
+			...licensePooled.insertPoolBalances,
+			...prepaidPooled.insertPoolBalances,
+		],
+		updatePoolBalances: [
+			...licensePooled.updatePoolBalances,
+			...prepaidPooled.updatePoolBalances,
+		],
+		expirePoolBalanceCandidates: [
+			...licensePooled.expirePoolBalanceCandidates,
+			...prepaidPooled.expirePoolBalanceCandidates,
+		],
+		insertPoolRollovers: [
+			...licensePooled.insertPoolRollovers,
+			...prepaidPooled.insertPoolRollovers,
+		],
+		insertPoolContributions: [
+			...licensePooled.insertPoolContributions,
+			...prepaidPooled.insertPoolContributions,
+		],
+		updatePoolContributions: [
+			...licensePooled.updatePoolContributions,
+			...prepaidPooled.updatePoolContributions,
+		],
+		deletePoolContributions: [
+			...licensePooled.deletePoolContributions,
+			...prepaidPooled.deletePoolContributions,
+		],
+		deletePoolBalances: [
+			...(licensePooled.deletePoolBalances ?? []),
+			...(prepaidPooled.deletePoolBalances ?? []),
+		],
 	};
 };
