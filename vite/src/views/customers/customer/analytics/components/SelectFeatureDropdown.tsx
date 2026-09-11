@@ -1,10 +1,5 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
-import { IconButton } from "@autumn/ui";
-import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { toast } from "sonner";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -12,11 +7,17 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuLabel,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
+import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import { useEventNames } from "../hooks/useEventNames";
+import { getEffectiveBinSize } from "../utils/intervals";
 
 const MAX_NUM_SELECTED = 10;
 
@@ -68,6 +69,10 @@ export const SelectFeatureDropdown = () => {
 	const { queryStates } = useAnalyticsQueryState();
 	const { eventNames: eventNamesData } = useEventNames({
 		interval: queryStates.interval,
+		binSize: getEffectiveBinSize({
+			interval: queryStates.interval,
+			binSize: queryStates.bin_size,
+		}),
 		start: queryStates.start,
 		end: queryStates.end,
 	});

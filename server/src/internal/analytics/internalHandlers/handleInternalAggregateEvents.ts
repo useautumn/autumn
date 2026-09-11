@@ -4,7 +4,6 @@ import {
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
-	MONTH_RANGES,
 	type RangeEnum,
 	RecaseError,
 	Scopes,
@@ -23,6 +22,7 @@ import { eventActions } from "../actions/eventActions.js";
 import {
 	defaultBinSizeForRange,
 	getStandardIntervalWindow,
+	isMonthRange,
 } from "../analyticsUtils.js";
 import { collapsePlanIdGroups } from "./utils/collapsePlanIdGroups.js";
 
@@ -119,8 +119,7 @@ export const handleInternalAggregateEvents = createRoute({
 			bin_size || defaultBinSizeForRange({ interval: interval ?? undefined });
 
 		if (
-			interval &&
-			interval in MONTH_RANGES &&
+			isMonthRange({ interval: interval ?? undefined }) &&
 			(binSize === "day" || binSize === "hour")
 		) {
 			throw new RecaseError({

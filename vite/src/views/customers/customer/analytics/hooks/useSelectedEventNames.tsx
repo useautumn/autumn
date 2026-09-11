@@ -1,5 +1,6 @@
 import { parseAsArrayOf, parseAsString, useQueryStates } from "nuqs";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { getEffectiveBinSize } from "../utils/intervals";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { type EventNameWithCount, useEventNames } from "./useEventNames";
 
@@ -16,9 +17,13 @@ export const useSelectedEventNames = () => {
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;
+	const binSize = getEffectiveBinSize({
+		interval,
+		binSize: queryStates.bin_size,
+	});
 
 	const { eventNames: cachedEventNames, isLoading: eventNamesLoading } =
-		useEventNames({ interval, start, end });
+		useEventNames({ interval, binSize, start, end });
 	const { features: featuresData, isLoading: featuresLoading } =
 		useFeaturesQuery();
 

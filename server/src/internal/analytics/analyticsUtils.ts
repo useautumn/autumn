@@ -6,7 +6,6 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	MONTH_RANGES,
-	type MonthRangeEnum,
 	RecaseError,
 	type Subscription,
 } from "@autumn/shared";
@@ -29,14 +28,33 @@ export const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 
 const CLICKHOUSE_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
+/** Own-property lookup: the interval is arbitrary caller input, so an inherited
+ * name like "toString" must not resolve to a range length. */
+const lookupRangeLength = ({
+	lengths,
+	interval,
+}: {
+	lengths: Record<string, number>;
+	interval?: string;
+}): number | undefined => {
+	if (interval === undefined) return undefined;
+	// biome-ignore lint/suspicious/noPrototypeBuiltins: Object.hasOwn needs lib ES2022; server targets ES2020.
+	if (!Object.prototype.hasOwnProperty.call(lengths, interval)) {
+		return undefined;
+	}
+	return lengths[interval];
+};
+
 const monthsForRange = ({
 	interval,
 }: {
 	interval?: string;
 }): number | undefined =>
-	interval !== undefined && interval in MONTH_RANGES
-		? MONTH_RANGES[interval as MonthRangeEnum]
-		: undefined;
+	lookupRangeLength({ lengths: MONTH_RANGES, interval });
+
+/** True when a range is measured in months rather than days. */
+export const isMonthRange = ({ interval }: { interval?: string }): boolean =>
+	monthsForRange({ interval }) !== undefined;
 
 /** Default bin for a range when the caller didn't pick one: month ranges are
  * built for monthly bins, and 24h is too short for anything but hours. */
@@ -63,7 +81,10 @@ export const getStandardIntervalWindow = ({
 	now?: UTCDate;
 }): { start: UTCDate; end: UTCDate } | undefined => {
 	const months = monthsForRange({ interval });
-	const days = interval ? STANDARD_INTERVAL_DAYS[interval] : undefined;
+	const days = lookupRangeLength({
+		lengths: STANDARD_INTERVAL_DAYS,
+		interval,
+	});
 	if (months === undefined && days === undefined) return undefined;
 
 	const bin = binSize ?? defaultBinSizeForRange({ interval });
@@ -84,14 +105,17 @@ export const getStandardIntervalWindow = ({
 
 /** Resolves the start/end window the event-name ranking should query so it
  * matches the chart's visible range. A custom range takes precedence; otherwise
- * the standard range resolves with the same boundary alignment the chart uses.
- * Returns undefined when neither applies (e.g. billing-cycle ranges), leaving
- * callers on all-time ranking. */
+ * the standard range resolves with the same boundary alignment the chart uses,
+ * which is why the chart's bin size belongs here too. Returns undefined when
+ * neither applies (e.g. billing-cycle ranges), leaving callers on all-time
+ * ranking. */
 export const getEventRankingWindow = ({
 	interval,
+	binSize,
 	customRange,
 }: {
 	interval?: string;
+	binSize?: string;
 	customRange?: { start: number; end: number };
 }): { startDate: string; endDate: string } | undefined => {
 	if (customRange) {
@@ -101,7 +125,7 @@ export const getEventRankingWindow = ({
 		};
 	}
 
-	const window = getStandardIntervalWindow({ interval });
+	const window = getStandardIntervalWindow({ interval, binSize });
 	if (!window) {
 		return undefined;
 	}

@@ -73,8 +73,19 @@ test(`${chalk.yellowBright(
 	).toBe("2026-06-13T00:00:00.000Z");
 
 	expect(
-		getStandardIntervalWindow({ interval: "24h", now: NOW })?.start.toISOString(),
+		getStandardIntervalWindow({
+			interval: "24h",
+			now: NOW,
+		})?.start.toISOString(),
 	).toBe("2026-09-10T14:00:00.000Z");
 
-	expect(getStandardIntervalWindow({ interval: "1bc", now: NOW })).toBeUndefined();
+	expect(
+		getStandardIntervalWindow({ interval: "1bc", now: NOW }),
+	).toBeUndefined();
+
+	// The internal endpoint accepts any interval string, so an inherited
+	// Object.prototype name must not be mistaken for a month range.
+	expect(
+		getStandardIntervalWindow({ interval: "toString", now: NOW }),
+	).toBeUndefined();
 });

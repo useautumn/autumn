@@ -157,6 +157,11 @@ export const useRawAnalyticsData = () => {
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;
+	// The table must cover the chart's window, so it resolves the bin the same way.
+	const binSize = getEffectiveBinSize({
+		interval,
+		binSize: queryStates.bin_size,
+	});
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
@@ -176,6 +181,7 @@ export const useRawAnalyticsData = () => {
 		customer_id: customerId || undefined,
 		entity_id: entityId || undefined,
 		interval: customRange ? undefined : interval,
+		bin_size: binSize,
 		custom_range: customRange,
 		event_names: tableEventNames,
 	};
@@ -187,6 +193,7 @@ export const useRawAnalyticsData = () => {
 			customerId,
 			entityId,
 			interval,
+			binSize,
 			String(start ?? ""),
 			String(end ?? ""),
 			...(tableEventNames ?? []).sort(),

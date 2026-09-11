@@ -173,14 +173,26 @@ const monthRangeStart = ({
 	months: number;
 	binSize: Granularity;
 }): number => {
-	const date = new Date(rangeEnd);
+	const end = new Date(rangeEnd);
+	const year = end.getUTCFullYear();
+	const month = end.getUTCMonth();
+
 	if (binSize === "month") {
-		date.setUTCDate(1);
-		date.setUTCMonth(date.getUTCMonth() - (months - 1));
-		return date.getTime();
+		return Date.UTC(year, month - (months - 1), 1);
 	}
-	date.setUTCMonth(date.getUTCMonth() - months);
-	return date.getTime();
+
+	// Clamp the day the way date-fns `sub` does on the server: day 0 of the
+	// following month is the last day of the target one.
+	const lastDayOfTarget = new Date(
+		Date.UTC(year, month - months + 1, 0),
+	).getUTCDate();
+	return Date.UTC(
+		year,
+		month - months,
+		Math.min(end.getUTCDate(), lastDayOfTarget),
+		end.getUTCHours(),
+		end.getUTCMinutes(),
+	);
 };
 
 /**
@@ -201,10 +213,9 @@ export const predictBarCount = ({
 }): number => {
 	const bin = getEffectiveBinSize({ interval, binSize });
 	const rangeEnd = interval === "custom" && end ? end : Date.now();
-	const months =
-		interval in MONTH_RANGES
-			? MONTH_RANGES[interval as MonthRangeEnum]
-			: undefined;
+	const months = Object.hasOwn(MONTH_RANGES, interval)
+		? MONTH_RANGES[interval as MonthRangeEnum]
+		: undefined;
 	const rangeStart =
 		interval === "custom" && start
 			? start
