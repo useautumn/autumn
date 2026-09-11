@@ -2,6 +2,10 @@ import { z } from "zod/v4";
 import { FeatureConfigOverrideSchema } from "../../featureModels/featureConfig/creditConfig";
 import { FeatureSchema } from "../../featureModels/featureModels";
 import { RolloverConfigSchema } from "../../productV2Models/productItemModels/productItemModels";
+import {
+	EntitlementDuration,
+	EntitlementExpirySchema,
+} from "../durationTypes/entitlementDuration";
 import { EntInterval } from "../intervals/entitlementInterval";
 
 export enum AllowanceType {
@@ -10,17 +14,10 @@ export enum AllowanceType {
 	None = "none",
 }
 
-export enum EntitlementDuration {
-	Day = "day",
-	Week = "week",
-	Month = "month",
-	Year = "year",
-}
-
-export const EntitlementExpirySchema = z.object({
-	duration: z.nativeEnum(EntitlementDuration),
-	length: z.number(),
-});
+export {
+	EntitlementDuration,
+	EntitlementExpirySchema,
+};
 
 export const EntitlementSchema = z.object({
 	// Required fields - no .optional()
