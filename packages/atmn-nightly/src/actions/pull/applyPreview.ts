@@ -1,3 +1,4 @@
+import { dirname, join } from "node:path";
 import {
 	branchSpecs,
 	type CollectionSpec,
@@ -20,6 +21,10 @@ import {
 	patchFixtureProperty,
 } from "../../surgery/patchFixtureProperty";
 import { replaceFixture } from "../../surgery/replaceFixture";
+import {
+	appendPlanVersionFixture,
+	planVersionExportName,
+} from "./appendPlanVersionFixture";
 import { changedFixtureKeys } from "./changedFixtureKeys";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
 import { resolveCollectionTarget } from "./resolveCollectionTarget";
@@ -139,6 +144,49 @@ export const applyPreview = ({
 			: undefined;
 	const internalIdOf = (entry: PreviewEntry): string | null =>
 		typeof entry.internalId === "string" ? entry.internalId : null;
+	const historyFileFor = ({
+		id,
+		row,
+	}: {
+		id: string;
+		row: Record<string, unknown>;
+	}): string => {
+		const planRows = rowsByPlan.get(id) ?? [];
+		const activeVersion = activeVersionOf({
+			rows: planRows as { active?: boolean; version?: number }[],
+		});
+		const nonRootFiles = new Map(
+			[...files].filter(([file]) => file !== configPath),
+		);
+		for (const sibling of planRows) {
+			if (sibling === row) continue;
+			const route = routePlanRow({
+				row: sibling as { active?: boolean; version?: number },
+				activeVersion,
+			});
+			if (route.collection !== "planVersions") continue;
+			const siblingId = idOfRow(sibling);
+			if (typeof siblingId !== "string") continue;
+			const located = locateFixture({
+				configPath: "",
+				files: nonRootFiles,
+				builder: specFor(sibling).builder,
+				idField: specFor(sibling).idField,
+				id: siblingId,
+				internalId:
+					typeof sibling.internalId === "string" ? sibling.internalId : null,
+				where: [
+					{
+						field: "versionSlug",
+						equals: slugOf(sibling),
+						absentMeans: "v1",
+					},
+				],
+			});
+			if (located !== null) return located.file;
+		}
+		return join(dirname(configPath), "planVersions", `${id}.ts`);
+	};
 
 	const removeFixture = ({
 		id,
@@ -202,6 +250,26 @@ export const applyPreview = ({
 		const key = keyOf({ id, slug: slugOf(entry) });
 		const row = rowsById.get(key);
 		if (row === undefined) return false;
+		const rowSpec = specFor(row);
+		const locatedEntry =
+			typeof row.internalId === "string"
+				? { ...entry, internalId: row.internalId }
+				: entry;
+		if (
+			versioned &&
+			locateFixture({
+				configPath,
+				files,
+				builder: rowSpec.builder,
+				idField: rowSpec.idField,
+				id,
+				internalId: internalIdOf(locatedEntry),
+				where: constraintsFor(locatedEntry),
+			}) !== null
+		) {
+			replaceRow({ id, entry: locatedEntry });
+			return true;
+		}
 		let target = collection;
 		let emitted: Record<string, unknown> = row;
 		if (versioned) {
@@ -259,7 +327,35 @@ export const applyPreview = ({
 			return false;
 		}
 		// The surgery indents the first line; the emitter indents the rest.
-		const rowSpec = specFor(row);
+		if (versioned && target === spec.historyKey) {
+			const versionSlug = slugOf(row);
+			const appended = appendPlanVersionFixture({
+				configPath,
+				files,
+				target: resolved,
+				fixtureFile: historyFileFor({ id, row }),
+				exportName: planVersionExportName({ planId: id, versionSlug }),
+				fixture: emitFixture({
+					spec,
+					row: emitted,
+					includeMappings,
+					indent: "",
+				}),
+				builder: rowSpec.builder,
+				targetCollection: target,
+				builderCollection: collection,
+			});
+			if (!appended) {
+				result.unlocated.push({
+					id: key,
+					action: `append to \`${target}\` by hand: it is not an array literal`,
+				});
+				return false;
+			}
+			result.appended.push(key);
+			result.lines.push(`+ ${key}`);
+			return true;
+		}
 		const text = (elementIndent: string) =>
 			emitFixture({
 				spec,

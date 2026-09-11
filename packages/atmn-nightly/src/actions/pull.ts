@@ -1,5 +1,11 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	unlinkSync,
+	writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
 import { ConfigNotFoundError, loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
 import type { AutumnClient } from "../generated/client";
@@ -227,7 +233,12 @@ export const runPull = async ({
 
 	for (const [file, source] of files) {
 		if (source === originals.get(file)) continue;
+		mkdirSync(dirname(file), { recursive: true });
 		writeFileSync(file, source, "utf8");
+		if (!originals.has(file)) {
+			const keep = join(dirname(file), ".gitkeep");
+			if (existsSync(keep)) unlinkSync(keep);
+		}
 	}
 
 	// Fixtures the catalog already knows get their stable id and slug, even
