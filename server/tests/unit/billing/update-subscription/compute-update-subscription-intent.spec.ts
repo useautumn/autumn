@@ -110,6 +110,24 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 		});
 	});
 
+	describe(chalk.cyan("UpdateLicenseQuantity intent"), () => {
+		test("wins over feature_quantities so parent prepaid can ride along", () => {
+			const params: UpdateSubscriptionV1Params = {
+				...baseParams,
+				license_quantities: [{ license_plan_id: "dev-seat", quantity: 5 }],
+				feature_quantities: [{ feature_id: "messages", quantity: 80000 }],
+			};
+
+			const result = setupUpdateSubscriptionIntent({
+				params,
+				checkoutMode: null,
+				customerProduct,
+			});
+
+			expect(result).toBe(UpdateSubscriptionIntent.UpdateLicenseQuantity);
+		});
+	});
+
 	describe(chalk.cyan("UpdatePlan intent (default)"), () => {
 		test("returns UpdatePlan when customize provided", () => {
 			const params: UpdateSubscriptionV1Params = {
