@@ -46,6 +46,7 @@ export type ApplyPreviewArgs = {
 	/** In-memory file sources, mutated in place; nothing touches disk here. */
 	files: Map<string, string>;
 	includeMappings: boolean;
+	featureTypes?: Readonly<Record<string, string>>;
 };
 
 export type ApplyPreviewResult = {
@@ -72,6 +73,7 @@ export const applyPreview = ({
 	configPath,
 	files,
 	includeMappings,
+	featureTypes,
 }: ApplyPreviewArgs): ApplyPreviewResult => {
 	const result: ApplyPreviewResult = {
 		appended: [],
@@ -369,6 +371,7 @@ export const applyPreview = ({
 				row: emitted,
 				includeMappings,
 				indent: elementIndent,
+				context: { featureTypes },
 			});
 		const targetSource = files.get(resolved.file) ?? "";
 		const updated =
@@ -433,6 +436,7 @@ export const applyPreview = ({
 				key: property,
 				includeMappings,
 				indent,
+				context: { featureTypes },
 			});
 			const next = patchFixtureProperty({
 				source,
@@ -554,7 +558,13 @@ export const applyPreview = ({
 			result.lines.push(`~ ${key}`);
 			return;
 		}
-		const text = emitFixture({ spec, row: emitted, includeMappings, indent });
+		const text = emitFixture({
+			spec,
+			row: emitted,
+			includeMappings,
+			indent,
+			context: { featureTypes },
+		});
 		const updated = replaceFixture({
 			source: located.source,
 			builder: rowSpec.builder,
