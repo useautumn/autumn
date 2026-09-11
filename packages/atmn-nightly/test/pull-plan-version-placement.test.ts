@@ -30,6 +30,16 @@ test("colliding sanitized names use a reversible fallback", () => {
 	).toBe("pro_5f_summer_5f_sale");
 });
 
+test("function and class declarations advance to the next free name", () => {
+	expect(
+		planVersionExportName({
+			planId: "pro",
+			versionSlug: "v1",
+			takenSources: ["function pro_v1() {}\nclass pro_5f_v1 {}"],
+		}),
+	).toBe("pro_5f_v1_2");
+});
+
 test("a missing history fixture gets its own file and a root reference", async () => {
 	rmSync(directory, { recursive: true, force: true });
 	mkdirSync(join(directory, "planVersions"), { recursive: true });
@@ -125,19 +135,33 @@ test("deleting an exported history fixture cleans its imported array target", as
 	writeFileSync(
 		join(targetDirectory, "autumn.config.ts"),
 		[
-			'import { atmn, plan } from "atmn-nightly";',
+			'import { atmn } from "atmn-nightly";',
+			'import { activePlans } from "./plans";',
 			'import { proVersions } from "./planVersions/pro";',
 			"",
 			"export default atmn({",
-			"\tplans: [",
-			'\t\tplan({ planId: "pro", internalId: "prod_v2", versionSlug: "v2", name: "Pro" }),',
-			"\t],",
+			"\tplans: activePlans,",
 			"\tplanVersions: proVersions,",
 			"});",
 			"",
 		].join("\n"),
 		"utf8",
 	);
+	const activePlansPath = join(targetDirectory, "plans.ts");
+	const activePlansSource = [
+		'import { plan } from "atmn-nightly";',
+		"",
+		"export const pro_v1 = plan({",
+		'\tplanId: "pro",',
+		'\tinternalId: "prod_v2",',
+		'\tversionSlug: "v2",',
+		'\tname: "Pro",',
+		"});",
+		"",
+		"export const activePlans = [pro_v1];",
+		"",
+	].join("\n");
+	writeFileSync(activePlansPath, activePlansSource, "utf8");
 	const versionsPath = join(targetDirectory, "planVersions", "pro.ts");
 	writeFileSync(
 		versionsPath,
@@ -218,4 +242,5 @@ test("deleting an exported history fixture cleans its imported array target", as
 	const afterDelete = readFileSync(versionsPath, "utf8");
 	expect(afterDelete).not.toContain("pro_v1");
 	expect(afterDelete).toContain("export const proVersions = [];");
+	expect(readFileSync(activePlansPath, "utf8")).toBe(activePlansSource);
 });

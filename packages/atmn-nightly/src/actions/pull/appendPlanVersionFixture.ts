@@ -1,5 +1,5 @@
 import { dirname, relative, resolve } from "node:path";
-import { Lang, parse } from "@ast-grep/napi";
+import { Lang, parse, type SgNode } from "@ast-grep/napi";
 import { appendToBinding } from "../../surgery/appendToBinding";
 import { appendToCollection } from "../../surgery/appendToCollection";
 import { ensureBuilderImport } from "../../surgery/ensureBuilderImport";
@@ -161,17 +161,95 @@ const declaresName = ({
 	name: string;
 }): boolean => {
 	const root = parse(Lang.TypeScript, source).root();
-	const variable = root
+	const variableBinding = root
 		.findAll({ rule: { kind: "variable_declarator" } })
-		.some((node) => node.field("name")?.text() === name);
-	if (variable) return true;
-	return root.findAll({ rule: { kind: "import_specifier" } }).some((node) => {
-		const names = node
-			.text()
-			.trim()
-			.split(/\s+as\s+/);
-		return names[names.length - 1] === name;
-	});
+		.some((node) => {
+			if (!bindsTopLevel({ node })) return false;
+			const pattern = node.field("name");
+			if (pattern === null) return false;
+			if (pattern.text() === name) return true;
+			return pattern
+				.findAll({ rule: { kind: "identifier", pattern: name } })
+				.some((identifier) => identifier.text() === name);
+		});
+	if (variableBinding) return true;
+	const namedDeclarationKinds = [
+		"function_declaration",
+		"generator_function_declaration",
+		"function_signature",
+		"class_declaration",
+		"abstract_class_declaration",
+		"enum_declaration",
+		"internal_module",
+	];
+	for (const kind of namedDeclarationKinds) {
+		if (
+			root
+				.findAll({ rule: { kind } })
+				.some(
+					(node) =>
+						bindsTopLevel({ node }) && node.field("name")?.text() === name,
+				)
+		)
+			return true;
+	}
+	const importBinding = root
+		.findAll({ rule: { kind: "import_specifier" } })
+		.some((node) => {
+			const names = node
+				.text()
+				.trim()
+				.split(/\s+as\s+/);
+			return names[names.length - 1] === name;
+		});
+	if (importBinding) return true;
+	const importClauseBinding = root
+		.findAll({ rule: { kind: "import_clause" } })
+		.some((clause) =>
+			clause
+				.children()
+				.some(
+					(child) =>
+						(child.kind() === "identifier" ||
+							child.kind() === "namespace_import") &&
+						child.text().replace(/^\*\s+as\s+/, "") === name,
+				),
+		);
+	if (importClauseBinding) return true;
+	const importRequireBinding = root
+		.findAll({ rule: { kind: "import_require_clause" } })
+		.some((clause) =>
+			clause
+				.findAll({ rule: { kind: "identifier", pattern: name } })
+				.some((identifier) => identifier.text() === name),
+		);
+	if (importRequireBinding) return true;
+	return root
+		.findAll({ rule: { kind: "export_specifier" } })
+		.some((specifier) => {
+			const names = specifier
+				.text()
+				.trim()
+				.split(/\s+as\s+/);
+			return names[names.length - 1] === name;
+		});
+};
+
+const bindsTopLevel = ({ node }: { node: SgNode }): boolean => {
+	const wrappers = new Set<string | number>([
+		"lexical_declaration",
+		"variable_declaration",
+		"export_statement",
+		"ambient_declaration",
+		"expression_statement",
+	]);
+	let current = node;
+	while (current.parent() !== null && current.parent()?.kind() !== "program") {
+		const parent = current.parent();
+		if (parent === null || !wrappers.has(parent.kind())) return false;
+		current = parent;
+	}
+	return current.parent()?.kind() === "program";
 };
 
 export const appendPlanVersionFixture = ({
