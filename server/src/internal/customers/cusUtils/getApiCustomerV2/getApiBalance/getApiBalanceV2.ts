@@ -60,15 +60,10 @@ const getApiBalanceBreakdownItemV2 = ({
 		entityId,
 	});
 	const includedGrant = new Decimal(allowance).add(adjustment).toNumber();
-	// Expiring items record each purchase on its own grant row (balance +
-	// adjustment), so the product-level option quantity is billing bookkeeping
-	// only — counting it here too would report every purchase twice.
-	const prepaidGrant = customerEntitlement.entitlement.expiry_duration
-		? 0
-		: cusEntsToPrepaidQuantity({
-				cusEnts: [customerEntitlement],
-				sumAcrossEntities: nullish(entityId),
-			});
+	const prepaidGrant = cusEntsToPrepaidQuantity({
+		cusEnts: [customerEntitlement],
+		sumAcrossEntities: nullish(entityId),
+	});
 	const remaining = cusEntsToCurrentBalance({
 		cusEnts: [customerEntitlement],
 		entityId,

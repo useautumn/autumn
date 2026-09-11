@@ -81,16 +81,14 @@ const planItemV0ToItemConfig = ({
 
 	const rollover = toItemRollover();
 	const proration = toItemProration();
-	const expiry = planItemV0.expiry ?? undefined;
 	const featureOverride = planItemV0.feature_override
 		? apiFeatureOverrideToDb(planItemV0.feature_override)
 		: undefined;
 	const thresholdBilling = planItemV0.threshold_billing ?? undefined;
 
-	if (rollover || proration || featureOverride || thresholdBilling || expiry) {
+	if (rollover || proration || featureOverride || thresholdBilling) {
 		return {
 			rollover,
-			expiry,
 			on_increase: proration?.on_increase,
 			on_decrease: proration?.on_decrease,
 			feature_override: featureOverride,

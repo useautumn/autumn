@@ -17,7 +17,6 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
-import { ExpiryConfig } from "./advanced-settings/ExpiryConfig";
 import { FeatureOverrideConfig } from "./advanced-settings/FeatureOverrideConfig";
 import { PooledBalanceConfig } from "./advanced-settings/PooledBalanceConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
@@ -40,11 +39,6 @@ export function AdvancedSettings() {
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	// Purchased credits only: the cadence of a recurring item already bounds it.
-	const showExpiry =
-		isPriced &&
-		item.usage_model === UsageModel.Prepaid &&
-		itemToBillingInterval({ item }) === BillingInterval.OneOff;
 	const showFeatureOverride =
 		isAdmin &&
 		isAnyCreditSystem(
@@ -89,9 +83,6 @@ export function AdvancedSettings() {
 
 					{/* Rollover */}
 					{showRollover && <RolloverConfig />}
-
-					{/* Expiry on purchased credits */}
-					{showExpiry && <ExpiryConfig />}
 
 					{/* Credit rate card override */}
 					{showFeatureOverride && <FeatureOverrideConfig />}

@@ -5,7 +5,6 @@ import {
 	additionalCurrencyPlanItemIssues,
 } from "@api/products/components/additionalCurrencies";
 import { BillingMethod } from "@api/products/components/billingMethod";
-import { EntitlementExpirySchema } from "@models/productModels/durationTypes/entitlementDuration";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
@@ -164,11 +163,6 @@ export const PlanItemParamsObjectSchema = z.object({
 				"Rollover config for unused units. If set, unused included units carry over.",
 		}),
 
-	expiry: EntitlementExpirySchema.optional().meta({
-		description:
-			"Purchased units expire this long after each purchase. One-off prepaid consumable items only.",
-	}),
-
 	feature_override: ApiFeatureOverrideSchema.optional().meta({
 		description:
 			"Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).",
@@ -225,43 +219,6 @@ export const planItemParamsIssues = (
 			message: "threshold_billing requires a finite usage-based price",
 			input: value.threshold_billing,
 		});
-	}
-
-	if (value.expiry) {
-		const isOneOffPrepaid =
-			value.price?.billing_method === BillingMethod.Prepaid &&
-			String(value.price.interval) === String(BillingInterval.OneOff);
-
-		if (!isOneOffPrepaid) {
-			issues.push({
-				message:
-					"expiry is only supported on one-off prepaid items. Recurring items are already bounded by their reset cadence.",
-				input: value.expiry,
-			});
-		}
-
-		if (value.entity_feature_id) {
-			issues.push({
-				message:
-					"expiry is not supported on entity-scoped items; each entity's balance would have to expire on its own clock.",
-				input: value.expiry,
-			});
-		}
-
-		if (value.pooled) {
-			issues.push({
-				message:
-					"expiry is not supported on pooled items; pooled balances have no per-purchase lifetime.",
-				input: value.expiry,
-			});
-		}
-
-		if (value.expiry.length <= 0) {
-			issues.push({
-				message: "expiry.length must be greater than 0",
-				input: value.expiry,
-			});
-		}
 	}
 	if (value.price) {
 		if (

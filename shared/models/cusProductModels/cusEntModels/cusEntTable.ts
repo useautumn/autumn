@@ -129,14 +129,6 @@ export const customerEntitlements = pgTable(
 			.on(table.pooled_contribution_id)
 			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)
 			.concurrently(),
-		// Expiring purchase grants only: the partial predicate keeps this index
-		// tiny on a table where a bare expires_at index would not be.
-		index("idx_customer_entitlements_expiring_grants")
-			.on(table.expires_at)
-			.where(
-				sql`${table.customer_product_id} IS NOT NULL AND ${table.expires_at} IS NOT NULL`,
-			)
-			.concurrently(),
 		// Every reset predicate leg except expiry, which stays a heap filter. Legs
 		// live here so the planner drops them instead of costing their selectivity.
 		index("idx_customer_entitlements_reset_scan")

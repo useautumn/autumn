@@ -10,10 +10,9 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
-import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions/index.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions/index.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "./autoTopupContext.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
@@ -221,17 +220,6 @@ export const autoTopup = async ({
 
 		if (isCustomPm) {
 			return;
-		}
-
-		// An expiring top-up adds a balance row rather than patching one, so the
-		// cached subject has to be dropped or the new grant stays invisible.
-		if (autumnBillingPlan.insertCustomerEntitlements?.length) {
-			await invalidateCachedFullSubject({ ctx, customerId });
-			await deleteCachedFullCustomer({
-				ctx,
-				customerId,
-				source: "auto-topup-expiring-grant",
-			});
 		}
 
 		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;

@@ -18,7 +18,6 @@ import {
 } from "../queue/blueGreen/blueGreenHeartbeat.js";
 import { stopBlueGreenSlotStorePolling } from "../queue/blueGreen/blueGreenSlotStore.js";
 import { shutdownSqsSendBatchers } from "../queue/queueUtils.js";
-import { runExpiredGrantCleanup } from "./grantCron/runExpiredGrantCleanup.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
@@ -95,11 +94,7 @@ const oneOffCleanupTick = async () => {
 
 	logCronHeartbeat("one_off_cleanup");
 
-	await Promise.all([
-		runOneOffCleanup({ ctx }),
-		runSeatSyncCron({ ctx }),
-		runExpiredGrantCleanup({ ctx }),
-	]);
+	await Promise.all([runOneOffCleanup({ ctx }), runSeatSyncCron({ ctx })]);
 };
 
 // DB health probes (long-txn / xmin pin, ...) — a separate tick so a heavy

@@ -3,7 +3,6 @@ import {
 	AllowanceType,
 	EntInterval,
 	type Entitlement,
-	EntitlementDuration,
 	entsAreSame,
 	FeatureUsageType,
 	RolloverExpiryDurationType,
@@ -369,7 +368,11 @@ describe("entsAreSame", () => {
 		});
 
 		test("max differences", () => {
-			expectSame({ rollover }, { rollover: { ...rollover, max: 20 } }, false);
+			expectSame(
+				{ rollover },
+				{ rollover: { ...rollover, max: 20 } },
+				false,
+			);
 			expectSame(
 				{ rollover: { ...rollover, max: null } },
 				{ rollover: { ...rollover, max: undefined } },
@@ -403,15 +406,11 @@ describe("entsAreSame", () => {
 		test("duration unset equals month (schema default)", () => {
 			expectSame(
 				{ rollover: { ...rollover, duration: undefined } },
-				{
-					rollover: { ...rollover, duration: RolloverExpiryDurationType.Month },
-				},
+				{ rollover: { ...rollover, duration: RolloverExpiryDurationType.Month } },
 				true,
 			);
 			expectSame(
-				{
-					rollover: { ...rollover, duration: RolloverExpiryDurationType.Month },
-				},
+				{ rollover: { ...rollover, duration: RolloverExpiryDurationType.Month } },
 				{
 					rollover: {
 						...rollover,
@@ -423,7 +422,11 @@ describe("entsAreSame", () => {
 		});
 
 		test("length differences", () => {
-			expectSame({ rollover }, { rollover: { ...rollover, length: 3 } }, false);
+			expectSame(
+				{ rollover },
+				{ rollover: { ...rollover, length: 3 } },
+				false,
+			);
 			expectSame(
 				{ rollover: { ...rollover, length: null } },
 				{ rollover: { ...rollover, length: undefined } },
@@ -521,48 +524,14 @@ describe("entsAreSame", () => {
 			["is_custom", true, false],
 			["org_id", "org_a", "org_b"],
 			["feature_id", "messages", "seats"],
+			["expiry_duration", "month", "year"],
+			["expiry_length", 1, 12],
 		])("%s is ignored", (field, a, b) => {
 			expectSame({ [field]: a }, { [field]: b }, true);
 		});
 
 		test("joined feature object is ignored", () => {
 			expectSame({ feature: seatsFeature }, { feature: undefined }, true);
-		});
-	});
-
-	// Purchase expiry is a plan-item field now, so a change to it has to make
-	// the entitlement count as changed — otherwise catalog edits never persist.
-	describe("expiry", () => {
-		test("duration differs", () => {
-			expectSame(
-				{ expiry_duration: EntitlementDuration.Month, expiry_length: 1 },
-				{ expiry_duration: EntitlementDuration.Year, expiry_length: 1 },
-				false,
-			);
-		});
-
-		test("length differs", () => {
-			expectSame(
-				{ expiry_duration: EntitlementDuration.Month, expiry_length: 1 },
-				{ expiry_duration: EntitlementDuration.Month, expiry_length: 12 },
-				false,
-			);
-		});
-
-		test("expiry vs absent differs", () => {
-			expectSame(
-				{ expiry_duration: EntitlementDuration.Month, expiry_length: 2 },
-				{},
-				false,
-			);
-		});
-
-		test("same expiry matches", () => {
-			expectSame(
-				{ expiry_duration: EntitlementDuration.Month, expiry_length: 2 },
-				{ expiry_duration: EntitlementDuration.Month, expiry_length: 2 },
-				true,
-			);
 		});
 	});
 

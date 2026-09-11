@@ -79,8 +79,6 @@ export function planItemV1ToV0({
 				}
 			: null,
 
-		expiry: item.expiry ?? undefined,
-
 		rollover: item.rollover
 			? {
 					max: item.rollover.max ?? null,
