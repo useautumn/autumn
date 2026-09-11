@@ -7,32 +7,44 @@ export type CollectionTarget =
 	| { kind: "inline"; file: string }
 	| { kind: "binding"; file: string; name: string };
 
-export const collectionTargetReferencesName = ({
+export const collectionTargetReferenceName = ({
 	target,
 	files,
 	collection,
 	name,
+	fixtureFile,
 }: {
 	target: CollectionTarget;
 	files: Map<string, string>;
 	collection: string;
 	name: string;
-}): boolean => {
+	fixtureFile: string;
+}): string | null => {
 	const source = files.get(target.file);
-	if (source === undefined) return false;
+	if (source === undefined) return null;
 	const root = parse(Lang.TypeScript, source).root();
 	const array =
 		target.kind === "binding"
 			? findLiteralBinding({ root, name: target.name, kind: "array" })
 			: collectionValue({ root, collection });
-	return (
-		array?.kind() === "array" &&
-		array
-			.namedChildren()
-			.some(
-				(element) => element.kind() === "identifier" && element.text() === name,
-			)
-	);
+	if (array?.kind() !== "array") return null;
+	for (const element of array.namedChildren()) {
+		if (element.kind() !== "identifier") continue;
+		const localName = element.text();
+		const imported = importedFrom({ root, name: localName });
+		if (imported !== null) {
+			const importedFile = moduleFileOf({
+				from: target.file,
+				specifier: imported.specifier,
+				files,
+			});
+			if (importedFile === fixtureFile && imported.exportedName === name)
+				return localName;
+			continue;
+		}
+		if (target.file === fixtureFile && localName === name) return localName;
+	}
+	return null;
 };
 
 const NAMED_IMPORT =

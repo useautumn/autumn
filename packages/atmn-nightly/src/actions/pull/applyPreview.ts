@@ -25,7 +25,7 @@ import { appendPlanVersionFixture } from "./appendPlanVersionFixture";
 import { changedFixtureKeys } from "./changedFixtureKeys";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
 import {
-	collectionTargetReferencesName,
+	collectionTargetReferenceName,
 	resolveCollectionTarget,
 } from "./resolveCollectionTarget";
 import { activeVersionOf, routePlanRow } from "./routePlanRow";
@@ -195,7 +195,7 @@ export const applyPreview = ({
 	}: {
 		name: string;
 		fixtureFile: string;
-	}): string => {
+	}): { targetCollection: string; referenceName: string } | null => {
 		const collectionTargets = [collection, spec.historyKey].flatMap(
 			(targetCollection) => {
 				if (targetCollection === undefined) return [];
@@ -207,23 +207,27 @@ export const applyPreview = ({
 				return target === null ? [] : [{ targetCollection, target }];
 			},
 		);
-		const membershipMatches = collectionTargets.filter(
-			({ targetCollection, target }) =>
-				collectionTargetReferencesName({
+		const membershipMatches = collectionTargets.flatMap(
+			({ targetCollection, target }) => {
+				const referenceName = collectionTargetReferenceName({
 					target,
 					files,
 					collection: targetCollection,
 					name,
-				}),
+					fixtureFile,
+				});
+				return referenceName === null
+					? []
+					: [{ targetCollection, referenceName }];
+			},
 		);
-		if (membershipMatches.length === 1)
-			return membershipMatches[0].targetCollection;
+		if (membershipMatches.length === 1) return membershipMatches[0];
 		const locationMatches = collectionTargets.filter(
 			({ target }) => target.file === fixtureFile,
 		);
 		if (locationMatches.length === 1)
-			return locationMatches[0].targetCollection;
-		return collection;
+			return { ...locationMatches[0], referenceName: name };
+		return null;
 	};
 	const deleteExportReference = ({
 		name,
@@ -280,14 +284,26 @@ export const applyPreview = ({
 			where: located.where,
 		});
 		if (removed === null) return;
+		const ownership =
+			removed.exportedName === undefined
+				? null
+				: collectionForRemoval({
+						name: removed.exportedName,
+						fixtureFile: located.file,
+					});
+		if (removed.exportedName !== undefined && ownership === null) {
+			result.unlocated.push({
+				id,
+				action:
+					"remove its exported reference by hand: collection ownership is ambiguous",
+			});
+			return;
+		}
 		files.set(located.file, removed.source);
-		if (removed.exportedName !== undefined)
+		if (ownership !== null)
 			deleteExportReference({
-				name: removed.exportedName,
-				targetCollection: collectionForRemoval({
-					name: removed.exportedName,
-					fixtureFile: located.file,
-				}),
+				name: ownership.referenceName,
+				targetCollection: ownership.targetCollection,
 			});
 		result.deleted.push(id);
 		result.lines.push(`- ${id}`);
@@ -565,14 +581,26 @@ export const applyPreview = ({
 					where: located.where,
 				});
 				if (removed === null) return;
+				const ownership =
+					removed.exportedName === undefined
+						? null
+						: collectionForRemoval({
+								name: removed.exportedName,
+								fixtureFile: located.file,
+							});
+				if (removed.exportedName !== undefined && ownership === null) {
+					result.unlocated.push({
+						id,
+						action:
+							"move its exported reference by hand: collection ownership is ambiguous",
+					});
+					return;
+				}
 				files.set(located.file, removed.source);
-				if (removed.exportedName !== undefined)
+				if (ownership !== null)
 					deleteExportReference({
-						name: removed.exportedName,
-						targetCollection: collectionForRemoval({
-							name: removed.exportedName,
-							fixtureFile: located.file,
-						}),
+						name: ownership.referenceName,
+						targetCollection: ownership.targetCollection,
 					});
 				const appended = appendRow({
 					id,
