@@ -36,6 +36,27 @@ import { ProductService } from "@/internal/products/ProductService.js";
 
 const EXPIRY = { duration: EntitlementDuration.Month, length: 2 };
 
+const expiringItem = {
+	feature_id: TestFeature.Messages,
+	included: 0,
+	price: {
+		amount: 10,
+		interval: BillingInterval.OneOff,
+		billing_method: BillingMethod.Prepaid,
+		billing_units: 100,
+	},
+	expiry: EXPIRY,
+};
+
+/** Manual top-up only routes on a one-off prepaid item hosted by a RECURRING
+ * plan, so the top-up case needs a base price. */
+const expiringTopUpOnRecurringPlan = (planId: string) => ({
+	plan_id: planId,
+	name: "Expiring Top-Up Host",
+	price: { amount: 20, interval: BillingInterval.Month },
+	items: [expiringItem],
+});
+
 const expiringTopUpPlan = (planId: string) => ({
 	plan_id: planId,
 	name: "Expiring Top-Up",
@@ -131,12 +152,13 @@ test.concurrent(
 		await autumnV2_3.billing.attach({
 			customer_id: customerId,
 			plan_id: planId,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 100 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 		});
 
-		const fullCustomer = await CusService.getFull({ ctx, idOrInternalId: customerId });
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
 		const customerProduct = fullCustomer.customer_products.find(
 			(cp) => cp.product.id === planId,
 		);
@@ -180,23 +202,24 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_3.catalogV2.update({ plans: [expiringTopUpPlan(planId)] });
+		await autumnV2_3.catalogV2.update({
+			plans: [expiringTopUpOnRecurringPlan(planId)],
+		});
 		await autumnV2_3.billing.attach({
 			customer_id: customerId,
 			plan_id: planId,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 100 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 		});
 		await autumnV2_2.subscriptions.update({
 			customer_id: customerId,
 			plan_id: planId,
-			feature_quantities: [
-				{ feature_id: TestFeature.Messages, quantity: 200 },
-			],
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 		});
 
-		const fullCustomer = await CusService.getFull({ ctx, idOrInternalId: customerId });
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
 		const customerProduct = fullCustomer.customer_products.find(
 			(cp) => cp.product.id === planId,
 		);
@@ -208,7 +231,11 @@ test.concurrent(
 
 		// ── Contract assertion 9: one grant row per purchase ──────────────────
 		expect(grants.length).toBe(2);
-		expect(grants.map((grant) => grant.balance).sort()).toEqual([100, 200]);
+		expect(
+			grants
+				.map((grant) => grant.balance)
+				.sort((left, right) => (left ?? 0) - (right ?? 0)),
+		).toEqual([100, 200]);
 
 		// ── Contract assertion 10: still one entitlement, still not custom ────
 		const entitlementIds = new Set(
