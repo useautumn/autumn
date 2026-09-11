@@ -1,0 +1,16 @@
+{
+	"hooks": {
+		"SessionStart": [
+			{
+				"matcher": "",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$CLAUDE_PROJECT_DIR/scripts/setup/claude-cloud/session-start.sh\"",
+						"timeout": 900
+					}
+				]
+			}
+		]
+	}
+}
