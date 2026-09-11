@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 
@@ -33,6 +34,7 @@ export const updateCurSchedule = async ({
 		schedule.id,
 		{
 			phases: newPhases,
+			metadata: buildAutumnSubscriptionMetadata({ actionSource: "v1Attach" }),
 		},
 		autumnStripeRequestOptions({ source: "attach.schedule_update" }),
 	);
