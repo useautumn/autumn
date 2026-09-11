@@ -167,10 +167,7 @@ const declaresName = ({
 			if (!bindsTopLevel({ node })) return false;
 			const pattern = node.field("name");
 			if (pattern === null) return false;
-			if (pattern.text() === name) return true;
-			return pattern
-				.findAll({ rule: { kind: "identifier", pattern: name } })
-				.some((identifier) => identifier.text() === name);
+			return bindingPatternHasName({ pattern, name });
 		});
 	if (variableBinding) return true;
 	const namedDeclarationKinds = [
@@ -233,6 +230,39 @@ const declaresName = ({
 				.split(/\s+as\s+/);
 			return names[names.length - 1] === name;
 		});
+};
+
+const bindingPatternHasName = ({
+	pattern,
+	name,
+}: {
+	pattern: SgNode;
+	name: string;
+}): boolean => {
+	if (
+		(pattern.kind() === "identifier" ||
+			pattern.kind() === "shorthand_property_identifier_pattern") &&
+		pattern.text() === name
+	)
+		return true;
+	const children = pattern.namedChildren();
+	if (
+		pattern.kind() === "pair_pattern" ||
+		pattern.kind() === "assignment_pattern" ||
+		pattern.kind() === "object_assignment_pattern" ||
+		pattern.kind() === "rest_pattern"
+	) {
+		const binding =
+			pattern.kind() === "pair_pattern"
+				? children[children.length - 1]
+				: children[0];
+		return binding === undefined
+			? false
+			: bindingPatternHasName({ pattern: binding, name });
+	}
+	return children.some((child) =>
+		bindingPatternHasName({ pattern: child, name }),
+	);
 };
 
 const bindsTopLevel = ({ node }: { node: SgNode }): boolean => {

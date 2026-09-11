@@ -24,7 +24,10 @@ import { replaceFixture } from "../../surgery/replaceFixture";
 import { appendPlanVersionFixture } from "./appendPlanVersionFixture";
 import { changedFixtureKeys } from "./changedFixtureKeys";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
-import { resolveCollectionTarget } from "./resolveCollectionTarget";
+import {
+	collectionTargetReferencesName,
+	resolveCollectionTarget,
+} from "./resolveCollectionTarget";
 import { activeVersionOf, routePlanRow } from "./routePlanRow";
 
 export type PreviewEntry = { action?: string } & Record<string, unknown>;
@@ -187,12 +190,10 @@ export const applyPreview = ({
 		return join(dirname(configPath), "planVersions", `${id}.ts`);
 	};
 	const collectionForRemoval = ({
-		id,
-		entry,
+		name,
 		fixtureFile,
 	}: {
-		id: string;
-		entry: PreviewEntry;
+		name: string;
 		fixtureFile: string;
 	}): string => {
 		const collectionTargets = [collection, spec.historyKey].flatMap(
@@ -203,13 +204,26 @@ export const applyPreview = ({
 					files,
 					collection: targetCollection,
 				});
-				return target?.file === fixtureFile ? [targetCollection] : [];
+				return target === null ? [] : [{ targetCollection, target }];
 			},
 		);
-		if (collectionTargets.length === 1) return collectionTargets[0];
-		return versioned && configActiveOf({ id, entry }) === false
-			? (spec.historyKey ?? collection)
-			: collection;
+		const membershipMatches = collectionTargets.filter(
+			({ targetCollection, target }) =>
+				collectionTargetReferencesName({
+					target,
+					files,
+					collection: targetCollection,
+					name,
+				}),
+		);
+		if (membershipMatches.length === 1)
+			return membershipMatches[0].targetCollection;
+		const locationMatches = collectionTargets.filter(
+			({ target }) => target.file === fixtureFile,
+		);
+		if (locationMatches.length === 1)
+			return locationMatches[0].targetCollection;
+		return collection;
 	};
 	const deleteExportReference = ({
 		name,
@@ -271,8 +285,7 @@ export const applyPreview = ({
 			deleteExportReference({
 				name: removed.exportedName,
 				targetCollection: collectionForRemoval({
-					id,
-					entry,
+					name: removed.exportedName,
 					fixtureFile: located.file,
 				}),
 			});
@@ -556,10 +569,10 @@ export const applyPreview = ({
 				if (removed.exportedName !== undefined)
 					deleteExportReference({
 						name: removed.exportedName,
-						targetCollection:
-							configActive === false
-								? (spec.historyKey ?? collection)
-								: collection,
+						targetCollection: collectionForRemoval({
+							name: removed.exportedName,
+							fixtureFile: located.file,
+						}),
 					});
 				const appended = appendRow({
 					id,
