@@ -240,6 +240,22 @@ export const planItemParamsIssues = (
 			});
 		}
 
+		if (value.entity_feature_id) {
+			issues.push({
+				message:
+					"expiry is not supported on entity-scoped items; each entity's balance would have to expire on its own clock.",
+				input: value.expiry,
+			});
+		}
+
+		if (value.pooled) {
+			issues.push({
+				message:
+					"expiry is not supported on pooled items; pooled balances have no per-purchase lifetime.",
+				input: value.expiry,
+			});
+		}
+
 		if (value.expiry.length <= 0) {
 			issues.push({
 				message: "expiry.length must be greater than 0",
