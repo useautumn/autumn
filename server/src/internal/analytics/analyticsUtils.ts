@@ -5,11 +5,13 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
+	MONTH_RANGES,
+	type MonthRangeEnum,
 	RecaseError,
 	type Subscription,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
-import { format, startOfDay, startOfHour, sub } from "date-fns";
+import { format, startOfDay, startOfHour, startOfMonth, sub } from "date-fns";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -27,11 +29,64 @@ export const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 
 const CLICKHOUSE_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
+const monthsForRange = ({
+	interval,
+}: {
+	interval?: string;
+}): number | undefined =>
+	interval !== undefined && interval in MONTH_RANGES
+		? MONTH_RANGES[interval as MonthRangeEnum]
+		: undefined;
+
+/** Default bin for a range when the caller didn't pick one: month ranges are
+ * built for monthly bins, and 24h is too short for anything but hours. */
+export const defaultBinSizeForRange = ({
+	interval,
+}: {
+	interval?: string;
+}): "hour" | "day" | "month" => {
+	if (interval === "24h") return "hour";
+	return monthsForRange({ interval }) === undefined ? "day" : "month";
+};
+
+/** Resolves the UTC window a standard (non billing-cycle) range covers. The
+ * start is aligned down to the bin boundary so a chart's bucket filter and its
+ * totals' timestamp filter select the same events. Returns undefined when the
+ * range is unknown or billing-cycle based, which callers resolve per customer. */
+export const getStandardIntervalWindow = ({
+	interval,
+	binSize,
+	now = new UTCDate(),
+}: {
+	interval?: string;
+	binSize?: string;
+	now?: UTCDate;
+}): { start: UTCDate; end: UTCDate } | undefined => {
+	const months = monthsForRange({ interval });
+	const days = interval ? STANDARD_INTERVAL_DAYS[interval] : undefined;
+	if (months === undefined && days === undefined) return undefined;
+
+	const bin = binSize ?? defaultBinSizeForRange({ interval });
+
+	// A month range counts bins, not days: "12m" is the last 12 monthly bars, so
+	// the window opens on the 1st rather than leaving a partial leading bar.
+	if (months !== undefined && bin === "month") {
+		return { start: startOfMonth(sub(now, { months: months - 1 })), end: now };
+	}
+
+	const unaligned =
+		months !== undefined ? sub(now, { months }) : sub(now, { days });
+	return {
+		start: bin === "hour" ? startOfHour(unaligned) : startOfDay(unaligned),
+		end: now,
+	};
+};
+
 /** Resolves the start/end window the event-name ranking should query so it
  * matches the chart's visible range. A custom range takes precedence; otherwise
- * a standard interval is resolved with the same boundary alignment the chart
- * uses — hour for 24h, day for 7d/30d/90d. Returns undefined when neither
- * applies (e.g. billing-cycle intervals), leaving callers on all-time ranking. */
+ * the standard range resolves with the same boundary alignment the chart uses.
+ * Returns undefined when neither applies (e.g. billing-cycle ranges), leaving
+ * callers on all-time ranking. */
 export const getEventRankingWindow = ({
 	interval,
 	customRange,
@@ -46,18 +101,14 @@ export const getEventRankingWindow = ({
 		};
 	}
 
-	const days = interval ? STANDARD_INTERVAL_DAYS[interval] : undefined;
-	if (!days) {
+	const window = getStandardIntervalWindow({ interval });
+	if (!window) {
 		return undefined;
 	}
 
-	const now = new UTCDate();
-	const unaligned = sub(now, { days });
-	const start =
-		interval === "24h" ? startOfHour(unaligned) : startOfDay(unaligned);
 	return {
-		startDate: format(start, CLICKHOUSE_DATE_FORMAT),
-		endDate: format(now, CLICKHOUSE_DATE_FORMAT),
+		startDate: format(window.start, CLICKHOUSE_DATE_FORMAT),
+		endDate: format(window.end, CLICKHOUSE_DATE_FORMAT),
 	};
 };
 

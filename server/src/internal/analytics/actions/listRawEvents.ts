@@ -2,9 +2,12 @@ import type {
 	BillingCycleResult,
 	ClickHouseResult,
 	FullCustomer,
+	MonthRangeEnum,
 	RawEventFromClickHouse,
 } from "@autumn/shared";
+import { MONTH_RANGES } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
+import { subMonths } from "date-fns";
 import {
 	getTinybirdPipes,
 	type ListEventsPaginatedPipeRow,
@@ -27,6 +30,14 @@ const formatJsDateToClickHouseDateTime = (date: Date): string => {
 
 const calculateStartDateFromInterval = (interval: string): Date => {
 	const startDate = new Date();
+
+	const months =
+		interval in MONTH_RANGES
+			? MONTH_RANGES[interval as MonthRangeEnum]
+			: undefined;
+	if (months !== undefined) {
+		return subMonths(startDate, months);
+	}
 
 	switch (interval) {
 		case "24h":

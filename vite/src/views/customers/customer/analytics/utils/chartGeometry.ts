@@ -1,4 +1,6 @@
+import { MONTH_RANGES, type MonthRangeEnum } from "@autumn/shared";
 import type { CSSProperties } from "react";
+import { type Granularity, getEffectiveBinSize } from "./intervals";
 
 /**
  * Single source of truth for the usage chart's layout, shared between the real
@@ -135,33 +137,13 @@ export const niceCeil = (value: number): number => {
 	return niceFraction * magnitude;
 };
 
-type BinSize = "hour" | "day" | "week" | "month";
-
-const resolveBinSize = ({
-	interval,
-	binSize,
-}: {
-	interval: string;
-	binSize: string | null;
-}): BinSize => {
-	if (
-		binSize === "hour" ||
-		binSize === "day" ||
-		binSize === "week" ||
-		binSize === "month"
-	) {
-		return binSize;
-	}
-	return interval === "24h" ? "hour" : "day";
-};
-
 /** Truncates a timestamp down to the start of its bin, matching the backend. */
 const alignDown = ({
 	ms,
 	binSize,
 }: {
 	ms: number;
-	binSize: BinSize;
+	binSize: Granularity;
 }): number => {
 	const date = new Date(ms);
 	if (binSize === "hour") {
@@ -177,6 +159,27 @@ const alignDown = ({
 	} else {
 		date.setUTCHours(0, 0, 0, 0);
 	}
+	return date.getTime();
+};
+
+/** Start of a month range's window, mirroring the backend: month bins open on
+ * the 1st so the range renders exactly `months` bars. */
+const monthRangeStart = ({
+	rangeEnd,
+	months,
+	binSize,
+}: {
+	rangeEnd: number;
+	months: number;
+	binSize: Granularity;
+}): number => {
+	const date = new Date(rangeEnd);
+	if (binSize === "month") {
+		date.setUTCDate(1);
+		date.setUTCMonth(date.getUTCMonth() - (months - 1));
+		return date.getTime();
+	}
+	date.setUTCMonth(date.getUTCMonth() - months);
 	return date.getTime();
 };
 
@@ -196,12 +199,18 @@ export const predictBarCount = ({
 	start: number | null;
 	end: number | null;
 }): number => {
-	const bin = resolveBinSize({ interval, binSize });
+	const bin = getEffectiveBinSize({ interval, binSize });
 	const rangeEnd = interval === "custom" && end ? end : Date.now();
+	const months =
+		interval in MONTH_RANGES
+			? MONTH_RANGES[interval as MonthRangeEnum]
+			: undefined;
 	const rangeStart =
 		interval === "custom" && start
 			? start
-			: rangeEnd - (STANDARD_INTERVAL_DAYS[interval] ?? 30) * MS_PER_DAY;
+			: months !== undefined
+				? monthRangeStart({ rangeEnd, months, binSize: bin })
+				: rangeEnd - (STANDARD_INTERVAL_DAYS[interval] ?? 30) * MS_PER_DAY;
 
 	const alignedStart = alignDown({ ms: rangeStart, binSize: bin });
 

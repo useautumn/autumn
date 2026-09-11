@@ -9,6 +9,7 @@ import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getEffectiveBinSize } from "../utils/intervals";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useSelectedEventNames } from "./useSelectedEventNames";
 
@@ -36,7 +37,13 @@ export const useAnalyticsData = ({
 	const maxGroups = Number(searchParams.get("max_groups")) || 10;
 
 	const { queryStates } = useAnalyticsQueryState();
-	const { interval, bin_size: binSize, start, end } = queryStates;
+	const { interval, start, end } = queryStates;
+	// Resolve the bin here rather than letting the server default it: a range's
+	// default granularity is a UI decision, and the two must not drift.
+	const binSize = getEffectiveBinSize({
+		interval,
+		binSize: queryStates.bin_size,
+	});
 	// The deduction rollup is keyed by customer, so it cannot run org-wide.
 	const aggregateOn =
 		queryStates.aggregate_on === "deducted" && customerId
@@ -77,7 +84,7 @@ export const useAnalyticsData = ({
 		custom_range: customRange,
 		event_names: selectedEventNames,
 		group_by: formattedGroupBy,
-		bin_size: binSize || undefined,
+		bin_size: binSize,
 		timezone: effectiveTimezone,
 		max_groups: formattedGroupBy ? maxGroups : undefined,
 		aggregate_on: aggregateOn,
@@ -92,7 +99,7 @@ export const useAnalyticsData = ({
 			customerId,
 			entityId,
 			interval,
-			binSize || "day",
+			binSize,
 			String(start ?? ""),
 			String(end ?? ""),
 			...selectedEventNames.sort(),
