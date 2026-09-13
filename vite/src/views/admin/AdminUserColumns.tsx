@@ -1,8 +1,8 @@
 import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { format } from "date-fns";
+import { AdminCreatedAt } from "./components/AdminCreatedAt";
+import { AdminUserActionsCell } from "./components/AdminUserActionsCell";
 import { AdminUserEmailCell } from "./components/AdminUserEmailCell";
-import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminUser = {
 	id: string;
@@ -11,7 +11,6 @@ export type AdminUser = {
 	createdAt: string;
 };
 
-// The mobile summary already includes the name and creation time.
 const hiddenOnMobile = { mobileCard: "hidden" as const };
 
 export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
@@ -25,6 +24,15 @@ export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
 		),
 	},
 	{
+		id: "createdAt",
+		header: "Created",
+		accessorKey: "createdAt",
+		size: 100,
+		cell: ({ row }: { row: Row<AdminUser> }) => (
+			<AdminCreatedAt createdAt={row.original.createdAt} />
+		),
+	},
+	{
 		id: "name",
 		header: "Name",
 		accessorKey: "name",
@@ -32,18 +40,6 @@ export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
 		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminUser> }) => (
 			<span className="truncate">{row.original.name}</span>
-		),
-	},
-	{
-		id: "createdAt",
-		header: "Created",
-		accessorKey: "createdAt",
-		size: 100,
-		meta: hiddenOnMobile,
-		cell: ({ row }: { row: Row<AdminUser> }) => (
-			<span className="whitespace-nowrap text-subtle text-xs">
-				{format(new Date(row.original.createdAt), "dd MMM HH:mm")}
-			</span>
 		),
 	},
 	{
@@ -60,13 +56,11 @@ export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
 	{
 		id: "actions",
 		header: "Actions",
-		size: 120,
+		size: 48,
 		enableSorting: false,
 		enableHiding: false,
 		cell: ({ row }: { row: Row<AdminUser> }) => (
-			<div onClick={(e) => e.stopPropagation()}>
-				<ImpersonateButton userId={row.original.id} />
-			</div>
+			<AdminUserActionsCell userId={row.original.id} />
 		),
 	},
 ];

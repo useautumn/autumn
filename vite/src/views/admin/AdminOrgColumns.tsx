@@ -1,12 +1,12 @@
 import type { OrgClaimState } from "@autumn/shared";
-import { Button, MiniCopyButton } from "@autumn/ui";
+import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { UserWithRole } from "better-auth/plugins";
-import { format } from "date-fns";
+import { AdminCreatedAt } from "./components/AdminCreatedAt";
+import { AdminOrgActionsCell } from "./components/AdminOrgActionsCell";
 import { AdminOrgNameCell } from "./components/AdminOrgNameCell";
 import { AdminOrgStatusCell } from "./components/AdminOrgStatusCell";
 import { AdminOrgUsersCell } from "./components/AdminOrgUsersCell";
-import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminOrg = {
 	id: string;
@@ -24,6 +24,8 @@ export type AdminOrg = {
 		migrationPercent: number;
 	} | null;
 };
+
+const hiddenOnMobile = { mobileCard: "hidden" as const };
 
 export const createAdminOrgColumns = ({
 	onManageRequestBlocks,
@@ -46,49 +48,46 @@ export const createAdminOrgColumns = ({
 		header: "Users",
 		accessorKey: "users",
 		size: 300,
-		meta: { mobileCard: "hidden" },
+		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
 			<AdminOrgUsersCell users={row.original.users} />
 		),
 	},
 	{
-		id: "status",
-		meta: { mobileCard: "hidden" },
-		header: "Status",
-		size: 120,
-		enableSorting: false,
+		id: "createdAt",
+		header: "Created",
+		accessorKey: "createdAt",
+		size: 92,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
-			<AdminOrgStatusCell org={row.original} />
+			<AdminCreatedAt createdAt={row.original.createdAt} />
 		),
 	},
 	{
 		id: "slug",
-		meta: { mobileCard: "hidden" },
 		header: "Slug",
 		accessorKey: "slug",
 		size: 150,
+		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
 			<MiniCopyButton text={row.original.slug} innerClassName="text-xs" />
 		),
 	},
 	{
-		id: "createdAt",
-		meta: { mobileCard: "hidden" },
-		header: "Created",
-		accessorKey: "createdAt",
-		size: 92,
+		id: "status",
+		header: "Status",
+		size: 120,
+		enableSorting: false,
+		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
-			<span className="whitespace-nowrap text-subtle text-xs">
-				{format(new Date(row.original.createdAt), "dd MMM HH:mm")}
-			</span>
+			<AdminOrgStatusCell org={row.original} />
 		),
 	},
 	{
 		id: "id",
-		meta: { mobileCard: "hidden" },
 		header: "ID",
 		accessorKey: "id",
 		size: 140,
+		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
 			<div className="group flex w-full font-mono">
 				<MiniCopyButton text={row.original.id} innerClassName="text-xs" />
@@ -96,50 +95,17 @@ export const createAdminOrgColumns = ({
 		),
 	},
 	{
-		// Deliberately not `actions`: that id makes mobile cards pin the buttons
-		// into the card header, squeezing out the org name.
-		id: "orgActions",
+		id: "actions",
 		header: "Actions",
-		size: 200,
+		size: 48,
 		enableSorting: false,
 		enableHiding: false,
-		meta: { mobileCard: "full" },
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const firstNonAdminUser = row.original.users.find(
-				(user) => user.role !== "admin",
-			);
-
-			// Org-level admin actions (Block, Redis) must remain reachable even when
-			// the org has only admin users — gating them on `firstNonAdminUser`
-			// would silently hide them. Only `ImpersonateButton` requires a
-			// non-admin user to target.
-			return (
-				<div
-					className="flex flex-wrap gap-2"
-					onClick={(e) => e.stopPropagation()}
-				>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => onManageRequestBlocks(row.original)}
-					>
-						Block
-					</Button>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => onManageRedis(row.original)}
-					>
-						Redis
-					</Button>
-					{firstNonAdminUser && (
-						<ImpersonateButton
-							userId={firstNonAdminUser.id}
-							organizationId={row.original.id}
-						/>
-					)}
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<AdminOrg> }) => (
+			<AdminOrgActionsCell
+				onManageRedis={onManageRedis}
+				onManageRequestBlocks={onManageRequestBlocks}
+				org={row.original}
+			/>
+		),
 	},
 ];

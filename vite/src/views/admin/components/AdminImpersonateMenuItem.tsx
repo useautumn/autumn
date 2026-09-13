@@ -1,27 +1,25 @@
-import { Button } from "@autumn/ui";
+import { DropdownMenuItem } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { impersonateUser } from "../adminUtils";
 import { useAdmin } from "../hooks/useAdmin";
 
-export const ImpersonateButton = ({
+export const AdminImpersonateMenuItem = ({
 	userId,
 	organizationId,
 }: {
-	userId?: string;
+	userId: string;
 	organizationId?: string;
 }) => {
 	const [loading, setLoading] = useState(false);
 	const { isCurrentlyImpersonating } = useAdmin();
-	if (!userId) {
-		return null;
-	}
 
 	return (
-		<Button
-			variant="secondary"
-			size="sm"
-			onClick={async () => {
+		<DropdownMenuItem
+			disabled={loading}
+			isLoading={loading}
+			onClick={async (event) => {
+				event.stopPropagation();
 				setLoading(true);
 				try {
 					await impersonateUser({
@@ -33,12 +31,11 @@ export const ImpersonateButton = ({
 					const errorMessage =
 						error instanceof Error ? error.message : "Unknown error";
 					toast.error(`Failed to impersonate user: ${errorMessage}`);
+					setLoading(false);
 				}
-				setLoading(false);
 			}}
-			isLoading={loading}
 		>
 			Impersonate
-		</Button>
+		</DropdownMenuItem>
 	);
 };
