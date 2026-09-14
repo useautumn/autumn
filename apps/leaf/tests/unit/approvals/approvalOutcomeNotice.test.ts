@@ -92,6 +92,38 @@ describe("approvalOutcomeNotice", () => {
 		expect(notice).toContain("never re-run it blindly");
 	});
 
+	// Greptile: an executor interrupted after the running marker leaves a row
+	// that must read as unknown, never as "did not apply".
+	test("treats a write left running as an unknown outcome", () => {
+		const notice = approvalOutcomeNotice({
+			outcome: {
+				error: true,
+				message: "Approval writes did not run",
+				retryable: true,
+			},
+			writes: [
+				{
+					result: null,
+					status: "running",
+					tool_args: { request: { customer_id: "c1", plan_id: "pro" } },
+					tool_name: "attach",
+				},
+				{
+					result: null,
+					status: "pending",
+					tool_args: { request: { customer_id: "c1", email: "a@b.c" } },
+					tool_name: "updateCustomer",
+				},
+			],
+		});
+		expect(notice).toContain("1. attach");
+		expect(notice).toContain("OUTCOME UNKNOWN (the call was interrupted");
+		expect(notice).toContain("never re-run it blindly");
+		expect(notice).toContain("2. updateCustomer");
+		expect(notice).toContain("did not run");
+		expect(notice).toContain("a write marked OUTCOME UNKNOWN may have");
+	});
+
 	test("falls back to the primary result when no write rows exist", () => {
 		const notice = approvalOutcomeNotice({
 			outcome: { result: { ok: true }, text: "", toolName: "attach" },

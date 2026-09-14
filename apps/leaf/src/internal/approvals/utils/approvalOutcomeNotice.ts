@@ -35,10 +35,16 @@ const writeLine = (write: WriteRow, index: number) => {
 			return `${head}FAILED: ${errorMessageOf(write.result)}`;
 		case "unknown":
 			return `${head}OUTCOME UNKNOWN (the call may or may not have reached the server; never re-run it blindly): ${errorMessageOf(write.result)}`;
+		// A write still marked running when the run is being narrated was
+		// interrupted mid-call: the request may have reached the server.
+		case "running":
+			return `${head}OUTCOME UNKNOWN (the call was interrupted and may have reached the server; never re-run it blindly)`;
 		case "skipped":
 			return `${head}skipped because an earlier write failed`;
+		case "pending":
+			return `${head}did not run`;
 		default:
-			return `${head}${write.status}`;
+			return `${head}${write.status satisfies never}`;
 	}
 };
 
@@ -63,7 +69,7 @@ export const approvalOutcomeNotice = ({
 			"The user approved the change you proposed, but executing it FAILED. Do NOT tell the user it was applied.",
 			`Error: ${outcome.message}`,
 			...(lines.length ? ["Per write:", ...lines] : []),
-			'Only writes marked "applied" took effect. Tell the user the action failed and quote the error. ' +
+			'Only writes marked "applied" took effect; a write marked OUTCOME UNKNOWN may have. Tell the user the action failed and quote the error. ' +
 				"If the error is in the request, fix it, preview again and re-issue the write; otherwise say what is needed and stop.",
 			"</approval_failed>",
 		].join("\n");
