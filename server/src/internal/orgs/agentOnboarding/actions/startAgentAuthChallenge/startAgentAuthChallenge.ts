@@ -28,8 +28,10 @@ export const startAgentAuthChallenge = async ({
 	if (identity.kind === "invalid") return null;
 
 	return issueAgentAuthChallenge({
+		db,
 		email: normalizedEmail,
 		claimTokenHash: identity.claimTokenHash,
+		organizationName: identity.organizationName,
 		now,
 	});
 };

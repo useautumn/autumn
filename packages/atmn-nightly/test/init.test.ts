@@ -156,14 +156,10 @@ const deps = ({
 					organizationSlug: slug,
 					apiKey: "am_sk_test_keyless",
 					claimToken: "tok",
-					claimUrl: "https://app.useautumn.com/claim?token=tok",
 					claimExpiresAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
 				};
 			},
 			startClaim: async () => {
-				throw new Error("init never claims");
-			},
-			verifyClaim: async () => {
 				throw new Error("init never claims");
 			},
 		},

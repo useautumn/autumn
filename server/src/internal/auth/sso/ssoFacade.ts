@@ -621,7 +621,15 @@ export const completeSsoSignIn = async ({
 
 export const getSsoCompletionCallbackUrl = ({
 	providerId,
+	next,
 }: {
 	providerId: string;
-}) =>
-	`${clientBaseUrl()}/sso/callback?providerId=${encodeURIComponent(providerId)}`;
+	next?: string;
+}) => {
+	const callback = new URL("/sso/callback", clientBaseUrl());
+	callback.searchParams.set("providerId", providerId);
+	if (next?.startsWith("/") && !next.startsWith("//") && next[1] !== "\\") {
+		callback.searchParams.set("next", next);
+	}
+	return callback.toString();
+};
