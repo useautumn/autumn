@@ -148,3 +148,23 @@ schema drops and CS removals. Remove `will_archive` stamping lives in
 
 (A same-call CS referencing a removed feature is a VERDICT, not an error —
 see remove-features t5. Locked in `catalog_update_ordering` plan, rule 1.)
+
+## Credit rate cards — `credit-rate-card.test.ts`
+
+| Case | Covered |
+|---|---|
+| Create flat + graduated rows; update rates; `invoice_credit` persisted | ✓ t1 |
+| Blocked: enabling invoice credits with a pooled plan item | ✓ t2 |
+| Blocked: enabling invoice credits with an included-only plan item | ✓ t3 |
+| Unpool + enable invoice credits in one call | ✓ t4 |
+| Included → priced usage + enable invoice credits in one call | ✓ t5 |
+| Empty `credit_schema` on a classic credit system → 400 | — (unit: `featureUtils.ts:81`) |
+
+## Credit dimensions — `credit-dimensions.test.ts`
+
+| Case | Covered |
+|---|---|
+| Create with a dimension; edit one dimension; convert back to a plain row | ✓ t1 |
+| Blocked: two same-specificity dimensions that can match one event (catalog + features.update) | ✓ t2 |
+| Plan-item `feature_override.credit_schema` carries a dimensioned row | ✓ t3 |
+| CLI round-trip of dimensions + multipliers | ✓ `atmn/crud/features/credit-system-dimensions-multipliers.test.ts` |
