@@ -13,9 +13,9 @@ export const getCheckSubject = ({
 		customerProduct: FullSubject["customer_products"][number],
 	) =>
 		customerProduct.status === CusProductStatus.PastDue &&
+		!customerProduct.product.config?.ignore_past_due &&
 		(ctx.org.config.block_overdue_entitlements ||
-			(isThresholdBillingProduct({ customerProduct }) &&
-				!customerProduct.product.config?.ignore_past_due));
+			isThresholdBillingProduct({ customerProduct }));
 
 	if (!fullSubject.customer_products.some(shouldBlockPastDue)) {
 		return fullSubject;
