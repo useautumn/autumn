@@ -132,12 +132,12 @@ export function CreditRateCardRow({
 				isExpanded ? "border" : "input-base input-state-open-tiny",
 			)}
 		>
-			<div className="group flex h-9 w-full items-center gap-2 rounded-lg pr-2">
+			<div className="group flex h-10 w-full items-center gap-2 rounded-lg pr-3">
 				<button
 					type="button"
 					aria-expanded={isExpanded}
 					onClick={onToggle}
-					className="flex h-full min-w-0 flex-1 cursor-pointer select-none items-center gap-2 rounded-lg px-2 text-left"
+					className="flex h-full min-w-0 flex-1 cursor-pointer select-none items-center gap-2 rounded-lg px-3 text-left"
 				>
 					<span className="shrink-0">
 						{getFeatureIcon({ feature: selectedFeature })}
@@ -165,7 +165,7 @@ export function CreditRateCardRow({
 			</div>
 
 			{isExpanded && (
-				<div className="flex flex-col gap-2 p-2 pt-0">
+				<div className="flex flex-col gap-3 px-3 pt-1 pb-3">
 					{isMultiTier && showRateCardControls ? (
 						<>
 							<CreditTierRows item={item} onChange={onChange} />
@@ -222,11 +222,13 @@ export function CreditRateCardRow({
 						)
 					)}
 					{showDimensions && (
-						<CreditRowDimensions
-							item={item}
-							onChange={onChange}
-							onRemove={removeDimensions}
-						/>
+						<div className="pt-2">
+							<CreditRowDimensions
+								item={item}
+								onChange={onChange}
+								onRemove={removeDimensions}
+							/>
+						</div>
 					)}
 				</div>
 			)}
