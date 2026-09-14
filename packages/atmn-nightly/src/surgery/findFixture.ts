@@ -73,10 +73,12 @@ const candidateFixtures = ({
 				key: builder.arrayProperty,
 			});
 			if (array === null || array.kind() !== "array") return [];
-			return array
-				.namedChildren()
-				.filter((element) => element.kind() === "object")
-				.map((element) => ({ node: element, object: element }));
+			// An element is a bare literal or a builder call around one:
+			// `variants: [{...}]` and `variants: [variant({...})]` both count.
+			return array.namedChildren().flatMap((element) => {
+				const object = fixtureObjectOf(element);
+				return object === null ? [] : [{ node: element, object }];
+			});
 		},
 	);
 };

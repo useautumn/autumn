@@ -50,6 +50,14 @@ export const versionSlugs = (rule: RuleOf<"versionSlugs">): LintRule => ({
 	...rule,
 });
 
+/** Exactly one row per group carries `field: true`. */
+export const exactlyOneActive = (
+	rule: RuleOf<"exactlyOneActive">,
+): LintRule => ({
+	kind: "exactlyOneActive",
+	...rule,
+});
+
 /** The field names an entry of another top-level collection. */
 export const exists = (rule: RuleOf<"exists">): LintRule => ({
 	kind: "exists",

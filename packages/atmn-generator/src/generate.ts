@@ -232,6 +232,11 @@ export const generate = async (): Promise<string[]> => {
 	const operations: ClientOperation[] = (
 		[
 			{
+				name: "diff",
+				path: "/v1/catalogV2.diff",
+				responseTypeName: "DiffCatalogResponse",
+			},
+			{
 				name: "previewUpdate",
 				path: "/v1/catalogV2.preview_update",
 				responseTypeName: "PreviewUpdateCatalogResponse",

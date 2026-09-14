@@ -109,6 +109,14 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
+			/** Among the entries sharing `groupBy`, exactly one has `field: true`. */
+			readonly kind: "exactlyOneActive";
+			readonly groupBy: string;
+			readonly field: string;
+			readonly label: string;
+			readonly because: string;
+	  }
+	| {
 			/** `field` names an entry of top-level collection `in` by `matching`.
 			 * An array-valued `field` is checked element-wise; a list of `matching`
 			 * paths matches on whichever the candidate states. Skipped when that
@@ -525,6 +533,7 @@ const entryRuleFailures = ({
 		case "unique":
 		case "linkedOnce":
 		case "versionSlugs":
+		case "exactlyOneActive":
 			return [];
 	}
 };
@@ -732,6 +741,66 @@ const checkVersionSlugs = ({
 	}
 };
 
+/** Among the rows sharing a group, exactly one carries `field: true`. */
+const checkExactlyOneActive = ({
+	entries,
+	rule,
+	node,
+	key,
+	trail,
+	issues,
+}: CollectionCheck<"exactlyOneActive">): void => {
+	type Member = { entry: Entry; index: number; active: boolean };
+	const rowsByGroup = new Map<string, Member[]>();
+	for (const [index, entry] of entries.entries()) {
+		if (!isEntry(entry)) continue;
+		const group = entry[rule.groupBy];
+		if (typeof group !== "string") continue;
+		rowsByGroup.set(group, [
+			...(rowsByGroup.get(group) ?? []),
+			{ entry, index, active: entry[rule.field] === true },
+		]);
+	}
+	for (const [group, members] of rowsByGroup) {
+		const active = members.filter((member) => member.active);
+		if (active.length === 1) continue;
+		// Report where the reader can act: the first row when none is active,
+		// the second active row when too many are.
+		const at = active.length === 0 ? members[0] : active[1];
+		if (at === undefined) continue;
+		const versions = `${members.length} version${members.length === 1 ? "" : "s"}`;
+		const count =
+			active.length === 0 ? "none is active" : `${active.length} are active`;
+		issues.push({
+			path: render([
+				...trail,
+				crumbFor({ node, key, entry: at.entry, index: at.index }),
+			]),
+			message: `${rule.label} ${show(group)} has ${versions} and ${count}. ${rule.because}${renameHint({ active, members })}`,
+		});
+	}
+};
+
+/**
+ * A group with no active row whose every row already has a stable id is what
+ * a half-done rename looks like: the versions moved to the new id all came
+ * from the server, and the live one stayed behind under the old id.
+ */
+const renameHint = <T extends { active: boolean; entry: Entry }>({
+	active,
+	members,
+}: {
+	active: T[];
+	members: T[];
+}): string => {
+	if (active.length !== 0) return "";
+	const everyRowIsKnown = members.every(
+		(member) => typeof member.entry.internalId === "string",
+	);
+	if (!everyRowIsKnown) return "";
+	return " If you are renaming a plan, change the planId on every one of its versions, not just some.";
+};
+
 /** Rules about the collection as a whole, reported on the offending entry. */
 const checkCollection = ({
 	entries,
@@ -753,6 +822,8 @@ const checkCollection = ({
 			checkLinkedOnce({ entries, rule, node, key, trail, issues });
 		if (rule.kind === "versionSlugs")
 			checkVersionSlugs({ entries, rule, node, key, trail, issues });
+		if (rule.kind === "exactlyOneActive")
+			checkExactlyOneActive({ entries, rule, node, key, trail, issues });
 	}
 };
 

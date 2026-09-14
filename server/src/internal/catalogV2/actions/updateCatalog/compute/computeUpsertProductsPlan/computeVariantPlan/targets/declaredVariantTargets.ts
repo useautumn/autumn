@@ -51,13 +51,13 @@ export const declaredVariantTargets = ({
 			return rows.map((row) => ({
 				row,
 				declared: true,
-				...(variant.customize ? { customize: variant.customize } : {}),
+				...(variant.customize !== undefined
+					? { customize: variant.customize }
+					: {}),
 				...(variant.processors !== undefined
 					? { processors: variant.processors }
 					: {}),
-				...(variant.archived !== undefined
-					? { archived: variant.archived }
-					: {}),
+				archived: variant.archived ?? false,
 				...(variant.new_version_slug
 					? { newVersionSlug: variant.new_version_slug }
 					: {}),

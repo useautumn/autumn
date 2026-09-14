@@ -258,6 +258,14 @@ export const LINT_RULES: LintRules = {
 				pins: ["versionSlug", "version"],
 				because: "Add versionSlug to every version so they can be told apart.",
 			},
+			{
+				kind: "exactlyOneActive",
+				groupBy: "planId",
+				field: "active",
+				label: "Plan",
+				because:
+					"Every version of a plan lives in plans; mark the one customers can buy active: true and the rest active: false.",
+			},
 		],
 	},
 	"plans.billingControls.autoTopups": {
@@ -563,6 +571,9 @@ export const LINT_RULES: LintRules = {
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
 			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
+			},
 		},
 		rules: [
 			{
@@ -825,6 +836,9 @@ export const LINT_RULES: LintRules = {
 			},
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
+			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
 			},
 		},
 	},
@@ -1212,6 +1226,9 @@ export const LINT_RULES: LintRules = {
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
 			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
+			},
 		},
 	},
 	"plans.variants.customize.addItems.price.additionalCurrencies": {
@@ -1547,6 +1564,9 @@ export const LINT_RULES: LintRules = {
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
 			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
+			},
 		},
 	},
 	"plans.variants.customize.items.price.additionalCurrencies": {
@@ -1839,6 +1859,9 @@ export const LINT_RULES: LintRules = {
 			},
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
+			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
 			},
 		},
 	},

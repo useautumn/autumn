@@ -5,11 +5,14 @@ import type {
 	CatalogVariantPreview,
 	CatalogVariantVersionPreview,
 	FullProduct,
+	PlanChangeV0,
 } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
-import { variantRowsAnchoredTo } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/variantPlanUtils";
 import { aliasReplacementForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/aliasReplacementForPlan";
-import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
+import {
+	catalogRowIdentity,
+	defaultVersionSlug,
+} from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { withVariantConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withVariantConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import { computeVersioningOptionsForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/versioningOptions/computeVersioningOptionsForPlan";
@@ -19,7 +22,9 @@ import type {
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { variantRowForDeclaredEntry } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/anchoredVariantRow";
 import { editedBaseInternalIds } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/editedBaseInternalIds";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 import { variantRowForPropagateTarget } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantRowForPropagateTarget";
 
@@ -83,13 +88,19 @@ const resolveVariantAction = ({
 		if (base.row.versioning === "all_versions") return true;
 		return version === previewVersion;
 	};
+	const anchorInternalIds = editedBaseInternalIds({ upsert: base });
+	// Same rule as compute: every declared entry that resolves here is a target,
+	// whether it carries content, an archive flag, or only the link itself.
 	if (
-		base.declaredVariants?.some(
-			(declared) =>
-				declared.variant_plan_id === variantPlanId &&
-				(declared.customize !== undefined || declared.archived !== undefined) &&
-				versionIsTargeted({ targetVersion: declared.version }),
-		)
+		base.declaredVariants?.some((declared) => {
+			if (declared.variant_plan_id !== variantPlanId) return false;
+			const declaredRow = variantRowForDeclaredEntry({
+				variant: declared,
+				anchorInternalIds,
+				productStatesContext,
+			});
+			return versionIsTargeted({ targetVersion: declaredRow?.version });
+		})
 	) {
 		return "explicit";
 	}
@@ -98,7 +109,7 @@ const resolveVariantAction = ({
 			if (target.plan_id !== variantPlanId) return false;
 			const targetRow = variantRowForPropagateTarget({
 				target,
-				anchorInternalIds: editedBaseInternalIds({ upsert: base }),
+				anchorInternalIds,
 				productStatesContext,
 			});
 			if (!targetRow) return false;
@@ -110,20 +121,84 @@ const resolveVariantAction = ({
 	return "unchanged";
 };
 
+/** The base row a variant points at, in the shape a license link reports its target. */
+type VariantBaseTarget = {
+	base_variant_id: string;
+	base_version: number;
+	base_version_slug: string;
+};
+
+const variantBaseTarget = ({
+	baseInternalId,
+	productStatesContext,
+}: {
+	baseInternalId: string | null | undefined;
+	productStatesContext: ProductStatesContext;
+}): VariantBaseTarget | null => {
+	if (!baseInternalId) return null;
+	const base = findFullProductByInternalId({
+		internalId: baseInternalId,
+		productStatesContext,
+	});
+	if (!base) return null;
+	return {
+		base_variant_id: base.id,
+		base_version: base.version,
+		base_version_slug:
+			base.version_slug ?? defaultVersionSlug({ version: base.version }),
+	};
+};
+
+const sameBaseTarget = (
+	left: VariantBaseTarget | null,
+	right: VariantBaseTarget | null,
+): boolean =>
+	left?.base_variant_id === right?.base_variant_id &&
+	left?.base_version === right?.base_version;
+
+/**
+ * Content diff plus the link's own scalars: a moved pointer rides
+ * `previous_attributes.base_*`, the way a license link's moved version
+ * rides its `previous_attributes.version` / `version_slug`.
+ */
 const variantPlanChange = ({
 	variantUpsert,
+	productStatesContext,
 }: {
 	variantUpsert: UpsertProductPlan | undefined;
-}) =>
-	variantUpsert
-		? buildPlanChangeFromFullProducts({
-				from:
-					variantUpsert.row.baseFullProduct ??
-					variantUpsert.row.currentFullProduct ??
-					undefined,
-				to: variantUpsert.row.nextFullProduct,
-			})
-		: undefined;
+	productStatesContext: ProductStatesContext;
+}): PlanChangeV0 | undefined => {
+	if (!variantUpsert) return undefined;
+	const from =
+		variantUpsert.row.baseFullProduct ??
+		variantUpsert.row.currentFullProduct ??
+		undefined;
+	const contentChange = buildPlanChangeFromFullProducts({
+		from,
+		to: variantUpsert.row.nextFullProduct,
+	});
+
+	const previousBase = variantBaseTarget({
+		baseInternalId: from?.base_internal_product_id,
+		productStatesContext,
+	});
+	const nextBase = variantBaseTarget({
+		baseInternalId: variantUpsert.row.nextFullProduct.base_internal_product_id,
+		productStatesContext,
+	});
+	if (!from || sameBaseTarget(previousBase, nextBase)) return contentChange;
+
+	return {
+		item_changes: [],
+		...contentChange,
+		previous_attributes: {
+			...contentChange?.previous_attributes,
+			base_variant_id: previousBase?.base_variant_id ?? null,
+			base_version: previousBase?.base_version ?? null,
+			base_version_slug: previousBase?.base_version_slug ?? null,
+		},
+	};
+};
 
 const variantPreviewState = ({
 	planId,
@@ -232,7 +307,10 @@ const siblingVersionsForVariant = ({
 				base,
 				productStatesContext,
 			});
-			const planChange = variantPlanChange({ variantUpsert: siblingUpsert });
+			const planChange = variantPlanChange({
+				variantUpsert: siblingUpsert,
+				productStatesContext,
+			});
 			const preview: CatalogVariantVersionPreview = {
 				...catalogRowIdentity({
 					planId: product.id,
@@ -259,18 +337,51 @@ const siblingVersionsForVariant = ({
 		})
 		.sort(byVersionAscending);
 
+/** Where a variant row points after this update — its upsert's next pointer, else its current one. */
+const nextBaseInternalIdFor = ({
+	row,
+	upsertProducts,
+}: {
+	row: FullProduct;
+	upsertProducts: UpsertProductPlan[];
+}): string | null | undefined => {
+	const rowUpsert = findVariantUpsert({
+		upsertProducts,
+		planId: row.id,
+		version: row.version,
+	});
+	return (
+		rowUpsert?.row.nextFullProduct.base_internal_product_id ??
+		row.base_internal_product_id
+	);
+};
+
 /** Anchored rows per variant plan: [representative, ...other anchored rows]. */
 const anchoredRowsByVariantPlan = ({
 	upsert,
+	upsertProducts,
 	productStatesContext,
 }: {
 	upsert: UpsertProductPlan;
+	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 }): Map<string, FullProduct[]> => {
-	const anchored = variantRowsAnchoredTo({
-		baseInternalIds: editedBaseInternalIds({ upsert }),
-		productStatesContext,
-	});
+	const anchors = editedBaseInternalIds({ upsert });
+	// Anchor on the post-update pointer: a row this update moves here belongs
+	// here, and one it moves away no longer does.
+	const anchored = Object.values(productStatesContext.versionsByPlanId)
+		.flat()
+		.filter((row) => {
+			const nextBase = nextBaseInternalIdFor({ row, upsertProducts });
+			if (!nextBase || !anchors.has(nextBase)) return false;
+			if (!row.archived) return true;
+			const rowUpsert = findVariantUpsert({
+				upsertProducts,
+				planId: row.id,
+				version: row.version,
+			});
+			return rowUpsert?.row.nextFullProduct.archived === false;
+		});
 	const byPlan = new Map<string, FullProduct[]>();
 	for (const row of anchored) {
 		if (row.id === upsert.row.planId) continue;
@@ -313,13 +424,18 @@ const variantCreatePreview = ({
 	createUpsert,
 	previewContext,
 	renamePlans,
+	productStatesContext,
 }: {
 	createUpsert: UpsertProductPlan;
 	previewContext: PreviewCatalogContext | undefined;
 	renamePlans: RenameProductPlan[];
+	productStatesContext: ProductStatesContext;
 }): CatalogVariantPreview => {
 	const { planId, version, nextFullProduct } = createUpsert.row;
-	const planChange = variantPlanChange({ variantUpsert: createUpsert });
+	const planChange = variantPlanChange({
+		variantUpsert: createUpsert,
+		productStatesContext,
+	});
 	const aliasReplacement = aliasReplacementForPlan({
 		planId,
 		upsert: createUpsert,
@@ -359,6 +475,7 @@ export const buildVariantsPreview = ({
 }): CatalogVariantPreview[] => {
 	const anchoredByPlan = anchoredRowsByVariantPlan({
 		upsert: directUpsert,
+		upsertProducts,
 		productStatesContext,
 	});
 	const creates = variantCreatesForBase({ directUpsert, upsertProducts });
@@ -368,7 +485,12 @@ export const buildVariantsPreview = ({
 	const editedNext = directUpsert.row.nextFullProduct;
 
 	const createPreviews = creates.map((createUpsert) =>
-		variantCreatePreview({ createUpsert, previewContext, renamePlans }),
+		variantCreatePreview({
+			createUpsert,
+			previewContext,
+			renamePlans,
+			productStatesContext,
+		}),
 	);
 	const existingPreviews = [...anchoredByPlan.values()].map(
 		([variant, ...anchoredSiblings]) => {
@@ -391,7 +513,10 @@ export const buildVariantsPreview = ({
 				base: directUpsert,
 				productStatesContext,
 			});
-			const planChange = variantPlanChange({ variantUpsert });
+			const planChange = variantPlanChange({
+				variantUpsert,
+				productStatesContext,
+			});
 			const aliasReplacement = aliasReplacementForPlan({
 				planId: variant.id,
 				upsert: variantUpsert,

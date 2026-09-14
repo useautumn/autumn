@@ -1,5 +1,6 @@
 import type { LintRule } from "../runtime/lintDocument";
 import {
+	exactlyOneActive,
 	exists,
 	linkedOnce,
 	targetHas,
@@ -81,5 +82,12 @@ export const planRules: LintRule[] = [
 		identity: "variantPlanId",
 		pins: ["versionSlug", "version"],
 		because: "Add versionSlug to every version so they can be told apart.",
+	}),
+	exactlyOneActive({
+		groupBy: "planId",
+		field: "active",
+		label: "Plan",
+		because:
+			"Every version of a plan lives in plans; mark the one customers can buy active: true and the rest active: false.",
 	}),
 ];

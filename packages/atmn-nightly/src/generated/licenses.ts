@@ -3,6 +3,7 @@
 
 export type License = {
 	licensePlanId: string;
+	versionSlug?: string;
 	included?: number;
 	prepaidOnly?: boolean;
 	customize?: {
@@ -97,6 +98,7 @@ export type License = {
 				billingUnits?: number;
 				/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 				billingMethod: "prepaid" | "usage_based";
+				allocatedBilling?: "arrear" | "prorated_legacy";
 				/** Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit. */
 				maxPurchase?: number | null;
 			};

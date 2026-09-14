@@ -34,6 +34,8 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 				rule.slug,
 				...(rule.collection === undefined ? [] : [rule.collection]),
 			];
+		case "exactlyOneActive":
+			return [rule.groupBy, rule.field];
 		case "exists":
 			return listOf(rule.field);
 		case "compare":

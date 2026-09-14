@@ -431,13 +431,21 @@ Linking a keyless org to an account:
 		.command("pull")
 		.description("write your remote catalog back into autumn.config.ts")
 		.option("--include-mappings", "keep processor mappings in pulled fixtures")
+		.option(
+			"--overwrite",
+			"discard the local config and pull the catalog fresh (e.g. after switching orgs)",
+		)
 		.action(
-			async (options: { includeMappings?: boolean }, command: Command) => {
+			async (
+				options: { includeMappings?: boolean; overwrite?: boolean },
+				command: Command,
+			) => {
 				const target = prepareTarget({ command });
 				await runPull({
 					client: clientFor({ target }),
 					configPath: configFlagOf({ command }),
 					includeMappings: options.includeMappings === true,
+					overwrite: options.overwrite === true,
 				});
 				writeStaleSkillsHint({ command });
 			},
