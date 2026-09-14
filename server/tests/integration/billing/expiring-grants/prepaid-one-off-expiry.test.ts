@@ -28,6 +28,7 @@ import {
 	type ApiCustomerV5,
 	BillingInterval,
 	BillingMethod,
+	CusProductStatus,
 	EntitlementDuration,
 	type FullCustomer,
 	ResetInterval,
@@ -620,7 +621,7 @@ test.concurrent(
 		const scheduled = fullCustomer.customer_products.find(
 			(cp) => cp.product.id === proId,
 		);
-		expect(scheduled?.status).toBe("scheduled");
+		expect(scheduled?.status).toBe(CusProductStatus.Scheduled);
 
 		// still spendable today; the plain plan's 500 only arrives at renewal
 		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
