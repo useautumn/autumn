@@ -2,6 +2,11 @@ import type { CreditSchemaItem, Feature } from "@autumn/shared";
 import { FeatureType, isAiCreditSystem } from "@autumn/shared";
 import { useMemo, useRef, useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import {
+	expandedKeyAfterItemChange,
+	keysForSchema,
+	removeSchemaItemAt,
+} from "../utils/creditSchemaList";
 import { createSchemaItem } from "../utils/creditSchemaUtils";
 
 /**
@@ -25,9 +30,10 @@ export function useCreditSchemaList({
 
 	const schemaKeysRef = useRef<string[]>([]);
 	const schemaKeys = useMemo(() => {
-		const nextKeys = [...schemaKeysRef.current];
-		while (nextKeys.length < schema.length) nextKeys.push(crypto.randomUUID());
-		while (nextKeys.length > schema.length) nextKeys.pop();
+		const nextKeys = keysForSchema({
+			keys: schemaKeysRef.current,
+			length: schema.length,
+		});
 		schemaKeysRef.current = nextKeys;
 		return nextKeys;
 	}, [schema.length]);
@@ -55,7 +61,17 @@ export function useCreditSchemaList({
 	}: {
 		index: number;
 		item: CreditSchemaItem;
-	}) => onChange(schema.map((existing, i) => (i === index ? item : existing)));
+	}) => {
+		setExpandedKey((current) =>
+			expandedKeyAfterItemChange({
+				previous: schema[index],
+				next: item,
+				rowKey: schemaKeys[index],
+				current,
+			}),
+		);
+		onChange(schema.map((existing, i) => (i === index ? item : existing)));
+	};
 
 	const addSchemaItem = () => {
 		const key = crypto.randomUUID();
@@ -69,8 +85,13 @@ export function useCreditSchemaList({
 			onRemoveLast();
 			return;
 		}
-		schemaKeysRef.current = schemaKeysRef.current.filter((_, i) => i !== index);
-		onChange(schema.filter((_, i) => i !== index));
+		const next = removeSchemaItemAt({
+			schema,
+			keys: schemaKeysRef.current,
+			index,
+		});
+		schemaKeysRef.current = next.keys;
+		onChange(next.schema);
 	};
 
 	return {
