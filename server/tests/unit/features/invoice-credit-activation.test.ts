@@ -1,9 +1,11 @@
+/**
+ * The invoice_credit flag no longer gates anything: itemization is stamped
+ * per customer entitlement from the plan item's price, so flipping the flag
+ * is not a blockable feature change and never trips a customer blocker.
+ */
+
 import { describe, expect, test } from "bun:test";
-import {
-	type Feature,
-	FeatureType,
-	type FeatureUpdateBlocker,
-} from "@autumn/shared";
+import { type Feature, FeatureType } from "@autumn/shared";
 import { features } from "@tests/utils/fixtures/db/features.js";
 import { detectFeatureUpdateBlockers as detectCatalogV2FeatureUpdateBlockers } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateFeatureErrors/detectFeatureUpdateBlockers.js";
 import type { FeatureState } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext/index.js";
@@ -25,24 +27,16 @@ const next = {
 	config: { ...current.config, invoice_credit: true },
 } as Feature;
 
-const objectsUsingFeature = ({
-	hasCustomers,
-}: {
-	hasCustomers: boolean;
-}): ObjectsUsingFeature => ({
+const objectsUsingFeatureWithCustomers: ObjectsUsingFeature = {
 	entitlements: [],
 	prices: [],
 	creditSystems: [],
 	linkedEntitlements: [],
-	cusEnts: hasCustomers ? ([{ id: "customer_entitlement" }] as never[]) : [],
-});
+	cusEnts: [{ id: "customer_entitlement" }] as never[],
+};
 
-const featureState = ({
-	hasCustomers,
-}: {
-	hasCustomers: boolean;
-}): FeatureState => ({
-	has_customers: hasCustomers,
+const featureStateWithCustomers: FeatureState = {
+	has_customers: true,
 	has_entitlements: true,
 	has_pooled_entitlements: false,
 	has_non_consumable_entitlements: false,
@@ -55,7 +49,7 @@ const featureState = ({
 	entitlementsOverflow: false,
 	entityFeatureIdEntitlementsOverflow: false,
 	pricesOverflow: false,
-});
+};
 
 const updateFeaturePlan = {
 	current,
@@ -72,69 +66,27 @@ const updateFeaturePlan = {
 	},
 } satisfies UpdateFeaturePlan;
 
-describe("invoice-credit activation", () => {
-	test("treats enabling invoice credits as a dependency-sensitive update", () => {
+describe("invoice_credit flag is inert", () => {
+	test("flipping the flag is not a dependency-sensitive change", () => {
 		expect(isBlockableFeatureChange({ feature: current, updates: next })).toBe(
-			true,
+			false,
 		);
 	});
 
-	test("allows activation before the first customer attachment", () => {
+	test("enabling it after customers attached is not blocked in either update path", () => {
 		expect(
 			detectFeatureUpdateBlockers({
 				feature: current,
 				updates: next,
-				objectsUsingFeature: objectsUsingFeature({ hasCustomers: false }),
+				objectsUsingFeature: objectsUsingFeatureWithCustomers,
 				allFeatures: [current],
 			}),
 		).toEqual([]);
-	});
-
-	test("blocks activation after a customer has been attached in both update paths", () => {
-		const expectedBlocker = {
-			field: "invoice_credit",
-			code: "attached_to_customer",
-			message:
-				"Cannot enable invoice credits for feature enterprise_credits because it has been attached to a customer before",
-		} satisfies FeatureUpdateBlocker;
-
-		expect(
-			detectFeatureUpdateBlockers({
-				feature: current,
-				updates: next,
-				objectsUsingFeature: objectsUsingFeature({ hasCustomers: true }),
-				allFeatures: [current],
-			}),
-		).toContainEqual(expectedBlocker);
 		expect(
 			detectCatalogV2FeatureUpdateBlockers({
 				updateFeaturePlan,
 				takenFeatureIds: new Set(),
-				featureState: featureState({ hasCustomers: true }),
-				projectedCreditSystemFeatureIds: [],
-			}),
-		).toContainEqual(expectedBlocker);
-	});
-
-	test("allows invoice credits to be disabled after customer attachment", () => {
-		expect(
-			detectFeatureUpdateBlockers({
-				feature: next,
-				updates: current,
-				objectsUsingFeature: objectsUsingFeature({ hasCustomers: true }),
-				allFeatures: [next],
-			}),
-		).toEqual([]);
-		expect(
-			detectCatalogV2FeatureUpdateBlockers({
-				updateFeaturePlan: {
-					...updateFeaturePlan,
-					current: next,
-					next: current,
-					previousAttributes: { invoice_credit: true },
-				},
-				takenFeatureIds: new Set(),
-				featureState: featureState({ hasCustomers: true }),
+				featureState: featureStateWithCustomers,
 				projectedCreditSystemFeatureIds: [],
 			}),
 		).toEqual([]);

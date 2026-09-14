@@ -2,12 +2,10 @@ import { expect, test } from "bun:test";
 import {
 	BillingInterval,
 	BillingMethod,
-	ErrCode,
 	FeatureType,
 	FeatureUsageType,
 	ResetInterval,
 } from "@autumn/shared";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { deleteDbPlans } from "../plans/utils/expectCatalogPlans.js";
@@ -52,7 +50,6 @@ test.concurrent(
 			feature_id: creditSystemId,
 			name: "Enterprise credits",
 			type: FeatureType.CreditSystem,
-			invoice_credit: true,
 			credit_schema: initialCreditSchema,
 		};
 
@@ -73,7 +70,6 @@ test.concurrent(
 			expect(
 				createResponse.features.find(({ id }) => id === creditSystemId),
 			).toMatchObject({
-				invoice_credit: true,
 				credit_schema: initialCreditSchema,
 			});
 			await expectDbFeaturesCorrect({
@@ -83,7 +79,6 @@ test.concurrent(
 						id: creditSystemId,
 						type: FeatureType.CreditSystem,
 						usageType: FeatureUsageType.Single,
-						invoiceCredit: true,
 						creditSchema: [
 							{
 								metered_feature_id: flatFeatureId,
@@ -118,7 +113,6 @@ test.concurrent(
 				features: [
 					{
 						...creditSystem,
-						invoice_credit: false,
 						credit_schema: updatedCreditSchema,
 					},
 				],
@@ -128,7 +122,6 @@ test.concurrent(
 				features: [{ id: creditSystemId, action: "update" }],
 			});
 			expect(updateResponse.features[0]).toMatchObject({
-				invoice_credit: false,
 				credit_schema: updatedCreditSchema,
 			});
 			await expectDbFeaturesCorrect({
@@ -137,7 +130,6 @@ test.concurrent(
 					{
 						id: creditSystemId,
 						type: FeatureType.CreditSystem,
-						invoiceCredit: false,
 						creditSchema: [
 							{
 								metered_feature_id: flatFeatureId,
@@ -164,7 +156,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 credit rate card: rejects enabling invoice credits on a pooled feature")}`,
+	`${chalk.yellowBright("catalogV2 credit rate card: a rate card update saves on a feature with a pooled plan item")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const meteredFeatureId = uniqueTestId("rate_pooled_metered");
@@ -194,7 +186,6 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: creditSystemId,
 						type: FeatureType.CreditSystem,
-						invoice_credit: false,
 						credit_schema: creditSchema,
 					},
 				],
@@ -213,32 +204,30 @@ test.concurrent(
 				],
 			});
 
-			await expectAutumnError({
-				errCode: ErrCode.InvalidProductItem,
-				errMessage: "Invoice-credit features cannot use pooled plan items",
-				func: () =>
-					autumnV2_3.catalogV2.update({
-						features: [
-							{
-								feature_id: creditSystemId,
-								name: creditSystemId,
-								type: FeatureType.CreditSystem,
-								invoice_credit: true,
-								credit_schema: creditSchema,
-							},
-						],
-					}),
-			});
-
-			await expectAutumnError({
-				errCode: ErrCode.InvalidProductItem,
-				errMessage: "Invoice-credit features cannot use pooled plan items",
-				func: () =>
-					autumnV2_3.post("/features.update", {
+			const catalogResponse = await autumnV2_3.catalogV2.update({
+				features: [
+					{
 						feature_id: creditSystemId,
-						invoice_credit: true,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
 						credit_schema: creditSchema,
-					}),
+					},
+				],
+			});
+			expect(catalogResponse.features[0]).toMatchObject({ id: creditSystemId });
+
+			await autumnV2_3.post("/features.update", {
+				feature_id: creditSystemId,
+				credit_schema: creditSchema,
+			});
+			await expectDbFeaturesCorrect({
+				ctx,
+				expected: [
+					{
+						id: creditSystemId,
+						type: FeatureType.CreditSystem,
+					},
+				],
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
@@ -248,7 +237,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 credit rate card: allows enabling invoice credits on an included-only plan item")}`,
+	`${chalk.yellowBright("catalogV2 credit rate card: a rate card update saves on a feature with an included-only plan item")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const meteredFeatureId = uniqueTestId("rate_included_metered");
@@ -278,7 +267,6 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: creditSystemId,
 						type: FeatureType.CreditSystem,
-						invoice_credit: false,
 						credit_schema: creditSchema,
 					},
 				],
@@ -291,22 +279,31 @@ test.concurrent(
 				],
 			});
 
-			await autumnV2_3.catalogV2.update({
+			const catalogResponse = await autumnV2_3.catalogV2.update({
 				features: [
 					{
 						feature_id: creditSystemId,
 						name: creditSystemId,
 						type: FeatureType.CreditSystem,
-						invoice_credit: true,
 						credit_schema: creditSchema,
 					},
 				],
 			});
+			expect(catalogResponse.features[0]).toMatchObject({ id: creditSystemId });
 
-			const feature = await autumnV2_3.post("/features.get", {
+			await autumnV2_3.post("/features.update", {
 				feature_id: creditSystemId,
+				credit_schema: creditSchema,
 			});
-			expect(feature.invoice_credit).toBe(true);
+			await expectDbFeaturesCorrect({
+				ctx,
+				expected: [
+					{
+						id: creditSystemId,
+						type: FeatureType.CreditSystem,
+					},
+				],
+			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 			await deleteDbFeatures({ ctx, featureIds });
@@ -315,7 +312,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 credit rate card: allows unpooling and enabling invoice credits atomically")}`,
+	`${chalk.yellowBright("catalogV2 credit rate card: unpooling and pricing a credit item saves atomically with a rate card update")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const meteredFeatureId = uniqueTestId("rate_atomic_pool_metered");
@@ -348,7 +345,6 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: creditSystemId,
 						type: FeatureType.CreditSystem,
-						invoice_credit: false,
 						credit_schema: creditSchema,
 					},
 				],
@@ -374,7 +370,6 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: creditSystemId,
 						type: FeatureType.CreditSystem,
-						invoice_credit: true,
 						credit_schema: creditSchema,
 					},
 				],
@@ -395,7 +390,7 @@ test.concurrent(
 				],
 			});
 
-			expect(response.features[0]).toMatchObject({ invoice_credit: true });
+			expect(response.features[0]).toMatchObject({ id: creditSystemId });
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 			await deleteDbFeatures({ ctx, featureIds });
@@ -404,7 +399,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 credit rate card: allows converting included usage to priced usage while enabling invoice credits")}`,
+	`${chalk.yellowBright("catalogV2 credit rate card: converting included usage to priced usage saves atomically with a rate card update")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const meteredFeatureId = uniqueTestId("rate_atomic_price_metered");
@@ -431,7 +426,6 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: creditSystemId,
 						type: FeatureType.CreditSystem,
-						invoice_credit: false,
 						credit_schema: creditSchema,
 					},
 				],
@@ -456,7 +450,6 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: creditSystemId,
 						type: FeatureType.CreditSystem,
-						invoice_credit: true,
 						credit_schema: creditSchema,
 					},
 				],
@@ -481,7 +474,7 @@ test.concurrent(
 				],
 			});
 
-			expect(response.features[0]).toMatchObject({ invoice_credit: true });
+			expect(response.features[0]).toMatchObject({ id: creditSystemId });
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 			await deleteDbFeatures({ ctx, featureIds });

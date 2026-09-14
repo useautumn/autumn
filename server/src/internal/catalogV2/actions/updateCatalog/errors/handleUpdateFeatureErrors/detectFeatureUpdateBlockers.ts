@@ -39,12 +39,8 @@ export const detectFeatureUpdateBlockers = ({
 	projectedCreditSystemFeatureIds: string[];
 }): FeatureUpdateBlocker[] => {
 	const { current, next } = updateFeaturePlan;
-	const {
-		isChangingId,
-		isChangingType,
-		isChangingUsageType,
-		isEnablingInvoiceCredits,
-	} = featureChangeFlags({ current, next });
+	const { isChangingId, isChangingType, isChangingUsageType } =
+		featureChangeFlags({ current, next });
 	const blockers: FeatureUpdateBlocker[] = [];
 	const hasCreditSystems = projectedCreditSystemFeatureIds.length > 0;
 
@@ -137,14 +133,6 @@ export const detectFeatureUpdateBlockers = ({
 				message: `Cannot set to ${usageTypeTitle} because it is / was used by customers`,
 			});
 		}
-	}
-
-	if (isEnablingInvoiceCredits && featureState?.has_customers) {
-		blockers.push({
-			field: "invoice_credit",
-			code: "attached_to_customer",
-			message: `Cannot enable invoice credits for feature ${current.id} because it has been attached to a customer before`,
-		});
 	}
 
 	return blockers;

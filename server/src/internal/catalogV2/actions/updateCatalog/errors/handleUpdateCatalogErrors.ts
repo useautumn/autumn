@@ -1,9 +1,4 @@
-import {
-	entToPrice,
-	type Feature,
-	toProductItem,
-	type UpdateCatalogParams,
-} from "@autumn/shared";
+import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { assertInternalIdAgrees } from "@/internal/catalogV2/actions/updateCatalog/errors/assertInternalIdAgrees";
 import { handleActivePointerErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleActivePointerErrors";
@@ -21,90 +16,6 @@ import { handleUpsertProductVersionSlugErrors } from "@/internal/catalogV2/actio
 import { handleVariantSharedAcrossVersionsErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleVariantSharedAcrossVersionsErrors";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
-import {
-	validateInvoiceCreditPooling,
-	validateInvoiceCreditPrice,
-} from "@/internal/features/validateInvoiceCreditPooling.js";
-
-const validateProjectedInvoiceCreditPrices = ({
-	feature,
-	updateCatalogPlan,
-}: {
-	feature: Feature;
-	updateCatalogPlan: UpdateCatalogPlan;
-}): void => {
-	for (const product of updateCatalogPlan.projected.products) {
-		for (const entitlement of product.entitlements) {
-			if (entitlement.internal_feature_id !== feature?.internal_id) continue;
-			const price = entToPrice({ ent: entitlement, prices: product.prices });
-			if (!price) continue;
-			validateInvoiceCreditPrice({
-				feature,
-				item: toProductItem({ ent: entitlement, price }),
-			});
-		}
-	}
-};
-
-const validateProjectedInvoiceCreditPooling = ({
-	catalogContext,
-	updateCatalogPlan,
-}: {
-	catalogContext: UpdateCatalogContext;
-	updateCatalogPlan: UpdateCatalogPlan;
-}): void => {
-	const projectedPlanIds = new Set(
-		Object.keys(catalogContext.productStatesContext.versionsByPlanId),
-	);
-	const validationCatalogPlan = {
-		...updateCatalogPlan,
-		projected: {
-			...updateCatalogPlan.projected,
-			products: [
-				...catalogContext.invoiceCreditProducts.filter(
-					(product) => !projectedPlanIds.has(product.id),
-				),
-				...updateCatalogPlan.projected.products,
-			],
-		},
-	};
-
-	for (const updateFeaturePlan of validationCatalogPlan.updateFeatures) {
-		const { next: feature } = updateFeaturePlan;
-		const hasPooledPlanItem = validationCatalogPlan.projected.products.some(
-			(product) =>
-				product.entitlements.some(
-					(entitlement) =>
-						entitlement.internal_feature_id === feature.internal_id &&
-						entitlement.pooled,
-				),
-		);
-		validateInvoiceCreditPooling({
-			feature,
-			pooled: hasPooledPlanItem,
-		});
-		validateProjectedInvoiceCreditPrices({
-			feature,
-			updateCatalogPlan: validationCatalogPlan,
-		});
-	}
-
-	for (const feature of validationCatalogPlan.insertFeatures) {
-		const hasPooledPlanItem = validationCatalogPlan.projected.products.some(
-			(product) =>
-				product.entitlements.some(
-					(entitlement) =>
-						entitlement.internal_feature_id === feature.internal_id &&
-						entitlement.pooled,
-				),
-		);
-		validateInvoiceCreditPooling({ feature, pooled: hasPooledPlanItem });
-		validateProjectedInvoiceCreditPrices({
-			feature,
-			updateCatalogPlan: validationCatalogPlan,
-		});
-	}
-};
 
 /** Throws on anything that should fail the whole batch before any write. */
 export const handleUpdateCatalogErrors = async ({
@@ -119,7 +30,6 @@ export const handleUpdateCatalogErrors = async ({
 	params: UpdateCatalogParams;
 }): Promise<void> => {
 	handleUpdateFeatureErrors({ ctx, catalogContext, updateCatalogPlan });
-	validateProjectedInvoiceCreditPooling({ catalogContext, updateCatalogPlan });
 	handleRemoveFeatureErrors({ updateCatalogPlan });
 	handleRemovePlanErrors({
 		updateCatalogPlan,

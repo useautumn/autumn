@@ -87,7 +87,6 @@ const runCompute = ({
 	const catalogContext = {
 		featureStatesContext: {},
 		productStatesContext: statesFor({ rows }),
-		invoiceCreditProducts: [],
 		licenseStatesContext: { referencedPlanLicenseIds: new Set<string>() },
 	} as unknown as UpdateCatalogContext;
 

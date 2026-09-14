@@ -46,7 +46,8 @@ export const BaseFeatureV1ParamsSchema = z.object({
 
 	invoice_credit: z.boolean().optional().meta({
 		description:
-			"Whether usage of this classic credit system should be itemized as invoice credits.",
+			"Deprecated. Credits are itemized on the invoice whenever a plan item bills the credit system pay-per-use at one currency unit per credit; this flag is stored but no longer read.",
+		deprecated: true,
 	}),
 
 	model_markups: ModelMarkupsSchema.optional().meta({
