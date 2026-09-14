@@ -239,16 +239,21 @@ const reduceActionResult = ({
 	if (!result?.callId) {
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
-	const recordedWrites = isGatedWriteTool(result.toolName)
-		? [
-				...progress.recordedWrites,
-				{
-					callId: result.callId,
-					input: progress.toolInputs.get(result.callId) ?? {},
-					toolName: normalizeToolName(result.toolName ?? ""),
-				},
-			]
-		: progress.recordedWrites;
+	// A write the agent process refused (thrown tool error → "failed") or eve
+	// denied ("rejected") never ran, so it has nothing to approve.
+	const writeCompleted =
+		event.status === undefined || event.status === "completed";
+	const recordedWrites =
+		isGatedWriteTool(result.toolName) && writeCompleted
+			? [
+					...progress.recordedWrites,
+					{
+						callId: result.callId,
+						input: progress.toolInputs.get(result.callId) ?? {},
+						toolName: normalizeToolName(result.toolName ?? ""),
+					},
+				]
+			: progress.recordedWrites;
 	logger.info("Eve tool completed", {
 		event: "leaf.eve_tool_completed",
 		data: {

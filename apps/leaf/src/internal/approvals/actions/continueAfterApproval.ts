@@ -5,35 +5,34 @@ import { logger as rootLogger } from "../../../lib/logger.js";
 import { runSlackAgentTurn } from "../../../providers/slack/actions/runSlackAgentTurn.js";
 import { presentSlackAgentTurn } from "../../../providers/slack/presenters/presentSlackAgentTurn.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
-
-/** The write ran outside the agent's turn, so its response has to be handed
- * back for the completion reply (links, invoice status, failures). */
-const appliedNotice = (result: unknown) =>
-	[
-		"<approval_applied>",
-		"The change you proposed was approved and applied. This is its result:",
-		JSON.stringify(result ?? {}),
-		"Reply per the billing skill's completion response, then carry out any",
-		"remaining steps of the original request.",
-		"</approval_applied>",
-	].join("\n");
+import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
+import type { ApprovalRunResult } from "../types.js";
+import { approvalOutcomeNotice } from "../utils/approvalOutcomeNotice.js";
 
 /** A fresh turn confirms the applied change and finishes any remaining steps
  * of a multi-step request. */
 export const continueAfterApproval = async ({
 	approval,
+	outcome,
 	providerUserId,
-	result,
 	target,
 	threadId,
 }: {
 	approval: ChatApproval;
+	outcome: ApprovalRunResult;
 	providerUserId: string;
-	result: unknown;
 	target: ReplyTarget;
 	threadId: string;
 }) => {
 	try {
+		// The writes ran outside the agent's turn, so every outcome — grouped
+		// siblings and failures included — has to be handed back explicitly.
+		const writes = await chatApprovalWritesRepo.list({
+			approvalId: approval.id,
+			db,
+		});
+		const notice = approvalOutcomeNotice({ outcome, writes });
+		if (!notice) return;
 		const installation = await db.query.chatInstallations.findFirst({
 			where: and(
 				eq(chatInstallations.org_id, approval.org_id),
@@ -46,7 +45,7 @@ export const continueAfterApproval = async ({
 			channelId: approval.channel_id,
 			installation,
 			providerUserId,
-			text: appliedNotice(result),
+			text: notice,
 			threadId,
 		});
 		// Neither is presentable, and neither can happen on a turn nobody drives.

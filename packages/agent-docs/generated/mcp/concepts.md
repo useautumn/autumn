@@ -542,8 +542,8 @@ The customer already has an active (Stripe) subscription — common in sales-led
 - Card required param is ignored if there is already an active sub.
 
 Updating or ending a trial
-- Call update_subscription on the trialing plan with a new `free_trial`. The duration is counted from now, not from the original start. A 14-day extension on day 10 of a 14-day trial gives 14 more days, not 4.
-- Pass `free_trial: null` to end the trial immediately instead.
+- Call update_subscription on the trialing plan with the new trial nested under `customize`: `{ customer_id, subscription_id, customize: { free_trial: { duration_length, duration_type, card_required, on_end } } }`. Never put `free_trial` at the top level of an update: the update endpoint rejects a request whose only change is a top-level `free_trial` ("At least one update parameter must be provided"), while `customize.free_trial` is accepted. The duration is counted from now, not from the original start. A 14-day extension on day 10 of a 14-day trial gives 14 more days, not 4.
+- Pass `customize: { free_trial: null }` to end the trial immediately instead.
 
 ### Customer and Entity
 
