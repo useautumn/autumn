@@ -47,11 +47,15 @@ opens a new `Invoice` webhook group we'll want anyway for part 2
 
 ### 2. Payload
 
-`POST` to the org's webhook URL. All amounts in **dollars**, matching `invoices.list`
-(not cents — `billing.auto_topup_succeeded` is the odd one out and we should leave it).
+`POST` to the org's webhook URL. Amounts in **dollars**, matching `invoices.list`.
+
+Every field below is a real column on `invoice_line_items`
+(`shared/models/cusModels/invoiceModels/invoiceLineItemModels.ts`) except `entity_id`,
+which is derived (see the blocker after the example). `period_start`/`period_end` are
+`effective_period_start`/`_end` renamed for the public shape.
 
 Worked example: a Mintlify enterprise customer provisioned through AWS, billed monthly
-for AI credits across three docs deployments. August period, invoiced 1 Sep.
+for AI credits across docs deployments. August period, invoiced 1 Sep.
 
 ```jsonc
 {
@@ -66,41 +70,37 @@ for AI credits across three docs deployments. August period, invoiced 1 Sep.
   "refunded_amount": 0,
   "plan_ids": ["enterprise"],
   "created_at": 1788220800000,
-  "period_start": 1785542400000,   // 2026-08-01
-  "period_end": 1788220800000,     // 2026-09-01
   "hosted_invoice_url": "https://api.useautumn.com/invoices/hosted_invoice_url/inv_2b3c4d5e6f7g8h",
 
-  "customer": {
-    "id": "acme_corp",
-    "name": "Acme Corp",
-    "metadata": { "provisioned_through": "aws", "suger_buyer_id": "buy_9f21" }
-  },
+  "customer_id": "acme_corp",
   "entity_id": null,   // invoice-level entity; null because this invoice spans deployments
 
-  // Every line on the invoice, each tagged with the entity it belongs to.
   "line_items": [
     {
-      "id": "ili_7h2k9",
+      "id": "invoice_li_7h2k9",
       "description": "Enterprise plan",
-      "entity_id": null,             // customer-level, not tied to a deployment
-      "plan_id": "enterprise",
+      "entity_id": null,              // customer-level, not tied to a deployment
+      "product_id": "enterprise",
+      "price_id": "pr_base_ent",
       "feature_id": null,
       "total_quantity": null,
-      "paid_quantity": 1,
+      "paid_quantity": null,
       "amount": 2400.00,
       "amount_after_discounts": 2400.00,
       "currency": "usd",
-      "period_start": 1785542400000,
-      "period_end": 1788220800000,
+      "period_start": 1785542400000,  // 2026-08-01
+      "period_end": 1788220800000,    // 2026-09-01
       "billing_timing": "in_advance",
       "direction": "charge",
-      "prorated": false
+      "prorated": false,
+      "discounts": []
     },
     {
-      "id": "ili_4m8p1",
+      "id": "invoice_li_4m8p1",
       "description": "AI credits",
       "entity_id": "acme-docs-prod",  // = Mintlify's own deployment id
-      "plan_id": "enterprise",
+      "product_id": "enterprise",
+      "price_id": "pr_ai_credits",
       "feature_id": "ai_credits",
       "total_quantity": 1842000,      // credits used this period
       "paid_quantity": 842000,        // the overage → meter this to AWS
@@ -111,13 +111,15 @@ for AI credits across three docs deployments. August period, invoiced 1 Sep.
       "period_end": 1788220800000,
       "billing_timing": "in_arrear",
       "direction": "charge",
-      "prorated": false
+      "prorated": false,
+      "discounts": []
     },
     {
-      "id": "ili_9q3r7",
+      "id": "invoice_li_9q3r7",
       "description": "AI credits",
       "entity_id": "acme-api-docs",
-      "plan_id": "enterprise",
+      "product_id": "enterprise",
+      "price_id": "pr_ai_credits",
       "feature_id": "ai_credits",
       "total_quantity": 1210500,
       "paid_quantity": 210500,
@@ -128,36 +130,8 @@ for AI credits across three docs deployments. August period, invoiced 1 Sep.
       "period_end": 1788220800000,
       "billing_timing": "in_arrear",
       "direction": "charge",
-      "prorated": false
-    }
-  ],
-
-  // Same numbers as line_items, pre-grouped by entity so the consumer doesn't
-  // have to fold them. Purely a convenience view — nothing here is new data.
-  "entity_breakdown": [
-    {
-      "entity_id": null,
-      "entity_name": null,
-      "total": 2400.00,
-      "features": []
-    },
-    {
-      "entity_id": "acme-docs-prod",
-      "entity_name": "Acme Docs (prod)",
-      "entity_feature_id": "deployments",
-      "total": 1684.00,
-      "features": [
-        { "feature_id": "ai_credits", "total_quantity": 1842000, "paid_quantity": 842000, "amount": 1684.00 }
-      ]
-    },
-    {
-      "entity_id": "acme-api-docs",
-      "entity_name": "Acme API Reference",
-      "entity_feature_id": "deployments",
-      "total": 421.00,
-      "features": [
-        { "feature_id": "ai_credits", "total_quantity": 1210500, "paid_quantity": 210500, "amount": 421.00 }
-      ]
+      "prorated": false,
+      "discounts": []
     }
   ],
 
@@ -165,21 +139,66 @@ for AI credits across three docs deployments. August period, invoiced 1 Sep.
 }
 ```
 
-**Mintlify's loop:** for each `entity_breakdown` entry with an `entity_id`, post
-`paid_quantity` for `ai_credits` to Suger → AWS, keyed on their own deployment id.
-`stripe_id` is the dedupe key. Then mark the invoice paid out of band (part 2).
+**Mintlify's loop:** filter `line_items` to those with an `entity_id` and a
+`feature_id`, post `paid_quantity` to Suger → AWS keyed on their own deployment id,
+then mark the invoice paid out of band (part 2). `stripe_id` is the dedupe key.
 
-Note `entity_id` is Mintlify's own deployment id — they create the entity with it — so
-the missing `metadata` column on entities doesn't block this. They join on their side.
+`entity_id` is Mintlify's own deployment id — they create the entity with it — so the
+missing `metadata` column on entities doesn't block them. They join on their side.
+
+#### Field notes
+
+- `billing_timing` is nullable. It's populated from Autumn billing context, but set to
+  `null` for lines we only know from Stripe
+  (`stripeLineItemGroupToDbLineItems.ts:372`), e.g. a manually added invoice item.
+- `total_quantity` / `paid_quantity` are nullable and are `null` on fixed-fee lines.
+- `direction` is `"charge" | "refund"`. Refund lines carry negative amounts — Mintlify
+  should skip or subtract them rather than metering them.
+- `description_source` (`"stripe" | "autumn"`) exists but isn't worth exposing; it just
+  says whether we or Stripe wrote the description string.
 
 #### Decisions applied
 
-- `included_quantity` **dropped**. Not on `invoice_line_items`; `total_quantity` −
-  `paid_quantity` gets you there for the common case.
-- `entity_metadata` **dropped from v1**. Entities have no `metadata` column yet;
-  `entity_id` carries the join.
+- `included_quantity` **dropped** — not a stored column.
+- `entity_metadata` **dropped** — entities have no `metadata` column; `entity_id` carries
+  the join.
+- `entity_breakdown` **dropped** — consumers can group `line_items` themselves.
 - Amounts in **dollars** throughout.
-- `entity_breakdown` **kept** — see the note above on what it is.
+
+### The blocker: one line item can span several entities
+
+`entity_id` is not a column. It has to come from
+`customer_product_ids[]` → `customer_products.internal_entity_id`, and that field is an
+**array** on purpose. From the code's own example
+(`stripeLineItemGroupToDbLineItems.ts:27`):
+
+> One Stripe line item can match multiple Autumn line items (e.g., when 2 entities each
+> have a $20 base price merged into one $40 Stripe item).
+
+When that happens the quantities are **summed** into the single row
+(`:210-220`, `reduce((sum, li) => sum + li.paidQuantity)`). So the merged row has one
+amount, one `paid_quantity`, and *n* entities — the per-entity split is gone by the time
+it's stored. That is exactly the number Mintlify needs.
+
+The per-entity values do exist upstream: each Autumn `LineItem` carries its own
+`context.entity` and its own `totalQuantity`/`paidQuantity`
+(`shared/models/billingModels/lineItem/lineItemContext.ts`), before the reduce.
+
+**Options:**
+
+1. **Write one `invoice_line_items` row per entity** instead of merging, keeping the
+   Stripe line id shared across them. `entity_id` becomes singular and honest, and the
+   webhook is a straight projection. Touches reconciliation
+   (`reconcileMany.ts`) and the `stripe_id` unique constraint, which assumes one row
+   per Stripe line — this is the real cost.
+2. **Emit `entity_ids: string[]`** on the line item and leave the split to the consumer.
+   Cheap, but Mintlify can't split a merged amount, so it doesn't actually solve their
+   problem.
+
+Recommend option 1, scoped to usage/arrear lines where this matters. Worth confirming
+first whether Mintlify's per-deployment AI credit prices actually merge today — if each
+deployment lands on its own Stripe subscription item, `customer_product_ids` is length 1
+throughout and option 1 is a no-op for them.
 
 ### The scale problem
 
@@ -191,7 +210,7 @@ will time out or get rejected long before it's useful.
 Only entities that actually incurred a charge produce a line, which trims it, but not
 reliably enough to ignore. Proposal:
 
-- Inline the first **100** line items and the matching `entity_breakdown` entries.
+- Inline the first **100** line items.
 - Add `line_items_count` and `line_items_truncated: true`.
 - Page the remainder from `GET /invoices/:id/line_items` (cursor-paginated, same
   shape), which we want anyway so webhook deliveries are replayable.
@@ -201,7 +220,7 @@ Consumers with small invoices never notice; Mintlify's big ones stay deliverable
 ### Another caveat worth naming
 
 A deployment that stayed **under** its allowance produces no line item at all — Stripe
-never creates a zero line. So `entity_breakdown` covers *billed* entities, not all
+never creates a zero line. So `line_items` covers *billed* entities, not all
 entities. That's correct for metering (nothing to post), but if Mintlify wants a
 zero-usage record per deployment they'd need to source that from `entities.list`, not
 from this webhook.
