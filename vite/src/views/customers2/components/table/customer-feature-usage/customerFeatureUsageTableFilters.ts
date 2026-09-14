@@ -34,8 +34,10 @@ export function filterCustomerFeatureUsage({
 			if (ent.customer_product.status === CusProductStatus.Expired) {
 				return showExpired;
 			}
-			// Scheduled products stay hidden from balance views.
-			if (ent.customer_product.status === CusProductStatus.Scheduled) {
+			const hidesFromBalanceView =
+				ent.customer_product.status === CusProductStatus.Scheduled ||
+				ent.customer_product.status === CusProductStatus.Pending;
+			if (hidesFromBalanceView) {
 				return false;
 			}
 			return showActive;

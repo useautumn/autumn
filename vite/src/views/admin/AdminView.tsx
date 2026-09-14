@@ -61,7 +61,7 @@ export const AdminView = () => {
 
 	return (
 		<div className="flex flex-col p-6 gap-8">
-			<div className="flex justify-end absolute top-10 right-10 gap-2">
+			<div className="flex flex-wrap justify-end gap-2 md:absolute md:top-10 md:right-10">
 				<CreateUser />
 				<Button
 					onClick={() => navigate(`${adminBasePath}/edge-config`)}
@@ -95,7 +95,7 @@ export const AdminView = () => {
 				value={activeTab}
 				onValueChange={(value) => setActiveTab(value as AdminTab)}
 			>
-				<TabsList>
+				<TabsList className="max-w-full justify-start overflow-x-auto">
 					<TabsTrigger value="orgs">Organizations</TabsTrigger>
 					<TabsTrigger value="users">Users</TabsTrigger>
 					<TabsTrigger value="slack-bot">Slack Bot</TabsTrigger>

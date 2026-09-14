@@ -1,5 +1,5 @@
 {
-  "id": "d422a704-641e-4a53-8f7c-303746b6d760",
+  "id": "53cf8494-476e-469c-9e07-98a820a39a5f",
   "prevId": "fe838c4b-2b6b-4a20-b503-f52270dd8d4f",
   "version": "7",
   "dialect": "postgresql",
@@ -5323,6 +5323,13 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'{}'"
+        },
+        "entities": {
+          "name": "entities",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         }
       },
       "indexes": {
@@ -7623,12 +7630,6 @@
         "redis_config": {
           "name": "redis_config",
           "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "provisioning_source": {
-          "name": "provisioning_source",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

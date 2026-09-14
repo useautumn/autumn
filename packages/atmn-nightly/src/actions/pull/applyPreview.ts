@@ -24,7 +24,10 @@ import { replaceFixture } from "../../surgery/replaceFixture";
 import { appendPlanVersionFixture } from "./appendPlanVersionFixture";
 import { changedFixtureKeys } from "./changedFixtureKeys";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
-import { resolveCollectionTarget } from "./resolveCollectionTarget";
+import {
+	collectionTargetReferenceName,
+	resolveCollectionTarget,
+} from "./resolveCollectionTarget";
 import { activeVersionOf, routePlanRow } from "./routePlanRow";
 
 export type PreviewEntry = { action?: string } & Record<string, unknown>;
@@ -186,20 +189,63 @@ export const applyPreview = ({
 		}
 		return join(dirname(configPath), "planVersions", `${id}.ts`);
 	};
-	const deleteExportReferences = ({ name }: { name: string }): void => {
-		const referenceFiles = new Set([configPath]);
-		for (const targetCollection of [collection, spec.historyKey]) {
-			if (targetCollection === undefined) continue;
-			const target = resolveCollectionTarget({
-				configPath,
-				files,
-				collection: targetCollection,
-			});
-			if (target !== null) referenceFiles.add(target.file);
-		}
-		for (const file of referenceFiles) {
-			files.set(file, deleteReference({ source: files.get(file) ?? "", name }));
-		}
+	const collectionForRemoval = ({
+		name,
+		fixtureFile,
+	}: {
+		name: string;
+		fixtureFile: string;
+	}): { targetCollection: string; referenceName: string } | null => {
+		const collectionTargets = [collection, spec.historyKey].flatMap(
+			(targetCollection) => {
+				if (targetCollection === undefined) return [];
+				const target = resolveCollectionTarget({
+					configPath,
+					files,
+					collection: targetCollection,
+				});
+				return target === null ? [] : [{ targetCollection, target }];
+			},
+		);
+		const membershipMatches = collectionTargets.flatMap(
+			({ targetCollection, target }) => {
+				const referenceName = collectionTargetReferenceName({
+					target,
+					files,
+					collection: targetCollection,
+					name,
+					fixtureFile,
+				});
+				return referenceName === null
+					? []
+					: [{ targetCollection, referenceName }];
+			},
+		);
+		if (membershipMatches.length === 1) return membershipMatches[0];
+		const locationMatches = collectionTargets.filter(
+			({ target }) => target.file === fixtureFile,
+		);
+		if (locationMatches.length === 1)
+			return { ...locationMatches[0], referenceName: name };
+		return null;
+	};
+	const deleteExportReference = ({
+		name,
+		targetCollection,
+	}: {
+		name: string;
+		targetCollection: string;
+	}): void => {
+		const target = resolveCollectionTarget({
+			configPath,
+			files,
+			collection: targetCollection,
+		});
+		if (target === null) return;
+		files.set(
+			target.file,
+			deleteReference({ source: files.get(target.file) ?? "", name }),
+		);
 	};
 
 	const removeFixture = ({
@@ -238,9 +284,27 @@ export const applyPreview = ({
 			where: located.where,
 		});
 		if (removed === null) return;
+		const ownership =
+			removed.exportedName === undefined
+				? null
+				: collectionForRemoval({
+						name: removed.exportedName,
+						fixtureFile: located.file,
+					});
+		if (removed.exportedName !== undefined && ownership === null) {
+			result.unlocated.push({
+				id,
+				action:
+					"remove its exported reference by hand: collection ownership is ambiguous",
+			});
+			return;
+		}
 		files.set(located.file, removed.source);
-		if (removed.exportedName !== undefined)
-			deleteExportReferences({ name: removed.exportedName });
+		if (ownership !== null)
+			deleteExportReference({
+				name: ownership.referenceName,
+				targetCollection: ownership.targetCollection,
+			});
 		result.deleted.push(id);
 		result.lines.push(`- ${id}`);
 	};
@@ -517,9 +581,27 @@ export const applyPreview = ({
 					where: located.where,
 				});
 				if (removed === null) return;
+				const ownership =
+					removed.exportedName === undefined
+						? null
+						: collectionForRemoval({
+								name: removed.exportedName,
+								fixtureFile: located.file,
+							});
+				if (removed.exportedName !== undefined && ownership === null) {
+					result.unlocated.push({
+						id,
+						action:
+							"move its exported reference by hand: collection ownership is ambiguous",
+					});
+					return;
+				}
 				files.set(located.file, removed.source);
-				if (removed.exportedName !== undefined)
-					deleteExportReferences({ name: removed.exportedName });
+				if (ownership !== null)
+					deleteExportReference({
+						name: ownership.referenceName,
+						targetCollection: ownership.targetCollection,
+					});
 				const appended = appendRow({
 					id,
 					entry,

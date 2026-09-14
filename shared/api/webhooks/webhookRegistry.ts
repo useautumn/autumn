@@ -4,6 +4,7 @@ import { BalancesUsageAlertTriggeredSchema } from "./balances/balancesUsageAlert
 import { BillingAutoTopupFailedSchema } from "./billing/billingAutoTopupFailed.js";
 import { BillingAutoTopupSucceededSchema } from "./billing/billingAutoTopupSucceeded.js";
 import { BillingUpdatedSchema } from "./billing/billingUpdated.js";
+import { InvoiceFinalizedSchema } from "./invoice/invoiceFinalized.js";
 import { VercelResourceDeletedSchema } from "./vercel/vercelResourceDeleted.js";
 import { VercelResourceProvisionedSchema } from "./vercel/vercelResourceProvisioned.js";
 import { VercelResourceRotateSecretsSchema } from "./vercel/vercelResourceRotateSecrets.js";
@@ -70,6 +71,17 @@ export const webhookRegistry: WebhookDefinition[] = [
 		group: "Billing",
 		description:
 			"Fired when a customer's plans change — activated, scheduled, updated, or expired. Each event carries a `plan_changes` array describing what happened and a `tags` array (e.g. `trial_ended`, `phase_changed`) describing why.",
+	},
+
+	// ── Invoice ───────────────────────────────────────────────────────────
+	{
+		eventType: WebhookEventType.InvoiceFinalized,
+		operationId: "invoiceFinalized",
+		title: "Invoice Finalized",
+		schema: InvoiceFinalizedSchema,
+		group: "Invoice",
+		description:
+			"Fired when a Stripe invoice is finalized and its line items have been reconciled. The body is the invoice as returned by `invoices.list`, with `items` populated and each item carrying a per-entity `entities` breakdown.",
 	},
 
 	// ── Vercel ────────────────────────────────────────────────────────────

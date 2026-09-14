@@ -102,6 +102,8 @@ export const shouldRetrySqsJobError = ({
 			return (
 				error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists
 			);
+		case JobName.StoreInvoiceLineItems:
+			return isTransientDbError({ error });
 		case JobName.StripeWebhookReplay:
 			return (
 				error instanceof StripeWebhookReplayInFlightError ||

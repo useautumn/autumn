@@ -25,7 +25,7 @@ export function TableDropdownMenuCell({
 					<EllipsisVertical size={12} />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent>{children}</DropdownMenuContent>
+			<DropdownMenuContent align="end">{children}</DropdownMenuContent>
 		</DropdownMenu>
 	);
 }

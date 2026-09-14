@@ -7,6 +7,7 @@ import { eventActions } from "../actions/eventActions.js";
 const ListEventNamesSchema = z.object({
 	limit: z.coerce.number().optional(),
 	interval: z.string().optional(),
+	bin_size: z.enum(["day", "hour", "week", "month"]).optional(),
 	start: z.coerce.number().optional(),
 	end: z.coerce.number().optional(),
 });
@@ -20,7 +21,7 @@ export const handleListEventNames = createRoute({
 	handler: async (c) => {
 		assertTinybirdAvailable();
 		const ctx = c.get("ctx");
-		const { limit, interval, start, end } = c.req.valid("query");
+		const { limit, interval, bin_size, start, end } = c.req.valid("query");
 
 		const customRange =
 			interval === "custom" && start !== undefined && end !== undefined
@@ -31,6 +32,7 @@ export const handleListEventNames = createRoute({
 			ctx,
 			limit,
 			interval,
+			binSize: bin_size,
 			customRange,
 		});
 

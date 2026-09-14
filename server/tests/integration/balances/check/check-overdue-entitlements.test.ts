@@ -27,7 +27,7 @@ test("overdue entitlements: visible balances, mixed deductions and payment recov
 		isAddOn: true,
 		items: [items.free({ featureId: TestFeature.Workflows, includedUsage: 7 })],
 	});
-	overdue.config = { ignore_past_due: true };
+	overdue.config = { ignore_past_due: false };
 	enterprise.config = { ignore_past_due: false };
 	const active = products.base({
 		id: "active",

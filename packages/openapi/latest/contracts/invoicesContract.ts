@@ -3,6 +3,10 @@ import { ApiListInvoiceV1Schema } from "@api/others/apiInvoice/apiListInvoiceV1.
 import { InsertInvoicesParamsSchema } from "@api/others/apiInvoice/insertInvoicesParams.js";
 import { InsertInvoicesResponseSchema } from "@api/others/apiInvoice/insertInvoicesResponse.js";
 import { ListInvoicesParamsSchema } from "@api/others/apiInvoice/listInvoicesParams.js";
+import {
+	PayInvoiceParamsSchema,
+	PayInvoiceResponseSchema,
+} from "@api/others/apiInvoice/payInvoiceParams.js";
 import { oc } from "@orpc/contract";
 
 const LIST_INVOICE_EXAMPLE = {
@@ -19,6 +23,30 @@ const LIST_INVOICE_EXAMPLE = {
 	currency: "usd",
 	created_at: 1759247877000,
 	hosted_invoice_url: "https://invoice.stripe.com/i/acct_123/test_456",
+	items: [
+		{
+			description: "Pro plan",
+			plan_id: "pro_plan",
+			feature_id: null,
+			feature_name: null,
+			quantity: null,
+			amount: 20,
+			period_start: 1759247877000,
+			period_end: 1761839877000,
+			entities: [],
+		},
+		{
+			description: "AI credits",
+			plan_id: "pro_plan",
+			feature_id: "ai_credits",
+			feature_name: "AI Credits",
+			quantity: 4995,
+			amount: 9.99,
+			period_start: 1759247877000,
+			period_end: 1761839877000,
+			entities: [{ entity_id: "acme-docs-prod", quantity: 4995, amount: 9.99 }],
+		},
+	],
 };
 
 export const insertInvoicesContract = oc
@@ -119,5 +147,30 @@ export const listInvoicesContract = oc
 					next_cursor: null,
 				},
 			],
+		}),
+	);
+
+export const payInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.pay",
+		operationId: "payInvoice",
+		tags: ["invoices"],
+		description:
+			"Marks an open Stripe invoice as paid out of band. No charge is attempted; use this when payment was collected elsewhere (e.g. a marketplace). Already-paid invoices are returned unchanged.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "pay",
+		}),
+	})
+	.input(
+		PayInvoiceParamsSchema.meta({
+			title: "PayInvoiceParams",
+			examples: [{ invoice_id: "inv_2b3c4d5e6f7g8h" }],
+		}),
+	)
+	.output(
+		PayInvoiceResponseSchema.meta({
+			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "paid" } }],
 		}),
 	);

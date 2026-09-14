@@ -1,4 +1,6 @@
+import { MONTH_RANGES, type MonthRangeEnum } from "@autumn/shared";
 import type { CSSProperties } from "react";
+import { type Granularity, getEffectiveBinSize } from "./intervals";
 
 /**
  * Single source of truth for the usage chart's layout, shared between the real
@@ -135,33 +137,13 @@ export const niceCeil = (value: number): number => {
 	return niceFraction * magnitude;
 };
 
-type BinSize = "hour" | "day" | "week" | "month";
-
-const resolveBinSize = ({
-	interval,
-	binSize,
-}: {
-	interval: string;
-	binSize: string | null;
-}): BinSize => {
-	if (
-		binSize === "hour" ||
-		binSize === "day" ||
-		binSize === "week" ||
-		binSize === "month"
-	) {
-		return binSize;
-	}
-	return interval === "24h" ? "hour" : "day";
-};
-
 /** Truncates a timestamp down to the start of its bin, matching the backend. */
 const alignDown = ({
 	ms,
 	binSize,
 }: {
 	ms: number;
-	binSize: BinSize;
+	binSize: Granularity;
 }): number => {
 	const date = new Date(ms);
 	if (binSize === "hour") {
@@ -180,6 +162,39 @@ const alignDown = ({
 	return date.getTime();
 };
 
+/** Start of a month range's window, mirroring the backend: month bins open on
+ * the 1st so the range renders exactly `months` bars. */
+const monthRangeStart = ({
+	rangeEnd,
+	months,
+	binSize,
+}: {
+	rangeEnd: number;
+	months: number;
+	binSize: Granularity;
+}): number => {
+	const end = new Date(rangeEnd);
+	const year = end.getUTCFullYear();
+	const month = end.getUTCMonth();
+
+	if (binSize === "month") {
+		return Date.UTC(year, month - (months - 1), 1);
+	}
+
+	// Clamp the day the way date-fns `sub` does on the server: day 0 of the
+	// following month is the last day of the target one.
+	const lastDayOfTarget = new Date(
+		Date.UTC(year, month - months + 1, 0),
+	).getUTCDate();
+	return Date.UTC(
+		year,
+		month - months,
+		Math.min(end.getUTCDate(), lastDayOfTarget),
+		end.getUTCHours(),
+		end.getUTCMinutes(),
+	);
+};
+
 /**
  * Predicts how many bars the chart will render, replicating the backend's
  * `generateAllPeriods` (bin-aligned start, inclusive bins up to end). Used only
@@ -196,12 +211,17 @@ export const predictBarCount = ({
 	start: number | null;
 	end: number | null;
 }): number => {
-	const bin = resolveBinSize({ interval, binSize });
+	const bin = getEffectiveBinSize({ interval, binSize });
 	const rangeEnd = interval === "custom" && end ? end : Date.now();
+	const months = Object.hasOwn(MONTH_RANGES, interval)
+		? MONTH_RANGES[interval as MonthRangeEnum]
+		: undefined;
 	const rangeStart =
 		interval === "custom" && start
 			? start
-			: rangeEnd - (STANDARD_INTERVAL_DAYS[interval] ?? 30) * MS_PER_DAY;
+			: months !== undefined
+				? monthRangeStart({ rangeEnd, months, binSize: bin })
+				: rangeEnd - (STANDARD_INTERVAL_DAYS[interval] ?? 30) * MS_PER_DAY;
 
 	const alignedStart = alignDown({ ms: rangeStart, binSize: bin });
 

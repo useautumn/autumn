@@ -45,6 +45,7 @@ export const handleStripeInvoiceFinalized = async ({
 			stripeInvoiceId: eventContext.stripeInvoice.id,
 			arrearLineItems: [],
 			reconcileOnly: true,
+			emitFinalizedWebhook: !eventContext.isVercelInvoice,
 		});
 	}
 };

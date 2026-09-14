@@ -17,6 +17,7 @@ import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import { useEventNames } from "../hooks/useEventNames";
+import { getEffectiveBinSize } from "../utils/intervals";
 
 const MAX_NUM_SELECTED = 10;
 
@@ -68,6 +69,10 @@ export const SelectFeatureDropdown = () => {
 	const { queryStates } = useAnalyticsQueryState();
 	const { eventNames: eventNamesData } = useEventNames({
 		interval: queryStates.interval,
+		binSize: getEffectiveBinSize({
+			interval: queryStates.interval,
+			binSize: queryStates.bin_size,
+		}),
 		start: queryStates.start,
 		end: queryStates.end,
 	});

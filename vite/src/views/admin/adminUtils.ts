@@ -49,23 +49,18 @@ export const impersonateUser = async ({
 }: {
 	userId: string;
 	organizationId?: string;
-	/**
-	 * When true, await stopImpersonating first — the active session is the
-	 * impersonated user's (non-admin) session, so impersonateUser would
-	 * otherwise fail the permission check. When false, skip the call entirely.
-	 */
 	isCurrentlyImpersonating?: boolean;
 }) => {
 	if (isCurrentlyImpersonating) {
-		try {
-			await authClient.admin.stopImpersonating();
-		} catch (error) {
-			console.error(error);
+		const { error } = await authClient.admin.stopImpersonating();
+		if (error) {
+			toast.error(error.message || "Failed to restore admin session");
+			return;
 		}
 	}
 	const res = await authClient.admin.impersonateUser({ userId });
 	if (res.error) {
-		toast.error("Something went wrong");
+		toast.error(res.error.message || "Failed to impersonate user");
 		return;
 	}
 

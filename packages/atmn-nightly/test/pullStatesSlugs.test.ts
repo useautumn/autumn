@@ -68,6 +68,7 @@ const catalog = {
 };
 
 const client = {
+	previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 	previewUpdate: async () => unchangedPreview,
 	update: async () => ({}),
 	get: async () => catalog,

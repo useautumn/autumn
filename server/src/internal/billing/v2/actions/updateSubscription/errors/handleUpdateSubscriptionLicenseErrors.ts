@@ -25,12 +25,6 @@ const handleLicenseQuantityErrors = ({
 	billingContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV1Params;
 }) => {
-	if (params.feature_quantities?.length) {
-		throwInvalidRequest(
-			"license_quantities cannot be combined with feature_quantities in one update.",
-		);
-	}
-
 	const pools = billingContext.customerProduct.customer_licenses ?? [];
 	for (const licenseQuantity of params.license_quantities ?? []) {
 		const pool = pools.find(
@@ -118,7 +112,10 @@ export const handleUpdateSubscriptionLicenseErrors = ({
 		);
 	}
 
-	if (billingContext.intent === UpdateSubscriptionIntent.UpdateLicenseQuantity)
+	if (
+		billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity &&
+		params.license_quantities?.length
+	)
 		handleLicenseQuantityErrors({ billingContext, params });
 
 	if (billingContext.intent === UpdateSubscriptionIntent.UpdatePlan)
