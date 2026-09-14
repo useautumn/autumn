@@ -20,9 +20,9 @@ import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { buildCatalogUpdatePlans } from "../catalog/buildUpdateCatalogPlanParams";
 import { catalogPreviewOpensDialog } from "../catalog/catalogPlanPreview";
+import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { validateItemsBeforeSave } from "../utils/validateItemsBeforeSave";
-import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import { PlanEditorBar } from "./PlanEditorBar";
 import {
 	commitLicenseChanges,

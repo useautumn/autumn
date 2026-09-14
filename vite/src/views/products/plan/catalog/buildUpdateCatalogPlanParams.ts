@@ -27,11 +27,21 @@ const planItemsToCatalogParams = (
 	items: ApiPlanV1["items"],
 ): NonNullable<UpdateCatalogPlanParamsInput["items"]> =>
 	items.map(
-		({ feature, display, reset, price, proration, rollover, ...item }) => ({
+		({
+			feature,
+			display,
+			reset,
+			price,
+			proration,
+			rollover,
+			expiry,
+			...item
+		}) => ({
 			...omitStripePriceId(item),
 			...(reset ? { reset } : {}),
 			...(price ? { price: omitStripePriceId(price) } : {}),
 			...(proration ? { proration } : {}),
+			...(expiry ? { expiry } : {}),
 			...(rollover
 				? {
 						rollover: {

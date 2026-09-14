@@ -16,9 +16,9 @@ import {
 import {
 	applyLicenseParentScopedDiffs,
 	buildCatalogMigrateTargets,
+	type CatalogVersionChoice,
 	catalogPlanLicenseParents,
 	catalogPlanVariantLanes,
-	type CatalogVersionChoice,
 	getLicenseParentVersionKey,
 	hasCatalogMigrationTargets,
 	licenseParentVersions,
