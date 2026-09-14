@@ -21,7 +21,7 @@ export function CreditRowDimensions({
 					type="button"
 					variant="skeleton"
 					size="sm"
-					className="text-tertiary-foreground text-xs hover:text-red-500"
+					className="text-tertiary-foreground text-xs hover:text-foreground!"
 					onClick={onRemove}
 				>
 					Remove dimensions
