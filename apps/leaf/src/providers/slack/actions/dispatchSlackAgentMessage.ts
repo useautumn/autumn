@@ -110,7 +110,11 @@ const runAndReply = async ({
 		// and whom they addressed, and declines replies meant for someone else.
 		const mentionedUserIds = slackMentionedUserIds({ raw });
 		const botUserId = installation.bot_user_id ?? undefined;
-		const mentionsAgent = !botUserId || mentionedUserIds.includes(botUserId);
+		// An installation without a stored bot id can't prove it was addressed;
+		// unknown reads as not mentioned, so delivery stays conditional.
+		const mentionsAgent = Boolean(
+			botUserId && mentionedUserIds.includes(botUserId),
+		);
 		const mentionsOthers = mentionedUserIds.some((id) => id !== botUserId);
 		const speaker = author
 			? { ...author, mentionsAgent, mentionsOthers }
