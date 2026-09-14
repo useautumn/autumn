@@ -25,7 +25,7 @@ test.concurrent(
 				raw: `import { proPlan } from "./plans";\nimport { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";\n\nexport default atmn({\n\tplans: [proPlan],\n});\n`,
 			},
 			files: {
-				"plans.ts": `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";\n\nexport const proPlan = plan({\n\tplanId: "${planId}",\n\tname: "Pro",\n\tprice: { amount: 20, interval: "month" },\n});\n`,
+				"plans.ts": `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";\n\nexport const proPlan = plan({ active: true,\n\tplanId: "${planId}",\n\tname: "Pro",\n\tprice: { amount: 20, interval: "month" },\n});\n`,
 			},
 		});
 

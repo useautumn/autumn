@@ -29,6 +29,7 @@ const METADATA = { tier: "gold", region: "us" };
 
 const enterpriseLicensingSeat = `
 		plan({
+			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
 			price: { amount: 999, interval: "month" },

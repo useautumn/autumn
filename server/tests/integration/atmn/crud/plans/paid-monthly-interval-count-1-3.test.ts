@@ -32,6 +32,7 @@ for (const intervalCount of INTERVAL_COUNTS) {
 				config: configBody({
 					plans: `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 49, interval: "month", intervalCount: ${intervalCount} },
@@ -53,7 +54,7 @@ for (const intervalCount of INTERVAL_COUNTS) {
 					(plan) => plan.id === "pro",
 				)?.price;
 
-				const fixtureText = freshFiles.get("autumn.config.ts") ?? "";
+				const fixtureText = freshFiles.get("plans.ts") ?? "";
 
 				// 1 is the implicit default: the server omits interval_count when it's
 				// 1, so it never round-trips as an explicit value, only n > 1 does.

@@ -17,17 +17,17 @@ const rules: LintRules = { plans: LINT_REGISTRY.plans };
 
 type PlanFixture = Record<string, unknown>;
 
-/** `atmn()` folds planVersions into plans before linting, stamping `active`. */
+/** One `plans` array: the live rows carry `active: true`, the rest `active: false`. */
 const stated = ({
-	plans,
-	planVersions = [],
+	live,
+	history = [],
 }: {
-	plans: PlanFixture[];
-	planVersions?: PlanFixture[];
+	live: PlanFixture[];
+	history?: PlanFixture[];
 }): Record<string, unknown> => ({
 	plans: [
-		...plans.map((row) => ({ ...row, active: true })),
-		...planVersions.map((row) => ({ ...row, active: false })),
+		...live.map((row) => ({ ...row, active: true })),
+		...history.map((row) => ({ ...row, active: false })),
 	],
 });
 
@@ -40,8 +40,8 @@ test("two rows of one plan where one lacks versionSlug are refused, once", () =>
 	expect(
 		issuesFor(
 			stated({
-				plans: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
-				planVersions: [{ planId: "pro", name: "Pro" }],
+				live: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
+				history: [{ planId: "pro", name: "Pro" }],
 			}),
 		),
 	).toEqual([
@@ -53,17 +53,17 @@ test("two rows of one plan where one lacks versionSlug are refused, once", () =>
 });
 
 test("a single slug-less row is the implicit v1 and lints clean", () => {
-	expect(
-		issuesFor(stated({ plans: [{ planId: "pro", name: "Pro" }] })),
-	).toEqual([]);
+	expect(issuesFor(stated({ live: [{ planId: "pro", name: "Pro" }] }))).toEqual(
+		[],
+	);
 });
 
 test("every version stating its slug lints clean", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
-				planVersions: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
+				live: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
+				history: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
 			}),
 		),
 	).toEqual([]);
@@ -72,7 +72,7 @@ test("every version stating its slug lints clean", () => {
 test("a variant declared under two versions where one entry lacks its slug is refused", () => {
 	const issues = issuesFor(
 		stated({
-			plans: [
+			live: [
 				{
 					planId: "pro",
 					name: "Pro",
@@ -80,7 +80,7 @@ test("a variant declared under two versions where one entry lacks its slug is re
 					variants: [{ variantPlanId: "proYearly", versionSlug: "v2" }],
 				},
 			],
-			planVersions: [
+			history: [
 				{
 					planId: "pro",
 					name: "Pro",
@@ -102,7 +102,7 @@ test("a variant declared once without a slug lints clean", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [
+				live: [
 					{
 						planId: "pro",
 						name: "Pro",
@@ -118,8 +118,8 @@ test("a plan with an active row beside its history lints clean", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
-				planVersions: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
+				live: [{ planId: "pro", name: "Pro", versionSlug: "v2" }],
+				history: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
 			}),
 		),
 	).toEqual([]);

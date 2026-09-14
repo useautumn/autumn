@@ -10,10 +10,10 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 // This scenario's org never turns multi-currency on, so an additional
 // currency on either the base price or an item price must be refused.
@@ -27,6 +27,7 @@ test("multi-currency price with the org config off → clean error, not a crash"
 		config: configBody({
 			plans: `
 		plan({
+			active: true,
 			planId: "${planId}",
 			name: "Pro",
 			price: {

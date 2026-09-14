@@ -26,6 +26,7 @@ type CatalogPlanRow = {
 // through unresolved, so a made-up id round-trips without a real account.
 const proPlan = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			createInStripe: false,

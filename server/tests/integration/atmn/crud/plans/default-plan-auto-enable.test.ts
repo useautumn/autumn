@@ -19,12 +19,14 @@ test.concurrent("default plan / auto enable", async () => {
 		config: configBody({
 			plans: `
 		plan({
+			active: true,
 			planId: "starter",
 			name: "Starter",
 			autoEnable: true,
 			items: [],
 		}),
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },
@@ -44,7 +46,7 @@ test.concurrent("default plan / auto enable", async () => {
 		expect(starter).toEqual(expect.objectContaining({ auto_enable: true }));
 		expect(pro).toEqual(expect.objectContaining({ auto_enable: true }));
 		// The deprecated twin never reaches a fixture; the stated flag does.
-		const config = freshFiles.get("autumn.config.ts") ?? "";
+		const config = freshFiles.get("plans.ts") ?? "";
 		expect(config).not.toContain("isDefault");
 		expect(config.match(/autoEnable: true/g)).toHaveLength(2);
 	} finally {

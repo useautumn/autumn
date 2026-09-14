@@ -7,6 +7,7 @@
  */
 
 import { test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	enterpriseWithSeats,
 	everyFeatureType,
@@ -19,13 +20,14 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/archive: re-pushing the same config after a restore previews nothing further")}`,
 	async () => {
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
 			config: `{ features: [${everyFeatureType}], plans: [${seatPlan}${enterpriseWithSeats({})}] }`,
 		});
 
@@ -40,8 +42,8 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "seat", archived: true }),
-		plan({ planId: "enterprise", archived: true, licenses: [] }),
+		plan({ active: true, planId: "seat", archived: true }),
+		plan({ active: true, planId: "enterprise", archived: true, licenses: [] }),
 	],
 }`,
 				}),
@@ -52,8 +54,8 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "seat", archived: false }),
-		plan({ planId: "enterprise", archived: false, licenses: [{ licensePlanId: "seat", included: 25 }] }),
+		plan({ active: true, planId: "seat", archived: false }),
+		plan({ active: true, planId: "enterprise", archived: false, licenses: [{ licensePlanId: "seat", included: 25 }] }),
 	],
 }`,
 				}),

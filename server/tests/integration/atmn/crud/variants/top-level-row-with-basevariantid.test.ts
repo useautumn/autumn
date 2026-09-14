@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -12,7 +13,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("top-level row with baseVariantId → server refuses, error surfaced")}`,
@@ -25,7 +25,7 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ planId: "base", name: "Base", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "base", name: "Base", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 		});
@@ -41,6 +41,7 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "sneakyVariant",
 			name: "Sneaky Variant",
 			baseVariantId: "base",

@@ -18,6 +18,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 // Stripe test account and 400s on an id that was never created.
 const proPlanWithUnknownPrice = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: {

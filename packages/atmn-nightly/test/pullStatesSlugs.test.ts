@@ -68,10 +68,10 @@ const catalog = {
 };
 
 const client = {
-	previewUpdateOrganization: async () => ({ config: { changes: [] } }),
-	previewUpdate: async () => unchangedPreview,
+	diff: async () => unchangedPreview,
 	update: async () => ({}),
 	get: async () => catalog,
+	previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 } as unknown as AutumnClient;
 
 test("a pull writes versionSlug into every plan row and variant entry that lacks one", async () => {
@@ -100,6 +100,7 @@ test("a pull writes versionSlug into every plan row and variant entry that lacks
 			"\tfeatures: [],",
 			"\tplans: [",
 			"\t\tplan({",
+			"\t\t\tactive: true,",
 			'\t\t\tplanId: "pro",',
 			'\t\t\tname: "Pro",',
 			"\t\t\tvariants: [",
@@ -118,7 +119,7 @@ test("a pull writes versionSlug into every plan row and variant entry that lacks
 
 	const config = readFileSync(join(dir, "autumn.config.ts"), "utf8");
 	expect(config).toContain(
-		'\t\tplan({\n\t\t\tinternalId: "prod_pro",\n\t\t\tplanId: "pro",\n\t\t\tname: "Pro",',
+		'\t\tplan({\n\t\t\tinternalId: "prod_pro",\n\t\t\tactive: true,\n\t\t\tplanId: "pro",\n\t\t\tname: "Pro",',
 	);
 	expect(config).toContain(
 		'{ internalId: "prod_yearly", variantPlanId: "pro_yearly", name: "Pro Yearly", versionSlug: "v1" }',

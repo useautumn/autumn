@@ -27,6 +27,7 @@ test.concurrent(
 				features: everyFeatureType,
 				plans: `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },

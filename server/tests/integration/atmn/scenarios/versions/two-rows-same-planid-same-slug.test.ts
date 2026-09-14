@@ -5,11 +5,11 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/versions: two rows declaring the same planId and versionSlug are rejected locally, no request")}`,
@@ -22,7 +22,9 @@ test.concurrent(
 			});
 
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
 			// Decision pending: same guard as two-absent-slug-rows — the `unique`
 			// lint rule kind exists for featureId already; the plans rule set
 			// doesn't declare a composite (planId, versionSlug) rule yet.

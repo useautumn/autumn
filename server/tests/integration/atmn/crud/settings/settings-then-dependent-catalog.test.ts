@@ -15,6 +15,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 const euroPro = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: {

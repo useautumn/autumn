@@ -4,8 +4,8 @@
  * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
  */
 
-import { FeatureType } from "@autumn/shared";
 import { expect, test } from "bun:test";
+import { FeatureType } from "@autumn/shared";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
 	atmnConfigSource,
@@ -29,7 +29,7 @@ test.concurrent(
 			],
 			config: configBody({
 				features: `\n\t\tfeature({ featureId: "${featureId}", name: "Type Change", type: "metered", consumable: true }),`,
-				plans: `\n\t\tplan({ planId: "${planId}", name: "Type Change Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
+				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Type Change Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
 			}),
 		});
 
@@ -41,7 +41,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: configBody({
 						features: `\n\t\tfeature({ featureId: "${featureId}", name: "Type Change", type: "boolean" }),`,
-						plans: `\n\t\tplan({ planId: "${planId}", name: "Type Change Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
+						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Type Change Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
 					}),
 				}),
 			);

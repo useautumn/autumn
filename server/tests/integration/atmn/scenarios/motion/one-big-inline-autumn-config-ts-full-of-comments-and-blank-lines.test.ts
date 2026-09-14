@@ -7,9 +7,12 @@
  */
 
 import { expect, test } from "bun:test";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
-import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
+import {
+	atmnImports,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 /** The text inserted between `before` and `after`, asserting nothing else moved. */
 const insertedText = ({
@@ -62,6 +65,7 @@ export default atmn({
 	// Then plans — blank lines and comments sprinkled throughout.
 	plans: [
 		plan({
+			active: true,
 			planId: "${freeId}",
 			name: "Free",
 			// a comment nested inside the fixture

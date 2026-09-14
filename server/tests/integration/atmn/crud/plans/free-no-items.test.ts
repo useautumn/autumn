@@ -19,6 +19,7 @@ test.concurrent("free no items", async () => {
 		config: configBody({
 			plans: `
 		plan({
+			active: true,
 			planId: "free",
 			name: "Free",
 			items: [],

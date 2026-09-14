@@ -17,6 +17,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 const enterpriseCustomizedLicense = `
 		plan({
+			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
 			price: { amount: 999, interval: "month" },

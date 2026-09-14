@@ -85,7 +85,7 @@ test.concurrent(
 				feature({ featureId: "${credits}", name: "Credits", type: "metered", consumable: true }),
 			],
 			plans: [
-				plan({ planId: "${pro}", name: "Pro" }),
+				plan({ active: true, planId: "${pro}", name: "Pro" }),
 			],
 			rewards: [${rewards}],
 			referralPrograms: [

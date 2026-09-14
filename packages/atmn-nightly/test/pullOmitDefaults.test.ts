@@ -57,7 +57,7 @@ const pull = async ({ preview, rows }: { preview: unknown; rows: unknown }) =>
 	runPull({
 		client: {
 			previewUpdateOrganization: async () => ({ config: { changes: [] } }),
-			previewUpdate: async () => preview,
+			diff: async () => preview,
 			update: async () => ({}),
 			get: async () => rows,
 			// biome-ignore lint/suspicious/noExplicitAny: a fake client
@@ -224,7 +224,7 @@ test("a whole-fixture emit leaves config out at default and keeps it when a flag
 test("a flag switched on appends config to a fixture that never stated it", async () => {
 	writeConfig(`export default atmn({
 	plans: [
-		plan({ internalId: "prod_B", planId: "pro", versionSlug: "v1", name: "Pro" }),
+		plan({ internalId: "prod_B", active: true, planId: "pro", versionSlug: "v1", name: "Pro" }),
 	],
 });
 `);
@@ -238,7 +238,7 @@ test("a flag switched on appends config to a fixture that never stated it", asyn
 test("a flag switched off removes the config pair instead of writing the default", async () => {
 	writeConfig(`export default atmn({
 	plans: [
-		plan({ internalId: "prod_B", planId: "pro", versionSlug: "v1", name: "Pro", config: { ignorePastDue: true } }),
+		plan({ internalId: "prod_B", active: true, planId: "pro", versionSlug: "v1", name: "Pro", config: { ignorePastDue: true } }),
 	],
 });
 `);
@@ -249,6 +249,6 @@ test("a flag switched off removes the config pair instead of writing the default
 	const text = configText();
 	expect(text).not.toContain("config");
 	expect(text).toContain(
-		'plan({ internalId: "prod_B", planId: "pro", versionSlug: "v1", name: "Pro" }),',
+		'plan({ internalId: "prod_B", active: true, planId: "pro", versionSlug: "v1", name: "Pro" }),',
 	);
 });

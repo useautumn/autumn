@@ -34,6 +34,7 @@ export default atmn({
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },

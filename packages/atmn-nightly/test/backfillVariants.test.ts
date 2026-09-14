@@ -12,7 +12,7 @@ test("a variant fixture in its own file gets its internalId, once", () => {
 	mkdirSync(`${dir}/variants`, { recursive: true });
 	writeFileSync(
 		`${dir}/autumn.config.ts`,
-		'import { plan } from "../../../src/generated/plans";\nimport { atmn } from "../../../src/generated/wire";\nimport { proAnnual } from "./variants/proAnnual";\n\nexport default atmn({\n\tplans: [plan({ planId: "pro", name: "Pro", variants: [proAnnual] })],\n});\n',
+		'import { plan } from "../../../src/generated/plans";\nimport { atmn } from "../../../src/generated/wire";\nimport { proAnnual } from "./variants/proAnnual";\n\nexport default atmn({\n\tplans: [plan({ active: true, planId: "pro", name: "Pro", variants: [proAnnual] })],\n});\n',
 	);
 	writeFileSync(
 		`${dir}/variants/proAnnual.ts`,
@@ -78,7 +78,7 @@ test("a plan and its variant both take their id and slug from the catalog", () =
 			"\t},",
 			"});",
 			"",
-			"export const pro = plan({",
+			"export const pro = plan({ active: true,",
 			'\tname: "Pro",',
 			'\tplanId: "pro",',
 			'\tprice: { amount: 20, interval: "month" },',

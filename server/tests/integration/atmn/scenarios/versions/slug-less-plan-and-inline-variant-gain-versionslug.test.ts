@@ -31,6 +31,7 @@ test.concurrent(
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			price: { amount: 20, interval: "month" },

@@ -36,6 +36,27 @@ export const CLI_PACKAGE_DIR = join(
 export const TMP_ROOT = join(CLI_PACKAGE_DIR, "test/.tmp");
 const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");
 
+/** A scenario's working directory: its own package, so the CLI roots there. */
+export const scenarioDir = ({ id }: { id: string }): string => {
+	const dir = join(TMP_ROOT, id);
+	mkdirSync(dir, { recursive: true });
+	writeFileSync(join(dir, "package.json"), "{}\n");
+	return dir;
+};
+
+/**
+ * The CLI finds `.env` at the git toplevel, which from under `.tmp` is this
+ * repo: one test's `sandbox use` would pin the repo's own `.env` and every
+ * test after it would authenticate as that sandbox. Ceiling the walk at
+ * `.tmp`, so each scenario (which carries its own package.json) is its root.
+ */
+export const cliProcessEnv = (): Record<string, string> => ({
+	...(process.env as Record<string, string>),
+	GIT_CEILING_DIRECTORIES: TMP_ROOT,
+	NO_COLOR: "1",
+	FORCE_COLOR: "0",
+});
+
 /**
  * Every push and pull runs the real CLI in a fresh process: a config's
  * imported files are re-read each time, which an in-process import cannot
@@ -55,11 +76,9 @@ export const runCli = ({
 	const result = Bun.spawnSync(["bun", CLI_ENTRY, ...args], {
 		cwd,
 		env: {
-			...process.env,
+			...cliProcessEnv(),
 			AUTUMN_SECRET_KEY: secretKey,
 			AUTUMN_BASE_URL: baseUrl,
-			NO_COLOR: "1",
-			FORCE_COLOR: "0",
 		},
 		stdout: "pipe",
 		stderr: "pipe",
@@ -239,8 +258,7 @@ export const initAtmnScenario = async ({
 }): Promise<AtmnScenario & ScenarioWithCustomer> => {
 	const scenario = await initScenarioWithCustomer({ setup, customerId });
 
-	const cwd = join(TMP_ROOT, generateId("atmn"));
-	mkdirSync(cwd, { recursive: true });
+	const cwd = scenarioDir({ id: generateId("atmn") });
 
 	const configPath = join(cwd, "autumn.config.ts");
 	const writeFile = (relativePath: string, source: string): void => {

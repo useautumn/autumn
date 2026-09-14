@@ -25,12 +25,14 @@ test.concurrent(
 			config: {
 				raw: `${atmnImports()}
 export const pro = plan({
+	active: true,
 	planId: "${proId}",
 	name: "Pro",
 	price: { amount: 20, interval: "month" },
 });
 
 export const free = plan({
+	active: true,
 	planId: "${freeId}",
 	name: "Free",
 });

@@ -25,8 +25,11 @@ test(`${chalk.yellowBright("catalog-qa: Team/EU v1→Seat v1, v2→Seat v2")}`, 
 	});
 	await autumnV2_3.catalogV2.update({
 		plans: [
-			{ plan_id: teamId, name: "QA Anchor Team" },
-			{ plan_id: euId, name: "QA Anchor EU" },
+			{
+				plan_id: teamId,
+				name: "QA Anchor Team",
+				variants: [{ variant_plan_id: euId, name: "QA Anchor EU" }],
+			},
 			{ plan_id: seatId, name: "QA Anchor Seat" },
 		],
 	});

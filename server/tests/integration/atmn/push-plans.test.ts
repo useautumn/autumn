@@ -128,12 +128,14 @@ test.concurrent(
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "${freePlan}",
 			name: "Free",
 			autoEnable: true,
 			items: [{ featureId: "${seats}", included: 1 }],
 		}),
 		plan({
+			active: true,
 			planId: "${proPlan}",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },
@@ -225,6 +227,7 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			price: { amount: 10, interval: "month" },
@@ -245,14 +248,15 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v2",
 			price: { amount: 20, interval: "month" },
 		}),
-	],
-	planVersions: [
+	
 		plan({
+			active: false,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v1",
@@ -280,6 +284,7 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v2",
@@ -291,6 +296,13 @@ test.concurrent(
 			versionSlug: "v3",
 			active: false,
 			price: { amount: 30, interval: "month" },
+		}),
+		plan({
+			active: false,
+			planId: "${pro}",
+			name: "Pro",
+			versionSlug: "v1",
+			price: { amount: 10, interval: "month" },
 		}),
 	],
 }`,
@@ -331,11 +343,13 @@ test.concurrent(
 				body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${seatPlan}",
 			name: "Seat",
 			price: { amount: 15, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${enterprisePlan}",
 			name: "Enterprise",
 			price: { amount: 12000, interval: "year" },

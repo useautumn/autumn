@@ -7,25 +7,28 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/archive: restoring a plan whose item feature is still archived is refused, naming the feature")}`,
 	async () => {
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
 			config: `{
 	features: [
 		feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false }),
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 20, interval: "month" },
@@ -48,7 +51,7 @@ test.concurrent(
 	features: [
 		feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false, archived: true }),
 	],
-	plans: [plan({ planId: "pro", archived: true })],
+	plans: [plan({ active: true, planId: "pro", archived: true })],
 }`,
 				}),
 			);
@@ -60,7 +63,7 @@ test.concurrent(
 			// error naming it) rather than a confirmed current one.
 			scenario.writeConfig(
 				atmnConfigSource({
-					body: `{ plans: [plan({ planId: "pro", archived: false })] }`,
+					body: `{ plans: [plan({ active: true, planId: "pro", archived: false })] }`,
 				}),
 			);
 

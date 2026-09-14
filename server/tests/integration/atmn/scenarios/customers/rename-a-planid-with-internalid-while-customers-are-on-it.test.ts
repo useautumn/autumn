@@ -16,6 +16,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 const catalogConfig = ({ planId }: { planId: string }): string => `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${planId}",
 			name: "Pro",
 			price: { amount: 20, interval: "month" },

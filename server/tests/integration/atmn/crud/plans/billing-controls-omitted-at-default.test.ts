@@ -22,6 +22,7 @@ const feature = `
 
 const pro = ({ billingControls }: { billingControls?: string }) => `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },
@@ -59,7 +60,7 @@ test.concurrent(
 		try {
 			// Never stated: the scaffold has no billingControls.
 			const { freshFiles } = await expectRoundTrip({ scenario });
-			expect(freshFiles.get("autumn.config.ts")).not.toContain(
+			expect(freshFiles.get("plans.ts")).not.toContain(
 				"billingControls",
 			);
 

@@ -48,7 +48,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: configBody({
 						features: `\n\t\tfeature({ featureId: "${featureId}", name: "Already There", type: "boolean" }),`,
-						plans: `\n\t\tplan({ planId: "${planId}", name: "Already Plan" }),`,
+						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Already Plan" }),`,
 					}),
 				}),
 			);
@@ -58,25 +58,25 @@ test.concurrent(
 			expect(pulled.replaced).toEqual([]);
 			expect(pulled.deleted).toEqual([]);
 
-			const text = scenario.files().get("autumn.config.ts");
-			const featureMatch = text?.match(
-				new RegExp(`feature\\(\\{ internalId: "([^"]+)", featureId: "${featureId}"`),
-			);
-			const planMatch = text?.match(
-				new RegExp(`plan\\(\\{ internalId: "([^"]+)", planId: "${planId}"`),
-			);
-			expect(featureMatch?.[1]).toBeTruthy();
-			expect(planMatch?.[1]).toBeTruthy();
+			const text = scenario.files().get("autumn.config.ts") ?? "";
+			const featureBlock = text.match(/feature\(\{[\s\S]*?\}\)/)?.[0];
+			const planBlock = text.match(/plan\(\{[\s\S]*?\}\)/)?.[0];
+			const featureInternalId = featureBlock?.match(
+				/internalId: "([^"]+)"/,
+			)?.[1];
+			const planInternalId = planBlock?.match(/internalId: "([^"]+)"/)?.[1];
+			expect(featureInternalId).toBeTruthy();
+			expect(planInternalId).toBeTruthy();
 
 			const catalog = (await scenario.client.get({})) as {
 				features: Array<{ id: string; internalId: string | null }>;
 				plans: Array<{ id: string; internalId: string | null }>;
 			};
-			expect(featureMatch?.[1]).toBe(
+			expect(featureInternalId).toBe(
 				catalog.features.find((feature) => feature.id === featureId)
 					?.internalId ?? undefined,
 			);
-			expect(planMatch?.[1]).toBe(
+			expect(planInternalId).toBe(
 				catalog.plans.find((plan) => plan.id === planId)?.internalId ??
 					undefined,
 			);

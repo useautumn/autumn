@@ -9,6 +9,7 @@
 import { expect, test } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -18,7 +19,6 @@ import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 /** The single live row's internal_id — renames address a row by this, never by plan_id. */
 const activeInternalId = async ({
@@ -51,7 +51,7 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 		});
@@ -67,7 +67,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "proNew", internalId: "${internalId}", name: "Pro" }),
+		plan({ active: true, planId: "proNew", internalId: "${internalId}", name: "Pro" }),
 	],
 }`,
 				}),

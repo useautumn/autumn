@@ -18,17 +18,17 @@ const rules: LintRules = { plans: LINT_REGISTRY.plans };
 
 type PlanFixture = Record<string, unknown>;
 
-/** `atmn()` folds planVersions into plans before linting, stamping `active`. */
+/** One `plans` array: the live rows carry `active: true`, the rest `active: false`. */
 const stated = ({
-	plans,
-	planVersions,
+	live,
+	history,
 }: {
-	plans: PlanFixture[];
-	planVersions: PlanFixture[];
+	live: PlanFixture[];
+	history: PlanFixture[];
 }): Record<string, unknown> => ({
 	plans: [
-		...plans.map((row) => ({ ...row, active: true })),
-		...planVersions.map((row) => ({ ...row, active: false })),
+		...live.map((row) => ({ ...row, active: true })),
+		...history.map((row) => ({ ...row, active: false })),
 	],
 });
 
@@ -58,8 +58,8 @@ test("a variant declared under two versions of its base is refused", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [proVersion({ versionSlug: "v2" })],
-				planVersions: [proVersion({ versionSlug: "v1" })],
+				live: [proVersion({ versionSlug: "v2" })],
+				history: [proVersion({ versionSlug: "v1" })],
 			}),
 		),
 	).toEqual([
@@ -80,8 +80,8 @@ test("the variant named by the version that owns it lints clean", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [proVersion({ versionSlug: "v2" })],
-				planVersions: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
+				live: [proVersion({ versionSlug: "v2" })],
+				history: [{ planId: "pro", name: "Pro", versionSlug: "v1" }],
 			}),
 		),
 	).toEqual([]);
@@ -91,10 +91,8 @@ test("versioning the variant alongside its base lints clean", () => {
 	expect(
 		issuesFor(
 			stated({
-				plans: [proVersion({ versionSlug: "v2", variantVersionSlug: "v2" })],
-				planVersions: [
-					proVersion({ versionSlug: "v1", variantVersionSlug: "v1" }),
-				],
+				live: [proVersion({ versionSlug: "v2", variantVersionSlug: "v2" })],
+				history: [proVersion({ versionSlug: "v1", variantVersionSlug: "v1" })],
 			}),
 		),
 	).toEqual([]);
@@ -103,14 +101,14 @@ test("versioning the variant alongside its base lints clean", () => {
 test("a variant pinned by version number is named by that pin", () => {
 	const issues = issuesFor(
 		stated({
-			plans: [
+			live: [
 				{
 					planId: "pro",
 					versionSlug: "v2",
 					variants: [{ variantPlanId: "pro_yearly", version: 1 }],
 				},
 			],
-			planVersions: [
+			history: [
 				{
 					planId: "pro",
 					versionSlug: "v1",
@@ -131,14 +129,14 @@ test("a numeric pin and a slug pin are different rows, not one link twice", () =
 	expect(
 		issuesFor(
 			stated({
-				plans: [
+				live: [
 					{
 						planId: "pro",
 						versionSlug: "v2",
 						variants: [{ variantPlanId: "pro_yearly", version: 1 }],
 					},
 				],
-				planVersions: [
+				history: [
 					{
 						planId: "pro",
 						versionSlug: "v1",
@@ -153,7 +151,7 @@ test("a numeric pin and a slug pin are different rows, not one link twice", () =
 test("one plan listing the same variant pin twice is refused", () => {
 	const issues = issuesFor(
 		stated({
-			plans: [
+			live: [
 				{
 					planId: "pro",
 					versionSlug: "v2",
@@ -163,7 +161,7 @@ test("one plan listing the same variant pin twice is refused", () => {
 					],
 				},
 			],
-			planVersions: [],
+			history: [],
 		}),
 	);
 
@@ -175,7 +173,7 @@ test("one plan listing the same variant pin twice is refused", () => {
 test("one plan listing the same unpinned variant twice is refused", () => {
 	const issues = issuesFor(
 		stated({
-			plans: [
+			live: [
 				{
 					planId: "pro",
 					variants: [
@@ -184,7 +182,7 @@ test("one plan listing the same unpinned variant twice is refused", () => {
 					],
 				},
 			],
-			planVersions: [],
+			history: [],
 		}),
 	);
 

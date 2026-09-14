@@ -34,6 +34,7 @@ const config = ({ seatCredits = 600 }: { seatCredits?: number } = {}) => `{
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "seat",
 			name: "Seat",
 			addOn: true,
@@ -41,6 +42,7 @@ const config = ({ seatCredits = 600 }: { seatCredits?: number } = {}) => `{
 			items: [${creditsItem({ included: seatCredits })}],
 		}),
 		plan({
+			active: true,
 			planId: "seatAnnual",
 			name: "Seat (annual)",
 			addOn: true,
@@ -48,11 +50,13 @@ const config = ({ seatCredits = 600 }: { seatCredits?: number } = {}) => `{
 			items: [${creditsItem({ included: 600 })}],
 		}),
 		plan({
+			active: true,
 			planId: "starter",
 			name: "Starter",
 			licenses: [{ licensePlanId: "seat", included: 1 }],
 		}),
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },

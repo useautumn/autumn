@@ -23,6 +23,7 @@ const v1Config = ({ planId }: { planId: string }): string => `{
 	plans: [
 		{
 			planId: "${planId}",
+			active: true,
 			name: "Pro",
 			versionSlug: "v1",
 			price: { amount: 39, interval: "month" },
@@ -35,15 +36,15 @@ const v2Config = ({ planId }: { planId: string }): string => `{
 	plans: [
 		{
 			planId: "${planId}",
+			active: true,
 			name: "Pro",
 			versionSlug: "v2",
 			price: { amount: 49, interval: "month" },
 			createInStripe: false,
 		},
-	],
-	planVersions: [
 		{
 			planId: "${planId}",
+			active: false,
 			name: "Pro",
 			versionSlug: "v1",
 			price: { amount: 39, interval: "month" },

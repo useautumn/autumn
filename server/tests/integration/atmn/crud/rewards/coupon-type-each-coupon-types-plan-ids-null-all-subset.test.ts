@@ -14,8 +14,17 @@ import {
 	seatPlan,
 	versionedPro,
 } from "@tests/utils/atmnUtils/baseConfigs.js";
-import { expectPreviewNone, expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
-import { atmnImports, initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import {
+	expectPreviewNone,
+	expectRoundTrip,
+} from "@tests/utils/atmnUtils/expectRoundTrip.js";
+import {
+	atmnImports,
+	initAtmnScenario,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-test.todo("coupon [type: each COUPON_TYPES] [plan_ids: null (all), subset]", () => {});
+test.todo(
+	"coupon [type: each COUPON_TYPES] [plan_ids: null (all), subset]",
+	() => {},
+);

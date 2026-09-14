@@ -17,9 +17,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 test("push twice → second preview is all `none`", async () => {
 	const scenario = await initAtmnScenario({
-		setup: [
-			s.platform.create({ userEmail: "atmn-push-twice@autumn.test" }),
-		],
+		setup: [s.platform.create({ userEmail: "atmn-push-twice@autumn.test" })],
 		config: configBody({
 			features: everyFeatureType,
 			plans: `${freePlan}${paidMonthly()}`,

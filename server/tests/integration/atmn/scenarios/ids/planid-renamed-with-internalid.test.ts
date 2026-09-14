@@ -47,7 +47,7 @@ test.concurrent(
 				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
 			config: configBody({
-				plans: `\n\t\tplan({ planId: "${oldId}", name: "Plan Rename", price: { amount: 10, interval: "month" } }),`,
+				plans: `\n\t\tplan({ active: true, planId: "${oldId}", name: "Plan Rename", price: { amount: 10, interval: "month" } }),`,
 			}),
 		});
 
@@ -56,8 +56,7 @@ test.concurrent(
 			const internalId = scenario
 				.files()
 				.get("autumn.config.ts")
-				?.match(new RegExp(`internalId: "([^"]+)", planId: "${oldId}"`))
-				?.[1];
+				?.match(/internalId: "([^"]+)"/)?.[1];
 			expect(internalId).toBeTruthy();
 			expect(
 				await livePlanVersions({ ctx: scenario.ctx, planId: oldId }),
@@ -66,7 +65,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
-						plans: `\n\t\tplan({ internalId: "${internalId}", planId: "${newId}", name: "Plan Rename", price: { amount: 10, interval: "month" } }),`,
+						plans: `\n\t\tplan({ active: true, internalId: "${internalId}", planId: "${newId}", name: "Plan Rename", price: { amount: 10, interval: "month" } }),`,
 					}),
 				}),
 			);

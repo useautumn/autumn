@@ -33,8 +33,7 @@ import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
 
 export default atmn({
 	features: bananas,
-	plans: strawberries,
-	planVersions: [...poo, ...pee],
+	plans: [...strawberries, ...poo, ...pee],
 });
 `;
 
@@ -51,7 +50,7 @@ export const bananas = [
 `,
 				"strawberries.ts": `${planImport}
 export const strawberries: Plan[] = [
-	plan({ planId: "${pro}", name: "Pro", price: { amount: 49, interval: "month" } }),
+	plan({ active: true, planId: "${pro}", name: "Pro", price: { amount: 49, interval: "month" } }),
 ];
 `,
 				"poo.ts": `${planImport}
@@ -70,15 +69,12 @@ export const pee: Plan[] = [];
 			const wire = await scenario.wireFromConfig();
 			const features = (wire.features as Record<string, unknown>[]) ?? [];
 			const plans = (wire.plans as Record<string, unknown>[]) ?? [];
-			const planVersions =
-				(wire.plan_versions as Record<string, unknown>[]) ?? [];
 
-			// A remote-only history row: mint `pro` a v2 the config never
-			// mentioned, restating its v1 content with a changed price in
-			// `plan_versions` (a genuine diff, not a no-op) — the same shape a
-			// second config directory uses to push a new version (see
-			// pull-plans.test.ts). The server moves the existing v1 row to
-			// history rather than creating a new one.
+			// A remote-only version: mint `pro` a v2 the config never mentioned
+			// and restate v1 inactive with a changed price (a genuine diff, not a
+			// no-op) — the shape a second config directory uses to push a new
+			// version. The server demotes the existing v1 row rather than
+			// creating a new one.
 			await scenario.client.update({
 				...wire,
 				features: [
@@ -95,18 +91,17 @@ export const pee: Plan[] = [];
 						plan_id: pro,
 						name: "Pro",
 						version_slug: "v2",
+						active: true,
 						price: { amount: 59, interval: "month" },
 					},
-					{ plan_id: remotePlanId, name: "Remote Plan" },
-				],
-				plan_versions: [
-					...planVersions,
 					{
 						plan_id: pro,
 						name: "Pro",
 						version_slug: "v1",
+						active: false,
 						price: { amount: 45, interval: "month" },
 					},
+					{ plan_id: remotePlanId, name: "Remote Plan", active: true },
 				],
 			});
 
@@ -120,20 +115,18 @@ export const pee: Plan[] = [];
 			expect(after.get("bananas.ts")).toContain(
 				`featureId: "${remoteFeatureId}"`,
 			);
+			// The row the config already holds is edited where it is: pro's v1
+			// flips to inactive in strawberries.ts.
 			expect(after.get("strawberries.ts")).not.toBe(
 				before.get("strawberries.ts"),
 			);
-			expect(after.get("strawberries.ts")).toContain(
-				`planId: "${remotePlanId}"`,
-			);
-			// poo.ts stays untouched: the resolver appends to the LAST spread in
-			// `[...poo, ...pee]`, which is pee.
+			expect(after.get("strawberries.ts")).toContain("active: false");
+			// New rows append to the LAST spread in `[...strawberries, ...poo, ...pee]`.
 			expect(after.get("poo.ts")).toBe(before.get("poo.ts"));
 			expect(after.get("pee.ts")).not.toBe(before.get("pee.ts"));
-			// `pro`'s old v1 row moved to history: the only fixture holding
-			// `versionSlug: "v1"` once it is no longer the sole/default version.
+			expect(after.get("pee.ts")).toContain(`planId: "${remotePlanId}"`);
 			expect(after.get("pee.ts")).toContain(`planId: "${pro}"`);
-			expect(after.get("pee.ts")).toContain(`versionSlug: "v1"`);
+			expect(after.get("pee.ts")).toContain(`versionSlug: "v2"`);
 		} finally {
 			scenario.cleanup();
 		}

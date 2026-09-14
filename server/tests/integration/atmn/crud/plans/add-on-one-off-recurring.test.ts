@@ -27,6 +27,7 @@ for (const { label, interval } of ADD_ON_INTERVALS) {
 			config: configBody({
 				plans: `
 		plan({
+			active: true,
 			planId: "addon",
 			name: "Addon",
 			addOn: true,

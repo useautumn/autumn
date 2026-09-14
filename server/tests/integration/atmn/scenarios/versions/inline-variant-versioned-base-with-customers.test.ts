@@ -5,25 +5,17 @@
  * a `variant({...})` fixture. Push backfills its identity into that object;
  * moving the v1 plan file to planVersions and writing pro@v2 beside it mints
  * proYearly@v2 under the new base, and the same config previews clean after.
- * A history entry that states no versionSlug (lint forbids it in a config, so
- * it is sent as a raw wire) still resolves to the v1 row.
  */
 
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-	CusProductStatus,
-	customerProducts,
-	type FullProduct,
-	isFixedPrice,
-} from "@autumn/shared";
+import { CusProductStatus, customerProducts } from "@autumn/shared";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { expectPreviewNone } from "@tests/utils/atmnUtils/expectRoundTrip.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
-	runCli,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -65,15 +57,19 @@ export default atmn({
 });
 `;
 
-/** Adds the planVersions import and entry to a root config already on disk,
- * keeping whatever push backfilled into it. */
+/** Adds the demoted row's import and entry to a root config already on disk,
+ * keeping whatever push backfilled into it: every version sits in `plans`. */
 const withHistory = (source: string): string =>
 	source
 		.replace(
 			'import { pro } from "./plans/pro";',
-			'import { pro } from "./plans/pro";\nimport { pro as proV1 } from "./planVersions/pro";',
+			'import { pro } from "./plans/pro";\nimport { pro as proV1 } from "./plans/proV1";',
 		)
-		.replace("\tplans: [pro],", "\tplans: [pro],\n\tplanVersions: [proV1],");
+		.replace("\tplans: [pro],", "\tplans: [pro, proV1],");
+
+/** The row a user demotes by hand: same file contents, `active` flipped. */
+const demoted = (source: string): string =>
+	source.replace("\tactive: true,", "\tactive: false,");
 
 const proV1WithoutVariant = ({
 	pro,
@@ -84,6 +80,7 @@ const proV1WithoutVariant = ({
 }): string => `${PLAN_IMPORT}
 
 export const pro = plan({
+	active: true,
 	planId: "${pro}",
 	name: "Pro",
 	price: { amount: 20, interval: "month" },
@@ -129,6 +126,7 @@ const proV2 = ({
 }): string => `${PLAN_IMPORT}
 
 export const pro = plan({
+	active: true,
 	planId: "${pro}",
 	versionSlug: "v2",
 	name: "Pro",
@@ -164,40 +162,6 @@ const activeCustomerProducts = async ({
 				eq(customerProducts.status, CusProductStatus.Active),
 			),
 		);
-
-const productForSlug = async ({
-	ctx,
-	planId,
-	versionSlug,
-}: {
-	ctx: AutumnContext;
-	planId: string;
-	versionSlug: string;
-}): Promise<FullProduct> => {
-	const rows = await ProductService.listFull({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		inIds: [planId],
-		returnAll: true,
-	});
-	const row = rows.find((product) => product.version_slug === versionSlug);
-	if (!row) throw new Error(`${planId}@${versionSlug} not found`);
-	return row;
-};
-
-const shapeOf = ({
-	product,
-	messages,
-}: {
-	product: FullProduct;
-	messages: string;
-}) => ({
-	amount: product.prices.find(isFixedPrice)?.config.amount,
-	included: product.entitlements.find(
-		(entitlement) => entitlement.feature.id === messages,
-	)?.allowance,
-});
 
 const productAt = async ({
 	ctx,
@@ -271,8 +235,8 @@ test.concurrent(
 				customerId: yearlyCustomerId,
 			});
 
-			// 4. v1 file moves to planVersions; plans/pro.ts becomes pro@v2.
-			scenario.writeFile("planVersions/pro.ts", afterVariant);
+			// 4. v1 moves to its own file, demoted; plans/pro.ts becomes pro@v2.
+			scenario.writeFile("plans/proV1.ts", demoted(afterVariant));
 			scenario.writeFile("plans/pro.ts", proV2({ pro, proYearly, messages }));
 			scenario.writeConfig(withHistory(read("autumn.config.ts")));
 			const pushedV2 = await scenario.push();
@@ -349,208 +313,3 @@ test.concurrent(
 	},
 );
 
-type WireVariantPin = { plan_id?: string; version_slug?: string };
-type WirePlanRow = {
-	plan_id: string;
-	version_slug?: string;
-	active?: boolean;
-	variants?: Array<{ variant_plan_id: string; version_slug?: string }>;
-	propagate?: { variants?: WireVariantPin[] };
-};
-
-/**
- * Lint now insists every version of a variant states its slug, so the
- * hand-written slug-less history entry can only reach the server as a raw
- * wire: the config's own wire with that one slug (and its follow pin) removed.
- */
-const withoutHistoryVariantSlug = ({
-	wire,
-	pro,
-}: {
-	wire: Record<string, unknown>;
-	pro: string;
-}): Record<string, unknown> => ({
-	...wire,
-	plans: (wire.plans as WirePlanRow[]).map((row) => {
-		if (row.plan_id !== pro || row.active !== false) return row;
-		return {
-			...row,
-			variants: row.variants?.map(({ version_slug: _slug, ...entry }) => entry),
-			propagate: {
-				...row.propagate,
-				variants: row.propagate?.variants?.map(
-					({ version_slug: _slug, ...pin }) => pin,
-				),
-			},
-		};
-	}),
-});
-
-test.concurrent(
-	`${chalk.yellowBright("atmn scenarios/versions: a history base whose variant entry states no versionSlug resolves to the variant row anchored to it")}`,
-	async () => {
-		const messages = uniqueTestId("atmn_messages");
-		const pro = uniqueTestId("atmn_pro");
-		const proYearly = `${pro}_yearly`;
-
-		const scenario = await initAtmnScenario({
-			setup: [
-				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
-			],
-			config: { raw: rootConfig({ messages }) },
-			files: {
-				"plans/pro.ts": withInlineVariant({
-					source: proV1WithoutVariant({ pro, messages }),
-					proYearly,
-					messages,
-				}),
-			},
-		});
-		const ctx = scenario.ctx;
-		const read = (relativePath: string): string =>
-			readFileSync(join(scenario.cwd, relativePath), "utf8");
-
-		try {
-			await scenario.push();
-			const proV1 = await productAt({ ctx, planId: pro, version: 1 });
-			const yearlyV1 = await productAt({ ctx, planId: proYearly, version: 1 });
-
-			// The v1 file, slugs included, becomes history beside pro@v2.
-			scenario.writeFile("planVersions/pro.ts", read("plans/pro.ts"));
-			scenario.writeFile("plans/pro.ts", proV2({ pro, proYearly, messages }));
-			scenario.writeConfig(withHistory(read("autumn.config.ts")));
-			await scenario.push();
-
-			// After the push proYearly@v2 is active, yet a slug-less entry under
-			// pro@v1 must still mean proYearly@v1: no conflict, no changes.
-			const slugless = withoutHistoryVariantSlug({
-				wire: await scenario.wireFromConfig(),
-				pro,
-			});
-			await expectPreviewNone({ client: scenario.client, wire: slugless });
-
-			const preview = (await scenario.client.previewUpdate(
-				slugless as never,
-			)) as unknown as {
-				plans: Array<{
-					planId: string;
-					version: number;
-					variants?: Array<{ planId: string; version: number }>;
-				}>;
-			};
-			const historyPreview = preview.plans.find(
-				(row) => row.planId === pro && row.version === 1,
-			);
-			expect(historyPreview?.variants).toEqual([
-				expect.objectContaining({ planId: proYearly, version: 1 }),
-			]);
-
-			const yearlyV1After = await productAt({
-				ctx,
-				planId: proYearly,
-				version: 1,
-			});
-			expect(yearlyV1After.internal_id).toBe(yearlyV1.internal_id);
-			expect(yearlyV1After.base_internal_product_id).toBe(proV1.internal_id);
-			const proV2Row = await productAt({ ctx, planId: pro, version: 2 });
-			const yearlyV2 = await productAt({ ctx, planId: proYearly, version: 2 });
-			expect(yearlyV2.base_internal_product_id).toBe(proV2Row.internal_id);
-		} finally {
-			scenario.cleanup();
-		}
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("atmn scenarios/versions: on an empty org, a slug-less history variant entry mints its own row under the history base instead of borrowing the active one")}`,
-	async () => {
-		const messages = uniqueTestId("atmn_messages");
-		const pro = uniqueTestId("atmn_pro");
-		const proYearly = `${pro}_yearly`;
-
-		const scenario = await initAtmnScenario({
-			setup: [
-				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
-			],
-			config: { raw: rootConfig({ messages }) },
-			files: {
-				"plans/pro.ts": withInlineVariant({
-					source: proV1WithoutVariant({ pro, messages }),
-					proYearly,
-					messages,
-				}),
-			},
-		});
-		const ctx = scenario.ctx;
-		const read = (relativePath: string): string =>
-			readFileSync(join(scenario.cwd, relativePath), "utf8");
-		// The CLI writes to the first .env on its search path; keep it inside cwd.
-		scenario.writeFile(".env", "");
-
-		try {
-			await scenario.push();
-			scenario.writeFile("planVersions/pro.ts", read("plans/pro.ts"));
-			scenario.writeFile("plans/pro.ts", proV2({ pro, proYearly, messages }));
-			scenario.writeConfig(withHistory(read("autumn.config.ts")));
-			await scenario.push();
-
-			// Wipe, then rebuild the whole catalog in one update whose history
-			// variant entry states no slug. The "v2" row lands first, so its rows
-			// are numbered lower: assert by slug.
-			const wiped = runCli({
-				cwd: scenario.cwd,
-				args: ["reset", "--yes"],
-				secretKey: scenario.secretKey,
-				baseUrl: scenario.baseUrl,
-			});
-			expect(wiped).toContain("Wiped");
-			const slugless = withoutHistoryVariantSlug({
-				wire: await scenario.wireFromConfig(),
-				pro,
-			});
-			await scenario.client.update(slugless as never);
-
-			const proV1 = await productForSlug({
-				ctx,
-				planId: pro,
-				versionSlug: "v1",
-			});
-			const proV2Row = await productForSlug({
-				ctx,
-				planId: pro,
-				versionSlug: "v2",
-			});
-			const yearlyV1 = await productForSlug({
-				ctx,
-				planId: proYearly,
-				versionSlug: "v1",
-			});
-			const yearlyV2 = await productForSlug({
-				ctx,
-				planId: proYearly,
-				versionSlug: "v2",
-			});
-			expect(proV1.active).toBe(false);
-			expect(proV2Row.active).toBe(true);
-			expect(yearlyV1.active).toBe(false);
-			expect(yearlyV2.active).toBe(true);
-			expect(yearlyV1.base_internal_product_id).toBe(proV1.internal_id);
-			expect(yearlyV2.base_internal_product_id).toBe(proV2Row.internal_id);
-			expect(shapeOf({ product: yearlyV1, messages })).toEqual({
-				amount: 200,
-				included: 120,
-			});
-			expect(shapeOf({ product: yearlyV2, messages })).toEqual({
-				amount: 225,
-				included: 100,
-			});
-
-			// Slug-less and slugged alike, the same catalog: nothing left to apply.
-			await expectPreviewNone({ client: scenario.client, wire: slugless });
-			const dryRun = await scenario.push({ dryRun: true });
-			expect(dryRun.output).toContain("No changes");
-		} finally {
-			scenario.cleanup();
-		}
-	},
-);

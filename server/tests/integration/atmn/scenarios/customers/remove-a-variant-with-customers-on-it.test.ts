@@ -30,6 +30,7 @@ const catalogConfig = ({
 	plans: [
 		{
 			planId: "${basePlanId}",
+			active: true,
 			name: "Pro",
 			price: { amount: 20, interval: "month" },
 			createInStripe: false,

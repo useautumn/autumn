@@ -1,7 +1,7 @@
 /**
- * Plans ride the same `atmn()` as features. What is new: history rows fold
- * into `plans` with `active` stamped by array membership, an omitted key stays
- * omitted, and a plan item must name a declared feature.
+ * Plans ride the same `atmn()` as features. What is new: every version is a
+ * row in `plans` and says whether it is live, an omitted key stays omitted,
+ * and a plan item must name a declared feature.
  */
 
 import { expect, test } from "bun:test";
@@ -20,11 +20,16 @@ const issuesOf = (run: () => unknown) => {
 	return [];
 };
 
-test("active rows and history rows become one wire collection with active stamped", () => {
+const ACTIVE_HINT =
+	"Every version of a plan lives in plans; mark the one customers can buy active: true and the rest active: false.";
+
+test("every version is one wire row, active as the config states it", () => {
 	const wire = atmn({
 		features: [],
-		plans: [plan({ planId: "pro", name: "Pro", versionSlug: "v2" })],
-		planVersions: [plan({ planId: "pro", name: "Pro", versionSlug: "v1" })],
+		plans: [
+			plan({ planId: "pro", name: "Pro", versionSlug: "v2", active: true }),
+			plan({ planId: "pro", name: "Pro", versionSlug: "v1", active: false }),
+		],
 		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
 	}) as any;
 
@@ -32,39 +37,50 @@ test("active rows and history rows become one wire collection with active stampe
 		{ plan_id: "pro", name: "Pro", version_slug: "v2", active: true },
 		{ plan_id: "pro", name: "Pro", version_slug: "v1", active: false },
 	]);
-	expect(Object.hasOwn(wire, "plan_versions")).toBe(false);
+	// Stated plans are every version: the ones omitted are removed.
+	expect(wire.skip_version_deletions).toBe(false);
 });
 
-test("a draft is a row in plans with explicit active: false", () => {
-	const wire = atmn({
-		plans: [
-			plan({ planId: "pro", name: "Pro", versionSlug: "v3", active: false }),
-		],
-		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
-	}) as any;
-	expect(wire.plans[0].active).toBe(false);
-});
-
-test("a plan that only appears in planVersions is refused, naming the plan", () => {
+test("a plan with no active version is refused, naming the plan", () => {
 	const issues = issuesOf(() =>
 		atmn({
-			plans: [plan({ planId: "free", name: "Free" })],
-			planVersions: [
-				plan({ planId: "pro", name: "Pro", versionSlug: "v1" }),
-				plan({ planId: "legacy", name: "Legacy", versionSlug: "v1" }),
+			plans: [
+				plan({ planId: "free", name: "Free", active: true }),
+				plan({ planId: "pro", name: "Pro", versionSlug: "v1", active: false }),
+				plan({
+					planId: "legacy",
+					name: "Legacy",
+					versionSlug: "v1",
+					active: false,
+				}),
 			],
 		}),
 	);
 	expect(issues).toEqual([
 		{
 			path: 'plan "pro"',
-			message:
-				'At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version. "pro", "legacy"',
+			message: `Plan "pro" has 1 version and none is active. ${ACTIVE_HINT}`,
 		},
 		{
 			path: 'plan "legacy"',
-			message:
-				'At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version. "pro", "legacy"',
+			message: `Plan "legacy" has 1 version and none is active. ${ACTIVE_HINT}`,
+		},
+	]);
+});
+
+test("a plan with two active versions is refused on the second", () => {
+	const issues = issuesOf(() =>
+		atmn({
+			plans: [
+				plan({ planId: "pro", name: "Pro", versionSlug: "v1", active: true }),
+				plan({ planId: "pro", name: "Pro", versionSlug: "v2", active: true }),
+			],
+		}),
+	);
+	expect(issues).toEqual([
+		{
+			path: 'plan "pro"',
+			message: `Plan "pro" has 2 versions and 2 are active. ${ACTIVE_HINT}`,
 		},
 	]);
 });
@@ -79,16 +95,6 @@ test("an omitted collection stays omitted", () => {
 	expect(onlyPlans.plans).toEqual([]);
 });
 
-test("history without plans is refused: it would remove every active version", () => {
-	const issues = issuesOf(() =>
-		atmn({
-			planVersions: [plan({ planId: "pro", name: "Pro", versionSlug: "v1" })],
-		}),
-	);
-	expect(issues).toHaveLength(1);
-	expect(issues[0]?.message).toContain("planVersions needs plans");
-});
-
 test("a plan item must meter a declared feature, named by breadcrumb", () => {
 	const issues = issuesOf(() =>
 		atmn({
@@ -97,6 +103,7 @@ test("a plan item must meter a declared feature, named by breadcrumb", () => {
 			],
 			plans: [
 				plan({
+					active: true,
 					planId: "pro",
 					name: "Pro",
 					items: [{ featureId: "seats" }, { featureId: "ghost", included: 5 }],
@@ -117,7 +124,12 @@ test("with features omitted, item references are not checked: absent means not m
 	expect(() =>
 		atmn({
 			plans: [
-				plan({ planId: "pro", name: "Pro", items: [{ featureId: "ghost" }] }),
+				plan({
+					active: true,
+					planId: "pro",
+					name: "Pro",
+					items: [{ featureId: "ghost" }],
+				}),
 			],
 		}),
 	).not.toThrow();
@@ -136,6 +148,7 @@ test("a volume-tiered item price must be prepaid", () => {
 			],
 			plans: [
 				plan({
+					active: true,
 					planId: "pro",
 					name: "Pro",
 					items: [
@@ -177,7 +190,7 @@ test("featureOverride is only honoured on classic credit-system features", () =>
 					consumable: true,
 				}),
 			],
-			plans: [plan({ planId: "pro", name: "Pro", items })],
+			plans: [plan({ active: true, planId: "pro", name: "Pro", items })],
 		}),
 	);
 	expect(withMetered).toEqual([
@@ -197,7 +210,7 @@ test("featureOverride is only honoured on classic credit-system features", () =>
 					type: "credit_system",
 				}),
 			],
-			plans: [plan({ planId: "pro", name: "Pro", items })],
+			plans: [plan({ active: true, planId: "pro", name: "Pro", items })],
 		}),
 	).not.toThrow();
 });
@@ -208,14 +221,14 @@ test("a variant linked from two versions of its base is refused", () => {
 		atmn({
 			plans: [
 				plan({
+					active: true,
 					planId: "pro",
 					name: "Pro",
 					versionSlug: "v2",
 					variants: [proYearly],
 				}),
-			],
-			planVersions: [
 				plan({
+					active: false,
 					planId: "pro",
 					name: "Pro",
 					versionSlug: "v1",
@@ -250,14 +263,14 @@ test("versioning the variant alongside its base lints clean", () => {
 		atmn({
 			plans: [
 				plan({
+					active: true,
 					planId: "pro",
 					name: "Pro",
 					versionSlug: "v2",
 					variants: [proYearly("v2")],
 				}),
-			],
-			planVersions: [
 				plan({
+					active: false,
 					planId: "pro",
 					name: "Pro",
 					versionSlug: "v1",

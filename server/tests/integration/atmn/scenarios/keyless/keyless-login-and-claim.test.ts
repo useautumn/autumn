@@ -25,7 +25,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { organizations } from "@autumn/shared";
-import { CLI_PACKAGE_DIR } from "@tests/utils/atmnUtils/initAtmnScenario.js";
+import {
+	CLI_PACKAGE_DIR,
+	TMP_ROOT,
+} from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
@@ -55,6 +58,7 @@ const runCliHeadless = ({
 		env: {
 			PATH: process.env.PATH ?? "",
 			HOME: process.env.HOME ?? "",
+			GIT_CEILING_DIRECTORIES: TMP_ROOT,
 			AUTUMN_BASE_URL: baseUrl,
 			ATMN_INIT_DEPENDENCY: `file:${CLI_PACKAGE_DIR}`,
 			NO_COLOR: "1",

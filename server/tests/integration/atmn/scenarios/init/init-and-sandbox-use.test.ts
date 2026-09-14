@@ -30,6 +30,7 @@ import { join } from "node:path";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
+	TMP_ROOT,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -56,6 +57,7 @@ const runCliHeadless = ({
 		env: {
 			PATH: process.env.PATH ?? "",
 			HOME: process.env.HOME ?? "",
+			GIT_CEILING_DIRECTORIES: TMP_ROOT,
 			AUTUMN_BASE_URL: baseUrl,
 			// A package init writes depends on the CLI; from source that is this checkout.
 			ATMN_INIT_DEPENDENCY: `file:${CLI_PACKAGE_DIR}`,
@@ -151,7 +153,9 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 		});
 		expect(exitCode).toBe(0);
 		expect(output).toContain("✓ Logged in as");
-		expect(output).toContain("✓ Wrote autumn.config.ts, planVersions/");
+		expect(output).toContain(
+			"✓ Wrote autumn.config.ts, features.ts, plans.ts, rewards.ts",
+		);
 		expect(output).toContain("✓ Added atmn-nightly to package.json");
 		expect(output).toContain("✓ Installed with npm");
 		expect(output).toContain(
@@ -162,7 +166,7 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 			"✓ Skills: skills/autumn-setup, autumn-catalog, autumn-integrate, autumn-concepts",
 		);
 
-		expect(readFileSync(join(root, "autumn.config.ts"), "utf8")).toContain(
+		expect(readFileSync(join(root, "features.ts"), "utf8")).toContain(
 			messages,
 		);
 		expect(existsSync(join(root, "skills/autumn-catalog/SKILL.md"))).toBe(true);

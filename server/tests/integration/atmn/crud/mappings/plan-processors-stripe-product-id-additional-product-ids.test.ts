@@ -24,6 +24,7 @@ type CatalogPlanRow = {
 // no Stripe existence check, so a made-up id is fine for a round-trip test.
 const acmePlan = `
 		plan({
+			active: true,
 			planId: "acme",
 			name: "Acme",
 			processors: {

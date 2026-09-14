@@ -23,8 +23,7 @@ test.concurrent(
 			config: `{
 	plans: [
 		${paidMonthly({ planId: pro, amount: 30, extra: `\n\t\t\tversionSlug: "v2",` })}
-	],
-	planVersions: [
+	
 		${paidMonthly({ planId: pro, amount: 20 })}
 	],
 }`,
@@ -68,8 +67,7 @@ test.concurrent(
 			config: `{
 	plans: [
 		${paidMonthly({ planId: pro, amount: 30, extra: `\n\t\t\tversionSlug: "v2",${variantEntry("v2")}` })}
-	],
-	planVersions: [
+	
 		${paidMonthly({ planId: pro, amount: 20, extra: `\n\t\t\tversionSlug: "v1",${variantEntry()}` })}
 	],
 }`,

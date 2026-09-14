@@ -28,11 +28,13 @@ const CASES: Record<
 		body: (id) => `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${id}",
 			name: "First",
 			price: { amount: 10, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${id}",
 			name: "Second",
 			price: { amount: 20, interval: "month" },
@@ -47,6 +49,7 @@ const CASES: Record<
 		body: (id) => `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${id}",
 			name: "Enterprise",
 			price: { amount: 999, interval: "month" },

@@ -17,6 +17,7 @@ const configFor = ({ planId, amount }: { planId: string; amount: number }) =>
 export default atmn({
 	plans: [
 		plan({
+			active: true,
 			planId: "${planId}",
 			name: "Pro",
 			price: { amount: ${amount}, interval: "month" },

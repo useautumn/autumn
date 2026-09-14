@@ -24,6 +24,7 @@ import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/g
 // price), plus a feature-level mapping.
 const proPlan = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			createInStripe: false,

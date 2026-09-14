@@ -26,6 +26,7 @@ const proWithVariant = ({ amount }: { amount: number }): string => `{
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "pro",
 			versionSlug: "v1",
 			name: "Pro",
@@ -131,6 +132,7 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "pro",
 			versionSlug: "v2",
 			name: "Pro",
@@ -140,9 +142,9 @@ test.concurrent(
 				{ variantPlanId: "pro_plus", name: "Pro Plus", versionSlug: "v2" },
 			],
 		}),
-	],
-	planVersions: [
+	
 		plan({
+			active: false,
 			planId: "pro",
 			versionSlug: "v1",
 			name: "Pro",

@@ -25,7 +25,7 @@ test.concurrent(
 			],
 			config: configBody({
 				features: `\n\t\tfeature({ featureId: "${featureId}", name: "Fake", type: "boolean", internalId: "${FAKE_INTERNAL_ID}" }),`,
-				plans: `\n\t\tplan({ planId: "${planId}", name: "Fake Plan", internalId: "${FAKE_INTERNAL_ID}" }),`,
+				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Fake Plan", internalId: "${FAKE_INTERNAL_ID}" }),`,
 			}),
 		});
 
@@ -50,8 +50,12 @@ test.concurrent(
 
 			const text = scenario.files().get("autumn.config.ts");
 			expect(text).not.toContain(FAKE_INTERNAL_ID);
-			expect(text).toContain(`internalId: ${JSON.stringify(realFeatureInternalId)}`);
-			expect(text).toContain(`internalId: ${JSON.stringify(realPlanInternalId)}`);
+			expect(text).toContain(
+				`internalId: ${JSON.stringify(realFeatureInternalId)}`,
+			);
+			expect(text).toContain(
+				`internalId: ${JSON.stringify(realPlanInternalId)}`,
+			);
 		} finally {
 			scenario.cleanup();
 		}

@@ -7,11 +7,11 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { renamePlan } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const CONFIG_PATH = "autumn.config.ts";
 
@@ -24,8 +24,8 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ planId: "free", name: "Free" }),
-		plan({ planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "free", name: "Free" }),
+		plan({ active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 		});
@@ -42,10 +42,9 @@ test.concurrent(
 				before.indexOf('planId: "free"') - 20,
 				before.indexOf('planId: "pro"'),
 			);
-			// internalId is backfilled as the first property, immediately before
-			// the planId it belongs to, on the same `plan({ ... })` call.
+			// internalId is backfilled as the first property of the `pro` call.
 			const internalIdMatch = before.match(
-				/internalId: "([^"]+)",\s+planId: "pro"/,
+				/internalId: "([^"]+)",\s+active: true,\s+planId: "pro"/,
 			);
 			if (!internalIdMatch)
 				throw new Error("pro's backfilled internalId not found");

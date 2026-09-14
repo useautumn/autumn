@@ -31,6 +31,7 @@ const enterpriseLicensingSeat = ({
 	prepaidOnly: boolean;
 }): string => `
 		plan({
+			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
 			price: { amount: 999, interval: "month" },

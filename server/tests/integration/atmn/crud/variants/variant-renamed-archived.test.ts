@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -13,11 +14,11 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../catalog-v2/plans/utils/planAliasTestUtils.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const baseConfig = `{
 	plans: [
 		plan({
+			active: true,
 			planId: "base",
 			name: "Base",
 			price: { amount: 49, interval: "month" },
@@ -59,6 +60,7 @@ for (const action of ["renamed", "archived"] as const) {
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "base",
 			variants: [
 				${variantEdit},

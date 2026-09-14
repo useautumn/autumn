@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -12,7 +13,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 for (const targetVersion of ["v1", "v2"] as const) {
 	test.concurrent(
@@ -26,7 +26,7 @@ for (const targetVersion of ["v1", "v2"] as const) {
 				],
 				config: `{
 	plans: [
-		plan({ planId: "base", versionSlug: "v1", name: "Base", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "base", versionSlug: "v1", name: "Base", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 			});
@@ -37,10 +37,9 @@ for (const targetVersion of ["v1", "v2"] as const) {
 					atmnConfigSource({
 						body: `{
 	plans: [
-		plan({ planId: "base", versionSlug: "v2", name: "Base", price: { amount: 59, interval: "month" } }),
-	],
-	planVersions: [
-		plan({ planId: "base", versionSlug: "v1", name: "Base", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "base", versionSlug: "v2", name: "Base", price: { amount: 59, interval: "month" } }),
+	
+		plan({ active: false, planId: "base", versionSlug: "v1", name: "Base", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 					}),
@@ -64,8 +63,9 @@ for (const targetVersion of ["v1", "v2"] as const) {
 				const target = targetVersion === "v1" ? v1 : v2;
 
 				// The variant nests under whichever specific version row is
-				// addressed — active (`plans`) or history (`planVersions`).
+				// addressed — the live row or a demoted one.
 				const variantEntry = `plan({
+			active: ${targetVersion === "v2"},
 			planId: "base",
 			versionSlug: "${targetVersion}",
 			variants: [
@@ -87,9 +87,8 @@ for (const targetVersion of ["v1", "v2"] as const) {
 }`
 								: `{
 	plans: [
-		plan({ planId: "base", versionSlug: "v2", name: "Base", price: { amount: 59, interval: "month" } }),
-	],
-	planVersions: [
+		plan({ active: true, planId: "base", versionSlug: "v2", name: "Base", price: { amount: 59, interval: "month" } }),
+	
 		${variantEntry},
 	],
 }`,

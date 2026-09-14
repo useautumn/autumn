@@ -16,7 +16,11 @@ import { schemaPaths } from "../src/fuzz/schemaPaths";
 import { OVERLAY } from "../src/overlay/overlay";
 import { catalogUpdateSchema, loadSpec } from "../src/spec/loadSpec";
 
-const EMPTY_OVERLAY = { collections: {}, exposeInternal: [] };
+const EMPTY_OVERLAY = {
+	collections: {},
+	exposeInternal: [],
+	serverOwnedInternal: {},
+};
 
 const syntheticSchema: JsonSchema = {
 	type: "object",

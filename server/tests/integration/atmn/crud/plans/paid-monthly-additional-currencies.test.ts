@@ -24,6 +24,7 @@ test.concurrent(
 			config: configBody({
 				plans: `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: {

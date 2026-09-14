@@ -33,6 +33,7 @@ type CatalogPlanRow = {
 // made-up product id round-trips without one.
 const proPlan = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
 			price: { amount: 49, interval: "month" },

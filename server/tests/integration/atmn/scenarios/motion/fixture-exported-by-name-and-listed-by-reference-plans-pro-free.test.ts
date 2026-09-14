@@ -7,12 +7,12 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const planImport = `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";\n`;
 
@@ -37,8 +37,8 @@ export default atmn({
 			config: { raw: rootConfig },
 			files: {
 				"plans.ts": `${planImport}
-export const pro = plan({ planId: "${proId}", name: "Pro", price: { amount: 49, interval: "month" } });
-export const free = plan({ planId: "${freeId}", name: "Free" });
+export const pro = plan({ active: true, planId: "${proId}", name: "Pro", price: { amount: 49, interval: "month" } });
+export const free = plan({ active: true, planId: "${freeId}", name: "Free" });
 `,
 			},
 		});
