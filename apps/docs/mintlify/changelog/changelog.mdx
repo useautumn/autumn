@@ -4,6 +4,12 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="September 14th 2026">
+  ## Rate cards and dimensions for everyone
+
+  Billing units, graduated tiers, per-row dimensions and plan-item rate-card overrides are no longer admin-only in the dashboard. Dimensions now live inside each rate-card row: **Add dimension** sits beside **Add Tier** and reveals that row's tables, a populated row shows its tables with a **Remove dimensions** action, and collapsed rows count their dimensions. Picking a feature on a new row opens it for editing straight away, and the only row in a rate card can be removed (an empty card is still rejected on save). The Stripe product field has left the feature sheets; feature-level Stripe products are managed through the CLI mappings. Customizing a customer's rate card from the dashboard now reaches the server: plan diffs compare and carry `feature_override`. The CLI config reference and the [credit systems guide](/documentation/modelling-pricing/credit-systems#rate-cards-and-dimensions) document billing units, tiers, dimensions and multipliers — [#3413](https://github.com/useautumn/autumn/pull/3413)
+</Update>
+
 <Update label="September 11th 2026">
   ## Credit dimensions and multipliers
 
