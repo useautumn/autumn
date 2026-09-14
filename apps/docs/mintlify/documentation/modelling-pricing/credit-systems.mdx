@@ -246,7 +246,7 @@ The `creditSchema` is the credit system's **rate card**: one row per metered fea
 
 ### Graduated rates
 
-A graduated row steps the credit cost as usage in the current cycle grows. Usage is priced tier by tier: below, the first 10,000 units cost 1 credit each and everything after costs 0.5.
+A graduated row steps the credit cost as usage in the current cycle grows. Tier boundaries are in units and the cost is per `billingUnits`, priced tier by tier: below, the first 10,000 tokens cost 1 credit per 1,000 tokens (10 credits), and everything after costs 0.5 credits per 1,000 tokens.
 
 ```ts autumn.config.ts
 {
