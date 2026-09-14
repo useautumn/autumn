@@ -1,5 +1,4 @@
 import { FormLabel, Switch } from "@autumn/ui";
-import { toast } from "sonner";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CreditSchemaListProvider } from "../hooks/CreditSchemaListContext";
 import { useCreditDimensionsToggle } from "../hooks/useCreditDimensionsToggle";
@@ -20,13 +19,7 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 	const dimensions = useCreditDimensionsToggle({ schema, setSchema });
 
 	return (
-		<CreditSchemaListProvider
-			schema={schema}
-			onChange={setSchema}
-			onRemoveLast={() =>
-				toast.error("There must be at least one item in the credit system")
-			}
-		>
+		<CreditSchemaListProvider schema={schema} onChange={setSchema}>
 			<div className="flex flex-col gap-4">
 				{isAdmin && (
 					<div className="flex items-center justify-between gap-4">
