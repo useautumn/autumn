@@ -4325,6 +4325,21 @@ class BillingUpdateLicenseQuantity(BaseModel):
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
+class BillingUpdateCustomLineItemTypedDict(TypedDict):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+
+
+class BillingUpdateCustomLineItem(BaseModel):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+
 class UpdateSubscriptionParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -4366,6 +4381,8 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""Whether to carry over usages from the previous plan."""
     license_quantities: NotRequired[List[BillingUpdateLicenseQuantityTypedDict]]
     r"""Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity."""
+    custom_line_items: NotRequired[List[BillingUpdateCustomLineItemTypedDict]]
+    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate updates to an existing recurring subscription."""
 
 
 class UpdateSubscriptionParams(BaseModel):
@@ -4429,6 +4446,9 @@ class UpdateSubscriptionParams(BaseModel):
     license_quantities: Optional[List[BillingUpdateLicenseQuantity]] = None
     r"""Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity."""
 
+    custom_line_items: Optional[List[BillingUpdateCustomLineItem]] = None
+    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate updates to an existing recurring subscription."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -4452,6 +4472,7 @@ class UpdateSubscriptionParams(BaseModel):
                 "recalculate_balances",
                 "carry_over_usages",
                 "license_quantities",
+                "custom_line_items",
             ]
         )
         nullable_fields = set(["free_trial"])
