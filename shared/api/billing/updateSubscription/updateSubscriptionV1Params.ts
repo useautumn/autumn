@@ -21,7 +21,7 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 			description:
 				"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 		}),
-		custom_line_items: z.array(CustomLineItemSchema).optional().meta({
+		custom_line_items: z.array(CustomLineItemSchema).min(1).optional().meta({
 			description:
 				"Custom line items that override the auto-generated proration invoice. Only valid for immediate updates to an existing recurring subscription.",
 		}),

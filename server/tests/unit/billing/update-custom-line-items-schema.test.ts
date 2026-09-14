@@ -33,3 +33,19 @@ test("update rejects malformed custom invoice lines", () => {
 		}).success,
 	).toBe(false);
 });
+
+test("update rejects an empty custom invoice line array", () => {
+	const result = UpdateSubscriptionV1ParamsSchema.safeParse({
+		customer_id: "custom-lines-customer",
+		plan_id: "pro",
+		custom_line_items: [],
+	});
+	expect(result.success).toBe(false);
+	if (result.success) throw new Error("Expected empty custom lines to fail");
+	expect(result.error.issues).toContainEqual(
+		expect.objectContaining({
+			code: "too_small",
+			path: ["custom_line_items"],
+		}),
+	);
+});

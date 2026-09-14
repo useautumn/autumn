@@ -55746,6 +55746,7 @@ paths:
                   description: Custom line items that override the auto-generated proration
                     invoice. Only valid for immediate updates to an existing
                     recurring subscription.
+                  minItems: 1
               required:
                 - customer_id
               title: UpdateSubscriptionParams
@@ -58849,6 +58850,7 @@ paths:
                   description: Custom line items that override the auto-generated proration
                     invoice. Only valid for immediate updates to an existing
                     recurring subscription.
+                  minItems: 1
               required:
                 - customer_id
               title: PreviewUpdateParams
