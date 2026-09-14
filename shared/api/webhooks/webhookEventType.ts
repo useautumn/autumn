@@ -9,6 +9,8 @@ export enum WebhookEventType {
 	BillingAutoTopupSucceeded = "billing.auto_topup_succeeded",
 	BillingUpdated = "billing.updated",
 
+	InvoiceFinalized = "invoice.finalized",
+
 	VercelResourcesDeleted = "vercel.resources.deleted",
 	VercelResourcesProvisioned = "vercel.resources.provisioned",
 	VercelResourcesRotateSecrets = "vercel.resources.rotate_secrets",

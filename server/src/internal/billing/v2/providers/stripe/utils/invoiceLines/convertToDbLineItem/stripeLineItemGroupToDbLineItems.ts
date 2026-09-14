@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { ExpandedStripeInvoiceLineItem } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
+import { billingLineItemsToDbEntities } from "./billingLineItemsToDbEntities";
 import type { StripeLineItemGroup } from "./groupStripeLineItems";
 import { stripeDiscountsToDbDiscounts } from "./stripeDiscountsToDbDiscounts";
 
@@ -253,6 +254,11 @@ const mergeStripeAndBillingLineItems = ({
 		.map((li) => li.context.customerEntitlement?.id)
 		.filter((id): id is string => id !== undefined && id !== null);
 
+	// Tiered groups split by Stripe tier, not by entity, so there is no per-entity fact to store
+	const entities = isMultiItemGroup
+		? []
+		: billingLineItemsToDbEntities({ billingLineItems });
+
 	return {
 		id: generateKsuid({ prefix: "invoice_li_" }),
 		invoice_id: invoiceId,
@@ -293,6 +299,7 @@ const mergeStripeAndBillingLineItems = ({
 		customer_product_ids: customerProductIds,
 		customer_price_ids: customerPriceIds,
 		customer_entitlement_ids: customerEntitlementIds,
+		entities,
 		internal_product_id: context.product.internal_id,
 		product_id: context.product.id,
 		internal_feature_id: context.feature?.internal_id ?? null,

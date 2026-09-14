@@ -1,5 +1,5 @@
 {
-  "id": "f39609f6-da93-42fd-bc85-15533d168e42",
+  "id": "53cf8494-476e-469c-9e07-98a820a39a5f",
   "prevId": "fe838c4b-2b6b-4a20-b503-f52270dd8d4f",
   "version": "7",
   "dialect": "postgresql",
@@ -1802,12 +1802,6 @@
         "external_id": {
           "name": "external_id",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -5329,6 +5323,13 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'{}'"
+        },
+        "entities": {
+          "name": "entities",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         }
       },
       "indexes": {

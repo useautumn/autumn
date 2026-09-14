@@ -26,6 +26,7 @@ import type { DrizzleCli } from "@/db/initDrizzle";
  * - feature_id, internal_feature_id
  * - price_id, billing_timing, direction, prorated
  * - customer_product_ids, customer_price_ids, customer_entitlement_ids
+ * - entities
  * - description_source
  */
 export const reconcileMany = async ({
@@ -80,7 +81,7 @@ export const reconcileMany = async ({
 						// - product_id, internal_product_id
 						// - feature_id, internal_feature_id
 						// - price_id, billing_timing, direction, prorated
-						// - customer_product_ids, customer_price_ids, customer_entitlement_ids
+						// - customer_product_ids, customer_price_ids, customer_entitlement_ids, entities
 						// - description_source
 					},
 				});
