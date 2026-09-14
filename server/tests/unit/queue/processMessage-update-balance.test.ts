@@ -39,6 +39,9 @@ await mockModuleWithRestore(
 		getOrSetCachedFullSubject: async (args: Record<string, unknown>) => {
 			state.getFullSubjectCalls.push(args);
 			return {
+				customer_products: [],
+				extra_customer_entitlements: [],
+				pooled_customer_entitlements: [],
 				customerId: args.customerId,
 				entityId: args.entityId,
 			};

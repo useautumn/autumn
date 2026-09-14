@@ -13,10 +13,7 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getUpdateBalanceProducerQueueUrl } from "@/queue/trackAsyncQueueUrls.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
-import {
-	validateInvoiceCreditBalanceMutationForFeature,
-	validateInvoiceCreditFeatureMutation,
-} from "../../utils/validateInvoiceCreditBalanceMutation.js";
+import { validateInvoiceCreditBalanceMutationForFeature } from "../../utils/validateInvoiceCreditBalanceMutation.js";
 import { updateExpiresAtV2 } from "./updateExpiresAtV2.js";
 import { updateIncludedGrantV2 } from "./updateIncludedGrantV2.js";
 import { updateNextResetAtV2 } from "./updateNextResetAtV2.js";
@@ -25,35 +22,6 @@ import { updateUsageV2 } from "./updateUsageV2.js";
 
 const ASYNC_UPDATE_BALANCE_UNAVAILABLE_MESSAGE =
 	"Async balance update is not available right now";
-
-const changesBalance = ({
-	params,
-	targetBalance,
-}: {
-	params: UpdateBalanceParamsV0;
-	targetBalance?: number;
-}): boolean =>
-	notNullish(targetBalance) ||
-	notNullish(params.remaining) ||
-	notNullish(params.add_to_balance) ||
-	notNullish(params.usage) ||
-	notNullish(params.included_grant);
-
-/** Runs before enqueue, so it can only consult the catalog; the worker checks the stamp. */
-const validateBalanceMutationHint = ({
-	ctx,
-	params,
-	targetBalance,
-}: {
-	ctx: AutumnContext;
-	params: UpdateBalanceParamsV0;
-	targetBalance?: number;
-}) => {
-	if (!changesBalance({ params, targetBalance })) return;
-	validateInvoiceCreditFeatureMutation({
-		feature: ctx.features.find((feature) => feature.id === params.feature_id),
-	});
-};
 
 const validateBalanceMutation = ({
 	params,
@@ -64,12 +32,19 @@ const validateBalanceMutation = ({
 	targetBalance?: number;
 	fullSubject: FullSubject;
 }) => {
-	if (!changesBalance({ params, targetBalance })) return;
+	const changesBalance =
+		notNullish(targetBalance) ||
+		notNullish(params.remaining) ||
+		notNullish(params.add_to_balance) ||
+		notNullish(params.usage) ||
+		notNullish(params.included_grant);
+	if (!changesBalance) return;
 
 	validateInvoiceCreditBalanceMutationForFeature({
 		customerEntitlements: fullSubjectToCustomerEntitlements({
 			fullSubject,
 			featureIds: [params.feature_id],
+			customerEntitlementFilters: buildCustomerEntitlementFilters({ params }),
 		}),
 		featureId: params.feature_id,
 	});
@@ -85,8 +60,6 @@ export const runUpdateBalanceV2 = async ({
 	params: UpdateBalanceParamsV0;
 	targetBalance?: number;
 }) => {
-	validateBalanceMutationHint({ ctx, params, targetBalance });
-
 	const fullSubject = await getOrSetCachedFullSubject({
 		ctx,
 		customerId: params.customer_id,
@@ -217,7 +190,6 @@ export const updateBalanceV2 = async ({
 			ctx.testOptions?.asyncBalanceUpdate);
 
 	if (asyncBalanceUpdateEnabled) {
-		validateBalanceMutationHint({ ctx, params, targetBalance });
 		return queueUpdateBalanceV2({ ctx, params, targetBalance });
 	}
 

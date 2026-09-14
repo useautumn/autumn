@@ -17,6 +17,7 @@ import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/e
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
@@ -99,6 +100,8 @@ test.concurrent(
 			});
 		}
 
+		// The Redis deduction reaches Postgres on the lazy sync, like track-invoice-credit-attribution.
+		await timeout(3_000);
 		const stampedAttribution = (await creditsRow(pricedCustomerId))
 			.usage_attribution;
 		expect(Object.keys(stampedAttribution)).toHaveLength(1);

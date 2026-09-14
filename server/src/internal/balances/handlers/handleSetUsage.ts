@@ -8,10 +8,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { updateUsageV2 } from "../updateBalance/v2/updateUsageV2.js";
-import {
-	validateInvoiceCreditBalanceMutationForFeature,
-	validateInvoiceCreditFeatureMutation,
-} from "../utils/validateInvoiceCreditBalanceMutation.js";
+import { validateInvoiceCreditBalanceMutationForFeature } from "../utils/validateInvoiceCreditBalanceMutation.js";
 
 export const handleSetUsage = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -23,10 +20,6 @@ export const handleSetUsage = createRoute({
 
 		if (isFullSubjectRolloutEnabled({ ctx })) {
 		}
-
-		validateInvoiceCreditFeatureMutation({
-			feature: ctx.features.find((feature) => feature.id === body.feature_id),
-		});
 
 		const fullSubject = await getOrCreateCachedFullSubject({
 			ctx,

@@ -32,6 +32,7 @@ const state = {
 	getFullSubjectCalls: [] as Record<string, unknown>[],
 	updateRemainingCalls: [] as Record<string, unknown>[],
 	originalSend: null as SQSClient["send"] | null,
+	subjectProducts: [] as Record<string, unknown>[],
 };
 
 await mockModuleWithRestore(
@@ -42,7 +43,7 @@ await mockModuleWithRestore(
 			return {
 				customerId: args.customerId,
 				entityId: args.entityId,
-				customer_products: [],
+				customer_products: state.subjectProducts,
 				extra_customer_entitlements: [],
 				pooled_customer_entitlements: [],
 			};
@@ -123,6 +124,22 @@ const createInvoiceCreditCtx = () => {
 	return ctx;
 };
 
+/** A subject whose credits balance was stamped as invoice credits at attach. */
+const stampedInvoiceCreditProducts = () => [
+	{
+		status: "active",
+		customer_entitlements: [
+			{
+				id: "ce_invoice_credits",
+				invoice_credit: true,
+				pooled_contribution_id: null,
+				is_pooled_balance: false,
+				entitlement: { feature: invoiceCreditFeature },
+			},
+		],
+	},
+];
+
 describe("updateBalanceV2 async routing", () => {
 	const originalQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 	const originalStandardQueueUrl =
@@ -134,6 +151,7 @@ describe("updateBalanceV2 async routing", () => {
 		state.queueCommands = [];
 		state.getFullSubjectCalls = [];
 		state.updateRemainingCalls = [];
+		state.subjectProducts = [];
 		_setAsyncBalanceUpdateConfigForTesting({
 			config: AsyncBalanceUpdateConfigSchema.parse({}),
 		});
@@ -244,10 +262,27 @@ describe("updateBalanceV2 async routing", () => {
 		expect(state.updateRemainingCalls).toHaveLength(0);
 	});
 
-	test("rejects invoice-credit balance mutations before enqueue", async () => {
+	test("enqueues flagged-feature mutations without consulting the catalog; the worker decides", async () => {
 		_setAsyncBalanceUpdateConfigForTesting({
 			config: { enabledOrgIds: ["test-org"] },
 		});
+
+		await updateBalanceV2({
+			ctx: createInvoiceCreditCtx(),
+			params: {
+				customer_id: "cus_123",
+				feature_id: invoiceCreditFeature.id,
+				usage: 60,
+			},
+		});
+
+		expect(state.queueCommands).toHaveLength(1);
+		expect(state.getFullSubjectCalls).toHaveLength(0);
+		expect(state.updateRemainingCalls).toHaveLength(0);
+	});
+
+	test("the worker core rejects mutations of a balance stamped as invoice credits", async () => {
+		state.subjectProducts = stampedInvoiceCreditProducts();
 
 		for (const mutation of [
 			{ remaining: 40 },
@@ -257,7 +292,7 @@ describe("updateBalanceV2 async routing", () => {
 			{ included_grant: 100 },
 		] satisfies Partial<UpdateBalanceParamsV0>[]) {
 			await expect(
-				updateBalanceV2({
+				runUpdateBalanceV2({
 					ctx: createInvoiceCreditCtx(),
 					params: {
 						customer_id: "cus_123",
@@ -272,28 +307,67 @@ describe("updateBalanceV2 async routing", () => {
 			});
 		}
 
-		expect(state.queueCommands).toHaveLength(0);
-		expect(state.getFullSubjectCalls).toHaveLength(0);
 		expect(state.updateRemainingCalls).toHaveLength(0);
 	});
 
-	test("rejects invoice-credit balance mutations in the worker core", async () => {
-		await expect(
-			runUpdateBalanceV2({
-				ctx: createInvoiceCreditCtx(),
-				params: {
-					customer_id: "cus_123",
-					feature_id: invoiceCreditFeature.id,
-					usage: 60,
-				},
-			}),
-		).rejects.toMatchObject({
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
+	test("the worker core allows mutations when the flagged feature's balance is not stamped", async () => {
+		state.subjectProducts = [
+			{
+				status: "active",
+				customer_entitlements: [
+					{
+						id: "ce_plain_credits",
+						invoice_credit: false,
+						pooled_contribution_id: null,
+						is_pooled_balance: false,
+						entitlement: { feature: invoiceCreditFeature },
+					},
+				],
+			},
+		];
+
+		await runUpdateBalanceV2({
+			ctx: createInvoiceCreditCtx(),
+			params: {
+				customer_id: "cus_123",
+				feature_id: invoiceCreditFeature.id,
+				remaining: 40,
+			},
+			targetBalance: 40,
 		});
 
-		expect(state.getFullSubjectCalls).toHaveLength(0);
-		expect(state.updateRemainingCalls).toHaveLength(0);
+		expect(state.updateRemainingCalls).toHaveLength(1);
+	});
+
+	test("the worker core scopes the guard to the balance the request names", async () => {
+		state.subjectProducts = [
+			{
+				status: "active",
+				customer_entitlements: [
+					...stampedInvoiceCreditProducts()[0].customer_entitlements,
+					{
+						id: "ce_plain_credits",
+						invoice_credit: false,
+						pooled_contribution_id: null,
+						is_pooled_balance: false,
+						entitlement: { feature: invoiceCreditFeature },
+					},
+				],
+			},
+		];
+
+		await runUpdateBalanceV2({
+			ctx: createInvoiceCreditCtx(),
+			params: {
+				customer_id: "cus_123",
+				feature_id: invoiceCreditFeature.id,
+				balance_id: "ce_plain_credits",
+				remaining: 40,
+			},
+			targetBalance: 40,
+		});
+
+		expect(state.updateRemainingCalls).toHaveLength(1);
 	});
 
 	test("allows metadata-only invoice-credit updates", async () => {
