@@ -107,11 +107,6 @@ export const previewUpdateLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
-export const previewUpdateCustomLineItemSchema = z.object({
-	amount: z.number(),
-	description: z.string(),
-});
-
 export const previewUpdateDiscountSchema = z.object({
 	amountOff: z.number(),
 	percentOff: z.union([z.number(), z.undefined()]).optional(),
@@ -381,11 +376,6 @@ export const previewUpdateCarryOverUsagesOutboundSchema = z.object({
 export const previewUpdateLicenseQuantityOutboundSchema = z.object({
 	license_plan_id: z.string(),
 	quantity: z.number(),
-});
-
-export const previewUpdateCustomLineItemOutboundSchema = z.object({
-	amount: z.number(),
-	description: z.string(),
 });
 
 const previewUpdateDimensionsUpsertLicense3Schema = z.any();
@@ -738,9 +728,6 @@ export const previewUpdateParamsSchema = z.object({
 	licenseQuantities: z
 		.union([z.array(previewUpdateLicenseQuantitySchema), z.undefined()])
 		.optional(),
-	customLineItems: z
-		.union([z.array(previewUpdateCustomLineItemSchema), z.undefined()])
-		.optional(),
 });
 
 export const previewUpdateIncomingSchema = z.object({
@@ -979,8 +966,5 @@ export const previewUpdateParamsOutboundSchema = z.object({
 		.optional(),
 	license_quantities: z
 		.union([z.array(previewUpdateLicenseQuantityOutboundSchema), z.undefined()])
-		.optional(),
-	custom_line_items: z
-		.union([z.array(previewUpdateCustomLineItemOutboundSchema), z.undefined()])
 		.optional(),
 });

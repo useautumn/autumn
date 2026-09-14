@@ -434,11 +434,6 @@ export const billingUpdateLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
-export const billingUpdateCustomLineItemSchema = z.object({
-	amount: z.number(),
-	description: z.string(),
-});
-
 export const billingUpdateInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -1638,11 +1633,6 @@ export const billingUpdateLicenseQuantityOutboundSchema = z.object({
 	quantity: z.number(),
 });
 
-export const billingUpdateCustomLineItemOutboundSchema = z.object({
-	amount: z.number(),
-	description: z.string(),
-});
-
 export const updateSubscriptionParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -1684,9 +1674,6 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 		.optional(),
 	license_quantities: z
 		.union([z.array(billingUpdateLicenseQuantityOutboundSchema), z.undefined()])
-		.optional(),
-	custom_line_items: z
-		.union([z.array(billingUpdateCustomLineItemOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -2603,9 +2590,6 @@ export const updateSubscriptionParamsSchema = z.object({
 		.optional(),
 	licenseQuantities: z
 		.union([z.array(billingUpdateLicenseQuantitySchema), z.undefined()])
-		.optional(),
-	customLineItems: z
-		.union([z.array(billingUpdateCustomLineItemSchema), z.undefined()])
 		.optional(),
 });
 

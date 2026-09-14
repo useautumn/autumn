@@ -1,7 +1,7 @@
 import type {
+	AttachParamsV1,
 	BillingContext,
 	BillingPlan,
-	CustomLineItem,
 } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
@@ -16,7 +16,7 @@ export const handleCustomLineItemsErrors = ({
 	billingContext,
 	billingPlan,
 }: {
-	params: { custom_line_items?: CustomLineItem[] };
+	params: AttachParamsV1;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }) => {

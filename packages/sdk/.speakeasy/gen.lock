@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: 9dc84a42c05c50d560bd8a12165541a0
+  docChecksum: 52ec1e632a8344119634052a21f0ef0a
   docVersion: 2.4.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 0.10.18
   configChecksum: a05ee9fa7bf0a40d4f216cac1903f122
 persistentEdits:
-  generation_id: 1c08eff8-d3c1-48e5-8210-ec0a34add95d
-  pristine_commit_hash: b8061b1e5af07c4ff191a867a579e1e77af51ab6
-  pristine_tree_hash: 7e7d09ae5b1249080f7355ee9e176125bdcc589a
+  generation_id: a8b9673b-1896-4318-aee7-877db83c47f4
+  pristine_commit_hash: 0f7f67957b22b032e4c462c14845d67646fa3a1e
+  pristine_tree_hash: 6de82c841281fdaf1c681c1e8b81bcba51c51a5a
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -1329,10 +1329,6 @@ trackedFiles:
     id: 906be96ff676
     last_write_checksum: sha1:3414aa01262d7907d588321ec19442218652bcc8
     pristine_git_object: f1f9529dad1a14dabb4634133820cf5d623ad54c
-  docs/models/billing-update-custom-line-item.md:
-    id: 183b9f50ce5e
-    last_write_checksum: sha1:ebf0d7e0f0a0b74dbd53494f4318f99bb047adbb
-    pristine_git_object: 2602850ddbb0a7744bf22c48711a95cced993268
   docs/models/billing-update-customize-duration-type.md:
     id: e54077036fcf
     last_write_checksum: sha1:e28c2c1c427b28dc4a6e22fe0f69678079f5fdaf
@@ -12729,10 +12725,6 @@ trackedFiles:
     id: 6f79cb9449b8
     last_write_checksum: sha1:d7547dcc9452c4c4e4488cef5ba81f533c41d560
     pristine_git_object: 5c734a9a7b6b22ebdf88b83aade29ccb93c2c10b
-  docs/models/preview-update-custom-line-item.md:
-    id: 988887c1a0e4
-    last_write_checksum: sha1:df46906d9a5fd4c741142dbe1a8e13d90c19d6f1
-    pristine_git_object: 9fd29648cba6209c54587037b181f1eb4ba48de3
   docs/models/preview-update-customize-duration-type.md:
     id: 6ab169788867
     last_write_checksum: sha1:5831fb309dcbeba1bd8908414f0528ceedac392a
@@ -13139,8 +13131,8 @@ trackedFiles:
     pristine_git_object: e8714760e72728061e1465b212f62eb136f383e2
   docs/models/preview-update-params.md:
     id: 4f27fa514996
-    last_write_checksum: sha1:4c1cec15a9834fff39d481630f6983a14827f019
-    pristine_git_object: 2a44904fd9a16a6feb1882b3beb4e9f76aba214d
+    last_write_checksum: sha1:bcb13fb413d710708bf955bbd1921c29e26cb56a
+    pristine_git_object: 6c5e58800e5c05f71e0d779991f4062355657ba0
   docs/models/preview-update-plan-item-filter.md:
     id: 28aeb1301817
     last_write_checksum: sha1:761e9a26917edf66e8a15ad7b97a29232df026b7
@@ -17763,8 +17755,8 @@ trackedFiles:
     pristine_git_object: 6c1a752cbe2ac2176220c041e897da04d65be0c0
   docs/models/update-subscription-params.md:
     id: 2f1abbd42a8a
-    last_write_checksum: sha1:6d6a8c01f60a2088766c17388510692bfd88c551
-    pristine_git_object: 95bee270f24a6432ebbbfa00af2fc2014084fb90
+    last_write_checksum: sha1:1b0f623678dd8a871a33f67ee815d8ce4e1fef12
+    pristine_git_object: 323018e9d9538da332078bcce953630f98f3a558
   docs/models/upsert-license-add-item-additional-currency.md:
     id: 0ef02c08366a
     last_write_checksum: sha1:14b456f4488754f3f2018d83af89242beaf33c37
@@ -18747,8 +18739,8 @@ trackedFiles:
     pristine_git_object: 16f66886fcadb22a9dc6d44137aea76959579d5c
   src/models/billing-update-op.ts:
     id: e7371769c7ca
-    last_write_checksum: sha1:e293cef0a06f03957de8e580d127d57de42e4708
-    pristine_git_object: eed22a627c9f17a0ccc03a9959d36b4026b9c9b3
+    last_write_checksum: sha1:3d7fa7e466f042d3871dfad91ec4be2dbf500505
+    pristine_git_object: e704cb8a722cd9bf5d5f230fe73409636c4cc739
   src/models/check-op.ts:
     id: 42085bda016a
     last_write_checksum: sha1:deff10c7110765fe6c44cc0ac36276f19f01f19c
@@ -18991,8 +18983,8 @@ trackedFiles:
     pristine_git_object: f14e5fc719362e5ad1b26c0b2c9ec02815c735d4
   src/models/preview-update-response.ts:
     id: a6ce80101517
-    last_write_checksum: sha1:fd301a3d29afe339556f0312d4d378c2af03ef3d
-    pristine_git_object: 0d29cd357604c3ddb8fe8e2a931a148a443b7839
+    last_write_checksum: sha1:5b103730e9dd6d0f1bb1b502b54b0a7fee6b39d9
+    pristine_git_object: 9926ee16d77de438c12b426ecd4af261d64695af
   src/models/redeem-referral-code-op.ts:
     id: 511bf73dc4c6
     last_write_checksum: sha1:9ab6622018c82175ea98d2b26eadb4abf08f441a
