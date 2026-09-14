@@ -18,6 +18,8 @@
  *     - churn                   -> grants outlive the plan (loose rows)
  *     - upgrade / downgrade     -> a live, partly used grant carries over
  *                                  unchanged, on top of the new plan's grant
+ *     - persist_free_overage    -> the grant is split BEFORE the overage
+ *                                  rebalance zeroes the one-off row
  *     - elapsed grant           -> leaves the balance; the sweep deletes it
  *     - expiry on a recurring / non-prepaid item -> 400
  *     - cusProduct.is_custom stays false (grants have their own entitlement)
@@ -65,7 +67,7 @@ const expiringItem = {
 const expiringTopUpPlan = (planId: string) => ({
 	plan_id: planId,
 	name: "Expiring Top-Up",
-	is_add_on: true,
+	add_on: true,
 	items: [expiringItem],
 });
 
@@ -662,5 +664,50 @@ test.concurrent(
 		// 500 from the plain plan + 150 carried
 		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expect(customer.balances[TestFeature.Messages].remaining).toBe(650);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("prepaid one-off expiry: with persist_free_overage on, the purchase still lands in an expiring grant")}`,
+	async () => {
+		const planId = "expiry-pfo";
+		const customerId = "expiry-pfo-cus";
+		const { autumnV2_1, autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [
+				// The overage rebalance only runs for orgs with this flag, and it
+				// zeroes every one-off prepaid row it claims — the split has to win.
+				s.platform.create({
+					userEmail: `expiry-pfo-${Math.random().toString(36).slice(2, 8)}@autumn.test`,
+					configOverrides: { persist_free_overage: true },
+					setupDefaultFeatures: true,
+				}),
+				s.customer({ paymentMethod: "success" }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_3.catalogV2.update({ plans: [expiringTopUpPlan(planId)] });
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: planId,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			withEntities: true,
+		});
+		const { keystones, grants } = messageRows({ fullCustomer, planId });
+
+		// the grant exists and expires; the keystone was not left holding 100
+		expect(grants.length).toBe(1);
+		expect(grants[0].balance).toBe(100);
+		expect(grants[0].expires_at).toBeGreaterThan(Date.now());
+		expect(keystones[0].balance).toBe(0);
+
+		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(customer.balances[TestFeature.Messages].remaining).toBe(100);
 	},
 );
