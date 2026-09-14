@@ -2,8 +2,25 @@ import { describe, expect, test } from "bun:test";
 import {
 	getSlackEventWorkspaceId,
 	normalizeSlackEventsBody,
+	slackMentionedUserIds,
 	slackMessageMentionsUser,
 } from "../../../../src/providers/slack/events.js";
+
+describe("slackMentionedUserIds", () => {
+	test("lists every mentioned user once, in order", () => {
+		expect(
+			slackMentionedUserIds({
+				raw: { text: "<@U1|ayush> lol <@W2> sorry <@U1>", type: "message" },
+			}),
+		).toEqual(["U1", "W2"]);
+	});
+
+	test("returns nothing for messages without mentions or text", () => {
+		expect(slackMentionedUserIds({ raw: { text: "hello" } })).toEqual([]);
+		expect(slackMentionedUserIds({ raw: { text: 42 } })).toEqual([]);
+		expect(slackMentionedUserIds({ raw: null })).toEqual([]);
+	});
+});
 
 describe("Slack event normalization", () => {
 	test("normalizes message events that contain a Slack mention", () => {

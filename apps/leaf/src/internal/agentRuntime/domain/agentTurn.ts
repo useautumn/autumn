@@ -31,7 +31,9 @@ export type AgentTurnResult = AgentTurnBase &
 				text: string;
 		  }>
 		| Readonly<{ kind: "stopped"; reason: RunStopReason; text: string }>
-		| Readonly<{ kind: "empty" }>
+		/** `declined`: the model chose not to reply (a message meant for
+		 * someone else) rather than producing nothing. */
+		| Readonly<{ declined?: boolean; kind: "empty" }>
 	);
 
 export type AgentApprovalTurn = Extract<AgentTurnResult, { kind: "approval" }>;

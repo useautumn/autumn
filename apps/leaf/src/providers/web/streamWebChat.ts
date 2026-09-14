@@ -234,8 +234,9 @@ export const streamWebChat = async ({
 				return;
 			}
 
-			if (output.kind === "empty") writeText(NO_REPLY_MESSAGE);
-			else if (output.text) writeText(output.text);
+			if (output.kind === "empty") {
+				if (!output.declined) writeText(NO_REPLY_MESSAGE);
+			} else if (output.text) writeText(output.text);
 		},
 		onError: (error) => {
 			logger.error("Web chat stream failed", {

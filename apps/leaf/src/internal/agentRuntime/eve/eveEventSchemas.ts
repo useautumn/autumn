@@ -57,7 +57,9 @@ const messageAppendedSchema = turnDataSchema.extend({
 });
 const messageCompletedSchema = turnDataSchema.extend({
 	finishReason: z.string().optional(),
-	message: z.string().default(""),
+	// null: the model replied with Eve's empty-delivery marker (see
+	// emptyDelivery.ts) and chose not to say anything.
+	message: z.string().nullable().default(""),
 });
 const failureSchema = z.object({ message: z.string().default("Eve failed") });
 /** A declared subagent was delegated to; the child runs its own session,

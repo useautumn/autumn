@@ -83,6 +83,59 @@ describe("Eve turn reducer", () => {
 		expect(terminal.outcome).toMatchObject({ kind: "answered", text: "Hello" });
 	});
 
+	test("treats an empty-delivery completion as a declined reply", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const appended = reduceEveTurnEvent({
+			createReasoningId: () => "reasoning_1",
+			event: {
+				messageDelta: "<eve-empty-delivery/>",
+				type: "message.appended",
+			},
+			progress: started.progress,
+		});
+		expect(appended.effects).toEqual([
+			{ id: "reasoning_1", kind: "reasoning", text: "" },
+		]);
+
+		const completed = reduceEveTurnEvent({
+			event: { finishReason: "stop", message: null, type: "message.completed" },
+			progress: appended.progress,
+		});
+		expect(completed.progress).toMatchObject({
+			declinedReply: true,
+			finalText: "",
+		});
+
+		const terminal = reduceEveTurnEvent({
+			event: { type: "session.completed" },
+			progress: completed.progress,
+		});
+		expect(terminal.outcome).toEqual({ declined: true, kind: "silent" });
+	});
+
+	test("treats the literal empty-delivery marker as a declined reply", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const completed = reduceEveTurnEvent({
+			event: {
+				finishReason: "stop",
+				message: "<eve-empty-delivery/>",
+				type: "message.completed",
+			},
+			progress: started.progress,
+		});
+		const terminal = reduceEveTurnEvent({
+			event: { type: "session.completed" },
+			progress: completed.progress,
+		});
+		expect(terminal.outcome).toEqual({ declined: true, kind: "silent" });
+	});
+
 	test("suspends a gated write without mutating prior tool state", () => {
 		const request = { customer_id: "cus_1", plan_id: "pro" };
 		const progress = {
