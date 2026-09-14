@@ -146,8 +146,6 @@ type PayloadFor<T extends WorkflowName> =
 
 type TriggerOptions = {
 	delayMs?: number;
-	/** FIFO group: jobs sharing a group run in order */
-	messageGroupId?: string;
 	metadata?: Record<string, string>;
 	scheduleAt?: Date;
 	scheduleName?: string;
@@ -189,7 +187,6 @@ const triggerWorkflow = async <T extends WorkflowName>({
 				jobName: config.jobName,
 				payload: payload,
 				delayMs: options?.delayMs,
-				messageGroupId: options?.messageGroupId,
 			});
 		} catch (error) {
 			logger.error(`Failed to trigger workflow ${name}: ${error}`);
@@ -228,13 +225,7 @@ export const workflows = {
 	triggerStoreInvoiceLineItems: (
 		payload: StoreInvoiceLineItemsPayload,
 		options?: TriggerOptions,
-	) =>
-		// Same group per invoice so the invoice.created write lands before the finalize reconcile
-		triggerWorkflow({
-			name: "storeInvoiceLineItems",
-			payload,
-			options: { ...options, messageGroupId: payload.stripeInvoiceId },
-		}),
+	) => triggerWorkflow({ name: "storeInvoiceLineItems", payload, options }),
 
 	triggerStoreDeferredInvoiceLineItems: (
 		payload: StoreDeferredInvoiceLineItemsPayload,
