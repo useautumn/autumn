@@ -16,6 +16,8 @@
  *                                  options NOT bumped, cache refreshed
  *     - repeated top-ups        -> one grant per purchase, none merged
  *     - churn                   -> grants outlive the plan (loose rows)
+ *     - upgrade / downgrade     -> a live, partly used grant carries over
+ *                                  unchanged, on top of the new plan's grant
  *     - elapsed grant           -> leaves the balance; the sweep deletes it
  *     - expiry on a recurring / non-prepaid item -> 400
  *     - cusProduct.is_custom stays false (grants have their own entitlement)
@@ -455,5 +457,173 @@ test.concurrent(
 		expect(grants.length).toBe(0);
 		// the keystone survives, so the item can still be topped up
 		expect(keystones.length).toBe(1);
+	},
+);
+
+const expiringPro = (planId: string) => ({
+	plan_id: planId,
+	name: "Expiring Pro",
+	price: { amount: 20, interval: BillingInterval.Month },
+	items: [expiringItem],
+});
+
+const plainPremium = (planId: string) => ({
+	plan_id: planId,
+	name: "Plain Premium",
+	price: { amount: 50, interval: BillingInterval.Month },
+	items: [
+		{
+			feature_id: TestFeature.Messages,
+			included: 500,
+			reset: { interval: ResetInterval.Month },
+		},
+	],
+});
+
+test.concurrent(
+	`${chalk.yellowBright("prepaid one-off expiry: a partly used grant survives an upgrade with its expiry")}`,
+	async () => {
+		const proId = "expiry-up-pro";
+		const premiumId = "expiry-up-premium";
+		const customerId = "expiry-upgrade-cus";
+		const { autumnV2_1, autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ paymentMethod: "success" })],
+			actions: [],
+		});
+
+		await autumnV2_3.catalogV2.update({
+			plans: [expiringPro(proId), plainPremium(premiumId)],
+		});
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: proId,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+		});
+
+		// Burn 50 of the 200 → the grant sits at 150.
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 50,
+		});
+		await timeout(2000);
+
+		const beforeGrant = messageRows({
+			fullCustomer: await CusService.getFull({
+				ctx,
+				idOrInternalId: customerId,
+				withEntities: true,
+			}),
+			planId: proId,
+		}).grants[0];
+		expect(beforeGrant.balance).toBe(150);
+
+		// ── act: upgrade to premium (500 included, no expiring item)
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: premiumId,
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			withEntities: true,
+		});
+		const { grants } = messageRows({ fullCustomer, planId: proId });
+
+		// the grant is the SAME row, untouched: same id, same balance, same expiry
+		expect(grants.length).toBe(1);
+		expect(grants[0].id).toBe(beforeGrant.id);
+		expect(grants[0].balance).toBe(150);
+		expect(grants[0].expires_at).toBe(beforeGrant.expires_at);
+		expect(grants[0].metadata?.plan_id).toBe(proId);
+
+		// 500 from premium + 150 carried = 650 spendable; the 50 already spent
+		// is still real usage against the 200 originally purchased.
+		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(customer.balances[TestFeature.Messages].remaining).toBe(650);
+		expect(customer.balances[TestFeature.Messages].granted).toBe(700);
+		expect(customer.balances[TestFeature.Messages].usage).toBe(50);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("prepaid one-off expiry: a partly used grant survives a downgrade with its expiry")}`,
+	async () => {
+		const premiumId = "expiry-down-premium";
+		const proId = "expiry-down-pro";
+		const customerId = "expiry-downgrade-cus";
+		const { autumnV2_1, autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ paymentMethod: "success" })],
+			actions: [],
+		});
+
+		// premium is the expiring host here so the grant exists before we step down
+		await autumnV2_3.catalogV2.update({
+			plans: [
+				{
+					...expiringPro(premiumId),
+					name: "Expiring Premium",
+					price: { amount: 50, interval: BillingInterval.Month },
+				},
+				{
+					...plainPremium(proId),
+					name: "Plain Pro",
+					price: { amount: 20, interval: BillingInterval.Month },
+				},
+			],
+		});
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: premiumId,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+		});
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 50,
+		});
+		await timeout(2000);
+
+		const beforeGrant = messageRows({
+			fullCustomer: await CusService.getFull({
+				ctx,
+				idOrInternalId: customerId,
+				withEntities: true,
+			}),
+			planId: premiumId,
+		}).grants[0];
+		expect(beforeGrant.balance).toBe(150);
+
+		// ── act: downgrade to the cheaper plan. A cheaper plan is scheduled for
+		// end of cycle, so premium stays live now and pro takes over at renewal.
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: proId,
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			withEntities: true,
+		});
+		const { grants } = messageRows({ fullCustomer, planId: premiumId });
+
+		// the grant is untouched by the scheduling
+		expect(grants.length).toBe(1);
+		expect(grants[0].id).toBe(beforeGrant.id);
+		expect(grants[0].balance).toBe(150);
+		expect(grants[0].expires_at).toBe(beforeGrant.expires_at);
+
+		const scheduled = fullCustomer.customer_products.find(
+			(cp) => cp.product.id === proId,
+		);
+		expect(scheduled?.status).toBe("scheduled");
+
+		// still spendable today; the plain plan's 500 only arrives at renewal
+		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(customer.balances[TestFeature.Messages].remaining).toBe(150);
 	},
 );
