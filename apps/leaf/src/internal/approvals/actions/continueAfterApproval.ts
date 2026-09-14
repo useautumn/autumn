@@ -1,8 +1,8 @@
-import { type ChatApproval, chatInstallations } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { runSlackAgentTurn } from "../../../providers/slack/actions/runSlackAgentTurn.js";
+import { findInstallation } from "../../../providers/slack/installations.js";
 import { presentSlackAgentTurn } from "../../../providers/slack/presenters/presentSlackAgentTurn.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
@@ -33,14 +33,25 @@ export const continueAfterApproval = async ({
 		});
 		const notice = approvalOutcomeNotice({ outcome, writes });
 		if (!notice) return;
-		const installation = await db.query.chatInstallations.findFirst({
-			where: and(
-				eq(chatInstallations.org_id, approval.org_id),
-				eq(chatInstallations.provider, approval.provider),
-				eq(chatInstallations.workspace_id, approval.workspace_id),
-			),
-		});
-		if (!installation) return;
+		// Provider + workspace identify the installation. The approval's org is
+		// the org acted on, which for the internal admin install differs from
+		// the installation's own org — matching on it found nothing, so admin
+		// approvals never got a follow-up turn.
+		const installation = await findInstallation(
+			approval.provider,
+			approval.workspace_id,
+		);
+		if (!installation) {
+			rootLogger.warn("No installation for approval; agent not resumed", {
+				event: "leaf.approval_continue_no_installation",
+				approval_id: approval.id,
+				data: {
+					provider: approval.provider,
+					workspace_id: approval.workspace_id,
+				},
+			});
+			return;
+		}
 		const output = await runSlackAgentTurn({
 			channelId: approval.channel_id,
 			installation,
@@ -49,7 +60,14 @@ export const continueAfterApproval = async ({
 			threadId,
 		});
 		// Neither is presentable, and neither can happen on a turn nobody drives.
-		if (output.kind === "blocked" || output.kind === "stopped") return;
+		if (output.kind === "blocked" || output.kind === "stopped") {
+			rootLogger.info("Approval follow-up turn did not run", {
+				event: "leaf.approval_continue_skipped",
+				approval_id: approval.id,
+				data: { kind: output.kind },
+			});
+			return;
+		}
 		await presentSlackAgentTurn({
 			channelId: approval.channel_id,
 			logAction: () => undefined,
