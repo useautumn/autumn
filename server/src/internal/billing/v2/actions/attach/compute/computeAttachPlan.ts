@@ -9,6 +9,7 @@ import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalancePlan";
+import { splitExpiringPurchaseGrants } from "@/internal/billing/v2/utils/expiringGrants/splitExpiringPurchaseGrants";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachBalanceTransitionPlan } from "./computeAttachBalanceTransitionPlan.js";
@@ -52,6 +53,16 @@ export const computeAttachPlan = ({
 	const oneOffPurchaseRebalance = computeOneOffPurchaseRebalance({
 		ctx,
 		newCustomerProduct,
+	});
+
+	// Expiring items keep their product row as a 0-balance price anchor; the
+	// purchase itself becomes a loose grant whose clock starts at access.
+	const expiringGrants = splitExpiringPurchaseGrants({
+		customerProduct: newCustomerProduct,
+		orgId: ctx.org.id,
+		now:
+			attachBillingContext.accessStartsAt ??
+			attachBillingContext.currentEpochMs,
 	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
@@ -158,6 +169,7 @@ export const computeAttachPlan = ({
 			...(customEnts ?? []),
 			...(carriedOverEntitlements ?? []),
 			...oneOffPrepaidCarryOvers.entitlements,
+			...expiringGrants.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
 		insertPlanLicenses: attachBillingContext.insertPlanLicenses,
@@ -166,6 +178,7 @@ export const computeAttachPlan = ({
 		insertCustomerEntitlements: [
 			...(carriedOverCustomerEntitlements ?? []),
 			...oneOffPrepaidCarryOvers.customerEntitlements,
+			...expiringGrants.customerEntitlements,
 		],
 		updateCustomerEntitlements,
 		pooledBalancePlan,
