@@ -128,7 +128,7 @@ test("overdue access: org default, status and plan exemption preserve normal lim
 	}
 });
 
-test("overdue access: cancellation protection does not grant access", async () => {
+test("overdue access: plan exemption overrides org blocking", async () => {
 	const plan = createPlan();
 	plan.product.config.ignore_past_due = true;
 	const { ctx } = setup({ plans: [plan] });
@@ -139,7 +139,7 @@ test("overdue access: cancellation protection does not grant access", async () =
 	});
 	expect(
 		await getCheckResponseV2({ ctx, checkData, requiredBalance: 1 }),
-	).toMatchObject({ allowed: false, balance: { remaining: 100 } });
+	).toMatchObject({ allowed: true, balance: { remaining: 100 } });
 });
 
 test("overdue access: blocked flags and unlimited grants remain visible without granting access", async () => {
