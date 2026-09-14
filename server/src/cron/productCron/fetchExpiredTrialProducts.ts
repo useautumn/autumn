@@ -1,11 +1,11 @@
 import {
 	ACTIVE_STATUSES,
 	type AppEnv,
-	type Feature,
-	type Organization,
 	customerPrices,
 	customerProducts,
 	customers,
+	type Feature,
+	type Organization,
 } from "@autumn/shared";
 import {
 	and,

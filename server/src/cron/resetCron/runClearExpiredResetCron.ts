@@ -40,7 +40,11 @@ const clearExpiredBatch = async ({ ctx }: { ctx: CronContext }) => {
 	return updated.length;
 };
 
-export const runClearExpiredResetCron = async ({ ctx }: { ctx: CronContext }) => {
+export const runClearExpiredResetCron = async ({
+	ctx,
+}: {
+	ctx: CronContext;
+}) => {
 	const { logger } = ctx;
 
 	if (process.env.DISABLE_CLEAR_EXPIRED_RESET_CRON === "true") return;
