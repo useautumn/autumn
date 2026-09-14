@@ -12,6 +12,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
+import {
+	hasRoomForExpiringGrant,
+	isExpiringPurchase,
+} from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
@@ -154,6 +158,32 @@ export const setupAutoTopupContext = async ({
 		...autoTopupConfig,
 		quantity: roundedQuantity,
 	};
+
+	if (
+		isExpiringPurchase({ customerEntitlement }) &&
+		!hasRoomForExpiringGrant({ fullCustomer, now: Date.now() })
+	) {
+		const message = `Customer ${customerId} already holds the maximum number of loose balances; an expiring top-up for feature ${featureId} would not be visible, skipping`;
+		logger.warn(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "grant_limit_reached",
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+				suppressionKey: [
+					"auto_topup_failed_webhook",
+					ctx.org.id,
+					ctx.env,
+					customerId,
+					featureId,
+					"grant_limit_reached",
+				].join(":"),
+				suppressionTtlMs: 24 * 60 * 60 * 1000,
+			},
+		};
+	}
 
 	const vercelInstallationId = fullCustomer.processors?.vercel?.installation_id;
 	const shouldUseInvoiceMode =
