@@ -173,6 +173,8 @@ export const toFeature = ({
 		usage_limit: null,
 
 		rollover: item.config?.rollover,
+		expiry_duration: item.config?.expiry?.duration,
+		expiry_length: item.config?.expiry?.length,
 		feature_override: item.config?.feature_override,
 	};
 
@@ -241,6 +243,8 @@ const toFeatureAndPrice = ({
 		usage_limit: item.usage_limit || null,
 
 		rollover: item.config?.rollover,
+		expiry_duration: item.config?.expiry?.duration,
+		expiry_length: item.config?.expiry?.length,
 		feature_override: item.config?.feature_override,
 	};
 
