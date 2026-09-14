@@ -217,8 +217,8 @@ test(
 				"qa-dim-repriced → all rows marked changed",
 				"qa-dim-flat → 3 rows marked missing-vs-catalog",
 				"qa-dim-extended → size_large inherited, region_apac added, 2 missing",
-				"non-admin: dimensions section hidden on all four plans",
-				"toggle dimensions off on qa-dim-repriced → warns before stripping rules",
+				"each override row carries its own Dimensions tables; plain rows show Add dimension",
+				"Remove dimensions on qa-dim-repriced strips only that row's rules",
 				"customer sheet shows dimension + multiplier counts, not a flat rate",
 			],
 		});

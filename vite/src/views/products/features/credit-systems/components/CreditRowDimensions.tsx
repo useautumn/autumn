@@ -1,42 +1,32 @@
 import type { CreditSchemaItem } from "@autumn/shared";
-import { hasCreditDimensionRules } from "@autumn/shared";
-import { Switch } from "@autumn/ui";
-import { useState } from "react";
-import { withoutDimensions } from "../utils/creditDimensionUtils";
+import { Button } from "@autumn/ui";
 import { CreditDimensionPriceList } from "./CreditDimensionPriceList";
 
-/** One row's dimensions: the switch opens the tables, and off strips only this row's rules. */
+/** One row's dimension tables, with a single action that strips only this row's rules. */
 export function CreditRowDimensions({
 	item,
 	onChange,
+	onRemove,
 }: {
 	item: CreditSchemaItem;
 	onChange: (item: CreditSchemaItem) => void;
+	onRemove: () => void;
 }) {
-	const [open, setOpen] = useState(false);
-	const enabled = open || hasCreditDimensionRules(item);
-
-	const setEnabled = (next: boolean) => {
-		setOpen(next);
-		if (!next) onChange(withoutDimensions(item));
-	};
-
 	return (
-		<div className="flex flex-col gap-2">
-			<div className="flex items-center justify-between gap-4">
-				<div className="flex flex-col gap-0.5">
-					<span className="text-sm">Dimensions</span>
-					<span className="text-tertiary-foreground text-xs">
-						Price by an event property such as size or region.
-					</span>
-				</div>
-				<Switch
-					aria-label="Dimensions"
-					checked={enabled}
-					onCheckedChange={setEnabled}
-				/>
-			</div>
-			{enabled && <CreditDimensionPriceList item={item} onChange={onChange} />}
-		</div>
+		<CreditDimensionPriceList
+			item={item}
+			onChange={onChange}
+			fieldsAction={
+				<Button
+					type="button"
+					variant="skeleton"
+					size="sm"
+					className="text-tertiary-foreground text-xs hover:text-red-500"
+					onClick={onRemove}
+				>
+					Remove dimensions
+				</Button>
+			}
+		/>
 	);
 }

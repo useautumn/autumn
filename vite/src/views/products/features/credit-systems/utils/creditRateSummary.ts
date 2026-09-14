@@ -4,6 +4,12 @@ import { isGraduated } from "./creditSchemaUtils";
 export const formatCredits = (amount: number) =>
 	`${amount} ${amount === 1 ? "credit" : "credits"}`;
 
+const dimensionCountSuffix = (item: CreditSchemaItem): string => {
+	const count = Object.keys(item.dimensions ?? {}).length;
+	if (count === 0) return "";
+	return ` · ${count} ${count === 1 ? "dimension" : "dimensions"}`;
+};
+
 export const creditRateSummary = ({
 	item,
 	unitName,
@@ -20,8 +26,11 @@ export const creditRateSummary = ({
 			? `per ${unitName}`
 			: `per ${billingUnits} ${unitName}`;
 
-	if (!isGraduated(item)) return `${formatCredits(item.credit_amount)} ${per}`;
-	if (item.tiers.length === 1)
-		return `${formatCredits(item.tiers[0].credit_amount)} ${per}`;
-	return `${item.tiers.length} tiers · from ${formatCredits(item.tiers[0].credit_amount)}`;
+	const rate = !isGraduated(item)
+		? `${formatCredits(item.credit_amount)} ${per}`
+		: item.tiers.length === 1
+			? `${formatCredits(item.tiers[0].credit_amount)} ${per}`
+			: `${item.tiers.length} tiers · from ${formatCredits(item.tiers[0].credit_amount)}`;
+
+	return `${rate}${dimensionCountSuffix(item)}`;
 };

@@ -1,10 +1,11 @@
 /**
- * Dimensions live inside each rate-card row, not on the card as a whole.
+ * Dimensions live inside each rate-card row as an "Add dimension" action
+ * beside Add Tier; once a row has rules the tables show with a
+ * "Remove dimensions" action, and the collapsed summary counts them.
  *
- * Red (current):  the row never renders a Dimensions control or the tables.
- * Green (after):  an expanded row offers a per-row Dimensions switch (admin),
- *                 shows its own tables when the row has rules, and a collapsed
- *                 or non-admin row shows neither.
+ * Red (current):  the row renders a Dimensions switch instead.
+ * Green (after):  button when empty, tables + remove action when populated,
+ *                 nothing for non-admins or collapsed rows.
  */
 
 import { expect, test } from "bun:test";
@@ -34,6 +35,10 @@ const dimensionedRow: CreditSchemaItem = {
 	...plainRow,
 	dimensions: {
 		size_large: { match: { size: "large" }, credit_amount: 16 },
+		size_xl: { match: { size: "xl" }, credit_amount: 20 },
+	},
+	multipliers: {
+		lifecycle_spot: { match: { lifecycle: "spot" }, factor: 0.3 },
 	},
 };
 
@@ -59,48 +64,53 @@ const renderRow = ({
 		/>,
 	);
 
-test("an expanded row with dimensions shows its own dimension tables", () => {
-	const html = renderRow({
-		item: dimensionedRow,
-		isExpanded: true,
-		showRateCardControls: true,
-	});
-
-	expect(html).toContain('aria-label="Dimensions"');
-	expect(html).toContain('aria-label="size values"');
-	expect(html).toContain('aria-label="size_large credit cost"');
-});
-
-test("an expanded plain row offers the switch but no tables", () => {
+test("an expanded plain row offers Add dimension beside Add Tier and no tables", () => {
 	const html = renderRow({
 		item: plainRow,
 		isExpanded: true,
 		showRateCardControls: true,
 	});
 
-	expect(html).toContain('aria-label="Dimensions"');
+	expect(html).toContain("Add Tier");
+	expect(html).toContain("Add dimension");
+	expect(html).not.toContain("Remove dimensions");
 	expect(html).not.toContain('aria-label="size values"');
-	expect(html).not.toContain("New rate");
+	expect(html).not.toContain('aria-label="Dimensions"');
 });
 
-test("non-admins see no dimensions control", () => {
+test("an expanded row with rules shows its tables and a remove action instead of the button", () => {
+	const html = renderRow({
+		item: dimensionedRow,
+		isExpanded: true,
+		showRateCardControls: true,
+	});
+
+	expect(html).toContain('aria-label="size values"');
+	expect(html).toContain('aria-label="size_large credit cost"');
+	expect(html).toContain("Remove dimensions");
+	expect(html).not.toContain("Add dimension");
+});
+
+test("non-admins see neither the button nor the tables", () => {
 	const html = renderRow({
 		item: dimensionedRow,
 		isExpanded: true,
 		showRateCardControls: false,
 	});
 
-	expect(html).not.toContain('aria-label="Dimensions"');
+	expect(html).not.toContain("Add dimension");
+	expect(html).not.toContain("Remove dimensions");
 	expect(html).not.toContain('aria-label="size values"');
 });
 
-test("a collapsed row shows nothing about dimensions", () => {
+test("a collapsed row counts its dimensions in the summary and shows no controls", () => {
 	const html = renderRow({
 		item: dimensionedRow,
 		isExpanded: false,
 		showRateCardControls: true,
 	});
 
-	expect(html).not.toContain('aria-label="Dimensions"');
+	expect(html).toContain("2 dimensions");
+	expect(html).not.toContain("Add dimension");
 	expect(html).not.toContain('aria-label="size values"');
 });
