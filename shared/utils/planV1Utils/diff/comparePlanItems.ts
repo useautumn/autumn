@@ -5,6 +5,7 @@ import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usag
 
 type ApiPlanItem = ApiPlanV1["items"][number];
 export type PlanItemInput = ApiPlanItem | CreatePlanItemParamsV1;
+type PlanItemFeatureOverride = PlanItemInput["feature_override"];
 type PlanItemPrice = NonNullable<PlanItemInput["price"]>;
 type PlanItemRollover = NonNullable<PlanItemInput["rollover"]>;
 type PlanItemProration = NonNullable<PlanItemInput["proration"]>;
@@ -38,6 +39,19 @@ export const additionalCurrenciesCompatible = (
 				(entry.flat_amount ?? null) === (match.flat_amount ?? null))
 		);
 	});
+
+/** Key-order-independent, so two overrides built by different mappers compare
+ * equal on content rather than on construction order. */
+const stableStringify = (value: unknown): string => {
+	if (value === null || typeof value !== "object") return JSON.stringify(value);
+	if (Array.isArray(value)) {
+		return `[${value.map(stableStringify).join(",")}]`;
+	}
+	const entries = Object.entries(value)
+		.filter(([, entry]) => entry !== undefined)
+		.sort(([left], [right]) => left.localeCompare(right));
+	return `{${entries.map(([key, entry]) => `${key}:${stableStringify(entry)}`).join(",")}}`;
+};
 
 /** Unset `interval_count` is 1 when an interval is set; meaningless otherwise. */
 export const normalizeIntervalCount = ({
@@ -143,11 +157,39 @@ const rolloversEqual = (
 	);
 };
 
+/** The db comparator in entsAreSame keys its rates as `credit_amount`; the api
+ * override compared here uses `credit_cost`, so the two cannot share one. */
+const creditSchemaEntriesEqual = (
+	a: NonNullable<NonNullable<PlanItemFeatureOverride>["credit_schema"]>[number],
+	b: NonNullable<NonNullable<PlanItemFeatureOverride>["credit_schema"]>[number],
+): boolean =>
+	a.metered_feature_id === b.metered_feature_id &&
+	stableStringify(a) === stableStringify(b);
+
+/** An override is identity-bearing: a change to it alone is a real item change
+ * and must reach add_items, so an unmatched entry means the items differ. */
+const featureOverridesEqual = (
+	a: PlanItemFeatureOverride,
+	b: PlanItemFeatureOverride,
+): boolean => {
+	if (a == null && b == null) return true;
+	if (a == null || b == null) return false;
+	return (
+		stableStringify(a.markups) === stableStringify(b.markups) &&
+		arraysEqual({
+			equals: creditSchemaEntriesEqual,
+			left: a.credit_schema,
+			right: b.credit_schema,
+		})
+	);
+};
+
 /** User-controlled item fields only. `included` 0 / `unlimited` false /
  * `pooled` false / `interval_count` 1 are the unset defaults. */
 export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 	return (
 		a.feature_id === b.feature_id &&
+		featureOverridesEqual(a.feature_override, b.feature_override) &&
 		(a.entity_feature_id ?? null) === (b.entity_feature_id ?? null) &&
 		(a.pooled ?? false) === (b.pooled ?? false) &&
 		(a.included ?? 0) === (b.included ?? 0) &&

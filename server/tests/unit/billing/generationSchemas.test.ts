@@ -226,3 +226,30 @@ describe("toGenerationOutputSchema salvage", () => {
 		expect(stats.salvaged).toBe(false);
 	});
 });
+
+describe("updateSubscriptionGenerationSchema non-empty guard", () => {
+	test("rejects an update with no update parameter", () => {
+		const parsed = updateSubscriptionGenerationSchema.safeParse({});
+		expect(parsed.success).toBe(false);
+	});
+
+	test("rejects an update carrying only a plan_id target", () => {
+		const parsed = updateSubscriptionGenerationSchema.safeParse({
+			plan_id: "pro",
+		});
+		expect(parsed.success).toBe(false);
+	});
+
+	test("accepts each generatable update field on its own", () => {
+		for (const params of [
+			{ cancel_action: "uncancel" },
+			{ version: 3 },
+			{ feature_quantities: [{ feature_id: "messages", quantity: 10 }] },
+			{ customize: { price: { amount: 50, interval: "month" } } },
+			{ billing_cycle_anchor: "now" },
+		]) {
+			const parsed = updateSubscriptionGenerationSchema.safeParse(params);
+			expect(parsed.success).toBe(true);
+		}
+	});
+});
