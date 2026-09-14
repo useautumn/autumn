@@ -55728,6 +55728,24 @@ paths:
                     - expired
                   type: string
                   x-internal: true
+                custom_line_items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative
+                          for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                    required:
+                      - amount
+                      - description
+                  description: Custom line items that override the auto-generated proration
+                    invoice. Only valid for immediate updates to an existing
+                    recurring subscription.
               required:
                 - customer_id
               title: UpdateSubscriptionParams
@@ -58813,6 +58831,24 @@ paths:
                     - expired
                   type: string
                   x-internal: true
+                custom_line_items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative
+                          for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                    required:
+                      - amount
+                      - description
+                  description: Custom line items that override the auto-generated proration
+                    invoice. Only valid for immediate updates to an existing
+                    recurring subscription.
               required:
                 - customer_id
               title: PreviewUpdateParams

@@ -115,7 +115,8 @@ export const buildStripeSubscriptionUpdateAction = ({
 		params.discounts,
 	].every((field) => field === undefined);
 
-	if (hasNoUpdates) {
+	// The executor resets the anchor before applying the remaining subscription update.
+	if (hasNoUpdates && billingContext.requestedBillingCycleAnchor !== "now") {
 		return undefined;
 	}
 

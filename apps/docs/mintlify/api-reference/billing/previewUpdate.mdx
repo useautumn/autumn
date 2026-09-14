@@ -1304,6 +1304,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="custom_line_items" type="object[]">
+  Custom line items that override the auto-generated proration invoice. Only valid for immediate updates to an existing recurring subscription.
+  <Expandable title="properties">
+    <DynamicParamField body="amount" type="number" required>
+      Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+    </DynamicParamField>
+
+    <DynamicParamField body="description" type="string" required>
+      Description for the line item.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 
 ### Response
 
