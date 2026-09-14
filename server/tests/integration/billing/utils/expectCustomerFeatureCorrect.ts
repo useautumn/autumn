@@ -87,9 +87,11 @@ const assertCustomerFeatureCorrect = ({
  * settles — a tracked deduction reaches Postgres via Redis then the queue.
  */
 export const expectCustomerFeatureCorrect = pollableCustomerExpect({
-	fetchCustomer: ({ customerId, autumn }: FeatureExpectParams) =>
-		(autumn ?? defaultAutumn).customers.get<ApiCustomerV3 | ApiEntityV0>(
-			customerId!,
-		),
+	fetchCustomer: ({ customerId, entityId, autumn }: FeatureExpectParams) => {
+		const client = autumn ?? defaultAutumn;
+		return entityId
+			? client.entities.get<ApiEntityV0>(customerId!, entityId)
+			: client.customers.get<ApiCustomerV3>(customerId!);
+	},
 	assert: assertCustomerFeatureCorrect,
 });
