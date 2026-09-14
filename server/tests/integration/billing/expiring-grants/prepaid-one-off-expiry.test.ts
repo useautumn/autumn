@@ -31,10 +31,12 @@ import {
 	CusProductStatus,
 	EntitlementDuration,
 	type FullCustomer,
+	ms,
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { timeout } from "@tests/utils/genUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { sql } from "drizzle-orm";
@@ -555,11 +557,12 @@ test.concurrent(
 		const premiumId = "expiry-down-premium";
 		const proId = "expiry-down-pro";
 		const customerId = "expiry-downgrade-cus";
-		const { autumnV2_1, autumnV2_3, ctx } = await initScenario({
-			customerId,
-			setup: [s.customer({ paymentMethod: "success" })],
-			actions: [],
-		});
+		const { autumnV2_1, autumnV2_3, ctx, testClockId, advancedTo } =
+			await initScenario({
+				customerId,
+				setup: [s.customer({ paymentMethod: "success", testClock: true })],
+				actions: [],
+			});
 
 		// premium is the expiring host here so the grant exists before we step down
 		await autumnV2_3.catalogV2.update({
@@ -624,7 +627,40 @@ test.concurrent(
 		expect(scheduled?.status).toBe(CusProductStatus.Scheduled);
 
 		// still spendable today; the plain plan's 500 only arrives at renewal
+		const beforeRenewal =
+			await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(beforeRenewal.balances[TestFeature.Messages].remaining).toBe(150);
+
+		// ── advance past the cycle boundary so the scheduled plan activates
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advanceTo: advancedTo + ms.days(35),
+			waitForSeconds: 30,
+		});
+
+		const afterRenewal = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			withEntities: true,
+		});
+		expect(
+			afterRenewal.customer_products.find((cp) => cp.product.id === proId)
+				?.status,
+		).toBe(CusProductStatus.Active);
+
+		// the grant survived the completed transition, byte for byte
+		const survivors = messageRows({
+			fullCustomer: afterRenewal,
+			planId: premiumId,
+		}).grants;
+		expect(survivors.length).toBe(1);
+		expect(survivors[0].id).toBe(beforeGrant.id);
+		expect(survivors[0].balance).toBe(150);
+		expect(survivors[0].expires_at).toBe(beforeGrant.expires_at);
+
+		// 500 from the plain plan + 150 carried
 		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-		expect(customer.balances[TestFeature.Messages].remaining).toBe(150);
+		expect(customer.balances[TestFeature.Messages].remaining).toBe(650);
 	},
 );
