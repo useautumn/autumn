@@ -52,6 +52,8 @@ export const storeInvoiceLineItems = async ({
 		ctx.logger.error(
 			`[storeInvoiceLineItems] Failed for ${stripeInvoiceId}: ${error instanceof Error ? error.message : "Unknown error"}`,
 		);
+		// A swallowed failure would permanently lose the finalized event; let SQS retry
+		if (emitFinalizedWebhook) throw error;
 		return;
 	}
 
