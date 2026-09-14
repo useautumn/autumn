@@ -47,21 +47,17 @@ const ADDRESSED_TO_OTHERS_GUIDANCE = `This message @-mentions someone else in th
 
 /** Every turn names its speaker: a thread has several people in it, and
  * without this the model reads a reply meant for someone else as its own.
- * Follow-ups also make delivery conditional, so the model can stay quiet on
- * chatter between people instead of acknowledging it. */
-const speakerSection = ({
-	newSession,
-	speaker,
-}: {
-	newSession: boolean;
-	speaker?: AgentTurnSpeaker;
-}) => {
+ * A message that does not @-mention the agent also makes delivery
+ * conditional, so the model can stay quiet on chatter between people. Keyed
+ * on the mention, not on session age: a recovered session mid-thread is
+ * still a follow-up. */
+const speakerSection = (speaker?: AgentTurnSpeaker) => {
 	if (!speaker) return null;
 	const identity = speaker.email
 		? `${speaker.name} (${speaker.email})`
 		: speaker.name;
 	const lines = [`Speaker: ${identity}`];
-	if (!newSession) lines.push(CONDITIONAL_REPLY_GUIDANCE);
+	if (!speaker.mentionsAgent) lines.push(CONDITIONAL_REPLY_GUIDANCE);
 	if (speaker.mentionsOthers && !speaker.mentionsAgent) {
 		lines.push(ADDRESSED_TO_OTHERS_GUIDANCE);
 	}
@@ -122,7 +118,7 @@ export const buildAgentMessageText = ({
 		!newSession && !approvalEdit
 			? pendingApprovalsSection(pendingApprovals)
 			: null,
-		speakerSection({ newSession, speaker: params.speaker }),
+		speakerSection(params.speaker),
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n");
