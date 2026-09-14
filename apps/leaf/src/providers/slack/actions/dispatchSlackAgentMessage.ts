@@ -106,19 +106,12 @@ const runAndReply = async ({
 			});
 			return "close";
 		}
-		// A subscribed thread answers every reply, so a follow-up that @-mentions
-		// another person and not the bot is theirs to answer, not ours.
+		// A subscribed thread delivers every reply; the model is told who spoke
+		// and whom they addressed, and declines replies meant for someone else.
 		const mentionedUserIds = slackMentionedUserIds({ raw });
 		const botUserId = installation.bot_user_id ?? undefined;
 		const mentionsAgent = !botUserId || mentionedUserIds.includes(botUserId);
 		const mentionsOthers = mentionedUserIds.some((id) => id !== botUserId);
-		if (!showRunPlan && mentionsOthers && !mentionsAgent) {
-			logger.info("Skipping Slack message addressed to another user", {
-				event: "leaf.slack_message_skipped",
-				data: { reason: "other_user_mention" },
-			});
-			return "keep";
-		}
 		const speaker = author
 			? { ...author, mentionsAgent, mentionsOthers }
 			: undefined;

@@ -23,8 +23,24 @@ describe("Harness message text", () => {
 		});
 
 		expect(text).toContain("Speaker: Aneil Singh (aneil@example.com)");
+		expect(text).toContain("Delivery is conditional");
+		expect(text).toContain("<eve-empty-delivery/>");
 		expect(text).not.toContain("@-mentions someone else");
 		expect(extractUserMessageText(text)).toBe("yep, we're good!");
+	});
+
+	test("does not make delivery conditional on a thread's first turn", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: true,
+			params: {
+				speaker: { name: "Aneil Singh" },
+				text: "please update their enterprise billing",
+			},
+		});
+
+		expect(text).toContain("Speaker: Aneil Singh");
+		expect(text).not.toContain("Delivery is conditional");
 	});
 
 	test("flags a message that mentions someone else and not the agent", () => {
@@ -43,6 +59,7 @@ describe("Harness message text", () => {
 
 		expect(text).toContain("Speaker: Aneil Singh");
 		expect(text).toContain("@-mentions someone else in the thread, not you");
+		expect(text).toContain("reply with exactly <eve-empty-delivery/>");
 	});
 
 	test("does not flag a message that mentions the agent alongside others", () => {

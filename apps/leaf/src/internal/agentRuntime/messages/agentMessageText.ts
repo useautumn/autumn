@@ -4,6 +4,7 @@ import type {
 	AgentTurnSpeaker,
 	PendingApprovalNote,
 } from "../domain/agentTurnContext.js";
+import { EVE_EMPTY_DELIVERY_SENTINEL } from "../eve/emptyDelivery.js";
 
 const USER_MESSAGE_OPEN = "<user_message>";
 const USER_MESSAGE_CLOSE = "</user_message>";
@@ -40,17 +41,27 @@ const pendingApprovalsSection = (
 	return [...cards, PENDING_APPROVAL_GUIDANCE].join("\n");
 };
 
-const ADDRESSED_TO_OTHERS_GUIDANCE =
-	"This message @-mentions someone else in the thread, not you. Treat it as addressed to them unless it plainly asks you for something.";
+const CONDITIONAL_REPLY_GUIDANCE = `Delivery is conditional: several people are in this thread. If this message is a reply to one of them and asks nothing of you, reply with exactly ${EVE_EMPTY_DELIVERY_SENTINEL} and no other text; the message still counts as context. Otherwise answer as usual.`;
+
+const ADDRESSED_TO_OTHERS_GUIDANCE = `This message @-mentions someone else in the thread, not you. Unless it plainly asks you for something, reply with exactly ${EVE_EMPTY_DELIVERY_SENTINEL}.`;
 
 /** Every turn names its speaker: a thread has several people in it, and
- * without this the model reads a reply meant for someone else as its own. */
-const speakerSection = (speaker?: AgentTurnSpeaker) => {
+ * without this the model reads a reply meant for someone else as its own.
+ * Follow-ups also make delivery conditional, so the model can stay quiet on
+ * chatter between people instead of acknowledging it. */
+const speakerSection = ({
+	newSession,
+	speaker,
+}: {
+	newSession: boolean;
+	speaker?: AgentTurnSpeaker;
+}) => {
 	if (!speaker) return null;
 	const identity = speaker.email
 		? `${speaker.name} (${speaker.email})`
 		: speaker.name;
 	const lines = [`Speaker: ${identity}`];
+	if (!newSession) lines.push(CONDITIONAL_REPLY_GUIDANCE);
 	if (speaker.mentionsOthers && !speaker.mentionsAgent) {
 		lines.push(ADDRESSED_TO_OTHERS_GUIDANCE);
 	}
@@ -111,7 +122,7 @@ export const buildAgentMessageText = ({
 		!newSession && !approvalEdit
 			? pendingApprovalsSection(pendingApprovals)
 			: null,
-		speakerSection(params.speaker),
+		speakerSection({ newSession, speaker: params.speaker }),
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n");
