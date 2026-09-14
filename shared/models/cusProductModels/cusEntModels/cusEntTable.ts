@@ -126,6 +126,14 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_loose_customer_expires")
 			.on(table.internal_customer_id, table.expires_at)
 			.where(sql`${table.customer_product_id} IS NULL`),
+		// Expiry-first for the unscoped purchase-grant sweep; the partial
+		// predicate keeps it to grant rows only.
+		index("idx_customer_entitlements_expiring_grants")
+			.on(table.expires_at)
+			.where(
+				sql`${table.customer_product_id} IS NULL AND ${table.expires_at} IS NOT NULL AND ${table.metadata}->>'source' IS NOT NULL`,
+			)
+			.concurrently(),
 		index("idx_customer_entitlements_next_reset_not_expired")
 			.on(table.next_reset_at)
 			.where(

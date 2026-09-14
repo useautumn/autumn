@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_customer_entitlements_expiring_grants" ON "customer_entitlements" USING btree ("expires_at") WHERE "customer_entitlements"."customer_product_id" IS NULL AND "customer_entitlements"."expires_at" IS NOT NULL AND "customer_entitlements"."metadata"->>'source' IS NOT NULL;
