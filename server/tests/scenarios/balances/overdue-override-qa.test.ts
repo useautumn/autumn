@@ -24,10 +24,8 @@ test.concurrent(
 				items.unlimited({ featureId: TestFeature.Words }),
 			],
 		});
-		exempt.config = {
-			ignore_past_due: true,
-			allow_overdue_entitlements: true,
-		};
+		exempt.config = { ignore_past_due: true };
+		Object.assign(exempt.config, { allow_overdue_entitlements: true });
 		const addon = products.base({
 			id: "overdue-active-addon",
 			isAddOn: true,
