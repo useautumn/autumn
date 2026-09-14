@@ -129,6 +129,10 @@ export type PreviewUpdateBasePrice = {
   additionalCurrencies?: Array<PreviewUpdateAdditionalCurrency> | undefined;
 };
 
+export type PreviewUpdateItemThresholdBilling = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -654,6 +658,10 @@ export type PreviewUpdateItemFeatureOverride = {
  */
 export type PreviewUpdateItemPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: PreviewUpdateItemThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -689,6 +697,10 @@ export type PreviewUpdateItemPlanItem = {
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
   featureOverride?: PreviewUpdateItemFeatureOverride | undefined;
+};
+
+export type PreviewUpdateAddItemThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -1224,6 +1236,10 @@ export type PreviewUpdateAddItemFeatureOverride = {
  */
 export type PreviewUpdateAddItemPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: PreviewUpdateAddItemThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -1713,6 +1729,10 @@ export type PreviewUpdateUpsertLicenseBasePrice = {
     | undefined;
 };
 
+export type PreviewUpdateUpsertLicenseThresholdBilling = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -1984,37 +2004,6 @@ export type PreviewUpdateDimensionsToUpsertLicenseEnum2 = ClosedEnum<
   typeof PreviewUpdateDimensionsToUpsertLicenseEnum2
 >;
 
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type PreviewUpdateDimensionsUpsertLicenseToUnion2 =
-  | number
-  | PreviewUpdateDimensionsToUpsertLicenseEnum2;
-
-export type PreviewUpdateDimensionsUpsertLicenseTier2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | PreviewUpdateDimensionsToUpsertLicenseEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type PreviewUpdateDimensionsUpsertLicense3 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<PreviewUpdateDimensionsUpsertLicenseTier2>;
-};
-
 /** @internal */
 export type PreviewUpdateFeatureQuantityRequestBody$Outbound = {
   feature_id: string;
@@ -2066,7 +2055,7 @@ export type PreviewUpdateFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
+  on_end: string;
 };
 
 /** @internal */
@@ -2078,7 +2067,7 @@ export const PreviewUpdateFreeTrialParams$outboundSchema: z.ZodMiniType<
     durationLength: z.number(),
     durationType: z._default(PreviewUpdateDurationType$outboundSchema, "month"),
     cardRequired: z._default(z.boolean(), false),
-    onEnd: z.optional(PreviewUpdateOnEnd$outboundSchema),
+    onEnd: z._default(PreviewUpdateOnEnd$outboundSchema, "bill"),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2134,7 +2123,7 @@ export function previewUpdateAdditionalCurrencyToJSON(
 export type PreviewUpdateBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<PreviewUpdateAdditionalCurrency$Outbound>
     | undefined;
@@ -2148,7 +2137,7 @@ export const PreviewUpdateBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: PreviewUpdatePriceInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => PreviewUpdateAdditionalCurrency$outboundSchema)),
     ),
@@ -2170,6 +2159,29 @@ export function previewUpdateBasePriceToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateItemThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const PreviewUpdateItemThresholdBilling$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemThresholdBilling$Outbound,
+  PreviewUpdateItemThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function previewUpdateItemThresholdBillingToJSON(
+  previewUpdateItemThresholdBilling: PreviewUpdateItemThresholdBilling,
+): string {
+  return JSON.stringify(
+    PreviewUpdateItemThresholdBilling$outboundSchema.parse(
+      previewUpdateItemThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const PreviewUpdateItemResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof PreviewUpdateItemResetInterval
 > = z.enum(PreviewUpdateItemResetInterval);
@@ -2177,7 +2189,7 @@ export const PreviewUpdateItemResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewUpdateItemReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -2187,7 +2199,7 @@ export const PreviewUpdateItemReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: PreviewUpdateItemResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3333,6 +3345,10 @@ export function previewUpdateItemFeatureOverrideToJSON(
 
 /** @internal */
 export type PreviewUpdateItemPlanItem$Outbound = {
+  threshold_billing?:
+    | PreviewUpdateItemThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -3350,6 +3366,11 @@ export const PreviewUpdateItemPlanItem$outboundSchema: z.ZodMiniType<
   PreviewUpdateItemPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(
+      z.nullable(
+        z.lazy(() => PreviewUpdateItemThresholdBilling$outboundSchema),
+      ),
+    ),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
@@ -3368,6 +3389,7 @@ export const PreviewUpdateItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -3383,6 +3405,29 @@ export function previewUpdateItemPlanItemToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateAddItemThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemThresholdBilling$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAddItemThresholdBilling$Outbound,
+  PreviewUpdateAddItemThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function previewUpdateAddItemThresholdBillingToJSON(
+  previewUpdateAddItemThresholdBilling: PreviewUpdateAddItemThresholdBilling,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemThresholdBilling$outboundSchema.parse(
+      previewUpdateAddItemThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const PreviewUpdateAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof PreviewUpdateAddItemResetInterval
 > = z.enum(PreviewUpdateAddItemResetInterval);
@@ -3390,7 +3435,7 @@ export const PreviewUpdateAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewUpdateAddItemReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -3400,7 +3445,7 @@ export const PreviewUpdateAddItemReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: PreviewUpdateAddItemResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4578,6 +4623,10 @@ export function previewUpdateAddItemFeatureOverrideToJSON(
 
 /** @internal */
 export type PreviewUpdateAddItemPlanItem$Outbound = {
+  threshold_billing?:
+    | PreviewUpdateAddItemThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -4595,11 +4644,16 @@ export const PreviewUpdateAddItemPlanItem$outboundSchema: z.ZodMiniType<
   PreviewUpdateAddItemPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
+      PreviewUpdateAddItemThresholdBilling$outboundSchema
+    ))),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() => PreviewUpdateAddItemReset$outboundSchema)),
+    reset: z.optional(z.lazy(() =>
+      PreviewUpdateAddItemReset$outboundSchema
+    )),
     price: z.optional(z.lazy(() => PreviewUpdateAddItemPrice$outboundSchema)),
     proration: z.optional(
       z.lazy(() => PreviewUpdateAddItemProration$outboundSchema),
@@ -4613,6 +4667,7 @@ export const PreviewUpdateAddItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -4726,7 +4781,7 @@ export type PreviewUpdateCustomizeFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
+  on_end: string;
 };
 
 /** @internal */
@@ -4742,7 +4797,7 @@ export const PreviewUpdateCustomizeFreeTrialParams$outboundSchema:
         "month",
       ),
       cardRequired: z._default(z.boolean(), false),
-      onEnd: z.optional(PreviewUpdateCustomizeOnEnd$outboundSchema),
+      onEnd: z._default(PreviewUpdateCustomizeOnEnd$outboundSchema, "bill"),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -5209,7 +5264,7 @@ export function previewUpdateUpsertLicenseAdditionalCurrencyToJSON(
 export type PreviewUpdateUpsertLicenseBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<PreviewUpdateUpsertLicenseAdditionalCurrency$Outbound>
     | undefined;
@@ -5223,7 +5278,7 @@ export const PreviewUpdateUpsertLicenseBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: PreviewUpdatePriceUpsertLicenseInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(z.array(z.lazy(() =>
       PreviewUpdateUpsertLicenseAdditionalCurrency$outboundSchema
     ))),
@@ -5247,6 +5302,31 @@ export function previewUpdateUpsertLicenseBasePriceToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateUpsertLicenseThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const PreviewUpdateUpsertLicenseThresholdBilling$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateUpsertLicenseThresholdBilling$Outbound,
+    PreviewUpdateUpsertLicenseThresholdBilling
+  > = z.object({
+    threshold: z.number(),
+  });
+
+export function previewUpdateUpsertLicenseThresholdBillingToJSON(
+  previewUpdateUpsertLicenseThresholdBilling:
+    PreviewUpdateUpsertLicenseThresholdBilling,
+): string {
+  return JSON.stringify(
+    PreviewUpdateUpsertLicenseThresholdBilling$outboundSchema.parse(
+      previewUpdateUpsertLicenseThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const PreviewUpdateUpsertLicenseResetInterval$outboundSchema:
   z.ZodMiniEnum<typeof PreviewUpdateUpsertLicenseResetInterval> = z.enum(
     PreviewUpdateUpsertLicenseResetInterval,
@@ -5255,7 +5335,7 @@ export const PreviewUpdateUpsertLicenseResetInterval$outboundSchema:
 /** @internal */
 export type PreviewUpdateUpsertLicenseReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -5265,7 +5345,7 @@ export const PreviewUpdateUpsertLicenseReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: PreviewUpdateUpsertLicenseResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5664,108 +5744,3 @@ export const PreviewUpdateDimensionsToUpsertLicenseEnum2$outboundSchema:
   z.ZodMiniEnum<typeof PreviewUpdateDimensionsToUpsertLicenseEnum2> = z.enum(
     PreviewUpdateDimensionsToUpsertLicenseEnum2,
   );
-
-/** @internal */
-export type PreviewUpdateDimensionsUpsertLicenseToUnion2$Outbound =
-  | number
-  | string;
-
-/** @internal */
-export const PreviewUpdateDimensionsUpsertLicenseToUnion2$outboundSchema:
-  z.ZodMiniType<
-    PreviewUpdateDimensionsUpsertLicenseToUnion2$Outbound,
-    PreviewUpdateDimensionsUpsertLicenseToUnion2
-  > = smartUnion([
-    z.number(),
-    PreviewUpdateDimensionsToUpsertLicenseEnum2$outboundSchema,
-  ]);
-
-export function previewUpdateDimensionsUpsertLicenseToUnion2ToJSON(
-  previewUpdateDimensionsUpsertLicenseToUnion2:
-    PreviewUpdateDimensionsUpsertLicenseToUnion2,
-): string {
-  return JSON.stringify(
-    PreviewUpdateDimensionsUpsertLicenseToUnion2$outboundSchema.parse(
-      previewUpdateDimensionsUpsertLicenseToUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type PreviewUpdateDimensionsUpsertLicenseTier2$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const PreviewUpdateDimensionsUpsertLicenseTier2$outboundSchema:
-  z.ZodMiniType<
-    PreviewUpdateDimensionsUpsertLicenseTier2$Outbound,
-    PreviewUpdateDimensionsUpsertLicenseTier2
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        PreviewUpdateDimensionsToUpsertLicenseEnum2$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function previewUpdateDimensionsUpsertLicenseTier2ToJSON(
-  previewUpdateDimensionsUpsertLicenseTier2:
-    PreviewUpdateDimensionsUpsertLicenseTier2,
-): string {
-  return JSON.stringify(
-    PreviewUpdateDimensionsUpsertLicenseTier2$outboundSchema.parse(
-      previewUpdateDimensionsUpsertLicenseTier2,
-    ),
-  );
-}
-
-/** @internal */
-export type PreviewUpdateDimensionsUpsertLicense3$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<PreviewUpdateDimensionsUpsertLicenseTier2$Outbound>;
-};
-
-/** @internal */
-export const PreviewUpdateDimensionsUpsertLicense3$outboundSchema:
-  z.ZodMiniType<
-    PreviewUpdateDimensionsUpsertLicense3$Outbound,
-    PreviewUpdateDimensionsUpsertLicense3
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      tierBehavior: z.literal("graduated"),
-      tiers: z.array(
-        z.lazy(() => PreviewUpdateDimensionsUpsertLicenseTier2$outboundSchema),
-      ),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        tierBehavior: "tier_behavior",
-      });
-    }),
-  );
-
-export function previewUpdateDimensionsUpsertLicense3ToJSON(
-  previewUpdateDimensionsUpsertLicense3: PreviewUpdateDimensionsUpsertLicense3,
-): string {
-  return JSON.stringify(
-    PreviewUpdateDimensionsUpsertLicense3$outboundSchema.parse(
-      previewUpdateDimensionsUpsertLicense3,
-    ),
-  );
-}

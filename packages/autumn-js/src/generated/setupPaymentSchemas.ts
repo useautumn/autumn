@@ -16,6 +16,10 @@ export const setupPaymentAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
+export const setupPaymentItemThresholdBillingSchema = z.object({
+	threshold: z.number(),
+});
+
 export const setupPaymentItemAdditionalCurrencySchema = z.object({
 	currency: z.string(),
 	amount: z.number(),
@@ -127,6 +131,10 @@ export const setupPaymentItemMarkupsSchema = z.object({
 		])
 		.optional()
 		.nullable(),
+});
+
+export const setupPaymentAddItemThresholdBillingSchema = z.object({
+	threshold: z.number(),
 });
 
 export const setupPaymentAddItemAdditionalCurrencySchema = z.object({
@@ -279,6 +287,10 @@ export const setupPaymentOverageAllowedSchema = z.object({
 export const setupPaymentUpsertLicenseAdditionalCurrencySchema = z.object({
 	currency: z.string(),
 	amount: z.number(),
+});
+
+export const setupPaymentUpsertLicenseThresholdBillingSchema = z.object({
+	threshold: z.number(),
 });
 
 export const setupPaymentUpsertLicenseAddItemAdditionalCurrencySchema =
@@ -448,7 +460,7 @@ export const setupPaymentFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
-	on_end: z.union([z.string(), z.undefined()]).optional(),
+	on_end: z.string(),
 });
 
 export const setupPaymentAdditionalCurrencyOutboundSchema = z.object({
@@ -459,7 +471,7 @@ export const setupPaymentAdditionalCurrencyOutboundSchema = z.object({
 export const setupPaymentBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 	additional_currencies: z
 		.union([
 			z.array(setupPaymentAdditionalCurrencyOutboundSchema),
@@ -468,9 +480,13 @@ export const setupPaymentBasePriceOutboundSchema = z.object({
 		.optional(),
 });
 
+export const setupPaymentItemThresholdBillingOutboundSchema = z.object({
+	threshold: z.number(),
+});
+
 export const setupPaymentItemResetOutboundSchema = z.object({
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 });
 
 export const setupPaymentItemAdditionalCurrencyOutboundSchema = z.object({
@@ -746,6 +762,10 @@ export const setupPaymentItemFeatureOverrideOutboundSchema = z.object({
 });
 
 export const setupPaymentItemPlanItemOutboundSchema = z.object({
+	threshold_billing: z
+		.union([setupPaymentItemThresholdBillingOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -767,9 +787,13 @@ export const setupPaymentItemPlanItemOutboundSchema = z.object({
 		.optional(),
 });
 
+export const setupPaymentAddItemThresholdBillingOutboundSchema = z.object({
+	threshold: z.number(),
+});
+
 export const setupPaymentAddItemResetOutboundSchema = z.object({
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 });
 
 export const setupPaymentAddItemAdditionalCurrencyOutboundSchema = z.object({
@@ -1047,6 +1071,10 @@ export const setupPaymentAddItemFeatureOverrideOutboundSchema = z.object({
 });
 
 export const setupPaymentAddItemPlanItemOutboundSchema = z.object({
+	threshold_billing: z
+		.union([setupPaymentAddItemThresholdBillingOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -1085,7 +1113,7 @@ export const setupPaymentCustomizeFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
-	on_end: z.union([z.string(), z.undefined()]).optional(),
+	on_end: z.string(),
 });
 
 export const setupPaymentPurchaseLimitOutboundSchema = z.object({
@@ -1195,7 +1223,7 @@ export const setupPaymentUpsertLicenseAdditionalCurrencyOutboundSchema =
 export const setupPaymentUpsertLicenseBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 	additional_currencies: z
 		.union([
 			z.array(setupPaymentUpsertLicenseAdditionalCurrencyOutboundSchema),
@@ -1204,9 +1232,15 @@ export const setupPaymentUpsertLicenseBasePriceOutboundSchema = z.object({
 		.optional(),
 });
 
+export const setupPaymentUpsertLicenseThresholdBillingOutboundSchema = z.object(
+	{
+		threshold: z.number(),
+	},
+);
+
 export const setupPaymentUpsertLicenseResetOutboundSchema = z.object({
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 });
 
 export const setupPaymentUpsertLicenseAddItemAdditionalCurrencyOutboundSchema =
@@ -1483,6 +1517,13 @@ export const setupPaymentUpsertLicenseFeatureOverrideOutboundSchema = z.object({
 });
 
 export const setupPaymentUpsertLicensePlanItemOutboundSchema = z.object({
+	threshold_billing: z
+		.union([
+			setupPaymentUpsertLicenseThresholdBillingOutboundSchema,
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -1871,6 +1912,10 @@ export const setupPaymentItemFeatureOverrideSchema = z.object({
 });
 
 export const setupPaymentItemPlanItemSchema = z.object({
+	thresholdBilling: z
+		.union([setupPaymentItemThresholdBillingSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -2070,6 +2115,10 @@ export const setupPaymentAddItemFeatureOverrideSchema = z.object({
 });
 
 export const setupPaymentAddItemPlanItemSchema = z.object({
+	thresholdBilling: z
+		.union([setupPaymentAddItemThresholdBillingSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -2409,6 +2458,10 @@ export const setupPaymentUpsertLicenseFeatureOverrideSchema = z.object({
 });
 
 export const setupPaymentUpsertLicensePlanItemSchema = z.object({
+	thresholdBilling: z
+		.union([setupPaymentUpsertLicenseThresholdBillingSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),

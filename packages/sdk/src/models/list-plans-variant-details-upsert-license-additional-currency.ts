@@ -117,6 +117,10 @@ export type ListPlansPrice = {
   processors?: ListPlansPriceProcessors | undefined;
 };
 
+export type ListPlansItemThresholdBilling = {
+  threshold: number;
+};
+
 /**
  * The type of the feature
  */
@@ -665,6 +669,10 @@ export type ListPlansItemFeatureOverride = {
 
 export type ListPlansItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: ListPlansItemThresholdBilling | null | undefined;
+  /**
    * The ID of the feature this item configures.
    */
   featureId: string;
@@ -1166,13 +1174,17 @@ export type ListPlansVariantDetailsBasePrice = {
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
-  intervalCount?: number | undefined;
+  intervalCount: number;
   /**
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
   additionalCurrencies?:
     | Array<ListPlansVariantDetailsAdditionalCurrency>
     | undefined;
+};
+
+export type ListPlansVariantDetailsThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -1207,7 +1219,7 @@ export type ListPlansVariantDetailsReset = {
   /**
    * Number of intervals between resets. Defaults to 1.
    */
-  intervalCount?: number | undefined;
+  intervalCount: number;
 };
 
 export type ListPlansVariantDetailsAddItemAdditionalCurrency = {
@@ -1698,6 +1710,10 @@ export type ListPlansVariantDetailsFeatureOverride = {
  */
 export type ListPlansVariantDetailsPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: ListPlansVariantDetailsThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -1860,7 +1876,7 @@ export type ListPlansVariantDetailsFreeTrialParams = {
   /**
    * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
    */
-  onEnd?: ListPlansVariantDetailsOnEnd | undefined;
+  onEnd: ListPlansVariantDetailsOnEnd;
 };
 
 /**
@@ -2165,51 +2181,6 @@ export type ListPlansVariantDetailsUpsertLicenseAdditionalCurrency = {
   amount: number;
 };
 
-/**
- * Base price configuration for a plan.
- */
-export type ListPlansVariantDetailsUpsertLicenseBasePrice = {
-  /**
-   * Base price amount for the plan, in major currency units (e.g. dollars).
-   */
-  amount: number;
-  /**
-   * Billing interval (e.g. 'month', 'year').
-   */
-  interval: ListPlansPriceVariantDetailsUpsertLicenseInterval;
-  /**
-   * Number of intervals per billing cycle. Defaults to 1.
-   */
-  intervalCount?: number | undefined;
-  /**
-   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-   */
-  additionalCurrencies?:
-    | Array<ListPlansVariantDetailsUpsertLicenseAdditionalCurrency>
-    | undefined;
-};
-
-/**
- * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
- */
-export const ListPlansVariantDetailsUpsertLicenseResetInterval = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-/**
- * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
- */
-export type ListPlansVariantDetailsUpsertLicenseResetInterval = OpenEnum<
-  typeof ListPlansVariantDetailsUpsertLicenseResetInterval
->;
-
 /** @internal */
 export type ListPlansParams$Outbound = {
   customer_id?: string | undefined;
@@ -2374,6 +2345,24 @@ export function listPlansPriceFromJSON(
     jsonString,
     (x) => ListPlansPrice$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'ListPlansPrice' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansItemThresholdBilling$inboundSchema: z.ZodMiniType<
+  ListPlansItemThresholdBilling,
+  unknown
+> = z.object({
+  threshold: types.number(),
+});
+
+export function listPlansItemThresholdBillingFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansItemThresholdBilling, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansItemThresholdBilling$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansItemThresholdBilling' from JSON`,
   );
 }
 
@@ -3326,6 +3315,9 @@ export const ListPlansItem$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    threshold_billing: z.optional(
+      z.nullable(z.lazy(() => ListPlansItemThresholdBilling$inboundSchema)),
+    ),
     feature_id: types.string(),
     feature: types.optional(z.lazy(() => ListPlansFeature$inboundSchema)),
     included: types.number(),
@@ -3341,6 +3333,7 @@ export const ListPlansItem$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "threshold_billing": "thresholdBilling",
       "feature_id": "featureId",
       "feature_override": "featureOverride",
     });
@@ -3929,7 +3922,7 @@ export const ListPlansVariantDetailsBasePrice$inboundSchema: z.ZodMiniType<
   z.object({
     amount: types.number(),
     interval: ListPlansPriceVariantDetailsInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
+    interval_count: z._default(types.number(), 1),
     additional_currencies: types.optional(z.array(z.lazy(() =>
       ListPlansVariantDetailsAdditionalCurrency$inboundSchema
     ))),
@@ -3953,6 +3946,28 @@ export function listPlansVariantDetailsBasePriceFromJSON(
 }
 
 /** @internal */
+export const ListPlansVariantDetailsThresholdBilling$inboundSchema:
+  z.ZodMiniType<ListPlansVariantDetailsThresholdBilling, unknown> = z.object({
+    threshold: types.number(),
+  });
+
+export function listPlansVariantDetailsThresholdBillingFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansVariantDetailsThresholdBilling,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansVariantDetailsThresholdBilling$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansVariantDetailsThresholdBilling' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
   ListPlansVariantDetailsResetInterval,
   unknown
@@ -3965,7 +3980,7 @@ export const ListPlansVariantDetailsReset$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: ListPlansVariantDetailsResetInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
+    interval_count: z._default(types.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4832,28 +4847,32 @@ export const ListPlansVariantDetailsPlanItem$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    threshold_billing: z.optional(z.nullable(z.lazy(() =>
+      ListPlansVariantDetailsThresholdBilling$inboundSchema
+    ))),
     feature_id: types.string(),
     included: types.optional(types.number()),
     unlimited: types.optional(types.boolean()),
     pooled: z._default(types.boolean(), false),
-    reset: types.optional(
-      z.lazy(() => ListPlansVariantDetailsReset$inboundSchema),
-    ),
-    price: types.optional(
-      z.lazy(() => ListPlansVariantDetailsPrice$inboundSchema),
-    ),
-    proration: types.optional(
-      z.lazy(() => ListPlansVariantDetailsProration$inboundSchema),
-    ),
-    rollover: types.optional(
-      z.lazy(() => ListPlansVariantDetailsRollover$inboundSchema),
-    ),
-    feature_override: types.optional(
-      z.lazy(() => ListPlansVariantDetailsFeatureOverride$inboundSchema),
-    ),
+    reset: types.optional(z.lazy(() =>
+      ListPlansVariantDetailsReset$inboundSchema
+    )),
+    price: types.optional(z.lazy(() =>
+      ListPlansVariantDetailsPrice$inboundSchema
+    )),
+    proration: types.optional(z.lazy(() =>
+      ListPlansVariantDetailsProration$inboundSchema
+    )),
+    rollover: types.optional(z.lazy(() =>
+      ListPlansVariantDetailsRollover$inboundSchema
+    )),
+    feature_override: types.optional(z.lazy(() =>
+      ListPlansVariantDetailsFeatureOverride$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
+      "threshold_billing": "thresholdBilling",
       "feature_id": "featureId",
       "feature_override": "featureOverride",
     });
@@ -4966,7 +4985,7 @@ export const ListPlansVariantDetailsFreeTrialParams$inboundSchema:
         "month",
       ),
       card_required: z._default(types.boolean(), false),
-      on_end: types.optional(ListPlansVariantDetailsOnEnd$inboundSchema),
+      on_end: z._default(ListPlansVariantDetailsOnEnd$inboundSchema, "bill"),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -5326,47 +5345,3 @@ export function listPlansVariantDetailsUpsertLicenseAdditionalCurrencyFromJSON(
     `Failed to parse 'ListPlansVariantDetailsUpsertLicenseAdditionalCurrency' from JSON`,
   );
 }
-
-/** @internal */
-export const ListPlansVariantDetailsUpsertLicenseBasePrice$inboundSchema:
-  z.ZodMiniType<ListPlansVariantDetailsUpsertLicenseBasePrice, unknown> = z
-    .pipe(
-      z.object({
-        amount: types.number(),
-        interval:
-          ListPlansPriceVariantDetailsUpsertLicenseInterval$inboundSchema,
-        interval_count: types.optional(types.number()),
-        additional_currencies: types.optional(
-          z.array(z.lazy(() =>
-            ListPlansVariantDetailsUpsertLicenseAdditionalCurrency$inboundSchema
-          )),
-        ),
-      }),
-      z.transform((v) => {
-        return remap$(v, {
-          "interval_count": "intervalCount",
-          "additional_currencies": "additionalCurrencies",
-        });
-      }),
-    );
-
-export function listPlansVariantDetailsUpsertLicenseBasePriceFromJSON(
-  jsonString: string,
-): SafeParseResult<
-  ListPlansVariantDetailsUpsertLicenseBasePrice,
-  SDKValidationError
-> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      ListPlansVariantDetailsUpsertLicenseBasePrice$inboundSchema.parse(
-        JSON.parse(x),
-      ),
-    `Failed to parse 'ListPlansVariantDetailsUpsertLicenseBasePrice' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantDetailsUpsertLicenseResetInterval$inboundSchema:
-  z.ZodMiniType<ListPlansVariantDetailsUpsertLicenseResetInterval, unknown> =
-    openEnums.inboundSchema(ListPlansVariantDetailsUpsertLicenseResetInterval);

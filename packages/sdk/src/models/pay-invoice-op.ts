@@ -6,74 +6,35 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { ClosedEnum, OpenEnum } from "../types/enums.js";
+import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
-export type ListInvoicesGlobals = {
+export type PayInvoiceGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export const ListInvoicesStatus = {
-  Draft: "draft",
-  Open: "open",
-  Void: "void",
-  Paid: "paid",
-  Uncollectible: "uncollectible",
-} as const;
-export type ListInvoicesStatus = ClosedEnum<typeof ListInvoicesStatus>;
-
-export const ListInvoicesProcessorTypeRequestBody = {
-  Stripe: "stripe",
-  Revenuecat: "revenuecat",
-} as const;
-export type ListInvoicesProcessorTypeRequestBody = ClosedEnum<
-  typeof ListInvoicesProcessorTypeRequestBody
->;
-
-export type ListInvoicesParams = {
+export type PayInvoiceParams = {
   /**
-   * Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+   * The Autumn invoice ID to mark as paid.
    */
-  startCursor?: string | undefined;
-  /**
-   * Number of items to return. Default 50, hard ceiling 5000.
-   */
-  limit?: number | undefined;
-  /**
-   * Filter invoices to a single customer by ID.
-   */
-  customerId?: string | undefined;
-  /**
-   * Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer.
-   */
-  entityId?: string | undefined;
-  /**
-   * Filter by invoice status (draft, open, paid, void, uncollectible).
-   */
-  status?: Array<ListInvoicesStatus> | undefined;
-  /**
-   * Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe.
-   */
-  processorTypes?: Array<ListInvoicesProcessorTypeRequestBody> | undefined;
+  invoiceId: string;
 };
 
 /**
  * The billing processor that owns this invoice.
  */
-export const ListInvoicesListProcessorType = {
+export const PayInvoiceProcessorType = {
   Stripe: "stripe",
   Revenuecat: "revenuecat",
 } as const;
 /**
  * The billing processor that owns this invoice.
  */
-export type ListInvoicesListProcessorType = OpenEnum<
-  typeof ListInvoicesListProcessorType
->;
+export type PayInvoiceProcessorType = OpenEnum<typeof PayInvoiceProcessorType>;
 
-export type ListInvoicesEntity = {
+export type PayInvoiceEntity = {
   /**
    * The entity this share of the line item is attributed to
    */
@@ -88,7 +49,7 @@ export type ListInvoicesEntity = {
   amount: number;
 };
 
-export type ListInvoicesItem = {
+export type PayInvoiceItem = {
   /**
    * Description of the invoice line item
    */
@@ -124,10 +85,10 @@ export type ListInvoicesItem = {
   /**
    * How this line splits by entity. Empty for customer-level lines. Only populated for invoices finalized after entity attribution shipped.
    */
-  entities: Array<ListInvoicesEntity>;
+  entities: Array<PayInvoiceEntity>;
 };
 
-export type ListInvoicesList = {
+export type PayInvoiceInvoice = {
   /**
    * Array of plan IDs included in this invoice
    */
@@ -139,7 +100,7 @@ export type ListInvoicesList = {
   /**
    * The billing processor that owns this invoice.
    */
-  processorType: ListInvoicesListProcessorType;
+  processorType: PayInvoiceProcessorType;
   /**
    * The status of the invoice
    */
@@ -183,85 +144,53 @@ export type ListInvoicesList = {
   /**
    * Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
    */
-  items?: Array<ListInvoicesItem> | undefined;
+  items?: Array<PayInvoiceItem> | undefined;
 };
 
 /**
  * OK
  */
-export type ListInvoicesResponse = {
-  /**
-   * Items for current page.
-   */
-  list: Array<ListInvoicesList>;
-  /**
-   * Opaque cursor for the next page. Null when there are no more results.
-   */
-  nextCursor: string | null;
+export type PayInvoiceResponse = {
+  invoice: PayInvoiceInvoice;
 };
 
 /** @internal */
-export const ListInvoicesStatus$outboundSchema: z.ZodMiniEnum<
-  typeof ListInvoicesStatus
-> = z.enum(ListInvoicesStatus);
-
-/** @internal */
-export const ListInvoicesProcessorTypeRequestBody$outboundSchema: z.ZodMiniEnum<
-  typeof ListInvoicesProcessorTypeRequestBody
-> = z.enum(ListInvoicesProcessorTypeRequestBody);
-
-/** @internal */
-export type ListInvoicesParams$Outbound = {
-  start_cursor: string;
-  limit: number;
-  customer_id?: string | undefined;
-  entity_id?: string | undefined;
-  status?: Array<string> | undefined;
-  processor_types?: Array<string> | undefined;
+export type PayInvoiceParams$Outbound = {
+  invoice_id: string;
 };
 
 /** @internal */
-export const ListInvoicesParams$outboundSchema: z.ZodMiniType<
-  ListInvoicesParams$Outbound,
-  ListInvoicesParams
+export const PayInvoiceParams$outboundSchema: z.ZodMiniType<
+  PayInvoiceParams$Outbound,
+  PayInvoiceParams
 > = z.pipe(
   z.object({
-    startCursor: z._default(z.string(), ""),
-    limit: z._default(z.int(), 50),
-    customerId: z.optional(z.string()),
-    entityId: z.optional(z.string()),
-    status: z.optional(z.array(ListInvoicesStatus$outboundSchema)),
-    processorTypes: z.optional(
-      z.array(ListInvoicesProcessorTypeRequestBody$outboundSchema),
-    ),
+    invoiceId: z.string(),
   }),
   z.transform((v) => {
     return remap$(v, {
-      startCursor: "start_cursor",
-      customerId: "customer_id",
-      entityId: "entity_id",
-      processorTypes: "processor_types",
+      invoiceId: "invoice_id",
     });
   }),
 );
 
-export function listInvoicesParamsToJSON(
-  listInvoicesParams: ListInvoicesParams,
+export function payInvoiceParamsToJSON(
+  payInvoiceParams: PayInvoiceParams,
 ): string {
   return JSON.stringify(
-    ListInvoicesParams$outboundSchema.parse(listInvoicesParams),
+    PayInvoiceParams$outboundSchema.parse(payInvoiceParams),
   );
 }
 
 /** @internal */
-export const ListInvoicesListProcessorType$inboundSchema: z.ZodMiniType<
-  ListInvoicesListProcessorType,
+export const PayInvoiceProcessorType$inboundSchema: z.ZodMiniType<
+  PayInvoiceProcessorType,
   unknown
-> = openEnums.inboundSchema(ListInvoicesListProcessorType);
+> = openEnums.inboundSchema(PayInvoiceProcessorType);
 
 /** @internal */
-export const ListInvoicesEntity$inboundSchema: z.ZodMiniType<
-  ListInvoicesEntity,
+export const PayInvoiceEntity$inboundSchema: z.ZodMiniType<
+  PayInvoiceEntity,
   unknown
 > = z.pipe(
   z.object({
@@ -276,19 +205,19 @@ export const ListInvoicesEntity$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listInvoicesEntityFromJSON(
+export function payInvoiceEntityFromJSON(
   jsonString: string,
-): SafeParseResult<ListInvoicesEntity, SDKValidationError> {
+): SafeParseResult<PayInvoiceEntity, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListInvoicesEntity$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListInvoicesEntity' from JSON`,
+    (x) => PayInvoiceEntity$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PayInvoiceEntity' from JSON`,
   );
 }
 
 /** @internal */
-export const ListInvoicesItem$inboundSchema: z.ZodMiniType<
-  ListInvoicesItem,
+export const PayInvoiceItem$inboundSchema: z.ZodMiniType<
+  PayInvoiceItem,
   unknown
 > = z.pipe(
   z.object({
@@ -300,7 +229,7 @@ export const ListInvoicesItem$inboundSchema: z.ZodMiniType<
     feature_name: types.nullable(types.string()),
     quantity: types.nullable(types.number()),
     amount: types.number(),
-    entities: z.array(z.lazy(() => ListInvoicesEntity$inboundSchema)),
+    entities: z.array(z.lazy(() => PayInvoiceEntity$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -313,28 +242,25 @@ export const ListInvoicesItem$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listInvoicesItemFromJSON(
+export function payInvoiceItemFromJSON(
   jsonString: string,
-): SafeParseResult<ListInvoicesItem, SDKValidationError> {
+): SafeParseResult<PayInvoiceItem, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListInvoicesItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListInvoicesItem' from JSON`,
+    (x) => PayInvoiceItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PayInvoiceItem' from JSON`,
   );
 }
 
 /** @internal */
-export const ListInvoicesList$inboundSchema: z.ZodMiniType<
-  ListInvoicesList,
+export const PayInvoiceInvoice$inboundSchema: z.ZodMiniType<
+  PayInvoiceInvoice,
   unknown
 > = z.pipe(
   z.object({
     plan_ids: z.array(types.string()),
     stripe_id: types.string(),
-    processor_type: z._default(
-      ListInvoicesListProcessorType$inboundSchema,
-      "stripe",
-    ),
+    processor_type: z._default(PayInvoiceProcessorType$inboundSchema, "stripe"),
     status: types.string(),
     total: types.number(),
     currency: types.string(),
@@ -345,9 +271,7 @@ export const ListInvoicesList$inboundSchema: z.ZodMiniType<
     entity_id: types.nullable(types.string()),
     amount_paid: types.nullable(types.number()),
     refunded_amount: types.number(),
-    items: types.optional(
-      z.array(z.lazy(() => ListInvoicesItem$inboundSchema)),
-    ),
+    items: types.optional(z.array(z.lazy(() => PayInvoiceItem$inboundSchema))),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -364,38 +288,30 @@ export const ListInvoicesList$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listInvoicesListFromJSON(
+export function payInvoiceInvoiceFromJSON(
   jsonString: string,
-): SafeParseResult<ListInvoicesList, SDKValidationError> {
+): SafeParseResult<PayInvoiceInvoice, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListInvoicesList$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListInvoicesList' from JSON`,
+    (x) => PayInvoiceInvoice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PayInvoiceInvoice' from JSON`,
   );
 }
 
 /** @internal */
-export const ListInvoicesResponse$inboundSchema: z.ZodMiniType<
-  ListInvoicesResponse,
+export const PayInvoiceResponse$inboundSchema: z.ZodMiniType<
+  PayInvoiceResponse,
   unknown
-> = z.pipe(
-  z.object({
-    list: z.array(z.lazy(() => ListInvoicesList$inboundSchema)),
-    next_cursor: types.nullable(types.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "next_cursor": "nextCursor",
-    });
-  }),
-);
+> = z.object({
+  invoice: z.lazy(() => PayInvoiceInvoice$inboundSchema),
+});
 
-export function listInvoicesResponseFromJSON(
+export function payInvoiceResponseFromJSON(
   jsonString: string,
-): SafeParseResult<ListInvoicesResponse, SDKValidationError> {
+): SafeParseResult<PayInvoiceResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListInvoicesResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListInvoicesResponse' from JSON`,
+    (x) => PayInvoiceResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PayInvoiceResponse' from JSON`,
   );
 }

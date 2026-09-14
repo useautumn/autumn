@@ -1,6 +1,6 @@
 ---
-title: "List Invoices"
-openapi: "openapi POST /v1/invoices.list"
+title: "Pay Invoice"
+openapi: "openapi POST /v1/invoices.pay"
 ---
 
 import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
@@ -9,35 +9,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
 ### Body Parameters
 
-<DynamicParamField body="start_cursor" type="string">
-  Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
-</DynamicParamField>
-
-<DynamicParamField body="limit" type="integer">
-  Number of items to return. Default 50, hard ceiling 5000.
-</DynamicParamField>
-
-<DynamicParamField body="customer_id" type="string">
-  Filter invoices to a single customer by ID.
-</DynamicParamField>
-
-<DynamicParamField body="entity_id" type="string">
-  Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer.
-</DynamicParamField>
-
-<DynamicParamField body="status" type="('draft' | 'open' | 'void' | 'paid' | 'uncollectible')[]">
-  Filter by invoice status (draft, open, paid, void, uncollectible).
-</DynamicParamField>
-
-<DynamicParamField body="processor_types" type="('stripe' | 'revenuecat')[]">
-  Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe.
+<DynamicParamField body="invoice_id" type="string" required>
+  The Autumn invoice ID to mark as paid.
 </DynamicParamField>
 
 
 ### Response
 
-<DynamicResponseField name="list" type="object[]">
-  Items for current page.
+<DynamicResponseField name="invoice" type="object">
   <Expandable title="properties">
     <DynamicResponseField name="plan_ids" type="string[]">
       Array of plan IDs included in this invoice
@@ -150,64 +129,57 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicResponseField>
 
-<DynamicResponseField name="next_cursor" type="string | null">
-  Opaque cursor for the next page. Null when there are no more results.
-</DynamicResponseField>
-
 
 <ResponseExample>
 ```json 200
 {
-  "list": [
-    {
-      "id": "inv_2b3c4d5e6f7g8h",
-      "customer_id": "cus_123",
-      "entity_id": null,
-      "plan_ids": [
-        "pro_plan"
-      ],
-      "stripe_id": "in_1A2B3C4D5E6F7G8H",
-      "processor_type": "stripe",
-      "status": "paid",
-      "total": 29.99,
-      "amount_paid": 29.99,
-      "refunded_amount": 0,
-      "currency": "usd",
-      "created_at": 1759247877000,
-      "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456",
-      "items": [
-        {
-          "description": "Pro plan",
-          "plan_id": "pro_plan",
-          "feature_id": null,
-          "feature_name": null,
-          "quantity": null,
-          "amount": 20,
-          "period_start": 1759247877000,
-          "period_end": 1761839877000,
-          "entities": []
-        },
-        {
-          "description": "AI credits",
-          "plan_id": "pro_plan",
-          "feature_id": "ai_credits",
-          "feature_name": "AI Credits",
-          "quantity": 4995,
-          "amount": 9.99,
-          "period_start": 1759247877000,
-          "period_end": 1761839877000,
-          "entities": [
-            {
-              "entity_id": "acme-docs-prod",
-              "quantity": 4995,
-              "amount": 9.99
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "next_cursor": null
+  "invoice": {
+    "id": "inv_2b3c4d5e6f7g8h",
+    "customer_id": "cus_123",
+    "entity_id": null,
+    "plan_ids": [
+      "pro_plan"
+    ],
+    "stripe_id": "in_1A2B3C4D5E6F7G8H",
+    "processor_type": "stripe",
+    "status": "paid",
+    "total": 29.99,
+    "amount_paid": 29.99,
+    "refunded_amount": 0,
+    "currency": "usd",
+    "created_at": 1759247877000,
+    "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456",
+    "items": [
+      {
+        "description": "Pro plan",
+        "plan_id": "pro_plan",
+        "feature_id": null,
+        "feature_name": null,
+        "quantity": null,
+        "amount": 20,
+        "period_start": 1759247877000,
+        "period_end": 1761839877000,
+        "entities": []
+      },
+      {
+        "description": "AI credits",
+        "plan_id": "pro_plan",
+        "feature_id": "ai_credits",
+        "feature_name": "AI Credits",
+        "quantity": 4995,
+        "amount": 9.99,
+        "period_start": 1759247877000,
+        "period_end": 1761839877000,
+        "entities": [
+          {
+            "entity_id": "acme-docs-prod",
+            "quantity": 4995,
+            "amount": 9.99
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 </ResponseExample>

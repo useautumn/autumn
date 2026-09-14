@@ -11,6 +11,8 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import {
+  ListPlansPriceVariantDetailsUpsertLicenseInterval,
+  ListPlansPriceVariantDetailsUpsertLicenseInterval$inboundSchema,
   ListPlansVariantDetailsBasePrice,
   ListPlansVariantDetailsBasePrice$inboundSchema,
   ListPlansVariantDetailsBillingControls,
@@ -21,13 +23,60 @@ import {
   ListPlansVariantDetailsPlanItem$inboundSchema,
   ListPlansVariantDetailsPlanItemFilter,
   ListPlansVariantDetailsPlanItemFilter$inboundSchema,
-  ListPlansVariantDetailsUpsertLicenseBasePrice,
-  ListPlansVariantDetailsUpsertLicenseBasePrice$inboundSchema,
-  ListPlansVariantDetailsUpsertLicenseResetInterval,
-  ListPlansVariantDetailsUpsertLicenseResetInterval$inboundSchema,
-} from "./list-plans-variant-details-upsert-license-reset-interval.js";
+  ListPlansVariantDetailsUpsertLicenseAdditionalCurrency,
+  ListPlansVariantDetailsUpsertLicenseAdditionalCurrency$inboundSchema,
+} from "./list-plans-variant-details-upsert-license-additional-currency.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * Base price configuration for a plan.
+ */
+export type ListPlansVariantDetailsUpsertLicenseBasePrice = {
+  /**
+   * Base price amount for the plan, in major currency units (e.g. dollars).
+   */
+  amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
+  interval: ListPlansPriceVariantDetailsUpsertLicenseInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount: number;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?:
+    | Array<ListPlansVariantDetailsUpsertLicenseAdditionalCurrency>
+    | undefined;
+};
+
+export type ListPlansVariantDetailsUpsertLicenseThresholdBilling = {
+  threshold: number;
+};
+
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export const ListPlansVariantDetailsUpsertLicenseResetInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export type ListPlansVariantDetailsUpsertLicenseResetInterval = OpenEnum<
+  typeof ListPlansVariantDetailsUpsertLicenseResetInterval
+>;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
@@ -40,7 +89,7 @@ export type ListPlansVariantDetailsUpsertLicenseReset = {
   /**
    * Number of intervals between resets. Defaults to 1.
    */
-  intervalCount?: number | undefined;
+  intervalCount: number;
 };
 
 export type ListPlansVariantDetailsUpsertLicenseAddItemAdditionalCurrency = {
@@ -531,6 +580,13 @@ export type ListPlansVariantDetailsUpsertLicenseFeatureOverride = {
  */
 export type ListPlansVariantDetailsUpsertLicensePlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?:
+    | ListPlansVariantDetailsUpsertLicenseThresholdBilling
+    | null
+    | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -759,11 +815,15 @@ export type ListPlansLicenseBasePrice = {
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
-  intervalCount?: number | undefined;
+  intervalCount: number;
   /**
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
   additionalCurrencies?: Array<ListPlansLicenseAdditionalCurrency> | undefined;
+};
+
+export type ListPlansLicenseThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -798,7 +858,7 @@ export type ListPlansLicenseReset = {
   /**
    * Number of intervals between resets. Defaults to 1.
    */
-  intervalCount?: number | undefined;
+  intervalCount: number;
 };
 
 export type ListPlansLicenseAddItemAdditionalCurrency = {
@@ -1276,6 +1336,10 @@ export type ListPlansLicenseFeatureOverride = {
  */
 export type ListPlansLicensePlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: ListPlansLicenseThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -1475,13 +1539,17 @@ export type ListPlansVariantBasePrice = {
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
-  intervalCount?: number | undefined;
+  intervalCount: number;
   /**
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
   additionalCurrencies?:
     | Array<ListPlansVariantCustomizeAdditionalCurrency>
     | undefined;
+};
+
+export type ListPlansVariantAddItemThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -1516,7 +1584,7 @@ export type ListPlansVariantAddItemReset = {
   /**
    * Number of intervals between resets. Defaults to 1.
    */
-  intervalCount?: number | undefined;
+  intervalCount: number;
 };
 
 export type ListPlansVariantAddItemAdditionalCurrency = {
@@ -2007,6 +2075,10 @@ export type ListPlansVariantAddItemFeatureOverride = {
  */
 export type ListPlansVariantPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: ListPlansVariantAddItemThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -2085,99 +2157,79 @@ export type ListPlansIntervalVariantRemoveItemEnum1 = OpenEnum<
   typeof ListPlansIntervalVariantRemoveItemEnum1
 >;
 
-/**
- * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
- */
-export type ListPlansVariantIntervalUnion =
-  | ListPlansIntervalVariantRemoveItemEnum1
-  | ListPlansIntervalVariantRemoveItemEnum2;
+/** @internal */
+export const ListPlansVariantDetailsUpsertLicenseBasePrice$inboundSchema:
+  z.ZodMiniType<ListPlansVariantDetailsUpsertLicenseBasePrice, unknown> = z
+    .pipe(
+      z.object({
+        amount: types.number(),
+        interval:
+          ListPlansPriceVariantDetailsUpsertLicenseInterval$inboundSchema,
+        interval_count: z._default(types.number(), 1),
+        additional_currencies: types.optional(
+          z.array(
+            ListPlansVariantDetailsUpsertLicenseAdditionalCurrency$inboundSchema,
+          ),
+        ),
+      }),
+      z.transform((v) => {
+        return remap$(v, {
+          "interval_count": "intervalCount",
+          "additional_currencies": "additionalCurrencies",
+        });
+      }),
+    );
 
-/**
- * Filter for matching plan items. All provided fields must match (AND).
- */
-export type ListPlansVariantPlanItemFilter = {
-  /**
-   * Match items linked to this feature.
-   */
-  featureId?: string | undefined;
-  /**
-   * Match items with this billing method (prepaid or usage_based).
-   */
-  billingMethod?: ListPlansVariantRemoveItemBillingMethod | undefined;
-  /**
-   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
-   */
-  interval?:
-    | ListPlansIntervalVariantRemoveItemEnum1
-    | ListPlansIntervalVariantRemoveItemEnum2
-    | undefined;
-  /**
-   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
-   */
-  intervalCount?: number | undefined;
-  /**
-   * Match items whose grant equals this included usage. Omitted is a wildcard.
-   */
-  included?: number | undefined;
-};
+export function listPlansVariantDetailsUpsertLicenseBasePriceFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansVariantDetailsUpsertLicenseBasePrice,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansVariantDetailsUpsertLicenseBasePrice$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansVariantDetailsUpsertLicenseBasePrice' from JSON`,
+  );
+}
 
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export const ListPlansVariantCustomizeDurationType = {
-  Day: "day",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export type ListPlansVariantCustomizeDurationType = OpenEnum<
-  typeof ListPlansVariantCustomizeDurationType
->;
+/** @internal */
+export const ListPlansVariantDetailsUpsertLicenseThresholdBilling$inboundSchema:
+  z.ZodMiniType<ListPlansVariantDetailsUpsertLicenseThresholdBilling, unknown> =
+    z.object({
+      threshold: types.number(),
+    });
 
-/**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export const ListPlansVariantCustomizeOnEnd = {
-  Bill: "bill",
-  Revert: "revert",
-} as const;
-/**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export type ListPlansVariantCustomizeOnEnd = OpenEnum<
-  typeof ListPlansVariantCustomizeOnEnd
->;
+export function listPlansVariantDetailsUpsertLicenseThresholdBillingFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansVariantDetailsUpsertLicenseThresholdBilling,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansVariantDetailsUpsertLicenseThresholdBilling$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansVariantDetailsUpsertLicenseThresholdBilling' from JSON`,
+  );
+}
 
-/**
- * Free trial configuration for a plan.
- */
-export type ListPlansVariantFreeTrialParams = {
-  /**
-   * Number of duration_type periods the trial lasts.
-   */
-  durationLength: number;
-  /**
-   * Unit of time for the trial ('day', 'month', 'year').
-   */
-  durationType: ListPlansVariantCustomizeDurationType;
-  /**
-   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
-   */
-  cardRequired: boolean;
-  /**
-   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-   */
-  onEnd?: ListPlansVariantCustomizeOnEnd | undefined;
-};
+/** @internal */
+export const ListPlansVariantDetailsUpsertLicenseResetInterval$inboundSchema:
+  z.ZodMiniType<ListPlansVariantDetailsUpsertLicenseResetInterval, unknown> =
+    openEnums.inboundSchema(ListPlansVariantDetailsUpsertLicenseResetInterval);
 
 /** @internal */
 export const ListPlansVariantDetailsUpsertLicenseReset$inboundSchema:
   z.ZodMiniType<ListPlansVariantDetailsUpsertLicenseReset, unknown> = z.pipe(
     z.object({
       interval: ListPlansVariantDetailsUpsertLicenseResetInterval$inboundSchema,
-      interval_count: types.optional(types.number()),
+      interval_count: z._default(types.number(), 1),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -3186,6 +3238,9 @@ export function listPlansVariantDetailsUpsertLicenseFeatureOverrideFromJSON(
 export const ListPlansVariantDetailsUpsertLicensePlanItem$inboundSchema:
   z.ZodMiniType<ListPlansVariantDetailsUpsertLicensePlanItem, unknown> = z.pipe(
     z.object({
+      threshold_billing: z.optional(z.nullable(z.lazy(() =>
+        ListPlansVariantDetailsUpsertLicenseThresholdBilling$inboundSchema
+      ))),
       feature_id: types.string(),
       included: types.optional(types.number()),
       unlimited: types.optional(types.boolean()),
@@ -3208,6 +3263,7 @@ export const ListPlansVariantDetailsUpsertLicensePlanItem$inboundSchema:
     }),
     z.transform((v) => {
       return remap$(v, {
+        "threshold_billing": "thresholdBilling",
         "feature_id": "featureId",
         "feature_override": "featureOverride",
       });
@@ -3329,21 +3385,15 @@ export const ListPlansVariantDetailsUpsertLicenseCustomize$inboundSchema:
   z.ZodMiniType<ListPlansVariantDetailsUpsertLicenseCustomize, unknown> = z
     .pipe(
       z.object({
-        price: z.optional(
-          z.nullable(
-            ListPlansVariantDetailsUpsertLicenseBasePrice$inboundSchema,
-          ),
-        ),
-        add_items: types.optional(
-          z.array(z.lazy(() =>
-            ListPlansVariantDetailsUpsertLicensePlanItem$inboundSchema
-          )),
-        ),
-        remove_items: types.optional(
-          z.array(z.lazy(() =>
-            ListPlansVariantDetailsUpsertLicensePlanItemFilter$inboundSchema
-          )),
-        ),
+        price: z.optional(z.nullable(z.lazy(() =>
+          ListPlansVariantDetailsUpsertLicenseBasePrice$inboundSchema
+        ))),
+        add_items: types.optional(z.array(z.lazy(() =>
+          ListPlansVariantDetailsUpsertLicensePlanItem$inboundSchema
+        ))),
+        remove_items: types.optional(z.array(z.lazy(() =>
+          ListPlansVariantDetailsUpsertLicensePlanItemFilter$inboundSchema
+        ))),
       }),
       z.transform((v) => {
         return remap$(v, {
@@ -3542,7 +3592,7 @@ export const ListPlansLicenseBasePrice$inboundSchema: z.ZodMiniType<
   z.object({
     amount: types.number(),
     interval: ListPlansPriceLicenseInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
+    interval_count: z._default(types.number(), 1),
     additional_currencies: types.optional(
       z.array(z.lazy(() => ListPlansLicenseAdditionalCurrency$inboundSchema)),
     ),
@@ -3566,6 +3616,24 @@ export function listPlansLicenseBasePriceFromJSON(
 }
 
 /** @internal */
+export const ListPlansLicenseThresholdBilling$inboundSchema: z.ZodMiniType<
+  ListPlansLicenseThresholdBilling,
+  unknown
+> = z.object({
+  threshold: types.number(),
+});
+
+export function listPlansLicenseThresholdBillingFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansLicenseThresholdBilling, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansLicenseThresholdBilling$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansLicenseThresholdBilling' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansLicenseResetInterval$inboundSchema: z.ZodMiniType<
   ListPlansLicenseResetInterval,
   unknown
@@ -3578,7 +3646,7 @@ export const ListPlansLicenseReset$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: ListPlansLicenseResetInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
+    interval_count: z._default(types.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4398,6 +4466,9 @@ export const ListPlansLicensePlanItem$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    threshold_billing: z.optional(
+      z.nullable(z.lazy(() => ListPlansLicenseThresholdBilling$inboundSchema)),
+    ),
     feature_id: types.string(),
     included: types.optional(types.number()),
     unlimited: types.optional(types.boolean()),
@@ -4416,6 +4487,7 @@ export const ListPlansLicensePlanItem$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "threshold_billing": "thresholdBilling",
       "feature_id": "featureId",
       "feature_override": "featureOverride",
     });
@@ -4611,7 +4683,7 @@ export const ListPlansVariantBasePrice$inboundSchema: z.ZodMiniType<
   z.object({
     amount: types.number(),
     interval: ListPlansPriceVariantCustomizeInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
+    interval_count: z._default(types.number(), 1),
     additional_currencies: types.optional(z.array(z.lazy(() =>
       ListPlansVariantCustomizeAdditionalCurrency$inboundSchema
     ))),
@@ -4635,6 +4707,28 @@ export function listPlansVariantBasePriceFromJSON(
 }
 
 /** @internal */
+export const ListPlansVariantAddItemThresholdBilling$inboundSchema:
+  z.ZodMiniType<ListPlansVariantAddItemThresholdBilling, unknown> = z.object({
+    threshold: types.number(),
+  });
+
+export function listPlansVariantAddItemThresholdBillingFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansVariantAddItemThresholdBilling,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansVariantAddItemThresholdBilling$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansVariantAddItemThresholdBilling' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansVariantAddItemResetInterval$inboundSchema: z.ZodMiniType<
   ListPlansVariantAddItemResetInterval,
   unknown
@@ -4647,7 +4741,7 @@ export const ListPlansVariantAddItemReset$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: ListPlansVariantAddItemResetInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
+    interval_count: z._default(types.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5515,28 +5609,32 @@ export const ListPlansVariantPlanItem$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    threshold_billing: z.optional(z.nullable(z.lazy(() =>
+      ListPlansVariantAddItemThresholdBilling$inboundSchema
+    ))),
     feature_id: types.string(),
     included: types.optional(types.number()),
     unlimited: types.optional(types.boolean()),
     pooled: z._default(types.boolean(), false),
-    reset: types.optional(
-      z.lazy(() => ListPlansVariantAddItemReset$inboundSchema),
-    ),
-    price: types.optional(
-      z.lazy(() => ListPlansVariantAddItemPrice$inboundSchema),
-    ),
-    proration: types.optional(
-      z.lazy(() => ListPlansVariantProration$inboundSchema),
-    ),
-    rollover: types.optional(
-      z.lazy(() => ListPlansVariantAddItemRollover$inboundSchema),
-    ),
-    feature_override: types.optional(
-      z.lazy(() => ListPlansVariantAddItemFeatureOverride$inboundSchema),
-    ),
+    reset: types.optional(z.lazy(() =>
+      ListPlansVariantAddItemReset$inboundSchema
+    )),
+    price: types.optional(z.lazy(() =>
+      ListPlansVariantAddItemPrice$inboundSchema
+    )),
+    proration: types.optional(z.lazy(() =>
+      ListPlansVariantProration$inboundSchema
+    )),
+    rollover: types.optional(z.lazy(() =>
+      ListPlansVariantAddItemRollover$inboundSchema
+    )),
+    feature_override: types.optional(z.lazy(() =>
+      ListPlansVariantAddItemFeatureOverride$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
+      "threshold_billing": "thresholdBilling",
       "feature_id": "featureId",
       "feature_override": "featureOverride",
     });
@@ -5567,106 +5665,3 @@ export const ListPlansIntervalVariantRemoveItemEnum2$inboundSchema:
 export const ListPlansIntervalVariantRemoveItemEnum1$inboundSchema:
   z.ZodMiniType<ListPlansIntervalVariantRemoveItemEnum1, unknown> = openEnums
     .inboundSchema(ListPlansIntervalVariantRemoveItemEnum1);
-
-/** @internal */
-export const ListPlansVariantIntervalUnion$inboundSchema: z.ZodMiniType<
-  ListPlansVariantIntervalUnion,
-  unknown
-> = smartUnion([
-  ListPlansIntervalVariantRemoveItemEnum1$inboundSchema,
-  ListPlansIntervalVariantRemoveItemEnum2$inboundSchema,
-]);
-
-export function listPlansVariantIntervalUnionFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantIntervalUnion, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantIntervalUnion$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantIntervalUnion' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantPlanItemFilter$inboundSchema: z.ZodMiniType<
-  ListPlansVariantPlanItemFilter,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    billing_method: types.optional(
-      ListPlansVariantRemoveItemBillingMethod$inboundSchema,
-    ),
-    interval: types.optional(
-      smartUnion([
-        ListPlansIntervalVariantRemoveItemEnum1$inboundSchema,
-        ListPlansIntervalVariantRemoveItemEnum2$inboundSchema,
-      ]),
-    ),
-    interval_count: types.optional(types.number()),
-    included: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "billing_method": "billingMethod",
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function listPlansVariantPlanItemFilterFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantPlanItemFilter, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantPlanItemFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantPlanItemFilter' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansVariantCustomizeDurationType$inboundSchema: z.ZodMiniType<
-  ListPlansVariantCustomizeDurationType,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantCustomizeDurationType);
-
-/** @internal */
-export const ListPlansVariantCustomizeOnEnd$inboundSchema: z.ZodMiniType<
-  ListPlansVariantCustomizeOnEnd,
-  unknown
-> = openEnums.inboundSchema(ListPlansVariantCustomizeOnEnd);
-
-/** @internal */
-export const ListPlansVariantFreeTrialParams$inboundSchema: z.ZodMiniType<
-  ListPlansVariantFreeTrialParams,
-  unknown
-> = z.pipe(
-  z.object({
-    duration_length: types.number(),
-    duration_type: z._default(
-      ListPlansVariantCustomizeDurationType$inboundSchema,
-      "month",
-    ),
-    card_required: z._default(types.boolean(), false),
-    on_end: types.optional(ListPlansVariantCustomizeOnEnd$inboundSchema),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "duration_length": "durationLength",
-      "duration_type": "durationType",
-      "card_required": "cardRequired",
-      "on_end": "onEnd",
-    });
-  }),
-);
-
-export function listPlansVariantFreeTrialParamsFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansVariantFreeTrialParams, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansVariantFreeTrialParams$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansVariantFreeTrialParams' from JSON`,
-  );
-}

@@ -1,0 +1,114 @@
+---
+title: "Invoice Finalized"
+openapi: "api/openapi.yml webhook invoice.finalized"
+---
+
+### Payload Fields
+
+<ParamField body="plan_ids" type="string[]" required>
+  Array of plan IDs included in this invoice
+</ParamField>
+
+<ParamField body="stripe_id" type="string" required>
+  The Stripe invoice ID
+</ParamField>
+
+<ParamField body="processor_type" type="'stripe' | 'revenuecat'" required>
+  The billing processor that owns this invoice.
+</ParamField>
+
+<ParamField body="status" type="string" required>
+  The status of the invoice
+</ParamField>
+
+<ParamField body="total" type="number" required>
+  The total amount of the invoice
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  The currency code for the invoice
+</ParamField>
+
+<ParamField body="created_at" type="number" required>
+  Timestamp when the invoice was created
+</ParamField>
+
+<ParamField body="hosted_invoice_url" type="string | null">
+  URL to the Stripe-hosted invoice page
+</ParamField>
+
+<ParamField body="id" type="string" required>
+  The Autumn invoice ID
+</ParamField>
+
+<ParamField body="customer_id" type="string | null" required>
+  The ID of the customer this invoice belongs to. Null for customers created without an ID.
+</ParamField>
+
+<ParamField body="entity_id" type="string | null" required>
+  The ID of the entity this invoice belongs to, if entity-scoped
+</ParamField>
+
+<ParamField body="amount_paid" type="number | null" required>
+  The amount paid on the invoice. Null on invoices recorded before amounts paid were tracked.
+</ParamField>
+
+<ParamField body="refunded_amount" type="number" required>
+  The total amount refunded on the invoice
+</ParamField>
+
+<ParamField body="items" type="object[]">
+  Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
+  <Expandable title="properties">
+    <ParamField body="description" type="string" required>
+      Description of the invoice line item
+    </ParamField>
+
+    <ParamField body="period_start" type="number | null" required>
+      Timestamp when the billing period starts
+    </ParamField>
+
+    <ParamField body="period_end" type="number | null" required>
+      Timestamp when the billing period ends
+    </ParamField>
+
+    <ParamField body="plan_id" type="string | null" required>
+      The plan this line item came from. Null for lines with no Autumn plan behind them.
+    </ParamField>
+
+    <ParamField body="feature_id" type="string | null" required>
+      The ID of the feature associated with this line item
+    </ParamField>
+
+    <ParamField body="feature_name" type="string | null" required>
+      The name of the feature associated with this line item
+    </ParamField>
+
+    <ParamField body="quantity" type="number | null" required>
+      Quantity actually charged on this line. Null on fixed-price lines.
+    </ParamField>
+
+    <ParamField body="amount" type="number" required>
+      Amount charged on this line, pre-discount and pre-tax. Negative for credits.
+    </ParamField>
+
+    <ParamField body="entities" type="object[]" required>
+      How this line splits by entity. Empty for customer-level lines. Only populated for invoices finalized after entity attribution shipped.
+      <Expandable title="properties">
+        <ParamField body="entity_id" type="string" required>
+          The entity this share of the line item is attributed to
+        </ParamField>
+
+        <ParamField body="quantity" type="number | null" required>
+          Quantity charged to this entity. Null on fixed-price lines.
+        </ParamField>
+
+        <ParamField body="amount" type="number" required>
+          Amount attributed to this entity, pre-discount and pre-tax
+        </ParamField>
+
+      </Expandable>
+    </ParamField>
+
+  </Expandable>
+</ParamField>

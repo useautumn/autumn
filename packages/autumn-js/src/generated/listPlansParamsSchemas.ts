@@ -33,6 +33,10 @@ export const listPlansPriceProcessorsSchema = z.object({
 		.nullable(),
 });
 
+export const listPlansItemThresholdBillingSchema = z.object({
+	threshold: z.number(),
+});
+
 export const listPlansFeatureDisplaySchema = z.object({
 	singular: z.string(),
 	plural: z.string(),
@@ -184,6 +188,10 @@ export const listPlansOverageAllowedSchema = z.object({
 export const listPlansVariantDetailsAdditionalCurrencySchema = z.object({
 	currency: z.string(),
 	amount: z.number(),
+});
+
+export const listPlansVariantDetailsThresholdBillingSchema = z.object({
+	threshold: z.number(),
 });
 
 export const listPlansVariantDetailsAddItemAdditionalCurrencySchema = z.object({
@@ -501,6 +509,10 @@ export const listPlansItemFeatureOverrideSchema = z.object({
 });
 
 export const listPlansItemSchema = z.object({
+	thresholdBilling: z
+		.union([listPlansItemThresholdBillingSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureId: z.string(),
 	feature: z.union([listPlansFeatureSchema, z.undefined()]).optional(),
 	included: z.number(),
@@ -619,7 +631,7 @@ export const listPlansPriceVariantDetailsIntervalSchema = openEnumSchema;
 export const listPlansVariantDetailsBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: listPlansPriceVariantDetailsIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	intervalCount: z.number(),
 	additionalCurrencies: z
 		.union([
 			z.array(listPlansVariantDetailsAdditionalCurrencySchema),
@@ -632,7 +644,7 @@ export const listPlansVariantDetailsResetIntervalSchema = openEnumSchema;
 
 export const listPlansVariantDetailsResetSchema = z.object({
 	interval: listPlansVariantDetailsResetIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	intervalCount: z.number(),
 });
 
 export const listPlansVariantDetailsTierBehaviorSchema = openEnumSchema;
@@ -812,6 +824,10 @@ export const listPlansVariantDetailsFeatureOverrideSchema = z.object({
 });
 
 export const listPlansVariantDetailsPlanItemSchema = z.object({
+	thresholdBilling: z
+		.union([listPlansVariantDetailsThresholdBillingSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -874,9 +890,7 @@ export const listPlansVariantDetailsFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: listPlansVariantDetailsDurationTypeSchema,
 	cardRequired: z.boolean(),
-	onEnd: z
-		.union([listPlansVariantDetailsOnEndSchema, z.undefined()])
-		.optional(),
+	onEnd: listPlansVariantDetailsOnEndSchema,
 });
 
 export const listPlansVariantDetailsAutoTopupIntervalSchema = openEnumSchema;
@@ -966,19 +980,4 @@ export const listPlansVariantDetailsBillingControlsSchema = z.object({
 });
 
 export const listPlansPriceVariantDetailsUpsertLicenseIntervalSchema =
-	openEnumSchema;
-
-export const listPlansVariantDetailsUpsertLicenseBasePriceSchema = z.object({
-	amount: z.number(),
-	interval: listPlansPriceVariantDetailsUpsertLicenseIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([
-			z.array(listPlansVariantDetailsUpsertLicenseAdditionalCurrencySchema),
-			z.undefined(),
-		])
-		.optional(),
-});
-
-export const listPlansVariantDetailsUpsertLicenseResetIntervalSchema =
 	openEnumSchema;
