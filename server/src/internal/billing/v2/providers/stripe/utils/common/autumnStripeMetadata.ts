@@ -26,6 +26,14 @@ export const buildAutumnSubscriptionMetadata = ({
 	return meta;
 };
 
+/** Ownership, not recency: a schedule Autumn wrote stays Autumn's for its whole life. */
+export const isAutumnManagedStripeSchedule = ({
+	schedule,
+}: {
+	schedule: Stripe.SubscriptionSchedule | null | undefined;
+}): boolean =>
+	Boolean(schedule?.metadata?.[AUTUMN_STRIPE_METADATA_KEYS.managedAt]);
+
 /**
  * @param requireRecent — when true (default), `autumn_managed_at` only counts
  *   if it falls within `windowMs`. Used by sub.updated where a stale stamp

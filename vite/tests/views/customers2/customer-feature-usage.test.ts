@@ -11,10 +11,12 @@ const buildCustomerEntitlement = ({
 	id,
 	pooled,
 	isPooledBalance = false,
+	status = CusProductStatus.Active,
 }: {
 	id: string;
 	pooled: boolean;
 	isPooledBalance?: boolean;
+	status?: CusProductStatus;
 }) =>
 	({
 		id,
@@ -25,7 +27,7 @@ const buildCustomerEntitlement = ({
 			feature: { id: "messages" },
 		},
 		customer_product: {
-			status: CusProductStatus.Active,
+			status,
 		},
 	}) as FullCusEntWithFullCusProduct;
 
@@ -103,5 +105,72 @@ describe("customer feature usage pooled balances", () => {
 		expect(flattened.id).toBe("pool");
 		expect(flattened.is_pooled_balance).toBe(true);
 		expect(flattened.customer_product).toBeNull();
+	});
+});
+
+describe("customer feature usage product statuses", () => {
+	test("hides pending entitlements from the active balance view", () => {
+		const pending = buildCustomerEntitlement({
+			id: "pending",
+			pooled: false,
+			status: CusProductStatus.Pending,
+		});
+
+		const filtered = filterCustomerFeatureUsage({
+			entitlements: [pending],
+			statuses: ["active"],
+		});
+
+		expect(filtered).toEqual([]);
+	});
+
+	test("hides pending entitlements from the expired balance view", () => {
+		const pending = buildCustomerEntitlement({
+			id: "pending",
+			pooled: false,
+			status: CusProductStatus.Pending,
+		});
+
+		const filtered = filterCustomerFeatureUsage({
+			entitlements: [pending],
+			statuses: ["expired"],
+		});
+
+		expect(filtered).toEqual([]);
+	});
+
+	test("keeps the active grant when the same feature also has a pending grant", () => {
+		const active = buildCustomerEntitlement({
+			id: "active",
+			pooled: false,
+			status: CusProductStatus.Active,
+		});
+		const pending = buildCustomerEntitlement({
+			id: "pending",
+			pooled: false,
+			status: CusProductStatus.Pending,
+		});
+
+		const filtered = filterCustomerFeatureUsage({
+			entitlements: [active, pending],
+			statuses: ["active"],
+		});
+
+		expect(filtered.map(({ id }) => id)).toEqual(["active"]);
+	});
+
+	test("hides scheduled entitlements from the active balance view", () => {
+		const scheduled = buildCustomerEntitlement({
+			id: "scheduled",
+			pooled: false,
+			status: CusProductStatus.Scheduled,
+		});
+
+		const filtered = filterCustomerFeatureUsage({
+			entitlements: [scheduled],
+			statuses: ["active"],
+		});
+
+		expect(filtered).toEqual([]);
 	});
 });
