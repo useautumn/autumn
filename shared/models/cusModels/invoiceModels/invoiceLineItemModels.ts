@@ -7,6 +7,12 @@ export const InvoiceLineItemDiscountSchema = z.object({
 	stripe_coupon_id: z.string().optional(),
 });
 
+export const InvoiceLineItemEntitySchema = z.object({
+	entity_id: z.string(),
+	quantity: z.number().nullable(),
+	amount: z.number(),
+});
+
 export const InvoiceLineItemSchema = z.object({
 	id: z.string(),
 	created_at: z.number(),
@@ -54,9 +60,13 @@ export const InvoiceLineItemSchema = z.object({
 
 	// Discounts
 	discounts: z.array(InvoiceLineItemDiscountSchema),
+
+	// Per-entity attribution of this line (empty for customer-level lines)
+	entities: z.array(InvoiceLineItemEntitySchema),
 });
 
 export type InvoiceLineItem = z.infer<typeof InvoiceLineItemSchema>;
+export type InvoiceLineItemEntity = z.infer<typeof InvoiceLineItemEntitySchema>;
 export type InvoiceLineItemDiscount = z.infer<
 	typeof InvoiceLineItemDiscountSchema
 >;
