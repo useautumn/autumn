@@ -3,7 +3,10 @@ import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
 import { oauthClientRepo } from "../repos/index.js";
-import { ensureAtmnAuthorizeScopes } from "./atmnOAuthClients.js";
+import {
+	ensureAtmnAuthorizeScopes,
+	ensureAtmnOAuthClient,
+} from "./atmnOAuthClients.js";
 import { getMcpAuthorizeScopes } from "./mcpAuthorizeScopes.js";
 import { ensureSummerOAuthClient } from "./summerOAuthClient.js";
 
@@ -11,6 +14,7 @@ export const handleOAuthAuthorize = async (c: Context) => {
 	const url = new URL(c.req.raw.url);
 	const clientId = url.searchParams.get("client_id");
 	await ensureSummerOAuthClient({ db, clientId });
+	await ensureAtmnOAuthClient({ db, clientId });
 
 	// Old atmn CLIs request legacy CRUDL scopes; keep the reserved atmn client's
 	// stored scopes covering them so better-auth /authorize never rejects.

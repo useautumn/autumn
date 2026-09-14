@@ -30,7 +30,11 @@ export const deleteReference = ({
 	for (const specifier of root.findAll({
 		rule: { kind: "import_specifier" },
 	})) {
-		if (specifier.text() !== name) continue;
+		const names = specifier
+			.text()
+			.trim()
+			.split(/\s+as\s+/);
+		if (names[names.length - 1] !== name) continue;
 		const imports = specifier.parent();
 		if (imports !== null && imports.namedChildren().length === 1) {
 			const statement = importStatementOf(specifier);

@@ -119,4 +119,62 @@ describe("public skill output", () => {
 			),
 		).toContain('"source_commit": "abc123"');
 	});
+
+	test("installs the complete public bundle without selecting skills", async () => {
+		const generatedDirectory = mkdtempSync(
+			resolve(tmpdir(), "autumn-generated-skills-"),
+		);
+		const targetRepository = mkdtempSync(
+			resolve(tmpdir(), "autumn-skills-repository-"),
+		);
+		const installDirectory = mkdtempSync(
+			resolve(tmpdir(), "autumn-skills-install-"),
+		);
+		const publicSkillNames = [
+			"autumn-setup",
+			"autumn-catalog",
+			"autumn-concepts",
+			"autumn-integrate",
+		];
+		writePublicSkills({
+			outputDirectory: generatedDirectory,
+			skills: publicSkillNames.map((name) => createSkill({ name })),
+		});
+		mirrorPublicSkills({
+			generatedDirectory,
+			sourceCommit: "abc123",
+			targetRepository,
+		});
+
+		const install = Bun.spawn({
+			cmd: [
+				"bunx",
+				"--bun",
+				"skills@1.5.23",
+				"add",
+				targetRepository,
+				"--agent",
+				"claude-code",
+				"--copy",
+				"--yes",
+			],
+			cwd: installDirectory,
+			stderr: "pipe",
+			stdout: "pipe",
+		});
+		const [exitCode] = await Promise.all([
+			install.exited,
+			new Response(install.stderr).text(),
+		]);
+
+		expect(exitCode).toBe(0);
+		for (const skillName of publicSkillNames) {
+			expect(
+				readFileSync(
+					resolve(installDirectory, ".claude/skills", skillName, "SKILL.md"),
+					"utf8",
+				),
+			).toContain(`name: ${skillName}`);
+		}
+	});
 });

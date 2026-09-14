@@ -1,10 +1,15 @@
+import { toCamelCase } from "../casing/schemaKeyCasing";
 import type {
 	CollectionBranchMeta,
 	NestedFixtureMeta,
 	SingletonMeta,
 } from "../collections";
 import { schemaDefaults, schemaPaths } from "../fuzz/schemaPaths";
-import { deprecatedFieldsOf, type Overlay } from "../overlay/overlay";
+import {
+	deprecatedFieldsOf,
+	fixtureNameFor,
+	type Overlay,
+} from "../overlay/overlay";
 import {
 	catalogUpdateSchema,
 	collectionItemSchema,
@@ -28,6 +33,36 @@ type EmittedCollection = {
 	readonly historyKey?: string;
 	readonly pull: boolean;
 	readonly branches?: readonly CollectionBranchMeta[];
+};
+
+export const withOverlayDefaults = ({
+	specDefaults,
+	overlay,
+}: {
+	specDefaults: ReadonlyMap<string, unknown>;
+	overlay: Overlay;
+}): Map<string, unknown> => {
+	const defaults = new Map(specDefaults);
+	for (const [collection, fields] of Object.entries(overlay.collections)) {
+		for (const [wirePath, field] of Object.entries(fields)) {
+			if (field.default === undefined) continue;
+			let path = "";
+			const fixtureSegments: string[] = [];
+			for (const wireKey of wirePath.split(".")) {
+				path = path ? `${path}.${wireKey}` : wireKey;
+				fixtureSegments.push(
+					fixtureNameFor({
+						overlay,
+						collection,
+						path,
+						recased: toCamelCase(wireKey),
+					}),
+				);
+			}
+			defaults.set(`${collection}.${fixtureSegments.join(".")}`, field.default);
+		}
+	}
+	return defaults;
 };
 
 /**
@@ -54,9 +89,12 @@ export const emitEmitModule = ({
 		root: spec as never,
 		overlay,
 	});
-	const allDefaults = schemaDefaults({
-		schema: catalogUpdateSchema({ spec }),
-		root: spec as never,
+	const allDefaults = withOverlayDefaults({
+		specDefaults: schemaDefaults({
+			schema: catalogUpdateSchema({ spec }),
+			root: spec as never,
+			overlay,
+		}),
 		overlay,
 	});
 	const defaultsUnder = (prefix: string): Record<string, unknown> =>

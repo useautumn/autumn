@@ -28,6 +28,12 @@ import {
 	useSession,
 } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
+import { getBackendErr } from "@/utils/genUtils";
+import {
+	type AdminMode,
+	AdminModeTabs,
+} from "@/views/admin/components/AdminModeTabs";
+import { ImpersonateOrgSelect } from "@/views/admin/components/ImpersonateOrgSelect";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 
 interface ClientInfo {
@@ -153,6 +159,43 @@ const fetchOAuthClientInfo = async ({
 const splitScopeString = (value: string | null) =>
 	value?.split(/\s+/).filter(Boolean) ?? [];
 
+type ImpersonationCliTokens = {
+	sandbox_token: string;
+	live_token: string;
+	expires_at: string;
+};
+
+const fetchImpersonationCliTokens =
+	async (): Promise<ImpersonationCliTokens> => {
+		const response = await fetch(
+			`${import.meta.env.VITE_BACKEND_URL}/admin/impersonation/cli-tokens`,
+			{ method: "POST", credentials: "include" },
+		);
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({}));
+			throw new Error(error.message || "Failed to issue impersonation tokens");
+		}
+		return response.json();
+	};
+
+/** The CLI's loopback callback reads these instead of an authorization code. */
+const buildImpersonationRedirect = ({
+	redirectUri,
+	state,
+	tokens,
+}: {
+	redirectUri: string;
+	state: string | null;
+	tokens: ImpersonationCliTokens;
+}) => {
+	const url = new URL(redirectUri);
+	if (state) url.searchParams.set("state", state);
+	url.searchParams.set("impersonation_sandbox_token", tokens.sandbox_token);
+	url.searchParams.set("impersonation_live_token", tokens.live_token);
+	url.searchParams.set("impersonation_expires_at", tokens.expires_at);
+	return url.toString();
+};
+
 const getGrantableOAuthScopes = ({
 	requestedScopes,
 	sessionScopes,
@@ -170,13 +213,15 @@ export const Consent = () => {
 	const [searchParams] = useSearchParams();
 	const { data: session } = useSession();
 	const { data: orgs } = useListOrganizations();
-	const { data: activeOrganization } = authClient.useActiveOrganization();
-	const { isCurrentlyImpersonating } = useAdmin();
+	const { data: activeOrganization, isPending: activeOrgPending } =
+		authClient.useActiveOrganization();
+	const { isAdmin, isCurrentlyImpersonating } = useAdmin();
 	const errorIconMaskId = useId();
 	const consentIconMaskId = useId();
 
-	const [isEndingImpersonation, setIsEndingImpersonation] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	// Staff default to Impersonate; Regular shows the page exactly as a customer sees it.
+	const [adminMode, setAdminMode] = useState<AdminMode>("impersonate");
 	const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string | null>(
 		null,
 	);
@@ -194,6 +239,7 @@ export const Consent = () => {
 		getOAuthQueryParam(searchParams, "scope"),
 	);
 	const requestedEnv = getOAuthQueryParam(searchParams, "env");
+	const requestedState = getOAuthQueryParam(searchParams, "state");
 	const initialEnv = parseAppEnv(requestedEnv) ?? AppEnv.Live;
 	const sessionScopes =
 		(session as SessionWithScopes | null | undefined)?.scopes ?? [];
@@ -204,7 +250,10 @@ export const Consent = () => {
 		enabled: !!clientId,
 	});
 	const clientInfo = clientInfoQuery.data ?? null;
-	const currentOrg = activeOrganization || orgs?.[0];
+	// Falling back to the first membership while the active org is still loading
+	// flashes the wrong name; wait for the session's answer first.
+	const currentOrg =
+		activeOrganization ?? (activeOrgPending ? undefined : orgs?.[0]);
 	const { sandboxes } = useSandboxesQuery({
 		enabled: !!currentOrg && clientInfo?.is_atmn === false,
 	});
@@ -227,17 +276,10 @@ export const Consent = () => {
 			: selectedEnvironment;
 	const isLoading = !!clientId && clientInfoQuery.isLoading;
 	const canAuthorize = selectedScopes.length > 0;
-
-	const handleStopImpersonating = async () => {
-		setIsEndingImpersonation(true);
-		const { error } = await authClient.admin.stopImpersonating();
-		if (error) {
-			toast.error("Failed to end impersonation");
-			setIsEndingImpersonation(false);
-			return;
-		}
-		window.location.reload();
-	};
+	// atmn must not mint permanent api keys for an impersonated customer.
+	const isAtmnImpersonation =
+		clientInfo?.is_atmn === true && isCurrentlyImpersonating;
+	const showImpersonatePicker = isAdmin && adminMode === "impersonate";
 
 	const handleSwitchOrg = async (orgId: string) => {
 		setSwitchingOrg(true);
@@ -250,37 +292,25 @@ export const Consent = () => {
 		}
 	};
 
-	const handleAuthorize = async () => {
-		if (!clientInfo) {
-			toast.error("Authorization failed");
-			return;
-		}
-		if (selectedScopes.length === 0) {
-			toast.error("Select at least one Autumn permission");
-			return;
-		}
-
+	const submitConsent = async ({
+		env,
+		sandboxOrgId,
+		scope,
+	}: {
+		env?: AppEnv;
+		sandboxOrgId?: string;
+		scope: string[];
+	}) => {
 		setIsSubmitting(true);
 		setPendingRedirectUrl(null);
 		try {
-			// Echo the app's originally-requested protocol scopes (openid,
-			// offline_access, …) so narrowing keeps the consent set a subset of
-			// the /authorize request — better-auth rejects anything it didn't see.
-			const consentScopes = clientInfo.is_atmn
-				? requestedScopes
-				: [
-						...new Set([
-							...selectedScopes,
-							...getOAuthProtocolScopes(requestedScopes),
-						]),
-					];
 			const { data, error } = await authClient.oauth2.consent({
 				accept: true,
-				scope: consentScopes.join(" "),
+				scope: scope.join(" "),
 				client_id: clientId,
 				redirect_uri: redirectUri,
-				env: clientInfo.is_atmn ? undefined : selectedEnv,
-				sandbox_org_id: clientInfo.is_atmn ? undefined : selectedSandboxOrgId,
+				env,
+				sandbox_org_id: sandboxOrgId,
 			} as Parameters<typeof authClient.oauth2.consent>[0] & {
 				client_id: string | null;
 				redirect_uri: string | null;
@@ -313,6 +343,55 @@ export const Consent = () => {
 			toast.error("Authorization failed. Please try again.");
 			setIsSubmitting(false);
 		}
+	};
+
+	const handleAuthorize = async () => {
+		if (!clientInfo) {
+			toast.error("Authorization failed");
+			return;
+		}
+		if (isAtmnImpersonation) {
+			if (!redirectUri) {
+				toast.error("Missing redirect_uri");
+				return;
+			}
+			setIsSubmitting(true);
+			try {
+				const tokens = await fetchImpersonationCliTokens();
+				window.location.href = buildImpersonationRedirect({
+					redirectUri,
+					state: requestedState,
+					tokens,
+				});
+			} catch (error) {
+				toast.error(
+					getBackendErr(error, "Failed to issue impersonation tokens"),
+				);
+				setIsSubmitting(false);
+			}
+			return;
+		}
+		if (selectedScopes.length === 0) {
+			toast.error("Select at least one Autumn permission");
+			return;
+		}
+
+		// Echo the app's originally-requested protocol scopes (openid,
+		// offline_access, …) so narrowing keeps the consent set a subset of
+		// the /authorize request — better-auth rejects anything it didn't see.
+		const consentScopes = clientInfo.is_atmn
+			? requestedScopes
+			: [
+					...new Set([
+						...selectedScopes,
+						...getOAuthProtocolScopes(requestedScopes),
+					]),
+				];
+		await submitConsent({
+			scope: consentScopes,
+			env: clientInfo.is_atmn ? undefined : selectedEnv,
+			sandboxOrgId: clientInfo.is_atmn ? undefined : selectedSandboxOrgId,
+		});
 	};
 
 	const handleCancel = async () => {
@@ -452,24 +531,16 @@ export const Consent = () => {
 							</span>
 						</p>
 					)}
-					{isCurrentlyImpersonating && (
-						<button
-							type="button"
-							onClick={handleStopImpersonating}
-							disabled={isEndingImpersonation}
-							className="text-xs text-primary hover:underline disabled:opacity-50"
-						>
-							{isEndingImpersonation
-								? "Ending impersonation…"
-								: "End impersonation"}
-						</button>
-					)}
 				</div>
 
+				{isAdmin && (
+					<AdminModeTabs mode={adminMode} onModeChange={setAdminMode} />
+				)}
+
 				{/* Account context: organization + environment */}
-				{(currentOrg || !clientInfo.is_atmn) && (
+				{(currentOrg || showImpersonatePicker || !clientInfo.is_atmn) && (
 					<div className="border border-border rounded-xl bg-card overflow-hidden divide-y divide-border">
-						{currentOrg && (
+						{currentOrg && !showImpersonatePicker && (
 							<div className="flex items-center justify-between gap-3 px-4 py-3">
 								<span className="text-sm text-muted-foreground shrink-0">
 									Organization
@@ -496,6 +567,16 @@ export const Consent = () => {
 										))}
 									</SelectContent>
 								</Select>
+							</div>
+						)}
+
+						{/* Staff pick any customer org here; the reload lands back on this consent URL. */}
+						{showImpersonatePicker && (
+							<div className="flex items-center justify-between gap-3 px-4 py-3">
+								<span className="text-sm text-muted-foreground shrink-0">
+									Impersonate
+								</span>
+								<ImpersonateOrgSelect currentOrg={currentOrg ?? undefined} />
 							</div>
 						)}
 
@@ -529,24 +610,38 @@ export const Consent = () => {
 				<div className="border border-border rounded-xl bg-card overflow-hidden">
 					<div className="px-4 py-3 border-b border-border bg-muted/30">
 						<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-							{clientInfo.is_atmn
-								? "Permissions for"
-								: "Choose permissions for"}{" "}
+							{isAtmnImpersonation
+								? "Support access for"
+								: clientInfo.is_atmn
+									? "Permissions for"
+									: "Choose permissions for"}{" "}
 							{clientInfo.client_name}
 						</p>
 					</div>
 					<div className="px-4 py-3">
-						<ScopeSelector
-							value={selectedScopes}
-							onChange={setScopeOverride}
-							availableScopes={sessionScopes}
-							resources={selectableResources}
-							allowUnrestricted={false}
-							disabled={isSubmitting || clientInfo.is_atmn}
-							showPresets={!clientInfo.is_atmn}
-							defaultScopes={defaultScopes}
-						/>
-						{!canAuthorize && (
+						{isAtmnImpersonation ? (
+							<p className="text-sm text-muted-foreground">
+								You are impersonating{" "}
+								<span className="font-medium text-foreground">
+									{currentOrg?.name ?? "this organization"}
+								</span>
+								. Authorizing issues one-hour sandbox and production tokens to{" "}
+								{clientInfo.client_name} instead of API keys. Nothing is added
+								to the customer's API keys or authorized apps.
+							</p>
+						) : (
+							<ScopeSelector
+								value={selectedScopes}
+								onChange={setScopeOverride}
+								availableScopes={sessionScopes}
+								resources={selectableResources}
+								allowUnrestricted={false}
+								disabled={isSubmitting || clientInfo.is_atmn}
+								showPresets={!clientInfo.is_atmn}
+								defaultScopes={defaultScopes}
+							/>
+						)}
+						{!canAuthorize && !isAtmnImpersonation && (
 							<p className="text-xs text-destructive mt-3">
 								Select at least one permission to authorize this app.
 							</p>
@@ -632,7 +727,10 @@ export const Consent = () => {
 							pendingRedirectUrl ? handleOpenPendingRedirect : handleAuthorize
 						}
 						isLoading={isSubmitting}
-						disabled={isSubmitting || (!pendingRedirectUrl && !canAuthorize)}
+						disabled={
+							isSubmitting ||
+							(!pendingRedirectUrl && !canAuthorize && !isAtmnImpersonation)
+						}
 						className="flex-1"
 					>
 						{pendingRedirectUrl

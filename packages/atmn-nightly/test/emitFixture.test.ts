@@ -290,6 +290,43 @@ test("plans: nested server extras do not leak into the fixture", () => {
 	expect(text).not.toContain("active");
 });
 
+test("plans: boolean items omit grant values while metered items keep meaningful values", () => {
+	const text = emitFixture({
+		spec: COLLECTIONS.plans,
+		row: {
+			id: "pro",
+			name: "Pro",
+			items: [
+				{ featureId: "enabled", included: 0, unlimited: true },
+				{ featureId: "requests", included: 0, unlimited: false },
+				{ featureId: "storage", unlimited: true },
+			],
+		},
+		includeMappings: false,
+		indent: "",
+		context: {
+			featureTypes: {
+				enabled: "boolean",
+				requests: "metered",
+				storage: "metered",
+			},
+		},
+	});
+
+	expect(text).toContain(`{
+			featureId: "enabled",
+		}`);
+	expect(text).toContain(`{
+			featureId: "requests",
+			included: 0,
+		}`);
+	expect(text).toContain(`{
+			featureId: "storage",
+			unlimited: true,
+		}`);
+	expect(text).not.toContain("unlimited: false");
+});
+
 test("plans: active is written only when the row is a draft", () => {
 	const text = emitFixture({
 		spec: COLLECTIONS.plans,

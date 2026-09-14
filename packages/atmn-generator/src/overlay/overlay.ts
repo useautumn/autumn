@@ -1,14 +1,5 @@
-/**
- * CLI-shaped differences from the API live here, in one declarative file, and
- * nowhere else. The spec stays the single source of truth for SHAPE; the
- * overlay only says what the CLI does with a field the API already describes.
- *
- * Three verbs, deliberately. Anything needing a fourth is a sign the difference
- * belongs in the schema or the server instead — that is the project's mantra.
- *
- * Entries are expected to stay few. Casing is NOT a rename: `version_slug`
- * becomes `versionSlug` by the generic mapper, so it needs no entry.
- */
+/** The overlay holds CLI-only field treatment while OpenAPI owns shape; `default` omits values the server reads identically.
+ * Casing is generic, so `version_slug` becomes `versionSlug` without an entry. */
 
 /** Dotted path from a collection item root, e.g. "items.price.billing_units". */
 export type FieldPath = string;
@@ -26,6 +17,8 @@ export type FieldOverlay = {
 	/** A sentence appended to the field's JSDoc: what the server's description
 	 * leaves out and a reader (or an agent) needs to know in the config. */
 	describe?: string;
+	/** The value the CLI treats as this field's default: a field at it is not written into a fixture. */
+	default?: unknown;
 	/** Why — this is documentation, and it is not optional. */
 	reason: string;
 };
@@ -47,6 +40,31 @@ export const OVERLAY: Overlay = {
 	exposeInternal: ["internal_id", "entity_feature_id"],
 	collections: {
 		plans: {
+			"items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
+			"licenses.customize.add_items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
+			"variants.customize.items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
+			"variants.customize.add_items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
+			"variants.customize.upsert_licenses.customize.add_items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
 			version_slug: {
 				describe:
 					'Defaults to "vN", N being the server\'s version number, which counts in creation order; state it explicitly on every history row so a nuke-and-repush or a sandbox-to-prod push keeps the same names even though the numbers may differ.',

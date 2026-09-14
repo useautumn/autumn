@@ -1,26 +1,24 @@
 import type { Entity } from "@autumn/shared";
-import { IconButton } from "@autumn/ui";
-import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { Check } from "lucide-react";
-import { useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
+import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { Check } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
+import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
 
 export const SelectEntityDropdown = () => {
 	const [open, setOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
 
-	const [searchParams] = useSearchParams();
-	const navigate = useNavigate();
-	const location = useLocation();
+	const { filterStates, setFilterStates } = useAnalyticsFilterState();
 
 	const { customer } = useAnalyticsContext();
 
@@ -30,19 +28,7 @@ export const SelectEntityDropdown = () => {
 		return null;
 	}
 
-	const currentEntityId = searchParams.get("entity_id") || "";
-
-	const updateQueryParams = ({ entityId }: { entityId: string | null }) => {
-		const params = new URLSearchParams(location.search);
-
-		if (entityId) {
-			params.set("entity_id", entityId);
-		} else {
-			params.delete("entity_id");
-		}
-
-		navigate(`${location.pathname}?${params.toString()}`);
-	};
+	const currentEntityId = filterStates.entity_id ?? "";
 
 	const filteredEntities = entities.filter((entity) => {
 		const label = entity.name || entity.id || "";
@@ -50,7 +36,7 @@ export const SelectEntityDropdown = () => {
 	});
 
 	const handleSelect = ({ entityId }: { entityId: string | null }) => {
-		updateQueryParams({ entityId });
+		setFilterStates({ entity_id: entityId });
 		setOpen(false);
 	};
 

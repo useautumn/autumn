@@ -34,9 +34,10 @@ export const setupUpdateSubscriptionIntent = ({
 	if (itemsChanged || licensesChanged || versionChanged || freeTrialChanged)
 		return UpdateSubscriptionIntent.UpdatePlan;
 
-	// Seat-count-only changes converge the pool in place — no plan restructure.
+	// Seat-count changes converge license pools in place — no plan restructure.
+	// Same quantity intent as feature_quantities; they may ride together.
 	if (params.license_quantities?.length)
-		return UpdateSubscriptionIntent.UpdateLicenseQuantity;
+		return UpdateSubscriptionIntent.UpdateQuantity;
 
 	// ManualTopUp wins over UpdateQuantity (and CancelAction/None): once we know
 	// this isn't a plan restructure, a feature_quantities entry whose prepaid
