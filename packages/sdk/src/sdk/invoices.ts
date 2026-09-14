@@ -4,6 +4,7 @@
 
 import { invoicesInsert } from "../funcs/invoices-insert.js";
 import { invoicesList } from "../funcs/invoices-list.js";
+import { invoicesPay } from "../funcs/invoices-pay.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
 import { unwrapAsync } from "../types/fp.js";
@@ -31,6 +32,20 @@ export class Invoices extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.ListInvoicesResponse> {
     return unwrapAsync(invoicesList(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Marks an open Stripe invoice as paid out of band. No charge is attempted; use this when payment was collected elsewhere (e.g. a marketplace). Already-paid invoices are returned unchanged.
+   */
+  async pay(
+    request: models.PayInvoiceParams,
+    options?: RequestOptions,
+  ): Promise<models.PayInvoiceResponse> {
+    return unwrapAsync(invoicesPay(
       this,
       request,
       options,

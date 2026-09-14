@@ -101,26 +101,10 @@ const creditFeature = {
 	event_names: [],
 };
 
-test("omits processors when the stripe product is unchanged", () => {
+test("never sends processors: feature Stripe products are managed outside the sheets", () => {
 	const result = featureToCatalogFeatureParams({
 		feature: { ...creditFeature, stripe_product_id: "prod_1" },
-		originalStripeProductId: "prod_1",
 	});
 
 	expect(result.processors).toBeUndefined();
-});
-
-test("sends processors when a stripe product is set or cleared", () => {
-	expect(
-		featureToCatalogFeatureParams({
-			feature: { ...creditFeature, stripe_product_id: "prod_1" },
-		}).processors,
-	).toEqual({ stripe: { product_id: "prod_1" } });
-
-	expect(
-		featureToCatalogFeatureParams({
-			feature: { ...creditFeature, stripe_product_id: null },
-			originalStripeProductId: "prod_1",
-		}).processors,
-	).toEqual({ stripe: { product_id: "" } });
 });

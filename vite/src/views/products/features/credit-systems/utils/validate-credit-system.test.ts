@@ -213,3 +213,9 @@ test("a rate card problem is reported before the off-screen name", () => {
 		} as CreateFeature),
 	).toBe("Select a feature on every rate card row");
 });
+
+test("an empty rate card is rejected at submit, not while editing", () => {
+	expect(validateCreditSystem(creditSystem([]))).toBe(
+		"Add at least one feature to the rate card",
+	);
+});

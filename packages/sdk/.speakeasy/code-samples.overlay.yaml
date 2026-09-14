@@ -1039,6 +1039,28 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/invoices.pay"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.pay({
+                invoiceId: "inv_2b3c4d5e6f7g8h",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/keys.mint"]["post"]
     update:
       x-codeSamples:

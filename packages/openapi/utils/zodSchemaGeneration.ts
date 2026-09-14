@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,13 +15,13 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		sdkFile: "get-or-create-customer-op.ts",
 		outputFile: "getOrCreateCustomerSchemas.ts",
 	},
-	{ sdkFile: "attach-op.ts", outputFile: "attachSchemas.ts" },
+	{ sdkFile: "attach-response.ts", outputFile: "attachSchemas.ts" },
 	{
 		sdkFile: "preview-attach-response.ts",
 		outputFile: "previewAttachSchemas.ts",
 	},
 	{
-		sdkFile: "billing-update-op.ts",
+		sdkFile: "billing-update-response.ts",
 		outputFile: "updateSubscriptionSchemas.ts",
 	},
 	{
@@ -40,7 +40,7 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 	},
 	{ sdkFile: "list-plans-response.ts", outputFile: "listPlansSchemas.ts" },
 	{
-		sdkFile: "list-plans-variant-details-upsert-license-reset-interval.ts",
+		sdkFile: "list-plans-variant-details-upsert-license-additional-currency.ts",
 		outputFile: "listPlansParamsSchemas.ts",
 	},
 	{ sdkFile: "list-events-op.ts", outputFile: "listEventsSchemas.ts" },
@@ -95,6 +95,17 @@ export async function generateZodSchemas({
 	// Get workspace root for running ts-to-zod
 	const currentFile = fileURLToPath(import.meta.url);
 	const workspaceRoot = path.resolve(path.dirname(currentFile), "../../..");
+
+	const missing = SCHEMA_SOURCES.filter(
+		(source) => !existsSync(path.join(sdkModelsDir, source.sdkFile)),
+	);
+	if (missing.length > 0) {
+		throw new Error(
+			`SDK model files missing for Zod generation:\n${missing
+				.map((source) => `  ${source.sdkFile} -> ${source.outputFile}`)
+				.join("\n")}`,
+		);
+	}
 
 	for (const source of SCHEMA_SOURCES) {
 		const inputPath = path.join(sdkModelsDir, source.sdkFile);

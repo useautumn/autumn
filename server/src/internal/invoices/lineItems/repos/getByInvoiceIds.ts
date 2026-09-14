@@ -16,5 +16,6 @@ export const getByInvoiceIds = async ({
 	return db
 		.select()
 		.from(invoiceLineItems)
-		.where(inArray(invoiceLineItems.invoice_id, invoiceIds));
+		.where(inArray(invoiceLineItems.invoice_id, invoiceIds))
+		.orderBy(invoiceLineItems.created_at, invoiceLineItems.id);
 };
