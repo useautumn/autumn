@@ -44,5 +44,14 @@ export const handleUpdateSubscriptionCustomLineItemsErrors = ({
 		});
 	}
 
+	// Suppressed custom invoices need no Stripe action when the subscription is otherwise unchanged.
+	if (
+		billingContext.stripeSubscription &&
+		billingContext.requestedProrationBehavior === "none" &&
+		!billingPlan.stripe?.subscriptionAction
+	) {
+		return;
+	}
+
 	handleCustomLineItemsErrors({ params, billingContext, billingPlan });
 };

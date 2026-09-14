@@ -15,7 +15,6 @@ import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/
 export const buildStripeSubscriptionUpdateAction = ({
 	ctx,
 	billingContext,
-	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
 	autumnBillingPlan,
 	subItemsUpdate,
 	stripeSubscriptionScheduleAction,
@@ -115,8 +114,12 @@ export const buildStripeSubscriptionUpdateAction = ({
 		params.discounts,
 	].every((field) => field === undefined);
 
-	// The executor resets the anchor before applying the remaining subscription update.
-	if (hasNoUpdates && billingContext.requestedBillingCycleAnchor !== "now") {
+	// Anchor resets and custom invoices still need an update action when subscription items stay unchanged.
+	if (
+		hasNoUpdates &&
+		billingContext.requestedBillingCycleAnchor !== "now" &&
+		!autumnBillingPlan.customLineItems?.length
+	) {
 		return undefined;
 	}
 
