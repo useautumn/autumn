@@ -4,6 +4,7 @@ import {
 	type Feature,
 	FeatureType,
 	Infinite,
+	isContUseFeature,
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
 	itemToEntInterval,
@@ -325,6 +326,20 @@ const validateProductItem = ({
 		throw new RecaseError({
 			message: `Bill immediately is not supported for prepaid just yet, contact us at hey@useautumn.com if you're interested!`,
 			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	// The schema can only see the item's shape; a purchase can only expire if
+	// the feature actually holds a consumable balance.
+	if (
+		item.config?.expiry &&
+		feature &&
+		(feature.type === FeatureType.Boolean || isContUseFeature({ feature }))
+	) {
+		throw new RecaseError({
+			message: `expiry is only supported on consumable features (feature: ${item.feature_id})`,
+			code: ErrCode.InvalidProductItem,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
