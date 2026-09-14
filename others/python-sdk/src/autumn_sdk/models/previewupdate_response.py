@@ -948,7 +948,7 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     license_quantities: NotRequired[List[PreviewUpdateLicenseQuantityTypedDict]]
     r"""Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity."""
     custom_line_items: NotRequired[List[PreviewUpdateCustomLineItemTypedDict]]
-    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate updates to an existing recurring subscription."""
+    r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
 
 
 class PreviewUpdateParams(BaseModel):
@@ -1013,7 +1013,7 @@ class PreviewUpdateParams(BaseModel):
     r"""Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity."""
 
     custom_line_items: Optional[List[PreviewUpdateCustomLineItem]] = None
-    r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate updates to an existing recurring subscription."""
+    r"""Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

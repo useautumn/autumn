@@ -23,7 +23,7 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 		}),
 		custom_line_items: z.array(CustomLineItemSchema).min(1).optional().meta({
 			description:
-				"Custom line items that override the auto-generated proration invoice. Only valid for immediate updates to an existing recurring subscription.",
+				"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
 		}),
 		cancel_action: CancelActionSchema.optional().meta({
 			description:
