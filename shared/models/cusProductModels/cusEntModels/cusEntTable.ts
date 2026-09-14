@@ -14,7 +14,11 @@ import { entities } from "../../cusModels/entityModels/entityTable.js";
 import { features } from "../../featureModels/featureTable.js";
 import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customerProducts } from "../cusProductTable.js";
-import type { EntityBalance, UsageAttribution } from "./cusEntModels.js";
+import type {
+	CustomerEntitlementMetadata,
+	EntityBalance,
+	UsageAttribution,
+} from "./cusEntModels.js";
 
 export const customerEntitlements = pgTable(
 	"customer_entitlements",
@@ -62,6 +66,9 @@ export const customerEntitlements = pgTable(
 		feature_id: text("feature_id"),
 
 		external_id: text("external_id"),
+
+		/** Provenance for loose rows that outlive their plan (expiring top-ups). */
+		metadata: jsonb("metadata").$type<CustomerEntitlementMetadata>(),
 
 		// Denormalized parent-product expiry; nullable tri-state so a manual `false`
 		// stays sticky and the backfill cron only flips NULL -> true.

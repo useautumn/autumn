@@ -32,6 +32,25 @@ export const UsageAttributionSchema = z.record(
 	UsageAttributionItemSchema,
 );
 
+export const CustomerEntitlementSourceSchema = z.enum([
+	"attach",
+	"manual_topup",
+	"auto_topup",
+]);
+export type CustomerEntitlementSource = z.infer<
+	typeof CustomerEntitlementSourceSchema
+>;
+
+/** Written by expiring purchase grants so the origin survives churn. */
+export const CustomerEntitlementMetadataSchema = z.object({
+	source: CustomerEntitlementSourceSchema,
+	plan_id: z.string().nullish(),
+	customer_product_id: z.string().nullish(),
+});
+export type CustomerEntitlementMetadata = z.infer<
+	typeof CustomerEntitlementMetadataSchema
+>;
+
 export const CustomerEntitlementSchema = z.object({
 	// Foreign keys
 	id: z.string(),
@@ -74,6 +93,9 @@ export const CustomerEntitlementSchema = z.object({
 	entities: z.record(z.string(), EntityBalanceSchema).nullish(),
 
 	external_id: z.string().nullable(),
+
+	/** Provenance for rows that outlive the plan that created them. */
+	metadata: CustomerEntitlementMetadataSchema.nullish(),
 });
 
 export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
