@@ -133,6 +133,7 @@ export const toCreatePlanItemParams = (
 			on_decrease: item.proration.on_decrease,
 		};
 	}
+	if (item.feature_override) out.feature_override = item.feature_override;
 	return out;
 };
 

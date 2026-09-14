@@ -39,9 +39,13 @@ Features define what can be gated, metered, or billed in your app.
 </ParamField>
 
 <ParamField body="creditSchema" type="array">
-  **Required for `credit_system` features.** Maps metered features to credit costs.
-  
-  Each entry: `{ meteredFeatureId: string, creditCost: number }`
+  **Required for `credit_system` features.** The rate card: one entry per metered feature that draws from the credit balance.
+
+  Flat rate: `{ meteredFeatureId: string, creditCost: number, billingUnits?: number }` -- `creditCost` credits per `billingUnits` units (default 1).
+
+  Graduated rate: `{ meteredFeatureId, billingUnits?, tierBehavior: 'graduated', tiers: [{ to: number | 'inf', creditCost: number }] }` -- the credit cost steps as usage in the cycle grows. The last tier must be `'inf'`.
+
+  Each entry may also carry `dimensions` and `multipliers` to price by event properties. See [Rate cards and dimensions](/documentation/modelling-pricing/credit-systems#rate-cards-and-dimensions).
 </ParamField>
 
 ### Feature types

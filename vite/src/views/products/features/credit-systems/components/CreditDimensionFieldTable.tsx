@@ -5,7 +5,7 @@ import type {
 	Row,
 	Table as TableInstance,
 } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { ValueChipInput } from "@/components/v2/rule-builder/ValueChipInput";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
@@ -98,7 +98,11 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 ];
 
 /** One row per dimension; the name is editable and its values are chips that wrap within the cell. */
-export function CreditDimensionFieldTable() {
+export function CreditDimensionFieldTable({
+	action,
+}: {
+	action?: ReactNode;
+} = {}) {
 	const {
 		values,
 		unnamedKeys,
@@ -147,6 +151,7 @@ export function CreditDimensionFieldTable() {
 		<CreditEditableTable
 			title="Dimensions"
 			hint="Request properties that change the rate, and the values they take."
+			action={action}
 			table={table}
 			columnCount={COLUMNS.length}
 			footer={
