@@ -50,6 +50,12 @@ import {
 
 /* ─── Outer Shell ─── */
 
+const GRANT_SOURCE_LABELS: Record<string, string> = {
+	attach: "Purchased at attach",
+	manual_topup: "Manual top-up",
+	auto_topup: "Auto top-up",
+};
+
 export function BalanceEditSheet() {
 	const { customer } = useCusQuery();
 	const { entityId } = useCustomerContext();
@@ -360,11 +366,22 @@ function EntitlementInfoRows({
 			)}
 			{entity && <InfoRow label="Entity" value={entity.name || entity.id} />}
 			<InfoRow label="Plan" value={planName} />
+			{selectedCusEnt.metadata?.source && (
+				<InfoRow
+					label="Source"
+					value={
+						<span className="bg-muted px-1 py-0.5 rounded-md text-tertiary-foreground">
+							{GRANT_SOURCE_LABELS[selectedCusEnt.metadata.source]}
+						</span>
+					}
+				/>
+			)}
 			<InfoRow
 				label="Interval"
 				value={
 					<span className="bg-muted px-1 py-0.5 rounded-md text-tertiary-foreground">
-						{selectedCusEnt.entitlement.interval === "lifetime"
+						{!selectedCusEnt.entitlement.interval ||
+						selectedCusEnt.entitlement.interval === "lifetime"
 							? "Lifetime"
 							: selectedCusEnt.entitlement.interval}
 					</span>
