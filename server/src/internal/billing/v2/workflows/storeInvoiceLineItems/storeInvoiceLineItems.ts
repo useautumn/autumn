@@ -4,12 +4,13 @@ import {
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
 import type { ExpandedStripeInvoiceLineItem } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/index.js";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos/index.js";
+import { sendInvoiceFinalizedWebhook } from "@/internal/invoices/webhooks/sendInvoiceFinalizedWebhook.js";
 import type { StoreInvoiceLineItemsPayload } from "@/queue/workflows.js";
 import { fetchSubscriptionItemsInfo } from "./fetchSubscriptionItemsMetadata.js";
 
@@ -31,152 +32,21 @@ export const storeInvoiceLineItems = async ({
 	ctx: AutumnContext;
 	payload: StoreInvoiceLineItemsPayload;
 }): Promise<void> => {
-	const { db, org, env } = ctx;
-	const { stripeInvoiceId, autumnInvoiceId, billingLineItems, reconcileOnly } =
-		payload;
+	const {
+		stripeInvoiceId,
+		autumnInvoiceId,
+		billingLineItems,
+		reconcileOnly,
+		emitFinalizedWebhook,
+	} = payload;
 
 	try {
-		const stripeCli = createStripeCli({ org, env });
-
-		// 1. Fetch line items from Stripe.
-		const stripeLineItems = await getStripeInvoiceLineItems({
-			stripeClient: stripeCli,
-			invoiceId: stripeInvoiceId,
-		});
-
-		// Subscription discounts appear in discount_amounts on each line, but their
-		// expanded coupon is only available through invoice.discounts.
-		const stripeDiscounts = stripeLineItems.some(
-			(lineItem) => (lineItem.discount_amounts?.length ?? 0) > 0,
-		)
-			? (
-					await getStripeInvoice({
-						stripeClient: stripeCli,
-						invoiceId: stripeInvoiceId,
-						expand: ["discounts.source.coupon"],
-					})
-				).discounts
-			: [];
-
-		if (stripeLineItems.length === 0) {
-			ctx.logger.debug(
-				`[storeInvoiceLineItems] No line items found for ${stripeInvoiceId}`,
-			);
-			// Still need to delete any stale items (invoice might have been emptied)
-			await invoiceLineItemRepo.deleteStaleByStripeInvoiceId({
-				db,
-				stripeInvoiceId,
-				activeStripeIds: [],
-			});
-			return;
-		}
-
-		// 2. Fetch subscription item info (metadata + isMetered flag)
-		const subscriptionItemInfo = await fetchSubscriptionItemsInfo({
-			stripeCli,
-			stripeLineItems,
-		});
-
-		// 3. Filter out $0 placeholder line items
-		// Stripe creates these for usage-based prices with zero usage, and for
-		// empty price placeholders (stripe_empty_price_id) used on entity subscriptions
-		const filteredStripeLineItems = stripeLineItems.filter((li) => {
-			if (li.amount !== 0) return true;
-			if ((li.quantity ?? 0) !== 0) return true;
-
-			const subItemId = li.parent?.subscription_item_details?.subscription_item;
-			if (typeof subItemId !== "string") return true;
-
-			// Filter metered $0 placeholders (zero-usage bookkeeping entries)
-			const info = subscriptionItemInfo.get(subItemId);
-			if (info?.isMetered) return false;
-
-			// Filter $0 empty price placeholders (e.g. stripe_empty_price_id)
-			if (li.pricing?.unit_amount_decimal === "0") return false;
-
-			return true;
-		});
-
-		// 4. Update deferred line items that were stored at billing time
-		// When ProrateNextCycle creates pending invoice items, they're stored with
-		// invoice_id=null. Now that they appear on a real invoice, update them.
-		const remainingStripeLineItems = await updateDeferredLineItems({
+		await storeLineItems({
 			ctx,
-			stripeLineItems: filteredStripeLineItems,
+			stripeInvoiceId,
 			autumnInvoiceId,
-			stripeInvoiceId,
-		});
-
-		// 5. Parse billing line items if provided
-		let autumnLineItems: LineItem[] | undefined;
-		if (billingLineItems && billingLineItems.length > 0) {
-			autumnLineItems = billingLineItems
-				.map((item) => {
-					const result = LineItemSchema.safeParse(item);
-					return result.success ? result.data : null;
-				})
-				.filter((item): item is LineItem => item !== null);
-		}
-
-		// 6. Convert to DB format (extract metadata for matching)
-		const subscriptionItemMetadata = new Map(
-			Array.from(subscriptionItemInfo.entries()).map(([id, info]) => [
-				id,
-				info.metadata,
-			]),
-		);
-
-		const dbLineItems = stripeLineItemsToDbLineItems({
-			stripeLineItems: remainingStripeLineItems,
-			stripeDiscounts,
-			invoiceId: autumnInvoiceId,
-			stripeInvoiceId,
-			autumnLineItems,
-			subscriptionItemMetadata,
-		});
-
-		// 7. Write to DB
-		if (dbLineItems.length > 0) {
-			if (reconcileOnly) {
-				// Reconcile mode: only update Stripe-authoritative fields, preserve Autumn metadata
-				await invoiceLineItemRepo.reconcileMany({
-					db,
-					lineItems: dbLineItems,
-				});
-			} else {
-				// Full upsert: update all columns (used when we have full Autumn context)
-				await invoiceLineItemRepo.upsertMany({
-					db,
-					lineItems: dbLineItems,
-				});
-			}
-
-			ctx.logger.info(
-				`${reconcileOnly ? "Reconciled" : "Stored"} invoice line items`,
-				{
-					data2: dbLineItems.map((li) => ({
-						id: li.id,
-						stripe_id: li.stripe_id,
-						feature_id: li.feature_id,
-						amount: li.amount,
-						direction: li.direction,
-						total_quantity: li.total_quantity,
-						paid_quantity: li.paid_quantity,
-					})),
-				},
-			);
-		}
-
-		// 8. Delete stale line items (removed between invoice.created and invoice.finalized)
-		// Use filtered list so we also delete $0 metered placeholders from DB
-		const activeStripeIds = filteredStripeLineItems
-			.map((li) => li.id)
-			.filter((id): id is string => id != null);
-
-		await invoiceLineItemRepo.deleteStaleByStripeInvoiceId({
-			db,
-			stripeInvoiceId,
-			activeStripeIds,
+			billingLineItems,
+			reconcileOnly,
 		});
 	} catch (error) {
 		ctx.logger.error(
@@ -184,6 +54,178 @@ export const storeInvoiceLineItems = async ({
 		);
 		return;
 	}
+
+	// Emit even when storage found no lines: consumers need every finalized invoice
+	if (emitFinalizedWebhook) {
+		await sendInvoiceFinalizedWebhook({ ctx, autumnInvoiceId });
+	}
+};
+
+const storeLineItems = async ({
+	ctx,
+	stripeInvoiceId,
+	autumnInvoiceId,
+	billingLineItems,
+	reconcileOnly,
+}: {
+	ctx: AutumnContext;
+	stripeInvoiceId: string;
+	autumnInvoiceId: string;
+	billingLineItems?: unknown[];
+	reconcileOnly?: boolean;
+}): Promise<void> => {
+	const { db, org, env } = ctx;
+	const stripeCli = createStripeCli({ org, env });
+
+	// 1. Fetch line items from Stripe.
+	const stripeLineItems = await getStripeInvoiceLineItems({
+		stripeClient: stripeCli,
+		invoiceId: stripeInvoiceId,
+	});
+
+	// Subscription discounts appear in discount_amounts on each line, but their
+	// expanded coupon is only available through invoice.discounts.
+	const stripeDiscounts = stripeLineItems.some(
+		(lineItem) => (lineItem.discount_amounts?.length ?? 0) > 0,
+	)
+		? (
+				await getStripeInvoice({
+					stripeClient: stripeCli,
+					invoiceId: stripeInvoiceId,
+					expand: ["discounts.source.coupon"],
+				})
+			).discounts
+		: [];
+
+	if (stripeLineItems.length === 0) {
+		ctx.logger.debug(
+			`[storeInvoiceLineItems] No line items found for ${stripeInvoiceId}`,
+		);
+		// Still need to delete any stale items (invoice might have been emptied)
+		await invoiceLineItemRepo.deleteStaleByStripeInvoiceId({
+			db,
+			stripeInvoiceId,
+			activeStripeIds: [],
+		});
+		return;
+	}
+
+	// 2. Fetch subscription item info (metadata + isMetered flag)
+	const subscriptionItemInfo = await fetchSubscriptionItemsInfo({
+		stripeCli,
+		stripeLineItems,
+	});
+
+	// 3. Filter out $0 placeholder line items
+	// Stripe creates these for usage-based prices with zero usage, and for
+	// empty price placeholders (stripe_empty_price_id) used on entity subscriptions
+	const filteredStripeLineItems = stripeLineItems.filter((li) => {
+		if (li.amount !== 0) return true;
+		if ((li.quantity ?? 0) !== 0) return true;
+
+		const subItemId = li.parent?.subscription_item_details?.subscription_item;
+		if (typeof subItemId !== "string") return true;
+
+		// Filter metered $0 placeholders (zero-usage bookkeeping entries)
+		const info = subscriptionItemInfo.get(subItemId);
+		if (info?.isMetered) return false;
+
+		// Filter $0 empty price placeholders (e.g. stripe_empty_price_id)
+		if (li.pricing?.unit_amount_decimal === "0") return false;
+
+		return true;
+	});
+
+	// 4. Update deferred line items that were stored at billing time
+	// When ProrateNextCycle creates pending invoice items, they're stored with
+	// invoice_id=null. Now that they appear on a real invoice, update them.
+	const remainingStripeLineItems = await updateDeferredLineItems({
+		ctx,
+		stripeLineItems: filteredStripeLineItems,
+		autumnInvoiceId,
+		stripeInvoiceId,
+	});
+
+	// 5. Parse billing line items if provided
+	let autumnLineItems: LineItem[] | undefined;
+	if (billingLineItems && billingLineItems.length > 0) {
+		autumnLineItems = billingLineItems
+			.map((item) => {
+				const result = LineItemSchema.safeParse(item);
+				if (!result.success) {
+					ctx.logger.warn(
+						`[storeInvoiceLineItems] Dropping unparseable billing line item for ${stripeInvoiceId}: ${result.error.issues
+							.slice(0, 3)
+							.map((i) => `${i.path.join(".")}: ${i.message}`)
+							.join("; ")}`,
+					);
+					return null;
+				}
+				return result.data;
+			})
+			.filter((item): item is LineItem => item !== null);
+	}
+
+	// 6. Convert to DB format (extract metadata for matching)
+	const subscriptionItemMetadata = new Map(
+		Array.from(subscriptionItemInfo.entries()).map(([id, info]) => [
+			id,
+			info.metadata,
+		]),
+	);
+
+	const dbLineItems = stripeLineItemsToDbLineItems({
+		stripeLineItems: remainingStripeLineItems,
+		stripeDiscounts,
+		invoiceId: autumnInvoiceId,
+		stripeInvoiceId,
+		autumnLineItems,
+		subscriptionItemMetadata,
+	});
+
+	// 7. Write to DB
+	if (dbLineItems.length > 0) {
+		if (reconcileOnly) {
+			// Reconcile mode: only update Stripe-authoritative fields, preserve Autumn metadata
+			await invoiceLineItemRepo.reconcileMany({
+				db,
+				lineItems: dbLineItems,
+			});
+		} else {
+			// Full upsert: update all columns (used when we have full Autumn context)
+			await invoiceLineItemRepo.upsertMany({
+				db,
+				lineItems: dbLineItems,
+			});
+		}
+
+		ctx.logger.info(
+			`${reconcileOnly ? "Reconciled" : "Stored"} invoice line items`,
+			{
+				data2: dbLineItems.map((li) => ({
+					id: li.id,
+					stripe_id: li.stripe_id,
+					feature_id: li.feature_id,
+					amount: li.amount,
+					direction: li.direction,
+					total_quantity: li.total_quantity,
+					paid_quantity: li.paid_quantity,
+				})),
+			},
+		);
+	}
+
+	// 8. Delete stale line items (removed between invoice.created and invoice.finalized)
+	// Use filtered list so we also delete $0 metered placeholders from DB
+	const activeStripeIds = filteredStripeLineItems
+		.map((li) => li.id)
+		.filter((id): id is string => id != null);
+
+	await invoiceLineItemRepo.deleteStaleByStripeInvoiceId({
+		db,
+		stripeInvoiceId,
+		activeStripeIds,
+	});
 };
 
 /**

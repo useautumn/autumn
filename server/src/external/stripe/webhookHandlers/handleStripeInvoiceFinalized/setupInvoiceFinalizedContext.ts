@@ -22,6 +22,7 @@ export interface InvoiceFinalizedContext {
 	stripeSubscriptionId: string;
 	fullCustomer: FullCustomer;
 	customerProducts: FullCusProduct[];
+	isVercelInvoice: boolean;
 }
 
 const isVercelInvoice = ({
@@ -72,7 +73,8 @@ export const setupInvoiceFinalizedContext = async ({
 	}
 
 	// 3. Vercel invoices submit out-of-band before the cus_product gate.
-	if (isVercelInvoice({ stripeInvoice, stripeSubscription })) {
+	const vercelInvoice = isVercelInvoice({ stripeInvoice, stripeSubscription });
+	if (vercelInvoice) {
 		await processVercelInvoice({ ctx, stripeInvoice, stripeSubscription });
 	}
 
@@ -112,5 +114,6 @@ export const setupInvoiceFinalizedContext = async ({
 		stripeSubscriptionId,
 		fullCustomer,
 		customerProducts,
+		isVercelInvoice: vercelInvoice,
 	};
 };

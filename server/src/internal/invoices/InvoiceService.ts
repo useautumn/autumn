@@ -72,7 +72,63 @@ export const processInvoice = ({
 	};
 };
 
+export type InvoiceListRow = {
+	invoice: Invoice;
+	customer_id: string | null;
+	entity_id: string | null;
+};
+
+const selectListRows = ({ db }: { db: DrizzleCli }) =>
+	db
+		.select({
+			invoice: invoices,
+			resolved_product_ids: resolvedProductIdsForColumn({
+				internalProductIds: invoices.internal_product_ids,
+				productIds: invoices.product_ids,
+			}),
+			customer_id: customers.id,
+			entity_id: entities.id,
+		})
+		.from(invoices)
+		.innerJoin(
+			customers,
+			eq(invoices.internal_customer_id, customers.internal_id),
+		)
+		.leftJoin(entities, eq(invoices.internal_entity_id, entities.internal_id));
+
+const toListRow = (
+	row: Awaited<
+		ReturnType<ReturnType<typeof selectListRows>["execute"]>
+	>[number],
+): InvoiceListRow => ({
+	invoice: {
+		...row.invoice,
+		resolved_product_ids: row.resolved_product_ids,
+	} as Invoice,
+	customer_id: row.customer_id,
+	entity_id: row.entity_id,
+});
+
 export class InvoiceService {
+	static async getListRowById({
+		ctx,
+		id,
+	}: {
+		ctx: AutumnContext;
+		id: string;
+	}): Promise<InvoiceListRow | null> {
+		const [row] = await selectListRows({ db: ctx.db })
+			.where(
+				and(
+					eq(invoices.id, id),
+					eq(customers.org_id, ctx.org.id),
+					eq(customers.env, ctx.env),
+				),
+			)
+			.limit(1);
+		return row ? toListRow(row) : null;
+	}
+
 	static async get({ db, id }: { db: DrizzleCli; id: string }) {
 		return (await db.query.invoices.findFirst({
 			where: eq(invoices.id, id),
@@ -118,11 +174,7 @@ export class InvoiceService {
 		ctx: AutumnContext;
 		query: ListInvoicesParams;
 	}): Promise<{
-		rows: {
-			invoice: Invoice;
-			customer_id: string | null;
-			entity_id: string | null;
-		}[];
+		rows: InvoiceListRow[];
 		nextCursor: string | null;
 	}> {
 		const cursor = StandardCursor.decode(query.start_cursor);
@@ -161,36 +213,14 @@ export class InvoiceService {
 			);
 		}
 
-		const results = await ctx.db
-			.select({
-				invoice: invoices,
-				resolved_product_ids: resolvedProductIdsForColumn({
-					internalProductIds: invoices.internal_product_ids,
-					productIds: invoices.product_ids,
-				}),
-				customer_id: customers.id,
-				entity_id: entities.id,
-			})
-			.from(invoices)
-			.innerJoin(
-				customers,
-				eq(invoices.internal_customer_id, customers.internal_id),
-			)
-			.leftJoin(entities, eq(invoices.internal_entity_id, entities.internal_id))
+		const results = await selectListRows({ db: ctx.db })
 			.where(and(...conditions))
 			.orderBy(desc(invoices.created_at), desc(invoices.id))
 			.limit(query.limit + 1);
 
 		const hasMore = results.length > query.limit;
 		const rows = (hasMore ? results.slice(0, query.limit) : results).map(
-			(row) => ({
-				invoice: {
-					...row.invoice,
-					resolved_product_ids: row.resolved_product_ids,
-				} as Invoice,
-				customer_id: row.customer_id,
-				entity_id: row.entity_id,
-			}),
+			toListRow,
 		);
 
 		const last = rows[rows.length - 1];
