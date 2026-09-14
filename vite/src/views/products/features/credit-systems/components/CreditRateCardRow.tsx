@@ -17,6 +17,7 @@ import {
 } from "../utils/creditSchemaUtils";
 import { CreditBillingUnits } from "./CreditBillingUnits";
 import { CreditNumberInput } from "./CreditNumberInput";
+import { CreditRowDimensions } from "./CreditRowDimensions";
 import { CreditTierRows } from "./CreditTierRows";
 import { FeatureSelectDropdown } from "./FeatureSelectDropdown";
 
@@ -191,6 +192,9 @@ export function CreditRateCardRow({
 								)}
 							</div>
 						)
+					)}
+					{showRateCardControls && (
+						<CreditRowDimensions item={item} onChange={onChange} />
 					)}
 				</div>
 			)}
