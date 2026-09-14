@@ -23,6 +23,7 @@ import {
 	updateCusEntOptionsInline,
 } from "@/internal/balances/autoTopUp/helpers/autoTopUpUtils.js";
 import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/entitlementExpiry.js";
+import { assertRoomForExpiringGrants } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
 import { routeRemainderToExpiringGrant } from "@/internal/billing/v2/utils/expiringGrants/routeRemainderToExpiringGrant.js";
 
 const findTargetCusEnt = ({
@@ -128,6 +129,17 @@ export const computeManualTopUpPlan = ({
 		prepaidCustomerEntitlementId: prepaidCusEnt.id,
 	});
 
+	const hasExpiry = Boolean(
+		entitlementToExpiry({ entitlement: prepaidCusEnt.entitlement }),
+	);
+	if (hasExpiry) {
+		assertRoomForExpiringGrants({
+			fullCustomer,
+			incoming: 1,
+			now: currentEpochMs ?? Date.now(),
+		});
+	}
+
 	const { deltas, customEntitlements, insertCustomerEntitlements } =
 		routeRemainderToExpiringGrant({
 			deltas: rebalance.deltas,
@@ -136,10 +148,6 @@ export const computeManualTopUpPlan = ({
 			orgId: org.id,
 			now: currentEpochMs ?? Date.now(),
 		});
-
-	const hasExpiry = Boolean(
-		entitlementToExpiry({ entitlement: prepaidCusEnt.entitlement }),
-	);
 
 	return {
 		customerId: fullCustomer?.id ?? "",
