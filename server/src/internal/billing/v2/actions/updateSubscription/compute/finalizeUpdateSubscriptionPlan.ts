@@ -2,7 +2,6 @@ import {
 	type AutumnBillingPlan,
 	isCustomerProductOneOff,
 	type UpdateSubscriptionBillingContext,
-	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyUpdateSubscriptionBillingCycleAnchor } from "@/internal/billing/v2/actions/updateSubscription/compute/applyUpdateSubscriptionBillingCycleAnchor";
@@ -18,12 +17,10 @@ export const finalizeUpdateSubscriptionPlan = async ({
 	ctx,
 	plan,
 	billingContext,
-	params,
 }: {
 	ctx: AutumnContext;
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
-	params: UpdateSubscriptionV1Params;
 }): Promise<AutumnBillingPlan> => {
 	plan = applyUpdateSubscriptionBillingCycleAnchor({ plan, billingContext });
 
@@ -33,7 +30,6 @@ export const finalizeUpdateSubscriptionPlan = async ({
 		lineItems: plan.lineItems ?? [],
 		billingContext,
 		autumnBillingPlan: plan,
-		customLineItems: params.custom_line_items,
 	});
 
 	// Guard: if current customer product is one off, make sure there are no line items

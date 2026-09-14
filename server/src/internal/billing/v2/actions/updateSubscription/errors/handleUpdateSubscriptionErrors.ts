@@ -20,7 +20,6 @@ import { handleProductTypeTransitionErrors } from "./handleProductTypeTransition
 import { handleUncancelErrors } from "./handleUncancelErrors";
 import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors";
 import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors";
-import { handleUpdateSubscriptionCustomLineItemsErrors } from "./handleUpdateSubscriptionCustomLineItemsErrors.js";
 import { handleUpdateSubscriptionLicenseErrors } from "./handleUpdateSubscriptionLicenseErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
@@ -71,11 +70,6 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 4b. Manual top-up strict-shape gate (must run before one-off check so it
 	// owns the "Update too complex" message for ManualTopUp requests).
 	handleManualTopUpErrors({ billingContext, params });
-	handleUpdateSubscriptionCustomLineItemsErrors({
-		billingContext,
-		billingPlan,
-		params,
-	});
 
 	// 5. One-off errors
 	handleOneOffErrors({ ctx, billingContext, autumnBillingPlan, params });

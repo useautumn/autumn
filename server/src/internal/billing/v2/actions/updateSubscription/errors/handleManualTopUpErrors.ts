@@ -13,7 +13,6 @@ import { COMPLEX_UPDATE_ERROR } from "./handleOneOffErrors";
  * like `proration_behavior`, `discounts`, `expand`, `customer_data` are allowed. */
 const FORBIDDEN_FIELDS: readonly (keyof UpdateSubscriptionV1Params)[] = [
 	"customize",
-	"custom_line_items",
 	"version",
 	"cancel_action",
 	"billing_cycle_anchor",

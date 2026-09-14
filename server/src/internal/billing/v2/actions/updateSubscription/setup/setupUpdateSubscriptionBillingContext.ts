@@ -40,7 +40,6 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"cancel_action",
 	"billing_cycle_anchor",
 	"discounts",
-	"custom_line_items",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
 /**
