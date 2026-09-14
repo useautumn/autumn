@@ -13,8 +13,8 @@ import { entitlementToExpiry, initExpiresAt } from "./entitlementExpiry";
 /**
  * A purchased balance that expires on its own clock. Loose (no customer
  * product) so it outlives the plan, with its own custom entitlement so the
- * plan's item set — and `is_custom` — never change. `adjustment` tracks
- * `balance` so granted reports the purchase and usage stays at 0.
+ * plan's item set — and `is_custom` — never change. The entitlement's own
+ * allowance IS the purchase, so granted reports it once and usage stays 0.
  */
 export const buildExpiringGrant = ({
 	sourceCustomerEntitlement,
@@ -55,7 +55,6 @@ export const buildExpiringGrant = ({
 			balance: amount,
 			expiresAt: initExpiresAt({ expiry, now }),
 		}),
-		adjustment: amount,
 		metadata: {
 			source,
 			plan_id: customerProduct?.product?.id ?? null,

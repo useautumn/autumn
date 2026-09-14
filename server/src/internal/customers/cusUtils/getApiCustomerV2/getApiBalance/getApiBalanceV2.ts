@@ -60,10 +60,14 @@ const getApiBalanceBreakdownItemV2 = ({
 		entityId,
 	});
 	const includedGrant = new Decimal(allowance).add(adjustment).toNumber();
-	const prepaidGrant = cusEntsToPrepaidQuantity({
-		cusEnts: [customerEntitlement],
-		sumAcrossEntities: nullish(entityId),
-	});
+	// An expiring item's purchases live on loose grant rows; its option
+	// quantity only sizes the charge, so counting it here would double up.
+	const prepaidGrant = customerEntitlement.entitlement.expiry_duration
+		? 0
+		: cusEntsToPrepaidQuantity({
+				cusEnts: [customerEntitlement],
+				sumAcrossEntities: nullish(entityId),
+			});
 	const remaining = cusEntsToCurrentBalance({
 		cusEnts: [customerEntitlement],
 		entityId,
