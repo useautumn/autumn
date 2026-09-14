@@ -465,16 +465,18 @@ test.concurrent(
 	},
 );
 
-const expiringPro = (planId: string) => ({
+/** A normal monthly plan whose one feature item is the expiring one-off prepaid. */
+const monthlyPlanWithExpiringItem = (planId: string) => ({
 	plan_id: planId,
-	name: "Expiring Pro",
+	name: "Monthly + Expiring Credits",
 	price: { amount: 20, interval: BillingInterval.Month },
 	items: [expiringItem],
 });
 
-const plainPremium = (planId: string) => ({
+/** A monthly plan with only included credits — no expiring item at all. */
+const monthlyPlanWithIncludedOnly = (planId: string) => ({
 	plan_id: planId,
-	name: "Plain Premium",
+	name: "Monthly + Included Credits",
 	price: { amount: 50, interval: BillingInterval.Month },
 	items: [
 		{
@@ -498,7 +500,10 @@ test.concurrent(
 		});
 
 		await autumnV2_3.catalogV2.update({
-			plans: [expiringPro(proId), plainPremium(premiumId)],
+			plans: [
+				monthlyPlanWithExpiringItem(proId),
+				monthlyPlanWithIncludedOnly(premiumId),
+			],
 		});
 		await autumnV2_3.billing.attach({
 			customer_id: customerId,
@@ -570,13 +575,13 @@ test.concurrent(
 		await autumnV2_3.catalogV2.update({
 			plans: [
 				{
-					...expiringPro(premiumId),
-					name: "Expiring Premium",
+					...monthlyPlanWithExpiringItem(premiumId),
+					name: "Pricier Monthly + Expiring Credits",
 					price: { amount: 50, interval: BillingInterval.Month },
 				},
 				{
-					...plainPremium(proId),
-					name: "Plain Pro",
+					...monthlyPlanWithIncludedOnly(proId),
+					name: "Cheaper Monthly + Included Credits",
 					price: { amount: 20, interval: BillingInterval.Month },
 				},
 			],
