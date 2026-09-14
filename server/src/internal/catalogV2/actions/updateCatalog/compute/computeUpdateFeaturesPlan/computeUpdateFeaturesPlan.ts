@@ -18,7 +18,6 @@ const FEATURE_DIFF_VERSION = new ApiVersionClass(ApiVersion.V2_1);
 
 const CREDIT_CONFIG_KEYS = [
 	"credit_schema",
-	"invoice_credit",
 	"model_markups",
 	"default_markup",
 	"provider_markups",

@@ -465,10 +465,6 @@ export type CheckFeature2 = {
     | Array<CheckCreditSchema4 | CheckCreditSchema5 | CheckCreditSchema6>
     | undefined;
   /**
-   * Whether usage of this classic credit system should be itemized as invoice credits.
-   */
-  invoiceCredit?: boolean | undefined;
-  /**
    * Per-model markup overrides for AI credit systems.
    */
   modelMarkups?: { [k: string]: CheckModelMarkups2 } | null | undefined;
@@ -1547,10 +1543,6 @@ export type CheckFeature1 = {
   creditSchema?:
     | Array<CheckCreditSchema1 | CheckCreditSchema2 | CheckCreditSchema3>
     | undefined;
-  /**
-   * Whether usage of this classic credit system should be itemized as invoice credits.
-   */
-  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -3074,7 +3066,6 @@ export const CheckFeature2$inboundSchema: z.ZodMiniType<
       ),
       z.lazy(() => CheckCreditSchema6$inboundSchema),
     ]))),
-    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => CheckModelMarkups2$inboundSchema),
@@ -3096,7 +3087,6 @@ export const CheckFeature2$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
-      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",
@@ -4564,7 +4554,6 @@ export const CheckFeature1$inboundSchema: z.ZodMiniType<
       ),
       z.lazy(() => CheckCreditSchema3$inboundSchema),
     ]))),
-    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => CheckModelMarkups1$inboundSchema),
@@ -4586,7 +4575,6 @@ export const CheckFeature1$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
-      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

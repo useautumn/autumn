@@ -266,14 +266,12 @@ export const featureV1ToDbFeatureConfig = ({
 	const type = apiFeature.type || originalFeature.type;
 	const hasProviderMarkups = "provider_markups" in apiFeature;
 	const hasDefaultMarkup = "default_markup" in apiFeature;
-	const hasInvoiceCredit = apiFeature.invoice_credit !== undefined;
 
 	if (
 		isAiCreditSystem(type) &&
 		(isAiCreditSystem(apiFeature.type) ||
 			hasDefaultMarkup ||
-			hasProviderMarkups ||
-			hasInvoiceCredit)
+			hasProviderMarkups)
 	) {
 		const config = buildAiCreditSystemConfig({
 			defaultMarkup: hasDefaultMarkup
@@ -283,16 +281,10 @@ export const featureV1ToDbFeatureConfig = ({
 				? apiFeature.provider_markups
 				: originalFeature.config?.provider_markups,
 		});
-		return hasInvoiceCredit
-			? { ...config, invoice_credit: apiFeature.invoice_credit }
-			: config;
+		return config;
 	}
 
-	if (
-		nullish(apiFeature.consumable) &&
-		nullish(apiFeature.credit_schema) &&
-		!hasInvoiceCredit
-	)
+	if (nullish(apiFeature.consumable) && nullish(apiFeature.credit_schema))
 		return;
 
 	if (type === FeatureType.Boolean) return;
@@ -315,9 +307,6 @@ export const featureV1ToDbFeatureConfig = ({
 		return {
 			...originalFeature.config,
 			schema: newSchema,
-			invoice_credit: hasInvoiceCredit
-				? apiFeature.invoice_credit
-				: originalFeature.config?.invoice_credit,
 			usage_type: FeatureUsageType.Single,
 		};
 	}
@@ -359,13 +348,6 @@ export const featureV1ToDbFeature = ({
 				providerMarkups: apiFeature.provider_markups,
 			}),
 		);
-	}
-
-	if (
-		isAnyCreditSystem(apiFeature.type) &&
-		apiFeature.invoice_credit !== undefined
-	) {
-		newConfig.invoice_credit = apiFeature.invoice_credit;
 	}
 
 	if (apiFeature.credit_schema) {
@@ -439,10 +421,6 @@ export const dbToApiFeatureV1 = ({
 		credit_schema: Array.isArray(dbFeature.config?.schema)
 			? dbFeature.config.schema.map(dbCreditSchemaItemToApi)
 			: undefined,
-		invoice_credit:
-			dbFeature.type === FeatureType.CreditSystem
-				? (dbFeature.config?.invoice_credit ?? undefined)
-				: undefined,
 		model_markups: dbFeature.model_markups ?? undefined,
 		default_markup: dbFeature.config?.default_markup ?? undefined,
 		provider_markups: dbFeature.config?.provider_markups ?? undefined,

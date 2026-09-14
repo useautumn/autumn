@@ -44,22 +44,6 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 	return newConfig as MeteredConfig;
 };
 
-export const validateInvoiceCreditFeatureType = ({
-	invoiceCredit,
-	featureType,
-}: {
-	invoiceCredit: boolean | undefined;
-	featureType: FeatureType;
-}) => {
-	if (invoiceCredit !== undefined && featureType !== FeatureType.CreditSystem) {
-		throw new RecaseError({
-			message: "Invoice credits are only supported for classic credit systems.",
-			code: ErrCode.InvalidFeature,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
-};
-
 export const validateCreditSystem = (
 	config: CreditSystemConfig,
 	featureType: FeatureType = FeatureType.CreditSystem,
@@ -72,11 +56,6 @@ export const validateCreditSystem = (
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	};
-
-	validateInvoiceCreditFeatureType({
-		invoiceCredit: config.invoice_credit,
-		featureType,
-	});
 
 	if (!isAiCreditSystem(featureType) && schema.length === 0) {
 		invalidCreditSystem(

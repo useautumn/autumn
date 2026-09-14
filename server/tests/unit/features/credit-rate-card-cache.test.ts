@@ -96,17 +96,4 @@ describe("credit rate-card cache comparison", () => {
 			}),
 		).toBe(true);
 	});
-
-	test("detects toggling invoice-credit mode", () => {
-		expect(
-			hasCreditRateCardChanged({
-				oldConfig: { ...baseConfig, schema: [] },
-				newConfig: {
-					...baseConfig,
-					schema: [],
-					invoice_credit: true,
-				},
-			}),
-		).toBe(true);
-	});
 });

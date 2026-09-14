@@ -39,12 +39,6 @@ export const ApiFeatureV1Schema = z.object({
 			"For classic credit systems: maps metered features to flat or graduated credit costs.",
 	}),
 
-	invoice_credit: z.boolean().optional().meta({
-		description:
-			"Deprecated. Credits are itemized on the invoice whenever a plan item bills the credit system pay-per-use at one currency unit per credit; this flag is stored but no longer read.",
-		deprecated: true,
-	}),
-
 	model_markups: ModelMarkupsSchema.optional().meta({
 		description: "Per-model markup overrides for AI credit systems.",
 	}),

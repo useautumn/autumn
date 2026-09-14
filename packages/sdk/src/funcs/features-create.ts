@@ -54,7 +54,6 @@ import { Result } from "../types/fp.js";
  * @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
  * @param display - Singular and plural display names for the feature in your user interface. (optional)
  * @param creditSchema - A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
- * @param invoiceCredit - Whether usage of this classic credit system should be itemized as invoice credits. (optional)
  * @param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
  * @param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
  * @param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)

@@ -322,7 +322,7 @@ When a plan bills a credit system **pay-per-use at exactly one currency unit per
 Any other price shape (a fractional price per credit, prepaid packs, included-only or pooled items) bills as an ordinary overage. The decision is made per customer when the plan is attached, so changing a plan's price later never rewrites an existing customer's invoices.
 
 <Note>
-  The `invoice_credit` feature flag is deprecated. It is still accepted and stored, but nothing reads it: the plan item's price decides.
+  There is no switch to turn this on. The plan item's price decides, so a credit system can itemize on one plan and bill plainly on another.
 </Note>
 
 ## Stacking with direct balances

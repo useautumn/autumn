@@ -152,11 +152,6 @@ export const OVERLAY: Overlay = {
 				reason:
 					"Dead since internal_id: a changed featureId beside it is the rename.",
 			},
-			invoice_credit: {
-				hidden: true,
-				reason:
-					"Admin-only for now: invoice credits are money, and a config must not mint them.",
-			},
 			name: {
 				required: true,
 				reason:
