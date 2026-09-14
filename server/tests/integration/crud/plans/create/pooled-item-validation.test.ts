@@ -152,16 +152,70 @@ test.concurrent(
 	},
 );
 
+const expectPlanCreated = async ({
+	planId,
+	item,
+}: {
+	planId: string;
+	item: NonNullable<CreatePlanParamsV2Input["items"]>[number];
+}) =>
+	autumnRpc.plans.create<unknown, CreatePlanParamsV2Input>({
+		plan_id: planId,
+		name: planId,
+		group: `group-${planId}`,
+		auto_enable: false,
+		items: [item],
+	});
+
 test.concurrent(
-	"invoice-credit item validation: rejects included-only plan items",
+	"invoice-credit item validation: accepts included-only plan items",
 	async () => {
-		await expectPooledItemRejected({
+		await expectPlanCreated({
 			planId: `included-only-invoice-credit-${crypto.randomUUID()}`,
 			item: {
 				feature_id: TestFeature.InvoiceCredits,
 				included: 100,
 			},
-			errMessage: "Invoice-credit features require usage-based pricing",
+		});
+	},
+);
+
+test.concurrent(
+	"invoice-credit item validation: accepts prepaid plan items at one currency unit per credit",
+	async () => {
+		await expectPlanCreated({
+			planId: `prepaid-invoice-credit-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.InvoiceCredits,
+				included: 0,
+				price: {
+					amount: 1,
+					billing_units: 1,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+		});
+	},
+);
+
+test.concurrent(
+	"invoice-credit item validation: rejects prepaid plan items that are not one currency unit per credit",
+	async () => {
+		await expectPooledItemRejected({
+			planId: `prepaid-invoice-credit-non-1to1-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.InvoiceCredits,
+				included: 0,
+				price: {
+					amount: 2,
+					billing_units: 1,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+			errMessage:
+				"Invoice-credit features require a price of one currency unit per credit",
 		});
 	},
 );
