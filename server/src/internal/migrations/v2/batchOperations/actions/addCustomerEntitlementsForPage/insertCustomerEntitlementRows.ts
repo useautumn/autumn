@@ -20,12 +20,14 @@ export const buildInsertCustomerEntitlementRowsQuery = ({
 	initialState,
 	rows,
 	now,
+	invoiceCredit,
 }: {
 	scope: OperationScope;
 	entitlement: EntitlementWithFeature;
 	initialState: CustomerEntitlementInitialState;
 	rows: InsertableCustomerEntitlementRow[];
 	now: number;
+	invoiceCredit: boolean;
 }) => {
 	const serializedRows = JSON.stringify(
 		rows.map((row) => ({
@@ -73,6 +75,7 @@ export const buildInsertCustomerEntitlementRowsQuery = ({
 				customer_id,
 				feature_id,
 				external_id,
+				invoice_credit,
 				expired
 			)
 			SELECT
@@ -97,6 +100,7 @@ export const buildInsertCustomerEntitlementRowsQuery = ({
 				new_row.customer_id,
 				${entitlement.feature.id},
 				NULL,
+				${invoiceCredit},
 				-- Terminal value at insert: leaving this NULL makes the expired
 				-- backfill cron rewrite every index entry in a second pass.
 				(cp.status = ${CusProductStatus.Expired})
@@ -120,6 +124,7 @@ export const insertCustomerEntitlementRows = async ({
 	initialState,
 	rows,
 	now,
+	invoiceCredit,
 }: {
 	db: DrizzleCli;
 	scope: OperationScope;
@@ -127,6 +132,7 @@ export const insertCustomerEntitlementRows = async ({
 	initialState: CustomerEntitlementInitialState;
 	rows: InsertableCustomerEntitlementRow[];
 	now: number;
+	invoiceCredit: boolean;
 	/** Ids of the rows that actually landed — the insert-time scope
 	 * re-assertion can drop rows the select had accepted. */
 }): Promise<string[]> => {
@@ -139,6 +145,7 @@ export const insertCustomerEntitlementRows = async ({
 			initialState,
 			rows,
 			now,
+			invoiceCredit,
 		}),
 	);
 

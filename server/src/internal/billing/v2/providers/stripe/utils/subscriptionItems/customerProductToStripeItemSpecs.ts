@@ -9,7 +9,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { cusPriceToStripeItemSpec } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/cusPriceToStripeItemSpec/cusPriceToStripeItemSpec";
-import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils.js";
+import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
 import { customerLicenseToStripeItemSpecs } from "./customerLicenseToStripeItemSpecs";
 
 /**
@@ -50,11 +50,7 @@ export const customerProductToStripeItemSpecs = ({
 				cusPrice,
 				cusEnts: customerProduct.customer_entitlements,
 			});
-			if (
-				isInvoiceCreditFeature({
-					feature: customerEntitlement?.entitlement.feature,
-				})
-			) {
+			if (isInvoiceCreditCustomerEntitlement({ customerEntitlement })) {
 				invoiceCreditItems.add(spec);
 			}
 		}

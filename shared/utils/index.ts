@@ -80,6 +80,7 @@ export * from "./productUtils/priceUtils/match/stripePriceMappingSlots";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";
 export * from "./productV2Utils/productItemUtils/getItemType";
+export * from "./productV2Utils/productItemUtils/isOneToOneUnitPriceItem";
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem";
 export * from "./productV2Utils/productItemUtils/matchPlanItem";

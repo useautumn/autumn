@@ -42,6 +42,9 @@ await mockModuleWithRestore(
 			return {
 				customerId: args.customerId,
 				entityId: args.entityId,
+				customer_products: [],
+				extra_customer_entitlements: [],
+				pooled_customer_entitlements: [],
 			};
 		},
 	}),

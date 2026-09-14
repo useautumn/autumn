@@ -79,6 +79,7 @@ export type SubjectBalance = {
 	unlimited: boolean | null;
 	balance: number;
 	usage_attribution?: UsageAttribution;
+	invoice_credit?: boolean;
 	adjustment: number | null;
 	additional_balance: number;
 	usage_allowed: boolean | null;

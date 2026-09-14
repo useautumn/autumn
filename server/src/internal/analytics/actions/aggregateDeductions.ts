@@ -163,7 +163,11 @@ export const resolveCreditCost = ({
 		(item: CreditSchemaItem) => item.metered_feature_id === sourceFeatureId,
 	);
 	if (!schemaItem) return null;
-	const rateCard = getCreditRateCard({ sourceFeature, creditSystem });
+	const rateCard = getCreditRateCard({
+		sourceFeature,
+		creditSystem,
+		invoiceCredit: false,
+	});
 	if (rateCard?.tier_behavior === "graduated") return null;
 
 	try {

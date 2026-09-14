@@ -36,6 +36,9 @@ export const customerEntitlements = pgTable(
 			.$type<UsageAttribution>()
 			.notNull()
 			.default({}),
+		// Stamped at creation from the plan item's price shape; invoice lines,
+		// attribution and mutation guards read this, never the feature config.
+		invoice_credit: boolean("invoice_credit").notNull().default(false),
 		created_at: numeric({ mode: "number" }).notNull(),
 		reset_cycle_anchor: numeric({ mode: "number" }),
 		next_reset_at: numeric({ mode: "number" }),

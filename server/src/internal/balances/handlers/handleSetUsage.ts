@@ -1,9 +1,17 @@
-import { RouteGroup, Scopes, SetUsageParamsSchema } from "@autumn/shared";
+import {
+	fullSubjectToCustomerEntitlements,
+	RouteGroup,
+	Scopes,
+	SetUsageParamsSchema,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { updateUsageV2 } from "../updateBalance/v2/updateUsageV2.js";
-import { validateInvoiceCreditBalanceMutation } from "../utils/validateInvoiceCreditBalanceMutation.js";
+import {
+	validateInvoiceCreditBalanceMutationForFeature,
+	validateInvoiceCreditFeatureMutation,
+} from "../utils/validateInvoiceCreditBalanceMutation.js";
 
 export const handleSetUsage = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -16,7 +24,7 @@ export const handleSetUsage = createRoute({
 		if (isFullSubjectRolloutEnabled({ ctx })) {
 		}
 
-		validateInvoiceCreditBalanceMutation({
+		validateInvoiceCreditFeatureMutation({
 			feature: ctx.features.find((feature) => feature.id === body.feature_id),
 		});
 
@@ -27,6 +35,14 @@ export const handleSetUsage = createRoute({
 				entity_id: body.entity_id,
 			},
 			source: "handleSetUsage",
+		});
+
+		validateInvoiceCreditBalanceMutationForFeature({
+			customerEntitlements: fullSubjectToCustomerEntitlements({
+				fullSubject,
+				featureIds: [body.feature_id],
+			}),
+			featureId: body.feature_id,
 		});
 
 		await updateUsageV2({
