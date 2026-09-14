@@ -45,7 +45,6 @@ export const handleStripeInvoiceFinalized = async ({
 			stripeInvoiceId: eventContext.stripeInvoice.id,
 			arrearLineItems: [],
 			reconcileOnly: true,
-			// Vercel marketplace settles its own invoices; never surface those to org webhooks
 			emitFinalizedWebhook: !eventContext.isVercelInvoice,
 		});
 	}
