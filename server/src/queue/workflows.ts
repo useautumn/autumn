@@ -57,6 +57,8 @@ export type StoreInvoiceLineItemsPayload = {
 	billingLineItems?: unknown[];
 	/** When true, only update Stripe-authoritative fields (amounts, quantities) and preserve Autumn metadata */
 	reconcileOnly?: boolean;
+	/** Fire `invoice.finalized` to the org once line items are stored */
+	emitFinalizedWebhook?: boolean;
 };
 
 export type StoreDeferredInvoiceLineItemsPayload = {
