@@ -27,6 +27,17 @@ const mentionsSlackUser = ({
 	userId: string;
 }) => new RegExp(`<@${escapeRegex(userId)}(?:\\|[^>]+)?>`).test(text);
 
+const SLACK_MENTION_PATTERN = /<@([UW][A-Z0-9]+)(?:\|[^>]+)?>/g;
+
+/** Every user id the raw Slack message @-mentions, in order, deduplicated. */
+export const slackMentionedUserIds = ({ raw }: { raw: unknown }): string[] => {
+	if (!isSlackEvent(raw) || typeof raw.text !== "string") return [];
+	const ids = [...raw.text.matchAll(SLACK_MENTION_PATTERN)].flatMap((match) =>
+		match[1] ? [match[1]] : [],
+	);
+	return [...new Set(ids)];
+};
+
 export const slackMessageMentionsUser = ({
 	raw,
 	userId,

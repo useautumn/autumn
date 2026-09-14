@@ -60,10 +60,22 @@ export type PendingApprovalNote = Readonly<{
 	writes: ReadonlyArray<PendingApprovalWrite>;
 }>;
 
+/** Who sent this turn's message and whom it addresses, so the model can tell
+ * a request for it from chatter between people in the thread. */
+export type AgentTurnSpeaker = Readonly<{
+	email?: string;
+	/** The message @-mentions this agent. */
+	mentionsAgent?: boolean;
+	/** The message @-mentions someone other than this agent. */
+	mentionsOthers?: boolean;
+	name: string;
+}>;
+
 export type AgentTurnParams = Readonly<{
 	attachments?: ReadonlyArray<AgentTurnAttachment>;
 	clientContext?: Readonly<Record<string, unknown>>;
 	questionResponse?: { optionId: string; requestId: string };
 	recentMessages?: ReadonlyArray<AgentContextMessage>;
+	speaker?: AgentTurnSpeaker;
 	text: string;
 }>;

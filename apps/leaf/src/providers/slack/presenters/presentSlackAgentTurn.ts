@@ -37,6 +37,13 @@ export const presentSlackAgentTurn = async ({
 	threadId: string;
 	turn: PresentableSlackAgentTurn;
 }) => {
+	if (turn.kind === "empty" && turn.declined) {
+		logger.info("Agent declined to reply", {
+			event: "leaf.slack_reply_declined",
+			data: { run_id: turn.sessionId },
+		});
+		return;
+	}
 	const outputText = turn.kind === "empty" ? "" : turn.text;
 	const { installation, org } = turn;
 	let catalogDecision: ResolvedAgentCatalogDecision | undefined;

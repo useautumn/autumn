@@ -19,9 +19,15 @@ const {
 	handleSubscribedSlackMessage,
 } = createSlackMessageHandlers(dependencies);
 
-const createMessage = ({ isBot = false }: { isBot?: boolean } = {}) =>
+const createMessage = ({
+	author,
+	isBot = false,
+}: {
+	author?: Partial<Message["author"]>;
+	isBot?: boolean;
+} = {}) =>
 	({
-		author: { isBot, userId: "U1" },
+		author: author ?? { isBot, userId: "U1" },
 		id: "M1",
 		raw: { team_id: "T1" },
 		text: "hello",
@@ -65,6 +71,40 @@ describe("handleSubscribedSlackMessage", () => {
 		expect(await input.recentMessages()).toEqual(recentMessages);
 		expect(getRecentMessages).toHaveBeenCalledTimes(1);
 		expect(unsubscribe).not.toHaveBeenCalled();
+	});
+
+	test("passes the speaker's name and email to dispatch", async () => {
+		disposition = "keep";
+		const { thread } = createThread();
+
+		await handleSubscribedSlackMessage(
+			thread,
+			createMessage({
+				author: {
+					email: "aneil@example.com",
+					fullName: "Aneil Singh",
+					isBot: false,
+					userId: "U2",
+				},
+			}),
+		);
+
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				author: { email: "aneil@example.com", name: "Aneil Singh" },
+			}),
+		);
+	});
+
+	test("falls back to the user id when the speaker has no name", async () => {
+		disposition = "keep";
+		const { thread } = createThread();
+
+		await handleSubscribedSlackMessage(thread, createMessage());
+
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ author: { email: undefined, name: "U1" } }),
+		);
 	});
 
 	test("answers every reply, with no relevance judgement", async () => {
