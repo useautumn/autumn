@@ -623,6 +623,17 @@ export type PreviewUpdateLicenseQuantity = {
   quantity: number;
 };
 
+export type PreviewUpdateCustomLineItem = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+};
+
 export type PreviewUpdateParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -706,6 +717,10 @@ export type PreviewUpdateParams = {
    * Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
    */
   licenseQuantities?: Array<PreviewUpdateLicenseQuantity> | undefined;
+  /**
+   * Custom line items that override the auto-generated proration invoice. Only valid for immediate updates to an existing recurring subscription.
+   */
+  customLineItems?: Array<PreviewUpdateCustomLineItem> | undefined;
 };
 
 export type PreviewUpdateDiscount = {
@@ -2310,6 +2325,31 @@ export function previewUpdateLicenseQuantityToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateCustomLineItem$Outbound = {
+  amount: number;
+  description: string;
+};
+
+/** @internal */
+export const PreviewUpdateCustomLineItem$outboundSchema: z.ZodMiniType<
+  PreviewUpdateCustomLineItem$Outbound,
+  PreviewUpdateCustomLineItem
+> = z.object({
+  amount: z.number(),
+  description: z.string(),
+});
+
+export function previewUpdateCustomLineItemToJSON(
+  previewUpdateCustomLineItem: PreviewUpdateCustomLineItem,
+): string {
+  return JSON.stringify(
+    PreviewUpdateCustomLineItem$outboundSchema.parse(
+      previewUpdateCustomLineItem,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -2333,6 +2373,7 @@ export type PreviewUpdateParams$Outbound = {
   recalculate_balances?: PreviewUpdateRecalculateBalances$Outbound | undefined;
   carry_over_usages?: PreviewUpdateCarryOverUsages$Outbound | undefined;
   license_quantities?: Array<PreviewUpdateLicenseQuantity$Outbound> | undefined;
+  custom_line_items?: Array<PreviewUpdateCustomLineItem$Outbound> | undefined;
 };
 
 /** @internal */
@@ -2382,6 +2423,9 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     licenseQuantities: z.optional(
       z.array(z.lazy(() => PreviewUpdateLicenseQuantity$outboundSchema)),
     ),
+    customLineItems: z.optional(
+      z.array(z.lazy(() => PreviewUpdateCustomLineItem$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2402,6 +2446,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       recalculateBalances: "recalculate_balances",
       carryOverUsages: "carry_over_usages",
       licenseQuantities: "license_quantities",
+      customLineItems: "custom_line_items",
     });
   }),
 );
