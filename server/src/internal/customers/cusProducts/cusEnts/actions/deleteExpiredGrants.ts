@@ -1,4 +1,4 @@
-import { customerEntitlements } from "@autumn/shared";
+import { customerEntitlements, entitlements } from "@autumn/shared";
 import { and, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 
@@ -29,7 +29,10 @@ export const deleteExpiredGrants = async ({
 
 	for (let batch = 0; batch < MAX_BATCHES_PER_TICK; batch++) {
 		const expired = await ctx.db
-			.select({ id: customerEntitlements.id })
+			.select({
+				id: customerEntitlements.id,
+				entitlementId: customerEntitlements.entitlement_id,
+			})
 			.from(customerEntitlements)
 			.where(
 				and(
@@ -56,6 +59,19 @@ export const deleteExpiredGrants = async ({
 			inArray(
 				customerEntitlements.id,
 				expired.map((row) => row.id),
+			),
+		);
+
+		// Each grant minted its own custom definition; the FK cascades the other
+		// way, so drop them here or they accumulate forever.
+		await ctx.db.delete(entitlements).where(
+			and(
+				inArray(
+					entitlements.id,
+					expired.map((row) => row.entitlementId),
+				),
+				eq(entitlements.is_custom, true),
+				isNull(entitlements.internal_product_id),
 			),
 		);
 
