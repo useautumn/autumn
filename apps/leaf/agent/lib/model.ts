@@ -4,16 +4,18 @@ import type { LeafAgentConnection } from "./toolAllowlists.js";
 
 type AgentModel = {
 	model?: string;
-	reasoning: "low" | "none";
+	reasoning: "low" | "medium" | "none";
 };
 
 const AGENTS: Record<LeafAgentConnection, AgentModel> = {
 	catalog: { reasoning: "low" },
 	// Routed through OpenRouter, not the direct Anthropic provider: turns on the
 	// direct path stalled silently after tool results.
+	// Medium: on "low" the model reasoned out loud in its reply when a tool
+	// result looked inconsistent, instead of resolving it in thought.
 	leaf: {
 		model: "openrouter/anthropic/claude-sonnet-5",
-		reasoning: "low",
+		reasoning: "medium",
 	},
 };
 

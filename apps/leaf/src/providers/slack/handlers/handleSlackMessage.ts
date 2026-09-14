@@ -46,6 +46,13 @@ const dispatchMessage = async ({
 	thread.adapter.addReaction(thread.id, message.id, "eyes").catch(() => {});
 	const disposition = await dispatch({
 		attachments: message.attachments,
+		author: {
+			email: message.author.email,
+			name:
+				message.author.fullName ||
+				message.author.userName ||
+				message.author.userId,
+		},
 		channelId: thread.channelId,
 		providerUserId: message.author.userId,
 		raw: message.raw,

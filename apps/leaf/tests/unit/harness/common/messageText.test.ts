@@ -12,6 +12,56 @@ const { buildAgentMessageText, extractUserMessageText } = await import(
 );
 
 describe("Harness message text", () => {
+	test("names the speaker on every turn", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				speaker: { email: "aneil@example.com", name: "Aneil Singh" },
+				text: "yep, we're good!",
+			},
+		});
+
+		expect(text).toContain("Speaker: Aneil Singh (aneil@example.com)");
+		expect(text).not.toContain("@-mentions someone else");
+		expect(extractUserMessageText(text)).toBe("yep, we're good!");
+	});
+
+	test("flags a message that mentions someone else and not the agent", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				speaker: {
+					mentionsAgent: false,
+					mentionsOthers: true,
+					name: "Aneil Singh",
+				},
+				text: "@Ayush any support here",
+			},
+		});
+
+		expect(text).toContain("Speaker: Aneil Singh");
+		expect(text).toContain("@-mentions someone else in the thread, not you");
+	});
+
+	test("does not flag a message that mentions the agent alongside others", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				speaker: {
+					mentionsAgent: true,
+					mentionsOthers: true,
+					name: "Aneil Singh",
+				},
+				text: "@Autumn @Ayush approved, apply it",
+			},
+		});
+
+		expect(text).not.toContain("@-mentions someone else");
+	});
+
 	test("injects org context on a new session", () => {
 		const text = buildAgentMessageText({
 			env: "sandbox",

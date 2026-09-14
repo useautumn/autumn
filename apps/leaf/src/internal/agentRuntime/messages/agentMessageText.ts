@@ -1,6 +1,7 @@
 import type { AutumnOrgContext } from "../../autumnMcp/orgContextService.js";
 import type {
 	AgentTurnParams,
+	AgentTurnSpeaker,
 	PendingApprovalNote,
 } from "../domain/agentTurnContext.js";
 
@@ -37,6 +38,23 @@ const pendingApprovalsSection = (
 		].join("\n");
 	});
 	return [...cards, PENDING_APPROVAL_GUIDANCE].join("\n");
+};
+
+const ADDRESSED_TO_OTHERS_GUIDANCE =
+	"This message @-mentions someone else in the thread, not you. Treat it as addressed to them unless it plainly asks you for something.";
+
+/** Every turn names its speaker: a thread has several people in it, and
+ * without this the model reads a reply meant for someone else as its own. */
+const speakerSection = (speaker?: AgentTurnSpeaker) => {
+	if (!speaker) return null;
+	const identity = speaker.email
+		? `${speaker.name} (${speaker.email})`
+		: speaker.name;
+	const lines = [`Speaker: ${identity}`];
+	if (speaker.mentionsOthers && !speaker.mentionsAgent) {
+		lines.push(ADDRESSED_TO_OTHERS_GUIDANCE);
+	}
+	return lines.join("\n");
 };
 
 const adminBypassPreamble = ({
@@ -93,6 +111,7 @@ export const buildAgentMessageText = ({
 		!newSession && !approvalEdit
 			? pendingApprovalsSection(pendingApprovals)
 			: null,
+		speakerSection(params.speaker),
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n");
