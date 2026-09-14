@@ -10,9 +10,9 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
-import { InvoiceService, processInvoice } from "../InvoiceService.js";
+import { InvoiceService } from "../InvoiceService.js";
 import { invoiceLineItemRepo } from "../lineItems/repos/index.js";
-import { dbLineItemsToApiInvoiceItems } from "../lineItems/utils/dbLineItemsToApiInvoiceItems.js";
+import { invoiceListRowToApi } from "../utils/invoiceListRowToApi.js";
 
 export const handleListInvoices = createRoute({
 	scopes: [Scopes.Customers.Read],
@@ -45,18 +45,13 @@ export const handleListInvoices = createRoute({
 			invoiceIds: rows.map((row) => row.invoice.id),
 		});
 
-		const list: ApiListInvoiceV1[] = rows.map((row) => ({
-			...processInvoice({ invoice: row.invoice }),
-			id: row.invoice.id,
-			customer_id: row.customer_id,
-			entity_id: row.entity_id,
-			amount_paid: row.invoice.amount_paid ?? null,
-			refunded_amount: row.invoice.refunded_amount,
-			items: dbLineItemsToApiInvoiceItems({
+		const list: ApiListInvoiceV1[] = rows.map((row) =>
+			invoiceListRowToApi({
+				ctx,
+				row,
 				lineItems: lineItems.filter((li) => li.invoice_id === row.invoice.id),
-				features: ctx.features,
 			}),
-		}));
+		);
 
 		return c.json<CursorPaginatedResponse<ApiListInvoiceV1>>({
 			list,
