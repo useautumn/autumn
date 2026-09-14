@@ -4,6 +4,11 @@ import type { LeafAgentConnection } from "./toolAllowlists.js";
 type GatedWrite = {
 	agents: readonly LeafAgentConnection[];
 	previewTool?: string;
+	/** The preview tool takes the write's own request body, so the write is
+	 * only accepted with a request the agent previewed verbatim this session —
+	 * the card, the walkthrough and the executed write then all describe one
+	 * request. Catalog previews reshape the request and cannot be compared. */
+	previewedRequestRequired?: true;
 	scopes?: RouteScopeRequirement;
 	toolName: string;
 };
@@ -15,12 +20,14 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		agents: ["leaf"],
 		previewTool: "previewAttach",
 		scopes: ["billing:write"],
+		previewedRequestRequired: true,
 		toolName: "attach",
 	},
 	{
 		agents: ["leaf"],
 		previewTool: "previewCreateBalance",
 		scopes: ["balances:write"],
+		previewedRequestRequired: true,
 		toolName: "createBalance",
 	},
 	{
@@ -42,6 +49,7 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		agents: ["leaf"],
 		previewTool: "previewCreateSchedule",
 		scopes: ["billing:write"],
+		previewedRequestRequired: true,
 		toolName: "createSchedule",
 	},
 	{
@@ -69,6 +77,7 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		agents: ["leaf"],
 		previewTool: "previewUpdateSubscription",
 		scopes: ["billing:write"],
+		previewedRequestRequired: true,
 		toolName: "updateSubscription",
 	},
 ];
