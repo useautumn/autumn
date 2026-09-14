@@ -4,7 +4,35 @@ import {
 	normalizeSlackEventsBody,
 	slackMentionedUserIds,
 	slackMessageMentionsUser,
+	slackSpeakerMentions,
 } from "../../../../src/providers/slack/events.js";
+
+describe("slackSpeakerMentions", () => {
+	test("classifies mentions against the bot id", () => {
+		expect(
+			slackSpeakerMentions({ botUserId: "UBOT", mentionedUserIds: ["UBOT"] }),
+		).toEqual({ mentionsAgent: true, mentionsOthers: false });
+		expect(
+			slackSpeakerMentions({ botUserId: "UBOT", mentionedUserIds: ["U1"] }),
+		).toEqual({ mentionsAgent: false, mentionsOthers: true });
+		expect(
+			slackSpeakerMentions({
+				botUserId: "UBOT",
+				mentionedUserIds: ["U1", "UBOT"],
+			}),
+		).toEqual({ mentionsAgent: true, mentionsOthers: true });
+	});
+
+	test("sets neither flag when the bot id is unknown", () => {
+		// A mention of the bot itself must not read as "someone else".
+		expect(
+			slackSpeakerMentions({ botUserId: null, mentionedUserIds: ["UBOT"] }),
+		).toEqual({ mentionsAgent: false, mentionsOthers: false });
+		expect(
+			slackSpeakerMentions({ botUserId: undefined, mentionedUserIds: [] }),
+		).toEqual({ mentionsAgent: false, mentionsOthers: false });
+	});
+});
 
 describe("slackMentionedUserIds", () => {
 	test("lists every mentioned user once, in order", () => {
