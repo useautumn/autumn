@@ -18,8 +18,8 @@ export interface InvoiceFinalizedContext {
 	stripeInvoice: ExpandedStripeInvoice<
 		["discounts.source.coupon", "total_discount_amounts"]
 	>;
-	stripeSubscription: Stripe.Subscription;
-	stripeSubscriptionId: string;
+	stripeSubscription: Stripe.Subscription | null;
+	stripeSubscriptionId: string | null;
 	fullCustomer: FullCustomer;
 	customerProducts: FullCusProduct[];
 	isVercelInvoice: boolean;
@@ -78,9 +78,17 @@ export const setupInvoiceFinalizedContext = async ({
 		await processVercelInvoice({ ctx, stripeInvoice, stripeSubscription });
 	}
 
+	// Standalone invoices (one-off plans, invoice-mode) have no subscription but
+	// still need line items reconciled and the org notified.
 	if (!stripeSubscriptionId || !stripeSubscription) {
-		logger.debug("[invoice.finalized] No subscription ID, skipping");
-		return null;
+		return {
+			stripeInvoice,
+			stripeSubscription: null,
+			stripeSubscriptionId: null,
+			fullCustomer,
+			customerProducts: [],
+			isVercelInvoice: vercelInvoice,
+		};
 	}
 
 	// 4. Get customer products by subscription ID
