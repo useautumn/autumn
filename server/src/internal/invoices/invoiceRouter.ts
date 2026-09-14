@@ -4,6 +4,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetStripeInvoice } from "./handlers/handleGetStripeInvoice.js";
 import { handleInsertInvoices } from "./handlers/handleInsertInvoices.js";
 import { handleListInvoices } from "./handlers/handleListInvoices.js";
+import { handlePayInvoice } from "./handlers/handlePayInvoice.js";
 import { handleRedirectToInvoice } from "./handlers/handleRedirectToInvoice.js";
 
 export const publicInvoiceRouter = new Hono<HonoEnv>();
@@ -35,3 +36,4 @@ export const invoiceRpcRouter = new Hono<HonoEnv>();
 
 invoiceRpcRouter.post("/invoices.insert", ...handleInsertInvoices);
 invoiceRpcRouter.post("/invoices.list", ...handleListInvoices);
+invoiceRpcRouter.post("/invoices.pay", ...handlePayInvoice);
