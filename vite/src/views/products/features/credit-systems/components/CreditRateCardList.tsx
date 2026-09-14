@@ -1,7 +1,6 @@
 import { IconButton } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCreditSchemaListContext } from "../hooks/CreditSchemaListContext";
 import { CreditRateCardRow } from "./CreditRateCardRow";
 
@@ -12,7 +11,6 @@ export function CreditRateCardList({
 	addLabel?: string;
 	renderRowLabel?: (index: number) => ReactNode;
 }) {
-	const { isAdmin } = useAdmin();
 	const {
 		schema,
 		schemaKeys,
@@ -41,7 +39,7 @@ export function CreditRateCardList({
 							onRemove={() => removeSchemaItem(index)}
 							isExpanded={expandedKey === rowKey}
 							onToggle={() => toggleExpandedKey(rowKey)}
-							showRateCardControls={isAdmin}
+							showRateCardControls
 						/>
 					</div>
 				);

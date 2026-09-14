@@ -2,6 +2,7 @@ import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter.js";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { featureOverridesEqual } from "./compareFeatureOverrides.js";
 
 type ApiPlanItem = ApiPlanV1["items"][number];
 export type PlanItemInput = ApiPlanItem | CreatePlanItemParamsV1;
@@ -156,7 +157,8 @@ export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 		(a.reset?.interval_count ?? 1) === (b.reset?.interval_count ?? 1) &&
 		itemPricesEqual(a.price, b.price) &&
 		rolloversEqual(a.rollover, b.rollover) &&
-		prorationsEqual(a.proration, b.proration)
+		prorationsEqual(a.proration, b.proration) &&
+		featureOverridesEqual(a.feature_override, b.feature_override)
 	);
 };
 

@@ -19,6 +19,7 @@ import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 import "./internal/misc/batchReset/batchResetConfigStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
+import "./internal/misc/rateLimiter/rateLimitOverridesStore.js";
 
 // Number of worker processes (defaults to CPU cores)
 const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 3 : 4;
