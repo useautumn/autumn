@@ -47,131 +47,117 @@ opens a new `Invoice` webhook group we'll want anyway for part 2
 
 ### 2. Payload
 
-`POST` to the org's webhook URL, `WebhookEventType.InvoiceCreated`, registered in
-`shared/api/webhooks/webhookRegistry.ts` under a new `Invoice` group.
+`POST` to the org's webhook URL. All amounts in **dollars**, matching `invoices.list`
+(not cents — `billing.auto_topup_succeeded` is the odd one out and we should leave it).
+
+Worked example: a Mintlify enterprise customer provisioned through AWS, billed monthly
+for AI credits across three docs deployments. August period, invoiced 1 Sep.
 
 ```jsonc
 {
   "object": "invoice.created",
   "id": "inv_2b3c4d5e6f7g8h",
-  "customer_id": "mintlify_acme",
-  "entity_id": null,              // invoice-level entity, null when invoice spans entities
   "stripe_id": "in_1A2B3C4D5E6F7G8H",
   "processor_type": "stripe",
   "status": "open",
   "currency": "usd",
-  "total": 2450.00,
+  "total": 4505.00,
   "amount_paid": null,
   "refunded_amount": 0,
   "plan_ids": ["enterprise"],
-  "created_at": 1789689600000,
-  "period_start": 1787011200000,  // earliest line-item period on the invoice
-  "period_end": 1789689600000,
+  "created_at": 1788220800000,
+  "period_start": 1785542400000,   // 2026-08-01
+  "period_end": 1788220800000,     // 2026-09-01
   "hosted_invoice_url": "https://api.useautumn.com/invoices/hosted_invoice_url/inv_2b3c4d5e6f7g8h",
 
   "customer": {
-    "id": "mintlify_acme",
+    "id": "acme_corp",
     "name": "Acme Corp",
-    "metadata": { "provisioned_through": "aws" }   // where Suger/AWS ids live
+    "metadata": { "provisioned_through": "aws", "suger_buyer_id": "buy_9f21" }
   },
+  "entity_id": null,   // invoice-level entity; null because this invoice spans deployments
 
-  // Flat list — every line on the invoice, each tagged with its entity.
+  // Every line on the invoice, each tagged with the entity it belongs to.
   "line_items": [
     {
-      "id": "ili_01",
-      "description": "AI credits (overage)",
-      "entity_id": "deployment_us_east",
-      "plan_id": "enterprise",
-      "feature_id": "ai_credits",
-      "total_quantity": 1500000,      // total usage in the period
-      "included_quantity": 1000000,   // covered by the plan
-      "paid_quantity": 500000,        // the overage — what gets metered to AWS
-      "amount": 1000.00,
-      "amount_after_discounts": 1000.00,
-      "currency": "usd",
-      "period_start": 1787011200000,
-      "period_end": 1789689600000,
-      "prorated": false,
-      "direction": "charge"
-    },
-    {
-      "id": "ili_02",
-      "description": "AI credits (overage)",
-      "entity_id": "deployment_eu_west",
-      "plan_id": "enterprise",
-      "feature_id": "ai_credits",
-      "total_quantity": 1200000,
-      "included_quantity": 1000000,
-      "paid_quantity": 200000,
-      "amount": 400.00,
-      "amount_after_discounts": 400.00,
-      "currency": "usd",
-      "period_start": 1787011200000,
-      "period_end": 1789689600000,
-      "prorated": false,
-      "direction": "charge"
-    },
-    {
-      "id": "ili_03",
+      "id": "ili_7h2k9",
       "description": "Enterprise plan",
-      "entity_id": null,              // customer-level line, not entity-scoped
+      "entity_id": null,             // customer-level, not tied to a deployment
       "plan_id": "enterprise",
       "feature_id": null,
       "total_quantity": null,
-      "included_quantity": null,
       "paid_quantity": 1,
-      "amount": 1050.00,
-      "amount_after_discounts": 1050.00,
+      "amount": 2400.00,
+      "amount_after_discounts": 2400.00,
       "currency": "usd",
-      "period_start": 1787011200000,
-      "period_end": 1789689600000,
-      "prorated": false,
-      "direction": "charge"
+      "period_start": 1785542400000,
+      "period_end": 1788220800000,
+      "billing_timing": "in_advance",
+      "direction": "charge",
+      "prorated": false
+    },
+    {
+      "id": "ili_4m8p1",
+      "description": "AI credits",
+      "entity_id": "acme-docs-prod",  // = Mintlify's own deployment id
+      "plan_id": "enterprise",
+      "feature_id": "ai_credits",
+      "total_quantity": 1842000,      // credits used this period
+      "paid_quantity": 842000,        // the overage → meter this to AWS
+      "amount": 1684.00,
+      "amount_after_discounts": 1684.00,
+      "currency": "usd",
+      "period_start": 1785542400000,
+      "period_end": 1788220800000,
+      "billing_timing": "in_arrear",
+      "direction": "charge",
+      "prorated": false
+    },
+    {
+      "id": "ili_9q3r7",
+      "description": "AI credits",
+      "entity_id": "acme-api-docs",
+      "plan_id": "enterprise",
+      "feature_id": "ai_credits",
+      "total_quantity": 1210500,
+      "paid_quantity": 210500,
+      "amount": 421.00,
+      "amount_after_discounts": 421.00,
+      "currency": "usd",
+      "period_start": 1785542400000,
+      "period_end": 1788220800000,
+      "billing_timing": "in_arrear",
+      "direction": "charge",
+      "prorated": false
     }
   ],
 
-  // Pre-rolled-up view. Same numbers as line_items, grouped so the consumer
-  // doesn't have to. Entity-less lines land under entity_id: null.
+  // Same numbers as line_items, pre-grouped by entity so the consumer doesn't
+  // have to fold them. Purely a convenience view — nothing here is new data.
   "entity_breakdown": [
-    {
-      "entity_id": "deployment_us_east",
-      "entity_name": "US East",
-      "entity_feature_id": "deployments",
-      "entity_metadata": { "aws_customer_id": "abc123" },
-      "total": 1000.00,
-      "features": [
-        {
-          "feature_id": "ai_credits",
-          "total_quantity": 1500000,
-          "included_quantity": 1000000,
-          "paid_quantity": 500000,
-          "amount": 1000.00
-        }
-      ]
-    },
-    {
-      "entity_id": "deployment_eu_west",
-      "entity_name": "EU West",
-      "entity_feature_id": "deployments",
-      "entity_metadata": { "aws_customer_id": "def456" },
-      "total": 400.00,
-      "features": [
-        {
-          "feature_id": "ai_credits",
-          "total_quantity": 1200000,
-          "included_quantity": 1000000,
-          "paid_quantity": 200000,
-          "amount": 400.00
-        }
-      ]
-    },
     {
       "entity_id": null,
       "entity_name": null,
-      "entity_feature_id": null,
-      "entity_metadata": null,
-      "total": 1050.00,
+      "total": 2400.00,
       "features": []
+    },
+    {
+      "entity_id": "acme-docs-prod",
+      "entity_name": "Acme Docs (prod)",
+      "entity_feature_id": "deployments",
+      "total": 1684.00,
+      "features": [
+        { "feature_id": "ai_credits", "total_quantity": 1842000, "paid_quantity": 842000, "amount": 1684.00 }
+      ]
+    },
+    {
+      "entity_id": "acme-api-docs",
+      "entity_name": "Acme API Reference",
+      "entity_feature_id": "deployments",
+      "total": 421.00,
+      "features": [
+        { "feature_id": "ai_credits", "total_quantity": 1210500, "paid_quantity": 210500, "amount": 421.00 }
+      ]
     }
   ],
 
@@ -179,25 +165,52 @@ opens a new `Invoice` webhook group we'll want anyway for part 2
 }
 ```
 
-**Does this cover Mintlify?** Per deployment, per feature, for the billing period:
-`paid_quantity` (the overage to meter), `total_quantity` (usage), and `amount`.
-Plus `entity_metadata` to carry the AWS/Suger id they said they'd tag on the entity,
-and `stripe_id` as a dedupe key. That's the whole AWS Marketplace post.
+**Mintlify's loop:** for each `entity_breakdown` entry with an `entity_id`, post
+`paid_quantity` for `ai_credits` to Suger → AWS, keyed on their own deployment id.
+`stripe_id` is the dedupe key. Then mark the invoice paid out of band (part 2).
 
-### Open questions
+Note `entity_id` is Mintlify's own deployment id — they create the entity with it — so
+the missing `metadata` column on entities doesn't block this. They join on their side.
 
-- **`included_quantity`** isn't on `invoice_line_items` today — derived from the
-  customer entitlement at invoice time, or dropped from v1?
-- **Entity metadata** — `entities` has no `metadata` column yet (the other half of
-  Ryan's ask). Ships with this or separately; if separately, `entity_metadata` is
-  `null` in v1 and they key off `entity_id`.
-- **`entity_breakdown` — do we need it?** It's derivable from `line_items`. Keep if
-  we think most consumers want the rollup; drop to halve the payload.
-- **Fire timing** — on Stripe `invoice.finalized` (amounts final, arrear usage
-  reconciled) vs `invoice.created` (draft, amounts can still move). Finalized is the
-  correct trigger regardless of what we name the event.
-- **Amount units** — list API returns dollars; `billing.auto_topup_succeeded` returns
-  cents. Pick one and document it loudly.
+#### Decisions applied
+
+- `included_quantity` **dropped**. Not on `invoice_line_items`; `total_quantity` −
+  `paid_quantity` gets you there for the common case.
+- `entity_metadata` **dropped from v1**. Entities have no `metadata` column yet;
+  `entity_id` carries the join.
+- Amounts in **dollars** throughout.
+- `entity_breakdown` **kept** — see the note above on what it is.
+
+### The scale problem
+
+`getFullSubjectRowsQuery.ts:27` records a Mintlify customer with **12,212 entities**.
+An invoice for a customer like that, with one arrear line per deployment, is a
+`line_items` array in the thousands — a multi-MB webhook body, and a delivery that
+will time out or get rejected long before it's useful.
+
+Only entities that actually incurred a charge produce a line, which trims it, but not
+reliably enough to ignore. Proposal:
+
+- Inline the first **100** line items and the matching `entity_breakdown` entries.
+- Add `line_items_count` and `line_items_truncated: true`.
+- Page the remainder from `GET /invoices/:id/line_items` (cursor-paginated, same
+  shape), which we want anyway so webhook deliveries are replayable.
+
+Consumers with small invoices never notice; Mintlify's big ones stay deliverable.
+
+### Another caveat worth naming
+
+A deployment that stayed **under** its allowance produces no line item at all — Stripe
+never creates a zero line. So `entity_breakdown` covers *billed* entities, not all
+entities. That's correct for metering (nothing to post), but if Mintlify wants a
+zero-usage record per deployment they'd need to source that from `entities.list`, not
+from this webhook.
+
+### Fire timing
+
+On Stripe's `invoice.finalized`, not `invoice.created`. Arrear usage isn't reconciled
+in the draft, so overage numbers can still move — and the overage is the whole point.
+Holds regardless of what we name our event.
 
 ### Also worth shipping alongside
 
