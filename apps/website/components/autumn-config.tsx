@@ -127,13 +127,15 @@ export default function AutumnConfig({
 			className="@container w-full max-w-[520px] flex flex-col border border-[#2A2A2A] bg-[#000000]/90"
 		>
 			<div className="flex items-center justify-between border-b border-[#2A2A2A] px-4 py-2.5">
-				<span className="font-mono uppercase tracking-[-2%] text-[11px] leading-none text-[#FFFFFF66]">
-					Build with agents
+				<span aria-hidden="true" className="flex items-center gap-1.5">
+					<span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
+					<span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
+					<span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
 				</span>
 				<AgentMarks className="h-3 w-3" />
 			</div>
 
-			<div className="flex flex-col gap-3 p-3">
+			<div className="p-3">
 				<div className="border border-[#2A2A2A] bg-[#0A0A0A]">
 					<div className="flex items-center gap-2 border-b border-[#2A2A2A] px-3 py-2 font-mono text-[12px] leading-none text-[#FFFFFF99]">
 						<svg
@@ -182,15 +184,6 @@ export default function AutumnConfig({
 					</div>
 				</div>
 
-				<div className="flex items-center justify-between border border-[#9564ff] bg-[#20143C] px-3 py-2 font-mono text-[12px] shadow-[0_4px_20px_rgba(149,100,255,0.1)]">
-					<div className="flex items-center gap-2">
-						<span className="text-[#959494]">allowed:</span>
-						<span className="text-[#2B8C3F]">true</span>
-						<span className="text-[#959494]">remaining:</span>
-						<span className="text-[#9564ff]">8976</span>
-					</div>
-					<span className="text-[#9564ff]">92ms</span>
-				</div>
 			</div>
 
 			<AgentPromptPane active={started} />
