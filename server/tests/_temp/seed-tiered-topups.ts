@@ -23,9 +23,12 @@
  *
  * Run (from server/):
  *   ENV_FILE=.env infisical run --env=dev --recursive -- bun tests/_temp/seed-tiered-topups.ts
+ * Add `--fire` to also drop every customer below its threshold and report the
+ * refill each one received.
  */
 
 import {
+	type ApiCustomerV3,
 	type ApiCustomerV5,
 	type CustomerBillingControlsParams,
 	ProductItemInterval,
@@ -135,6 +138,9 @@ const scaleMonthly = products.base({
 	],
 });
 
+const FIRE_TRACK_VALUE = 12;
+const REFILL_WAIT_MS = 30000;
+
 const STARTER = "bloom-starter";
 const SCALE_VOLUME = "bloom-scale-volume";
 const SCALE_GRADUATED = "bloom-scale-graduated";
@@ -147,7 +153,7 @@ const seed = async () => {
 
 	const ctx = await createTestContext();
 
-	const { autumnV2_3 } = await initScenario({
+	const { autumnV1, autumnV2_3 } = await initScenario({
 		ctx,
 		customerId: STARTER,
 		setup: [
@@ -229,11 +235,38 @@ const seed = async () => {
 				`  auto top-up: threshold ${control?.threshold} / refill ${control?.quantity}`,
 		);
 	}
+	if (!process.argv.includes("--fire")) {
+		console.log(
+			chalk.gray(
+				"\nTrack a few credits on any customer to drop below its threshold and fire the refill.\n",
+			),
+		);
+		return;
+	}
+
 	console.log(
-		chalk.gray(
-			"\nTrack a few credits on any customer to drop below its threshold and fire the refill.\n",
-		),
+		chalk.green("\nFiring refills (tracking below each threshold)...\n"),
 	);
+	for (const { customerId } of scenarios) {
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: CREDITS,
+			value: FIRE_TRACK_VALUE,
+		});
+	}
+	await new Promise((resolve) => setTimeout(resolve, REFILL_WAIT_MS));
+
+	for (const { customerId, threshold, quantity } of scenarios) {
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		const invoices = (await autumnV1.customers.get<ApiCustomerV3>(customerId))
+			.invoices;
+		const latest = invoices?.[0];
+		console.log(
+			`  ${chalk.cyan(customerId.padEnd(24))} remaining ${String(customer.balances[CREDITS]?.remaining).padStart(4)}` +
+				`  (was ${threshold + 2 - FIRE_TRACK_VALUE} + refill ${quantity})` +
+				`  latest invoice $${latest?.total} ${latest?.status}  invoices ${invoices?.length}`,
+		);
+	}
 };
 
 seed()
