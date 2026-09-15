@@ -188,6 +188,75 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 		});
 	});
 
+	test("restore carries trials, discounts, invoice items, anchors and item metadata", async () => {
+		mockState.failingUpdateCount = 1;
+		const richSchedule = {
+			...previousSchedule,
+			current_phase: { start_date: 900, end_date: 2000 },
+			phases: [
+				previousSchedule.phases[0],
+				{
+					...stripePhase({
+						start_date: 2000,
+						end_date: 3000,
+						items: [{ price: "price_entity_seat", quantity: 3 }],
+					}),
+					trial_end: 2500,
+					billing_cycle_anchor: "phase_start",
+					proration_behavior: "none",
+					discounts: [
+						{
+							coupon: { id: "coupon_10off" },
+							discount: null,
+							promotion_code: null,
+						},
+					],
+					add_invoice_items: [
+						{ price: { id: "price_setup_fee" }, quantity: 1, discounts: [] },
+					],
+					items: [
+						{
+							price: "price_entity_seat",
+							quantity: 3,
+							discounts: [],
+							metadata: { autumn_customer_price_id: "cus_price_seat" },
+						},
+					],
+				},
+			],
+		} as unknown as Stripe.SubscriptionSchedule;
+
+		await expect(
+			executeStripeSubscriptionScheduleAction({
+				ctx,
+				billingContext: {
+					stripeSubscriptionSchedule: richSchedule,
+				} as unknown as BillingContext,
+				subscriptionScheduleAction: updateAction,
+			}),
+		).rejects.toThrow("already ended");
+
+		const restore = mockState.updateCalls[1] as {
+			params: Stripe.SubscriptionScheduleUpdateParams;
+		};
+		expect(restore.params.phases?.[1]).toEqual({
+			start_date: 2000,
+			end_date: 3000,
+			trial_end: 2500,
+			billing_cycle_anchor: "phase_start",
+			proration_behavior: "none",
+			discounts: [{ coupon: "coupon_10off" }],
+			add_invoice_items: [{ price: "price_setup_fee", quantity: 1 }],
+			items: [
+				{
+					price: "price_entity_seat",
+					quantity: 3,
+					metadata: { autumn_customer_price_id: "cus_price_seat" },
+				},
+			],
+		});
+	});
+
 	test("releases the bare schedule when the previous phases cannot be restored", async () => {
 		mockState.failingUpdateCount = 2;
 
