@@ -41,10 +41,20 @@ const fetchExecutorKey = async ({
 };
 
 /** Swap Claude's `${EXECUTOR_API_KEY}` placeholder for the real key. */
-const writeResolvedKey = async ({ key }: { key: string }): Promise<void> => {
+const writeResolvedKey = async ({ key }: { key: string }): Promise<boolean> => {
+	// .mcp.json is written by `bun ai sync`, which needs the private ai submodule
+	// a Conductor setup script cannot clone. Absent is expected, not an error.
+	if (!(await Bun.file(MCP_PATH).exists())) {
+		log(`${MCP_PATH} not written yet — run \`bun ai/src/cli.ts sync\` first`);
+		return false;
+	}
+
 	const config = await Bun.file(MCP_PATH).json();
 	const executor = config.mcpServers?.executor;
-	if (!executor) throw new Error(`no executor server in ${MCP_PATH}`);
+	if (!executor) {
+		log(`no executor server in ${MCP_PATH}`);
+		return false;
+	}
 
 	executor.headers = { Authorization: `Bearer ${key}` };
 	// Claude prefers OAuth when both are offered, and OAuth cannot complete headless.
@@ -52,13 +62,14 @@ const writeResolvedKey = async ({ key }: { key: string }): Promise<void> => {
 
 	await Bun.write(MCP_PATH, `${JSON.stringify(config, null, "\t")}\n`);
 	chmodSync(MCP_PATH, 0o600);
+	return true;
 };
 
 const projectId = await readInfisicalProjectId();
 const key = await fetchExecutorKey({ projectId });
 if (key) {
-	await writeResolvedKey({ key });
-	log("executor MCP: resolved API key into .mcp.json");
+	if (await writeResolvedKey({ key }))
+		log("executor MCP: resolved API key into .mcp.json");
 } else {
 	log("EXECUTOR_API_KEY unavailable — Executor MCP will fall back to OAuth");
 }
