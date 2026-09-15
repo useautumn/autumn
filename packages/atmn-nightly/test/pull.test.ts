@@ -715,7 +715,52 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 	).toEqual(["messages", "seats"]);
 });
 
-test("--overwrite discards the stale config and its sibling fixtures, then pulls fresh", async () => {
+test("--overwrite without --yes warns and changes nothing", async () => {
+	const dir = tempDir({ name: "overwrite-confirmation" });
+	const configPath = writeConfig({
+		dir,
+		text: "export default { features: [] };\n",
+	});
+	const appPath = join(dir, "app.ts");
+	writeFileSync(appPath, "export const app = true;\n", "utf8");
+	let calls = 0;
+	let output = "";
+
+	const result = await runPull({
+		client: {
+			diff: async () => {
+				calls += 1;
+				return {};
+			},
+			get: async () => {
+				calls += 1;
+				return {};
+			},
+		} as unknown as AutumnClient,
+		cwd: dir,
+		overwrite: true,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result).toEqual({
+		configPath,
+		appended: [],
+		replaced: [],
+		deleted: [],
+	});
+	expect(calls).toBe(0);
+	expect(readFileSync(configPath, "utf8")).toBe(
+		"export default { features: [] };\n",
+	);
+	expect(readFileSync(appPath, "utf8")).toBe("export const app = true;\n");
+	expect(output).toBe(
+		"This deletes every TypeScript file under your Autumn config directory, then pulls a fresh catalog. Re-run with --yes to overwrite.\n",
+	);
+});
+
+test("--overwrite --yes discards the stale config and its sibling fixtures, then pulls fresh", async () => {
 	const dir = tempDir({ name: "overwrite" });
 	// A config for some other org, plus a fixture file an earlier pull wrote.
 	writeConfig({
@@ -754,6 +799,7 @@ test("--overwrite discards the stale config and its sibling fixtures, then pulls
 			builders: "../../../src/generated/features",
 		},
 		overwrite: true,
+		yes: true,
 	});
 
 	expect((diffed as { features: unknown[] }).features).toEqual([]);
