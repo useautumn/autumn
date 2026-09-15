@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { Command } from "commander";
+import { registerApiCommands } from "./actions/api/registerApiCommands";
 import { runEnv } from "./actions/env";
 import { fetchOrgInfo } from "./actions/env/fetchOrgInfo";
 import { runInit } from "./actions/init/runInit";
@@ -317,6 +318,11 @@ Linking a keyless org to an account:
 				await runLogin({ target, configPath: configFlagOf({ command }) });
 			},
 		);
+
+	registerApiCommands({
+		program,
+		targetOf: (command) => prepareTarget({ command }),
+	});
 
 	program
 		.command("env")
