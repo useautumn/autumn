@@ -5,9 +5,8 @@ import {
 	type FullCusEntWithFullCusProduct,
 	fullCustomerToCustomerEntitlements,
 	InternalError,
-	isOneOffPrice,
-	isPrepaidPrice,
-	isVolumeBasedCusEnt,
+	isOneOffCustomerEntitlement,
+	isPrepaidCustomerEntitlement,
 	type LineItem,
 	type LineItemContext,
 	type UpdateSubscriptionBillingContext,
@@ -40,16 +39,12 @@ const findTargetCusEnt = ({
 		featureId,
 	});
 
-	return cusEntsForFeature.find((ce) => {
-		if (ce.customer_product?.id !== customerProduct.id) return false;
-		const cusPrice = cusEntToCusPrice({ cusEnt: ce });
-		if (!cusPrice) return false;
-		return (
-			isOneOffPrice(cusPrice.price) &&
-			isPrepaidPrice(cusPrice.price) &&
-			!isVolumeBasedCusEnt(ce)
-		);
-	});
+	return cusEntsForFeature.find(
+		(ce) =>
+			ce.customer_product?.id === customerProduct.id &&
+			isOneOffCustomerEntitlement(ce) &&
+			isPrepaidCustomerEntitlement(ce),
+	);
 };
 
 /** Build the AutumnBillingPlan for a manual top-up: invoice charge (unless
