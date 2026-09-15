@@ -53,6 +53,19 @@ const AGENT_MARKS = [
 	{ name: "Cursor", d: CURSOR_PATH },
 ];
 
+export const AgentMarks = ({ className }: { className: string }) => (
+	<span className="flex items-center gap-2 text-[#FFFFFF66]">
+		{AGENT_MARKS.map(({ name, d }) => (
+			<BrandMark
+				key={name}
+				title={name}
+				d={d}
+				className={cn("shrink-0", className)}
+			/>
+		))}
+	</span>
+);
+
 const PROMPT_TYPING_SPEED_MS = 22;
 const CURSOR_BLINK_MS = 530;
 
@@ -95,62 +108,57 @@ export default function AgentPromptPane({ active }: { active: boolean }) {
 	};
 
 	return (
-		<div className="border border-b-0 border-[#2A2A2A] bg-[#000000]/90">
-			<div className="flex items-center justify-between border-b border-[#2A2A2A] bg-[#000000] px-4 py-2">
-				<div className="flex items-center gap-2.5">
-					<span className="flex items-center gap-1.5 text-[#FFFFFF66]">
-						{AGENT_MARKS.map(({ name, d }) => (
-							<BrandMark
-								key={name}
-								title={name}
-								d={d}
-								className="h-3 w-3 shrink-0"
-							/>
-						))}
-					</span>
-					<span className="font-mono uppercase tracking-[-2%] text-[11px] leading-none text-[#FFFFFF66] whitespace-nowrap">
-						Build with agents
-					</span>
-				</div>
-				<span
-					className={cn(
-						"font-mono uppercase text-[11px] tracking-[-2%] leading-none transition-opacity duration-300",
-						copied ? "text-[#9564ff] opacity-100" : "opacity-0",
-					)}
-				>
-					Copied
-				</span>
-			</div>
-
+		<div className="px-3 pb-3">
 			<button
 				type="button"
 				onClick={copyPrompt}
 				aria-label="Copy the Autumn setup prompt"
-				className="group flex w-full items-center gap-2.5 px-4 py-3 font-mono text-left cursor-pointer hover:bg-[#FFFFFF08] transition-colors duration-300"
+				className="group flex w-full flex-col gap-3 border border-[#2A2A2A] bg-[#0F0F0F] px-3 pt-3 pb-2.5 font-mono text-left cursor-pointer hover:border-[#3A3A3A] transition-colors duration-300"
 			>
-				<span
-					aria-hidden="true"
-					className="text-[#9564ff] shrink-0 text-sm leading-none"
-				>
-					&#8250;
-				</span>
-				<span className="flex-1 min-w-0 truncate text-[#BFBFBF] group-hover:text-white text-[13px] tracking-[-2%] leading-none transition-colors duration-300">
-					{typed}
+				<span className="flex items-start gap-2 min-w-0">
 					<span
 						aria-hidden="true"
-						className="inline-block align-middle w-[7px] h-3.5 -mt-0.5 ml-px bg-[#9564ff]"
-						style={{
-							opacity: active && (!typingDone || cursorVisible) ? 1 : 0,
-							transition: "opacity 0.1s",
-						}}
-					/>
+						className="text-[#9564ff] shrink-0 text-[13px] leading-[18px]"
+					>
+						&#8250;
+					</span>
+					<span className="min-w-0 text-[#BFBFBF] group-hover:text-white text-[13px] tracking-[-2%] leading-[18px] transition-colors duration-300">
+						{typed}
+						<span
+							aria-hidden="true"
+							className="inline-block align-middle w-[7px] h-3.5 -mt-0.5 ml-px bg-[#9564ff]"
+							style={{
+								opacity: active && (!typingDone || cursorVisible) ? 1 : 0,
+								transition: "opacity 0.1s",
+							}}
+						/>
+					</span>
 				</span>
-				<span className="w-6 h-6 border border-[#2A2A2A] flex items-center justify-center shrink-0 text-[#FFFFFF99] group-hover:text-white group-hover:bg-white/5 transition-colors">
-					{copied ? (
-						<IconTick className="w-3.5 h-3.5" />
-					) : (
-						<IconCopy className="w-3 h-3" />
-					)}
+
+				<span className="flex items-center justify-between">
+					<span className="flex items-center gap-2">
+						<span className="font-mono uppercase text-[10px] tracking-[-2%] leading-none text-[#FFFFFF66]">
+							Agent
+						</span>
+						<span aria-hidden="true" className="text-[#FFFFFF33] text-[10px] leading-none">
+							&bull;
+						</span>
+						<span
+							className={cn(
+								"font-mono uppercase text-[10px] tracking-[-2%] leading-none transition-colors duration-300",
+								copied ? "text-[#9564ff]" : "text-[#FFFFFF66] group-hover:text-[#FFFFFF99]",
+							)}
+						>
+							{copied ? "Copied" : "Click to copy"}
+						</span>
+					</span>
+					<span className="w-6 h-6 border border-[#2A2A2A] flex items-center justify-center shrink-0 text-[#FFFFFF99] group-hover:text-white group-hover:bg-white/5 transition-colors">
+						{copied ? (
+							<IconTick className="w-3.5 h-3.5" />
+						) : (
+							<IconCopy className="w-3 h-3" />
+						)}
+					</span>
 				</span>
 			</button>
 		</div>
