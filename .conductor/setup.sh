@@ -3,7 +3,11 @@
 # Everything slow and one-time lives here; workspace.sh only starts the stack.
 set -euo pipefail
 
-# The machine snapshot carries Docker images but not a running daemon.
+# Nothing here may assume the Cloud computer install script provided anything:
+# it is org-level UI state and emptying it silently removes bun and docker.
+. "$(dirname "$0")/ensureBun.sh"
+ensure_bun_installed || exit 1
+
 . "$(dirname "$0")/startDocker.sh"
 start_docker_daemon || exit 1
 

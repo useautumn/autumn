@@ -6,6 +6,9 @@
 # hit repeatedly.
 set -euo pipefail
 
+. "$(dirname "$0")/ensureBun.sh"
+ensure_bun_installed || true
+
 # A resumed workspace comes back without a running daemon.
 . "$(dirname "$0")/startDocker.sh"
 start_docker_daemon || true
