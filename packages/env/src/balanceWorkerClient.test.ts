@@ -1,7 +1,78 @@
 import { expect, test } from "bun:test";
-import { createBalanceWorkerClientEnv } from "./balanceWorkerClient.js";
+import {
+	createBalanceWorkerClientEnv,
+	parseBalanceWorkerRolloutEnabled,
+} from "./balanceWorkerClient.js";
 
 const localEnv = { KAFKA_AUTH_MODE: "none" };
+
+test.concurrent(
+	"disabled rollout ignores missing or invalid Kafka settings",
+	() => {
+		for (const kafkaEnv of [
+			{},
+			{ KAFKA_AUTH_MODE: "invalid" },
+			{ AWS_REGION: "us-east-1", BALANCE_WORKER_PARTITION_COUNT: "16" },
+		]) {
+			for (const rollout of [undefined, "false"]) {
+				expect(
+					parseBalanceWorkerRolloutEnabled({
+						runtimeEnv: {
+							NODE_ENV: "production",
+							...kafkaEnv,
+							BALANCE_WORKER_ROLLOUT_ENABLED: rollout,
+						},
+					}),
+				).toBe(false);
+			}
+		}
+	},
+);
+
+test.concurrent(
+	"the isolated flag parser preserves direct routing restrictions",
+	() => {
+		expect(
+			parseBalanceWorkerRolloutEnabled({
+				runtimeEnv: {
+					NODE_ENV: "development",
+					BALANCE_WORKER_ROLLOUT_ENABLED: "true",
+				},
+			}),
+		).toBe(true);
+		for (const nodeEnv of [undefined, "test", "production"]) {
+			expect(() =>
+				parseBalanceWorkerRolloutEnabled({
+					runtimeEnv: {
+						NODE_ENV: nodeEnv,
+						BALANCE_WORKER_ROLLOUT_ENABLED: "true",
+					},
+				}),
+			).toThrow("requires NODE_ENV=development");
+		}
+		expect(() =>
+			parseBalanceWorkerRolloutEnabled({
+				runtimeEnv: { BALANCE_WORKER_ROLLOUT_ENABLED: "yes" },
+			}),
+		).toThrow("must be true or false");
+	},
+);
+
+test.concurrent(
+	"actual client configuration still validates Kafka with direct routing off",
+	() => {
+		expect(() =>
+			createBalanceWorkerClientEnv({ NODE_ENV: "production" }),
+		).toThrow("KAFKA_AUTH_MODE=msk_iam requires AWS_REGION");
+		expect(() =>
+			createBalanceWorkerClientEnv({
+				NODE_ENV: "production",
+				BALANCE_WORKER_ROLLOUT_ENABLED: "false",
+				KAFKA_AUTH_MODE: "invalid",
+			}),
+		).toThrow("KAFKA_AUTH_MODE must be none or msk_iam");
+	},
+);
 
 test(
 	"balance worker routing requires an explicit development opt-in",

@@ -1,4 +1,4 @@
-import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
+import { getBalanceWorkerRolloutEnabled } from "@autumn/env/balanceWorkerClient";
 import { AppEnv } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
@@ -7,8 +7,5 @@ export function isBalanceWorkerRolloutEnabled({
 }: {
 	ctx: AutumnContext;
 }): boolean {
-	return (
-		getBalanceWorkerClientEnv().BALANCE_WORKER_ROLLOUT_ENABLED &&
-		ctx.env === AppEnv.Sandbox
-	);
+	return getBalanceWorkerRolloutEnabled() && ctx.env === AppEnv.Sandbox;
 }
