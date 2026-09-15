@@ -14,35 +14,14 @@ const toListItem = (doc: McpResource) => ({
 	annotations: { audience: doc.audience, priority: doc.priority },
 });
 
-/**
- * Wrap an MCP server's base resources, overriding any whose `uri` matches an
- * agent-docs-generated resource and appending any that the base lacks. Other
- * base resources delegate unchanged.
- */
-export const withAgentDocResources = (
-	base: MCPServerResources,
-): MCPServerResources => {
-	const byUri = new Map(mcpResources.map((doc) => [doc.uri, doc]));
+const byUri = new Map(mcpResources.map((doc) => [doc.uri, doc]));
 
-	return {
-		listResources: async (extra) => {
-			const baseList = await base.listResources(extra);
-			const baseUris = new Set(baseList.map((resource) => resource.uri));
-			const merged = baseList.map((resource) => {
-				const doc = byUri.get(resource.uri);
-				return doc ? toListItem(doc) : resource;
-			});
-			const additions = mcpResources
-				.filter((doc) => !baseUris.has(doc.uri))
-				.map(toListItem);
-			return [...merged, ...additions];
-		},
-		getResourceContent: async (args) => {
-			const doc = byUri.get(args.uri);
-			if (doc) {
-				return { text: doc.text };
-			}
-			return base.getResourceContent(args);
-		},
-	};
+/** The generated agent-docs resources, ready to hand to an MCP server. */
+export const agentDocResources: MCPServerResources = {
+	listResources: async () => mcpResources.map(toListItem),
+	getResourceContent: async ({ uri }) => {
+		const doc = byUri.get(uri);
+		if (!doc) throw new Error(`Unknown resource ${uri}`);
+		return { text: doc.text };
+	},
 };

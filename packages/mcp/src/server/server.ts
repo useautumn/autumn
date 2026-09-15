@@ -1,7 +1,6 @@
 import { autumnMcpInstructions } from "@autumn/agent-docs/agent";
-import { withAgentDocResources } from "@autumn/agent-docs/mcp";
+import { agentDocResources } from "@autumn/agent-docs/mcp";
 import { MCPServer } from "@mastra/mcp";
-import { autumnMcpResources } from "../resources/index.js";
 import { createRawAutumnOperationTools } from "../tools/index.js";
 
 export const createAutumnOperationsMCPServer = ({
@@ -16,5 +15,5 @@ export const createAutumnOperationsMCPServer = ({
 		description: "Operate on Autumn customers, plans, and billing.",
 		instructions: autumnMcpInstructions,
 		tools: createRawAutumnOperationTools({ requireIntent }),
-		resources: withAgentDocResources(autumnMcpResources),
+		resources: agentDocResources,
 	});
