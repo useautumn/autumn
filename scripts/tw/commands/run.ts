@@ -1517,16 +1517,25 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		// delivers events for the accounts it owns). The ingress routes every event
 		// to the owning worker by `event.account` regardless of which key sent it.
 		const usedKeys = Math.min(stripeKeyPoolSize(), effectiveWorkers);
-		for (let keyIndex = 0; keyIndex < usedKeys; keyIndex++) {
-			const webhookId = await registerConnectIngressWebhook(
-				ingress.publicUrl,
-				stripeKeyByIndex(keyIndex),
-			);
-			await registry.addWebhook(runId, {
-				sandboxName: ingress.sandbox.name,
-				accountId: webhookKeyTag(keyIndex),
-				webhookId,
-			});
+		const registerIngress = pLimit(10);
+		const registrations = await Promise.allSettled(
+			Array.from({ length: usedKeys }, (_, keyIndex) =>
+				registerIngress(async () => {
+					const webhookId = await registerConnectIngressWebhook(
+						ingress.publicUrl,
+						stripeKeyByIndex(keyIndex),
+					);
+					await registry.addWebhook(runId, {
+						sandboxName: ingress.sandbox.name,
+						accountId: webhookKeyTag(keyIndex),
+						webhookId,
+					});
+				}),
+			),
+		);
+		// Finish recording concurrent successes before a failure starts teardown.
+		for (const registration of registrations) {
+			if (registration.status === "rejected") throw registration.reason;
 		}
 		log(
 			`ingress ready (${ingress.publicUrl}), ${usedKeys} platform Connect webhook(s) registered across the key pool`,
