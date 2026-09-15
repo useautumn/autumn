@@ -6,9 +6,11 @@ import {
 } from "../../env/resolveTarget";
 import { API_ROUTES, type ApiRoute } from "../../generated/apiRoutes";
 import {
+	ApiResponseError,
 	buildApiRequest,
 	callApi,
 	parseFieldArgs,
+	renderApiResponseError,
 	renderCurl,
 } from "./callApi";
 
@@ -101,8 +103,16 @@ export const registerApiCommands = ({
 						);
 						return;
 					}
-					const response = await callApi(call);
-					process.stdout.write(`${JSON.stringify(response, null, 2)}\n`);
+					try {
+						const response = await callApi(call);
+						process.stdout.write(`${JSON.stringify(response, null, 2)}\n`);
+					} catch (error) {
+						// The server's reply is the answer, so it is shown whole; the
+						// status line goes to stderr so stdout stays the body alone.
+						if (!(error instanceof ApiResponseError)) throw error;
+						process.stderr.write(`${renderApiResponseError({ error })}\n`);
+						process.exitCode = 1;
+					}
 				},
 			);
 	}

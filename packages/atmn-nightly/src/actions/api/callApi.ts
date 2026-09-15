@@ -220,6 +220,40 @@ const tryParseJson = ({ text }: { text: string }): unknown => {
 	}
 };
 
+/** A non-2xx reply, whole: the command prints it rather than a one-line summary. */
+export class ApiResponseError extends AutumnApiError {
+	readonly statusText: string;
+
+	constructor({
+		status,
+		statusText,
+		body,
+		path,
+	}: {
+		status: number;
+		statusText: string;
+		body: unknown;
+		path: string;
+	}) {
+		super({ status, body, path });
+		this.name = "ApiResponseError";
+		this.statusText = statusText;
+	}
+}
+
+/** `HTTP 404 Not Found` and the body as the server sent it, pretty-printed when it is JSON. */
+export const renderApiResponseError = ({
+	error,
+}: {
+	error: ApiResponseError;
+}): string => {
+	const body =
+		typeof error.body === "string"
+			? error.body
+			: JSON.stringify(error.body, null, 2);
+	return `HTTP ${error.status} ${error.statusText}\n${body}`;
+};
+
 /** One POST, the way the generated client does it, plus the version header the spec pins. */
 export const callApi = async ({
 	fetch = globalThis.fetch,
@@ -235,8 +269,9 @@ export const callApi = async ({
 	// A proxy's HTML error page is not JSON; the status and route still matter.
 	const parsed: unknown = text ? tryParseJson({ text }) : null;
 	if (!response.ok)
-		throw new AutumnApiError({
+		throw new ApiResponseError({
 			status: response.status,
+			statusText: response.statusText,
 			body: parsed,
 			path: options.route.path,
 		});

@@ -6,12 +6,14 @@
 
 import { expect, test } from "bun:test";
 import {
+	ApiResponseError,
 	buildApiBody,
 	buildApiRequest,
 	callApi,
 	findApiRoute,
 	parseFieldArgs,
 	parseHeaderArgs,
+	renderApiResponseError,
 	renderCurl,
 } from "../src/actions/api/callApi";
 import { summarize } from "../src/actions/api/registerApiCommands";
@@ -143,6 +145,32 @@ test("a failure surfaces the server's message", async () => {
 			fetch,
 		}),
 	).rejects.toThrow(AutumnApiError);
+});
+
+test("a server error renders as the status line and the whole body", async () => {
+	const fetch = (async () =>
+		new Response(
+			JSON.stringify({
+				message: "Customer nope not found",
+				code: "customer_not_found",
+			}),
+			{ status: 404, statusText: "Not Found" },
+		)) as unknown as typeof globalThis.fetch;
+	const error = await callApi({
+		route: check,
+		baseUrl: "http://localhost:8080",
+		secretKey: "sk_test",
+		fetch,
+	}).catch((caught: unknown) => caught);
+	if (!(error instanceof ApiResponseError))
+		throw new Error("expected ApiResponseError");
+	expect(renderApiResponseError({ error })).toBe(
+		`HTTP 404 Not Found\n${JSON.stringify(
+			{ message: "Customer nope not found", code: "customer_not_found" },
+			null,
+			2,
+		)}`,
+	);
 });
 
 test("-H adds a header and can override the api version", async () => {
