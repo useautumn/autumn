@@ -173,7 +173,7 @@ export default function Hero() {
 					  so mobile never downloads them, and desktop fills the
 					  already-reserved space once it hydrates.
 					*/}
-					<div className="hero-reveal lg:opacity-0 relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:flex flex-col justify-end">
+					<div className="hero-reveal lg:opacity-0 relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:flex flex-col justify-center">
 						{isXl && (
 							<>
 								<div className="absolute inset-0 z-0 pointer-events-none">
@@ -186,7 +186,7 @@ export default function Hero() {
 										className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100"
 									/>
 								</div>
-								<div className="relative z-10 translate-y-16 w-full flex justify-center">
+								<div className="relative z-10 w-full flex justify-center">
 									<AutumnConfig initialDelay={200} />
 								</div>
 							</>
