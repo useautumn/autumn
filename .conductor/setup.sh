@@ -9,6 +9,7 @@ cd "$(dirname "$0")/.."
 . "$(dirname "$0")/ensureTooling.sh"
 ensure_bun_installed || exit 1
 ensure_neonctl_installed || exit 1
+ensure_psql_installed || exit 1
 
 . "$(dirname "$0")/startDocker.sh"
 start_docker_daemon || exit 1

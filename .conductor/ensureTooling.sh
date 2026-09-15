@@ -39,3 +39,15 @@ ensure_neonctl_installed() {
 	export PATH="$(npm prefix -g 2>/dev/null)/bin:$PATH"
 	command -v neonctl >/dev/null 2>&1 || { echo "[conductor] neonctl install failed" >&2; return 1; }
 }
+
+# dw runs migrations through psql. postgresql16 is what the image carried; fall
+# back to 15 since only the client matters here.
+ensure_psql_installed() {
+	command -v psql >/dev/null 2>&1 && return 0
+	echo "[conductor] installing postgresql client"
+	sudo dnf install -y postgresql16 >/dev/null 2>&1 ||
+		sudo dnf install -y postgresql15 >/dev/null 2>&1 || true
+	# The image can carry the rpm registered with its binaries deleted.
+	command -v psql >/dev/null 2>&1 || sudo dnf reinstall -y postgresql16 >/dev/null 2>&1 || true
+	command -v psql >/dev/null 2>&1 || { echo "[conductor] psql install failed" >&2; return 1; }
+}

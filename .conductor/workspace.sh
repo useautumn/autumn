@@ -9,6 +9,7 @@ set -euo pipefail
 . "$(dirname "$0")/ensureTooling.sh"
 ensure_bun_installed || true
 ensure_neonctl_installed || true
+ensure_psql_installed || true
 
 # A resumed workspace comes back without a running daemon.
 . "$(dirname "$0")/startDocker.sh"
