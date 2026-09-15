@@ -584,6 +584,7 @@ export class AutumnInt {
 			updates: {
 				name?: string;
 				email?: string;
+				stripe_id?: string | null;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
 				billing_controls?: WritableBillingControls<CustomerBillingControlsParams>;
