@@ -113,7 +113,7 @@ export default function AgentPromptPane({ active }: { active: boolean }) {
 				type="button"
 				onClick={copyPrompt}
 				aria-label="Copy the Autumn setup prompt"
-				className="group flex w-full items-center gap-2.5 border border-[#2A2A2A] bg-[#0F0F0F] px-3 py-2.5 font-mono text-left cursor-pointer hover:border-[#3A3A3A] transition-colors duration-300"
+				className="group flex w-full items-center gap-2.5 border border-[#9564ff] bg-[#0F0F0F] px-3 py-2.5 font-mono text-left cursor-pointer hover:border-[#b08aff] transition-colors duration-300"
 			>
 				<span
 					aria-hidden="true"
