@@ -4,6 +4,7 @@ import { handleGetCustomer } from "@/internal/customers/internalHandlers/handleG
 import { handleGetPendingPaymentLink } from "@/internal/customers/internalHandlers/handleGetPendingPaymentLink.js";
 import { handleClearCustomerCache } from "./handlers/handleClearCustomerCache.js";
 import { handleListCustomerProducts } from "./handlers/handleListCustomerProducts.js";
+import { handleGetInvoiceMetadata } from "./handlers/handleRefundInvoice/handleGetInvoiceMetadata.js";
 import { handleCountCustomers } from "./internalHandlers/handleCountCustomers.js";
 import { handleCreateCustomerExport } from "./internalHandlers/handleCreateCustomerExport.js";
 import { handleDownloadCustomerExport } from "./internalHandlers/handleDownloadCustomerExport.js";
@@ -50,4 +51,8 @@ internalCusRouter.get("/:customer_id/entities", ...handleListEntitiesInternal);
 internalCusRouter.post(
 	"/:customer_id/invoice-line-items",
 	...handleGetInvoiceLineItems,
+);
+internalCusRouter.get(
+	"/:customer_id/invoices/:stripe_invoice_id/metadata",
+	...handleGetInvoiceMetadata,
 );
