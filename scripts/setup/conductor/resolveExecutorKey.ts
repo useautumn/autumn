@@ -23,9 +23,14 @@ const fetchExecutorKey = async ({
 	const fromEnv = (process.env.EXECUTOR_API_KEY ?? "").trim();
 	if (fromEnv) return fromEnv;
 
+	// The CLI ships in node_modules, so a bare "infisical" only resolves when the
+	// caller already put node_modules/.bin on PATH.
+	const localCli = join(PROJECT_ROOT, "node_modules/.bin/infisical");
+	const cli = (await Bun.file(localCli).exists()) ? localCli : "infisical";
+
 	const result = Bun.spawnSync(
 		[
-			"infisical",
+			cli,
 			"secrets",
 			"get",
 			"EXECUTOR_API_KEY",
