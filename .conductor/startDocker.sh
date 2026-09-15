@@ -40,11 +40,13 @@ start_docker_daemon() {
 
 	echo "[conductor] starting docker daemon"
 	# The image was snapshotted mid-build with docker running, so a fresh VM
-	# inherits its leavings: a docker.pid pointing at an unrelated process, and a
-	# containerd that dockerd adopts and then times out waiting 15s for. Clearing
-	# both is safe — we only get here when no daemon answered.
-	sudo rm -f /var/run/docker.pid
+	# inherits a half-live dockerd, its containerd, and a docker.pid pointing at
+	# an unrelated process. Clearing all three is safe — we only get here when no
+	# daemon answered, so nothing healthy is being killed.
+	sudo pkill -x dockerd 2>/dev/null || true
 	sudo pkill -x containerd 2>/dev/null || true
+	sleep 2
+	sudo rm -f /var/run/docker.pid
 	sudo rm -rf /var/run/docker/containerd
 
 	# No systemd on these boxes. if/then rather than `a || b &`, which would
