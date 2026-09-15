@@ -56,7 +56,7 @@ const config = ({ seatCredits = 600 }: { seatCredits?: number } = {}) => `{
 			planId: "starter",
 			name: "Starter",
 			versionSlug: "v1",
-			licenses: [{ licensePlanId: "seat", included: 1 }],
+			licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: 1 }],
 		}),
 		plan({
 			active: true,
@@ -64,7 +64,7 @@ const config = ({ seatCredits = 600 }: { seatCredits?: number } = {}) => `{
 			name: "Pro",
 			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
-			licenses: [{ licensePlanId: "seat", included: 1 }],
+			licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: 1 }],
 			variants: [
 				{
 					variantPlanId: "proAnnual",

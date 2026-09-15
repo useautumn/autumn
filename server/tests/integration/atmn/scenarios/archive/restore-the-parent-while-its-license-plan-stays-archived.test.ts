@@ -77,7 +77,7 @@ test.concurrent(
 			archived: false,
 			price: { amount: 999, interval: "month" },
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
-			licenses: [{ licensePlanId: "seat", included: 25 }],
+			licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: 25 }],
 		}),
 	],
 }`,

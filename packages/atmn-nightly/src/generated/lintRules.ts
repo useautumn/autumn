@@ -645,7 +645,7 @@ export const LINT_RULES: LintRules = {
 	"plans.licenses": {
 		label: "license",
 		idField: "licensePlanId",
-		required: ["licensePlanId"],
+		required: ["licensePlanId", "versionSlug"],
 		fields: {
 			included: {
 				minimum: 0,

@@ -358,7 +358,7 @@ test.concurrent(
 			name: "Enterprise",
 			versionSlug: "v1",
 			price: { amount: 12000, interval: "year" },
-			licenses: [{ licensePlanId: "${seatPlan}", included: 25 }],
+			licenses: [{ licensePlanId: "${seatPlan}", versionSlug: "v1", included: 25 }],
 		}),
 	],
 }`,

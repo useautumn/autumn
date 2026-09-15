@@ -56,7 +56,7 @@ const CASES: Record<
 			name: "Enterprise",
 			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
-			licenses: [{ licensePlanId: "${id}_no_such_plan", included: 25 }],
+			licenses: [{ licensePlanId: "${id}_no_such_plan", versionSlug: "v1", included: 25 }],
 		}),
 	],
 }`,

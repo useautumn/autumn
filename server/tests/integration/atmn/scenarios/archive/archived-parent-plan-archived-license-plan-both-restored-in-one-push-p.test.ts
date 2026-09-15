@@ -58,7 +58,7 @@ const row = ({
 	}
 	const licenses = archived
 		? "[]"
-		: `[{ licensePlanId: "seat", included: 25 }]`;
+		: `[{ licensePlanId: "seat", versionSlug: "v1", included: 25 }]`;
 	return `\n\t\t\tplan({ active: true, planId: "enterprise", versionSlug: "v1", archived: ${archived}, licenses: ${licenses} }),`;
 };
 

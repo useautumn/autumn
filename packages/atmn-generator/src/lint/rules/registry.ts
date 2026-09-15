@@ -38,7 +38,11 @@ export const LINT_REGISTRY: Record<string, RegistryEntry> = {
 	},
 	"plans.items": { label: "item", idField: "featureId", rules: planItemRules },
 	"plans.items.price": { label: "price", rules: planItemPriceRules },
-	"plans.licenses": { label: "license", idField: "licensePlanId" },
+	"plans.licenses": {
+		label: "license",
+		idField: "licensePlanId",
+		required: ["versionSlug"],
+	},
 	rewards: { label: "reward", rules: rewardRules },
 	"rewards.coupon": { label: "coupon", idField: "id", rules: couponRules },
 	"rewards.featureGrant": { label: "feature grant", idField: "id" },

@@ -36,7 +36,7 @@ const baseConfig = ({
 			price: { amount: 49, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
 			freeTrial: { durationLength: 14, durationType: "day" },
-			licenses: [{ licensePlanId: "seatLicense", included: 5 }],
+			licenses: [{ licensePlanId: "seatLicense", versionSlug: "v1", included: 5 }],
 			variants: [
 				{
 					variantPlanId: "variant",

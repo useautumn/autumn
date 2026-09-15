@@ -185,6 +185,7 @@ test("declared relationship customizations remain explicit", () => {
 				licenses: [
 					license({
 						licensePlanId: "seat",
+						versionSlug: "v1",
 						customize: {
 							addItems: [{ featureId: "messages", included: 200 }],
 						},

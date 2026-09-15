@@ -150,7 +150,7 @@ export const enterpriseWithSeats = ({
 			active: true,
 			price: { amount: 999, interval: "month" },
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
-			licenses: [{ licensePlanId: "seat", included: ${included} }],
+			licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: ${included} }],
 		}),`;
 
 /** The `atmn({...})` body from collection sources. Omit a key to leave that

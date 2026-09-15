@@ -25,6 +25,7 @@ const enterpriseCustomizedLicense = `
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
 			licenses: [{
 				licensePlanId: "seat",
+				versionSlug: "v1",
 				included: 25,
 				customize: { price: { amount: 5, interval: "month" } },
 			}],

@@ -236,7 +236,7 @@ const pushProV1ThenV2WithLicensedSeat = async (): Promise<ProFixture> => {
 			name: "Enterprise",
 			versionSlug: "v1",
 			price: { amount: 200, interval: "month" },
-			licenses: [{ licensePlanId: "${seatPlan}", included: 25 }],
+			licenses: [{ licensePlanId: "${seatPlan}", versionSlug: "v1", included: 25 }],
 		}),
 	
 		plan({
@@ -367,7 +367,7 @@ test.concurrent(
 			name: "Enterprise",
 			versionSlug: "v1",
 			price: { amount: 200, interval: "month" },
-			licenses: [{ licensePlanId: "${seatPlan}", included: 25 }],
+			licenses: [{ licensePlanId: "${seatPlan}", versionSlug: "v1", included: 25 }],
 		}),
 	
 		plan({

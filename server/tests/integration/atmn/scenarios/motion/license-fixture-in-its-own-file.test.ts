@@ -57,7 +57,7 @@ export default atmn({
 		const licenseFile = ({ included }: { included: number }) =>
 			`import { license } from "${CLI_PACKAGE_DIR}/src/generated/licenses";
 
-export const seatLink = license({ licensePlanId: "${seat}", included: ${included} });
+export const seatLink = license({ licensePlanId: "${seat}", versionSlug: "v1", included: ${included} });
 `;
 
 		const scenario = await initAtmnScenario({

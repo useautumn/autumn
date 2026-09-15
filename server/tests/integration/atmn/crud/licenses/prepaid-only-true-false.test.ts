@@ -37,7 +37,7 @@ const enterpriseLicensingSeat = ({
 			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
-			licenses: [{ licensePlanId: "seat", included: 25, prepaidOnly: ${prepaidOnly} }],
+			licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: 25, prepaidOnly: ${prepaidOnly} }],
 		}),`;
 
 for (const prepaidOnly of [true, false] as const) {
