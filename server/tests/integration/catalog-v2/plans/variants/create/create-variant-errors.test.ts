@@ -17,8 +17,8 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import { messagesItem } from "../../licenses/utils/seedLicensePlans.js";
+import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import { expectVariantPointerCorrect } from "../utils/expectVariantPointer.js";
 
 const seedBaseAndVariant = async ({
@@ -101,7 +101,7 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: secondBaseId,
-						variants: [{ variant_plan_id: variantId }],
+						variants: [{ variant_plan_id: variantId, version: 1 }],
 					},
 				],
 			});
@@ -166,7 +166,9 @@ test.concurrent(
 						plans: [
 							{
 								plan_id: baseId,
-								variants: [{ variant_plan_id: baseId, name: "Self" }],
+								variants: [
+									{ variant_plan_id: baseId, version: 1, name: "Self" },
+								],
 							},
 						],
 					}),
@@ -225,7 +227,7 @@ test.concurrent(
 						plans: [
 							{
 								plan_id: baseId,
-								variants: [{ variant_plan_id: variantId }],
+								variants: [{ variant_plan_id: variantId, version: 1 }],
 							},
 							{ plan_id: variantId },
 						],

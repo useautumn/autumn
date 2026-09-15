@@ -1,11 +1,5 @@
-/**
- * catalogV2.update — license follow compose with plan items and declare.
- *
- * Contract:
- *   omit licenses[] → variant Seat link untouched
- *   follow + variants[].customize.upsert_licenses 300 → 300 wins slot, Dashboard still lands
- *   items-only Team follow does not add Dashboard onto the Seat overlay
- */
+/** Declared license content is inherited before variant overrides, with or without follow.
+ * Items-only propagation leaves the Seat overlay unchanged. */
 
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -100,6 +94,7 @@ test.concurrent(
 							variants: [
 								{
 									variant_plan_id: variantId,
+									version: 1,
 									customize: {
 										upsert_licenses: [
 											{
@@ -127,7 +122,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants licenses: declare-only upsert_licenses 300 does not take Dashboard")}`,
+	`${chalk.yellowBright("catalogV2 variants licenses: declare-only upsert_licenses 300 wins messages and inherits Dashboard")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_var_lic_declonly");
@@ -160,6 +155,7 @@ test.concurrent(
 							variants: [
 								{
 									variant_plan_id: variantId,
+									version: 1,
 									customize: {
 										upsert_licenses: [
 											{
@@ -178,7 +174,7 @@ test.concurrent(
 					parentPlanId: variantId,
 					licensePlanId: childId,
 					messagesAllowance: 300,
-					omitFeatureIds: [TestFeature.Dashboard],
+					entitlements: [{ feature_id: TestFeature.Dashboard }],
 				});
 			},
 		});

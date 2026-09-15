@@ -21,15 +21,15 @@ export const creditRateSummary = ({
 }): string => {
 	const billingUnits = item.feature_amount ?? 1;
 	const per = isAiChild
-		? `per $${billingUnits} ${unitName}`
+		? ` per $${billingUnits} ${unitName}`
 		: billingUnits === 1
-			? `per ${unitName}`
-			: `per ${billingUnits} ${unitName}`;
+			? ""
+			: ` per ${billingUnits} ${unitName}`;
 
 	const rate = !isGraduated(item)
-		? `${formatCredits(item.credit_amount)} ${per}`
+		? `${formatCredits(item.credit_amount)}${per}`
 		: item.tiers.length === 1
-			? `${formatCredits(item.tiers[0].credit_amount)} ${per}`
+			? `${formatCredits(item.tiers[0].credit_amount)}${per}`
 			: `${item.tiers.length} tiers · from ${formatCredits(item.tiers[0].credit_amount)}`;
 
 	return `${rate}${dimensionCountSuffix(item)}`;

@@ -54,11 +54,7 @@ For items 4 and 6, another skill owns the conversation and its checklist replace
 
 Don't message the user yet — just find out where things stand.
 
-Four skills share this job. If any of them is missing, install them all with one command from the project root:
-
-```bash
-npx skills add useautumn/skills -y
-```
+Four skills share this job, and they ship inside the `atmn` CLI: `atmn init` writes them next to the config and prints the `npx skills add <that folder> -y` line that registers them with your agent, and `atmn skills update` refreshes them when `push` or `pull` say they are older than the CLI. If any is missing here, that is Phase 2's job — never fetch them from anywhere else.
 
 `autumn-setup` (this file) is the flow. `autumn-catalog` is how to build the pricing, plus the exact `atmn` commands — load it in Phase 4. `autumn-integrate` is how the app calls Autumn — load it in Phase 6. `autumn-concepts` explains Autumn's objects — the other two load it themselves.
 

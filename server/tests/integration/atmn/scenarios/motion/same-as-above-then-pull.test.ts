@@ -6,7 +6,7 @@
  * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
  *
  * "Above" is the previous matrix line: a fixture written by hand into
- * `bananas.ts`/`strawberries.ts`/`poo.ts`, then pushed. Push already backfills
+ * `bananas.ts`/`strawberries.ts`/`poo.ts` (spread into plans), then pushed. Push already backfills
  * that fixture's `internalId`, so a follow-up pull has nothing left to do.
  */
 
@@ -42,8 +42,7 @@ import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
 
 export default atmn({
 	features: bananas,
-	plans: strawberries,
-	planVersions: poo,
+	plans: [...strawberries, ...poo],
 });
 `;
 
@@ -62,7 +61,7 @@ export const bananas = [
 `,
 					"strawberries.ts": `${planImport}
 export const strawberries: Plan[] = [
-	plan({ planId: "${pro}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
+	plan({ active: true, planId: "${pro}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 ];
 `,
 					"poo.ts": `${planImport}
@@ -93,7 +92,7 @@ export const poo: Plan[] = [];
 						"strawberries.ts",
 						existing.replace(
 							"];\n",
-							`\tplan({ planId: "${pissId}", name: "Piss", price: { amount: 5, interval: "month" } }),\n];\n`,
+							`\tplan({ active: true, planId: "${pissId}", name: "Piss", versionSlug: "v1", price: { amount: 5, interval: "month" } }),\n];\n`,
 						),
 					);
 				} else {
@@ -101,7 +100,7 @@ export const poo: Plan[] = [];
 						"poo.ts",
 						`${planImport}
 export const poo: Plan[] = [
-	plan({ planId: "${pro}", name: "Pro", versionSlug: "v0", price: { amount: 39, interval: "month" } }),
+	plan({ active: false, planId: "${pro}", name: "Pro", versionSlug: "v0", price: { amount: 39, interval: "month" } }),
 ];
 `,
 					);

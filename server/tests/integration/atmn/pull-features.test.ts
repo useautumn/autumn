@@ -100,7 +100,12 @@ const wireFeatures = async ({
 	const wire = (await scenario.wireFromConfig()) as {
 		features: Record<string, unknown>[];
 	};
-	return sortByFeatureId(wire.features);
+	return sortByFeatureId(wire.features).map((row) => {
+		if (!Array.isArray(row.event_names) || row.event_names.length > 0)
+			return row;
+		const { event_names: _empty, ...rest } = row;
+		return rest;
+	});
 };
 
 /** The catalog rows, recased to the wire shape a config executes to. */
@@ -110,6 +115,7 @@ type CatalogFeatureRow = {
 	name: string;
 	type: string;
 	consumable?: boolean;
+	eventNames?: string[] | null;
 	creditSchema?: {
 		meteredFeatureId: string;
 		billingUnits?: number;
@@ -131,6 +137,7 @@ const wireRowOf = ({
 	name: row.name,
 	type: row.type,
 	...(row.consumable ? { consumable: true } : {}),
+	...(row.eventNames?.length ? { event_names: row.eventNames } : {}),
 	...(row.creditSchema
 		? {
 				credit_schema: row.creditSchema.map((item) => ({

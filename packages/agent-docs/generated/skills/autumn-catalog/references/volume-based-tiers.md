@@ -14,69 +14,58 @@ Volume-based pricing uses tiers to determine a single flat charge based on the t
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Use the `tiers` array with `tierBehavior: 'volume'` on a plan item price:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const records = feature({
-  id: 'records',
-  name: 'Records Processed',
-  type: 'metered',
+  featureId: "records",
+  name: "Records Processed",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 50, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 50, interval: "month" },
   items: [
-    item({
-      featureId: records.id,
-      reset: { interval: 'month' },
+    {
+      featureId: records.featureId,
+      reset: { interval: "month" },
       price: {
         tiers: [
           { to: 1000, flatAmount: 100 },
           { to: 10000, flatAmount: 500 },
-          { to: 'inf', flatAmount: 1000 },
+          { to: "inf", flatAmount: 1000 },
         ],
-        tierBehavior: 'volume',
-        billingMethod: 'usage_based',
-        interval: 'month',
+        tierBehavior: "volume",
+        billingMethod: "prepaid",
+        interval: "month",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [records], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create or edit a plan
-2. Add a **consumable** feature
-3. Under **Price**, select **Tiered**
-4. Switch the tier behavior to **Volume**
-5. Add tiers with the upper limit (`to`) and flat amount (`flat_amount`) for each range
-6. Set the billing method to **Usage-based** and the billing interval
-7. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How volume-based pricing works
 
-At the end of the billing period, Autumn:
+Autumn:
 
-1. Looks at the total usage for the feature
+1. Looks at the total volume for the feature
 2. Finds the tier the total falls into
 3. Charges the flat amount for that tier
 
-| Total usage | Matching tier | Charge |
+Volume tiers are prepaid-only.
+
+| Total volume | Matching tier | Charge |
 |-------------|---------------|--------|
 | 500 | 0–1,000 | **$100** |
 | 5,000 | 1,001–10,000 | **$500** |
@@ -89,25 +78,25 @@ Each tier has the following fields:
 | Field | Type | Description |
 |-------|------|-------------|
 | `to` | number or `"inf"` | The upper boundary of this tier |
-| `flat_amount` | number | Flat fee charged when total usage falls in this tier |
-| `amount` | number | Optional per-unit price applied to the total usage when this tier is the matching tier |
+| `flatAmount` | number | Flat fee charged when the total volume falls in this tier (`flat_amount` over the API) |
+| `amount` | number | Optional per-unit price applied to the total volume when this tier is the matching tier |
 
 Tiers must be in ascending order by `to`. The final tier should use `"inf"`.
 
 ## Combining flat and per-unit amounts
 
-Each tier can include both `flat_amount` and `amount` — a fixed fee plus a per-unit charge when that tier is the matching tier. This is useful for combining a base fee with per-unit volume pricing.
+Each tier can include both `flatAmount` and `amount` — a fixed fee plus a per-unit charge when that tier is the matching tier. This is useful for combining a base fee with per-unit volume pricing.
 
 ```ts
 price: {
   tiers: [
-    { to: 1000, amount: 0.10, flat_amount: 0 },
-    { to: 10000, amount: 0.08, flat_amount: 50 },
-    { to: 'inf', amount: 0.05, flat_amount: 100 },
+    { to: 1000, amount: 0.10, flatAmount: 0 },
+    { to: 10000, amount: 0.08, flatAmount: 50 },
+    { to: "inf", amount: 0.05, flatAmount: 100 },
   ],
-  tierBehavior: 'volume',
-  billingMethod: 'usage_based',
-  interval: 'month',
+  tierBehavior: "volume",
+  billingMethod: "prepaid",
+  interval: "month",
 }
 ```
 

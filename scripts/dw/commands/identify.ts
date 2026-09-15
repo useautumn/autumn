@@ -1,43 +1,12 @@
 import chalk from "chalk";
-import type { PublicServiceUrls } from "../devProxy/cloudflareConfig.ts";
-import { emulateGoogleUrl } from "../helpers/emulate.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
+import { serverPortFor, vitePortFor } from "../helpers/ports.ts";
 import {
-	aliasesFor,
-	checkoutPortFor,
-	leafPortFor,
-	serverPortFor,
-	vitePortFor,
-} from "../helpers/ports.ts";
-import { entryPublicServiceUrls } from "../helpers/publicUrls.ts";
+	entryPublicServiceUrls,
+	localServiceUrls,
+} from "../helpers/publicUrls.ts";
 import { resolveCurrentEntryOrFatal } from "../helpers/registry.ts";
 import { tmuxSessionName } from "../helpers/tmux.ts";
-import type { RegistryEntry } from "../types.ts";
-
-function localServiceUrls({
-	entry,
-}: {
-	entry: RegistryEntry;
-}): PublicServiceUrls {
-	const n = entry.worktreeNum;
-	if (isProvisioned(entry)) {
-		const aliases = aliasesFor(n);
-		return {
-			api: aliases.apiUrl,
-			checkout: `http://localhost:${checkoutPortFor(n)}`,
-			emulate: emulateGoogleUrl({}),
-			leaf: `http://localhost:${leafPortFor(n)}`,
-			vite: aliases.viteUrl,
-		};
-	}
-	return {
-		api: `http://localhost:${serverPortFor(n)}`,
-		checkout: `http://localhost:${checkoutPortFor(n)}`,
-		emulate: emulateGoogleUrl({}),
-		leaf: `http://localhost:${leafPortFor(n)}`,
-		vite: `http://localhost:${vitePortFor(n)}`,
-	};
-}
 
 export function cmdIdentify(): void {
 	const entry = resolveCurrentEntryOrFatal("bun dw identify");

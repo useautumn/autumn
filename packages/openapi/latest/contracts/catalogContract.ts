@@ -29,6 +29,26 @@ export const catalogV2GetContract = oc
 	.input(GetCatalogParamsSchema.meta({ title: "GetCatalogParams" }))
 	.output(GetCatalogResponseSchema.meta({ title: "GetCatalogResponse" }));
 
+export const catalogV2DiffContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/catalogV2.diff",
+		operationId: "diffCatalogV2",
+		tags: ["catalog"],
+		description:
+			"Compute a catalog delta without mutation validation or persistence.",
+	})
+	.input(
+		PreviewUpdateCatalogParamsSchema.meta({
+			title: "PreviewUpdateCatalogParams",
+		}),
+	)
+	.output(
+		PreviewUpdateCatalogResponseSchema.meta({
+			title: "PreviewUpdateCatalogResponse",
+		}),
+	);
+
 export const catalogV2PreviewUpdateContract = oc
 	.route({
 		method: "POST",

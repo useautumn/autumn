@@ -16,7 +16,7 @@ const planImport = `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans
 const atmnImport = `import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";`;
 
 const planLiteral = ({ planId, amount }: { planId: string; amount: number }) =>
-	`plan({\n\tplanId: "${planId}",\n\tname: "Pro",\n\tprice: { amount: ${amount}, interval: "month" },\n})`;
+	`plan({\n\tactive: true,\n\tplanId: "${planId}",\n\tname: "Pro",\n\tversionSlug: "v1",\n\tprice: { amount: ${amount}, interval: "month" },\n})`;
 
 type Layout = {
 	fixtureFile: string;

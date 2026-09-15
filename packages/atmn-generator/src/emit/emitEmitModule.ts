@@ -30,7 +30,7 @@ type EmittedCollection = {
 	readonly builder: string;
 	readonly idField: string;
 	readonly responseIdField: string;
-	readonly historyKey?: string;
+	readonly versioned?: boolean;
 	readonly pull: boolean;
 	readonly branches?: readonly CollectionBranchMeta[];
 };
@@ -138,8 +138,7 @@ export const emitEmitModule = ({
 		);
 		lines.push(`\t\tpaths: ${JSON.stringify(paths)},`);
 		lines.push(`\t\tdefaults: ${JSON.stringify(defaultsUnder(prefix))},`);
-		if (meta.historyKey !== undefined)
-			lines.push(`\t\thistoryKey: ${JSON.stringify(meta.historyKey)},`);
+		if (meta.versioned) lines.push(`\t\tversioned: true,`);
 		lines.push(`\t\tpull: ${meta.pull},`);
 		lines.push(
 			`\t\tdeprecated: ${JSON.stringify(deprecatedFieldsOf({ overlay, collection: name }))},`,

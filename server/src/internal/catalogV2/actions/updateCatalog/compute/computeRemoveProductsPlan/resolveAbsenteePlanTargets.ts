@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
+import type { UpdateCatalogParams } from "@autumn/shared";
 import type {
 	ProductStatesContext,
 	UpdateCatalogContext,
@@ -27,27 +27,56 @@ const currentIdOf = ({
 	return current ? [current.id] : [];
 };
 
+type DesiredRowDeclaration = {
+	planId: string;
+	internalId?: string;
+	version?: number;
+	versionSlug?: string;
+};
+
+const desiredRowDeclarations = ({
+	params,
+}: {
+	params: UpdateCatalogParams;
+}): DesiredRowDeclaration[] =>
+	(params.plans ?? []).flatMap((plan) => [
+		{
+			planId: plan.plan_id,
+			internalId: plan.internal_id,
+			version: plan.version,
+			versionSlug: plan.version_slug,
+		},
+		...(plan.variants ?? []).map((variant) => ({
+			planId: variant.variant_plan_id,
+			internalId: variant.internal_id,
+			version: variant.version,
+			versionSlug: variant.version_slug,
+		})),
+	]);
+
 /** Every plan id the payload speaks for — stated, renamed into, or skipped. */
 const statedPlanIds = ({
 	params,
 	productStatesContext,
+	declarations,
 }: {
 	params: UpdateCatalogParams;
 	productStatesContext: ProductStatesContext;
+	declarations: DesiredRowDeclaration[];
 }): Set<string> =>
 	new Set([
+		...declarations.flatMap((declaration) => [
+			declaration.planId,
+			...currentIdOf({
+				internalId: declaration.internalId,
+				productStatesContext,
+			}),
+		]),
 		...(params.plans ?? []).flatMap((plan) => [
-			plan.plan_id,
 			...(plan.new_plan_id ? [plan.new_plan_id] : []),
-			...currentIdOf({ internalId: plan.internal_id, productStatesContext }),
-			...(plan.variants ?? []).flatMap((variant) => [
-				variant.variant_plan_id,
-				...(variant.new_plan_id ? [variant.new_plan_id] : []),
-				...currentIdOf({
-					internalId: variant.internal_id,
-					productStatesContext,
-				}),
-			]),
+			...(plan.variants ?? []).flatMap((variant) =>
+				variant.new_plan_id ? [variant.new_plan_id] : [],
+			),
 		]),
 		...params.remove_plans.map((entry) => entry.plan_id),
 		...params.skip_plan_ids,
@@ -75,9 +104,11 @@ export const resolveAbsenteePlanTargets = ({
 	// the legacy path already follows for rewards and referral programs.
 	if (params.plans === undefined) return [];
 
+	const declarations = desiredRowDeclarations({ params });
 	const stated = statedPlanIds({
 		params,
 		productStatesContext: catalogContext.productStatesContext,
+		declarations,
 	});
 	const absent = Object.entries(
 		catalogContext.productStatesContext.versionsByPlanId,
@@ -99,7 +130,7 @@ export const resolveAbsenteePlanTargets = ({
 	if (params.skip_version_deletions !== false) return wholePlans;
 	return [
 		...wholePlans,
-		...absentVersionTargets({ params, catalogContext, stated }),
+		...absentVersionTargets({ catalogContext, stated, declarations }),
 	];
 };
 
@@ -109,30 +140,30 @@ export const resolveAbsenteePlanTargets = ({
  * its explicit version, its slug, or, unpinned, the active version.
  */
 const absentVersionTargets = ({
-	params,
 	catalogContext,
 	stated,
+	declarations,
 }: {
-	params: UpdateCatalogParams;
 	catalogContext: UpdateCatalogContext;
 	stated: Set<string>;
+	declarations: DesiredRowDeclaration[];
 }): RemovePlanTarget[] => {
 	const { productStatesContext, internalIdRefs } = catalogContext;
 	const statedVersions = new Map<string, Set<number>>();
-	for (const plan of params.plans ?? []) {
+	for (const declaration of declarations) {
 		const ref =
-			plan.internal_id === undefined
+			declaration.internalId === undefined
 				? undefined
-				: internalIdRefs.get(plan.internal_id);
-		const planId = ref?.planId ?? plan.plan_id;
+				: internalIdRefs.get(declaration.internalId);
+		const planId = ref?.planId ?? declaration.planId;
 		const version =
 			ref?.version ??
-			plan.version ??
-			(plan.version_slug === undefined
+			declaration.version ??
+			(declaration.versionSlug === undefined
 				? activeFullProductForPlan({ planId, productStatesContext })?.version
 				: versionForSlug({
 						planId,
-						versionSlug: plan.version_slug,
+						versionSlug: declaration.versionSlug,
 						productStatesContext,
 					}));
 		if (version === undefined) continue;

@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
 	atmnConfigSource,
@@ -13,7 +14,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type CatalogPlanRow = {
 	id: string;
@@ -39,8 +39,10 @@ test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/versions: editing a planVersions row updates that inactive row in place")}`,
 	async () => {
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
-			config: `{ plans: [${paidMonthly({ planId: "pro", amount: 20, extra: `\n\t\t\t\tversionSlug: "v1",` })}] }`,
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
+			config: `{ plans: [${paidMonthly({ planId: "pro", amount: 20, versionSlug: "v1" })}] }`,
 		});
 
 		try {
@@ -49,8 +51,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}],
-	planVersions: [${paidMonthly({ planId: "pro", amount: 20, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
+	plans: [${paidMonthly({ planId: "pro", amount: 30, versionSlug: "v2" })}${paidMonthly({ planId: "pro", amount: 20, active: false, versionSlug: "v1" })}],
 }`,
 				}),
 			);
@@ -60,8 +61,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}],
-	planVersions: [${paidMonthly({ planId: "pro", amount: 25, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
+	plans: [${paidMonthly({ planId: "pro", amount: 30, versionSlug: "v2" })}${paidMonthly({ planId: "pro", amount: 25, active: false, versionSlug: "v1" })}],
 }`,
 				}),
 			);

@@ -48,6 +48,7 @@ const fakeClient = ({
 	return {
 		calls,
 		client: {
+			diff: record("diff", catalogPreview),
 			previewUpdate: record("previewUpdate", catalogPreview),
 			update: record("update", { results: {}, migrations: [] }),
 			get: record("get", { features: [], plans: [] }),

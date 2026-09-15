@@ -20,8 +20,10 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 const pro = ({ config }: { config?: string }) => `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },${
 				config === undefined ? "" : `\n\t\t\tconfig: ${config},`
 			}
@@ -58,7 +60,7 @@ test.concurrent("plan config is omitted at its default", async () => {
 		// A plan that never stated config scaffolds without it, and the server
 		// still answers with the flag at its default.
 		const { freshFiles, freshWire } = await expectRoundTrip({ scenario });
-		expect(freshFiles.get("autumn.config.ts")).not.toContain("config");
+		expect(freshFiles.get("plans.ts")).not.toContain("config");
 		const plans = freshWire.plans as Array<Record<string, unknown>>;
 		expect(
 			plans.find((plan) => plan.plan_id === "pro")?.config,

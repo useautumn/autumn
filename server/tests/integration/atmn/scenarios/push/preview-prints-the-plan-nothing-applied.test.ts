@@ -16,9 +16,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
 test("preview prints the plan, nothing applied", async () => {
 	const scenario = await initAtmnScenario({
-		setup: [
-			s.platform.create({ userEmail: "atmn-preview@autumn.test" }),
-		],
+		setup: [s.platform.create({ userEmail: "atmn-preview@autumn.test" })],
 		config: configBody({
 			features: everyFeatureType,
 			plans: `${freePlan}${paidMonthly()}`,

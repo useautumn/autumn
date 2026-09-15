@@ -1,9 +1,14 @@
-import { ErrCode, findDuplicate, RecaseError } from "@autumn/shared";
+import {
+	type CatalogVariantParams,
+	ErrCode,
+	findDuplicate,
+	RecaseError,
+} from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { variantRowForDeclaredEntry } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/anchoredVariantRow";
 import { editedBaseInternalIds } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/editedBaseInternalIds";
-import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { mintedVariantPins } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/mintedVariantPins";
 import { rowHasVersionableCustomers } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/rowHasVersionableCustomers";
@@ -26,6 +31,26 @@ const baseInternalIdsForPlan = ({
 			(product) => product.internal_id,
 		),
 	]);
+
+const declaredVariantKey = ({
+	variant,
+	baseInternalIds,
+	productStatesContext,
+}: {
+	variant: CatalogVariantParams;
+	baseInternalIds: Set<string>;
+	productStatesContext: ProductStatesContext;
+}): string =>
+	variantRowForDeclaredEntry({
+		variant,
+		anchorInternalIds: baseInternalIds,
+		productStatesContext,
+	})?.internal_id ??
+	variantPinKey({
+		planId: variant.variant_plan_id,
+		version: variant.version,
+		versionSlug: variant.version_slug,
+	});
 
 const isVariantOfBase = ({
 	variantPlanId,
@@ -110,40 +135,30 @@ export const handleVariantErrors = ({
 		});
 	}
 
-	const duplicate = findDuplicate(
-		declaredVariants.map((variant) => variant.variant_plan_id),
+	const baseInternalIds = baseInternalIdsForPlan({
+		upsert,
+		productStatesContext,
+	});
+	const variantKeys = declaredVariants.map((variant) =>
+		declaredVariantKey({
+			variant,
+			baseInternalIds,
+			productStatesContext,
+		}),
 	);
-	if (duplicate) {
+	const duplicateKey = findDuplicate(variantKeys);
+	if (duplicateKey) {
+		const duplicateIndex = variantKeys.indexOf(duplicateKey);
+		const duplicatePlanId =
+			declaredVariants[duplicateIndex]?.variant_plan_id ?? duplicateKey;
 		throw new RecaseError({
-			message: `Duplicate variant_plan_id ${duplicate} in variants`,
+			message: `Duplicate variant_plan_id ${duplicatePlanId} in variants`,
 			code: ErrCode.InvalidRequest,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 
-	const baseInternalIds = baseInternalIdsForPlan({
-		upsert,
-		productStatesContext,
-	});
-
 	for (const variant of declaredVariants) {
-		const existingRows =
-			productStatesContext.versionsByPlanId[variant.variant_plan_id] ?? [];
-		for (const row of existingRows) {
-			if (!row.base_internal_product_id) continue;
-			const anchoredBase = findFullProductByInternalId({
-				internalId: row.base_internal_product_id,
-				productStatesContext,
-			});
-			if (anchoredBase && anchoredBase.id !== upsert.row.planId) {
-				throw new RecaseError({
-					message: `All versions of ${variant.variant_plan_id} must point at ${upsert.row.planId}`,
-					code: ErrCode.VariantCrossPlanAnchor,
-					statusCode: StatusCodes.BAD_REQUEST,
-				});
-			}
-		}
-
 		if (
 			typeof variant.base_variant_id === "string" &&
 			variant.base_variant_id !== upsert.row.planId

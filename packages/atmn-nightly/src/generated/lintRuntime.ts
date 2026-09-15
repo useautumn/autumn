@@ -70,10 +70,8 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** No two entries of the collection share a value of `field`, paired
-			 * with `alongside` when given (an absent `alongside` reads as `absentMeans`).
-			 * A list of paths reads the first one the entry states, which is how a
-			 * union item is named. */
+			/** No two entries share `field` (or the first stated path), paired with
+			 * `alongside` when given. An omitted `alongside` is not keyed as a default. */
 			readonly kind: "unique";
 			readonly field: string | readonly string[];
 			readonly alongside?: string;
@@ -95,17 +93,11 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** Entries sharing `groupBy` are versions of one thing; once there is
-			 * more than one, every one of them must state `slug`. With
-			 * `collection`, the same holds for the nested rows named by `identity`
-			 * across every entry's `collection`, where any of `pins` counts. */
-			readonly kind: "versionSlugs";
+			/** Among the entries sharing `groupBy`, exactly one has `field: true`. */
+			readonly kind: "exactlyOneActive";
 			readonly groupBy: string;
-			readonly slug: string;
+			readonly field: string;
 			readonly label: string;
-			readonly collection?: string;
-			readonly identity?: string;
-			readonly pins?: readonly string[];
 			readonly because: string;
 	  }
 	| {
@@ -524,7 +516,7 @@ const entryRuleFailures = ({
 		}
 		case "unique":
 		case "linkedOnce":
-		case "versionSlugs":
+		case "exactlyOneActive":
 			return [];
 	}
 };
@@ -554,11 +546,9 @@ const checkUnique = ({
 		const fieldName =
 			typeof rule.field === "string" ? rule.field : rule.field.join(" / ");
 		const pair =
-			rule.alongside === undefined
-				? undefined
-				: (entry[rule.alongside] ?? rule.absentMeans);
-		const composite =
-			rule.alongside === undefined ? value : `${value}@${String(pair)}`;
+			rule.alongside === undefined ? undefined : entry[rule.alongside];
+		if (rule.alongside !== undefined && typeof pair !== "string") continue;
+		const composite = rule.alongside === undefined ? value : `${value}@${pair}`;
 		if (seen.has(composite)) {
 			const label =
 				rule.alongside === undefined
@@ -645,38 +635,16 @@ const checkLinkedOnce = ({
 	}
 };
 
-/** Once a thing has versions, a slug-less one no longer reads as "the v1". */
-const checkVersionSlugs = ({
+/** Among the rows sharing a group, exactly one carries `field: true`. */
+const checkExactlyOneActive = ({
 	entries,
 	rule,
 	node,
 	key,
 	trail,
 	issues,
-}: CollectionCheck<"versionSlugs">): void => {
-	type Member = { entry: Entry; index: number; slugged: boolean };
-	const statesSlug = (entry: Entry): boolean =>
-		typeof entry[rule.slug] === "string";
-	const report = ({
-		members,
-		subject,
-	}: {
-		members: Member[];
-		subject: string;
-	}): void => {
-		const slugged = members.filter((member) => member.slugged).length;
-		if (members.length <= 1 || slugged === members.length) return;
-		const first = members.find((member) => !member.slugged);
-		if (first === undefined) return;
-		issues.push({
-			path: render([
-				...trail,
-				crumbFor({ node, key, entry: first.entry, index: first.index }),
-			]),
-			message: `${subject} has ${members.length} versions but only ${slugged} states ${rule.slug}. ${rule.because}`,
-		});
-	};
-
+}: CollectionCheck<"exactlyOneActive">): void => {
+	type Member = { entry: Entry; index: number; active: boolean };
 	const rowsByGroup = new Map<string, Member[]>();
 	for (const [index, entry] of entries.entries()) {
 		if (!isEntry(entry)) continue;
@@ -684,52 +652,47 @@ const checkVersionSlugs = ({
 		if (typeof group !== "string") continue;
 		rowsByGroup.set(group, [
 			...(rowsByGroup.get(group) ?? []),
-			{ entry, index, slugged: statesSlug(entry) },
+			{ entry, index, active: entry[rule.field] === true },
 		]);
 	}
 	for (const [group, members] of rowsByGroup) {
-		report({ members, subject: `${rule.label} ${show(group)}` });
-	}
-
-	if (rule.collection === undefined || rule.identity === undefined) return;
-	// A nested row is reported on the base entry that declares it without a
-	// slug, so the finding points at a fixture the user can open.
-	const linksByIdentity = new Map<
-		string,
-		{ base: string; members: Member[] }
-	>();
-	for (const [index, entry] of entries.entries()) {
-		if (!isEntry(entry)) continue;
-		const base = entry[rule.groupBy];
-		const links = entry[rule.collection];
-		if (typeof base !== "string" || !Array.isArray(links)) continue;
-		for (const link of links) {
-			if (!isEntry(link)) continue;
-			const id = link[rule.identity];
-			if (typeof id !== "string") continue;
-			const current = linksByIdentity.get(id) ?? { base, members: [] };
-			current.members.push({
-				entry,
-				index,
-				slugged:
-					pinOf({ entry: link, pins: rule.pins ?? [rule.slug] }) !== undefined,
-			});
-			linksByIdentity.set(id, current);
-		}
-	}
-	for (const [id, { base, members }] of linksByIdentity) {
-		const slugged = members.filter((member) => member.slugged).length;
-		if (members.length <= 1 || slugged === members.length) continue;
-		const first = members.find((member) => !member.slugged);
-		if (first === undefined) continue;
+		const active = members.filter((member) => member.active);
+		if (active.length === 1) continue;
+		// Report where the reader can act: the first row when none is active,
+		// the second active row when too many are.
+		const at = active.length === 0 ? members[0] : active[1];
+		if (at === undefined) continue;
+		const versions = `${members.length} version${members.length === 1 ? "" : "s"}`;
+		const count =
+			active.length === 0 ? "none is active" : `${active.length} are active`;
 		issues.push({
 			path: render([
 				...trail,
-				crumbFor({ node, key, entry: first.entry, index: first.index }),
+				crumbFor({ node, key, entry: at.entry, index: at.index }),
 			]),
-			message: `Variant ${show(id)} is declared under ${members.length} versions of ${show(base)} but only ${slugged} states ${rule.slug}. ${rule.because}`,
+			message: `${rule.label} ${show(group)} has ${versions} and ${count}. ${rule.because}${renameHint({ active, members })}`,
 		});
 	}
+};
+
+/**
+ * A group with no active row whose every row already has a stable id is what
+ * a half-done rename looks like: the versions moved to the new id all came
+ * from the server, and the live one stayed behind under the old id.
+ */
+const renameHint = <T extends { active: boolean; entry: Entry }>({
+	active,
+	members,
+}: {
+	active: T[];
+	members: T[];
+}): string => {
+	if (active.length !== 0) return "";
+	const everyRowIsKnown = members.every(
+		(member) => typeof member.entry.internalId === "string",
+	);
+	if (!everyRowIsKnown) return "";
+	return " If you are renaming a plan, change the planId on every one of its versions, not just some.";
 };
 
 /** Rules about the collection as a whole, reported on the offending entry. */
@@ -751,8 +714,8 @@ const checkCollection = ({
 			checkUnique({ entries, rule, node, key, trail, issues });
 		if (rule.kind === "linkedOnce")
 			checkLinkedOnce({ entries, rule, node, key, trail, issues });
-		if (rule.kind === "versionSlugs")
-			checkVersionSlugs({ entries, rule, node, key, trail, issues });
+		if (rule.kind === "exactlyOneActive")
+			checkExactlyOneActive({ entries, rule, node, key, trail, issues });
 	}
 };
 

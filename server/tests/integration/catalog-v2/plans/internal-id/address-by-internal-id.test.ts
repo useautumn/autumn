@@ -24,8 +24,9 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiPlanExpandedV1 } from "@autumn/shared";
+import { type ApiPlanExpandedV1, ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -187,6 +188,163 @@ test.concurrent(
 					allowNotFound: true,
 				});
 				expect(viaOldId?.id, "row now answers to the new id").toBe(renamedId);
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 internal_id: a differing version_slug on a known id is a slug rename")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_iid_reslug");
+
+		await withCatalogPlans({
+			ctx,
+			planIds: [planId],
+			run: async () => {
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{ plan_id: planId, name: "Before", items: [messagesItem(100)] },
+					],
+				});
+				const before = await versionRow({ ctx, planId, version: 1 });
+				const internalId = before!.internal_id;
+				expect(before?.version_slug).toBe("v1");
+
+				// Same rule as plan_id: the config states the slug the row should
+				// carry now; the stable id says which row. No new_version_slug.
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: planId,
+							internal_id: internalId,
+							version_slug: "legacy",
+							name: "Before",
+							items: [messagesItem(100)],
+						},
+					],
+				});
+
+				const reslugged = await versionRow({ ctx, planId, version: 1 });
+				expect(reslugged?.internal_id, "same row").toBe(internalId);
+				expect(reslugged?.version_slug, "slug renamed").toBe("legacy");
+				expect(
+					(
+						await ProductService.listFull({
+							db: ctx.db,
+							orgId: ctx.org.id,
+							env: ctx.env,
+							inIds: [planId],
+						})
+					).length,
+					"no second row minted under the new slug",
+				).toBe(1);
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 internal_id: renaming one version of a plan away from its family is rejected")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_iid_split");
+		const renamedId = `${planId}_renamed`;
+
+		await withCatalogPlans({
+			ctx,
+			planIds: [planId, renamedId],
+			run: async () => {
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{ plan_id: planId, name: "Plan", items: [messagesItem(100)] },
+					],
+				});
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: planId,
+							versioning: "new_version",
+							items: [messagesItem(200)],
+						},
+					],
+				});
+				const v1 = await versionRow({ ctx, planId, version: 1 });
+				const v2 = await versionRow({ ctx, planId, version: 2 });
+
+				// A plan id is a family name. Moving one row's stable id under a
+				// new id while a sibling keeps the old one splits the family.
+				const splitMessage = `All versions of ${planId} must keep one plan id. Rename every version to ${renamedId}, or none.`;
+				await expectAutumnError({
+					errCode: ErrCode.InvalidRequest,
+					errMessage: splitMessage,
+					func: () =>
+						autumnV2_3.catalogV2.update({
+							plans: [
+								{
+									plan_id: planId,
+									internal_id: v1!.internal_id,
+									name: "Plan",
+									items: [messagesItem(100)],
+								},
+								{
+									plan_id: renamedId,
+									internal_id: v2!.internal_id,
+									name: "Plan",
+									items: [messagesItem(200)],
+								},
+							],
+						}),
+				});
+
+				// The sibling need not be in the payload to be left behind.
+				await expectAutumnError({
+					errCode: ErrCode.InvalidRequest,
+					errMessage: splitMessage,
+					func: () =>
+						autumnV2_3.catalogV2.update({
+							plans: [
+								{
+									plan_id: renamedId,
+									internal_id: v2!.internal_id,
+									name: "Plan",
+									items: [messagesItem(200)],
+								},
+							],
+						}),
+				});
+
+				// Nothing moved.
+				expect((await versionRow({ ctx, planId, version: 2 }))?.id).toBe(
+					planId,
+				);
+
+				// Every version stated under the new id is the supported rename.
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: renamedId,
+							internal_id: v1!.internal_id,
+							name: "Plan",
+							items: [messagesItem(100)],
+						},
+						{
+							plan_id: renamedId,
+							internal_id: v2!.internal_id,
+							name: "Plan",
+							items: [messagesItem(200)],
+						},
+					],
+				});
+				expect(
+					(await versionRow({ ctx, planId: renamedId, version: 1 }))
+						?.internal_id,
+				).toBe(v1!.internal_id);
+				expect(
+					(await versionRow({ ctx, planId: renamedId, version: 2 }))
+						?.internal_id,
+				).toBe(v2!.internal_id);
 			},
 		});
 	},

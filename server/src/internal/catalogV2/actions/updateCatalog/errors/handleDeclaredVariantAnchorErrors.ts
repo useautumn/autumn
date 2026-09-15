@@ -13,6 +13,7 @@ export const handleDeclaredVariantAnchorErrors = ({
 	productStatesContext: ProductStatesContext;
 }): void => {
 	const parentByVariantKey = new Map<string, string>();
+	const basePlanByVariantPlanId = new Map<string, string>();
 
 	for (const entry of params.plans ?? []) {
 		if (entry.variants === undefined) continue;
@@ -42,6 +43,17 @@ export const handleDeclaredVariantAnchorErrors = ({
 				});
 			}
 			parentByVariantKey.set(key, parent.internal_id);
+			const previousBasePlanId = basePlanByVariantPlanId.get(
+				variant.variant_plan_id,
+			);
+			if (previousBasePlanId && previousBasePlanId !== entry.plan_id) {
+				throw new RecaseError({
+					message: `All versions of ${variant.variant_plan_id} must share one base plan or all be standalone`,
+					code: ErrCode.VariantCrossPlanAnchor,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+			basePlanByVariantPlanId.set(variant.variant_plan_id, entry.plan_id);
 		}
 	}
 };

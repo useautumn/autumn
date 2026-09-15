@@ -4,6 +4,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	fullCustomerToCustomerEntitlements,
 	isEntityScopedCusEnt,
+	isPooledBalanceSourceCustomerEntitlement,
 	priceToProrationConfig,
 	type UpdateCustomerEntitlement,
 	type UpdateSubscriptionBillingContext,
@@ -17,13 +18,21 @@ export const computeUpdateQuantityCustomerEntitlementChanges = ({
 	updateSubscriptionContext,
 	quantityDifference,
 	customerEntitlement,
+	applyImmediately = false,
 }: {
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	quantityDifference: number;
 	customerEntitlement: FullCusEntWithFullCusProduct;
+	applyImmediately?: boolean;
 }): UpdateCustomerEntitlement[] => {
 	const { fullCustomer, recalculateBalances } = updateSubscriptionContext;
+	// The pooled transition owns the grant delta; its source balance stays zero.
+	if (
+		applyImmediately &&
+		isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })
+	)
+		return [];
 
 	const customerPrice = cusEntToCusPrice({
 		cusEnt: customerEntitlement,
@@ -43,7 +52,7 @@ export const computeUpdateQuantityCustomerEntitlementChanges = ({
 	});
 
 	// If downgrade and no proration, don't change entitlement balance THIS cycle
-	if (!isUpgrade && !shouldApplyProration) {
+	if (!applyImmediately && !isUpgrade && !shouldApplyProration) {
 		return [];
 	}
 

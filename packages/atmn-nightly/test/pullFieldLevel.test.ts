@@ -49,15 +49,15 @@ const clientWith = ({
 	rows: unknown;
 }) => ({
 	previewUpdateOrganization: async () => ({ config: { changes: [] } }),
-	previewUpdate: async () => preview,
+	diff: async () => preview,
 	update: async () => ({}),
 	get: async () => rows,
 });
 
 const config = `${imports}export default atmn({
 	plans: [
-		plan({ internalId: "prod_A", planId: "free", versionSlug: "v1", name: "Free" }),
-		plan({ internalId: "prod_B", planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ internalId: "prod_A", active: true, planId: "free", versionSlug: "v1", name: "Free" }),
+		plan({ internalId: "prod_B", active: true, planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 49, interval: "month" } }),
 	],
 });
 `;
@@ -187,5 +187,5 @@ test("a diff that names no fields rewrites the whole fixture", async () => {
 	});
 	const text = configText();
 	expect(text).toContain('group: "core"');
-	expect(text).toContain("plan({\n");
+	expect(text).toContain("\t\t\tactive: true,\n");
 });

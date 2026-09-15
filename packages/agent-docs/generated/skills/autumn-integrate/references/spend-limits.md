@@ -11,53 +11,40 @@ Spend limits apply to **usage-based** features — features with overage pricing
 
 You'll need a plan with a usage-based price on the feature you want to cap:
 
-<Tabs>
-<Tab title="CLI">
-
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const apiCalls = feature({
-  id: 'api_calls',
-  name: 'API Calls',
-  type: 'metered',
+  featureId: "api_calls",
+  name: "API Calls",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: apiCalls.id,
+    {
+      featureId: apiCalls.featureId,
       included: 1000,
       price: {
         amount: 1,
-        interval: 'month',
+        interval: "month",
         billingUnits: 1000,
-        billingMethod: 'usage_based',
+        billingMethod: "usage_based",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [apiCalls], plans: [pro] });
 ```
 
-Push changes with `atmn push`. Then configure spend limits per customer via the API (see below).
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create or edit a plan
-2. Add a **consumable** feature (e.g., "API Calls")
-3. Set an **included** amount (e.g., 1,000)
-4. Add a **price** with **Billing method: Usage-based**
-5. Save the plan
-
-Spend limits are then configured per customer via the API.
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`. Then configure spend limits per customer via the API (see below).
 
 ## Configuring spend limits
 
@@ -229,7 +216,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response (under spend limit)">
 ```json
 {
   "allowed": true,
@@ -247,9 +233,7 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 }
 ```
 The customer has used 4,000 API calls (3,000 overage) against a spend limit of 5,000. They still have 2,000 overage units remaining, so `allowed` is `true`.
-</Expandable>
 
-<Expandable title="check response (at spend limit)">
 ```json
 {
   "allowed": false,
@@ -267,7 +251,6 @@ The customer has used 4,000 API calls (3,000 overage) against a spend limit of 5
 }
 ```
 The customer has reached their 5,000 overage limit (6,000 total usage). `allowed` is `false` even though the feature allows overage.
-</Expandable>
 
 ## Entity-level spend limits
 

@@ -1,9 +1,11 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { COLLECTIONS } from "../generated/emit";
 import { ConfigError, type LintIssue } from "../generated/lintRuntime";
 import { fixtureLocation } from "../surgery/fixtureLocation";
 import { configPackageName } from "./configPackageName";
+import { isLegacyConfigText, LegacyConfigError } from "./legacyConfig";
 
 const CONFIG_FILENAMES = ["autumn.config.ts", "autumn.config.js"] as const;
 
@@ -84,19 +86,34 @@ const withFixtureLocations = ({
  * existed for non-TS producers is gone; this function is the seam a future
  * `--config-json` would slot into.
  */
-/** Bun runs TypeScript natively; the published node binary needs jiti for it. */
+/**
+ * A fresh process per load: the root imports its collection files, and no
+ * in-process import — Bun's `?v=` bust, jiti's `moduleCache: false` — re-reads
+ * a dependency after the first load. A single push never notices; pull edits
+ * the collection files and then re-evaluates the config, so it must.
+ */
 const importConfigModule = async ({
 	path,
 }: {
 	path: string;
 }): Promise<Record<string, unknown> & { default?: WireDocument }> => {
-	if (typeof Bun !== "undefined") {
-		return import(`${path}?v=${Date.now()}`);
+	const onBun = typeof Bun !== "undefined";
+	const script = `import(${JSON.stringify(path)}).then((m) => process.stdout.write(JSON.stringify({ ok: true, module: { ...m, default: m.default } })), (e) => process.stdout.write(JSON.stringify({ ok: false, name: e?.name, message: e?.message, issues: e?.issues })))`;
+	const result = spawnSync(
+		process.execPath,
+		onBun ? ["-e", script] : ["--import", "jiti/register", "-e", script],
+		{ cwd: dirname(path), encoding: "utf8" },
+	);
+	if (result.status !== 0 || result.stdout.length === 0) {
+		throw new Error(result.stderr.trim() || `Failed to load ${path}`);
 	}
-	const { createJiti } = await import("jiti");
-	return createJiti(import.meta.url, { moduleCache: false }).import(
-		path,
-	) as Promise<Record<string, unknown> & { default?: WireDocument }>;
+	const parsed = JSON.parse(result.stdout) as
+		| { ok: true; module: Record<string, unknown> & { default?: WireDocument } }
+		| { ok: false; name?: string; message?: string; issues?: LintIssue[] };
+	if (parsed.ok) return parsed.module;
+	if (parsed.name === "ConfigError" && parsed.issues)
+		throw new ConfigError(parsed.issues);
+	throw new Error(parsed.message ?? `Failed to load ${path}`);
 };
 
 export const loadConfig = async ({
@@ -116,6 +133,11 @@ export const loadConfig = async ({
 				: null
 			: findConfigPath({ dirs });
 	if (!path) throw new ConfigNotFoundError(configPath ? [configPath] : dirs);
+	// A 1.x config would die inside the import with "item is not exported";
+	// say what happened and how to move instead.
+	if (isLegacyConfigText({ text: readFileSync(path, "utf8") })) {
+		throw new LegacyConfigError({ path });
+	}
 
 	// Cache-busted because the module cache would otherwise pin the first read
 	// for the life of the process — irrelevant for a single `atmn push`, wrong
@@ -133,11 +155,7 @@ export const loadConfig = async ({
 	}
 	const wire = module.default;
 
-	if (looksLikeV2Config({ module })) {
-		throw new Error(
-			`${path} is an atmn v2 config. v3 writes its own from your catalog: move this file aside, then run \`atmn pull\` to generate the v3 autumn.config.ts.`,
-		);
-	}
+	if (looksLikeV2Config({ module })) throw new LegacyConfigError({ path });
 	if (wire === undefined) {
 		throw new Error(
 			`${path} has no default export. It should end with \`export default atmn({ ... })\`.`,

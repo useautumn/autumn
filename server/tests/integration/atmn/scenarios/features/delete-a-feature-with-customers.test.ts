@@ -28,7 +28,7 @@ test.concurrent(
 			],
 			config: configBody({
 				features: `\n\t\tfeature({ featureId: "${featureId}", name: "Delete With Customer", type: "metered", consumable: true }),`,
-				plans: `\n\t\tplan({ planId: "${planId}", name: "Delete With Customer Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
+				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Delete With Customer Plan", versionSlug: "v1", items: [{ featureId: "${featureId}", included: 100 }] }),`,
 			}),
 		});
 
@@ -42,7 +42,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: configBody({
 						features: "",
-						plans: `\n\t\tplan({ planId: "${planId}", name: "Delete With Customer Plan" }),`,
+						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Delete With Customer Plan", versionSlug: "v1", }),`,
 					}),
 				}),
 			);

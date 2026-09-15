@@ -31,9 +31,7 @@ export const applyLicenseParamsPatch = ({
 	upsertLicenses?: CustomizePlanLicense[];
 	removeLicenses?: RemovePlanLicense[];
 }): PlanLicenseParams[] => {
-	const removed = new Set(
-		removeLicenses.map((entry) => entry.license_plan_id),
-	);
+	const removed = new Set(removeLicenses.map((entry) => entry.license_plan_id));
 	const byPlanId = new Map(
 		licenses
 			.filter((license) => !removed.has(license.license_plan_id))
@@ -44,6 +42,9 @@ export const applyLicenseParamsPatch = ({
 		const current = byPlanId.get(upsert.license_plan_id);
 		byPlanId.set(upsert.license_plan_id, {
 			license_plan_id: upsert.license_plan_id,
+			...(upsert.version_slug !== undefined
+				? { version_slug: upsert.version_slug }
+				: {}),
 			included: upsert.included ?? current?.included ?? 0,
 			prepaid_only: upsert.prepaid_only ?? current?.prepaid_only ?? true,
 			...(upsert.customize !== undefined

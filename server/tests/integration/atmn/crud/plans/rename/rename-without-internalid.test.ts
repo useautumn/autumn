@@ -7,6 +7,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -15,7 +16,6 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("rename without internalId → not a rename: a new plan is created and the old one archived, no alias")}`,
@@ -28,7 +28,7 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "pro", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 		});
@@ -52,7 +52,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "proNew", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "proNew", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 				}),

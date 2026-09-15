@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	configBody,
 	everyFeatureType,
@@ -18,7 +19,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 /** A minted draft: `active: false` alongside a plan_id that already has an active row. */
 const draftV3 = `
@@ -68,8 +68,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
-						plans: versionedPro({ versionSlug: "v2", amount: 49 }),
-						planVersions: versionedPro({ versionSlug: "v1", amount: 39 }),
+						plans: `${versionedPro({ versionSlug: "v2", amount: 49 })}${versionedPro({ versionSlug: "v1", amount: 39, active: false })}`,
 					}),
 				}),
 			);
@@ -83,8 +82,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
-						plans: `${versionedPro({ versionSlug: "v2", amount: 49 })}${draftV3}`,
-						planVersions: versionedPro({ versionSlug: "v1", amount: 39 }),
+						plans: `${versionedPro({ versionSlug: "v2", amount: 49 })}${draftV3}${versionedPro({ versionSlug: "v1", amount: 39, active: false })}`,
 					}),
 				}),
 			);

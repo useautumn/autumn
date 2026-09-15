@@ -22,7 +22,11 @@ const resolveDesiredFreeTrial = ({
 }): FreeTrial | null => {
 	if (freeTrialParams === undefined) return currentFreeTrial;
 	if (freeTrialParams === null) return null;
-	return initFreeTrialRow({ freeTrialParams, internalProductId });
+	const desired = initFreeTrialRow({ freeTrialParams, internalProductId });
+	// Not a plan-params field, so a restated trial keeps what the row holds.
+	return currentFreeTrial
+		? { ...desired, unique_fingerprint: currentFreeTrial.unique_fingerprint }
+		: desired;
 };
 
 /** Pair desired vs current by mode — version never claims/retires the base row. */

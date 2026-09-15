@@ -38,58 +38,54 @@ Entities are created with a `feature_id` identifying their type (e.g. a non-cons
 
 Create your plans as normal — no entity-specific configuration on the plan itself. Put plans that should replace each other on upgrade/downgrade in the same `group`.
 
-<Tabs>
-<Tab title="CLI">
-
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const requests = feature({
-  id: 'requests',
-  name: 'API Requests',
-  type: 'metered',
+  featureId: "requests",
+  name: "API Requests",
+  type: "metered",
   consumable: true,
 });
 
 export const workspaceFree = plan({
-  id: 'workspace_free',
-  name: 'Workspace Free',
-  group: 'workspace',
+  planId: "workspace_free",
+  versionSlug: "v1",
+  active: true,
+  name: "Workspace Free",
+  group: "workspace",
   items: [
-    item({
-      featureId: requests.id,
+    {
+      featureId: requests.featureId,
       included: 100,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
 
 export const workspacePro = plan({
-  id: 'workspace_pro',
-  name: 'Workspace Pro',
-  group: 'workspace',
-  price: { amount: 20, interval: 'month' },
+  planId: "workspace_pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Workspace Pro",
+  group: "workspace",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: requests.id,
+    {
+      featureId: requests.featureId,
       included: 10000,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
+});
+
+export default atmn({
+  features: [requests],
+  plans: [workspaceFree, workspacePro],
 });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Create your plan tiers as normal (e.g. "Workspace Free", "Workspace Pro")
-2. Set the same **group** on plans that should replace each other on upgrade/downgrade
-3. Entity-level attachment is handled via the API — no extra dashboard configuration needed
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 #### Create the entity
 
@@ -226,61 +222,57 @@ team plan  ──licenses: [{ seat, included: 1 }]──►  pool of seats
 
 The pool has a `granted` size (included seats plus any paid seats), a `usage` count (seats currently assigned), and a `remaining` count. Assigning consumes a seat; releasing gives it back.
 
-<Tabs>
-<Tab title="CLI">
-
 Create the feature each seat consumes, then a license plan holding what one seat gets. Link it from the parent plan via `licenses`:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, license, plan } from "atmn";
 
 export const summaries = feature({
-  id: 'summaries',
-  name: 'Meeting Summaries',
-  type: 'metered',
+  featureId: "summaries",
+  name: "Meeting Summaries",
+  type: "metered",
   consumable: true,
 });
 
 // Everything one seat gets, priced per seat.
 export const seat = plan({
-  id: 'seat',
-  name: 'Seat',
-  group: 'licenses',
-  price: { amount: 30, interval: 'month' },
+  planId: "seat",
+  versionSlug: "v1",
+  active: true,
+  name: "Seat",
+  group: "licenses",
+  price: { amount: 30, interval: "month" },
   items: [
-    item({
-      featureId: summaries.id,
+    {
+      featureId: summaries.featureId,
       included: 50,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
 
 export const team = plan({
-  id: 'team',
-  name: 'Team',
+  planId: "team",
+  versionSlug: "v1",
+  active: true,
+  name: "Team",
   licenses: [
-    { licensePlanId: seat.id, included: 1 },
+    license({
+      licensePlanId: seat.planId,
+      versionSlug: seat.versionSlug,
+      included: 1,
+    }),
   ],
 });
+
+export default atmn({ features: [summaries], plans: [seat, team] });
 ```
 
 `included: 1` means the Team plan comes with one free seat. Seats beyond that are paid at the license plan's own price.
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 Give the license plan its own `group`. Attaching a plan replaces other plans in the same group, so a license plan sharing a group with its parent would knock the parent off.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create the license plan (e.g. "Seat") — give it its own group, its per-seat price, and the features one seat receives (e.g. 50 Meeting Summaries per month)
-2. Create or edit the parent plan (e.g. "Team")
-3. Under **Licenses**, add the Seat plan and set how many seats are **included**
-4. Save the plan
-
-</Tab>
-</Tabs>
 
 #### Buy seats
 

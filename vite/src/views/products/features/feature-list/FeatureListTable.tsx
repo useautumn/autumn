@@ -1,7 +1,7 @@
 import { AppEnv, type Feature, isAnyCreditSystem } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { ArrowSquareOutIcon, CoinsIcon, LegoIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
@@ -11,6 +11,7 @@ import { useProductsQueryState } from "@/views/products/hooks/useProductsQuerySt
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "../credit-systems/components/UpdateCreditSystemSheet";
+import { sheetFeatureForId } from "../utils/sheetFeatureForId";
 import { createCreditListColumns } from "./CreditListColumns";
 import { createFeatureListColumns } from "./FeatureListColumns";
 import { FeatureListCreateButton } from "./FeatureListCreateButton";
@@ -20,12 +21,16 @@ export function FeatureListTable() {
 	const env = useEnv();
 	const { features } = useFeaturesQuery();
 	const { providers } = useModelsDevPricing();
-	const { queryStates } = useProductsQueryState();
-	const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
-	const [updateFeatureOpen, setUpdateFeatureOpen] = useState(false);
-	const [selectedCreditSystem, setSelectedCreditSystem] =
-		useState<Feature | null>(null);
-	const [updateCreditOpen, setUpdateCreditOpen] = useState(false);
+	const { queryStates, setQueryStates } = useProductsQueryState();
+	const { selectedFeature, selectedCreditSystem } = sheetFeatureForId({
+		features,
+		featureId: queryStates.feature,
+	});
+	const openSheet = (feature: Feature) =>
+		setQueryStates({ feature: feature.id });
+	const setSheetOpen = (open: boolean) => {
+		if (!open) setQueryStates({ feature: null });
+	};
 
 	// Filter features and credit systems based on archived state
 	const { regularFeatures, creditSystems, hasEventNames } = useMemo(() => {
@@ -77,16 +82,6 @@ export function FeatureListTable() {
 		},
 	});
 
-	const handleFeatureRowClick = (feature: Feature) => {
-		setSelectedFeature(feature);
-		setUpdateFeatureOpen(true);
-	};
-
-	const handleCreditRowClick = (creditSystem: Feature) => {
-		setSelectedCreditSystem(creditSystem);
-		setUpdateCreditOpen(true);
-	};
-
 	const enableSorting = false;
 
 	const hasFeatureRows =
@@ -126,13 +121,13 @@ export function FeatureListTable() {
 	return (
 		<>
 			<UpdateFeatureSheet
-				open={updateFeatureOpen}
-				setOpen={setUpdateFeatureOpen}
+				open={selectedFeature !== null}
+				setOpen={setSheetOpen}
 				selectedFeature={selectedFeature}
 			/>
 			<UpdateCreditSystemSheet
-				open={updateCreditOpen}
-				setOpen={setUpdateCreditOpen}
+				open={selectedCreditSystem !== null}
+				setOpen={setSheetOpen}
 				selectedCreditSystem={selectedCreditSystem}
 			/>
 
@@ -146,7 +141,7 @@ export function FeatureListTable() {
 								numberOfColumns: featureColumns.length,
 								enableSorting,
 								isLoading: false,
-								onRowClick: handleFeatureRowClick,
+								onRowClick: openSheet,
 								emptyStateText: "You haven't archived any features yet.",
 								rowClassName: "h-10",
 							}}
@@ -196,7 +191,7 @@ export function FeatureListTable() {
 								numberOfColumns: creditColumns.length,
 								enableSorting,
 								isLoading: false,
-								onRowClick: handleCreditRowClick,
+								onRowClick: openSheet,
 								emptyStateChildren: creditEmptyStateChildren,
 								rowClassName: "h-10",
 							}}

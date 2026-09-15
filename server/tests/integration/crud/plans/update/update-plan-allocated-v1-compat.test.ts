@@ -23,6 +23,7 @@ import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/util
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
@@ -257,7 +258,13 @@ test.concurrent(
 			latestInvoiceProductId: pro.id,
 		});
 		expect(customer.invoices?.[0]?.total).toBeGreaterThan(0);
-		await expectStripeSubscriptionCorrect({ ctx, customerId });
+		// Verification reads DB balances, which track syncs asynchronously.
+		await pollUntil({
+			fetch: () => expectStripeSubscriptionCorrect({ ctx, customerId }),
+			until: () => true,
+			timeoutMs: 30_000,
+			intervalMs: 1000,
+		});
 	},
 );
 

@@ -18,35 +18,39 @@ You'll need a plan with a usage-based price on the feature you want to cap:
 <Tab title="CLI">
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const apiCalls = feature({
-  id: 'api_calls',
-  name: 'API Calls',
-  type: 'metered',
+  featureId: "api_calls",
+  name: "API Calls",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: apiCalls.id,
+    {
+      featureId: apiCalls.featureId,
       included: 1000,
       price: {
         amount: 1,
-        interval: 'month',
+        interval: "month",
         billingUnits: 1000,
-        billingMethod: 'usage_based',
+        billingMethod: "usage_based",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [apiCalls], plans: [pro] });
 ```
 
-Push changes with `atmn push`. Then configure spend limits per customer via the API (see below).
+Preview with `atmn push`, then apply with `atmn push --yes`. Then configure spend limits per customer via the API (see below).
 
 </Tab>
 <Tab title="Dashboard">

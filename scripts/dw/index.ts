@@ -8,6 +8,7 @@ import { cmdIdentify } from "./commands/identify.ts";
 import { cmdKill } from "./commands/kill.ts";
 import { cmdList } from "./commands/list.ts";
 import { cmdLogs } from "./commands/logs.ts";
+import { cmdOpen } from "./commands/open.ts";
 import { cmdReset } from "./commands/reset.ts";
 import { cmdRun } from "./commands/run.ts";
 import { cmdSetup } from "./commands/setup.ts";
@@ -55,6 +56,9 @@ async function main(): Promise<void> {
 		case "identify":
 			await cmdIdentify();
 			break;
+		case "open":
+			cmdOpen();
+			break;
 		case "enable":
 			cmdEnable();
 			break;
@@ -66,7 +70,7 @@ async function main(): Promise<void> {
 			break;
 		default:
 			fatal(
-				`unknown subcommand: ${sub} (use: setup | start | run | kill | teardown | cleanup | list | reset | logs | attach | identify | enable | disable | admin)`,
+				`unknown subcommand: ${sub} (use: setup | start | run | kill | teardown | cleanup | list | reset | logs | attach | identify | open | enable | disable | admin)`,
 			);
 	}
 }

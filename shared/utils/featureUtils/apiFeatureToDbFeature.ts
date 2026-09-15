@@ -39,6 +39,7 @@ import { mapRecordValues } from "../common/objectUtils.js";
 import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
 import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
+import { isConsumableFeature } from "./classifyFeature/isConsumableFeature.js";
 
 export const featureProcessorsToDbFields = ({
 	processors,
@@ -432,9 +433,10 @@ export const dbToApiFeatureV1 = ({
 		internal_id: dbFeature.internal_id,
 		name: dbFeature.name,
 		type: dbFeature.type,
+		// Boolean rows may carry a stale usage_type from a past type change; the
+		// predicate ignores it, so a re-pull never phantom-diffs on consumable.
 		consumable:
-			isAnyCreditSystem(dbFeature.type) ||
-			dbFeature.config?.usage_type === FeatureUsageType.Single,
+			isAnyCreditSystem(dbFeature.type) || isConsumableFeature(dbFeature),
 
 		credit_schema: Array.isArray(dbFeature.config?.schema)
 			? dbFeature.config.schema.map(dbCreditSchemaItemToApi)

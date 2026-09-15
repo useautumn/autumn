@@ -155,17 +155,8 @@ describe("productV2ToApiPlanV1 — proration fidelity", () => {
 		],
 	} as unknown as ProductV2;
 
-	test("plan responses keep stripping proration", () => {
+	test("prepaid items emit defined proration", () => {
 		const plan = productV2ToApiPlanV1({ features, product });
-		expect(plan.items[0]?.proration).toBeUndefined();
-	});
-
-	test("diff and patch bases keep proration with includeProration", () => {
-		const plan = productV2ToApiPlanV1({
-			features,
-			includeProration: true,
-			product,
-		});
 		expect(plan.items[0]?.proration).toEqual({
 			on_increase: "prorate_immediately",
 			on_decrease: "prorate_immediately",

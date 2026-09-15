@@ -7,9 +7,10 @@ import {
 	notNullish,
 	type UpdateCustomerEntitlement,
 	type UpdateSubscriptionBillingContext,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
+import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails.js";
 
 export type PrepaidQuantityDetails = {
 	updatedOptions: FeatureOptions[];
@@ -22,19 +23,25 @@ export type PrepaidQuantityDetails = {
 export const computePrepaidQuantityDetails = ({
 	ctx,
 	billingContext,
+	params,
 }: {
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
+	params: UpdateSubscriptionV1Params;
 }): PrepaidQuantityDetails => {
 	const { customerProduct, featureQuantities } = billingContext;
+	const applyImmediately = billingContext.requestedBillingCycleAnchor === "now";
+	const requestedFeatureIds = new Set(
+		params.feature_quantities?.map((quantity) => quantity.feature_id),
+	);
 
-	// One-off prepaid mutations belong to the ManualTopUp intent. Drop an option
-	// only when the feature's prepaid tie-break target is one-off — a recurring
-	// prepaid sibling of the same feature wins the quantity instead.
+	// Recurring prepaid wins over a one-off sibling; one-off mutations belong to ManualTopUp.
 	const customerPrices = customerProduct.customer_prices.map(
 		(customerPrice) => customerPrice.price,
 	);
 	const recurringPrepaidOptions = featureQuantities.filter((option) => {
+		if (applyImmediately && !requestedFeatureIds.has(option.feature_id))
+			return false;
 		const targetPrice = findPrepaidQuantityTargetPrice({
 			prices: customerPrices,
 			internalFeatureId: option.internal_feature_id,
@@ -48,11 +55,21 @@ export const computePrepaidQuantityDetails = ({
 			ctx,
 			updatedOptions,
 			updateSubscriptionContext: billingContext,
+			applyImmediately,
 		}),
 	);
 
+	const updatedOptions = details.map((detail) => detail.updatedOptions);
+	const updatedOptionsByFeature = new Map(
+		(applyImmediately ? customerProduct.options : []).map((option) => [
+			option.feature_id,
+			option,
+		]),
+	);
+	for (const option of updatedOptions)
+		updatedOptionsByFeature.set(option.feature_id, option);
 	return {
-		updatedOptions: details.map((detail) => detail.updatedOptions),
+		updatedOptions: Array.from(updatedOptionsByFeature.values()),
 		updateCustomerEntitlements: details.flatMap(
 			(detail) => detail.updateCustomerEntitlements,
 		),

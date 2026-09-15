@@ -16,30 +16,34 @@ Recurring plans let you grant customers a fixed allowance of consumable features
 Define a recurring plan in your `autumn.config.ts`:
 
 ```ts autumn.config.ts expandable
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const messages = feature({
-  id: 'messages',
-  name: 'Messages',
-  type: 'metered',
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: messages.id,
+    {
+      featureId: messages.featureId,
       included: 1000,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
+
+export default atmn({ features: [messages], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">

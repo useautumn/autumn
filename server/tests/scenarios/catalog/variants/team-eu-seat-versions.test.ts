@@ -25,8 +25,11 @@ test(`${chalk.yellowBright("catalog-qa: Team+EU+Seat all versioned")}`, async ()
 	});
 	await autumnV2_3.catalogV2.update({
 		plans: [
-			{ plan_id: teamId, name: "QA Combo Team" },
-			{ plan_id: euId, name: "QA Combo EU" },
+			{
+				plan_id: teamId,
+				name: "QA Combo Team",
+				variants: [{ variant_plan_id: euId, name: "QA Combo EU" }],
+			},
 			{ plan_id: seatId, name: "QA Combo Seat" },
 		],
 	});
@@ -34,7 +37,8 @@ test(`${chalk.yellowBright("catalog-qa: Team+EU+Seat all versioned")}`, async ()
 		plans: [
 			{
 				plan_id: euId,
-				versioning: "new_version", active: true,
+				versioning: "new_version",
+				active: true,
 				licenses: [{ license_plan_id: seatId, included: 2 }],
 			},
 		],
@@ -43,7 +47,8 @@ test(`${chalk.yellowBright("catalog-qa: Team+EU+Seat all versioned")}`, async ()
 		plans: [
 			{
 				plan_id: teamId,
-				versioning: "new_version", active: true,
+				versioning: "new_version",
+				active: true,
 				items: [messagesItem(200)],
 				licenses: [{ license_plan_id: seatId, included: 2 }],
 			},
@@ -53,7 +58,8 @@ test(`${chalk.yellowBright("catalog-qa: Team+EU+Seat all versioned")}`, async ()
 		plans: [
 			{
 				plan_id: seatId,
-				versioning: "new_version", active: true,
+				versioning: "new_version",
+				active: true,
 				items: [messagesItem(20)],
 			},
 		],

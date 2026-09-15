@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runPull } from "../src/actions/pull";
-import type { AutumnClient } from "../src/generated/client";
+import { AutumnApiError, type AutumnClient } from "../src/generated/client";
 
 /**
  * Pull against a fake client: preview and catalog responses are canned
@@ -31,7 +31,7 @@ const fakeClient = ({
 }): AutumnClient =>
 	({
 		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
-		previewUpdate: async () => preview,
+		diff: async () => preview,
 		update: async () => ({}),
 		get: async () => catalog,
 	}) as unknown as AutumnClient;
@@ -609,7 +609,7 @@ test("a fixture that is not a plain literal stops the pull before any write", as
 
 	const client = {
 		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
-		previewUpdate: async () => ({
+		diff: async () => ({
 			features: [{ featureId: "seats", action: "update" }],
 			plans: [],
 		}),
@@ -649,7 +649,7 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 
 	const client = {
 		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
-		previewUpdate: async () => ({
+		diff: async () => ({
 			features: [
 				{ featureId: "seats", action: "delete" },
 				{ featureId: "messages", action: "delete" },
@@ -691,7 +691,21 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 
 	expect(result.appended.sort()).toEqual(["messages", "seats"]);
 	expect(printed[0]).toStartWith("Scaffolded ");
-	expect(existsSync(`${dir}/planVersions/.gitkeep`)).toBe(true);
+	// One file per surface; the root only imports and states settings.
+	for (const file of ["features.ts", "plans.ts", "rewards.ts"])
+		expect(existsSync(`${dir}/${file}`)).toBe(true);
+	expect(existsSync(`${dir}/planVersions`)).toBe(false);
+	const root = readFileSync(`${dir}/autumn.config.ts`, "utf8");
+	expect(root).toContain('import { features } from "./features";');
+	expect(root).toContain('import { plans } from "./plans";');
+	expect(root).toContain(
+		'import { rewards, referralPrograms } from "./rewards";',
+	);
+	expect(root).not.toContain("feature(");
+	// The rows landed in the collection file the root imports.
+	const featuresFile = readFileSync(`${dir}/features.ts`, "utf8");
+	expect(featuresFile).toContain('featureId: "seats"');
+	expect(featuresFile).toContain('featureId: "messages"');
 
 	const module = await import(`${dir}/autumn.config.ts?v=first`);
 	// biome-ignore lint/suspicious/noExplicitAny: the executed wire
@@ -699,4 +713,138 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 	expect(
 		wire.features.map((row: { feature_id: string }) => row.feature_id).sort(),
 	).toEqual(["messages", "seats"]);
+});
+
+test("--overwrite without --yes warns and changes nothing", async () => {
+	const dir = tempDir({ name: "overwrite-confirmation" });
+	const configPath = writeConfig({
+		dir,
+		text: "export default { features: [] };\n",
+	});
+	const appPath = join(dir, "app.ts");
+	writeFileSync(appPath, "export const app = true;\n", "utf8");
+	let calls = 0;
+	let output = "";
+
+	const result = await runPull({
+		client: {
+			diff: async () => {
+				calls += 1;
+				return {};
+			},
+			get: async () => {
+				calls += 1;
+				return {};
+			},
+		} as unknown as AutumnClient,
+		cwd: dir,
+		overwrite: true,
+		write: (text) => {
+			output += text;
+		},
+	});
+
+	expect(result).toEqual({
+		configPath,
+		appended: [],
+		replaced: [],
+		deleted: [],
+	});
+	expect(calls).toBe(0);
+	expect(readFileSync(configPath, "utf8")).toBe(
+		"export default { features: [] };\n",
+	);
+	expect(readFileSync(appPath, "utf8")).toBe("export const app = true;\n");
+	expect(output).toBe(
+		"This deletes every TypeScript file under your Autumn config directory, then pulls a fresh catalog. Re-run with --yes to overwrite.\n",
+	);
+});
+
+test("--overwrite --yes discards the stale config and its sibling fixtures, then pulls fresh", async () => {
+	const dir = tempDir({ name: "overwrite" });
+	// A config for some other org, plus a fixture file an earlier pull wrote.
+	writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			'import { feature } from "../../../src/generated/features";',
+			"",
+			"export default atmn({",
+			"\tfeatures: [",
+			'\t\tfeature({ featureId: "credits", name: "Credits", type: "metered", consumable: true }),',
+			"\t],",
+			"});",
+			"",
+		].join("\n"),
+	});
+	writeFileSync(join(dir, "old.ts"), "export const old = 1;\n");
+
+	// The fake never sees the stale rows: a diff of the empty shell only.
+	let diffed: unknown;
+	const client = {
+		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+		diff: async (wire: unknown) => {
+			diffed = wire;
+			return { features: [{ featureId: "seats", action: "delete" }] };
+		},
+		get: async () => ({ features: [seatsRow], plans: [] }),
+	};
+	const result = await runPull({
+		// biome-ignore lint/suspicious/noExplicitAny: a fake client
+		client: client as any,
+		cwd: dir,
+		write: () => {},
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		overwrite: true,
+		yes: true,
+	});
+
+	expect((diffed as { features: unknown[] }).features).toEqual([]);
+	expect(result.appended).toEqual(["seats"]);
+	expect(existsSync(join(dir, "old.ts"))).toBe(false);
+	const text = readFileSync(join(dir, "features.ts"), "utf8");
+	expect(text).toContain('featureId: "seats"');
+	expect(text).not.toContain("credits");
+});
+
+test("a diff the server refuses points at --overwrite; other failures do not", async () => {
+	const dir = tempDir({ name: "overwrite-hint" });
+	writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			"export default atmn({ features: [] });",
+			"",
+		].join("\n"),
+	});
+	const failing = (error: Error) =>
+		({
+			previewUpdateOrganization: async () => ({ config: { changes: [] } }),
+			diff: async () => {
+				throw error;
+			},
+			get: async () => ({ features: [], plans: [] }),
+		}) as unknown as AutumnClient;
+
+	const refused = new AutumnApiError({
+		status: 400,
+		body: { message: "Cannot change type of feature credits" },
+		path: "/v1/catalogV2.diff",
+	});
+	await expect(
+		runPull({ client: failing(refused), cwd: dir, write: () => {} }),
+	).rejects.toThrow(/atmn pull --overwrite/);
+
+	const unauthorized = new AutumnApiError({
+		status: 401,
+		body: { message: "Invalid secret key" },
+		path: "/v1/catalogV2.diff",
+	});
+	await expect(
+		runPull({ client: failing(unauthorized), cwd: dir, write: () => {} }),
+	).rejects.not.toThrow(/--overwrite/);
 });

@@ -1,5 +1,5 @@
 /**
- * atmn scenarios/motion — a collection array that mixes forms (`plans: [pro, ...more, plan({...})]`) → inline fixtures edited in place, appends go to the array literal itself, references stay references
+ * atmn scenarios/motion — a collection array that mixes forms (`plans: [pro, ...more, plan({ active: true,...})]`) → inline fixtures edited in place, appends go to the array literal itself, references stay references
  *
  * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
  *
@@ -7,17 +7,17 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const planImport = `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";\n`;
 
 test.concurrent(
-	"a collection array that mixes forms (`plans: [pro, ...more, plan({...})]`) → the named reference and the spread stay untouched by a remote add, and a remote update on the reference rewrites its own file",
+	"a collection array that mixes forms (`plans: [pro, ...more, plan({ active: true,...})]`) → the named reference and the spread stay untouched by a remote add, and a remote update on the reference rewrites its own file",
 	async () => {
 		const proId = uniqueTestId("atmn_pro");
 		const spreadId = uniqueTestId("atmn_spread");
@@ -33,7 +33,7 @@ export default atmn({
 	plans: [
 		pro,
 		...more,
-		plan({ planId: "${inlineId}", name: "Inline", price: { amount: 5, interval: "month" } }),
+		plan({ active: true, planId: "${inlineId}", name: "Inline", versionSlug: "v1", price: { amount: 5, interval: "month" } }),
 	],
 });
 `;
@@ -45,11 +45,11 @@ export default atmn({
 			config: { raw: rootConfig },
 			files: {
 				"pro.ts": `${planImport}
-export const pro = plan({ planId: "${proId}", name: "Pro", price: { amount: 49, interval: "month" } });
+export const pro = plan({ active: true, planId: "${proId}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } });
 `,
 				"more.ts": `${planImport}
 export const more = [
-	plan({ planId: "${spreadId}", name: "Spread", price: { amount: 15, interval: "month" } }),
+	plan({ active: true, planId: "${spreadId}", name: "Spread", versionSlug: "v1", price: { amount: 15, interval: "month" } }),
 ];
 `,
 			},
