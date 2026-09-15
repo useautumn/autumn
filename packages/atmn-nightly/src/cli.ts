@@ -435,9 +435,14 @@ Linking a keyless org to an account:
 			"--overwrite",
 			"discard the local config and pull the catalog fresh (e.g. after switching orgs)",
 		)
+		.option("-y, --yes", "overwrite it")
 		.action(
 			async (
-				options: { includeMappings?: boolean; overwrite?: boolean },
+				options: {
+					includeMappings?: boolean;
+					overwrite?: boolean;
+					yes?: boolean;
+				},
 				command: Command,
 			) => {
 				const target = prepareTarget({ command });
@@ -446,6 +451,7 @@ Linking a keyless org to an account:
 					configPath: configFlagOf({ command }),
 					includeMappings: options.includeMappings === true,
 					overwrite: options.overwrite === true,
+					yes: options.yes === true,
 				});
 				writeStaleSkillsHint({ command });
 			},

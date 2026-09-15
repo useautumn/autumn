@@ -46,6 +46,8 @@ export type PullOptions = {
 	 * way out when the file describes a different org than the key targets.
 	 */
 	overwrite?: boolean;
+	/** Confirm replacing the local config when overwrite is set. */
+	yes?: boolean;
 };
 
 const OVERWRITE_HINT =
@@ -195,8 +197,21 @@ export const runPull = async ({
 	write = (text) => process.stdout.write(text),
 	imports,
 	overwrite = false,
+	yes = false,
 }: PullOptions): Promise<PullResult> => {
 	const project = resolveProject({ cwd, configFlag });
+	if (overwrite && !yes) {
+		write(
+			"This deletes every TypeScript file under your Autumn config directory, then pulls a fresh catalog. Re-run with --yes to overwrite.\n",
+		);
+		return {
+			configPath:
+				project.configPath ?? join(project.configDir, "autumn.config.ts"),
+			appended: [],
+			replaced: [],
+			deleted: [],
+		};
+	}
 	const dirs = configSearchDirs({ cwd, configPath: configFlag });
 	loadEnvFiles({ dirs: project.envDirs });
 
