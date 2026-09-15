@@ -47,6 +47,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - The word "included" means free allowance, not a purchase: "N included credits" sets `included: N` on the item via `customize` (carrying the rest of the item over unchanged) and does NOT add `feature_quantities`. Only combine both when the user asks for extra prepaid units on top of the new allowance.
 - Before any trial action, re-read the Trials section in `autumn://docs/concepts`.
 - Adding a trial for a customer who already has a paid subscription resets the Stripe billing cycle; warn the user and offer the `on_end: "revert"` flow, then let them choose.
+- To end a revert trial early, cancel it with `updateSubscription` and `cancel_action: "cancel_immediately"`; Autumn restores the previous plan. Do not remove `free_trial` (that converts the trial to paid) or re-attach the old plan.
 
 ## Target resolution
 
