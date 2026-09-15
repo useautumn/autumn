@@ -2,7 +2,7 @@ import {
 	type Feature,
 	FeatureType,
 	isFeaturePriceItem,
-	isOneToOneUnitPriceItem,
+	isFlatRateItem,
 	type ProductItem,
 	UsageModel,
 } from "@autumn/shared";
@@ -18,5 +18,5 @@ export const isInvoiceCreditItem = ({
 	if (item.pooled) return false;
 	if (!isFeaturePriceItem(item)) return false;
 	if (item.usage_model !== UsageModel.PayPerUse) return false;
-	return isOneToOneUnitPriceItem({ item });
+	return isFlatRateItem({ item });
 };

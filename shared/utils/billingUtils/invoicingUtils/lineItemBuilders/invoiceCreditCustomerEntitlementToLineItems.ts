@@ -3,6 +3,8 @@ import type { LineItem } from "../../../../models/billingModels/lineItem/lineIte
 import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext.js";
 import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
+import { priceAmountsForCurrency } from "../../../../models/productModels/priceModels/priceConfig/priceCurrencyView.js";
+import type { Price } from "../../../../models/productModels/priceModels/priceModels.js";
 import {
 	STRIPE_THREE_DECIMAL_CURRENCIES,
 	stripeMinorUnitFactor,
@@ -26,7 +28,24 @@ type CreditSourceLine = {
 	label: string;
 	units: number;
 	credits: number;
+	exactAmount: Decimal;
 	amount: number;
+};
+
+/** Flat rate per credit in the invoice currency: the single tier's amount spread over its billing units. */
+const creditRateForCurrency = ({
+	price,
+	currency,
+}: {
+	price: Price;
+	currency: string;
+}): Decimal => {
+	const tiers =
+		priceAmountsForCurrency({ config: price.config, currency }).usage_tiers ??
+		price.config.usage_tiers ??
+		[];
+	const amount = tiers[0]?.amount ?? 0;
+	return new Decimal(amount).div(price.config.billing_units || 1);
 };
 
 const roundToCurrency = ({
@@ -68,10 +87,12 @@ const customerEntitlementToCreditSourceLines = ({
 	customerEntitlement,
 	features,
 	currency,
+	rate,
 }: {
 	customerEntitlement: FullCusEntWithFullCusProduct;
 	features: Feature[];
 	currency: string;
+	rate: Decimal;
 }): CreditSourceLine[] =>
 	Object.entries(customerEntitlement.usage_attribution ?? {})
 		.filter(([, value]) => value.credits > 0)
@@ -86,16 +107,15 @@ const customerEntitlementToCreditSourceLines = ({
 				errorOnNotFound: false,
 			});
 			const sourceName = feature?.name ?? "Removed feature";
+			const exactAmount = rate.mul(sourceAttribution.credits);
 			return {
 				attributionKey,
 				feature,
 				label: dimensionName ? `${sourceName} — ${dimensionName}` : sourceName,
 				units: sourceAttribution.units,
 				credits: sourceAttribution.credits,
-				amount: roundToCurrency({
-					amount: sourceAttribution.credits,
-					currency,
-				}),
+				exactAmount,
+				amount: roundToCurrency({ amount: exactAmount.toNumber(), currency }),
 			};
 		});
 
@@ -105,7 +125,7 @@ const smallestBillableUnit = (currency: string): Decimal =>
 		: new Decimal(1).div(stripeMinorUnitFactor(currency));
 
 const roundingResidual = (line: CreditSourceLine): Decimal =>
-	new Decimal(line.amount).sub(line.credits);
+	new Decimal(line.amount).sub(line.exactAmount);
 
 /**
  * Rounding each source line to the cent can drift their sum away from the rounded
@@ -154,10 +174,15 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 	fullyOffsetOverage?: boolean;
 }): LineItem[] => {
 	const invoiceCreditFeature = customerEntitlement.entitlement.feature;
+	const rate = creditRateForCurrency({
+		price: context.price,
+		currency: context.currency,
+	});
 	const sourceLines = customerEntitlementToCreditSourceLines({
 		customerEntitlement,
 		features,
 		currency: context.currency,
+		rate,
 	});
 
 	const overage = cusEntToInvoiceOverage({ cusEnt: customerEntitlement });
@@ -168,12 +193,15 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 	const roundedCreditsApplied = creditsApplied.isZero()
 		? 0
 		: roundToCurrency({
-				amount: creditsApplied.toNumber(),
+				amount: rate.mul(creditsApplied).toNumber(),
 				currency: context.currency,
 			});
 	const roundedOverage = fullyOffsetOverage
 		? 0
-		: roundToCurrency({ amount: overage, currency: context.currency });
+		: roundToCurrency({
+				amount: rate.mul(overage).toNumber(),
+				currency: context.currency,
+			});
 
 	absorbRoundingDrift({
 		lines: sourceLines,

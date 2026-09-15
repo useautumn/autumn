@@ -42,7 +42,7 @@ describe("credit system plan items", () => {
 		).not.toThrow();
 	});
 
-	test("a fractional pay-per-use price saves; it simply does not itemize", () => {
+	test("a fractional pay-per-use price saves", () => {
 		expect(() =>
 			validate({
 				feature_id: flaggedCredits.id,

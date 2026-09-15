@@ -179,5 +179,6 @@ see remove-features t5. Locked in `catalog_update_ordering` plan, rule 1.)
 | Track on unstamped balance deducts plainly, no attribution | ✓ |
 | Manual balance update on the unstamped balance succeeds | ✓ |
 | Price-shape predicate matrix (P1–P9) | ✓ unit `features/invoice-credit-item.test.ts` |
+| Lines and offset priced at the item's rate (rate, billing units, currency, drift) | ✓ unit `billing/invoice-credit-line-item-rate.test.ts`, `stripe-webhooks/invoice-created/invoice-created-invoice-credit-rate.test.ts` |
 | Flag flip is not a blockable change, no customer blocker | ✓ unit `features/invoice-credit-activation.test.ts` |
 

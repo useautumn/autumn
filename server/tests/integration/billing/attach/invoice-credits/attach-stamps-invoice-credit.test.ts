@@ -4,7 +4,7 @@
  * attribution and the balance-mutation guards from then on.
  *
  * Contract:
- *   A1 pay-per-use $1/credit item      → customer_entitlements.invoice_credit = true
+ *   A1 pay-per-use $0.25/credit item   → customer_entitlements.invoice_credit = true
  *   A2 included-only item, flag true   → stamp false (attach succeeds)
  *   T1 track on the stamped balance    → usage_attribution written
  *   T2 track on the unstamped balance  → plain deduction, no attribution
@@ -36,7 +36,7 @@ test.concurrent(
 				items.consumable({
 					featureId: TestFeature.InvoiceCredits,
 					includedUsage: INCLUDED,
-					price: 1,
+					price: 0.25,
 					billingUnits: 1,
 				}),
 			],
@@ -44,7 +44,7 @@ test.concurrent(
 		const includedOnly = products.base({
 			id: "ic-stamp-included-plan",
 			items: [
-				items.consumable({
+				items.free({
 					featureId: TestFeature.InvoiceCredits,
 					includedUsage: INCLUDED,
 				}),

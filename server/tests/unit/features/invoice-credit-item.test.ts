@@ -1,17 +1,18 @@
 /**
  * A plan item itemizes credits on the invoice when, and only when, it is a
- * classic credit system priced pay-per-use at exactly one currency unit per
- * credit and not pooled. Nothing else decides it.
+ * classic credit system priced pay-per-use at a flat per-credit rate and not
+ * pooled. The rate itself is free.
  *
  * P1 pay-per-use $1/credit                     → itemize
  * P2 pay-per-use $100 per 100 credits          → itemize
- * P3 pay-per-use $0.002/credit                 → plain
+ * P3 pay-per-use $0.002/credit                 → itemize
  * P4 prepaid credits                           → plain
  * P5 included-only                             → plain
  * P6 pooled $1/credit                          → plain
- * P7 graduated tiers all $1/credit, no flat    → itemize; any tier off → plain
+ * P7 a single open-ended tier is flat; graduated tiers → plain
  * P8 feature is not a classic credit system    → plain
- * P9 additional currency not 1:1               → plain
+ * P9 additional currencies price in their own rate → itemize
+ * P10 zero or negative price                  → plain
  */
 
 import { describe, expect, test } from "bun:test";
@@ -93,13 +94,13 @@ describe("isInvoiceCreditItem", () => {
 		).toBe(true);
 	});
 
-	test("P3 a fractional price per credit is an ordinary overage", () => {
+	test("P3 a fractional price per credit itemizes at that rate", () => {
 		expect(
 			isInvoiceCreditItem({
 				item: pricedCredits({ price: 0.002 }),
 				feature: credits,
 			}),
-		).toBe(false);
+		).toBe(true);
 	});
 
 	test("P4 prepaid credits never itemize", () => {
@@ -129,13 +130,10 @@ describe("isInvoiceCreditItem", () => {
 		).toBe(false);
 	});
 
-	test("P7 graduated tiers itemize only when every tier is one unit per credit with no flat fee", () => {
+	test("P7 a single open-ended tier is a flat rate; graduated tiers and flat fees are plain", () => {
 		expect(
 			isInvoiceCreditItem({
-				item: tieredCredits([
-					{ to: 1_000, amount: 1 },
-					{ to: TierInfinite, amount: 1 },
-				]),
+				item: tieredCredits([{ to: TierInfinite, amount: 0.5 }]),
 				feature: credits,
 			}),
 		).toBe(true);
@@ -143,7 +141,7 @@ describe("isInvoiceCreditItem", () => {
 			isInvoiceCreditItem({
 				item: tieredCredits([
 					{ to: 1_000, amount: 1 },
-					{ to: TierInfinite, amount: 0.5 },
+					{ to: TierInfinite, amount: 1 },
 				]),
 				feature: credits,
 			}),
@@ -165,19 +163,26 @@ describe("isInvoiceCreditItem", () => {
 		).toBe(false);
 	});
 
-	test("P9 every configured currency must keep the 1:1 price", () => {
+	test("P10 a zero or negative price is not a rate", () => {
 		expect(
 			isInvoiceCreditItem({
-				item: pricedCredits({
-					additionalCurrencies: [{ currency: "eur", amount: 0.8 }],
-				}),
+				item: pricedCredits({ price: 0 }),
 				feature: credits,
 			}),
 		).toBe(false);
 		expect(
 			isInvoiceCreditItem({
+				item: tieredCredits([{ to: TierInfinite, amount: 0 }]),
+				feature: credits,
+			}),
+		).toBe(false);
+	});
+
+	test("P9 additional currencies do not need to match the base rate", () => {
+		expect(
+			isInvoiceCreditItem({
 				item: pricedCredits({
-					additionalCurrencies: [{ currency: "eur", amount: 1 }],
+					additionalCurrencies: [{ currency: "eur", amount: 0.8 }],
 				}),
 				feature: credits,
 			}),
