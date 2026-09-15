@@ -528,11 +528,11 @@ SQL >
         {% if String(bin_size, 'day') == 'hour' %}
         formatDateTime(toStartOfHour(timestamp), '%F %T') as period,
         {% elif String(bin_size, 'day') == 'month' %}
-        formatDateTime(toStartOfMonth(toStartOfHour(timestamp), {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        formatDateTime(toStartOfMonth(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% elif String(bin_size, 'day') == 'week' %}
-        formatDateTime(toStartOfWeek(toStartOfHour(timestamp), 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        formatDateTime(toStartOfWeek(timestamp, 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% else %}
-        formatDateTime(toStartOfDay(toStartOfHour(timestamp), {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        formatDateTime(toStartOfDay(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% end %}
         event_name,
         {% if String(group_column, 'property') == 'customer_id' %}

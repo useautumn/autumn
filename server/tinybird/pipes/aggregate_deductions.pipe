@@ -35,7 +35,7 @@ SQL >
     %
     {% set use_property = defined(property_key) and String(property_key, '') != '' %}
     WITH
-        {% if use_property %}timestamp{% else %}toStartOfHour(timestamp){% end %} AS bin_timestamp,
+        timestamp AS bin_timestamp,
         toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
         toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
         if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
