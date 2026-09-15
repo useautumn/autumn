@@ -6,8 +6,18 @@
 # repo-driven and survives that script changing.
 ensure_docker_installed() {
 	command -v dockerd >/dev/null 2>&1 && return 0
+
 	echo "[conductor] installing docker"
-	sudo dnf install -y docker >/dev/null 2>&1 || return 1
+	sudo dnf install -y docker >/dev/null 2>&1 || true
+
+	# The image carries docker's rpm registered but its binaries deleted, so
+	# `dnf install` reports "Nothing to do" and never restores them.
+	if ! command -v dockerd >/dev/null 2>&1; then
+		echo "[conductor] docker rpm registered without binaries — reinstalling"
+		sudo dnf reinstall -y docker >/dev/null 2>&1 || true
+	fi
+
+	command -v dockerd >/dev/null 2>&1 || return 1
 	sudo usermod -aG docker "$USER" 2>/dev/null || true
 }
 
