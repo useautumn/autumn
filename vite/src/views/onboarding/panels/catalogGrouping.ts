@@ -6,6 +6,7 @@ import {
 	isAnyCreditSystem,
 	isOneOffProductV2,
 	type ProductItem,
+	productV2ToFeatureItems,
 	sortPlanItems,
 	splitBooleanItems,
 } from "@autumn/shared";
@@ -50,7 +51,9 @@ const planLicenses = ({
 /** Sorted per the shared display order, then trimmed twice: booleans collapse
  * past their own threshold, and what remains caps at MAX_VISIBLE_ITEMS. */
 export const visiblePlanItems = ({ items }: { items: ProductItem[] }) => {
-	const sorted = sortPlanItems({ items });
+	const sorted = sortPlanItems({
+		items: productV2ToFeatureItems({ items }),
+	});
 	const { visibleItems: shown, collapsedBooleanItems } = splitBooleanItems({
 		items: sorted,
 	});
