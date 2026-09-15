@@ -51,3 +51,16 @@ ensure_psql_installed() {
 	command -v psql >/dev/null 2>&1 || sudo dnf reinstall -y postgresql16 >/dev/null 2>&1 || true
 	command -v psql >/dev/null 2>&1 || { echo "[conductor] psql install failed" >&2; return 1; }
 }
+
+# Every `bun t`, `bun tw`, `bun dw` and `bun d` script is `infisical run -- …`.
+# The CLI is a repo dependency, but node_modules/.bin is not on PATH in the plain
+# shells agents use, so install the pinned version globally.
+ensure_infisical_cli_installed() {
+	command -v infisical >/dev/null 2>&1 && return 0
+	local pinned
+	pinned="$(bun --print 'require("./package.json").devDependencies?.["@infisical/cli"] ?? require("./package.json").dependencies?.["@infisical/cli"] ?? ""' 2>/dev/null || true)"
+	echo "[conductor] installing infisical CLI ${pinned:-latest}"
+	npm install -g --silent "@infisical/cli${pinned:+@$pinned}" >/dev/null 2>&1 || true
+	export PATH="$(npm prefix -g 2>/dev/null)/bin:$PATH"
+	command -v infisical >/dev/null 2>&1 || { echo "[conductor] infisical CLI install failed" >&2; return 1; }
+}

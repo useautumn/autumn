@@ -13,6 +13,7 @@ exec > >(tee /tmp/conductor-setup.log) 2>&1
 . "$(dirname "$0")/ensureTooling.sh"
 ensure_bun_installed || exit 1
 ensure_neonctl_installed || exit 1
+ensure_infisical_cli_installed || exit 1
 ensure_psql_installed || exit 1
 
 . "$(dirname "$0")/startDocker.sh"
