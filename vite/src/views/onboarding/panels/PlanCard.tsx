@@ -40,7 +40,7 @@ export function PlanCard({
 						className="group flex min-w-0 items-center gap-1 rounded-sm"
 					>
 						<span className="truncate text-xs font-medium text-foreground">
-							{card.plan.name}
+							{plan.name}
 						</span>
 						<ArrowUpRightIcon
 							size={10}
