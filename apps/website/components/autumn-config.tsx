@@ -163,7 +163,7 @@ export default function AutumnConfig({
 								style={autumnTheme}
 								showLineNumbers
 								lineNumberStyle={{
-									color: "#fff",
+									color: "#FFFFFF4D",
 									minWidth: "2rem",
 									paddingRight: "1rem",
 									userSelect: "none",
