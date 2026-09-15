@@ -1,6 +1,7 @@
 import {
 	ErrCode,
 	type Feature,
+	isFeaturePriceItem,
 	type ProductItem,
 	RecaseError,
 } from "@autumn/shared";
@@ -22,22 +23,6 @@ export const validateInvoiceCreditPooling = ({
 	});
 };
 
-export const validateInvoiceCreditUsageBasedPricing = ({
-	feature,
-	usageBased,
-}: {
-	feature?: Feature;
-	usageBased: boolean;
-}): void => {
-	if (usageBased || !isInvoiceCreditFeature({ feature })) return;
-
-	throw new RecaseError({
-		message: "Invoice-credit features require usage-based pricing",
-		code: ErrCode.InvalidProductItem,
-		statusCode: 400,
-	});
-};
-
 export const validateInvoiceCreditPrice = ({
 	feature,
 	item,
@@ -45,7 +30,7 @@ export const validateInvoiceCreditPrice = ({
 	feature?: Feature;
 	item: ProductItem;
 }): void => {
-	if (!isInvoiceCreditFeature({ feature })) return;
+	if (!isInvoiceCreditFeature({ feature }) || !isFeaturePriceItem(item)) return;
 
 	const billingUnits = item.billing_units ?? 1;
 	const hasOneToOnePrice =

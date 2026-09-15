@@ -1,6 +1,9 @@
 import type { Organization } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { AgentAuthChallenge } from "../agentAuthUtils.js";
+import {
+	consumeAgentClaimAttempt,
+	deleteAgentClaimAttemptPointer,
+} from "../repos/agentChallengeRepo.js";
 import {
 	claimPendingAgentOrg,
 	updateAgentSessionOrg,
@@ -12,24 +15,28 @@ export type CommittedAgentAuthEffects = {
 
 export const commitAgentAuthEffects = async ({
 	db,
-	challenge,
+	attemptTokenHash,
 	sessionToken,
 	userId,
 	now,
 }: {
 	db: DrizzleCli;
-	challenge: AgentAuthChallenge;
+	attemptTokenHash: string;
 	sessionToken: string;
 	userId: string;
 	now: Date;
 }): Promise<CommittedAgentAuthEffects | null> => {
-	if (!challenge.claimTokenHash) return null;
-
 	return db.transaction(async (tx) => {
 		const transactionDb = tx as unknown as DrizzleCli;
+		const consumedAttempt = await consumeAgentClaimAttempt({
+			db: transactionDb,
+			attemptTokenHash,
+		});
+		if (!consumedAttempt) return null;
+
 		const organization = await claimPendingAgentOrg({
 			db: transactionDb,
-			claimTokenHash: challenge.claimTokenHash!,
+			claimTokenHash: consumedAttempt.claimTokenHash,
 			userId,
 			now,
 		});
@@ -41,6 +48,10 @@ export const commitAgentAuthEffects = async ({
 			organizationId: organization.id,
 		});
 		if (!sessionUpdated) throw new Error("Agent session update failed");
+		await deleteAgentClaimAttemptPointer({
+			db: transactionDb,
+			claimTokenHash: consumedAttempt.claimTokenHash,
+		});
 
 		return { organization };
 	});

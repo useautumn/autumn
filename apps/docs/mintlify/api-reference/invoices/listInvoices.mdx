@@ -91,6 +91,62 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       The total amount refunded on the invoice
     </DynamicResponseField>
 
+    <DynamicResponseField name="items" type="object[]">
+      Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
+      <Expandable title="properties">
+        <DynamicResponseField name="description" type="string">
+          Description of the invoice line item
+        </DynamicResponseField>
+
+        <DynamicResponseField name="period_start" type="number | null">
+          Timestamp when the billing period starts
+        </DynamicResponseField>
+
+        <DynamicResponseField name="period_end" type="number | null">
+          Timestamp when the billing period ends
+        </DynamicResponseField>
+
+        <DynamicResponseField name="plan_id" type="string | null">
+          The plan this line item came from. Null for lines with no Autumn plan behind them.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="feature_id" type="string | null">
+          The ID of the feature associated with this line item
+        </DynamicResponseField>
+
+        <DynamicResponseField name="feature_name" type="string | null">
+          The name of the feature associated with this line item
+        </DynamicResponseField>
+
+        <DynamicResponseField name="quantity" type="number | null">
+          Quantity actually charged on this line. Null on fixed-price lines.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="amount" type="number">
+          Amount charged on this line, pre-discount and pre-tax. Negative for credits.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="entities" type="object[]">
+          How this line splits by entity. Empty for customer-level lines. Only populated for invoices finalized after entity attribution shipped.
+          <Expandable title="properties">
+            <DynamicResponseField name="entity_id" type="string">
+              The entity this share of the line item is attributed to
+            </DynamicResponseField>
+
+            <DynamicResponseField name="quantity" type="number | null">
+              Quantity charged to this entity. Null on fixed-price lines.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="amount" type="number">
+              Amount attributed to this entity, pre-discount and pre-tax
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 
@@ -118,7 +174,37 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       "refunded_amount": 0,
       "currency": "usd",
       "created_at": 1759247877000,
-      "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456"
+      "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456",
+      "items": [
+        {
+          "description": "Pro plan",
+          "plan_id": "pro_plan",
+          "feature_id": null,
+          "feature_name": null,
+          "quantity": null,
+          "amount": 20,
+          "period_start": 1759247877000,
+          "period_end": 1761839877000,
+          "entities": []
+        },
+        {
+          "description": "AI credits",
+          "plan_id": "pro_plan",
+          "feature_id": "ai_credits",
+          "feature_name": "AI Credits",
+          "quantity": 4995,
+          "amount": 9.99,
+          "period_start": 1759247877000,
+          "period_end": 1761839877000,
+          "entities": [
+            {
+              "entity_id": "acme-docs-prod",
+              "quantity": 4995,
+              "amount": 9.99
+            }
+          ]
+        }
+      ]
     }
   ],
   "next_cursor": null

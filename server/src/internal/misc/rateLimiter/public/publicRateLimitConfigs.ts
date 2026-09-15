@@ -2,7 +2,8 @@ export enum PublicRateLimitType {
 	AgentProvisionGlobal = "agent_provision_global",
 	AgentProvisionClient = "agent_provision_client",
 	AgentClaim = "agent_claim",
-	AgentVerify = "agent_verify",
+	AgentClaimInspect = "agent_claim_inspect",
+	AgentClaimComplete = "agent_claim_complete",
 }
 
 export enum PublicRateLimitScope {
@@ -43,8 +44,14 @@ export const PUBLIC_RATE_LIMIT_CONFIGS: Record<
 		windowMs: HOUR_MS,
 		scope: PublicRateLimitScope.Client,
 	},
-	[PublicRateLimitType.AgentVerify]: {
-		name: "agent-verify",
+	[PublicRateLimitType.AgentClaimInspect]: {
+		name: "agent-claim-inspect",
+		limit: process.env.NODE_ENV === "development" ? DEVELOPMENT_LIMIT : 30,
+		windowMs: 15 * MINUTE_MS,
+		scope: PublicRateLimitScope.Client,
+	},
+	[PublicRateLimitType.AgentClaimComplete]: {
+		name: "agent-claim-complete",
 		limit: process.env.NODE_ENV === "development" ? DEVELOPMENT_LIMIT : 30,
 		windowMs: 15 * MINUTE_MS,
 		scope: PublicRateLimitScope.Client,

@@ -1,7 +1,6 @@
 import {
 	entToPrice,
 	type Feature,
-	isConsumablePrice,
 	toProductItem,
 	type UpdateCatalogParams,
 } from "@autumn/shared";
@@ -25,26 +24,7 @@ import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatal
 import {
 	validateInvoiceCreditPooling,
 	validateInvoiceCreditPrice,
-	validateInvoiceCreditUsageBasedPricing,
 } from "@/internal/features/validateInvoiceCreditPooling.js";
-
-const planItemsForFeatureAreUsageBased = ({
-	internalFeatureId,
-	updateCatalogPlan,
-}: {
-	internalFeatureId: string;
-	updateCatalogPlan: UpdateCatalogPlan;
-}): boolean =>
-	updateCatalogPlan.projected.products.every((product) =>
-		product.entitlements
-			.filter(
-				(entitlement) => entitlement.internal_feature_id === internalFeatureId,
-			)
-			.every((entitlement) => {
-				const price = entToPrice({ ent: entitlement, prices: product.prices });
-				return price !== undefined && isConsumablePrice(price);
-			}),
-	);
 
 const validateProjectedInvoiceCreditPrices = ({
 	feature,
@@ -103,13 +83,6 @@ const validateProjectedInvoiceCreditPooling = ({
 			feature,
 			pooled: hasPooledPlanItem,
 		});
-		validateInvoiceCreditUsageBasedPricing({
-			feature,
-			usageBased: planItemsForFeatureAreUsageBased({
-				internalFeatureId: feature.internal_id,
-				updateCatalogPlan: validationCatalogPlan,
-			}),
-		});
 		validateProjectedInvoiceCreditPrices({
 			feature,
 			updateCatalogPlan: validationCatalogPlan,
@@ -126,13 +99,6 @@ const validateProjectedInvoiceCreditPooling = ({
 				),
 		);
 		validateInvoiceCreditPooling({ feature, pooled: hasPooledPlanItem });
-		validateInvoiceCreditUsageBasedPricing({
-			feature,
-			usageBased: planItemsForFeatureAreUsageBased({
-				internalFeatureId: feature.internal_id,
-				updateCatalogPlan: validationCatalogPlan,
-			}),
-		});
 		validateProjectedInvoiceCreditPrices({
 			feature,
 			updateCatalogPlan: validationCatalogPlan,

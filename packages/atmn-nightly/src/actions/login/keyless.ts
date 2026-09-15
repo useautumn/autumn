@@ -2,16 +2,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import {
 	type ClaimStarted,
-	type ClaimVerified,
 	type ProvisionedOrg,
 	provisionKeylessOrg,
 	slugFor,
 	startClaim,
-	verifyClaim,
 } from "../../auth/keyless";
 import { writeEnvValues } from "../../env/loadEnv";
 import { type Target, targetBaseUrl } from "../../env/resolveTarget";
-import { ask, done, type Prompter } from "../../prompt/prompt";
+import { done, type Prompter } from "../../prompt/prompt";
 
 /** The one place the two ways in are described; help text and hints both read it. */
 export const CONNECT_OPTIONS = {
@@ -31,10 +29,6 @@ export type KeylessDeps = {
 		secretKey: string;
 		email: string;
 	}) => Promise<ClaimStarted>;
-	verifyClaim: (params: {
-		email: string;
-		otp: string;
-	}) => Promise<ClaimVerified>;
 };
 
 export const keylessDepsFor = ({ target }: { target: Target }): KeylessDeps => {
@@ -43,7 +37,6 @@ export const keylessDepsFor = ({ target }: { target: Target }): KeylessDeps => {
 		provision: ({ name, slug }) => provisionKeylessOrg({ baseUrl, name, slug }),
 		startClaim: ({ secretKey, email }) =>
 			startClaim({ baseUrl, secretKey, email }),
-		verifyClaim: ({ email, otp }) => verifyClaim({ baseUrl, email, otp }),
 	};
 };
 
@@ -104,9 +97,6 @@ export const runKeylessLogin = async ({
 	prompter.write(
 		`  This org has no owner yet. Link it within ${daysUntil(provisioned.claimExpiresAt)}: atmn login --claim you@example.com\n`,
 	);
-	// A URL is for a person to click; an agent has the command above.
-	if (prompter.interactive)
-		prompter.write(`  Or open ${provisioned.claimUrl} in a browser.\n`);
 	return {
 		envPath,
 		orgId: provisioned.organizationId,
@@ -121,38 +111,25 @@ const minutesUntil = (iso: string): string => {
 	return `${Math.max(1, Math.round(ms / 60_000))} min`;
 };
 
-/** Link the keyless org the key belongs to with an account: a code by email, then verify. */
+/** Create a browser link that attaches this keyless org to the requested account. */
 export const runClaim = async ({
 	secretKey,
 	email,
-	otp,
 	deps,
 	prompter,
 }: {
 	secretKey: string;
 	email: string;
-	/** Given headless on the second run; asked for interactively. */
-	otp?: string;
 	deps: KeylessDeps;
 	prompter: Prompter;
-}): Promise<ClaimVerified> => {
-	let code = otp;
-	if (code === undefined) {
-		const started = await deps.startClaim({ secretKey, email });
-		prompter.write(
-			`${done(`Sent a one-time code to ${email} (expires in ${minutesUntil(started.expiresAt)})`)}\n`,
-		);
-		code = await ask({
-			prompter,
-			value: undefined,
-			question: "Enter the code:",
-			flag: `--otp <code>`,
-			example: `atmn login --claim ${email} --otp 123456`,
-		});
-	}
-	const verified = await deps.verifyClaim({ email, otp: code });
+}): Promise<ClaimStarted> => {
+	const started = await deps.startClaim({ secretKey, email });
 	prompter.write(
-		`${done(`Linked ${verified.organizationSlug} to ${verified.email}. Same key, same plans; the dashboard is at app.useautumn.com`)}\n`,
+		`${done(`Created a claim link for ${email} (expires in ${minutesUntil(started.expiresAt)})`)}\n`,
 	);
-	return verified;
+	prompter.write(`  ${started.claimUrl}\n`);
+	prompter.write(
+		`  The same link was emailed to ${email}. Sign in there to claim the org; the existing key stays valid.\n`,
+	);
+	return started;
 };

@@ -64,6 +64,10 @@ export type UpdatePlanBasePriceRequestBody = {
     | undefined;
 };
 
+export type UpdatePlanItemThresholdBillingRequestBody = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -602,6 +606,13 @@ export type UpdatePlanItemFeatureOverrideRequestBody = {
  */
 export type UpdatePlanItemPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?:
+    | UpdatePlanItemThresholdBillingRequestBody
+    | null
+    | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -688,6 +699,10 @@ export type UpdatePlanLicenseBasePrice = {
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
   additionalCurrencies?: Array<UpdatePlanLicenseAdditionalCurrency> | undefined;
+};
+
+export type UpdatePlanLicenseThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -1216,6 +1231,10 @@ export type UpdatePlanLicenseFeatureOverride = {
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type UpdatePlanLicensePlanItem = {
+  /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: UpdatePlanLicenseThresholdBilling | null | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -1747,6 +1766,10 @@ export type UpdatePlanVariantBasePrice = {
   additionalCurrencies?: Array<UpdatePlanVariantAdditionalCurrency> | undefined;
 };
 
+export type UpdatePlanVariantThresholdBilling = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -1964,45 +1987,6 @@ export type UpdatePlanVariantExpiryDurationType = ClosedEnum<
   typeof UpdatePlanVariantExpiryDurationType
 >;
 
-/**
- * Rollover config for unused units. If set, unused included units carry over.
- */
-export type UpdatePlanVariantRollover = {
-  /**
-   * Max rollover units. Omit for unlimited rollover.
-   */
-  max?: number | undefined;
-  /**
-   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
-   */
-  maxPercentage?: number | undefined;
-  /**
-   * When rolled over units expire.
-   */
-  expiryDurationType: UpdatePlanVariantExpiryDurationType;
-  /**
-   * Number of periods before expiry.
-   */
-  expiryDurationLength?: number | undefined;
-};
-
-export type DimensionsVariantMatch4 = string | number | boolean;
-
-export type UpdatePlanDimensionsVariant4 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
 /** @internal */
 export const UpdatePlanPriceIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
   typeof UpdatePlanPriceIntervalRequestBody
@@ -2039,7 +2023,7 @@ export function updatePlanAdditionalCurrencyRequestBodyToJSON(
 export type UpdatePlanBasePriceRequestBody$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<UpdatePlanAdditionalCurrencyRequestBody$Outbound>
     | undefined;
@@ -2053,7 +2037,7 @@ export const UpdatePlanBasePriceRequestBody$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: UpdatePlanPriceIntervalRequestBody$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(z.array(z.lazy(() =>
       UpdatePlanAdditionalCurrencyRequestBody$outboundSchema
     ))),
@@ -2077,6 +2061,31 @@ export function updatePlanBasePriceRequestBodyToJSON(
 }
 
 /** @internal */
+export type UpdatePlanItemThresholdBillingRequestBody$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const UpdatePlanItemThresholdBillingRequestBody$outboundSchema:
+  z.ZodMiniType<
+    UpdatePlanItemThresholdBillingRequestBody$Outbound,
+    UpdatePlanItemThresholdBillingRequestBody
+  > = z.object({
+    threshold: z.number(),
+  });
+
+export function updatePlanItemThresholdBillingRequestBodyToJSON(
+  updatePlanItemThresholdBillingRequestBody:
+    UpdatePlanItemThresholdBillingRequestBody,
+): string {
+  return JSON.stringify(
+    UpdatePlanItemThresholdBillingRequestBody$outboundSchema.parse(
+      updatePlanItemThresholdBillingRequestBody,
+    ),
+  );
+}
+
+/** @internal */
 export const UpdatePlanItemResetIntervalRequestBody$outboundSchema:
   z.ZodMiniEnum<typeof UpdatePlanItemResetIntervalRequestBody> = z.enum(
     UpdatePlanItemResetIntervalRequestBody,
@@ -2085,7 +2094,7 @@ export const UpdatePlanItemResetIntervalRequestBody$outboundSchema:
 /** @internal */
 export type UpdatePlanItemResetRequestBody$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -2095,7 +2104,7 @@ export const UpdatePlanItemResetRequestBody$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: UpdatePlanItemResetIntervalRequestBody$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3294,6 +3303,10 @@ export function updatePlanItemFeatureOverrideRequestBodyToJSON(
 
 /** @internal */
 export type UpdatePlanItemPlanItem$Outbound = {
+  threshold_billing?:
+    | UpdatePlanItemThresholdBillingRequestBody$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -3313,17 +3326,22 @@ export const UpdatePlanItemPlanItem$outboundSchema: z.ZodMiniType<
   UpdatePlanItemPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
+      UpdatePlanItemThresholdBillingRequestBody$outboundSchema
+    ))),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(
-      z.lazy(() => UpdatePlanItemResetRequestBody$outboundSchema),
-    ),
-    price: z.optional(
-      z.lazy(() => UpdatePlanItemPriceRequestBody$outboundSchema),
-    ),
-    proration: z.optional(z.lazy(() => UpdatePlanItemProration$outboundSchema)),
+    reset: z.optional(z.lazy(() =>
+      UpdatePlanItemResetRequestBody$outboundSchema
+    )),
+    price: z.optional(z.lazy(() =>
+      UpdatePlanItemPriceRequestBody$outboundSchema
+    )),
+    proration: z.optional(z.lazy(() =>
+      UpdatePlanItemProration$outboundSchema
+    )),
     rollover: z.optional(
       z.lazy(() => UpdatePlanItemRolloverRequestBody$outboundSchema),
     ),
@@ -3333,6 +3351,7 @@ export const UpdatePlanItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -3381,7 +3400,7 @@ export function updatePlanLicenseAdditionalCurrencyToJSON(
 export type UpdatePlanLicenseBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<UpdatePlanLicenseAdditionalCurrency$Outbound>
     | undefined;
@@ -3395,7 +3414,7 @@ export const UpdatePlanLicenseBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: UpdatePlanPriceLicenseInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => UpdatePlanLicenseAdditionalCurrency$outboundSchema)),
     ),
@@ -3417,6 +3436,29 @@ export function updatePlanLicenseBasePriceToJSON(
 }
 
 /** @internal */
+export type UpdatePlanLicenseThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const UpdatePlanLicenseThresholdBilling$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseThresholdBilling$Outbound,
+  UpdatePlanLicenseThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function updatePlanLicenseThresholdBillingToJSON(
+  updatePlanLicenseThresholdBilling: UpdatePlanLicenseThresholdBilling,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseThresholdBilling$outboundSchema.parse(
+      updatePlanLicenseThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const UpdatePlanLicenseResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof UpdatePlanLicenseResetInterval
 > = z.enum(UpdatePlanLicenseResetInterval);
@@ -3424,7 +3466,7 @@ export const UpdatePlanLicenseResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type UpdatePlanLicenseReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -3434,7 +3476,7 @@ export const UpdatePlanLicenseReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: UpdatePlanLicenseResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4584,6 +4626,10 @@ export function updatePlanLicenseFeatureOverrideToJSON(
 
 /** @internal */
 export type UpdatePlanLicensePlanItem$Outbound = {
+  threshold_billing?:
+    | UpdatePlanLicenseThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -4601,6 +4647,11 @@ export const UpdatePlanLicensePlanItem$outboundSchema: z.ZodMiniType<
   UpdatePlanLicensePlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(
+      z.nullable(
+        z.lazy(() => UpdatePlanLicenseThresholdBilling$outboundSchema),
+      ),
+    ),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
@@ -4619,6 +4670,7 @@ export const UpdatePlanLicensePlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -4816,7 +4868,7 @@ export type UpdatePlanFreeTrialParamsRequestBody$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
+  on_end: string;
 };
 
 /** @internal */
@@ -4831,7 +4883,7 @@ export const UpdatePlanFreeTrialParamsRequestBody$outboundSchema: z.ZodMiniType<
       "month",
     ),
     cardRequired: z._default(z.boolean(), false),
-    onEnd: z.optional(UpdatePlanOnEndRequestBody$outboundSchema),
+    onEnd: z._default(UpdatePlanOnEndRequestBody$outboundSchema, "bill"),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5410,7 +5462,7 @@ export function updatePlanVariantAdditionalCurrencyToJSON(
 export type UpdatePlanVariantBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<UpdatePlanVariantAdditionalCurrency$Outbound>
     | undefined;
@@ -5424,7 +5476,7 @@ export const UpdatePlanVariantBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: UpdatePlanPriceVariantInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => UpdatePlanVariantAdditionalCurrency$outboundSchema)),
     ),
@@ -5446,6 +5498,29 @@ export function updatePlanVariantBasePriceToJSON(
 }
 
 /** @internal */
+export type UpdatePlanVariantThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const UpdatePlanVariantThresholdBilling$outboundSchema: z.ZodMiniType<
+  UpdatePlanVariantThresholdBilling$Outbound,
+  UpdatePlanVariantThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function updatePlanVariantThresholdBillingToJSON(
+  updatePlanVariantThresholdBilling: UpdatePlanVariantThresholdBilling,
+): string {
+  return JSON.stringify(
+    UpdatePlanVariantThresholdBilling$outboundSchema.parse(
+      updatePlanVariantThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const UpdatePlanVariantResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof UpdatePlanVariantResetInterval
 > = z.enum(UpdatePlanVariantResetInterval);
@@ -5453,7 +5528,7 @@ export const UpdatePlanVariantResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type UpdatePlanVariantReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -5463,7 +5538,7 @@ export const UpdatePlanVariantReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: UpdatePlanVariantResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5716,93 +5791,3 @@ export function updatePlanVariantProrationToJSON(
 export const UpdatePlanVariantExpiryDurationType$outboundSchema: z.ZodMiniEnum<
   typeof UpdatePlanVariantExpiryDurationType
 > = z.enum(UpdatePlanVariantExpiryDurationType);
-
-/** @internal */
-export type UpdatePlanVariantRollover$Outbound = {
-  max?: number | undefined;
-  max_percentage?: number | undefined;
-  expiry_duration_type: string;
-  expiry_duration_length?: number | undefined;
-};
-
-/** @internal */
-export const UpdatePlanVariantRollover$outboundSchema: z.ZodMiniType<
-  UpdatePlanVariantRollover$Outbound,
-  UpdatePlanVariantRollover
-> = z.pipe(
-  z.object({
-    max: z.optional(z.number()),
-    maxPercentage: z.optional(z.number()),
-    expiryDurationType: UpdatePlanVariantExpiryDurationType$outboundSchema,
-    expiryDurationLength: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      maxPercentage: "max_percentage",
-      expiryDurationType: "expiry_duration_type",
-      expiryDurationLength: "expiry_duration_length",
-    });
-  }),
-);
-
-export function updatePlanVariantRolloverToJSON(
-  updatePlanVariantRollover: UpdatePlanVariantRollover,
-): string {
-  return JSON.stringify(
-    UpdatePlanVariantRollover$outboundSchema.parse(updatePlanVariantRollover),
-  );
-}
-
-/** @internal */
-export type DimensionsVariantMatch4$Outbound = string | number | boolean;
-
-/** @internal */
-export const DimensionsVariantMatch4$outboundSchema: z.ZodMiniType<
-  DimensionsVariantMatch4$Outbound,
-  DimensionsVariantMatch4
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function dimensionsVariantMatch4ToJSON(
-  dimensionsVariantMatch4: DimensionsVariantMatch4,
-): string {
-  return JSON.stringify(
-    DimensionsVariantMatch4$outboundSchema.parse(dimensionsVariantMatch4),
-  );
-}
-
-/** @internal */
-export type UpdatePlanDimensionsVariant4$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const UpdatePlanDimensionsVariant4$outboundSchema: z.ZodMiniType<
-  UpdatePlanDimensionsVariant4$Outbound,
-  UpdatePlanDimensionsVariant4
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function updatePlanDimensionsVariant4ToJSON(
-  updatePlanDimensionsVariant4: UpdatePlanDimensionsVariant4,
-): string {
-  return JSON.stringify(
-    UpdatePlanDimensionsVariant4$outboundSchema.parse(
-      updatePlanDimensionsVariant4,
-    ),
-  );
-}

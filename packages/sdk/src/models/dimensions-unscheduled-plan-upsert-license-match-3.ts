@@ -198,6 +198,10 @@ export type UnscheduledPlanBasePrice = {
   additionalCurrencies?: Array<UnscheduledPlanAdditionalCurrency> | undefined;
 };
 
+export type UnscheduledPlanItemThresholdBilling = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -729,6 +733,10 @@ export type UnscheduledPlanItemFeatureOverride = {
  */
 export type UnscheduledPlanItemPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: UnscheduledPlanItemThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -764,6 +772,10 @@ export type UnscheduledPlanItemPlanItem = {
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
   featureOverride?: UnscheduledPlanItemFeatureOverride | undefined;
+};
+
+export type UnscheduledPlanAddItemThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -1299,6 +1311,10 @@ export type UnscheduledPlanAddItemFeatureOverride = {
  */
 export type UnscheduledPlanAddItemPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: UnscheduledPlanAddItemThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -1739,6 +1755,10 @@ export type UnscheduledPlanUpsertLicenseBasePrice = {
     | undefined;
 };
 
+export type UnscheduledPlanUpsertLicenseThresholdBilling = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -2003,31 +2023,6 @@ export type DimensionsUnscheduledPlanUpsertLicenseMatch3 =
   | number
   | boolean;
 
-export const DimensionsToUnscheduledPlanUpsertLicenseEnum2 = {
-  Inf: "inf",
-} as const;
-export type DimensionsToUnscheduledPlanUpsertLicenseEnum2 = ClosedEnum<
-  typeof DimensionsToUnscheduledPlanUpsertLicenseEnum2
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type DimensionsUnscheduledPlanUpsertLicenseToUnion2 =
-  | number
-  | DimensionsToUnscheduledPlanUpsertLicenseEnum2;
-
-export type DimensionsUnscheduledPlanUpsertLicenseTier2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | DimensionsToUnscheduledPlanUpsertLicenseEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
 /** @internal */
 export const CreateScheduleFreeTrialDurationType$outboundSchema: z.ZodMiniEnum<
   typeof CreateScheduleFreeTrialDurationType
@@ -2043,7 +2038,7 @@ export type CreateScheduleFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
+  on_end: string;
 };
 
 /** @internal */
@@ -2058,7 +2053,7 @@ export const CreateScheduleFreeTrialParams$outboundSchema: z.ZodMiniType<
       "month",
     ),
     cardRequired: z._default(z.boolean(), false),
-    onEnd: z.optional(CreateScheduleOnEnd$outboundSchema),
+    onEnd: z._default(CreateScheduleOnEnd$outboundSchema, "bill"),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2229,7 +2224,7 @@ export function unscheduledPlanAdditionalCurrencyToJSON(
 export type UnscheduledPlanBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<UnscheduledPlanAdditionalCurrency$Outbound>
     | undefined;
@@ -2243,7 +2238,7 @@ export const UnscheduledPlanBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: PriceUnscheduledPlanInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => UnscheduledPlanAdditionalCurrency$outboundSchema)),
     ),
@@ -2265,6 +2260,29 @@ export function unscheduledPlanBasePriceToJSON(
 }
 
 /** @internal */
+export type UnscheduledPlanItemThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const UnscheduledPlanItemThresholdBilling$outboundSchema: z.ZodMiniType<
+  UnscheduledPlanItemThresholdBilling$Outbound,
+  UnscheduledPlanItemThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function unscheduledPlanItemThresholdBillingToJSON(
+  unscheduledPlanItemThresholdBilling: UnscheduledPlanItemThresholdBilling,
+): string {
+  return JSON.stringify(
+    UnscheduledPlanItemThresholdBilling$outboundSchema.parse(
+      unscheduledPlanItemThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const UnscheduledPlanItemResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof UnscheduledPlanItemResetInterval
 > = z.enum(UnscheduledPlanItemResetInterval);
@@ -2272,7 +2290,7 @@ export const UnscheduledPlanItemResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type UnscheduledPlanItemReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -2282,7 +2300,7 @@ export const UnscheduledPlanItemReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: UnscheduledPlanItemResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3450,6 +3468,10 @@ export function unscheduledPlanItemFeatureOverrideToJSON(
 
 /** @internal */
 export type UnscheduledPlanItemPlanItem$Outbound = {
+  threshold_billing?:
+    | UnscheduledPlanItemThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -3467,11 +3489,16 @@ export const UnscheduledPlanItemPlanItem$outboundSchema: z.ZodMiniType<
   UnscheduledPlanItemPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
+      UnscheduledPlanItemThresholdBilling$outboundSchema
+    ))),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() => UnscheduledPlanItemReset$outboundSchema)),
+    reset: z.optional(z.lazy(() =>
+      UnscheduledPlanItemReset$outboundSchema
+    )),
     price: z.optional(z.lazy(() => UnscheduledPlanItemPrice$outboundSchema)),
     proration: z.optional(
       z.lazy(() => UnscheduledPlanItemProration$outboundSchema),
@@ -3485,6 +3512,7 @@ export const UnscheduledPlanItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -3502,6 +3530,31 @@ export function unscheduledPlanItemPlanItemToJSON(
 }
 
 /** @internal */
+export type UnscheduledPlanAddItemThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const UnscheduledPlanAddItemThresholdBilling$outboundSchema:
+  z.ZodMiniType<
+    UnscheduledPlanAddItemThresholdBilling$Outbound,
+    UnscheduledPlanAddItemThresholdBilling
+  > = z.object({
+    threshold: z.number(),
+  });
+
+export function unscheduledPlanAddItemThresholdBillingToJSON(
+  unscheduledPlanAddItemThresholdBilling:
+    UnscheduledPlanAddItemThresholdBilling,
+): string {
+  return JSON.stringify(
+    UnscheduledPlanAddItemThresholdBilling$outboundSchema.parse(
+      unscheduledPlanAddItemThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const UnscheduledPlanAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof UnscheduledPlanAddItemResetInterval
 > = z.enum(UnscheduledPlanAddItemResetInterval);
@@ -3509,7 +3562,7 @@ export const UnscheduledPlanAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type UnscheduledPlanAddItemReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -3519,7 +3572,7 @@ export const UnscheduledPlanAddItemReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: UnscheduledPlanAddItemResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4720,6 +4773,10 @@ export function unscheduledPlanAddItemFeatureOverrideToJSON(
 
 /** @internal */
 export type UnscheduledPlanAddItemPlanItem$Outbound = {
+  threshold_billing?:
+    | UnscheduledPlanAddItemThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -4737,11 +4794,16 @@ export const UnscheduledPlanAddItemPlanItem$outboundSchema: z.ZodMiniType<
   UnscheduledPlanAddItemPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
+      UnscheduledPlanAddItemThresholdBilling$outboundSchema
+    ))),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() => UnscheduledPlanAddItemReset$outboundSchema)),
+    reset: z.optional(z.lazy(() =>
+      UnscheduledPlanAddItemReset$outboundSchema
+    )),
     price: z.optional(z.lazy(() => UnscheduledPlanAddItemPrice$outboundSchema)),
     proration: z.optional(
       z.lazy(() => UnscheduledPlanAddItemProration$outboundSchema),
@@ -4755,6 +4817,7 @@ export const UnscheduledPlanAddItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -5305,7 +5368,7 @@ export function unscheduledPlanUpsertLicenseAdditionalCurrencyToJSON(
 export type UnscheduledPlanUpsertLicenseBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<UnscheduledPlanUpsertLicenseAdditionalCurrency$Outbound>
     | undefined;
@@ -5320,7 +5383,7 @@ export const UnscheduledPlanUpsertLicenseBasePrice$outboundSchema:
     z.object({
       amount: z.number(),
       interval: PriceUnscheduledPlanUpsertLicenseInterval$outboundSchema,
-      intervalCount: z.optional(z.number()),
+      intervalCount: z._default(z.number(), 1),
       additionalCurrencies: z.optional(z.array(z.lazy(() =>
         UnscheduledPlanUpsertLicenseAdditionalCurrency$outboundSchema
       ))),
@@ -5344,6 +5407,31 @@ export function unscheduledPlanUpsertLicenseBasePriceToJSON(
 }
 
 /** @internal */
+export type UnscheduledPlanUpsertLicenseThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const UnscheduledPlanUpsertLicenseThresholdBilling$outboundSchema:
+  z.ZodMiniType<
+    UnscheduledPlanUpsertLicenseThresholdBilling$Outbound,
+    UnscheduledPlanUpsertLicenseThresholdBilling
+  > = z.object({
+    threshold: z.number(),
+  });
+
+export function unscheduledPlanUpsertLicenseThresholdBillingToJSON(
+  unscheduledPlanUpsertLicenseThresholdBilling:
+    UnscheduledPlanUpsertLicenseThresholdBilling,
+): string {
+  return JSON.stringify(
+    UnscheduledPlanUpsertLicenseThresholdBilling$outboundSchema.parse(
+      unscheduledPlanUpsertLicenseThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const UnscheduledPlanUpsertLicenseResetInterval$outboundSchema:
   z.ZodMiniEnum<typeof UnscheduledPlanUpsertLicenseResetInterval> = z.enum(
     UnscheduledPlanUpsertLicenseResetInterval,
@@ -5352,7 +5440,7 @@ export const UnscheduledPlanUpsertLicenseResetInterval$outboundSchema:
 /** @internal */
 export type UnscheduledPlanUpsertLicenseReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -5362,7 +5450,7 @@ export const UnscheduledPlanUpsertLicenseReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: UnscheduledPlanUpsertLicenseResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5755,75 +5843,6 @@ export function dimensionsUnscheduledPlanUpsertLicenseMatch3ToJSON(
   return JSON.stringify(
     DimensionsUnscheduledPlanUpsertLicenseMatch3$outboundSchema.parse(
       dimensionsUnscheduledPlanUpsertLicenseMatch3,
-    ),
-  );
-}
-
-/** @internal */
-export const DimensionsToUnscheduledPlanUpsertLicenseEnum2$outboundSchema:
-  z.ZodMiniEnum<typeof DimensionsToUnscheduledPlanUpsertLicenseEnum2> = z.enum(
-    DimensionsToUnscheduledPlanUpsertLicenseEnum2,
-  );
-
-/** @internal */
-export type DimensionsUnscheduledPlanUpsertLicenseToUnion2$Outbound =
-  | number
-  | string;
-
-/** @internal */
-export const DimensionsUnscheduledPlanUpsertLicenseToUnion2$outboundSchema:
-  z.ZodMiniType<
-    DimensionsUnscheduledPlanUpsertLicenseToUnion2$Outbound,
-    DimensionsUnscheduledPlanUpsertLicenseToUnion2
-  > = smartUnion([
-    z.number(),
-    DimensionsToUnscheduledPlanUpsertLicenseEnum2$outboundSchema,
-  ]);
-
-export function dimensionsUnscheduledPlanUpsertLicenseToUnion2ToJSON(
-  dimensionsUnscheduledPlanUpsertLicenseToUnion2:
-    DimensionsUnscheduledPlanUpsertLicenseToUnion2,
-): string {
-  return JSON.stringify(
-    DimensionsUnscheduledPlanUpsertLicenseToUnion2$outboundSchema.parse(
-      dimensionsUnscheduledPlanUpsertLicenseToUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type DimensionsUnscheduledPlanUpsertLicenseTier2$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const DimensionsUnscheduledPlanUpsertLicenseTier2$outboundSchema:
-  z.ZodMiniType<
-    DimensionsUnscheduledPlanUpsertLicenseTier2$Outbound,
-    DimensionsUnscheduledPlanUpsertLicenseTier2
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        DimensionsToUnscheduledPlanUpsertLicenseEnum2$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function dimensionsUnscheduledPlanUpsertLicenseTier2ToJSON(
-  dimensionsUnscheduledPlanUpsertLicenseTier2:
-    DimensionsUnscheduledPlanUpsertLicenseTier2,
-): string {
-  return JSON.stringify(
-    DimensionsUnscheduledPlanUpsertLicenseTier2$outboundSchema.parse(
-      dimensionsUnscheduledPlanUpsertLicenseTier2,
     ),
   );
 }

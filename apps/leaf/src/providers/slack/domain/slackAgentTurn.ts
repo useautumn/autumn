@@ -5,6 +5,7 @@ import type { AgentTurnResult } from "../../../internal/agentRuntime/domain/agen
 import type {
 	AgentActionProgress,
 	AgentContextMessage,
+	AgentTurnSpeaker,
 } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import type { ActiveRun } from "../../../internal/runs/runRegistry.js";
 
@@ -28,6 +29,7 @@ export type SlackAgentTurnParams = Readonly<{
 	providerUserId: string;
 	recentMessages?: ReadonlyArray<AgentContextMessage>;
 	run?: ActiveRun;
+	speaker?: AgentTurnSpeaker;
 	text: string;
 	threadId: string;
 }>;

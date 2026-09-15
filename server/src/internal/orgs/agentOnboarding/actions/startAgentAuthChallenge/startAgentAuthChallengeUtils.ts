@@ -1,16 +1,16 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { hashApiKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
-import { auth } from "@/utils/auth.js";
+import { sendAgentClaimEmail } from "@/internal/emails/sendAgentClaimEmail.js";
 import {
-	AGENT_AUTH_CHALLENGE_TTL_MS,
-	type AgentAuthChallenge,
-	AgentAuthPurpose,
+	AGENT_CLAIM_ATTEMPT_TTL_MS,
+	type AgentClaimAttempt,
+	AgentClaimPurpose,
+	buildAgentClaimUrl,
+	createAgentClaimAttemptToken,
+	hashAgentAuthSubject,
 	hashAgentClaimToken,
 } from "../../agentAuthUtils.js";
-import {
-	createAgentChallenge,
-	deleteAgentChallenge,
-} from "../../repos/agentChallengeRepo.js";
+import { createAgentClaimAttempt } from "../../repos/agentChallengeRepo.js";
 import {
 	findPendingAgentOrg,
 	findPendingAgentOrgBySetupKeyHash,
@@ -18,7 +18,11 @@ import {
 
 export type ResolvedAgentAuthIdentity =
 	| { kind: "invalid" }
-	| { kind: "claim"; claimTokenHash: string };
+	| {
+			kind: "claim";
+			claimTokenHash: string;
+			organizationName: string;
+	  };
 
 export const resolveClaimIdentity = async ({
 	db,
@@ -43,7 +47,11 @@ export const resolveClaimIdentity = async ({
 			now,
 		});
 		return organization
-			? { kind: "claim", claimTokenHash }
+			? {
+					kind: "claim",
+					claimTokenHash,
+					organizationName: organization.name,
+				}
 			: { kind: "invalid" };
 	}
 
@@ -55,40 +63,47 @@ export const resolveClaimIdentity = async ({
 		now,
 	});
 	return organization?.claim_token_hash
-		? { kind: "claim", claimTokenHash: organization.claim_token_hash }
+		? {
+				kind: "claim",
+				claimTokenHash: organization.claim_token_hash,
+				organizationName: organization.name,
+			}
 		: { kind: "invalid" };
 };
 
 export const issueAgentAuthChallenge = async ({
+	db,
 	email,
 	claimTokenHash,
+	organizationName,
 	now,
 }: {
+	db: DrizzleCli;
 	email: string;
 	claimTokenHash: string;
+	organizationName: string;
 	now: Date;
 }) => {
-	const expiresAt = new Date(now.getTime() + AGENT_AUTH_CHALLENGE_TTL_MS);
-	const authContext = await auth.$context;
-	const challenge: AgentAuthChallenge = {
+	const attemptToken = createAgentClaimAttemptToken();
+	const attemptTokenHash = hashAgentAuthSubject({ value: attemptToken });
+	const expiresAt = new Date(now.getTime() + AGENT_CLAIM_ATTEMPT_TTL_MS);
+	const attempt: AgentClaimAttempt = {
 		version: 1,
-		purpose: AgentAuthPurpose.Claim,
+		purpose: AgentClaimPurpose.Claim,
 		email,
 		claimTokenHash,
+		attemptTokenHash,
 		expiresAt: expiresAt.toISOString(),
-		attempts: 0,
 	};
+	const claimUrl = buildAgentClaimUrl({ attemptToken });
 
-	await deleteAgentChallenge({ authContext, email }).catch(() => undefined);
-	await createAgentChallenge({ authContext, email, challenge });
-	try {
-		await auth.api.sendVerificationOTP({
-			body: { email, type: "sign-in" },
-		});
-	} catch (error) {
-		await deleteAgentChallenge({ authContext, email }).catch(() => undefined);
-		throw error;
-	}
+	await createAgentClaimAttempt({ db, attempt });
+	await sendAgentClaimEmail({
+		email,
+		organizationName,
+		claimUrl,
+		expiresAt,
+	});
 
-	return { expiresAt };
+	return { claimUrl, expiresAt };
 };

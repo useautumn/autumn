@@ -27,7 +27,6 @@ import { StatusCodes } from "http-status-codes";
 import {
 	validateInvoiceCreditPooling,
 	validateInvoiceCreditPrice,
-	validateInvoiceCreditUsageBasedPricing,
 } from "@/internal/features/validateInvoiceCreditPooling.js";
 import { validateItemFeatureOverride } from "@/internal/features/validateItemFeatureOverride.js";
 import {
@@ -76,11 +75,6 @@ const validateProductItem = ({
 	}
 
 	validateInvoiceCreditPooling({ feature, pooled: item.pooled });
-	validateInvoiceCreditUsageBasedPricing({
-		feature,
-		usageBased:
-			isFeaturePriceItem(item) && item.usage_model === UsageModel.PayPerUse,
-	});
 	validateInvoiceCreditPrice({ feature, item });
 	validateItemFeatureOverride({ item, feature, features });
 

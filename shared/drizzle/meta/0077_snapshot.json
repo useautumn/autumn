@@ -1,5 +1,5 @@
 {
-  "id": "49d68974-c493-414d-8031-566e4a3a16b5",
+  "id": "9603782b-12ed-4fed-a81c-cffecebfe015",
   "prevId": "53cf8494-476e-469c-9e07-98a820a39a5f",
   "version": "7",
   "dialect": "postgresql",
@@ -1805,12 +1805,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "metadata": {
-          "name": "metadata",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "expired": {
           "name": "expired",
           "type": "boolean",
@@ -1964,22 +1958,6 @@
           "isUnique": false,
           "where": "\"customer_entitlements\".\"customer_product_id\" IS NULL",
           "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_customer_entitlements_expiring_grants": {
-          "name": "idx_customer_entitlements_expiring_grants",
-          "columns": [
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"customer_entitlements\".\"customer_product_id\" IS NULL AND \"customer_entitlements\".\"expires_at\" IS NOT NULL AND \"customer_entitlements\".\"metadata\"->>'source' IS NOT NULL",
-          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -7652,6 +7630,12 @@
         "redis_config": {
           "name": "redis_config",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provisioning_source": {
+          "name": "provisioning_source",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

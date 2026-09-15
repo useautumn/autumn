@@ -1,21 +1,22 @@
 import { describe, expect, test } from "bun:test";
+import { ROLE_SCOPES } from "@autumn/shared";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { getTrustedClientIp } from "@/internal/misc/rateLimiter/public/getTrustedClientIp.js";
-import { ROLE_SCOPES } from "@autumn/shared";
 import {
 	AGENT_PROVISIONAL_API_KEY_SCOPES,
 	AGENT_USER_API_KEY_SCOPES,
 	grantAgentUserApiKeyScopes,
 } from "@/internal/orgs/agentOnboarding/agentAuthScopeKeys.js";
 import {
-	createAgentClaimSessionHeaders,
-	getAgentChallengeIdentifier,
+	createAgentClaimIntent,
+	getAgentClaimAttemptIdentifier,
+	getAgentClaimIntentFromHeaders,
+	getAgentClaimPointerIdentifier,
 	hashAgentAuthSubject,
 	normalizeAgentEmail,
-	shouldSkipDefaultOrgForAgentClaim,
 } from "@/internal/orgs/agentOnboarding/agentAuthUtils.js";
-import { parseAgentAuthChallenge } from "@/internal/orgs/agentOnboarding/repos/agentChallengeRepo.js";
+import { parseAgentClaimAttempt } from "@/internal/orgs/agentOnboarding/repos/agentChallengeRepo.js";
 import { updateAgentSessionOrg } from "@/internal/orgs/agentOnboarding/repos/agentOrgRepo.js";
 
 const getClientIp = ({ headers }: { headers: HeadersInit }): string => {
@@ -62,25 +63,27 @@ describe("agent onboarding", () => {
 		expect(email).toBe("agent@example.com");
 		expect(hashed).toHaveLength(64);
 		expect(hashed).not.toContain(email);
-		expect(getAgentChallengeIdentifier({ email })).toBe(
-			`agent-challenge:${hashed}`,
+		expect(getAgentClaimAttemptIdentifier({ attemptTokenHash: hashed })).toBe(
+			`agent-claim-attempt:${hashed}`,
+		);
+		expect(getAgentClaimPointerIdentifier({ claimTokenHash: hashed })).toBe(
+			`agent-claim-pointer:${hashed}`,
 		);
 	});
 
-	test("suppresses default org creation only for internal claim context", () => {
+	test("accepts only signed claim intent cookies", () => {
+		const intent = createAgentClaimIntent({ attemptToken: "attempt-token" });
 		expect(
-			shouldSkipDefaultOrgForAgentClaim({
-				headers: createAgentClaimSessionHeaders(),
+			getAgentClaimIntentFromHeaders({
+				headers: { cookie: `autumn_agent_claim=${encodeURIComponent(intent)}` },
 			}),
-		).toBe(true);
+		).toBe("attempt-token");
 		expect(
-			shouldSkipDefaultOrgForAgentClaim({
-				headers: { "x-autumn-agent-claim": "spoofed" },
+			getAgentClaimIntentFromHeaders({
+				headers: { cookie: "autumn_agent_claim=spoofed" },
 			}),
-		).toBe(false);
-		expect(shouldSkipDefaultOrgForAgentClaim({ headers: undefined })).toBe(
-			false,
-		);
+		).toBeNull();
+		expect(getAgentClaimIntentFromHeaders({ headers: undefined })).toBeNull();
 	});
 
 	test("provisional and durable keys use explicit least-privilege scopes", () => {
@@ -101,24 +104,29 @@ describe("agent onboarding", () => {
 	});
 
 	test("challenge purpose comes only from the stored envelope", () => {
-		const stored = parseAgentAuthChallenge({
+		const stored = parseAgentClaimAttempt({
 			value: JSON.stringify({
 				version: 1,
 				purpose: "claim",
 				email: "agent@example.com",
 				claimTokenHash: "a".repeat(64),
+				attemptTokenHash: "b".repeat(64),
 				expiresAt: new Date(Date.now() + 60_000).toISOString(),
-				attempts: 0,
 			}),
 		});
 
 		expect(stored?.purpose).toBe("claim");
 		expect(
-			parseAgentAuthChallenge({
+			parseAgentClaimAttempt({
 				value: JSON.stringify({
 					...stored,
 					purpose: "admin",
 				}),
+			}),
+		).toBeNull();
+		expect(
+			parseAgentClaimAttempt({
+				value: JSON.stringify({ ...stored, attemptTokenHash: "raw-secret" }),
 			}),
 		).toBeNull();
 	});

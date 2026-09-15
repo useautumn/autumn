@@ -69,6 +69,10 @@ export type CreatePlanPriceRequestBody = {
     | undefined;
 };
 
+export type CreatePlanItemThresholdBillingRequestBody = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -607,6 +611,13 @@ export type CreatePlanItemFeatureOverrideRequestBody = {
  */
 export type CreatePlanItemPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?:
+    | CreatePlanItemThresholdBillingRequestBody
+    | null
+    | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -693,6 +704,10 @@ export type CreatePlanLicenseBasePrice = {
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
   additionalCurrencies?: Array<CreatePlanLicenseAdditionalCurrency> | undefined;
+};
+
+export type CreatePlanLicenseThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -1221,6 +1236,10 @@ export type CreatePlanLicenseFeatureOverride = {
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type CreatePlanLicensePlanItem = {
+  /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: CreatePlanLicenseThresholdBilling | null | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -1831,6 +1850,10 @@ export type CreatePlanPriceResponse = {
   processors?: CreatePlanPriceProcessors | undefined;
 };
 
+export type CreatePlanItemThresholdBillingResponse = {
+  threshold: number;
+};
+
 /**
  * The type of the feature
  */
@@ -2008,62 +2031,6 @@ export type CreatePlanItemBillingMethodResponse = OpenEnum<
   typeof CreatePlanItemBillingMethodResponse
 >;
 
-export type CreatePlanItemStripe = {
-  /**
-   * Stripe price ID. For prepaid with included > 0 this is the V2 price.
-   */
-  priceId: string;
-};
-
-/**
- * Payment processors this item price is connected to. Omitted when unset.
- */
-export type CreatePlanItemProcessors = {
-  stripe?: CreatePlanItemStripe | null | undefined;
-};
-
-export type CreatePlanItemPriceResponse = {
-  /**
-   * Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
-   */
-  amount?: number | undefined;
-  /**
-   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
-   */
-  additionalCurrencies?:
-    | Array<CreatePlanItemAdditionalCurrencyResponse>
-    | undefined;
-  /**
-   * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
-   */
-  tiers?: Array<CreatePlanPriceItemTierResponse> | undefined;
-  tierBehavior?: CreatePlanItemTierBehaviorResponse | undefined;
-  /**
-   * Billing interval for this price. For consumable features, should match reset.interval.
-   */
-  interval: CreatePlanPriceItemIntervalResponse;
-  /**
-   * Number of intervals per billing cycle. Defaults to 1.
-   */
-  intervalCount?: number | undefined;
-  /**
-   * Number of units per price increment. Usage is rounded UP to the nearest billing_units when billed (e.g. billing_units=100 means 101 usage rounds to 200).
-   */
-  billingUnits: number;
-  /**
-   * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
-   */
-  billingMethod: CreatePlanItemBillingMethodResponse;
-  /**
-   * Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
-   */
-  maxPurchase: number | null;
-  /**
-   * Payment processors this item price is connected to. Omitted when unset.
-   */
-  processors?: CreatePlanItemProcessors | undefined;
-};
-
 /** @internal */
 export const CreatePlanPriceIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
   typeof CreatePlanPriceIntervalRequestBody
@@ -2100,7 +2067,7 @@ export function createPlanAdditionalCurrencyRequestBodyToJSON(
 export type CreatePlanPriceRequestBody$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<CreatePlanAdditionalCurrencyRequestBody$Outbound>
     | undefined;
@@ -2114,7 +2081,7 @@ export const CreatePlanPriceRequestBody$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: CreatePlanPriceIntervalRequestBody$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(z.array(z.lazy(() =>
       CreatePlanAdditionalCurrencyRequestBody$outboundSchema
     ))),
@@ -2136,6 +2103,31 @@ export function createPlanPriceRequestBodyToJSON(
 }
 
 /** @internal */
+export type CreatePlanItemThresholdBillingRequestBody$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const CreatePlanItemThresholdBillingRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreatePlanItemThresholdBillingRequestBody$Outbound,
+    CreatePlanItemThresholdBillingRequestBody
+  > = z.object({
+    threshold: z.number(),
+  });
+
+export function createPlanItemThresholdBillingRequestBodyToJSON(
+  createPlanItemThresholdBillingRequestBody:
+    CreatePlanItemThresholdBillingRequestBody,
+): string {
+  return JSON.stringify(
+    CreatePlanItemThresholdBillingRequestBody$outboundSchema.parse(
+      createPlanItemThresholdBillingRequestBody,
+    ),
+  );
+}
+
+/** @internal */
 export const CreatePlanItemResetIntervalRequestBody$outboundSchema:
   z.ZodMiniEnum<typeof CreatePlanItemResetIntervalRequestBody> = z.enum(
     CreatePlanItemResetIntervalRequestBody,
@@ -2144,7 +2136,7 @@ export const CreatePlanItemResetIntervalRequestBody$outboundSchema:
 /** @internal */
 export type CreatePlanItemResetRequestBody$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -2154,7 +2146,7 @@ export const CreatePlanItemResetRequestBody$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: CreatePlanItemResetIntervalRequestBody$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3353,6 +3345,10 @@ export function createPlanItemFeatureOverrideRequestBodyToJSON(
 
 /** @internal */
 export type CreatePlanItemPlanItem$Outbound = {
+  threshold_billing?:
+    | CreatePlanItemThresholdBillingRequestBody$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -3372,17 +3368,22 @@ export const CreatePlanItemPlanItem$outboundSchema: z.ZodMiniType<
   CreatePlanItemPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
+      CreatePlanItemThresholdBillingRequestBody$outboundSchema
+    ))),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(
-      z.lazy(() => CreatePlanItemResetRequestBody$outboundSchema),
-    ),
-    price: z.optional(
-      z.lazy(() => CreatePlanItemPriceRequestBody$outboundSchema),
-    ),
-    proration: z.optional(z.lazy(() => CreatePlanItemProration$outboundSchema)),
+    reset: z.optional(z.lazy(() =>
+      CreatePlanItemResetRequestBody$outboundSchema
+    )),
+    price: z.optional(z.lazy(() =>
+      CreatePlanItemPriceRequestBody$outboundSchema
+    )),
+    proration: z.optional(z.lazy(() =>
+      CreatePlanItemProration$outboundSchema
+    )),
     rollover: z.optional(
       z.lazy(() => CreatePlanItemRolloverRequestBody$outboundSchema),
     ),
@@ -3392,6 +3393,7 @@ export const CreatePlanItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -3440,7 +3442,7 @@ export function createPlanLicenseAdditionalCurrencyToJSON(
 export type CreatePlanLicenseBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<CreatePlanLicenseAdditionalCurrency$Outbound>
     | undefined;
@@ -3454,7 +3456,7 @@ export const CreatePlanLicenseBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: CreatePlanPriceLicenseInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => CreatePlanLicenseAdditionalCurrency$outboundSchema)),
     ),
@@ -3476,6 +3478,29 @@ export function createPlanLicenseBasePriceToJSON(
 }
 
 /** @internal */
+export type CreatePlanLicenseThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const CreatePlanLicenseThresholdBilling$outboundSchema: z.ZodMiniType<
+  CreatePlanLicenseThresholdBilling$Outbound,
+  CreatePlanLicenseThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function createPlanLicenseThresholdBillingToJSON(
+  createPlanLicenseThresholdBilling: CreatePlanLicenseThresholdBilling,
+): string {
+  return JSON.stringify(
+    CreatePlanLicenseThresholdBilling$outboundSchema.parse(
+      createPlanLicenseThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const CreatePlanLicenseResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof CreatePlanLicenseResetInterval
 > = z.enum(CreatePlanLicenseResetInterval);
@@ -3483,7 +3508,7 @@ export const CreatePlanLicenseResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CreatePlanLicenseReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -3493,7 +3518,7 @@ export const CreatePlanLicenseReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: CreatePlanLicenseResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4643,6 +4668,10 @@ export function createPlanLicenseFeatureOverrideToJSON(
 
 /** @internal */
 export type CreatePlanLicensePlanItem$Outbound = {
+  threshold_billing?:
+    | CreatePlanLicenseThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -4660,6 +4689,11 @@ export const CreatePlanLicensePlanItem$outboundSchema: z.ZodMiniType<
   CreatePlanLicensePlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(
+      z.nullable(
+        z.lazy(() => CreatePlanLicenseThresholdBilling$outboundSchema),
+      ),
+    ),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
@@ -4678,6 +4712,7 @@ export const CreatePlanLicensePlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -4875,7 +4910,7 @@ export type FreeTrialRequestBody$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
+  on_end: string;
 };
 
 /** @internal */
@@ -4890,7 +4925,7 @@ export const FreeTrialRequestBody$outboundSchema: z.ZodMiniType<
       "month",
     ),
     cardRequired: z._default(z.boolean(), false),
-    onEnd: z.optional(CreatePlanOnEndRequestBody$outboundSchema),
+    onEnd: z._default(CreatePlanOnEndRequestBody$outboundSchema, "bill"),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5559,6 +5594,23 @@ export function createPlanPriceResponseFromJSON(
 }
 
 /** @internal */
+export const CreatePlanItemThresholdBillingResponse$inboundSchema:
+  z.ZodMiniType<CreatePlanItemThresholdBillingResponse, unknown> = z.object({
+    threshold: types.number(),
+  });
+
+export function createPlanItemThresholdBillingResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanItemThresholdBillingResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanItemThresholdBillingResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanItemThresholdBillingResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanType$inboundSchema: z.ZodMiniType<
   CreatePlanType,
   unknown
@@ -5794,95 +5846,3 @@ export const CreatePlanItemBillingMethodResponse$inboundSchema: z.ZodMiniType<
   CreatePlanItemBillingMethodResponse,
   unknown
 > = openEnums.inboundSchema(CreatePlanItemBillingMethodResponse);
-
-/** @internal */
-export const CreatePlanItemStripe$inboundSchema: z.ZodMiniType<
-  CreatePlanItemStripe,
-  unknown
-> = z.pipe(
-  z.object({
-    price_id: types.string(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "price_id": "priceId",
-    });
-  }),
-);
-
-export function createPlanItemStripeFromJSON(
-  jsonString: string,
-): SafeParseResult<CreatePlanItemStripe, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CreatePlanItemStripe$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreatePlanItemStripe' from JSON`,
-  );
-}
-
-/** @internal */
-export const CreatePlanItemProcessors$inboundSchema: z.ZodMiniType<
-  CreatePlanItemProcessors,
-  unknown
-> = z.object({
-  stripe: z.optional(
-    z.nullable(z.lazy(() => CreatePlanItemStripe$inboundSchema)),
-  ),
-});
-
-export function createPlanItemProcessorsFromJSON(
-  jsonString: string,
-): SafeParseResult<CreatePlanItemProcessors, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CreatePlanItemProcessors$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreatePlanItemProcessors' from JSON`,
-  );
-}
-
-/** @internal */
-export const CreatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
-  CreatePlanItemPriceResponse,
-  unknown
-> = z.pipe(
-  z.object({
-    amount: types.optional(types.number()),
-    additional_currencies: types.optional(z.array(z.lazy(() =>
-      CreatePlanItemAdditionalCurrencyResponse$inboundSchema
-    ))),
-    tiers: types.optional(z.array(z.lazy(() =>
-      CreatePlanPriceItemTierResponse$inboundSchema
-    ))),
-    tier_behavior: types.optional(
-      CreatePlanItemTierBehaviorResponse$inboundSchema,
-    ),
-    interval: CreatePlanPriceItemIntervalResponse$inboundSchema,
-    interval_count: types.optional(types.number()),
-    billing_units: types.number(),
-    billing_method: CreatePlanItemBillingMethodResponse$inboundSchema,
-    max_purchase: types.nullable(types.number()),
-    processors: types.optional(z.lazy(() =>
-      CreatePlanItemProcessors$inboundSchema
-    )),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "additional_currencies": "additionalCurrencies",
-      "tier_behavior": "tierBehavior",
-      "interval_count": "intervalCount",
-      "billing_units": "billingUnits",
-      "billing_method": "billingMethod",
-      "max_purchase": "maxPurchase",
-    });
-  }),
-);
-
-export function createPlanItemPriceResponseFromJSON(
-  jsonString: string,
-): SafeParseResult<CreatePlanItemPriceResponse, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CreatePlanItemPriceResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreatePlanItemPriceResponse' from JSON`,
-  );
-}

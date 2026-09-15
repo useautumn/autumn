@@ -18,15 +18,15 @@ export type InsertInvoicesGlobals = {
 /**
  * The billing processor that owns this invoice.
  */
-export const InsertInvoicesProcessorTypeRequest = {
+export const InsertInvoicesProcessorTypeRequestBody = {
   Stripe: "stripe",
   Revenuecat: "revenuecat",
 } as const;
 /**
  * The billing processor that owns this invoice.
  */
-export type InsertInvoicesProcessorTypeRequest = ClosedEnum<
-  typeof InsertInvoicesProcessorTypeRequest
+export type InsertInvoicesProcessorTypeRequestBody = ClosedEnum<
+  typeof InsertInvoicesProcessorTypeRequestBody
 >;
 
 /**
@@ -60,7 +60,7 @@ export type InvoiceRequestBody = {
   /**
    * The billing processor that owns this invoice.
    */
-  processorType?: InsertInvoicesProcessorTypeRequest | undefined;
+  processorType?: InsertInvoicesProcessorTypeRequestBody | undefined;
   /**
    * The invoice status.
    */
@@ -174,9 +174,10 @@ export type InsertInvoicesResponse = {
 };
 
 /** @internal */
-export const InsertInvoicesProcessorTypeRequest$outboundSchema: z.ZodMiniEnum<
-  typeof InsertInvoicesProcessorTypeRequest
-> = z.enum(InsertInvoicesProcessorTypeRequest);
+export const InsertInvoicesProcessorTypeRequestBody$outboundSchema:
+  z.ZodMiniEnum<typeof InsertInvoicesProcessorTypeRequestBody> = z.enum(
+    InsertInvoicesProcessorTypeRequestBody,
+  );
 
 /** @internal */
 export const InsertInvoicesStatus$outboundSchema: z.ZodMiniEnum<
@@ -208,7 +209,7 @@ export const InvoiceRequestBody$outboundSchema: z.ZodMiniType<
     planIds: z.optional(z.array(z.string())),
     stripeId: z.string(),
     processorType: z._default(
-      InsertInvoicesProcessorTypeRequest$outboundSchema,
+      InsertInvoicesProcessorTypeRequestBody$outboundSchema,
       "stripe",
     ),
     status: InsertInvoicesStatus$outboundSchema,

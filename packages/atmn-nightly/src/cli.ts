@@ -274,26 +274,20 @@ Two ways in:
   atmn login                       ${CONNECT_OPTIONS.login}
   atmn login --keyless             ${CONNECT_OPTIONS.keyless}
 Linking a keyless org to an account:
-  atmn login --claim you@acme.com  emails a one-time code; pass it back with --otp <code>`,
+  atmn login --claim you@acme.com  creates and emails a secure browser claim link`,
 		)
 		.option("--keyless", CONNECT_OPTIONS.keyless)
 		.option(
 			"--claim <email>",
 			"link the keyless org this key belongs to with an account",
 		)
-		.option(
-			"--otp <code>",
-			"the code --claim emailed (headless: run again with it)",
-		)
 		.action(
 			async (
-				options: { keyless?: boolean; claim?: string; otp?: string },
+				options: { keyless?: boolean; claim?: string },
 				command: Command,
 			) => {
 				if (options.keyless && options.claim !== undefined)
 					throw new Error("Pick one of --keyless and --claim.");
-				if (options.otp !== undefined && options.claim === undefined)
-					throw new Error("--otp answers --claim; pass --claim <email> too.");
 				const target = prepareTarget({ command });
 				const prompter = prompterFor({ command });
 				// A keyless org lives in sandbox, so its key is the main sandbox one
@@ -315,7 +309,6 @@ Linking a keyless org to an account:
 					await runClaim({
 						secretKey: requireSecretKey({ target: mainTarget }),
 						email: options.claim,
-						...(options.otp === undefined ? {} : { otp: options.otp }),
 						deps: keylessDepsFor({ target: mainTarget }),
 						prompter,
 					});

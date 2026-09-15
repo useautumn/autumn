@@ -10,6 +10,10 @@ export const previewMultiAttachAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
+export const previewMultiAttachThresholdBillingSchema = z.object({
+	threshold: z.number(),
+});
+
 export const previewMultiAttachItemAdditionalCurrencySchema = z.object({
 	currency: z.string(),
 	amount: z.number(),
@@ -277,7 +281,7 @@ export const previewMultiAttachAdditionalCurrencyOutboundSchema = z.object({
 export const previewMultiAttachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 	additional_currencies: z
 		.union([
 			z.array(previewMultiAttachAdditionalCurrencyOutboundSchema),
@@ -286,9 +290,13 @@ export const previewMultiAttachBasePriceOutboundSchema = z.object({
 		.optional(),
 });
 
+export const previewMultiAttachThresholdBillingOutboundSchema = z.object({
+	threshold: z.number(),
+});
+
 export const previewMultiAttachResetOutboundSchema = z.object({
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 });
 
 export const previewMultiAttachItemAdditionalCurrencyOutboundSchema = z.object({
@@ -564,6 +572,10 @@ export const previewMultiAttachFeatureOverrideOutboundSchema = z.object({
 });
 
 export const previewMultiAttachPlanItemOutboundSchema = z.object({
+	threshold_billing: z
+		.union([previewMultiAttachThresholdBillingOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -621,7 +633,7 @@ export const previewMultiAttachFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
-	on_end: z.union([z.string(), z.undefined()]).optional(),
+	on_end: z.string(),
 });
 
 export const previewMultiAttachInvoiceModeOutboundSchema = z.object({
@@ -928,6 +940,10 @@ export const previewMultiAttachFeatureOverrideSchema = z.object({
 });
 
 export const previewMultiAttachPlanItemSchema = z.object({
+	thresholdBilling: z
+		.union([previewMultiAttachThresholdBillingSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),

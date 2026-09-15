@@ -4,16 +4,21 @@ import type { LeafAgentConnection } from "./toolAllowlists.js";
 
 type AgentModel = {
 	model?: string;
-	reasoning: "low" | "none";
+	reasoning: "low" | "medium" | "none";
 };
 
 const AGENTS: Record<LeafAgentConnection, AgentModel> = {
 	catalog: { reasoning: "low" },
 	// Routed through OpenRouter, not the direct Anthropic provider: turns on the
 	// direct path stalled silently after tool results.
+	// Opus: the Slack agent is low-volume and moves real money, and its
+	// failures were judgement calls (hedging on an inconsistent preview,
+	// answering a message meant for someone else), where the tier matters.
+	// Medium: on "low" the model reasoned out loud in its reply instead of
+	// resolving it in thought.
 	leaf: {
-		model: "openrouter/anthropic/claude-sonnet-5",
-		reasoning: "low",
+		model: "openrouter/anthropic/claude-opus-5",
+		reasoning: "medium",
 	},
 };
 
@@ -35,9 +40,11 @@ const FAMILIES: Record<string, ModelFamily> = {
 const familyOf = (model: string): ModelFamily | undefined =>
 	FAMILIES[model.replace(/^openrouter\//, "").split("/")[0] ?? ""];
 
+// The per-agent variable is an override for trying a model without a deploy;
+// the shared EVE_MODEL only fills in where the table leaves the model unset.
 const modelFor = (agent: LeafAgentConnection) =>
-	AGENTS[agent].model ??
 	process.env[`EVE_MODEL_${agent.toUpperCase()}`] ??
+	AGENTS[agent].model ??
 	process.env.EVE_MODEL;
 
 type ChatBody = {

@@ -11,21 +11,14 @@ export type ProvisionedOrg = {
 	organizationSlug: string;
 	apiKey: string;
 	claimToken: string;
-	claimUrl: string;
 	/** ISO 8601: after this the org can no longer be linked to anyone. */
 	claimExpiresAt: string;
 };
 
 export type ClaimStarted = {
-	/** ISO 8601: the one-time code stops working after this. */
+	claimUrl: string;
+	/** ISO 8601: after this the browser claim link stops working. */
 	expiresAt: string;
-};
-
-export type ClaimVerified = {
-	organizationId: string;
-	organizationSlug: string;
-	userId: string;
-	email: string;
 };
 
 type Fetch = typeof globalThis.fetch;
@@ -82,12 +75,11 @@ export const provisionKeylessOrg = async ({
 		organizationSlug: String(body.organization_slug),
 		apiKey: String(body.api_key),
 		claimToken: String(body.claim_token),
-		claimUrl: String(body.claim_url),
 		claimExpiresAt: String(body.claim_expires_at),
 	};
 };
 
-/** Emails a one-time code to `email`; the org is the one `secretKey` belongs to. */
+/** Creates and emails a browser claim link for the org `secretKey` belongs to. */
 export const startClaim = async ({
 	baseUrl,
 	secretKey,
@@ -101,36 +93,14 @@ export const startClaim = async ({
 }): Promise<ClaimStarted> => {
 	const body = await post({
 		baseUrl,
-		path: "/agent.claim",
+		path: "/agent.start_claim",
 		body: { email },
 		secretKey,
 		fetch,
 	});
-	return { expiresAt: String(body.expires_at) };
-};
-
-export const verifyClaim = async ({
-	baseUrl,
-	email,
-	otp,
-	fetch,
-}: {
-	baseUrl: string;
-	email: string;
-	otp: string;
-	fetch?: Fetch;
-}): Promise<ClaimVerified> => {
-	const body = await post({
-		baseUrl,
-		path: "/agent.verify",
-		body: { email, otp },
-		fetch,
-	});
 	return {
-		organizationId: String(body.organization_id),
-		organizationSlug: String(body.organization_slug),
-		userId: String(body.user_id),
-		email: String(body.email),
+		claimUrl: String(body.claim_url),
+		expiresAt: String(body.expires_at),
 	};
 };
 
