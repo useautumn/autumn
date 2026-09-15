@@ -4,12 +4,14 @@ import type {
 } from "@autumn/shared";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@server/external/stripe/common/autumnStripeIdempotency";
+import { stripeSchedulePhaseItemToPriceId } from "@server/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type Stripe from "stripe";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { findMatchingInlinePriceIdForPhaseItem } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { discardFailedScheduleRecreate } from "./discardFailedScheduleRecreate";
 
 /** Maps update phase format to create phase format and propagates Autumn metadata. */
 const toCreatePhase = (
@@ -64,12 +66,9 @@ const buildAnchoredPhases = ({
 	// Stripe's from_subscription strips item metadata, but subscription items keep it.
 	const existingFirstPhaseItems: Stripe.SubscriptionScheduleUpdateParams.Phase["items"] =
 		existingSchedule.phases[0]?.items.map((item) => {
-			const priceId =
-				typeof item.price === "string" ? item.price : item.price?.id;
+			const priceId = stripeSchedulePhaseItemToPriceId(item);
 
-			const subMetadata = priceId
-				? subItemMetadataByPriceId.get(priceId)
-				: undefined;
+			const subMetadata = subItemMetadataByPriceId.get(priceId);
 			const metadata =
 				subMetadata ??
 				(item.metadata && Object.keys(item.metadata).length > 0
@@ -142,12 +141,14 @@ const createScheduleFromSubscription = async ({
 	subscriptionId,
 	params,
 	stripeSubscription,
+	previousSchedule,
 	autumnMetadata,
 }: {
 	stripeCli: Stripe;
 	subscriptionId: string;
 	params: Stripe.SubscriptionScheduleUpdateParams;
 	stripeSubscription?: Stripe.Subscription;
+	previousSchedule?: Stripe.SubscriptionSchedule;
 	autumnMetadata: Stripe.MetadataParam;
 }): Promise<Stripe.SubscriptionSchedule> => {
 	const schedule = await stripeCli.subscriptionSchedules.create(
@@ -163,15 +164,25 @@ const createScheduleFromSubscription = async ({
 		stripeSubscription,
 	});
 
-	return await stripeCli.subscriptionSchedules.update(
-		schedule.id,
-		{
-			phases,
-			end_behavior: params.end_behavior,
-			metadata: autumnMetadata,
-		},
-		autumnStripeRequestOptions({ source: "schedule" }),
-	);
+	try {
+		return await stripeCli.subscriptionSchedules.update(
+			schedule.id,
+			{
+				phases,
+				end_behavior: params.end_behavior,
+				metadata: autumnMetadata,
+			},
+			autumnStripeRequestOptions({ source: "schedule" }),
+		);
+	} catch (error) {
+		await discardFailedScheduleRecreate({
+			stripeCli,
+			bareSchedule: schedule,
+			previousSchedule,
+			autumnMetadata,
+		});
+		throw error;
+	}
 };
 
 const getStandaloneScheduleDefaults = ({
@@ -285,6 +296,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 						: subscriptionId.id,
 				params,
 				stripeSubscription,
+				previousSchedule: billingContext.stripeSubscriptionSchedule,
 				autumnMetadata,
 			});
 

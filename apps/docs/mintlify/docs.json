@@ -233,7 +233,8 @@
 							"api-reference/customers/updateCustomer",
 							"api-reference/customers/deleteCustomer",
 							"api-reference/invoices/insertInvoices",
-							"api-reference/invoices/listInvoices"
+							"api-reference/invoices/listInvoices",
+							"api-reference/invoices/payInvoice"
 						]
 					},
 					{

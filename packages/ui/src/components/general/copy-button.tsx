@@ -122,18 +122,21 @@ export const CopyButton = ({
 	);
 };
 
-export const MiniCopyButton = ({
+type CopyIconButtonProps = Omit<IconButtonProps, "icon" | "onClick"> & {
+	text: string;
+	side?: "top" | "bottom" | "left" | "right";
+};
+
+/** Icon-only copy affordance with the "Copied!" tooltip. */
+export const CopyIconButton = ({
 	text,
 	side = "right",
-	innerClassName = "",
-	iconOrientation = "right",
-	iconClassName,
-	children,
+	className,
 	...props
-}: CopyButtonProps) => {
+}: CopyIconButtonProps) => {
 	const { copied, handleCopy } = useCopyAnimation({ text });
 
-	const copyIcon = (
+	return (
 		<TooltipProvider>
 			<Tooltip open={copied} onOpenChange={() => {}}>
 				<TooltipTrigger asChild>
@@ -144,9 +147,9 @@ export const MiniCopyButton = ({
 						icon={<AnimatedCopyIcon copied={copied} />}
 						onClick={handleCopy}
 						className={cn(
-							"opacity-0 group-hover:opacity-100 cursor-pointer px-0!",
+							"cursor-pointer px-0! hover:text-foreground!",
+							className,
 							copied && "opacity-100",
-							iconClassName,
 						)}
 					/>
 				</TooltipTrigger>
@@ -161,6 +164,25 @@ export const MiniCopyButton = ({
 				</TooltipContent>
 			</Tooltip>
 		</TooltipProvider>
+	);
+};
+
+export const MiniCopyButton = ({
+	text,
+	side = "right",
+	innerClassName = "",
+	iconOrientation = "right",
+	iconClassName,
+	children,
+	...props
+}: CopyButtonProps) => {
+	const copyIcon = (
+		<CopyIconButton
+			text={text}
+			side={side}
+			{...props}
+			className={cn("opacity-0 group-hover:opacity-100", iconClassName)}
+		/>
 	);
 
 	return (

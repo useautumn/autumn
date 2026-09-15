@@ -16,7 +16,7 @@ test("features and plans in one catalog.ts each receive their append", async () 
 	);
 	writeFileSync(
 		`${dir}/catalog.ts`,
-		'import { feature } from "../../../src/generated/features";\nimport { plan } from "../../../src/generated/plans";\n\nexport const features = [\n\tfeature({ featureId: "seats", name: "Seats", type: "boolean" }),\n];\n\nexport const plans = [\n\tplan({ active: true, planId: "pro", name: "Pro" }),\n];\n',
+		'import { feature } from "../../../src/generated/features";\nimport { plan } from "../../../src/generated/plans";\n\nexport const features = [\n\tfeature({ featureId: "seats", name: "Seats", type: "boolean" }),\n];\n\nexport const plans = [\n\tplan({ active: true, planId: "pro", versionSlug: "v1", name: "Pro" }),\n];\n',
 	);
 	const rows = {
 		features: [

@@ -1,10 +1,10 @@
 import type { UpdateSubscriptionV1Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/findPendingCustomerProduct";
+import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 import {
 	type PendingUpdateResult,
 	updatePendingCustomerProduct,
-} from "@/internal/billing/v2/execute/updatePendingCustomerProduct";
+} from "@/internal/billing/v2/execute/pendingCustomerProducts/updatePendingCustomerProduct";
 
 export const updatePendingPlanIfAny = async ({
 	ctx,

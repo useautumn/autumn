@@ -14,7 +14,8 @@ import yaml from "yaml";
 import { feature } from "../src/generated/features";
 import { license } from "../src/generated/licenses";
 import { plan } from "../src/generated/plans";
-import { atmn } from "../src/generated/wire";
+import { ConfigError } from "../src/generated/lintRuntime";
+import { type AtmnConfig, atmn } from "../src/generated/wire";
 
 // biome-ignore lint/suspicious/noExplicitAny: the raw OpenAPI document
 const specDocument = (): any =>
@@ -234,4 +235,31 @@ test("explicit archived state overrides the live membership default", () => {
 
 	expect(wire.plans[0].archived).toBe(true);
 	expect(wire.plans[0].variants[0].archived).toBe(true);
+});
+
+test("a config from another version of the CLI is refused, not silently trimmed", () => {
+	const issuesOf = (run: () => unknown) => {
+		try {
+			run();
+		} catch (error) {
+			if (error instanceof ConfigError) return error.issues;
+			throw error;
+		}
+		return [];
+	};
+
+	// The previous nightly kept history in `planVersions`; dropping it would
+	// delete those versions on the next push.
+	const stale = issuesOf(() =>
+		atmn({ plans: [], planVersions: [] } as unknown as AtmnConfig),
+	);
+	expect(stale).toHaveLength(1);
+	expect(stale[0]?.path).toBe("planVersions");
+	expect(stale[0]?.message).toContain("every version is now a row in plans");
+	expect(stale[0]?.message).toContain("atmn pull --overwrite --yes");
+
+	const typo = issuesOf(() => atmn({ products: [] } as unknown as AtmnConfig));
+	expect(typo[0]?.message).toBe(
+		"products is not a config field. The fields are features, plans, rewards, referralPrograms, settings.",
+	);
 });

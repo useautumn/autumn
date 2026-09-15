@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runPull } from "../src/actions/pull";
 import { AutumnApiError, type AutumnClient } from "../src/generated/client";
+import { createPrompter } from "../src/prompt/prompt";
 
 /**
  * Pull against a fake client: preview and catalog responses are canned
@@ -35,6 +36,14 @@ const fakeClient = ({
 		update: async () => ({}),
 		get: async () => catalog,
 	}) as unknown as AutumnClient;
+
+/** A terminal that answers every question with `answer`. */
+const answering = (answer: string) =>
+	createPrompter({
+		interactive: true,
+		write: () => {},
+		readLine: async () => answer,
+	});
 
 const seatsRow = {
 	id: "seats",
@@ -687,6 +696,7 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 			atmn: "../../../src/generated/wire",
 			builders: "../../../src/generated/features",
 		},
+		prompter: answering(dir),
 	});
 
 	expect(result.appended.sort()).toEqual(["messages", "seats"]);
@@ -756,14 +766,14 @@ test("--overwrite without --yes warns and changes nothing", async () => {
 	);
 	expect(readFileSync(appPath, "utf8")).toBe("export const app = true;\n");
 	expect(output).toBe(
-		"This deletes every TypeScript file under your Autumn config directory, then pulls a fresh catalog. Re-run with --yes to overwrite.\n",
+		"This rewrites autumn.config.ts and the features.ts, plans.ts and rewards.ts beside it from your org's catalog. Other files are left alone. Re-run with --yes to overwrite.\n",
 	);
 });
 
-test("--overwrite --yes discards the stale config and its sibling fixtures, then pulls fresh", async () => {
+test("--overwrite --yes rewrites the config and its collection files, then pulls fresh; other files stay", async () => {
 	const dir = tempDir({ name: "overwrite" });
-	// A config for some other org, plus a fixture file an earlier pull wrote.
-	writeConfig({
+	// A config for some other org, plus a file that is not atmn's.
+	const configPath = writeConfig({
 		dir,
 		text: [
 			'import { atmn } from "../../../src/generated/wire";',
@@ -804,10 +814,123 @@ test("--overwrite --yes discards the stale config and its sibling fixtures, then
 
 	expect((diffed as { features: unknown[] }).features).toEqual([]);
 	expect(result.appended).toEqual(["seats"]);
-	expect(existsSync(join(dir, "old.ts"))).toBe(false);
+	expect(readFileSync(join(dir, "old.ts"), "utf8")).toBe(
+		"export const old = 1;\n",
+	);
 	const text = readFileSync(join(dir, "features.ts"), "utf8");
 	expect(text).toContain('featureId: "seats"');
 	expect(text).not.toContain("credits");
+	const root = readFileSync(configPath, "utf8");
+	expect(root).toContain('import { features } from "./features";');
+	expect(root).not.toContain("credits");
+});
+
+test("--overwrite --yes leaves a collection file alone when it is not atmn's, and keeps that collection inline", async () => {
+	const dir = tempDir({ name: "overwrite-foreign-file" });
+	const configPath = writeConfig({
+		dir,
+		text: [
+			'import { atmn } from "../../../src/generated/wire";',
+			"",
+			"export default atmn({ features: [], plans: [] });",
+			"",
+		].join("\n"),
+	});
+	// The user's own plans.ts: no atmn import, so it is not ours to rewrite.
+	const usersPlans = 'export const plans = ["mine"];\n';
+	writeFileSync(join(dir, "plans.ts"), usersPlans);
+
+	let output = "";
+	await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "seats", action: "delete" }] },
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: (text) => {
+			output += text;
+		},
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		overwrite: true,
+		yes: true,
+	});
+
+	expect(readFileSync(join(dir, "plans.ts"), "utf8")).toBe(usersPlans);
+	const root = readFileSync(configPath, "utf8");
+	expect(root).not.toContain('from "./plans"');
+	expect(root).toContain("plans: [],");
+	expect(root).toContain('import { features } from "./features";');
+	expect(readFileSync(join(dir, "features.ts"), "utf8")).toContain(
+		'featureId: "seats"',
+	);
+	expect(output).toContain("Left alone (not atmn files): plans.ts");
+});
+
+test("--overwrite --yes with no config is a first pull: scaffold, delete nothing", async () => {
+	const dir = tempDir({ name: "overwrite-no-config" });
+	const appPath = join(dir, "app.ts");
+	writeFileSync(appPath, "export const app = true;\n", "utf8");
+
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "seats", action: "delete" }] },
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: () => {},
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		overwrite: true,
+		yes: true,
+		prompter: answering(dir),
+	});
+
+	expect(result.appended).toEqual(["seats"]);
+	expect(readFileSync(appPath, "utf8")).toBe("export const app = true;\n");
+	expect(readFileSync(join(dir, "features.ts"), "utf8")).toContain(
+		'featureId: "seats"',
+	);
+});
+
+test("--overwrite --yes rebuilds a 1.x config without loading it first", async () => {
+	const dir = tempDir({ name: "overwrite-legacy" });
+	const configPath = writeConfig({
+		dir,
+		text: [
+			'import { feature, item, plan } from "atmn";',
+			"",
+			'export const seats = feature({ id: "seats", name: "Seats", type: "boolean" });',
+			"",
+		].join("\n"),
+	});
+
+	const result = await runPull({
+		client: fakeClient({
+			preview: { features: [{ featureId: "seats", action: "delete" }] },
+			catalog: { features: [seatsRow], plans: [] },
+		}),
+		cwd: dir,
+		write: () => {},
+		imports: {
+			atmn: "../../../src/generated/wire",
+			builders: "../../../src/generated/features",
+		},
+		overwrite: true,
+		yes: true,
+	});
+
+	expect(result.appended).toEqual(["seats"]);
+	const root = readFileSync(configPath, "utf8");
+	expect(root).not.toContain("item");
+	expect(root).toContain("export default atmn({");
+	expect(readFileSync(join(dir, "features.ts"), "utf8")).toContain(
+		'featureId: "seats"',
+	);
 });
 
 test("a diff the server refuses points at --overwrite; other failures do not", async () => {

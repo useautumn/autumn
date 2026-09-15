@@ -6,6 +6,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 
 export const promotePendingCustomerProducts = async ({
 	ctx,
@@ -37,10 +38,24 @@ export const promotePendingCustomerProducts = async ({
 			);
 		if (!plannedCustomerProduct) continue;
 
+		// Checkout can change quantities after the pending rows were inserted.
+		for (const customerEntitlement of plannedCustomerProduct.customer_entitlements) {
+			await CusEntService.update({
+				ctx,
+				id: customerEntitlement.id,
+				updates: {
+					balance: customerEntitlement.balance ?? undefined,
+					entities: customerEntitlement.entities,
+				},
+				incrementCacheVersion: true,
+			});
+		}
+
 		await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates: {
+				options: plannedCustomerProduct.options,
 				status: plannedCustomerProduct.status,
 				metadata_id: null,
 				subscription_ids: plannedCustomerProduct.subscription_ids ?? undefined,

@@ -50,13 +50,13 @@ You can verify your setup at any time with `bunx atmn env`, which shows your cur
 
 ## Initialize a project
 
-Run `atmn init` in your project root to create an `autumn.config.ts` file:
+Run `atmn init` in your project root. It creates an `autumn` folder for your config:
 
 ```bash
 bunx atmn init
 ```
 
-This creates `autumn.config.ts` along with `features.ts`, `plans.ts` and `rewards.ts`, pulls in any plans you've already created in Autumn, and installs the Autumn skills for your coding agent. If you haven't logged in yet, it prompts you to.
+This creates `autumn/autumn.config.ts` along with `features.ts`, `plans.ts` and `rewards.ts` beside it, pulls in any plans you've already created in Autumn, and installs the Autumn skills for your coding agent. In a monorepo it asks where the folder should go, with `packages/autumn` as the default. If you haven't logged in yet, it prompts you to.
 
 Build your pricing using the [config reference](/cli/config).
 

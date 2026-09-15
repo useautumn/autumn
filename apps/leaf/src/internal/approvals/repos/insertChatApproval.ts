@@ -8,7 +8,7 @@ import {
 	type InsertApprovalWrite,
 } from "./chatApprovalWritesRepo.js";
 
-const APPROVAL_TTL_MINUTES = 15;
+const APPROVAL_TTL_MINUTES = 120;
 
 /** The primary write (position 0) is derived from the top-level tool fields;
  * `groupedWrites` carries only the withheld rest, in execution order. */

@@ -46894,8 +46894,6 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
-/** Whether usage of this classic credit system should be itemized as invoice credits. */
-invoiceCredit?: boolean;
 /** Per-model markup overrides for AI credit systems. */
 modelMarkups?: Record<string, {
 markup?: number;
@@ -49106,8 +49104,6 @@ add?: number;
 /** Credits consumed per billing-unit group. */
 creditCost: number;
 }>;
-/** Whether usage of this classic credit system should be itemized as invoice credits. */
-invoiceCredit?: boolean;
 /** Per-model markup overrides for AI credit systems. */
 modelMarkups?: Record<string, {
 markup?: number;

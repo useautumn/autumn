@@ -692,13 +692,6 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.",
 			},
 			{
-				name: "invoice_credit",
-				type: "boolean",
-				required: false,
-				description:
-					"Whether usage of this classic credit system should be itemized as invoice credits.",
-			},
-			{
 				name: "model_markups",
 				type: "json",
 				required: false,
@@ -795,13 +788,6 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.",
-			},
-			{
-				name: "invoice_credit",
-				type: "boolean",
-				required: false,
-				description:
-					"Whether usage of this classic credit system should be itemized as invoice credits.",
 			},
 			{
 				name: "model_markups",

@@ -1304,10 +1304,6 @@ components:
                           additionalProperties: false
                     description: "For classic credit systems: maps metered features to flat or
                       graduated credit costs."
-                  invoice_credit:
-                    type: boolean
-                    description: Whether usage of this classic credit system should be itemized as
-                      invoice credits.
                   model_markups:
                     anyOf:
                       - type: object
@@ -5088,10 +5084,6 @@ components:
                     additionalProperties: false
               description: "For classic credit systems: maps metered features to flat or
                 graduated credit costs."
-            invoice_credit:
-              type: boolean
-              description: Whether usage of this classic credit system should be itemized as
-                invoice credits.
             model_markups:
               anyOf:
                 - type: object
@@ -6859,10 +6851,6 @@ paths:
                                     additionalProperties: false
                               description: "For classic credit systems: maps metered features to flat or
                                 graduated credit costs."
-                            invoice_credit:
-                              type: boolean
-                              description: Whether usage of this classic credit system should be itemized as
-                                invoice credits.
                             model_markups:
                               anyOf:
                                 - type: object
@@ -8507,10 +8495,6 @@ paths:
                                           additionalProperties: false
                                     description: "For classic credit systems: maps metered features to flat or
                                       graduated credit costs."
-                                  invoice_credit:
-                                    type: boolean
-                                    description: Whether usage of this classic credit system should be itemized as
-                                      invoice credits.
                                   model_markups:
                                     anyOf:
                                       - type: object
@@ -10188,10 +10172,6 @@ paths:
                                     additionalProperties: false
                               description: "For classic credit systems: maps metered features to flat or
                                 graduated credit costs."
-                            invoice_credit:
-                              type: boolean
-                              description: Whether usage of this classic credit system should be itemized as
-                                invoice credits.
                             model_markups:
                               anyOf:
                                 - type: object
@@ -31284,9 +31264,6 @@ paths:
         graduated credit costs. For classic credit systems only — AI credit
         systems use model_markups instead. (optional)
 
-        @param invoiceCredit - Whether usage of this classic credit system
-        should be itemized as invoice credits. (optional)
-
         @param modelMarkups - Per-model markup overrides for AI credit systems.
         Maps model IDs to their markup configuration. (optional)
 
@@ -31650,10 +31627,6 @@ paths:
                   description: A schema that maps metered feature IDs to flat or graduated credit
                     costs. For classic credit systems only — AI credit systems
                     use model_markups instead.
-                invoice_credit:
-                  type: boolean
-                  description: Whether usage of this classic credit system should be itemized as
-                    invoice credits.
                 model_markups:
                   anyOf:
                     - type: object
@@ -32174,10 +32147,6 @@ paths:
                           additionalProperties: false
                     description: "For classic credit systems: maps metered features to flat or
                       graduated credit costs."
-                  invoice_credit:
-                    type: boolean
-                    description: Whether usage of this classic credit system should be itemized as
-                      invoice credits.
                   model_markups:
                     anyOf:
                       - type: object
@@ -32753,10 +32722,6 @@ paths:
                           additionalProperties: false
                     description: "For classic credit systems: maps metered features to flat or
                       graduated credit costs."
-                  invoice_credit:
-                    type: boolean
-                    description: Whether usage of this classic credit system should be itemized as
-                      invoice credits.
                   model_markups:
                     anyOf:
                       - type: object
@@ -33327,10 +33292,6 @@ paths:
                                 additionalProperties: false
                           description: "For classic credit systems: maps metered features to flat or
                             graduated credit costs."
-                        invoice_credit:
-                          type: boolean
-                          description: Whether usage of this classic credit system should be itemized as
-                            invoice credits.
                         model_markups:
                           anyOf:
                             - type: object
@@ -33492,9 +33453,6 @@ paths:
         @param creditSchema - A schema that maps metered feature IDs to flat or
         graduated credit costs. For classic credit systems only — AI credit
         systems use model_markups instead. (optional)
-
-        @param invoiceCredit - Whether usage of this classic credit system
-        should be itemized as invoice credits. (optional)
 
         @param modelMarkups - Per-model markup overrides for AI credit systems.
         Maps model IDs to their markup configuration. (optional)
@@ -33866,10 +33824,6 @@ paths:
                   description: A schema that maps metered feature IDs to flat or graduated credit
                     costs. For classic credit systems only — AI credit systems
                     use model_markups instead.
-                invoice_credit:
-                  type: boolean
-                  description: Whether usage of this classic credit system should be itemized as
-                    invoice credits.
                 model_markups:
                   anyOf:
                     - type: object
@@ -34390,10 +34344,6 @@ paths:
                           additionalProperties: false
                     description: "For classic credit systems: maps metered features to flat or
                       graduated credit costs."
-                  invoice_credit:
-                    type: boolean
-                    description: Whether usage of this classic credit system should be itemized as
-                      invoice credits.
                   model_markups:
                     anyOf:
                       - type: object
@@ -61072,10 +61022,6 @@ paths:
                                       additionalProperties: false
                                 description: "For classic credit systems: maps metered features to flat or
                                   graduated credit costs."
-                              invoice_credit:
-                                type: boolean
-                                description: Whether usage of this classic credit system should be itemized as
-                                  invoice credits.
                               model_markups:
                                 anyOf:
                                   - type: object
@@ -62313,10 +62259,6 @@ paths:
                                       additionalProperties: false
                                 description: "For classic credit systems: maps metered features to flat or
                                   graduated credit costs."
-                              invoice_credit:
-                                type: boolean
-                                description: Whether usage of this classic credit system should be itemized as
-                                  invoice credits.
                               model_markups:
                                 anyOf:
                                   - type: object
@@ -66476,10 +66418,6 @@ paths:
                                     additionalProperties: false
                               description: "For classic credit systems: maps metered features to flat or
                                 graduated credit costs."
-                            invoice_credit:
-                              type: boolean
-                              description: Whether usage of this classic credit system should be itemized as
-                                invoice credits.
                             model_markups:
                               anyOf:
                                 - type: object
@@ -67583,10 +67521,6 @@ paths:
                                     additionalProperties: false
                               description: "For classic credit systems: maps metered features to flat or
                                 graduated credit costs."
-                            invoice_credit:
-                              type: boolean
-                              description: Whether usage of this classic credit system should be itemized as
-                                invoice credits.
                             model_markups:
                               anyOf:
                                 - type: object
@@ -68761,10 +68695,6 @@ paths:
                                           additionalProperties: false
                                     description: "For classic credit systems: maps metered features to flat or
                                       graduated credit costs."
-                                  invoice_credit:
-                                    type: boolean
-                                    description: Whether usage of this classic credit system should be itemized as
-                                      invoice credits.
                                   model_markups:
                                     anyOf:
                                       - type: object
@@ -70101,10 +70031,6 @@ paths:
                                     additionalProperties: false
                               description: "For classic credit systems: maps metered features to flat or
                                 graduated credit costs."
-                            invoice_credit:
-                              type: boolean
-                              description: Whether usage of this classic credit system should be itemized as
-                                invoice credits.
                             model_markups:
                               anyOf:
                                 - type: object

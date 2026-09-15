@@ -18,7 +18,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
-import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils.js";
+import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 export const customerProductToArrearLineItems = ({
@@ -88,8 +88,8 @@ export const customerProductToArrearLineItems = ({
 			);
 		}
 
-		const isInvoiceCredit = isInvoiceCreditFeature({
-			feature: customerEntitlement.entitlement.feature,
+		const isInvoiceCredit = isInvoiceCreditCustomerEntitlement({
+			customerEntitlement,
 		});
 		const invoiceCreditOptions = options.invoiceCredits;
 		if (isInvoiceCredit) {

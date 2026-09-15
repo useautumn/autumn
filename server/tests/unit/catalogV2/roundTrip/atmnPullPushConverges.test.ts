@@ -60,6 +60,7 @@ const expectConverges = async ({
 	const first = await runPull({
 		client,
 		cwd: dir,
+		configPath: dir,
 		imports,
 		overwrite: true,
 		yes: true,

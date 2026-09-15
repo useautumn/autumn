@@ -6,12 +6,12 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { buildPendingReattachParams } from "@/internal/billing/v2/execute/buildPendingReattachParams";
-import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/discardPendingCustomerProduct";
-import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/getDeferredBillingPlanData";
-import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/inheritPendingCreatedAt";
-import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingPlanRebills";
-import { relinkPendingPayment } from "@/internal/billing/v2/execute/relinkPendingPayment";
+import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendingCustomerProducts/buildPendingReattachParams";
+import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
+import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
+import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/pendingCustomerProducts/inheritPendingCreatedAt";
+import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
+import { relinkPendingPayment } from "@/internal/billing/v2/execute/pendingCustomerProducts/relinkPendingPayment";
 
 export type PendingUpdateResult = {
 	billingContext?: UpdateSubscriptionBillingContext;

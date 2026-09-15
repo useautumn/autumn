@@ -17,7 +17,7 @@ export class LegacyConfigError extends Error {
 				"",
 				"  1. Push any pending changes first:   bunx atmn@1 push",
 				"  2. Rebuild the config from your org:  bunx atmn pull --overwrite --yes",
-				"     (this replaces the .ts files in this folder, so commit them first)",
+				"     (this rewrites autumn.config.ts, features.ts, plans.ts and rewards.ts, so commit them first)",
 			].join("\n"),
 		);
 		this.name = "LegacyConfigError";

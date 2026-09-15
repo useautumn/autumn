@@ -94,16 +94,35 @@ describe("computeCreditCosts", () => {
 		expect(lookup("ce_stale")).toEqual({ creditCost: 1 });
 	});
 
-	test("rejects a stale cached schema for an invoice credit rate card", () => {
+	test("rejects a stale cached schema for a balance stamped as invoice credits", () => {
 		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+		const stampedStale = {
+			...makeCusEnt("ce_stale", staleCredits),
+			invoice_credit: true,
+		} as FullCusEntWithFullCusProduct;
 
 		expect(() =>
 			computeCreditCosts({
-				cusEnts: [makeCusEnt("ce_stale", staleCredits)],
+				cusEnts: [stampedStale],
 				deduction,
 				catalogFeatures: [messages, currentInvoiceCredits],
 			}),
 		).toThrow(/stale credit rate card/i);
+	});
+
+	test("an unstamped balance ignores the feature's invoice_credit flag and falls back", () => {
+		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+		const unstampedStale = {
+			...makeCusEnt("ce_stale", staleCredits),
+			invoice_credit: false,
+		} as FullCusEntWithFullCusProduct;
+		const lookup = computeCreditCosts({
+			cusEnts: [unstampedStale],
+			deduction,
+			catalogFeatures: [messages, currentInvoiceCredits],
+		});
+
+		expect(lookup("ce_stale")).toEqual({ creditCost: 1 });
 	});
 
 	test("passes graduated cards to the atomic deduction engine", () => {

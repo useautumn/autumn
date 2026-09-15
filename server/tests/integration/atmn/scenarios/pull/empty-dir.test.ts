@@ -39,6 +39,7 @@ test.concurrent(
 			const first = await runPull({
 				client: scenario.client,
 				cwd: emptyDir,
+				configPath: emptyDir,
 				write: (text) => {
 					firstOutput += text;
 				},
@@ -60,6 +61,7 @@ test.concurrent(
 			const second = await runPull({
 				client: scenario.client,
 				cwd: emptyDir,
+				configPath: emptyDir,
 				write: (text) => {
 					secondOutput += text;
 				},

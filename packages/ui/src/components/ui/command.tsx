@@ -65,7 +65,7 @@ function CommandInput({
 	return (
 		<div
 			data-slot="command-input-wrapper"
-			className="flex h-10 items-center gap-2 border-b border-border/50 px-3"
+			className="flex h-10 items-center gap-2 border-b border-border px-3"
 		>
 			<CommandPrimitive.Input
 				data-slot="command-input"

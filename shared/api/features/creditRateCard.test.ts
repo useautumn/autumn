@@ -16,7 +16,6 @@ describe("credit rate-card feature API schemas", () => {
 		expect(result.credit_schema).toEqual([
 			{ metered_feature_id: "feature_a", credit_cost: 0.2 },
 		]);
-		expect(result.invoice_credit).toBeUndefined();
 	});
 
 	test("accepts public per-X and graduated request rates", () => {
@@ -24,7 +23,6 @@ describe("credit rate-card feature API schemas", () => {
 			feature_id: "credits",
 			name: "Credits",
 			type: FeatureType.CreditSystem,
-			invoice_credit: true,
 			credit_schema: [
 				{
 					metered_feature_id: "feature_a",
@@ -44,7 +42,6 @@ describe("credit rate-card feature API schemas", () => {
 			],
 		});
 
-		expect(result.invoice_credit).toBe(true);
 		expect(result.credit_schema?.[1]).toMatchObject({
 			billing_units: 1_000,
 			tier_behavior: "graduated",
@@ -57,7 +54,6 @@ describe("credit rate-card feature API schemas", () => {
 			name: "Credits",
 			type: FeatureType.CreditSystem,
 			consumable: true,
-			invoice_credit: true,
 			credit_schema: [
 				{
 					metered_feature_id: "feature_a",
@@ -73,7 +69,6 @@ describe("credit rate-card feature API schemas", () => {
 			archived: false,
 		});
 
-		expect(result.invoice_credit).toBe(true);
 		expect(result.credit_schema).toHaveLength(2);
 	});
 
@@ -113,7 +108,6 @@ describe("credit rate-card feature API schemas", () => {
 	test("supports partial rate-card updates", () => {
 		const result = UpdateFeatureV2ParamsSchema.parse({
 			feature_id: "credits",
-			invoice_credit: false,
 			credit_schema: [
 				{
 					metered_feature_id: "feature_a",
@@ -123,7 +117,6 @@ describe("credit rate-card feature API schemas", () => {
 			],
 		});
 
-		expect(result.invoice_credit).toBe(false);
 		expect(result.credit_schema?.[0]).toMatchObject({ billing_units: 100 });
 	});
 
@@ -161,24 +154,6 @@ describe("credit rate-card feature API schemas", () => {
 						],
 					},
 				],
-			}).success,
-		).toBe(false);
-	});
-
-	test("rejects invoice credits on non-classic credit features", () => {
-		expect(
-			CreateFeatureV2ParamsSchema.safeParse({
-				feature_id: "ai_credits",
-				name: "AI credits",
-				type: FeatureType.AiCreditSystem,
-				invoice_credit: true,
-			}).success,
-		).toBe(false);
-		expect(
-			UpdateFeatureV2ParamsSchema.safeParse({
-				feature_id: "ai_credits",
-				type: FeatureType.AiCreditSystem,
-				invoice_credit: false,
 			}).success,
 		).toBe(false);
 	});

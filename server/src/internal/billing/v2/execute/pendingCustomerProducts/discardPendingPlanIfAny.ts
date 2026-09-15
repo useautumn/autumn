@@ -1,6 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/discardPendingCustomerProduct";
-import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/findPendingCustomerProduct";
+import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
+import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 
 export const discardPendingPlanIfAny = async ({
 	ctx,
