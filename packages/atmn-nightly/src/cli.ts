@@ -47,7 +47,9 @@ import { autumnFetch } from "./http/autumnFetch";
 import { type Project, resolveProject } from "./project/resolveProject";
 import {
 	createPrompter,
+	hint,
 	NeedsInputError,
+	needs,
 	type Prompter,
 	releaseStdin,
 } from "./prompt/prompt";
@@ -100,6 +102,26 @@ const projectOf = ({ command }: { command: Command }): Project =>
 
 const configFlagOf = ({ command }: { command: Command }): string | undefined =>
 	command.optsWithGlobals<GlobalFlags>().config;
+
+/** Skills sit beside the config; with no config and no --dir there is nowhere to put them. */
+const skillsDirOf = ({
+	command,
+	dir,
+}: {
+	command: Command;
+	dir: string | undefined;
+}): string => {
+	if (dir !== undefined) return dir;
+	const project = projectOf({ command });
+	if (project.configPath === null) {
+		const flagHint = `Run ${configPackageName()} init, or pass --dir <dir>`;
+		process.stdout.write(
+			`${needs("No Autumn config folder found.")}\n${hint(flagHint)}\n`,
+		);
+		throw new NeedsInputError(flagHint);
+	}
+	return join(project.configDir, SKILLS_DIR_NAME);
+};
 
 const writeStaleSkillsHint = ({ command }: { command: Command }): void => {
 	const stale = staleSkillsHint({
@@ -404,9 +426,7 @@ Linking a keyless org to an account:
 		.option("--link", "run `npx skills add <dir> --all` afterwards")
 		.action(
 			async (options: { dir?: string; link?: boolean }, command: Command) => {
-				const dir =
-					options.dir ??
-					join(projectOf({ command }).configDir, SKILLS_DIR_NAME);
+				const dir = skillsDirOf({ command, dir: options.dir });
 				installSkills({ dir, write: (text) => process.stdout.write(text) });
 				if (options.link === true)
 					await linkSkills({
@@ -424,8 +444,7 @@ Linking a keyless org to an account:
 			"the install to update; <config folder>/skills by default",
 		)
 		.action((options: { dir?: string }, command: Command) => {
-			const dir =
-				options.dir ?? join(projectOf({ command }).configDir, SKILLS_DIR_NAME);
+			const dir = skillsDirOf({ command, dir: options.dir });
 			updateSkills({ dir, write: (text) => process.stdout.write(text) });
 		});
 
@@ -454,6 +473,7 @@ Linking a keyless org to an account:
 					includeMappings: options.includeMappings === true,
 					overwrite: options.overwrite === true,
 					yes: options.yes === true,
+					prompter: prompterFor({ command }),
 				});
 				writeStaleSkillsHint({ command });
 			},

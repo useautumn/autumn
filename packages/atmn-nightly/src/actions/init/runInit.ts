@@ -8,7 +8,8 @@ import {
 } from "../../env/loadEnv";
 import { SANDBOX_PIN_NAME, sandboxKeyName } from "../../env/sandboxKeyName";
 import { AutumnApiError } from "../../generated/client";
-import { MARKER_FIELD, readMarker } from "../../project/resolveProject";
+import { readMarker } from "../../project/resolveProject";
+import { writeRootMarker } from "../../project/rootMarker";
 import {
 	ask,
 	choose,
@@ -241,35 +242,6 @@ const addDependency = ({
 		...manifest,
 		dependencies: { ...deps, [PACKAGE_NAME]: dependencySpec },
 	});
-	return true;
-};
-
-/** The root's marker and script, added beside whatever is already there. */
-const writeRootMarker = ({
-	repoRoot,
-	configPath,
-}: {
-	repoRoot: string;
-	configPath: string;
-}): boolean => {
-	const manifestPath = join(repoRoot, "package.json");
-	const manifest = existsSync(manifestPath) ? readJson(manifestPath) : {};
-	const config = relative(repoRoot, configPath);
-	const scripts = (manifest.scripts ?? {}) as Record<string, string>;
-	const next = {
-		...manifest,
-		scripts: {
-			...scripts,
-			atmn: `${PACKAGE_NAME} -c ${JSON.stringify(config)}`,
-		},
-		[MARKER_FIELD]: { config },
-	};
-	if (
-		readMarker({ repoRoot })?.config === config &&
-		scripts.atmn === next.scripts.atmn
-	)
-		return false;
-	writeJson(manifestPath, next);
 	return true;
 };
 

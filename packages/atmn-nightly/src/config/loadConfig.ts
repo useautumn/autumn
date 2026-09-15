@@ -17,7 +17,9 @@ export class ConfigNotFoundError extends Error {
 		super(
 			`No autumn.config.ts found. Looked in:\n${searched
 				.map((path) => `  ${path}`)
-				.join("\n")}\n\nRun \`${configPackageName()} pull\` to scaffold one.`,
+				.join(
+					"\n",
+				)}\n\nRun \`${configPackageName()} init\` to create one, or pass -c <dir>.`,
 		);
 		this.name = "ConfigNotFoundError";
 	}

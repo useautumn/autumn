@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runPull } from "../src/actions/pull";
 import { AutumnApiError, type AutumnClient } from "../src/generated/client";
+import { createPrompter } from "../src/prompt/prompt";
 
 /**
  * Pull against a fake client: preview and catalog responses are canned
@@ -35,6 +36,14 @@ const fakeClient = ({
 		update: async () => ({}),
 		get: async () => catalog,
 	}) as unknown as AutumnClient;
+
+/** A terminal that answers every question with `answer`. */
+const answering = (answer: string) =>
+	createPrompter({
+		interactive: true,
+		write: () => {},
+		readLine: async () => answer,
+	});
 
 const seatsRow = {
 	id: "seats",
@@ -687,6 +696,7 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 			atmn: "../../../src/generated/wire",
 			builders: "../../../src/generated/features",
 		},
+		prompter: answering(dir),
 	});
 
 	expect(result.appended.sort()).toEqual(["messages", "seats"]);
@@ -877,6 +887,7 @@ test("--overwrite --yes with no config is a first pull: scaffold, delete nothing
 		},
 		overwrite: true,
 		yes: true,
+		prompter: answering(dir),
 	});
 
 	expect(result.appended).toEqual(["seats"]);

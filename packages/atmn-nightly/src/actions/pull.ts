@@ -11,7 +11,10 @@ import { loadEnvFiles } from "../env/loadEnv";
 import { AutumnApiError, type AutumnClient } from "../generated/client";
 import { COLLECTIONS, NESTED_FIXTURES, SINGLETONS } from "../generated/emit";
 import { splitWire, type WireDocument } from "../generated/wire";
+import { chooseConfigDir } from "../project/chooseConfigDir";
 import { resolveProject } from "../project/resolveProject";
+import { writeRootMarker } from "../project/rootMarker";
+import { createPrompter, type Prompter } from "../prompt/prompt";
 import type { SettingsPreview } from "../render/renderPreview";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { applySettingsPreview } from "./pull/applySettingsPreview";
@@ -54,6 +57,8 @@ export type PullOptions = {
 	overwrite?: boolean;
 	/** Confirm replacing the local config when overwrite is set. */
 	yes?: boolean;
+	/** Asks where a first pull should put the config; headless by default. */
+	prompter?: Prompter;
 };
 
 const OVERWRITE_HINT =
@@ -213,6 +218,7 @@ export const runPull = async ({
 	imports,
 	overwrite = false,
 	yes = false,
+	prompter = createPrompter({ interactive: false, write }),
 }: PullOptions): Promise<PullResult> => {
 	const project = resolveProject({ cwd, configFlag });
 	if (overwrite && !yes) {
@@ -230,12 +236,23 @@ export const runPull = async ({
 	const dirs = configSearchDirs({ cwd, configPath: configFlag });
 	loadEnvFiles({ dirs: project.envDirs });
 
+	// Nothing states where the config lives: ask, and never scaffold into cwd
+	// unasked. A folder other than cwd gets the root marker so later commands
+	// find it from anywhere in the repo.
+	let scaffoldDir = project.configDir;
+	let scaffoldPath = project.configPath ?? undefined;
+	if (project.configPath === null) {
+		const chosen = await chooseConfigDir({ cwd, prompter });
+		scaffoldDir = chosen.configDir;
+		scaffoldPath = join(scaffoldDir, "autumn.config.ts");
+		if (scaffoldDir !== cwd)
+			writeRootMarker({ repoRoot: chosen.repoRoot, configPath: scaffoldPath });
+	}
+
 	const { path: configPath, wire: document } = await loadOrScaffold({
 		dirs,
-		cwd: project.configDir,
-		...(project.source === "flag" && project.configPath !== null
-			? { configPath: project.configPath }
-			: {}),
+		cwd: scaffoldDir,
+		...(scaffoldPath === undefined ? {} : { configPath: scaffoldPath }),
 		existingConfigPath: project.configPath,
 		imports,
 		overwrite,
