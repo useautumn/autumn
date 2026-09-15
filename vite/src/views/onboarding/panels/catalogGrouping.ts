@@ -16,18 +16,10 @@ import type { ProductListItem } from "@/hooks/queries/useProductsQuery";
  * threshold in `splitBooleanItems` — they're what actually blow a list up. */
 const MAX_VISIBLE_ITEMS = 4;
 
-export interface PlanLicenseSummary {
-	id: string;
-	name: string;
-	included: number;
-}
-
 export interface PlanCardModel {
 	plan: ProductListItem;
 	/** Sibling plans sharing this base — shown as a variant strip, not rows. */
 	variants: ProductListItem[];
-	/** Licenses this plan hands out per unit (seats, workspaces). */
-	licenses: PlanLicenseSummary[];
 	items: ProductItem[];
 	hiddenItemCount: number;
 }
@@ -37,27 +29,21 @@ export interface PlanGroup {
 	cards: PlanCardModel[];
 }
 
-const planLicenses = ({
-	plan,
+/** Each nesting level counts its own overflow, excluding the base price. */
+export const visiblePlanItems = ({
+	items,
+	limit = MAX_VISIBLE_ITEMS,
 }: {
-	plan: ProductListItem;
-}): PlanLicenseSummary[] =>
-	(plan.licenses ?? []).map((license) => ({
-		id: license.id,
-		name: license.product?.name ?? license.product?.id ?? "License",
-		included: license.included,
-	}));
-
-/** Sorted per the shared display order, then trimmed twice: booleans collapse
- * past their own threshold, and what remains caps at MAX_VISIBLE_ITEMS. */
-export const visiblePlanItems = ({ items }: { items: ProductItem[] }) => {
+	items: ProductItem[];
+	limit?: number;
+}) => {
 	const sorted = sortPlanItems({
 		items: productV2ToFeatureItems({ items }),
 	});
 	const { visibleItems: shown, collapsedBooleanItems } = splitBooleanItems({
 		items: sorted,
 	});
-	const capped = shown.slice(0, MAX_VISIBLE_ITEMS);
+	const capped = shown.slice(0, limit);
 
 	return {
 		items: capped,
@@ -89,7 +75,6 @@ export const buildPlanGroups = ({
 	const toCard = (plan: ProductListItem): PlanCardModel => ({
 		plan,
 		variants: variantsByBase.get(plan.id) ?? [],
-		licenses: planLicenses({ plan }),
 		...visiblePlanItems({ items: plan.items ?? [] }),
 	});
 
