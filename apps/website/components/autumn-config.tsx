@@ -133,6 +133,8 @@ export default function AutumnConfig({
 			ref={containerRef}
 			className="@container w-full max-w-[520px] flex flex-col gap-4"
 		>
+			<AgentPromptPane active={started} />
+
 			<div className="border border-[#2A2A2A] bg-[#000000]/90">
 			{/* Title bar */}
 			{/* <div className="flex items-center justify-between border-b border-[#2A2A2A] px-4 py-0.5 gap-3 w-full">
@@ -259,8 +261,6 @@ export default function AutumnConfig({
 				</div>
 			</div>
 			</div>
-
-			<AgentPromptPane active={started} />
 		</div>
 	);
 }
