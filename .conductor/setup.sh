@@ -4,6 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Conductor keeps setup output in its own UI only, so a failed provision leaves
+# nothing on the box to debug. Keep a copy.
+exec > >(tee /tmp/conductor-setup.log) 2>&1
+
 # Nothing here may assume the Cloud computer install script provided anything:
 # it is org-level UI state and emptying it silently removes bun and docker.
 . "$(dirname "$0")/ensureTooling.sh"
