@@ -104,7 +104,7 @@ export default function AutumnConfig({
 		const el = containerRef.current;
 		if (!el) return;
 		const measure = () =>
-			setFontSize(Math.min(Math.max(el.offsetWidth * 0.032, 12), 16));
+			setFontSize(Math.min(Math.max(el.offsetWidth * 0.032, 11), 16));
 		measure();
 		const ro = new ResizeObserver(measure);
 		ro.observe(el);

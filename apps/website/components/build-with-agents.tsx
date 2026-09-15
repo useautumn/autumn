@@ -117,11 +117,11 @@ export default function AgentPromptPane({ active }: { active: boolean }) {
 			>
 				<span
 					aria-hidden="true"
-					className="text-[#9564ff] shrink-0 text-[12px] md:text-[13px] leading-[18px]"
+					className="text-[#9564ff] shrink-0 text-[11px] md:text-[13px] leading-[18px]"
 				>
 					&#8250;
 				</span>
-				<span className="flex-1 min-w-0 truncate text-[#BFBFBF] group-hover:text-white text-[12px] md:text-[13px] tracking-[-2%] leading-[18px] transition-colors duration-300">
+				<span className="flex-1 min-w-0 truncate text-[#BFBFBF] group-hover:text-white text-[11px] md:text-[13px] tracking-[-2%] leading-[18px] transition-colors duration-300">
 					{typed}
 					<span
 						aria-hidden="true"
