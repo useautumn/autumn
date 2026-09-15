@@ -107,6 +107,11 @@ export const billingUpdateLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const billingUpdateCustomLineItemSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
+});
+
 export const billingUpdateInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -301,6 +306,11 @@ export const billingUpdateCarryOverUsagesOutboundSchema = z.object({
 export const billingUpdateLicenseQuantityOutboundSchema = z.object({
 	license_plan_id: z.string(),
 	quantity: z.number(),
+});
+
+export const billingUpdateCustomLineItemOutboundSchema = z.object({
+	amount: z.number(),
+	description: z.string(),
 });
 
 const billingUpdateDimensionsToUpsertLicenseEnum2Schema = z.any();
@@ -675,6 +685,9 @@ export const updateSubscriptionParamsSchema = z.object({
 	licenseQuantities: z
 		.union([z.array(billingUpdateLicenseQuantitySchema), z.undefined()])
 		.optional(),
+	customLineItems: z
+		.union([z.array(billingUpdateCustomLineItemSchema), z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateCodeSchema = openEnumSchema;
@@ -896,5 +909,8 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 		.optional(),
 	license_quantities: z
 		.union([z.array(billingUpdateLicenseQuantityOutboundSchema), z.undefined()])
+		.optional(),
+	custom_line_items: z
+		.union([z.array(billingUpdateCustomLineItemOutboundSchema), z.undefined()])
 		.optional(),
 });

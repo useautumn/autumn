@@ -47514,6 +47514,22 @@ paths:
                       - license_plan_id
                       - quantity
                   description: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
+                custom_line_items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                    required:
+                      - amount
+                      - description
+                  description: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+                  minItems: 1
               required:
                 - customer_id
               title: UpdateSubscriptionParams
@@ -49910,6 +49926,22 @@ paths:
                       - license_plan_id
                       - quantity
                   description: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
+                custom_line_items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                    required:
+                      - amount
+                      - description
+                  description: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+                  minItems: 1
               required:
                 - customer_id
               title: PreviewUpdateParams
