@@ -3,6 +3,7 @@ import {
 	type FullCustomer,
 	getCycleEnd,
 	isResettingEntitlement,
+	notNullish,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -23,12 +24,27 @@ export const computeScheduledPooledAnchorResetPlan = ({
 	stripeSubscriptionId: string;
 	anchorMs: number;
 }) => {
+	// A pool is only re-anchored and reset here when one of the products whose
+	// scheduled reset actually landed contributes to it. Products still mid-cycle
+	// on the same subscription keep their pools untouched, since their
+	// contributions are not reconciled by this pass.
+	const resetContributionPoolIds = new Set(
+		customerProducts.flatMap((customerProduct) =>
+			customerProduct.customer_entitlements
+				.map(
+					(customerEntitlement) =>
+						customerEntitlement.pooled_balance_contribution?.pooled_balance_id,
+				)
+				.filter(notNullish),
+		),
+	);
 	const pools = (fullCustomer.pooled_customer_entitlements ?? []).filter(
 		(customerEntitlement) =>
 			customerEntitlement.pooled_balance?.reset_mode ===
 				PooledBalanceResetMode.Subscription &&
 			customerEntitlement.pooled_balance.stripe_subscription_id ===
 				stripeSubscriptionId &&
+			resetContributionPoolIds.has(customerEntitlement.pooled_balance.id) &&
 			isResettingEntitlement({ entitlement: customerEntitlement.entitlement }),
 	);
 	const poolIds = new Set(pools.map((pool) => pool.pooled_balance!.id));
