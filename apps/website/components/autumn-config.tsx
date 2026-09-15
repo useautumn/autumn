@@ -81,7 +81,6 @@ export default function AutumnConfig({
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [fontSize, setFontSize] = useState(16);
 	const [displayed, setDisplayed] = useState("");
-	const [cursorVisible, setCursorVisible] = useState(true);
 	const [awaitDone, setAwaitDone] = useState(!awaitEvent);
 	const [started, setStarted] = useState(initialDelay === 0 && !awaitEvent);
 	const done = displayed.length >= fullCode.length;
@@ -121,13 +120,6 @@ export default function AutumnConfig({
 		}, TYPING_SPEED);
 		return () => clearTimeout(timer);
 	}, [displayed, done, started, fullCode]);
-
-	// Blinking cursor after done
-	useEffect(() => {
-		if (!done) return;
-		const interval = setInterval(() => setCursorVisible((v) => !v), 530);
-		return () => clearInterval(interval);
-	}, [done]);
 
 	return (
 		<div
@@ -186,16 +178,6 @@ export default function AutumnConfig({
 							>
 								{displayedPadded}
 							</SyntaxHighlighter>
-						</div>
-
-						<div style={{ height: 0, overflow: "visible", position: "relative" }}>
-							<span
-								className="absolute -top-3.5 left-12 w-0.5 h-3.5 bg-[#9564ff]"
-								style={{
-									opacity: cursorVisible ? 1 : 0,
-									transition: "opacity 0.1s",
-								}}
-							/>
 						</div>
 					</div>
 				</div>
