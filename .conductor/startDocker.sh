@@ -39,10 +39,13 @@ start_docker_daemon() {
 	ensure_docker_installed || { echo "[conductor] docker install failed" >&2; return 1; }
 
 	echo "[conductor] starting docker daemon"
-	# The machine image was snapshotted with dockerd running, so /var/run/docker.pid
-	# survives into a fresh VM pointing at an unrelated PID and dockerd refuses to
-	# start. Safe to clear: we only get here when no daemon answered.
+	# The image was snapshotted mid-build with docker running, so a fresh VM
+	# inherits its leavings: a docker.pid pointing at an unrelated process, and a
+	# containerd that dockerd adopts and then times out waiting 15s for. Clearing
+	# both is safe — we only get here when no daemon answered.
 	sudo rm -f /var/run/docker.pid
+	sudo pkill -x containerd 2>/dev/null || true
+	sudo rm -rf /var/run/docker/containerd
 
 	# No systemd on these boxes. if/then rather than `a || b &`, which would
 	# background the whole list instead of just the fallback.
