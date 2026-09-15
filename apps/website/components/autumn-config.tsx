@@ -148,12 +148,12 @@ export default function AutumnConfig({
 							viewBox="0 0 24 24"
 							xmlns="http://www.w3.org/2000/svg"
 							role="img"
-							className="h-3.5 w-3.5 shrink-0"
+							className="h-3 w-3 shrink-0"
 						>
 							<title>TypeScript</title>
 							<path d={TYPESCRIPT_ICON_PATH} fill="currentColor" />
 						</svg>
-						billing.ts
+						<span className="leading-none">billing.ts</span>
 					</div>
 
 					<div className="relative px-3 py-3 font-mono text-sm overflow-hidden">
