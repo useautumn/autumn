@@ -10,6 +10,7 @@ import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/util
 import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration/index.js";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
+import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos/index.js";
 import {
 	expectAnchorQuantityIdentity,
@@ -31,6 +32,21 @@ for (const variant of [
 		catalog: true,
 	},
 	{ name: "combined", seats: 3, nextSeats: 5, nextPrepaid: 500 },
+	{
+		name: "plan-change-none",
+		seats: 3,
+		nextSeats: 3,
+		none: true,
+		planChange: true,
+	},
+	{
+		name: "plan-change-none-catalog",
+		seats: 3,
+		nextSeats: 3,
+		none: true,
+		catalog: true,
+		planChange: true,
+	},
 ]) {
 	test.concurrent(`anchor quantities: ${variant.name}`, async () => {
 		const customerId = `anchor-qty-${variant.name}`;
@@ -67,8 +83,9 @@ for (const variant of [
 		const before = await scenario.readProduct();
 		const customerBefore = await scenario.readCustomer();
 		const oldAmount = 50 + variant.seats * 20;
+		const baseAmount = variant.planChange ? 30 : 20;
 		const newAmount =
-			20 + (variant.nextPrepaid ?? 300) / 10 + variant.nextSeats * 20;
+			baseAmount + (variant.nextPrepaid ?? 300) / 10 + variant.nextSeats * 20;
 		const expectedTotal = variant.none
 			? newAmount
 			: await calculateResetBillingCycleNowTotal({
@@ -81,9 +98,13 @@ for (const variant of [
 			...target,
 			billing_cycle_anchor: "now",
 			...(variant.none ? { proration_behavior: "none" as const } : {}),
-			license_quantities: [
-				{ license_plan_id: licensePlan.id, quantity: variant.nextSeats },
-			],
+			...(variant.planChange
+				? { customize: { price: itemsV2.monthlyPrice({ amount: baseAmount }) } }
+				: {
+						license_quantities: [
+							{ license_plan_id: licensePlan.id, quantity: variant.nextSeats },
+						],
+					}),
 			...(variant.nextPrepaid
 				? {
 						feature_quantities: [
@@ -104,9 +125,11 @@ for (const variant of [
 				.map((line) => line.total)
 				.sort((a, b) => a - b),
 		).toEqual(
-			[20, (variant.nextPrepaid ?? 300) / 10, variant.nextSeats * 20].sort(
-				(a, b) => a - b,
-			),
+			[
+				baseAmount,
+				(variant.nextPrepaid ?? 300) / 10,
+				variant.nextSeats * 20,
+			].sort((a, b) => a - b),
 		);
 		expect(await scenario.readProduct()).toEqual(before);
 		expect(await scenario.readCustomer()).toEqual(customerBefore);

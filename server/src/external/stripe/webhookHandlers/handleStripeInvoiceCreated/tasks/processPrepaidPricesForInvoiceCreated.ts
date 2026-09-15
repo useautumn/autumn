@@ -7,6 +7,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	isPooledBalanceSourceCustomerEntitlement,
 	notNullish,
 	secondsToMs,
 } from "@autumn/shared";
@@ -51,7 +52,7 @@ const processPrepaidPrice = async ({
 
 	if (!options) return;
 	const previousQuantity = options?.quantity ?? 0;
-	const resetQuantity = (options?.upcoming_quantity || options?.quantity) ?? 0;
+	const resetQuantity = options.upcoming_quantity ?? options.quantity ?? 0;
 	const config = customerPrice.price.config;
 	const billingUnits = config.billing_units || 1;
 	const newAllowance =
@@ -143,6 +144,9 @@ const processPrepaidPrice = async ({
 		id: customerEntitlement.id,
 		updates: {
 			...resetUpdate,
+			...(isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })
+				? { balance: 0, additional_balance: 0, adjustment: 0, entities: null }
+				: {}),
 			next_reset_at: nextResetAt,
 			...(resetsBillingCycleAnchor
 				? {

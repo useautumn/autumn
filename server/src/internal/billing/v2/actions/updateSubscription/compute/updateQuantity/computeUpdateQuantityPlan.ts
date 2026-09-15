@@ -13,6 +13,8 @@ import {
 } from "./computePrepaidQuantityDetails.js";
 import { computeUpdateQuantityAnchorResetPlan } from "./computeUpdateQuantityAnchorResetPlan.js";
 
+import { computeUpdateQuantityScheduledAnchorPlan } from "./computeUpdateQuantityScheduledAnchorPlan.js";
+
 const untouchedPrepaidQuantities: PrepaidQuantityDetails = {
 	updatedOptions: [],
 	updateCustomerEntitlements: [],
@@ -82,7 +84,9 @@ export const computeUpdateQuantityPlan = ({
 	};
 	return billingContext.requestedBillingCycleAnchor === "now"
 		? computeUpdateQuantityAnchorResetPlan({ ctx, billingContext, plan })
-		: plan;
+		: typeof billingContext.requestedBillingCycleAnchor === "number"
+			? computeUpdateQuantityScheduledAnchorPlan({ billingContext, plan })
+			: plan;
 };
 
 const isLicenseOnlyRequest = ({
