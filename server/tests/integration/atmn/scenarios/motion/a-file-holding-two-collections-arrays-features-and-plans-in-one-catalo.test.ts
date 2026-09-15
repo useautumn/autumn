@@ -42,7 +42,7 @@ export const features = [
 ];
 
 export const plans = [
-	plan({ active: true, planId: "${pro}", name: "Pro", price: { amount: 49, interval: "month" } }),
+	plan({ active: true, planId: "${pro}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 ];
 `,
 			},

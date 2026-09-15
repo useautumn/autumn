@@ -45,7 +45,7 @@ test("a plan with no active version is refused, naming the plan", () => {
 	const issues = issuesOf(() =>
 		atmn({
 			plans: [
-				plan({ planId: "free", name: "Free", active: true }),
+				plan({ planId: "free", name: "Free", versionSlug: "v1", active: true }),
 				plan({ planId: "pro", name: "Pro", versionSlug: "v1", active: false }),
 				plan({
 					planId: "legacy",
@@ -106,6 +106,7 @@ test("a plan item must meter a declared feature, named by breadcrumb", () => {
 					active: true,
 					planId: "pro",
 					name: "Pro",
+					versionSlug: "v1",
 					items: [{ featureId: "seats" }, { featureId: "ghost", included: 5 }],
 				}),
 			],
@@ -128,6 +129,7 @@ test("with features omitted, item references are not checked: absent means not m
 					active: true,
 					planId: "pro",
 					name: "Pro",
+					versionSlug: "v1",
 					items: [{ featureId: "ghost" }],
 				}),
 			],
@@ -151,6 +153,7 @@ test("a volume-tiered item price must be prepaid", () => {
 					active: true,
 					planId: "pro",
 					name: "Pro",
+					versionSlug: "v1",
 					items: [
 						{
 							featureId: "api",
@@ -190,7 +193,15 @@ test("featureOverride is only honoured on classic credit-system features", () =>
 					consumable: true,
 				}),
 			],
-			plans: [plan({ active: true, planId: "pro", name: "Pro", items })],
+			plans: [
+				plan({
+					active: true,
+					planId: "pro",
+					name: "Pro",
+					versionSlug: "v1",
+					items,
+				}),
+			],
 		}),
 	);
 	expect(withMetered).toEqual([
@@ -210,7 +221,15 @@ test("featureOverride is only honoured on classic credit-system features", () =>
 					type: "credit_system",
 				}),
 			],
-			plans: [plan({ active: true, planId: "pro", name: "Pro", items })],
+			plans: [
+				plan({
+					active: true,
+					planId: "pro",
+					name: "Pro",
+					versionSlug: "v1",
+					items,
+				}),
+			],
 		}),
 	).not.toThrow();
 });
@@ -245,9 +264,12 @@ test("a variant linked from two versions of its base is refused", () => {
 				"pro_yearly is linked from pro v2 and pro v1. When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
 		},
 		{
-			path: 'plan "pro"',
-			message:
-				'Variant "pro_yearly" is declared under 2 versions of "pro" but only 0 states versionSlug. Add versionSlug to every version so they can be told apart.',
+			path: 'plan "pro" › variant "pro_yearly"',
+			message: "versionSlug is required.",
+		},
+		{
+			path: 'plan "pro" › variant "pro_yearly"',
+			message: "versionSlug is required.",
 		},
 	]);
 });

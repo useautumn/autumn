@@ -32,6 +32,7 @@ export const pro = plan({
 	active: true,
 	planId: "${proId}",
 	name: "Pro",
+	versionSlug: "v1",
 	price: { amount: 20, interval: "month" },
 });
 
@@ -39,6 +40,7 @@ export const free = plan({
 	active: true,
 	planId: "${freeId}",
 	name: "Free",
+	versionSlug: "v1",
 });
 `,
 			},

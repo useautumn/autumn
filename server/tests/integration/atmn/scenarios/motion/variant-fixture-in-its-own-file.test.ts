@@ -37,6 +37,7 @@ export default atmn({
 			active: true,
 			planId: "${pro}",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			items: [{ featureId: "${seats}", included: 5 }],
 			variants: [proAnnual],
@@ -49,6 +50,7 @@ export default atmn({
 export const proAnnual = variant({
 	variantPlanId: "${proAnnual}",
 	name: "Pro (annual)",
+	versionSlug: "v1",
 	customize: { price: { amount: 490, interval: "year" } },
 });
 `;

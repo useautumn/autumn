@@ -62,6 +62,7 @@ const WIRED_CASES: Record<
 			active: true,
 			planId: "${id}",
 			name: "Plan",
+			versionSlug: "v1",
 			items: [{ featureId: "${id}_missing" }],
 		}),
 	],
@@ -78,6 +79,7 @@ const WIRED_CASES: Record<
 			active: true,
 			planId: "${id}_plan",
 			name: "Plan",
+			versionSlug: "v1",
 			items: [{ featureId: "${id}", featureOverride: { creditSchema: [] } }],
 		}),
 	],
@@ -95,6 +97,7 @@ const WIRED_CASES: Record<
 			active: true,
 			planId: "${id}_plan",
 			name: "Plan",
+			versionSlug: "v1",
 			price: { amount: 10, interval: "month" },
 			items: [
 				{
@@ -184,6 +187,7 @@ test("one failing config per rule kind: five distinct kinds failing at once are 
 			active: true,
 			planId: "${planId}",
 			name: "Plan",
+			versionSlug: "v1",
 			price: { amount: 10, interval: "month" },
 			items: [
 				{ featureId: "${planId}_missing" },

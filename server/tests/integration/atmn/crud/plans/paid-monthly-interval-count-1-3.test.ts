@@ -35,6 +35,7 @@ for (const intervalCount of INTERVAL_COUNTS) {
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month", intervalCount: ${intervalCount} },
 			items: [],
 		}),`,

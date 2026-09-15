@@ -43,8 +43,8 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
-		plan({ active: true, planId: "enterprise", name: "Enterprise", price: { amount: 999, interval: "month" } }),
+		plan({ active: true, planId: "pro", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "enterprise", name: "Enterprise", versionSlug: "v1", price: { amount: 999, interval: "month" } }),
 	],
 }`,
 		});
@@ -60,7 +60,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ active: true, planId: "enterprise", internalId: "${internalId}", name: "Pro" }),
+		plan({ active: true, planId: "enterprise", internalId: "${internalId}", name: "Pro", versionSlug: "v1", }),
 	],
 }`,
 				}),

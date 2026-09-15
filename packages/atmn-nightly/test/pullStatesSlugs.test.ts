@@ -1,7 +1,6 @@
 /**
- * A pull never leaves a fixture slug-less: a plan row and the variant entries
- * under it (inline objects and `variant({...})` calls alike) take the slug
- * the catalog reports, even when nothing else about them changed.
+ * A pull writes identity onto plan and variant fixtures that already state
+ * versionSlug (inline objects and `variant({...})` calls alike).
  */
 
 import { expect, test } from "bun:test";
@@ -74,7 +73,7 @@ const client = {
 	previewUpdateOrganization: async () => ({ config: { changes: [] } }),
 } as unknown as AutumnClient;
 
-test("a pull writes versionSlug into every plan row and variant entry that lacks one", async () => {
+test("a pull writes internalId onto plan and variant fixtures that already state versionSlug", async () => {
 	rmSync(dir, { recursive: true, force: true });
 	mkdirSync(join(dir, "variants"), { recursive: true });
 	writeFileSync(
@@ -85,6 +84,7 @@ test("a pull writes versionSlug into every plan row and variant entry that lacks
 			"export const proTeam = variant({",
 			'\tvariantPlanId: "pro_team",',
 			'\tname: "Pro Team",',
+			'\tversionSlug: "v1",',
 			"});",
 			"",
 		].join("\n"),
@@ -103,8 +103,9 @@ test("a pull writes versionSlug into every plan row and variant entry that lacks
 			"\t\t\tactive: true,",
 			'\t\t\tplanId: "pro",',
 			'\t\t\tname: "Pro",',
+			'\t\t\tversionSlug: "v1",',
 			"\t\t\tvariants: [",
-			'\t\t\t\t{ variantPlanId: "pro_yearly", name: "Pro Yearly" },',
+			'\t\t\t\t{ variantPlanId: "pro_yearly", name: "Pro Yearly", versionSlug: "v1" },',
 			"\t\t\t\tproTeam,",
 			"\t\t\t],",
 			"\t\t}),",
@@ -119,12 +120,11 @@ test("a pull writes versionSlug into every plan row and variant entry that lacks
 
 	const config = readFileSync(join(dir, "autumn.config.ts"), "utf8");
 	expect(config).toContain(
-		'\t\tplan({\n\t\t\tinternalId: "prod_pro",\n\t\t\tactive: true,\n\t\t\tplanId: "pro",\n\t\t\tname: "Pro",',
+		'\t\tplan({\n\t\t\tinternalId: "prod_pro",\n\t\t\tactive: true,\n\t\t\tplanId: "pro",\n\t\t\tname: "Pro",\n\t\t\tversionSlug: "v1",',
 	);
 	expect(config).toContain(
 		'{ internalId: "prod_yearly", variantPlanId: "pro_yearly", name: "Pro Yearly", versionSlug: "v1" }',
 	);
-	expect(config).toContain('\t\t\t],\n\t\t\tversionSlug: "v1",\n\t\t}),');
 	expect(readFileSync(join(dir, "variants/proTeam.ts"), "utf8")).toBe(
 		[
 			'import { variant } from "../../../../src/generated/variants";',
@@ -139,5 +139,4 @@ test("a pull writes versionSlug into every plan row and variant entry that lacks
 		].join("\n"),
 	);
 	expect(printed.join("")).toContain("↳ wrote internalId into 3 fixtures");
-	expect(printed.join("")).toContain("↳ wrote versionSlug into 3 fixtures");
 });

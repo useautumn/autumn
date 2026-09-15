@@ -27,11 +27,12 @@ const baseConfig = ({
 		feature({ featureId: "extra", name: "Extra", type: "metered", consumable: false }),
 	],
 	plans: [
-		plan({ active: true, planId: "seatLicense", name: "Seat License", price: { amount: 15, interval: "month" } }),
+		plan({ active: true, planId: "seatLicense", name: "Seat License", versionSlug: "v1", price: { amount: 15, interval: "month" } }),
 		plan({
 			active: true,
 			planId: "base",
 			name: "Base",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
 			freeTrial: { durationLength: 14, durationType: "day" },
@@ -40,6 +41,7 @@ const baseConfig = ({
 				{
 					variantPlanId: "variant",
 					name: "Variant",
+					versionSlug: "v1",
 					customize: ${variantCustomize},
 				},
 			],

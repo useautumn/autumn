@@ -30,6 +30,7 @@ for (const { label, interval } of ADD_ON_INTERVALS) {
 			active: true,
 			planId: "addon",
 			name: "Addon",
+			versionSlug: "v1",
 			addOn: true,
 			price: { amount: 10, interval: "${interval}" },
 			items: [],

@@ -37,7 +37,7 @@ export default atmn({ plans: [custom] });
 				"plans.ts": `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
 
 const base = { name: "Custom", price: { amount: 20, interval: "month" as const } };
-export const custom = plan({ active: true, ...base, planId: "${customId}" });
+export const custom = plan({ active: true, ...base, planId: "${customId}", versionSlug: "v1", });
 `,
 			},
 		});

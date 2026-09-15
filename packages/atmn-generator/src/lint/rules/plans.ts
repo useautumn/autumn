@@ -7,7 +7,6 @@ import {
 	targetLacks,
 	unique,
 	valueWhen,
-	versionSlugs,
 } from "./define";
 
 export const planItemRules: LintRule[] = [
@@ -60,9 +59,7 @@ export const planRules: LintRule[] = [
 	unique({
 		field: "planId",
 		alongside: "versionSlug",
-		absentMeans: "v1",
-		because:
-			"A plan id plus a version slug names exactly one version; a fixture without a slug is v1.",
+		because: "A plan id plus a version slug names exactly one version.",
 	}),
 	linkedOnce({
 		groupBy: "planId",
@@ -73,15 +70,6 @@ export const planRules: LintRule[] = [
 		pins: ["versionSlug", "version"],
 		because:
 			"When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
-	}),
-	versionSlugs({
-		groupBy: "planId",
-		slug: "versionSlug",
-		label: "Plan",
-		collection: "variants",
-		identity: "variantPlanId",
-		pins: ["versionSlug", "version"],
-		because: "Add versionSlug to every version so they can be told apart.",
 	}),
 	exactlyOneActive({
 		groupBy: "planId",

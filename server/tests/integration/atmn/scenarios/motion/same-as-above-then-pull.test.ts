@@ -92,7 +92,7 @@ export const poo: Plan[] = [];
 						"strawberries.ts",
 						existing.replace(
 							"];\n",
-							`\tplan({ active: true, planId: "${pissId}", name: "Piss", price: { amount: 5, interval: "month" } }),\n];\n`,
+							`\tplan({ active: true, planId: "${pissId}", name: "Piss", versionSlug: "v1", price: { amount: 5, interval: "month" } }),\n];\n`,
 						),
 					);
 				} else {

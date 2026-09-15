@@ -21,12 +21,12 @@ const NON_LITERAL_FORMS: Record<string, (planId: string) => string> = {
 		planId,
 	) => `const base = { name: "Pro", price: { amount: 20, interval: "month" } };
 export default atmn({
-	plans: [plan({ active: true, ...base, planId: "${planId}" })],
+	plans: [plan({ active: true, ...base, planId: "${planId}", versionSlug: "v1", })],
 });
 `,
 	".map": (planId) => `const ids = ["${planId}"];
 export default atmn({
-	plans: ids.map((id) => plan({ active: true, planId: id, name: "Pro", price: { amount: 20, interval: "month" } })),
+	plans: ids.map((id) => plan({ active: true, planId: id, name: "Pro", versionSlug: "v1", price: { amount: 20, interval: "month" } })),
 });
 `,
 	"helper call": (

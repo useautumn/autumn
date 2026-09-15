@@ -83,6 +83,7 @@ export const pro = plan({
 	active: true,
 	planId: "${pro}",
 	name: "Pro",
+	versionSlug: "v1",
 	price: { amount: 20, interval: "month" },
 	items: [{ featureId: "${messages}", included: 100, reset: { interval: "month" } }],
 });
@@ -105,6 +106,7 @@ const withInlineVariant = ({
 		{
 			variantPlanId: "${proYearly}",
 			name: "Pro Yearly",
+			versionSlug: "v1",
 			customize: {
 				price: { amount: 200, interval: "year" },
 				items: [{ featureId: "${messages}", included: 120, reset: { interval: "month" } }],

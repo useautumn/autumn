@@ -36,6 +36,7 @@ const proPlan = `
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
 			processors: {

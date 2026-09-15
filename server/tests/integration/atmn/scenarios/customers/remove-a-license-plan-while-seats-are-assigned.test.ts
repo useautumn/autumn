@@ -43,6 +43,7 @@ const catalogConfig = ({
 			planId: "${enterprisePlanId}",
 			active: true,
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
 			licenses: [{ licensePlanId: "${seatPlanId}", included: 5 }],
 			createInStripe: false,

@@ -27,7 +27,7 @@ import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
 
 export default atmn({
 	...shared,
-	plans: [plan({ active: true, planId: "${pro}", name: "Pro" })],
+	plans: [plan({ active: true, planId: "${pro}", name: "Pro", versionSlug: "v1", })],
 });
 `;
 

@@ -50,7 +50,7 @@ export const bananas = [
 `,
 				"strawberries.ts": `${planImport}
 export const strawberries: Plan[] = [
-	plan({ active: true, planId: "${pro}", name: "Pro", price: { amount: 49, interval: "month" } }),
+	plan({ active: true, planId: "${pro}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 ];
 `,
 				"poo.ts": `${planImport}

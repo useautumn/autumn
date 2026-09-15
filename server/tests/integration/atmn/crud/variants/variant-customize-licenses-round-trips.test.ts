@@ -37,6 +37,7 @@ const config = ({ seatCredits = 600 }: { seatCredits?: number } = {}) => `{
 			active: true,
 			planId: "seat",
 			name: "Seat",
+			versionSlug: "v1",
 			addOn: true,
 			price: { amount: 25, interval: "month" },
 			items: [${creditsItem({ included: seatCredits })}],
@@ -45,6 +46,7 @@ const config = ({ seatCredits = 600 }: { seatCredits?: number } = {}) => `{
 			active: true,
 			planId: "seatAnnual",
 			name: "Seat (annual)",
+			versionSlug: "v1",
 			addOn: true,
 			price: { amount: 250, interval: "year" },
 			items: [${creditsItem({ included: 600 })}],
@@ -53,18 +55,21 @@ const config = ({ seatCredits = 600 }: { seatCredits?: number } = {}) => `{
 			active: true,
 			planId: "starter",
 			name: "Starter",
+			versionSlug: "v1",
 			licenses: [{ licensePlanId: "seat", included: 1 }],
 		}),
 		plan({
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			licenses: [{ licensePlanId: "seat", included: 1 }],
 			variants: [
 				{
 					variantPlanId: "proAnnual",
 					name: "Pro (annual)",
+					versionSlug: "v1",
 					customize: {
 						price: { amount: 490, interval: "year" },
 						removeLicenses: [{ licensePlanId: "seat" }],

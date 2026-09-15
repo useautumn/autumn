@@ -18,6 +18,7 @@ const euroPro = `
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: {
 				amount: 49,
 				interval: "month",

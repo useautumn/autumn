@@ -22,6 +22,7 @@ test.concurrent("default plan / auto enable", async () => {
 			active: true,
 			planId: "starter",
 			name: "Starter",
+			versionSlug: "v1",
 			autoEnable: true,
 			items: [],
 		}),
@@ -29,6 +30,7 @@ test.concurrent("default plan / auto enable", async () => {
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			// A paid auto-enable plan needs a cardless trial to pass the default-plan rule.
 			freeTrial: { durationLength: 14, durationType: "day", cardRequired: false },

@@ -27,6 +27,7 @@ const proPlan = `
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			createInStripe: false,
 			processors: { stripe: { productId: "prod_fake_depth_plan" } },
 			price: {

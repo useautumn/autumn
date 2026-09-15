@@ -44,12 +44,6 @@ export const linkedOnce = (rule: RuleOf<"linkedOnce">): LintRule => ({
 	...rule,
 });
 
-/** Every version of one thing states its slug once there is more than one. */
-export const versionSlugs = (rule: RuleOf<"versionSlugs">): LintRule => ({
-	kind: "versionSlugs",
-	...rule,
-});
-
 /** Exactly one row per group carries `field: true`. */
 export const exactlyOneActive = (
 	rule: RuleOf<"exactlyOneActive">,

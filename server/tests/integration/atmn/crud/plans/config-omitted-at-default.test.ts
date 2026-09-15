@@ -23,6 +23,7 @@ const pro = ({ config }: { config?: string }) => `
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },${
 				config === undefined ? "" : `\n\t\t\tconfig: ${config},`
 			}

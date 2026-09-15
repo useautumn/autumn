@@ -88,7 +88,7 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 		config: `{ features: [
 				feature({ featureId: "${messages}", name: "Messages", type: "metered", consumable: true }),
 			], plans: [
-				plan({ active: true, planId: "${pro}", name: "Pro" }),
+				plan({ active: true, planId: "${pro}", name: "Pro", versionSlug: "v1", }),
 			] }`,
 	});
 	const { cwd, secretKey, baseUrl } = scenario;

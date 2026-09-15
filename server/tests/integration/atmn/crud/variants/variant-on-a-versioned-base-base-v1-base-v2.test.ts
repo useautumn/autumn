@@ -72,6 +72,7 @@ for (const targetVersion of ["v1", "v2"] as const) {
 				{
 					variantPlanId: "variantHere",
 					name: "Variant Here",
+					versionSlug: "v1",
 					customize: { price: { amount: 99, interval: "month" } },
 				},
 			],

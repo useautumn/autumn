@@ -29,7 +29,7 @@ test.concurrent(
 			],
 			config: configBody({
 				features: `\n\t\tfeature({ featureId: "${featureId}", name: "Type Change", type: "metered", consumable: true }),`,
-				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Type Change Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
+				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Type Change Plan", versionSlug: "v1", items: [{ featureId: "${featureId}", included: 100 }] }),`,
 			}),
 		});
 
@@ -41,7 +41,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: configBody({
 						features: `\n\t\tfeature({ featureId: "${featureId}", name: "Type Change", type: "boolean" }),`,
-						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Type Change Plan", items: [{ featureId: "${featureId}", included: 100 }] }),`,
+						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Type Change Plan", versionSlug: "v1", items: [{ featureId: "${featureId}", included: 100 }] }),`,
 					}),
 				}),
 			);

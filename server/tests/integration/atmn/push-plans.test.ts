@@ -131,6 +131,7 @@ test.concurrent(
 			active: true,
 			planId: "${freePlan}",
 			name: "Free",
+			versionSlug: "v1",
 			autoEnable: true,
 			items: [{ featureId: "${seats}", included: 1 }],
 		}),
@@ -138,6 +139,7 @@ test.concurrent(
 			active: true,
 			planId: "${proPlan}",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			items: [
 				{
@@ -230,6 +232,7 @@ test.concurrent(
 			active: true,
 			planId: "${pro}",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 10, interval: "month" },
 		}),
 	],
@@ -346,12 +349,14 @@ test.concurrent(
 			active: true,
 			planId: "${seatPlan}",
 			name: "Seat",
+			versionSlug: "v1",
 			price: { amount: 15, interval: "month" },
 		}),
 		plan({
 			active: true,
 			planId: "${enterprisePlan}",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 12000, interval: "year" },
 			licenses: [{ licensePlanId: "${seatPlan}", included: 25 }],
 		}),

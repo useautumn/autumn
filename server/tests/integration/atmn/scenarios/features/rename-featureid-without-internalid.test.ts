@@ -29,7 +29,7 @@ test.concurrent(
 			],
 			config: configBody({
 				features: `\n\t\tfeature({ featureId: "${oldId}", name: "Renamed Bare", type: "metered", consumable: true }),`,
-				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Renamed Bare Plan", items: [{ featureId: "${oldId}", included: 100 }] }),`,
+				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Renamed Bare Plan", versionSlug: "v1", items: [{ featureId: "${oldId}", included: 100 }] }),`,
 			}),
 		});
 
@@ -44,7 +44,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: configBody({
 						features: `\n\t\tfeature({ featureId: "${newId}", name: "Renamed Bare", type: "metered", consumable: true }),`,
-						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Renamed Bare Plan", items: [{ featureId: "${newId}", included: 100 }] }),`,
+						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Renamed Bare Plan", versionSlug: "v1", items: [{ featureId: "${newId}", included: 100 }] }),`,
 					}),
 				}),
 			);

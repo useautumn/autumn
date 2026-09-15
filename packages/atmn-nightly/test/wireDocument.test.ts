@@ -120,6 +120,7 @@ test("declared variants remain PUT state and never generate propagation", () => 
 				active: true,
 				planId: "pro",
 				name: "Pro",
+				versionSlug: "v1",
 				variants: [
 					{
 						variantPlanId: "pro_annual",
@@ -150,6 +151,7 @@ test("declared licenses pin the exact child version row", () => {
 				active: true,
 				planId: "team",
 				name: "Team",
+				versionSlug: "v1",
 				licenses: [
 					license({
 						licensePlanId: "seat",
@@ -179,6 +181,7 @@ test("declared relationship customizations remain explicit", () => {
 				active: true,
 				planId: "team",
 				name: "Team",
+				versionSlug: "v1",
 				licenses: [
 					license({
 						licensePlanId: "seat",
@@ -191,6 +194,7 @@ test("declared relationship customizations remain explicit", () => {
 					{
 						variantPlanId: "team_eu",
 						name: "Team EU",
+						versionSlug: "v1",
 						customize: { items: [] },
 					},
 				],
@@ -212,11 +216,13 @@ test("explicit archived state overrides the live membership default", () => {
 				active: true,
 				planId: "retired",
 				name: "Retired",
+				versionSlug: "v1",
 				archived: true,
 				variants: [
 					{
 						variantPlanId: "retired_eu",
 						name: "Retired EU",
+						versionSlug: "v1",
 						archived: true,
 					},
 				],

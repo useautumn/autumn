@@ -47,7 +47,7 @@ test.concurrent(
 				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
 			config: configBody({
-				plans: `\n\t\tplan({ active: true, planId: "${oldId}", name: "Plan Rename", price: { amount: 10, interval: "month" } }),`,
+				plans: `\n\t\tplan({ active: true, planId: "${oldId}", name: "Plan Rename", versionSlug: "v1", price: { amount: 10, interval: "month" } }),`,
 			}),
 		});
 
@@ -65,7 +65,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
-						plans: `\n\t\tplan({ active: true, internalId: "${internalId}", planId: "${newId}", name: "Plan Rename", price: { amount: 10, interval: "month" } }),`,
+						plans: `\n\t\tplan({ active: true, internalId: "${internalId}", planId: "${newId}", name: "Plan Rename", versionSlug: "v1", price: { amount: 10, interval: "month" } }),`,
 					}),
 				}),
 			);

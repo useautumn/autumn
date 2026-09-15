@@ -32,12 +32,14 @@ const catalogConfig = ({
 			planId: "${basePlanId}",
 			active: true,
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 			createInStripe: false,
 			variants: [
 				{
 					variantPlanId: "${variantPlanId}",
-					name: "Pro Variant",${archiveVariant ? "\n\t\t\t\t\tarchived: true," : ""}
+					name: "Pro Variant",
+					versionSlug: "v1",${archiveVariant ? "\n\t\t\t\t\tarchived: true," : ""}
 					customize: { price: { amount: 15, interval: "month" } },
 				},
 			],

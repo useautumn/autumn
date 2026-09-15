@@ -41,6 +41,7 @@ export const freePlan = `
 			planId: "free",
 			name: "Free",
 			active: true,
+			versionSlug: "v1",
 			items: [
 				{ featureId: "messages", included: 100, reset: { interval: "month" } },
 				{ featureId: "seats", included: 1 },
@@ -54,12 +55,14 @@ export const paidMonthly = ({
 	items = "",
 	extra = "",
 	active = true,
+	versionSlug = "v1",
 }: {
 	planId?: string;
 	amount?: number;
 	items?: string;
 	extra?: string;
 	active?: boolean;
+	versionSlug?: string | null;
 } = {}): string => `
 		plan({
 			planId: "${planId}",
@@ -67,7 +70,7 @@ export const paidMonthly = ({
 			active: ${active},
 			price: { amount: ${amount}, interval: "month" },
 			items: [${items}
-			],${extra}
+			],${versionSlug == null ? "" : `\n\t\t\tversionSlug: "${versionSlug}",`}${extra}
 		}),`;
 
 /** The complicated pro: trial, prepaid seats with proration, graduated overage,
@@ -130,6 +133,7 @@ export const seatPlan = `
 		plan({
 			planId: "seat",
 			name: "Seat",
+			versionSlug: "v1",
 			active: true,
 			price: { amount: 15, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
@@ -142,6 +146,7 @@ export const enterpriseWithSeats = ({
 		plan({
 			planId: "enterprise",
 			name: "Enterprise",
+			versionSlug: "v1",
 			active: true,
 			price: { amount: 999, interval: "month" },
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],

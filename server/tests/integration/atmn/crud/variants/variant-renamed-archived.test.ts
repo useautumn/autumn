@@ -21,11 +21,13 @@ const baseConfig = `{
 			active: true,
 			planId: "base",
 			name: "Base",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			variants: [
 				{
 					variantPlanId: "addon",
 					name: "Addon",
+					versionSlug: "v1",
 					customize: { price: { amount: 79, interval: "month" } },
 				},
 			],
@@ -53,8 +55,8 @@ for (const action of ["renamed", "archived"] as const) {
 
 			const variantEdit =
 				action === "renamed"
-					? `{ variantPlanId: "addon", newPlanId: "addonNew" }`
-					: `{ variantPlanId: "addon", archived: true }`;
+					? `{ variantPlanId: "addon", versionSlug: "v1", newPlanId: "addonNew" }`
+					: `{ variantPlanId: "addon", versionSlug: "v1", archived: true }`;
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -62,6 +64,7 @@ for (const action of ["renamed", "archived"] as const) {
 		plan({
 			active: true,
 			planId: "base",
+			versionSlug: "v1",
 			variants: [
 				${variantEdit},
 			],

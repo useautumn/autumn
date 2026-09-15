@@ -42,8 +42,8 @@ const catalogPlans = async ({
  */
 const archivedRow = (planId: string): string =>
 	planId === "enterprise"
-		? `\n\t\t\tplan({ active: true, planId: "enterprise", archived: true, licenses: [] }),`
-		: `\n\t\t\tplan({ active: true, planId: "${planId}", archived: true }),`;
+		? `\n\t\t\tplan({ active: true, planId: "enterprise", versionSlug: "v1", archived: true, licenses: [] }),`
+		: `\n\t\t\tplan({ active: true, planId: "${planId}", versionSlug: "v1", archived: true }),`;
 
 const archivedPairBody = ({
 	parentFirst,

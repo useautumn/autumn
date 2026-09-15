@@ -27,6 +27,7 @@ const acmePlan = `
 			active: true,
 			planId: "acme",
 			name: "Acme",
+			versionSlug: "v1",
 			processors: {
 				stripe: {
 					productId: "prod_fake_acme_plan",

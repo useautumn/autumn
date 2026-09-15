@@ -35,8 +35,8 @@ export default atmn({ plans: [keep, gone] });
 			files: {
 				"plans.ts": `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
 
-export const keep = plan({ active: true, planId: "${keepId}", name: "Keep", price: { amount: 10, interval: "month" } });
-export const gone = plan({ active: true, planId: "${goneId}", name: "Gone", price: { amount: 20, interval: "month" } });
+export const keep = plan({ active: true, planId: "${keepId}", name: "Keep", versionSlug: "v1", price: { amount: 10, interval: "month" } });
+export const gone = plan({ active: true, planId: "${goneId}", name: "Gone", versionSlug: "v1", price: { amount: 20, interval: "month" } });
 `,
 			},
 		});

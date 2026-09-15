@@ -19,6 +19,7 @@ const catalogConfig = ({ planId }: { planId: string }): string => `{
 			active: true,
 			planId: "${planId}",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 			createInStripe: false,
 		}),

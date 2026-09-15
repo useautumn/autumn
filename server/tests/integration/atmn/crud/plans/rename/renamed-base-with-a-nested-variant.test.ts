@@ -35,11 +35,13 @@ test.concurrent(
 			active: true,
 			planId: "base",
 			name: "Base",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			variants: [
 				{
 					variantPlanId: "addon",
 					name: "Addon",
+					versionSlug: "v1",
 					customize: { price: { amount: 79, interval: "month" } },
 				},
 			],
@@ -77,10 +79,12 @@ test.concurrent(
 			planId: "baseNew",
 			internalId: "${base.internal_id}",
 			name: "Base",
+			versionSlug: "v1",
 			variants: [
 				{
 					variantPlanId: "addon",
 					name: "Addon",
+					versionSlug: "v1",
 					customize: { price: { amount: 79, interval: "month" } },
 				},
 			],

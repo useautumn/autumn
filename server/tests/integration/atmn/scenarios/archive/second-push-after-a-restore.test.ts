@@ -42,8 +42,8 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ active: true, planId: "seat", archived: true }),
-		plan({ active: true, planId: "enterprise", archived: true, licenses: [] }),
+		plan({ active: true, planId: "seat", versionSlug: "v1", archived: true }),
+		plan({ active: true, planId: "enterprise", versionSlug: "v1", archived: true, licenses: [] }),
 	],
 }`,
 				}),
@@ -54,8 +54,8 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ active: true, planId: "seat", archived: false }),
-		plan({ active: true, planId: "enterprise", archived: false, licenses: [{ licensePlanId: "seat", included: 25 }] }),
+		plan({ active: true, planId: "seat", versionSlug: "v1", archived: false }),
+		plan({ active: true, planId: "enterprise", versionSlug: "v1", archived: false, licenses: [{ licensePlanId: "seat", included: 25 }] }),
 	],
 }`,
 				}),

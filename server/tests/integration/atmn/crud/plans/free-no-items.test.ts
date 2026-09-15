@@ -22,6 +22,7 @@ test.concurrent("free no items", async () => {
 			active: true,
 			planId: "free",
 			name: "Free",
+			versionSlug: "v1",
 			items: [],
 		}),`,
 		}),

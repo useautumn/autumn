@@ -24,8 +24,8 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ active: true, planId: "free", name: "Free" }),
-		plan({ active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "free", name: "Free", versionSlug: "v1", }),
+		plan({ active: true, planId: "pro", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 		});

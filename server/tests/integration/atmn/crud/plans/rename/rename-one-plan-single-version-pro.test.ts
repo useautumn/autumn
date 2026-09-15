@@ -51,7 +51,7 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "pro", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 		});
@@ -67,7 +67,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ active: true, planId: "proNew", internalId: "${internalId}", name: "Pro" }),
+		plan({ active: true, planId: "proNew", internalId: "${internalId}", name: "Pro", versionSlug: "v1", }),
 	],
 }`,
 				}),

@@ -30,6 +30,7 @@ test("multi-currency price with the org config off → clean error, not a crash"
 			active: true,
 			planId: "${planId}",
 			name: "Pro",
+			versionSlug: "v1",
 			price: {
 				amount: 49,
 				interval: "month",

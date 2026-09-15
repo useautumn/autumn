@@ -25,6 +25,7 @@ const pro = ({ billingControls }: { billingControls?: string }) => `
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			items: [{ featureId: "api", included: 100 }],${
 				billingControls === undefined

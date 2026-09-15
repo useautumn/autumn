@@ -18,12 +18,24 @@ export type RegistryEntry = {
 	label?: string;
 	/** Field whose value names one entry. */
 	idField?: string;
+	/** Extra required fields beyond what the spec harvests. */
+	required?: readonly string[];
 	rules?: LintRule[];
 };
 
 export const LINT_REGISTRY: Record<string, RegistryEntry> = {
 	features: { label: "feature", idField: "featureId", rules: featureRules },
-	plans: { label: "plan", idField: "planId", rules: planRules },
+	plans: {
+		label: "plan",
+		idField: "planId",
+		required: ["versionSlug"],
+		rules: planRules,
+	},
+	"plans.variants": {
+		label: "variant",
+		idField: "variantPlanId",
+		required: ["versionSlug"],
+	},
 	"plans.items": { label: "item", idField: "featureId", rules: planItemRules },
 	"plans.items.price": { label: "price", rules: planItemPriceRules },
 	"plans.licenses": { label: "license", idField: "licensePlanId" },

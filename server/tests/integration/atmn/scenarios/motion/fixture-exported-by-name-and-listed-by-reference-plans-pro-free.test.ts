@@ -37,8 +37,8 @@ export default atmn({
 			config: { raw: rootConfig },
 			files: {
 				"plans.ts": `${planImport}
-export const pro = plan({ active: true, planId: "${proId}", name: "Pro", price: { amount: 49, interval: "month" } });
-export const free = plan({ active: true, planId: "${freeId}", name: "Free" });
+export const pro = plan({ active: true, planId: "${proId}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } });
+export const free = plan({ active: true, planId: "${freeId}", name: "Free", versionSlug: "v1", });
 `,
 			},
 		});

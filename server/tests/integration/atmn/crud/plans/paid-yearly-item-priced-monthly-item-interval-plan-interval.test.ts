@@ -26,6 +26,7 @@ test.concurrent(
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 490, interval: "year" },
 			items: [
 				{

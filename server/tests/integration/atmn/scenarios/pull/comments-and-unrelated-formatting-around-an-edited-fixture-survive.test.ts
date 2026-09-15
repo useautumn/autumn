@@ -32,6 +32,7 @@ export default atmn({
 			active: true,
 			planId: "${planId}",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 		}),
 		// Trailing comment after the array's only fixture.

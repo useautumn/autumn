@@ -29,7 +29,7 @@ type CatalogPlanRow = {
 /** The license link has no version_slug field on the wire — it can only ever
  * point at the license plan_id, never a specific version. */
 const seatVersion = ({
-	versionSlug,
+	versionSlug = "v1",
 	amount,
 	active = true,
 }: {
@@ -40,7 +40,8 @@ const seatVersion = ({
 		plan({
 			active: ${active},
 			planId: "seat",
-			name: "Seat",${versionSlug ? `\n\t\t\tversionSlug: "${versionSlug}",` : ""}
+			name: "Seat",
+			versionSlug: "${versionSlug}",
 			price: { amount: ${amount}, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
 		}),`;

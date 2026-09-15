@@ -68,6 +68,7 @@ export default atmn({
 			active: true,
 			planId: "${freeId}",
 			name: "Free",
+			versionSlug: "v1",
 			// a comment nested inside the fixture
 			items: [{ featureId: "${seats}", included: 1 }],
 		}),

@@ -37,6 +37,7 @@ const corePlans = [
 		active: true,
 		planId: "${planId}",
 		name: "Pro",
+		versionSlug: "v1",
 		price: { amount: 20, interval: "month" },
 	}),
 ] ${modifier};
@@ -89,6 +90,7 @@ const corePlans = [
 		active: true,
 		planId: "${existingId}",
 		name: "Existing",
+		versionSlug: "v1",
 		price: { amount: 20, interval: "month" },
 	}),
 ] ${modifier};

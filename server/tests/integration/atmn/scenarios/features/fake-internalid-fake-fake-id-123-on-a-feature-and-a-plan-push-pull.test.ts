@@ -25,7 +25,7 @@ test.concurrent(
 			],
 			config: configBody({
 				features: `\n\t\tfeature({ featureId: "${featureId}", name: "Fake", type: "boolean", internalId: "${FAKE_INTERNAL_ID}" }),`,
-				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Fake Plan", internalId: "${FAKE_INTERNAL_ID}" }),`,
+				plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Fake Plan", versionSlug: "v1", internalId: "${FAKE_INTERNAL_ID}" }),`,
 			}),
 		});
 

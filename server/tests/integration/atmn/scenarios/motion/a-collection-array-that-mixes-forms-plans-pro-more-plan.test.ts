@@ -33,7 +33,7 @@ export default atmn({
 	plans: [
 		pro,
 		...more,
-		plan({ active: true, planId: "${inlineId}", name: "Inline", price: { amount: 5, interval: "month" } }),
+		plan({ active: true, planId: "${inlineId}", name: "Inline", versionSlug: "v1", price: { amount: 5, interval: "month" } }),
 	],
 });
 `;
@@ -45,11 +45,11 @@ export default atmn({
 			config: { raw: rootConfig },
 			files: {
 				"pro.ts": `${planImport}
-export const pro = plan({ active: true, planId: "${proId}", name: "Pro", price: { amount: 49, interval: "month" } });
+export const pro = plan({ active: true, planId: "${proId}", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } });
 `,
 				"more.ts": `${planImport}
 export const more = [
-	plan({ active: true, planId: "${spreadId}", name: "Spread", price: { amount: 15, interval: "month" } }),
+	plan({ active: true, planId: "${spreadId}", name: "Spread", versionSlug: "v1", price: { amount: 15, interval: "month" } }),
 ];
 `,
 			},

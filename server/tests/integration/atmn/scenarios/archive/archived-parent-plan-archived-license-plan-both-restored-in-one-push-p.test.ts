@@ -54,12 +54,12 @@ const row = ({
 	archived: boolean;
 }): string => {
 	if (planId !== "enterprise") {
-		return `\n\t\t\tplan({ active: true, planId: "${planId}", archived: ${archived} }),`;
+		return `\n\t\t\tplan({ active: true, planId: "${planId}", versionSlug: "v1", archived: ${archived} }),`;
 	}
 	const licenses = archived
 		? "[]"
 		: `[{ licensePlanId: "seat", included: 25 }]`;
-	return `\n\t\t\tplan({ active: true, planId: "enterprise", archived: ${archived}, licenses: ${licenses} }),`;
+	return `\n\t\t\tplan({ active: true, planId: "enterprise", versionSlug: "v1", archived: ${archived}, licenses: ${licenses} }),`;
 };
 
 const pairBody = ({

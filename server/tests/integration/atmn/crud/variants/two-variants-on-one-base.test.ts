@@ -25,16 +25,19 @@ test.concurrent(
 			active: true,
 			planId: "base",
 			name: "Base",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			variants: [
 				{
 					variantPlanId: "variantA",
 					name: "Variant A",
+					versionSlug: "v1",
 					customize: { price: { amount: 59, interval: "month" } },
 				},
 				{
 					variantPlanId: "variantB",
 					name: "Variant B",
+					versionSlug: "v1",
 					customize: { price: { amount: 99, interval: "month" } },
 				},
 			],

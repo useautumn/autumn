@@ -48,7 +48,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: configBody({
 						features: `\n\t\tfeature({ featureId: "${featureId}", name: "Already There", type: "boolean" }),`,
-						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Already Plan" }),`,
+						plans: `\n\t\tplan({ active: true, planId: "${planId}", name: "Already Plan", versionSlug: "v1", }),`,
 					}),
 				}),
 			);

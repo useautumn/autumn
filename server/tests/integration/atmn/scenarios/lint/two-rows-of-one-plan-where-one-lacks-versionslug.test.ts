@@ -24,7 +24,7 @@ test.concurrent(
 	plans: [
 		${paidMonthly({ planId: pro, amount: 30, extra: `\n\t\t\tversionSlug: "v2",` })}
 	
-		${paidMonthly({ planId: pro, amount: 20 })}
+		${paidMonthly({ planId: pro, amount: 20, versionSlug: null })}
 	],
 }`,
 		});
@@ -33,7 +33,7 @@ test.concurrent(
 			const error = await scenario.push().catch((thrown) => thrown as Error);
 			expect(error).toBeInstanceOf(Error);
 			expect((error as Error).message).toContain(
-				`Plan "${pro}" has 2 versions but only 1 states versionSlug. Add versionSlug to every version so they can be told apart. (autumn.config.ts:`,
+				"versionSlug is required.",
 			);
 			expect((error as Error).message).not.toContain("catalogV2");
 
@@ -77,7 +77,7 @@ test.concurrent(
 			const error = await scenario.push().catch((thrown) => thrown as Error);
 			expect(error).toBeInstanceOf(Error);
 			expect((error as Error).message).toContain(
-				`Variant "${proYearly}" is declared under 2 versions of "${pro}" but only 1 states versionSlug. Add versionSlug to every version so they can be told apart. (autumn.config.ts:`,
+				"versionSlug is required.",
 			);
 
 			const catalog = (await scenario.client.get({})) as unknown as {

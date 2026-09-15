@@ -31,6 +31,7 @@ const proPlan = `
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			createInStripe: false,
 			price: { amount: 49, interval: "month" },
 			items: [

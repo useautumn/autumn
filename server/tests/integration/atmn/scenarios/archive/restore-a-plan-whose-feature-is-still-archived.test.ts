@@ -31,6 +31,7 @@ test.concurrent(
 			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
 		}),
@@ -51,7 +52,7 @@ test.concurrent(
 	features: [
 		feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false, archived: true }),
 	],
-	plans: [plan({ active: true, planId: "pro", archived: true })],
+	plans: [plan({ active: true, planId: "pro", versionSlug: "v1", archived: true })],
 }`,
 				}),
 			);
@@ -63,7 +64,7 @@ test.concurrent(
 			// error naming it) rather than a confirmed current one.
 			scenario.writeConfig(
 				atmnConfigSource({
-					body: `{ plans: [plan({ active: true, planId: "pro", archived: false })] }`,
+					body: `{ plans: [plan({ active: true, planId: "pro", versionSlug: "v1", archived: false })] }`,
 				}),
 			);
 

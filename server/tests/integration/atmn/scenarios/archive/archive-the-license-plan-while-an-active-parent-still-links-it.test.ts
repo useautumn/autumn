@@ -42,11 +42,12 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ active: true, planId: "seat", archived: true }),
+		plan({ active: true, planId: "seat", versionSlug: "v1", archived: true }),
 		plan({
 			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
 			licenses: [{ licensePlanId: "seat", included: 25 }],

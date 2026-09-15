@@ -186,7 +186,7 @@ export const LINT_RULES: LintRules = {
 	plans: {
 		label: "plan",
 		idField: "planId",
-		required: ["planId"],
+		required: ["planId", "versionSlug"],
 		fields: {
 			planId: {
 				minLength: 1,
@@ -233,9 +233,7 @@ export const LINT_RULES: LintRules = {
 				kind: "unique",
 				field: "planId",
 				alongside: "versionSlug",
-				absentMeans: "v1",
-				because:
-					"A plan id plus a version slug names exactly one version; a fixture without a slug is v1.",
+				because: "A plan id plus a version slug names exactly one version.",
 			},
 			{
 				kind: "linkedOnce",
@@ -247,16 +245,6 @@ export const LINT_RULES: LintRules = {
 				pins: ["versionSlug", "version"],
 				because:
 					"When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
-			},
-			{
-				kind: "versionSlugs",
-				groupBy: "planId",
-				slug: "versionSlug",
-				label: "Plan",
-				collection: "variants",
-				identity: "variantPlanId",
-				pins: ["versionSlug", "version"],
-				because: "Add versionSlug to every version so they can be told apart.",
 			},
 			{
 				kind: "exactlyOneActive",
@@ -1020,7 +1008,9 @@ export const LINT_RULES: LintRules = {
 		},
 	},
 	"plans.variants": {
-		required: ["variantPlanId"],
+		label: "variant",
+		idField: "variantPlanId",
+		required: ["variantPlanId", "versionSlug"],
 		fields: {
 			variantPlanId: {
 				minLength: 1,

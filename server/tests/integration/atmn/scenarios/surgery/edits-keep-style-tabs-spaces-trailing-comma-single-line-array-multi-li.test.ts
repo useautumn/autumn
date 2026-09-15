@@ -47,12 +47,14 @@ export default atmn({
 			active: true,
 			planId: "${editId}",
 			name: "Edit",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 		}),
 		plan({
 			active: true,
 			planId: "${keepId}",
 			name: "Keep",
+			versionSlug: "v1",
 			price: { amount: 5, interval: "month" },
 		}),
 	],
@@ -67,12 +69,14 @@ export default atmn({
       active: true,
       planId: "${editId}",
       name: "Edit",
+      versionSlug: "v1",
       price: { amount: 20, interval: "month" },
     }),
     plan({
       active: true,
       planId: "${keepId}",
       name: "Keep",
+      versionSlug: "v1",
       price: { amount: 5, interval: "month" },
     }),
   ],
@@ -83,8 +87,8 @@ export default atmn({
 		raw: (editId, keepId) => `${atmnImports()}
 export default atmn({
 	plans: [
-		plan({ active: true, planId: "${editId}", name: "Edit", price: { amount: 20, interval: "month" } }),
-		plan({ active: true, planId: "${keepId}", name: "Keep", price: { amount: 5, interval: "month" } }),
+		plan({ active: true, planId: "${editId}", name: "Edit", versionSlug: "v1", price: { amount: 20, interval: "month" } }),
+		plan({ active: true, planId: "${keepId}", name: "Keep", versionSlug: "v1", price: { amount: 5, interval: "month" } }),
 	],
 });
 `,
@@ -92,7 +96,7 @@ export default atmn({
 	"single-line array": {
 		raw: (editId, keepId) => `${atmnImports()}
 export default atmn({
-	plans: [plan({ active: true, planId: "${editId}", name: "Edit", price: { amount: 20, interval: "month" } }), plan({ active: true, planId: "${keepId}", name: "Keep", price: { amount: 5, interval: "month" } })],
+	plans: [plan({ active: true, planId: "${editId}", name: "Edit", versionSlug: "v1", price: { amount: 20, interval: "month" } }), plan({ active: true, planId: "${keepId}", name: "Keep", versionSlug: "v1", price: { amount: 5, interval: "month" } })],
 });
 `,
 	},
@@ -104,6 +108,7 @@ export default atmn({
 			active: true,
 			planId: "${editId}",
 			name: "Edit",
+			versionSlug: "v1",
 			price: {
 				amount: 20,
 				interval: "month",
@@ -113,6 +118,7 @@ export default atmn({
 			active: true,
 			planId: "${keepId}",
 			name: "Keep",
+			versionSlug: "v1",
 			price: {
 				amount: 5,
 				interval: "month",
@@ -192,6 +198,7 @@ export default atmn({
 			planId: "${editId}",
 			// A note living inside the fixture literal.
 			name: "Edit",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 		}),
 	],

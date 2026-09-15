@@ -39,6 +39,7 @@ export const pro = plan({
 	planId: "${proId}",
 	${comment}
 	name: "Pro",
+	versionSlug: "v1",
 	price: { amount: 49, interval: "month" },
 });
 `,

@@ -33,7 +33,7 @@ const proWithVariant = ({ amount }: { amount: number }): string => `{
 			price: { amount: ${amount}, interval: "month" },
 			items: [{ featureId: "seats", included: 5 }],
 			variants: [
-				{ variantPlanId: "pro_plus", name: "Pro Plus" },
+				{ variantPlanId: "pro_plus", name: "Pro Plus", versionSlug: "v1" },
 			],
 		}),
 	],

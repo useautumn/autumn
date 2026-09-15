@@ -20,6 +20,7 @@ export default atmn({
 			active: true,
 			planId: "${planId}",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: ${amount}, interval: "month" },
 		}),
 	],
