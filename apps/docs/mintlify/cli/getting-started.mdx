@@ -1,13 +1,13 @@
 ---
 title: "Getting started"
-description: "Set up the atmn CLI, then push and pull your catalog as code"
+description: "Install the CLI, authenticate, and sync your pricing config"
 ---
 
-The `atmn` CLI keeps your Autumn catalog (features, plans, versions and rewards) in an `autumn.config.ts` file. `atmn push` makes the server match the file. `atmn pull` writes the server's catalog back into the file.
+The `atmn` CLI lets you define your pricing plans in code via an `autumn.config.ts` file, and sync them to Autumn with a single command.
 
 ## Installation
 
-Run it with your package manager:
+Run the CLI directly with your package manager:
 
 <CodeGroup>
 
@@ -15,129 +15,93 @@ Run it with your package manager:
 bunx atmn
 ```
 
-```bash npx
-npx atmn
-```
-
 ```bash pnpm
 pnpm dlx atmn
 ```
 
-</CodeGroup>
-
-`atmn init` adds the package as a dependency and an `atmn` script to your root `package.json`. After that you can run `bun atmn push`, `npm run atmn push`, and so on.
-
-## Initialize a project
-
-```bash
-bunx atmn init
+```bash npx
+npx atmn
 ```
 
-`init` does the whole setup:
+</CodeGroup>
 
-1. **Connect.** If there is no `AUTUMN_SECRET_KEY` in your `.env`, it asks how you want to connect:
-   - `--login` opens a browser to sign in. It writes `AUTUMN_SECRET_KEY` (sandbox) and `AUTUMN_PROD_SECRET_KEY` (production) to your `.env`.
-   - `--keyless` creates a sandbox org right away, no account needed. You can link it to an account later with `atmn login --claim <email>`. It writes `AUTUMN_SECRET_KEY` only.
+## Login
 
-   If there is no terminal to ask in (for example in CI or from an agent), it prints the two flags and stops. Run it again with the flag you want.
-2. **Create the config.** It writes `autumn.config.ts`, `features.ts`, `plans.ts` and `rewards.ts`, adds `atmn` to `package.json` and installs it. In a monorepo it asks where to put the package (`--path <dir>`) and what to call it (`--name <name>`).
-3. **Pull your catalog.** Anything the org already has is written into those files.
-4. **Install the skills.** The agent skills bundled with the CLI are written to `<config folder>/skills`. Run `npx skills add <dir> -y` so your coding agent can find them.
+Authenticate with your Autumn account:
+
+```bash
+bunx atmn login
+```
+
+This opens your browser, lets you pick an organization, and saves API keys for both sandbox and production to your `.env` file:
 
 ```bash .env
 AUTUMN_SECRET_KEY=am_sk_test_...
 AUTUMN_PROD_SECRET_KEY=am_sk_live_...
 ```
 
+<Tip>
+No account yet? `bunx atmn login --keyless` creates a sandbox for you right away. You can link it to an account later with `bunx atmn login --claim <email>`.
+</Tip>
+
 <Check>
-`bunx atmn env` shows which org, environment and key your commands will use, and flags anything that looks wrong. Add `--json` for machine-readable output.
+You can verify your setup at any time with `bunx atmn env`, which shows your current organization and environment.
 </Check>
 
-## Edit the config
+## Initialize a project
 
-`autumn.config.ts` imports each collection and passes them to `atmn()`:
-
-```ts autumn.config.ts
-import { atmn } from "atmn";
-import { features } from "./features";
-import { plans } from "./plans";
-import { rewards, referralPrograms } from "./rewards";
-
-export default atmn({
-	features,
-	plans,
-	rewards,
-	referralPrograms,
-	settings: {},
-});
-```
-
-The other files hold the definitions:
-
-```ts plans.ts
-import { plan } from "atmn";
-
-export const plans = [
-	plan({
-		planId: "pro",
-		versionSlug: "v2",
-		active: true,
-		name: "Pro",
-		price: { amount: 20, interval: "month" },
-		items: [
-			{
-				featureId: "messages",
-				included: 10000,
-				reset: { interval: "month" },
-			},
-		],
-	}),
-];
-```
-
-Each collection you pass to `atmn()` is the full state. If a plan, version or variant is missing from the file, it gets deleted on push (or archived, if customers are on it). A collection you leave out of `atmn()` is left alone. See the [configuration reference](/cli/config) for every field.
-
-## Push
-
-`atmn push` shows you what would change. It does not write anything:
+Run `atmn init` in your project root to create an `autumn.config.ts` file:
 
 ```bash
+bunx atmn init
+```
+
+This creates `autumn.config.ts` along with `features.ts`, `plans.ts` and `rewards.ts`, pulls in any plans you've already created in Autumn, and installs the Autumn skills for your coding agent. If you haven't logged in yet, it prompts you to.
+
+Build your pricing using the [config reference](/cli/config).
+
+## Push and pull
+
+Once you have an `autumn.config.ts`, sync it with Autumn:
+
+```bash
+# Preview what would change
 bunx atmn push
-```
 
-It checks the config, sends it to the server as a preview, and prints the diff: what gets created, updated, deleted or archived, which customers are affected, and any migration drafts the change would create.
-
-To apply what the preview showed, add `--yes`:
-
-```bash
+# Apply the changes
 bunx atmn push --yes
-```
 
-After a successful push, the CLI writes each row's `internalId` back into your config (and a `versionSlug`, if the server assigned one). That is expected. A row with an `internalId` can be renamed later instead of being deleted and recreated.
-
-Use `-d` or `--dry-run` to force a preview even when `--yes` is passed.
-
-<Warning>
-Commands use your sandbox by default. Add `-p` to target production: `bunx atmn push -p --yes`.
-</Warning>
-
-## Pull
-
-```bash
+# Pull remote config into your local file
 bunx atmn pull
 ```
 
-`pull` updates your config in place. It adds rows the file did not have, flips `active` if someone promoted a version in the dashboard, and fills in `internalId` and `versionSlug`. Run it after someone edits the dashboard, and before you edit a config you did not write.
+`push` reads your config file, compares it with what's in Autumn, and shows a summary of what will be created, updated, or deleted. Run it again with `--yes` to apply the changes.
 
-`atmn pull --overwrite --yes` deletes every TypeScript file in the config folder and rebuilds it from the server. Only use it when the config belongs to a different org than your key.
+`pull` fetches your plans and features from Autumn and writes them into your local config. If the file already exists, it does a smart in-place update that preserves your local formatting and comments where possible.
 
-## Sandboxes
+<Tip>
+Use `bunx atmn pull` to generate an `autumn.config.ts` from plans you've already created in the dashboard.
+</Tip>
 
-`atmn sandbox create <name>` creates a separate sandbox and saves its key. `atmn sandbox use <name>` pins it, so every later command targets it until you run `atmn sandbox use --clear`.
+## Environments
 
-`atmn reset --yes` wipes the sandbox's catalog and customers (keys and settings stay). `atmn push --yes` then rebuilds it from your config.
+By default, all commands target your **sandbox** environment. Add the `-p` flag to target production:
+
+```bash
+# Push to production
+bunx atmn push -p --yes
+
+# Pull from production
+bunx atmn pull -p
+```
+
+<Warning>
+`push -p` only previews the changes. Add `--yes` to apply them to production.
+</Warning>
 
 **Next: Configuration reference**
+
+Learn how to define features, plans, and pricing in your `autumn.config.ts`.
 
 <Card
   title="Configuration reference"

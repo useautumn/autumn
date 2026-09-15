@@ -1,9 +1,9 @@
 ---
 title: "Command reference"
-description: "Every command, flag and environment variable in the atmn CLI"
+description: "All available atmn CLI commands and flags"
 ---
 
-For the latest help, run `atmn --help` or `atmn <command> --help`.
+Run `atmn --help` or `atmn <command> --help` to see the latest options.
 
 ## Global flags
 
@@ -11,63 +11,58 @@ These work with every command.
 
 | Flag | Description |
 |------|-------------|
-| `-p, --prod` | target production instead of sandbox |
-| `--sandbox <sandboxId>` | target a specific sandbox |
-| `-l, --local` | target a local server (default port 8080) |
-| `--port <port>` | port of a local server (implies `--local`) |
-| `-b, --base-url <url>` | send to this URL instead |
-| `--client-id <id>` | OAuth client id the CLI identifies as |
-| `-c, --config <path>` | `autumn.config.ts`, or the folder holding it |
-| `--headless` | never prompt: print what a command needs and stop |
-| `-V, --version` | print the version |
+| `-p, --prod` | Target production instead of sandbox |
+| `--sandbox <id>` | Target a specific sandbox |
+| `-l, --local` | Use `localhost:8080` API server |
+| `-c, --config <path>` | Path to config file (default: `autumn.config.ts`) |
+| `--headless` | Force non-interactive mode (for CI/agents) |
+| `-V, --version` | Show CLI version |
 
-You cannot combine `-p` with `--sandbox`. If you pass `-p` while a sandbox is pinned, production wins.
+## Authentication
 
-## `atmn init`
+### `atmn login`
 
-Sets up the repo: connects to Autumn, creates the config, pulls your catalog and installs the skills.
+Authenticate with Autumn via OAuth. Opens your browser, lets you select an organization, and saves sandbox + production API keys to `.env`.
 
 ```bash
-atmn init [options]
+atmn login
+```
+
+In non-TTY environments (CI), it prints a URL you can open manually.
+
+| Flag | Description |
+|------|-------------|
+| `--keyless` | Create a sandbox org without an account |
+| `--claim <email>` | Link a keyless org to your account |
+
+### `atmn env`
+
+Show your current organization, environment and key:
+
+```bash
+atmn env
+```
+
+## Configuration
+
+### `atmn init`
+
+Create an `autumn.config.ts` in your project, pull your existing plans into it, and install the agent skills. Prompts for login if you haven't authenticated yet.
+
+```bash
+atmn init
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--path <dir>` | folder for the Autumn package (monorepos) |
-| `--name <name>` | the package's name (monorepos) |
-| `--login` | sign in on the web |
-| `--keyless` | create a sandbox org now, no account needed |
+| `--login` | Sign in on the web |
+| `--keyless` | Create a sandbox org without an account |
+| `--path <dir>` | Folder for the config package (monorepos) |
+| `--name <name>` | Name of the config package (monorepos) |
 
-If there is no `AUTUMN_SECRET_KEY` yet, `init` asks how you want to connect. Without a terminal it prints the two flags and stops. Pass one of them, not both.
+### `atmn push`
 
-## `atmn login`
-
-Connects to Autumn and writes the org's keys to your `.env`.
-
-```bash
-atmn login [options]
-```
-
-| Flag | Description |
-|------|-------------|
-| `--keyless` | create a sandbox org now, no account needed |
-| `--claim <email>` | link a keyless org to an account |
-
-A plain `atmn login` opens a browser (or prints the URL if it can't) and writes `AUTUMN_SECRET_KEY` and `AUTUMN_PROD_SECRET_KEY`. `--keyless` creates a sandbox org with no account and writes `AUTUMN_SECRET_KEY` only. `--claim <email>` emails a link that attaches the keyless org to an account. Your key keeps working after that.
-
-## `atmn env`
-
-Shows the org, environment and key your commands will use.
-
-```bash
-atmn env [--json]
-```
-
-`--json` prints the raw response, including `notes` that say how to fix anything that looks wrong.
-
-## `atmn push`
-
-Previews `autumn.config.ts` against your catalog. `--yes` applies it.
+Push your local `autumn.config.ts` to Autumn.
 
 ```bash
 atmn push [options]
@@ -75,16 +70,14 @@ atmn push [options]
 
 | Flag | Description |
 |------|-------------|
-| `-y, --yes` | apply the changes the preview shows |
-| `-d, --dry-run` | preview only, even with `--yes` |
+| `-y, --yes` | Apply the changes |
+| `-d, --dry-run` | Preview only, even with `--yes` |
 
-`push` never asks questions. Without `--yes` it checks the config and prints the diff. With `--yes` it applies exactly that diff, deletions included.
+The CLI compares your local config with what's in Autumn and shows a summary of changes. Nothing is applied until you pass `--yes`.
 
-After a successful `push --yes`, the CLI writes each row's `internalId` back into your config and lists any migration drafts it created.
+### `atmn pull`
 
-## `atmn pull`
-
-Writes your remote catalog back into `autumn.config.ts`.
+Pull plans and features from Autumn into your local `autumn.config.ts`.
 
 ```bash
 atmn pull [options]
@@ -92,128 +85,62 @@ atmn pull [options]
 
 | Flag | Description |
 |------|-------------|
-| `--include-mappings` | keep processor mappings in pulled fixtures |
-| `--overwrite` | discard the local config and pull the catalog fresh |
-| `-y, --yes` | confirm `--overwrite` |
+| `--overwrite` | Overwrite config instead of smart in-place update (needs `--yes`) |
+| `--include-mappings` | Keep Stripe and RevenueCat mappings in the pulled config |
 
-A plain `pull` edits the file in place: it adds rows the config did not have, updates changed ones, flips `active`, and fills in `internalId` and `versionSlug`. It can only edit rows written as plain objects. If a row is built with a spread, a helper or `.map()`, `pull` tells you which rows it cannot edit and writes nothing.
+By default, `pull` does a smart in-place update: it adds new features and plans, updates existing ones, and removes deleted ones while preserving your formatting. Use `--overwrite --yes` to replace the config files entirely.
 
-`--overwrite` deletes every TypeScript file in the config folder and rebuilds it from the server, so it needs `--yes`. Without `--yes` it tells you what would happen and stops.
+### `atmn reset`
 
-## `atmn reset`
-
-Wipes the sandbox's catalog and customers. `--yes` applies it.
+Delete all plans, features and customers in your sandbox. Sandbox only.
 
 ```bash
-atmn reset [-y]
+atmn reset --yes
 ```
 
-Clears every customer, plan, feature and migration draft in the targeted sandbox. Keys and settings stay. Without `--yes` it names the sandbox and stops.
+## Skills
 
-<Warning>
-`reset` refuses to run with a live key.
-</Warning>
+### `atmn skills`
 
-## `atmn skills`
-
-Lists, prints, installs and updates the agent skills bundled with the CLI.
+List the agent skills bundled with the CLI, or print one:
 
 ```bash
-atmn skills [name] [options]
+atmn skills
+atmn skills autumn-catalog
 ```
-
-| Argument / flag | Description |
-|------|-------------|
-| `[name]` | print this skill's `SKILL.md` |
-| `--ref <path>` | print one of the skill's reference files instead |
-| `--json` | print the skill as JSON |
-
-The CLI carries `autumn-setup`, `autumn-catalog`, `autumn-integrate` and `autumn-concepts`. `push` and `pull` tell you when the copy next to your config is older than the CLI's.
 
 ### `atmn skills install`
 
-Writes the skills next to your config.
+Write the skills next to your config so your coding agent can use them. `atmn init` does this for you.
 
 | Flag | Description |
 |------|-------------|
-| `--dir <dir>` | write here instead of `<config folder>/skills` |
-| `--link` | run `npx skills add <dir> --all` afterwards |
+| `--dir <dir>` | Install to a different folder |
+| `--link` | Run `npx skills add` afterwards |
 
 ### `atmn skills update`
 
-Rewrites installed skills that are older than the CLI's.
+Update installed skills to the version bundled with this CLI.
 
-| Flag | Description |
-|------|-------------|
-| `--dir <dir>` | the install to update (default `<config folder>/skills`) |
+## Sandboxes
 
-## `atmn sandbox`
-
-Manages isolated sandboxes. These subcommands always use your main `AUTUMN_SECRET_KEY`, even when a sandbox is pinned.
-
-### `atmn sandbox list`
-
-Shows your sandboxes, newest first. `--json` prints the raw response.
-
-### `atmn sandbox use`
+Sandboxes are isolated copies of your organization, each with their own plans, customers and API key.
 
 ```bash
-atmn sandbox use [query] [options]
-```
-
-| Argument / flag | Description |
-|------|-------------|
-| `[query]` | the sandbox's name or id |
-| `--clear` | drop the pin so commands target the main sandbox |
-| `--json` | print the result as JSON |
-
-Pins `AUTUMN_SANDBOX_ID` in your `.env`. Every command targets that sandbox until you clear it. If you have no key for that sandbox yet, `use` creates one and saves it as `AUTUMN_SANDBOX_<ID>_SECRET_KEY`.
-
-### `atmn sandbox create`
-
-```bash
-atmn sandbox create <name> [options]
-```
-
-| Argument / flag | Description |
-|------|-------------|
-| `<name>` | name for the sandbox |
-| `--color <color>` | colour the dashboard labels it with |
-| `--icon <icon>` | icon the dashboard labels it with |
-| `--use` | pin it so later commands target it |
-| `--json` | print the raw response |
-
-The key is shown once, in the create response. If the CLI cannot write it to `.env`, it prints the key so you can save it yourself.
-
-### `atmn sandbox delete`
-
-```bash
-atmn sandbox delete <id> [-y]
-```
-
-Deletes the sandbox, its catalog and its customers. Without `--yes` it names the sandbox and stops. It also removes that sandbox's key and pin from your `.env`.
-
-## Environment variables
-
-Read from `.env.local`, then `.env`, in the config folder, the repo root and the current directory. Anything already set in your shell wins.
-
-| Variable | Used for |
-|----------|----------|
-| `AUTUMN_SECRET_KEY` | the sandbox key. The default for every command |
-| `AUTUMN_PROD_SECRET_KEY` | the production key, used with `-p` |
-| `AUTUMN_SANDBOX_<ID>_SECRET_KEY` | a named sandbox's key, used when that sandbox is pinned or passed to `--sandbox` |
-| `AUTUMN_SANDBOX_ID` | the pinned sandbox, written by `atmn sandbox use` |
-| `AUTUMN_BASE_URL` | send to this URL instead of Autumn's API |
-| `AUTUMN_CLIENT_ID` | the OAuth client id the CLI identifies as |
-
-If the key a command needs is missing, it stops before sending anything and tells you what to run:
-
-```
-AUTUMN_SECRET_KEY is not set. Run atmn login, or atmn login --keyless if you don't have an account.
-AUTUMN_PROD_SECRET_KEY is not set. Run atmn login.
-AUTUMN_SANDBOX_<ID>_SECRET_KEY is not set. Run atmn sandbox create, or add its key to your .env.
+atmn sandbox list                  # Show your sandboxes
+atmn sandbox create <name>         # Create one and save its key
+atmn sandbox use <name>            # Target it in later commands
+atmn sandbox use --clear           # Go back to your main sandbox
+atmn sandbox delete <id> --yes     # Delete it
 ```
 
 ## Headless mode
 
-With `--headless`, or whenever there is no terminal (CI, coding agents), commands never prompt. Instead they print the flag they need and stop. Run again with that flag to continue. `push` and `pull` never prompt anyway; `--yes` is their only gate.
+The CLI automatically detects non-TTY environments and switches to headless mode with plain text output and no interactive prompts. You can also force it with `--headless`.
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Error (network, auth, validation, or confirmation required) |

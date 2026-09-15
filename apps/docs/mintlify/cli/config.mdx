@@ -1,453 +1,435 @@
 ---
 title: "Configuration reference"
-description: "Define features, plans, versions and rewards in autumn.config.ts"
+description: "Define features, plans, and pricing in autumn.config.ts"
 ---
 
-`autumn.config.ts` is your catalog as code. It imports builders from the `atmn` package and passes your collections to `atmn()`. `atmn push` previews the file against the server and `--yes` applies it. `atmn pull` writes the server's catalog back into the file.
-
-Field names are camelCase (`featureId`, `planId`, `billingMethod`, `versionSlug`). Amounts are in dollars, not cents: $20 is `20`.
-
-## The root config
+Your `autumn.config.ts` file is the source of truth for your pricing. It exports features and plans using helper functions from the `atmn` package.
 
 ```ts autumn.config.ts
-import { atmn } from "atmn";
-import { features } from "./features";
-import { plans } from "./plans";
-import { rewards, referralPrograms } from "./rewards";
+import { atmn, feature, plan } from "atmn";
 
-export default atmn({
-	features,
-	plans,
-	rewards,
-	referralPrograms,
-	settings: {},
-});
+export const messages = feature({ ... });
+export const pro = plan({ ... });
+
+export default atmn({ features: [messages], plans: [pro] });
 ```
 
-Each collection you pass is the full list. A feature, plan, version or variant missing from it is deleted on push, or archived if customers are on it. `[]` means "I manage this and it's empty". A collection you leave out of `atmn()` is left alone.
-
-`settings` works differently: only the fields you set are written. Fields you leave out keep their current value.
-
-`atmn init` splits the config across four files (`autumn.config.ts`, `features.ts`, `plans.ts`, `rewards.ts`), but it is normal TypeScript. A row can live in any file under any export name. The only thing `pull` cannot edit is a row that isn't a plain object literal (a spread, a helper call, a `.map()`). It tells you which rows those are and writes nothing.
-
-## Builders
-
-| Builder | Builds |
-|---------|--------|
-| `feature({...})` | an entry in `features` |
-| `plan({...})` | one version of a plan, in `plans` |
-| `variant({...})` | an entry in a plan's `variants` |
-| `license({...})` | an entry in a plan's `licenses` |
-| `coupon({...})` | a discount in `rewards` |
-| `featureGrant({...})` | a feature grant in `rewards` |
-| `referralProgram({...})` | an entry in `referralPrograms` |
-
-Plan items are plain objects inside `items`. There is no `item()` builder. To reference a feature from a plan, use `featureId`.
+Preview changes with `atmn push`, apply them with `atmn push --yes`, or pull existing config with `atmn pull`.
 
 ## Features
 
+Features define what can be gated, metered, or billed in your app.
+
+### `feature(config)`
+
 <ParamField body="featureId" type="string" required>
-  The ID used in `check`, `track` and plan items.
+  Unique identifier used in API calls (`check`, `track`, etc).
 </ParamField>
 
 <ParamField body="name" type="string" required>
-  Display name.
+  Display name shown in the dashboard and billing UI.
 </ParamField>
 
 <ParamField body="type" type="enum" required>
-  `"boolean"` | `"metered"` | `"credit_system"` | `"ai_credit_system"`
+  `"boolean"` | `"metered"` | `"credit_system"`
 </ParamField>
 
 <ParamField body="consumable" type="boolean">
-  For `metered` features. `true` for things that get used up and reset (messages, API calls). `false` for things a customer holds (seats, workspaces).
+  **Required for `metered` features.**
+  - `true`: usage is consumed (messages, API calls, credits)
+  - `false`: usage is ongoing (seats, storage, workspaces)
 </ParamField>
 
 <ParamField body="creditSchema" type="array">
-  For `credit_system` features. Maps metered feature IDs to credit costs. Flat: `{ meteredFeatureId, creditCost, billingUnits? }`. Graduated: `{ meteredFeatureId, tierBehavior: "graduated", tiers: [{ to: number | "inf", creditCost }] }`.
+  **Required for `credit_system` features.** The rate card: one entry per metered feature that draws from the credit balance.
+
+  Flat rate: `{ meteredFeatureId: string, creditCost: number, billingUnits?: number }`: `creditCost` credits per `billingUnits` units (default 1).
+
+  Graduated rate: `{ meteredFeatureId, billingUnits?, tierBehavior: "graduated", tiers: [{ to: number | "inf", creditCost: number }] }`: the credit cost steps as usage in the cycle grows. The last tier must be `"inf"`.
+
+  Each entry may also carry `dimensions` and `multipliers` to price by event properties. See [Rate cards and dimensions](/documentation/modelling-pricing/credit-systems#rate-cards-and-dimensions).
 </ParamField>
 
-<ParamField body="modelMarkups / providerMarkups / defaultMarkup" type="object">
-  For `ai_credit_system` features. Markup percentages per model, per provider, and as a default.
-</ParamField>
+### Feature types
 
-<ParamField body="internalId" type="string">
-  The server's stable ID. `push --yes` and `pull` write it into your config. A feature with an `internalId` can have its `featureId` changed and the server treats it as a rename.
-</ParamField>
+**Boolean**: simple on/off flag.
 
-<ParamField body="archived" type="boolean">
-  Archive or unarchive the feature.
-</ParamField>
+```ts
+export const sso = feature({
+  featureId: "sso",
+  name: "SSO Authentication",
+  type: "boolean",
+});
+```
+
+**Metered, consumable**: used up and replenished (messages, API calls).
+
+```ts
+export const messages = feature({
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
+  consumable: true,
+});
+```
+
+**Metered, non-consumable**: ongoing usage (seats, storage).
+
+```ts
+export const seats = feature({
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
+  consumable: false,
+});
+```
+
+**Credit system**: maps multiple metered features to credit costs.
+
+```ts
+export const basicModel = feature({
+  featureId: "basic_model",
+  name: "Basic Model",
+  type: "metered",
+  consumable: true,
+});
+
+export const premiumModel = feature({
+  featureId: "premium_model",
+  name: "Premium Model",
+  type: "metered",
+  consumable: true,
+});
+
+export const credits = feature({
+  featureId: "credits",
+  name: "AI Credits",
+  type: "credit_system",
+  creditSchema: [
+    { meteredFeatureId: basicModel.featureId, creditCost: 1 },
+    { meteredFeatureId: premiumModel.featureId, creditCost: 5 },
+  ],
+});
+```
+
+<Tip>
+If you set the price per credit to 1 cent, credits become monetary credits (eg, 5 credits = $0.05 per premium message).
+</Tip>
 
 ## Plans
 
-Every version of a plan is its own row in `plans`. Rows of the same plan share a `planId`. Each row names its version with `versionSlug`, and exactly one row is `active: true`.
+Plans combine features with pricing to create your subscription tiers, add-ons, and top-ups.
+
+### `plan(config)`
 
 <ParamField body="planId" type="string" required>
-  The plan's ID. Shared by every version of the plan.
+  Unique identifier used in checkout and subscription APIs.
 </ParamField>
 
 <ParamField body="versionSlug" type="string" required>
-  The name of this version, like `"v1"`. Required on every row, including a plan's only version.
+  Name of this version of the plan, eg `"v1"`. See [versions](#versions).
 </ParamField>
 
 <ParamField body="active" type="boolean" required>
-  Whether this is the version new customers get. Exactly one row per `planId` can be `true`.
-</ParamField>
-
-<ParamField body="internalId" type="string">
-  The server's stable ID, written by `push --yes` and `pull`. It lets you rename `planId` or `versionSlug` without the server treating it as a delete and a create.
+  Whether this is the version new customers get. Exactly one version of each plan is active.
 </ParamField>
 
 <ParamField body="name" type="string" required>
-  Display name.
-</ParamField>
-
-<ParamField body="group" type="string">
-  Plans in the same group replace each other when a customer switches.
+  Display name shown in pricing tables and billing.
 </ParamField>
 
 <ParamField body="price" type="object">
-  Base price: `amount`, `interval` (`"one_off"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`), and optionally `intervalCount` and `additionalCurrencies`. `null` removes it.
+  Base subscription price:
+  - `amount: number`: price amount (eg, `20` for $20)
+  - `interval: string`: `"month"` | `"quarter"` | `"semi_annual"` | `"year"` | `"one_off"`
+  - `additionalCurrencies?: array`: amounts in [other currencies](/documentation/concepts/plans#multiple-currencies), eg `[{ currency: "eur", amount: 18 }]`
 </ParamField>
 
 <ParamField body="items" type="array">
-  What the plan includes and how extra usage is charged. See [plan items](#plan-items).
-</ParamField>
-
-<ParamField body="variants" type="array">
-  `variant({...})` entries for this version. See [variants](#variants).
-</ParamField>
-
-<ParamField body="licenses" type="array">
-  `license({...})` links to a child plan this plan hands out. See [licenses](#licenses).
-</ParamField>
-
-<ParamField body="freeTrial" type="object">
-  `durationLength`, `durationType` (`"day"` | `"month"` | `"year"`), `cardRequired`, and `onEnd` (`"bill"` charges the customer when the trial ends, `"revert"` puts them back on their previous plan). `null` removes the trial.
+  Array of plan items defining what's included. See [plan items](#plan-items).
 </ParamField>
 
 <ParamField body="autoEnable" type="boolean" default="false">
-  Attach this plan to new customers automatically. Usually the free plan.
+  Automatically assign this plan to new customers. Typically used for free plans.
 </ParamField>
 
 <ParamField body="addOn" type="boolean" default="false">
-  Customers can buy this plan on top of another plan instead of replacing it.
+  Allow this plan to be purchased alongside other plans (instead of replacing them).
 </ParamField>
 
-<ParamField body="billingControls" type="object">
-  Defaults for customers on this plan: `autoTopups`, `spendLimits`, `usageLimits`, `usageAlerts` and `overageAllowed`. Each is an array keyed by `featureId`.
+<ParamField body="freeTrial" type="object">
+  Free trial before billing starts:
+  - `durationLength: number`: eg, `14`
+  - `durationType: string`: `"day"` | `"month"` | `"year"`
+  - `cardRequired: boolean`: whether a card is needed to start the trial
 </ParamField>
 
-<ParamField body="description / archived / metadata / config" type="object">
-  Optional description, archive state, metadata shared across versions, and `config.ignorePastDue`.
+<ParamField body="group" type="string">
+  Group related plans together. Plans in the same group replace each other on upgrade/downgrade.
 </ParamField>
 
-### Versioning
-
-There are no versioning flags in the config. The CLI works out what you mean from the rows.
-
-| You want | Row edit |
-|---|---|
-| Change a version in place | edit that row. Keep its `versionSlug` and `internalId` |
-| Create a new version and keep existing customers on the old one | add a row with the same `planId`, a new `versionSlug`, `active: true` and no `internalId`. Set the old row to `active: false` |
-| A draft nobody can buy yet | add the row with `active: false` next to the active one |
-| Rename a plan | change `planId` on every row of the plan |
-| Remove a version | delete its row. This is refused while customers are on it |
-
-The server also numbers versions in the order they were created, and the preview shows that number (`pro@v2`). The config only uses slugs, so don't copy a preview number into the config as a slug.
-
-## Plan items
-
-<ParamField body="featureId" type="string" required>
-  The feature this item configures.
+<ParamField body="variants" type="array">
+  `variant()` entries for this plan, eg an annual version. See [plan variants](/documentation/modelling-pricing/plan-variants).
 </ParamField>
 
-<ParamField body="included" type="number">
-  Free units included. For consumable features the balance resets to this each interval.
+<ParamField body="licenses" type="array">
+  `license()` entries for plans this plan hands out per seat. See [entity plans](/documentation/modelling-pricing/entity-plans).
 </ParamField>
 
-<ParamField body="unlimited" type="boolean">
-  Unlimited access to the feature.
-</ParamField>
+### Versions
 
-<ParamField body="pooled" type="boolean" default="false">
-  Entity-level grants go into one shared customer balance.
-</ParamField>
+Each version of a plan is its own `plan()` entry with the same `planId` and a different `versionSlug`. One version is `active: true`; that's the one new customers get. Customers on an older version stay on it.
 
-<ParamField body="reset" type="object">
-  For consumable features: `interval` (`"one_off"` | `"minute"` | `"hour"` | `"day"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`) and `intervalCount`. Leave it out for non-consumable features like seats.
-</ParamField>
-
-<ParamField body="price" type="object">
-  How usage beyond `included` is charged. Leave it out for free items.
-
-  - `amount`: price per `billingUnits`. Use this or `tiers`, not both.
-  - `tiers`: `[{ to: number | "inf", amount?, flatAmount? }]`. The last tier must be `"inf"`.
-  - `tierBehavior`: `"graduated"` | `"volume"`.
-  - `interval` (required): billing interval. Should match `reset.interval` for consumable features.
-  - `intervalCount`: intervals per billing cycle. Default `1`.
-  - `billingUnits`: units per price increment. Default `1`. Usage is rounded up.
-  - `billingMethod` (required): `"prepaid"` for quantities bought upfront (seats), `"usage_based"` for pay as you go.
-  - `maxPurchase`: the most units a customer can buy beyond `included`.
-  - `additionalCurrencies`: amounts per currency, on the price or on each tier.
-</ParamField>
-
-<ParamField body="rollover" type="object">
-  Carry unused units into the next period: `max` or `maxPercentage` (one or the other), `expiryDurationType` (`"month"` | `"forever"`) and `expiryDurationLength`.
-</ParamField>
-
-<ParamField body="proration" type="object">
-  For prepaid items. How to bill quantity changes mid-cycle: `onIncrease` (`"bill_immediately"` | `"prorate_immediately"` | `"prorate_next_cycle"` | `"bill_next_cycle"`) and `onDecrease` (`"prorate"` | `"prorate_immediately"` | `"prorate_next_cycle"` | `"none"` | `"no_prorations"`).
-</ParamField>
-
-<ParamField body="thresholdBilling / featureOverride" type="object">
-  Bill overage once it reaches a threshold, and override the feature's credit schema or markups for customers on this plan.
-</ParamField>
-
-## Variants
-
-A variant is an entry in its base plan's `variants` array. It stores only what differs from that version of the base.
+To change a plan's price for new customers only, add a new version and set the old one to `active: false`:
 
 ```ts
-variant({
-	variantPlanId: "pro_annual",
-	versionSlug: "v2",
-	name: "Pro Annual",
-	customize: { price: { amount: 200, interval: "year" } },
-});
-```
-
-- `variantPlanId` and `versionSlug` name the variant version. `internalId` makes renames safe.
-- `customize` can override `price` or `freeTrial`, replace the item list with `items`, or patch it with `addItems` and `removeItems`.
-- When you create a new version of the base, list the variants again under the new row, with the new `versionSlug` and no `internalId`. A variant version can only belong to one base version.
-- Set `archived: true` to retire a variant. A variant missing from the array is deleted, which is refused while customers are on it.
-
-## Licenses
-
-A license is an entry in the parent plan's `licenses` array. It points at one version of the child plan.
-
-```ts
-license({
-	licensePlanId: "support_seat",
-	versionSlug: "v1",
-	included: 2,
-	prepaidOnly: true,
-});
-```
-
-`versionSlug` is required. Creating a new version of the child plan does not move any parent. To move a parent onto the new version, change the slug on its license. `customize` can override the child's `price` or patch its items with `addItems` and `removeItems`.
-
-## Rewards and referral programs
-
-`coupon({...})` takes `id`, `name`, `type` (`"percentage_discount"` | `"fixed_discount"`), `value`, `duration` (`{ type: "one_off" | "months" | "forever", length }`), `planIds` and `promoCodes`.
-
-`featureGrant({...})` takes `id`, `name`, `grants` (`{ featureId, included, expiry }`) and `promoCodes`.
-
-`referralProgram({...})` takes `id`, `rewardId`, `redeemOn` (`"customer_creation"` | `"checkout"`), `receivedBy` (`"referrer"` | `"all"`), and optionally `maxRedemptions`, `planIds` and `excludeTrial`.
-
-## Settings
-
-`settings` holds org-level flags: `cancelOnPastDue`, `reverseDeductionOrder`, `blockOverdueEntitlements`, `invoiceMemos`, `disableOverageBilling`, `paydownOverages`, `automaticTax` and `multiCurrency`. They are applied before the catalog, because a flag like `multiCurrency` changes what the catalog accepts.
-
-## Full example
-
-A free plan, a paid plan with a trial and an annual variant, a licensed seat plan, an older version kept for existing customers, a top-up add-on, and rewards, all in one file:
-
-```ts autumn.config.ts
-import {
-	atmn,
-	coupon,
-	feature,
-	featureGrant,
-	license,
-	plan,
-	referralProgram,
-	variant,
-} from "atmn";
-
-export const messages = feature({
-	featureId: "messages",
-	name: "Messages",
-	type: "metered",
-	consumable: true,
-});
-
-export const seats = feature({
-	featureId: "seats",
-	name: "Seats",
-	type: "metered",
-	consumable: false,
-});
-
-export const sso = feature({
-	featureId: "sso",
-	name: "SSO",
-	type: "boolean",
-});
-
-export const free = plan({
-	planId: "free",
-	versionSlug: "v1",
-	active: true,
-	name: "Free",
-	group: "main",
-	autoEnable: true,
-	items: [
-		{
-			featureId: "messages",
-			included: 100,
-			reset: { interval: "month" },
-		},
-	],
-});
-
-export const proAnnual = variant({
-	variantPlanId: "pro_annual",
-	versionSlug: "v2",
-	name: "Pro Annual",
-	customize: {
-		price: { amount: 200, interval: "year" },
-	},
-});
-
-export const pro = plan({
-	planId: "pro",
-	versionSlug: "v2",
-	active: true,
-	name: "Pro",
-	group: "main",
-	price: { amount: 20, interval: "month" },
-	freeTrial: {
-		durationLength: 14,
-		durationType: "day",
-		cardRequired: true,
-	},
-	items: [
-		{
-			featureId: "messages",
-			included: 10000,
-			reset: { interval: "month" },
-			rollover: {
-				max: 5000,
-				expiryDurationType: "month",
-				expiryDurationLength: 1,
-			},
-			price: {
-				interval: "month",
-				billingMethod: "usage_based",
-				billingUnits: 1000,
-				tierBehavior: "graduated",
-				tiers: [
-					{ to: 50000, amount: 0.9 },
-					{ to: "inf", amount: 0.5 },
-				],
-			},
-		},
-		{
-			featureId: "seats",
-			included: 3,
-			pooled: true,
-			price: {
-				amount: 10,
-				interval: "month",
-				billingMethod: "prepaid",
-			},
-		},
-		{ featureId: "sso" },
-	],
-	billingControls: {
-		spendLimits: [{ featureId: "messages", enabled: true, overageLimit: 500 }],
-	},
-	variants: [proAnnual],
-	licenses: [
-		license({
-			licensePlanId: "support_seat",
-			versionSlug: "v1",
-			included: 2,
-			prepaidOnly: true,
-		}),
-	],
+export const proV2 = plan({
+  planId: "pro",
+  versionSlug: "v2",
+  active: true,
+  name: "Pro",
+  price: { amount: 25, interval: "month" },
+  items: [ ... ],
 });
 
 export const proV1 = plan({
-	internalId: "prod_3JMkgK39u0jQzXYVLv4NR5OkS7n",
-	planId: "pro",
-	versionSlug: "v1",
-	active: false,
-	name: "Pro",
-	group: "main",
-	price: { amount: 15, interval: "month" },
-	items: [
-		{
-			featureId: "messages",
-			included: 5000,
-			reset: { interval: "month" },
-		},
-	],
+  planId: "pro",
+  versionSlug: "v1",
+  active: false,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [ ... ],
+});
+```
+
+To change a plan for everyone on it, edit its existing entry instead.
+
+<Note>
+After a push, the CLI adds an `internalId` to each plan and feature in your config. Leave it there. It's how the CLI knows to rename a plan instead of deleting and recreating it.
+</Note>
+
+## Plan items
+
+Plan items define what each plan includes: usage limits, pricing, and billing behavior. They are plain objects in the plan's `items` array.
+
+<ParamField body="featureId" type="string" required>
+  The `featureId` of the feature to include.
+</ParamField>
+
+<ParamField body="included" type="number">
+  Amount included for free. Omit for boolean features.
+</ParamField>
+
+<ParamField body="unlimited" type="boolean">
+  Grant unlimited usage of this feature.
+</ParamField>
+
+<ParamField body="reset" type="object">
+  How often the included amount resets:
+  - `interval: string`: `"hour"` | `"day"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`
+  - `intervalCount: number`: defaults to `1`
+</ParamField>
+
+<ParamField body="price" type="object">
+  Pricing for usage beyond the included amount. See [pricing patterns](#pricing-patterns) below.
+</ParamField>
+
+<ParamField body="proration" type="object">
+  How to handle mid-cycle quantity changes on prepaid items:
+  - `onIncrease:` `"prorate_immediately"` | `"bill_immediately"` | `"prorate_next_cycle"` | `"bill_next_cycle"`
+  - `onDecrease:` `"prorate_immediately"` | `"prorate_next_cycle"` | `"no_prorations"`
+</ParamField>
+
+<ParamField body="rollover" type="object">
+  Carry unused balance forward:
+  - `max: number`: maximum rollover amount
+  - `expiryDurationType:` `"month"` | `"forever"`
+  - `expiryDurationLength: number`: ignored if type is `"forever"`
+</ParamField>
+
+### Pricing patterns
+
+The `price` object on a plan item supports different billing models:
+
+**Usage-based**: charge based on actual usage.
+
+```ts
+{
+  featureId: messages.featureId,
+  included: 1000,
+  reset: { interval: "month" },
+  price: {
+    amount: 1,
+    billingUnits: 1000,
+    interval: "month",
+    billingMethod: "usage_based",
+  },
+}
+```
+
+**Prepaid**: customer buys a fixed quantity upfront.
+
+```ts
+{
+  featureId: credits.featureId,
+  price: {
+    amount: 5,
+    billingUnits: 100,
+    interval: "month",
+    billingMethod: "prepaid",
+  },
+}
+```
+
+**Tiered**: price changes based on usage volume.
+
+```ts
+{
+  featureId: apiCalls.featureId,
+  reset: { interval: "month" },
+  price: {
+    tiers: [
+      { to: 1000, amount: 0.01 },
+      { to: 10000, amount: 0.008 },
+      { to: "inf", amount: 0.005 },
+    ],
+    interval: "month",
+    billingMethod: "usage_based",
+  },
+}
+```
+
+#### Price fields
+
+<ParamField body="amount" type="number">
+  Price per `billingUnits`. Mutually exclusive with `tiers`.
+</ParamField>
+
+<ParamField body="tiers" type="array">
+  Tiered pricing. Each entry: `{ to: number | "inf", amount: number }`. Mutually exclusive with `amount`.
+</ParamField>
+
+<ParamField body="additionalCurrencies" type="array">
+  Amounts in [other currencies](/documentation/concepts/plans#multiple-currencies). For flat prices: `[{ currency: "eur", amount: 0.09 }]` at the price level. For tiered prices, set per tier: `{ to: 1000, amount: 0.01, additionalCurrencies: [{ currency: "eur", amount: 0.009 }] }`.
+</ParamField>
+
+<ParamField body="billingMethod" type="enum" required>
+  `"usage_based"` | `"prepaid"`
+</ParamField>
+
+<ParamField body="interval" type="enum" required>
+  `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"` | `"one_off"`. Use `"one_off"` for one-time charges.
+</ParamField>
+
+<ParamField body="billingUnits" type="number" default="1">
+  Units per price. Eg, $5 per 100 credits = `amount: 5, billingUnits: 100`.
+</ParamField>
+
+<ParamField body="maxPurchase" type="number">
+  Maximum quantity that can be purchased.
+</ParamField>
+
+## Full example
+
+A complete config with a free plan, a paid plan with a trial, and a credits top-up add-on:
+
+```ts autumn.config.ts
+import { atmn, feature, plan } from "atmn";
+
+// Features
+export const messages = feature({
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
+  consumable: true,
 });
 
-export const supportSeat = plan({
-	planId: "support_seat",
-	versionSlug: "v1",
-	active: true,
-	name: "Support Seat",
-	items: [{ featureId: "sso" }],
+export const seats = feature({
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
+  consumable: false,
+});
+
+export const sso = feature({
+  featureId: "sso",
+  name: "SSO",
+  type: "boolean",
+});
+
+// Plans
+export const free = plan({
+  planId: "free",
+  versionSlug: "v1",
+  active: true,
+  name: "Free",
+  autoEnable: true,
+  items: [
+    {
+      featureId: messages.featureId,
+      included: 100,
+      reset: { interval: "month" },
+    },
+  ],
+});
+
+export const pro = plan({
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  freeTrial: {
+    durationLength: 14,
+    durationType: "day",
+    cardRequired: true,
+  },
+  items: [
+    {
+      featureId: messages.featureId,
+      included: 10000,
+      reset: { interval: "month" },
+      price: {
+        amount: 1,
+        billingUnits: 1000,
+        interval: "month",
+        billingMethod: "usage_based",
+      },
+    },
+    {
+      featureId: seats.featureId,
+      included: 3,
+      price: {
+        amount: 10,
+        interval: "month",
+        billingMethod: "prepaid",
+      },
+    },
+    { featureId: sso.featureId },
+  ],
 });
 
 export const messageTopUp = plan({
-	planId: "message_top_up",
-	versionSlug: "v1",
-	active: true,
-	name: "Message Top-Up",
-	addOn: true,
-	items: [
-		{
-			featureId: "messages",
-			price: {
-				amount: 5,
-				interval: "one_off",
-				billingMethod: "prepaid",
-				billingUnits: 1000,
-			},
-		},
-	],
+  planId: "message_top_up",
+  versionSlug: "v1",
+  active: true,
+  name: "Message Top-Up",
+  addOn: true,
+  items: [
+    {
+      featureId: messages.featureId,
+      price: {
+        amount: 5,
+        billingUnits: 1000,
+        interval: "one_off",
+        billingMethod: "prepaid",
+      },
+    },
+  ],
 });
 
 export default atmn({
-	features: [messages, seats, sso],
-	plans: [free, pro, proV1, supportSeat, messageTopUp],
-	rewards: [
-		coupon({
-			id: "launch_50",
-			name: "Launch 50",
-			type: "percentage_discount",
-			value: 50,
-			duration: { type: "months", length: 3 },
-			planIds: ["pro"],
-			promoCodes: [{ code: "LAUNCH50" }],
-		}),
-		featureGrant({
-			id: "bonus_messages",
-			name: "Bonus Messages",
-			grants: [
-				{
-					featureId: "messages",
-					included: 1000,
-					expiry: { type: "month", length: 1 },
-				},
-			],
-			promoCodes: [{ code: "BONUS", maxUses: null }],
-		}),
-	],
-	referralPrograms: [
-		referralProgram({
-			id: "refer_a_friend",
-			rewardId: "bonus_messages",
-			redeemOn: "checkout",
-			receivedBy: "all",
-			planIds: ["pro"],
-		}),
-	],
-	settings: {},
+  features: [messages, seats, sso],
+  plans: [free, pro, messageTopUp],
 });
 ```
