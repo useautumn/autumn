@@ -247,7 +247,10 @@ const seed = async () => {
 	console.log(
 		chalk.green("\nFiring refills (tracking below each threshold)...\n"),
 	);
+	const remainingBefore: Record<string, number | undefined> = {};
 	for (const { customerId } of scenarios) {
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		remainingBefore[customerId] = customer.balances[CREDITS]?.remaining;
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: CREDITS,
@@ -256,14 +259,14 @@ const seed = async () => {
 	}
 	await new Promise((resolve) => setTimeout(resolve, REFILL_WAIT_MS));
 
-	for (const { customerId, threshold, quantity } of scenarios) {
+	for (const { customerId, quantity } of scenarios) {
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		const invoices = (await autumnV1.customers.get<ApiCustomerV3>(customerId))
 			.invoices;
 		const latest = invoices?.[0];
 		console.log(
 			`  ${chalk.cyan(customerId.padEnd(24))} remaining ${String(customer.balances[CREDITS]?.remaining).padStart(4)}` +
-				`  (was ${threshold + 2 - FIRE_TRACK_VALUE} + refill ${quantity})` +
+				`  (${remainingBefore[customerId]} - ${FIRE_TRACK_VALUE} tracked + refill ${quantity})` +
 				`  latest invoice $${latest?.total} ${latest?.status}  invoices ${invoices?.length}`,
 		);
 	}
