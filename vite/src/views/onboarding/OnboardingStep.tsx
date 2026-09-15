@@ -88,13 +88,13 @@ export function OnboardingStep({
 		: { ...PANEL_TRANSITION, opacity: FADE_TRANSITION };
 
 	return (
-		<div className={cn(isExpanded && "bg-muted dark:bg-card")}>
+		<div className={cn(isExpanded && "bg-interactive-secondary-hover")}>
 			<button
 				type="button"
 				onClick={onToggle}
 				className={cn(
 					"flex h-12 w-full items-center gap-2.5 px-4 text-left",
-					!isExpanded && "hover:bg-muted/50 dark:hover:bg-card/50",
+					!isExpanded && "hover:bg-interactive-secondary-hover",
 				)}
 			>
 				<StepMarker index={index} isComplete={isComplete} />
