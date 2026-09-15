@@ -1,6 +1,20 @@
 import { autumnStripeRequestOptions } from "@server/external/stripe/common/autumnStripeIdempotency";
-import { stripeSchedulePhaseItemToUpdateParam } from "@server/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
+import {
+	stripeSchedulePhaseItemToUpdateParam,
+	stripeSchedulePhaseToUpdateParam,
+} from "@server/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import type Stripe from "stripe";
+
+/** The previous schedule's phases from its current one onward; completed phases cannot be replayed. */
+const previousPhasesStillAhead = (
+	previousSchedule: Stripe.SubscriptionSchedule,
+): Stripe.SubscriptionSchedule.Phase[] => {
+	const currentPhaseStart = previousSchedule.current_phase?.start_date;
+	const currentIndex = previousSchedule.phases.findIndex(
+		(phase) => phase.start_date === currentPhaseStart,
+	);
+	return previousSchedule.phases.slice(Math.max(currentIndex, 0));
+};
 
 /**
  * A `from_subscription` schedule whose phase update was rejected is a bare,
@@ -19,25 +33,21 @@ export const discardFailedScheduleRecreate = async ({
 	autumnMetadata: Stripe.MetadataParam;
 }): Promise<void> => {
 	const currentPhaseStart = bareSchedule.current_phase?.start_date;
-	const [previousCurrentPhase, ...previousFuturePhases] =
-		previousSchedule?.phases ?? [];
+	const [previousCurrentPhase, ...previousFuturePhases] = previousSchedule
+		? previousPhasesStillAhead(previousSchedule)
+		: [];
 
 	if (previousSchedule && previousCurrentPhase && currentPhaseStart) {
 		// Stripe rejects active phase item edits, so the first phase must mirror it.
 		const phases: Stripe.SubscriptionScheduleUpdateParams.Phase[] = [
 			{
+				...stripeSchedulePhaseToUpdateParam(previousCurrentPhase),
 				start_date: currentPhaseStart,
-				end_date: previousCurrentPhase.end_date ?? undefined,
 				items: bareSchedule.phases[0]?.items.map(
 					stripeSchedulePhaseItemToUpdateParam,
 				),
 			},
-			...previousFuturePhases.map((phase) => ({
-				start_date: phase.start_date,
-				end_date: phase.end_date ?? undefined,
-				proration_behavior: phase.proration_behavior,
-				items: phase.items.map(stripeSchedulePhaseItemToUpdateParam),
-			})),
+			...previousFuturePhases.map(stripeSchedulePhaseToUpdateParam),
 		];
 
 		try {

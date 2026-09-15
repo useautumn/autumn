@@ -25,8 +25,11 @@ await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 									{
 										price: { id: "price_current_inline" },
 										quantity: 1,
+										discounts: [],
 									},
 								],
+								discounts: [],
+								add_invoice_items: [],
 							},
 						],
 					};
@@ -78,21 +81,33 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 		mockState.failingUpdateCount = 0;
 	});
 
+	const stripePhase = (
+		phase: Omit<Partial<Stripe.SubscriptionSchedule.Phase>, "items"> & {
+			items: { price: string; quantity?: number }[];
+		},
+	) =>
+		({
+			discounts: [],
+			add_invoice_items: [],
+			...phase,
+			items: phase.items.map((item) => ({ ...item, discounts: [] })),
+		}) as unknown as Stripe.SubscriptionSchedule.Phase;
+
 	const previousSchedule = {
 		id: "sched_previous",
 		subscription: "sub_123",
 		end_behavior: "release",
 		phases: [
-			{
+			stripePhase({
 				start_date: 900,
 				end_date: 2000,
 				items: [{ price: "price_pro", quantity: 1 }],
-			},
-			{
+			}),
+			stripePhase({
 				start_date: 2000,
 				end_date: 3000,
 				items: [{ price: "price_metered" }],
-			},
+			}),
 		],
 	} as unknown as Stripe.SubscriptionSchedule;
 
@@ -135,6 +150,41 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 			start_date: 2000,
 			end_date: 3000,
 			items: [{ price: "price_metered" }],
+		});
+	});
+
+	test("restores from the previous schedule's current phase, not its first", async () => {
+		mockState.failingUpdateCount = 1;
+		const advancedSchedule = {
+			...previousSchedule,
+			current_phase: { start_date: 2000, end_date: 3000 },
+			phases: [
+				...previousSchedule.phases,
+				stripePhase({ start_date: 3000, items: [{ price: "price_last" }] }),
+			],
+		} as unknown as Stripe.SubscriptionSchedule;
+
+		await expect(
+			executeStripeSubscriptionScheduleAction({
+				ctx,
+				billingContext: {
+					stripeSubscriptionSchedule: advancedSchedule,
+				} as unknown as BillingContext,
+				subscriptionScheduleAction: updateAction,
+			}),
+		).rejects.toThrow("already ended");
+
+		const restore = mockState.updateCalls[1] as {
+			params: Stripe.SubscriptionScheduleUpdateParams;
+		};
+		expect(restore.params.phases).toHaveLength(2);
+		expect(restore.params.phases?.[0]).toMatchObject({
+			start_date: 1000,
+			end_date: 3000,
+		});
+		expect(restore.params.phases?.[1]).toMatchObject({
+			start_date: 3000,
+			items: [{ price: "price_last" }],
 		});
 	});
 
