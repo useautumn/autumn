@@ -6,8 +6,9 @@ cd "$(dirname "$0")/.."
 
 # Nothing here may assume the Cloud computer install script provided anything:
 # it is org-level UI state and emptying it silently removes bun and docker.
-. "$(dirname "$0")/ensureBun.sh"
+. "$(dirname "$0")/ensureTooling.sh"
 ensure_bun_installed || exit 1
+ensure_neonctl_installed || exit 1
 
 . "$(dirname "$0")/startDocker.sh"
 start_docker_daemon || exit 1

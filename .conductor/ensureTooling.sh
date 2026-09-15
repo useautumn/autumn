@@ -29,3 +29,13 @@ ensure_bun_installed() {
 	command -v bun >/dev/null 2>&1 || { echo "[conductor] bun install failed" >&2; return 1; }
 	echo "[conductor] bun $(bun --version)"
 }
+
+# `bun dw setup` shells out to neonctl to branch the database. It came from the
+# Cloud computer install script, which is org-level UI state.
+ensure_neonctl_installed() {
+	command -v neonctl >/dev/null 2>&1 && return 0
+	echo "[conductor] installing neonctl"
+	npm install -g --silent neonctl >/dev/null 2>&1 || true
+	export PATH="$(npm prefix -g 2>/dev/null)/bin:$PATH"
+	command -v neonctl >/dev/null 2>&1 || { echo "[conductor] neonctl install failed" >&2; return 1; }
+}
