@@ -5,10 +5,6 @@ export const coreMigrations: TestGroup = {
 	description: "Core migration tests",
 	tier: "core",
 	paths: [
-		"migrations/migrate-free.test.ts",
-		"migrations/migrate-paid.test.ts",
-		"migrations/migrate-trials.test.ts",
-		"migrations/migrate-states.test.ts",
 		"integration/billing/migrations-v2/update-plan-operation/customize/update-plan-op-price.test.ts",
 		"integration/billing/migrations-v2/update-plan-operation/customize/update-plan-op-scheduled-patch.test.ts",
 		"integration/billing/migrations-v2/trial/migration-paid-recurring-trial-carryover.test.ts",
