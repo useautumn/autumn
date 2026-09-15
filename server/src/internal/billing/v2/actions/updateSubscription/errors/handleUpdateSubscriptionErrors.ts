@@ -8,20 +8,20 @@ import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/upda
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
-import { computeFieldUpdates } from "../compute/computeFieldUpdates";
-import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
-import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
-import { handleManualTopUpErrors } from "./handleManualTopUpErrors";
+import { computeFieldUpdates } from "../compute/computeFieldUpdates.js";
+import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors.js";
+import { handleCustomPlanErrors } from "./handleCustomPlanErrors.js";
+import { handleManualTopUpErrors } from "./handleManualTopUpErrors.js";
 import {
 	checkTrialRemovalWithOneOffItems,
 	handleOneOffErrors,
-} from "./handleOneOffErrors";
-import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
-import { handleUncancelErrors } from "./handleUncancelErrors";
-import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors";
-import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors";
+} from "./handleOneOffErrors.js";
+import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors.js";
+import { handleUncancelErrors } from "./handleUncancelErrors.js";
+import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors.js";
+import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors.js";
 import { handleUpdateSubscriptionCustomLineItemsErrors } from "./handleUpdateSubscriptionCustomLineItemsErrors.js";
-import { handleUpdateSubscriptionLicenseErrors } from "./handleUpdateSubscriptionLicenseErrors";
+import { handleUpdateSubscriptionLicenseErrors } from "./handleUpdateSubscriptionLicenseErrors.js";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -96,7 +96,7 @@ export const handleUpdateSubscriptionErrors = async ({
 	});
 
 	// 10. Billing cycle anchor errors
-	handleUpdateSubscriptionBillingCycleAnchorErrors({ billingContext, params });
+	handleUpdateSubscriptionBillingCycleAnchorErrors({ billingContext });
 
 	// 11. Update checkout errors
 	handleUpdateCheckoutErrors({ billingContext });

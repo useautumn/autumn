@@ -10,7 +10,7 @@ import chalk from "chalk";
  * Update Subscription — Billing Cycle Anchor Error Tests
  *
  * Validates that billing_cycle_anchor: "now" is rejected for
- * one-off products, active trials, cancel actions, and feature_quantities.
+ * one-off products, active trials, cancel actions, and past timestamps.
  */
 
 test.concurrent(
@@ -109,52 +109,6 @@ test.concurrent(
 				await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 					customer_id: customerId,
 					plan_id: proTrial.id,
-					billing_cycle_anchor: "now",
-				});
-			},
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("update-sub anchor-reset-errors 4: feature_quantities with anchor reset is blocked")}`,
-	async () => {
-		const customerId = "update-sub-anchor-err-qty";
-
-		const prepaidItem = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 10,
-		});
-		const priceItem = items.monthlyPrice({ price: 20 });
-		const pro = products.base({
-			id: "pro",
-			items: [prepaidItem, priceItem],
-		});
-
-		const { autumnV2_2 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [
-				s.attach({
-					productId: pro.id,
-					options: [{ feature_id: "messages", quantity: 300 }],
-				}),
-			],
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage:
-				"billing_cycle_anchor cannot be used together with feature_quantities",
-			func: async () => {
-				await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
-					customer_id: customerId,
-					plan_id: pro.id,
-					feature_quantities: [{ feature_id: "messages", quantity: 500 }],
 					billing_cycle_anchor: "now",
 				});
 			},

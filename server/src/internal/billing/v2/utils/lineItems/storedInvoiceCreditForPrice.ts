@@ -6,13 +6,13 @@ import type {
 	Price,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
-import { chargeRowToRefundLineItem } from "./chargeRowToRefundLineItem";
+import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund.js";
+import { chargeRowToRefundLineItem } from "./chargeRowToRefundLineItem.js";
 import {
 	computeAlreadyRefundedByCharge,
 	computeProratedCredit,
 	splitMultiEntityAmount,
-} from "./storedLineItemUtils";
+} from "./storedLineItemUtils.js";
 
 type StoredInvoiceCreditForPriceResult = {
 	lineItems: LineItem[];
@@ -95,8 +95,11 @@ export const storedInvoiceCreditForPrice = ({
 			billingPeriod: { start: periodStart, end: periodEnd },
 			anchorResetRefund: billingContext.anchorResetRefund,
 		});
-		if (action.type === "skip") continue;
 		consumedChargeRowIds?.add(chargeRow.id);
+		coveredSeats +=
+			(chargeRow.paid_quantity ?? 0) /
+			Math.max(chargeRow.customer_product_ids.length, 1);
+		if (action.type === "skip") continue;
 		const effectiveNow =
 			action.type === "use_snapped_now" ? action.snappedNow : now;
 		const alreadyRefunded = alreadyRefundedByCharge.get(chargeRow.id) ?? 0;
@@ -108,9 +111,6 @@ export const storedInvoiceCreditForPrice = ({
 			now: effectiveNow,
 			alreadyRefunded,
 		});
-		coveredSeats +=
-			(chargeRow.paid_quantity ?? 0) /
-			Math.max(chargeRow.customer_product_ids.length, 1);
 		if (creditAmount === 0) continue;
 
 		lineItems.push(
