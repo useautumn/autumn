@@ -51,6 +51,7 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
 		return {
 			feature_id: ent.feature.id,
 			entity_feature_id: ent.entity_feature_id,
+			pooled: ent.pooled ?? false,
 			entitlement_id: ent.id,
 		};
 	}
