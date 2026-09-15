@@ -4,6 +4,7 @@ import type {
 	Entitlement,
 	FullCusProduct,
 	FullCustomerEntitlement,
+	FullCustomerLicense,
 	FullCustomerPrice,
 	FullProduct,
 	InsertPlanLicenseSpec,
@@ -30,6 +31,8 @@ export type PatchContext = {
 	fullProduct: FullProduct;
 	insertCustomerPrices: FullCustomerPrice[];
 	insertCustomerEntitlements: FullCustomerEntitlement[];
+	/** Pools minted for links the customer had none for. */
+	insertCustomerLicenses?: FullCustomerLicense[];
 	deleteCustomerPrices: FullCustomerPrice[];
 	deleteCustomerEntitlements: FullCustomerEntitlement[];
 	customPrices: Price[];

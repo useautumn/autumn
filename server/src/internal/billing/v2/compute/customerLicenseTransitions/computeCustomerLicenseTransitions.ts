@@ -8,11 +8,18 @@ import { computeProductTransitions } from "@/internal/billing/v2/actions/batchTr
 import { pairCustomerProducts } from "../pairCustomerProducts.js";
 import { applyCustomerLicenseTransitions } from "./applyCustomerLicenseTransitions.js";
 import { customerLicensePairToTransition } from "./customerLicensePairToTransition.js";
+import { isSameRowTransition } from "./isSameRowTransition.js";
 import { pairCustomerLicensesByLicensePlan } from "./pairCustomerLicensesByLicensePlan.js";
 
-/** Drops successors already converged by content; parent version bumps still transition. */
+/** Drops successors already converged by content; parent version bumps still transition.
+ * Same-row patches diff against the pristine outgoing row: the incoming copy is
+ * already converged, so comparing to it would hide every in-place resize. */
 const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
-	const { incomingCustomerLicense, updates } = transition;
+	const { incomingCustomerLicense, outgoingCustomerLicense, updates } =
+		transition;
+	const baseline = isSameRowTransition(transition)
+		? outgoingCustomerLicense
+		: incomingCustomerLicense;
 	const fromProduct = transition.outgoingCustomerLicense.planLicense?.product;
 	const toProduct = transition.incomingCustomerLicense.planLicense?.product;
 	const productTransitions =
@@ -31,9 +38,10 @@ const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
 		!productTransitions?.customerProduct &&
 		!hasEntitlementChanges &&
 		updates.linkId === incomingCustomerLicense.link_id &&
-		updates.granted === incomingCustomerLicense.granted &&
-		updates.remaining === incomingCustomerLicense.remaining &&
-		updates.paidQuantity === incomingCustomerLicense.paid_quantity
+		updates.granted === baseline.granted &&
+		updates.remaining === baseline.remaining &&
+		updates.paidQuantity === baseline.paid_quantity &&
+		incomingCustomerLicense.plan_license_id === baseline.plan_license_id
 	);
 };
 
