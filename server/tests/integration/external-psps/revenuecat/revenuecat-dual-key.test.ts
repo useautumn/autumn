@@ -7,8 +7,9 @@
  * auto-creates an email-`app_user_id` customer with a non-email id.
  *
  * Additive-only: a customer with no `processors.revenuecat` must resolve exactly
- * as today (customer_id fallback), and the getCusProcessors response invariant
- * (presence gated on an ACTIVE RC product, never on the DB column) must hold.
+ * as today (customer_id fallback). getCusProcessors prefers the stored
+ * `processors.revenuecat` row when present; otherwise it falls back to an
+ * ACTIVE RC product with `customer.id`.
  */
 
 import { expect, test } from "bun:test";
@@ -451,14 +452,15 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// TEST 6: getCusProcessors invariant — DB column set but no ACTIVE RC
-// product ⇒ response omits processors.revenuecat.
+// TEST 6: getCusProcessors — stored processors.revenuecat surfaces
+// even with no ACTIVE RC product.
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("rc dual-key: getCusProcessors omits revenuecat when no active RC product (invariant)")}`,
+	`${chalk.yellowBright("rc dual-key: getCusProcessors surfaces stored revenuecat id without active RC product")}`,
 	async () => {
 		const customerId = "rc-invariant-cus";
+		const revenueCatId = "rc-invariant-appuser";
 		const proMonthly = rcProMonthly({ id: "rc-invariant-pro" });
 
 		await setupRevenueCatOrg();
@@ -476,11 +478,13 @@ test.concurrent(
 		// DB column is set, but the customer has no active RC customer_product.
 		await seedProcessorsRevenueCatId({
 			customerId,
-			revenueCatId: "rc-invariant-appuser",
+			revenueCatId,
 		});
 
-		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-		expect(customer.processors?.revenuecat).toBeUndefined();
+		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+			skip_cache: "true",
+		});
+		expect(customer.processors?.revenuecat).toEqual({ id: revenueCatId });
 	},
 );
 
