@@ -166,12 +166,53 @@ test("--curl prints the request with the key's env var in place of the key", asy
 		secretKey: "sk_secret",
 		fields: { customer_id: "it's" },
 	});
-	const curl = renderCurl({ request, secretKeyName: "AUTUMN_PROD_SECRET_KEY" });
+	const curl = renderCurl({
+		request,
+		secretKey: "sk_secret",
+		secretKeyName: "AUTUMN_PROD_SECRET_KEY",
+	});
 	expect(curl).not.toContain("sk_secret");
-	// Double-quoted so a shell expands the variable; single quotes would send it literally.
-	expect(curl).toContain('-H "authorization: Bearer $AUTUMN_PROD_SECRET_KEY"');
+	// Single-quoted on purpose: the output names the variable rather than expanding it.
+	expect(curl).toContain("-H 'authorization: Bearer $AUTUMN_PROD_SECRET_KEY'");
 	expect(curl).toContain("'https://api.useautumn.com/v1/balances.check'");
 	expect(curl).toContain(`-d '{"customer_id":"it'\\''s"}'`);
+});
+
+test("--curl keeps an authorization the caller set with -H", async () => {
+	const request = await buildApiRequest({
+		route: check,
+		baseUrl: "https://api.useautumn.com",
+		secretKey: "sk_secret",
+		headers: ["authorization: Bearer other_token"],
+	});
+	const curl = renderCurl({
+		request,
+		secretKey: "sk_secret",
+		secretKeyName: "AUTUMN_SECRET_KEY",
+	});
+	expect(curl).toContain("Bearer other_token");
+	expect(curl).not.toContain("AUTUMN_SECRET_KEY");
+});
+
+test("a non-finite number is refused rather than sent as null", async () => {
+	await expect(
+		buildApiBody({ route: check, fields: { required_balance: "Infinity" } }),
+	).rejects.toThrow("takes a number");
+});
+
+test("a non-JSON error body still surfaces the status and route", async () => {
+	const fetch = (async () =>
+		new Response("<html>502 Bad Gateway</html>", {
+			status: 502,
+		})) as unknown as typeof globalThis.fetch;
+	await expect(
+		callApi({
+			route: check,
+			baseUrl: "http://localhost:8080",
+			secretKey: "sk_test",
+			fetch,
+		}),
+	).rejects.toThrow("/v1/balances.check failed (502)");
 });
 
 test("the group listing shows one clipped sentence per route", () => {

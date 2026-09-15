@@ -74,7 +74,7 @@ const coerce = ({
 		}
 		case "number": {
 			const parsed = Number(value);
-			if (value === "" || Number.isNaN(parsed))
+			if (value === "" || !Number.isFinite(parsed))
 				throw new Error(`${field.name} takes a number.`);
 			return parsed;
 		}
@@ -186,25 +186,39 @@ export const buildApiRequest = async ({
 
 const shellQuote = (text: string): string => `'${text.replace(/'/g, "'\\''")}'`;
 
-/** The same request as a curl line. The key is replaced by its env var, in
- * double quotes so the shell expands it; everything else is single-quoted. */
+/** The same request as a curl line, for pasting into a doc or a support
+ * thread. The key is shown as the literal name of its env var, on purpose:
+ * nothing in the output is a secret, and the reader fills it in. */
 export const renderCurl = ({
 	request,
+	secretKey,
 	secretKeyName,
 }: {
 	request: ApiRequest;
+	secretKey: string;
 	/** The env var the key came from, printed in the key's place. */
 	secretKeyName: string;
 }): string =>
 	[
 		`curl -X POST ${shellQuote(request.url)}`,
-		...Object.entries(request.headers).map(([name, value]) =>
-			name === "authorization"
-				? `  -H "authorization: Bearer $${secretKeyName}"`
-				: `  -H ${shellQuote(`${name}: ${value}`)}`,
-		),
+		...Object.entries(request.headers).map(([name, value]) => {
+			// An authorization the caller overrode with -H is theirs to show.
+			const shown =
+				name === "authorization" && value === `Bearer ${secretKey}`
+					? `Bearer $${secretKeyName}`
+					: value;
+			return `  -H ${shellQuote(`${name}: ${shown}`)}`;
+		}),
 		`  -d ${shellQuote(request.body)}`,
 	].join(" \\\n");
+
+const tryParseJson = ({ text }: { text: string }): unknown => {
+	try {
+		return JSON.parse(text);
+	} catch {
+		return text;
+	}
+};
 
 /** One POST, the way the generated client does it, plus the version header the spec pins. */
 export const callApi = async ({
@@ -218,7 +232,8 @@ export const callApi = async ({
 		body: request.body,
 	});
 	const text = await response.text();
-	const parsed: unknown = text ? JSON.parse(text) : null;
+	// A proxy's HTML error page is not JSON; the status and route still matter.
+	const parsed: unknown = text ? tryParseJson({ text }) : null;
 	if (!response.ok)
 		throw new AutumnApiError({
 			status: response.status,

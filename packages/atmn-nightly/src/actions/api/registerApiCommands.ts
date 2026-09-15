@@ -95,6 +95,7 @@ export const registerApiCommands = ({
 						process.stdout.write(
 							`${renderCurl({
 								request: await buildApiRequest(call),
+								secretKey: call.secretKey,
 								secretKeyName: target.secretKeyName,
 							})}\n`,
 						);
