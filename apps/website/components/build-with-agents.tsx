@@ -117,7 +117,7 @@ export default function AgentPromptPane({ active }: { active: boolean }) {
 			>
 				<span
 					aria-hidden="true"
-					className="text-[#9564ff] shrink-0 text-[11px] md:text-[13px] leading-[18px]"
+					className="text-[#9564ff] shrink-0 text-[15px] md:text-[17px] leading-[18px]"
 				>
 					&#8250;
 				</span>
