@@ -40,6 +40,7 @@ import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0";
 import {
 	clearVercelCaptures,
+	readVercelCaptures,
 	seedVercelCustomer,
 	seedVercelResource,
 	setupVercelOrg,
@@ -292,4 +293,71 @@ test(`${chalk.yellowBright(
 			MOCK_HEADERS,
 		),
 	).rejects.toThrow(/vercel/i);
+}, 60000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST 6: invoice must belong to the customer in the URL
+// ─────────────────────────────────────────────────────────────────────────────
+
+test(`${chalk.yellowBright(
+	"vercel-invoice-refund: refund via another customer's URL is rejected",
+)}`, async () => {
+	const [{ stripeInvoiceId }, other] = await Promise.all([
+		setupPaidVercelInvoice({ suffix: "owner-a" }),
+		setupPaidVercelInvoice({ suffix: "owner-b" }),
+	]);
+
+	await expect(
+		autumn.post(
+			`/customers/${other.customerId}/invoices/${stripeInvoiceId}/refund`,
+			{ mode: "full" },
+			MOCK_HEADERS,
+		),
+	).rejects.toThrow(/not found/i);
+
+	const autumnInvoice = await InvoiceService.getByStripeId({
+		db: ctx.db,
+		stripeId: stripeInvoiceId,
+	});
+	expect(autumnInvoice?.refunded_amount).toBe(0);
+}, 90000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST 7: concurrent full refunds can't double-refund
+// ─────────────────────────────────────────────────────────────────────────────
+
+test(`${chalk.yellowBright(
+	"vercel-invoice-refund: concurrent full refunds reserve atomically",
+)}`, async () => {
+	const { customerId, installationId, stripeInvoiceId } =
+		await setupPaidVercelInvoice({ suffix: "race" });
+
+	const results = await Promise.allSettled([
+		autumn.post(
+			`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
+			{ mode: "full" },
+			MOCK_HEADERS,
+		),
+		autumn.post(
+			`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
+			{ mode: "full" },
+			MOCK_HEADERS,
+		),
+	]);
+	expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+
+	const autumnInvoice = await InvoiceService.getByStripeId({
+		db: ctx.db,
+		stripeId: stripeInvoiceId,
+	});
+	expect(autumnInvoice?.refunded_amount).toBe(20);
+
+	await waitForVercelCapture({
+		installationId,
+		predicate: (call) => call.path.endsWith("/actions"),
+	});
+	const refundCalls = (await readVercelCaptures(installationId)).filter(
+		(call) => call.path.endsWith("/actions"),
+	);
+	expect(refundCalls).toHaveLength(1);
 }, 60000);

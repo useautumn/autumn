@@ -104,12 +104,15 @@ export function InvoiceDetailSheet({
 
 	const invoiceIsStripe =
 		(invoice?.processor_type ?? ProcessorType.Stripe) === ProcessorType.Stripe;
-	const { metadata: invoiceMetadata, isLoading: metadataLoading } =
-		useInvoiceMetadataQuery({
-			customerId: customer?.id || customer?.internal_id,
-			stripeInvoiceId: invoice?.stripe_id,
-			enabled: invoiceIsStripe && invoice?.status === InvoiceStatus.Paid,
-		});
+	const {
+		metadata: invoiceMetadata,
+		isLoading: metadataLoading,
+		isError: metadataError,
+	} = useInvoiceMetadataQuery({
+		customerId: customer?.id || customer?.internal_id,
+		stripeInvoiceId: invoice?.stripe_id,
+		enabled: invoiceIsStripe && invoice?.status === InvoiceStatus.Paid,
+	});
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -203,6 +206,7 @@ export function InvoiceDetailSheet({
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded &&
 		!metadataLoading &&
+		!metadataError &&
 		!vercelRefundBlocked;
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id

@@ -1,6 +1,6 @@
 import { type Customer, ErrCode, invoices, RecaseError } from "@autumn/shared";
 import { Marketplace } from "@vercel/sdk/sdk/marketplace.js";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getVercelInvoiceId } from "@/external/vercel/misc/vercelInvoiceUtils.js";
@@ -70,6 +70,7 @@ export const refundVercelInvoice = async ({
 	stripeInvoice,
 	installationId,
 	amount,
+	refundableAmount,
 	reason = DEFAULT_VERCEL_REFUND_REASON,
 	testOptions,
 }: {
@@ -78,6 +79,8 @@ export const refundVercelInvoice = async ({
 	stripeInvoice: Stripe.Invoice;
 	installationId: string;
 	amount: number;
+	/** Amount paid; the reservation guards `refunded_amount + amount <= paid`. */
+	refundableAmount: number;
 	reason?: string;
 	testOptions?: VercelSdkTestOptions;
 }): Promise<{ vercelInvoiceId: string; installationId: string }> => {
@@ -100,27 +103,53 @@ export const refundVercelInvoice = async ({
 		});
 	}
 
+	// Reserve the amount atomically before calling Vercel so concurrent
+	// requests can't both refund the same balance.
+	const reserved = await db
+		.update(invoices)
+		.set({
+			refunded_amount: sql`${invoices.refunded_amount} + ${amount}`,
+		})
+		.where(
+			and(
+				eq(invoices.stripe_id, stripeInvoice.id),
+				sql`${invoices.refunded_amount} + ${amount} <= ${refundableAmount}`,
+			),
+		)
+		.returning({ id: invoices.id });
+
+	if (reserved.length === 0) {
+		throw new RecaseError({
+			message: "Refund amount exceeds the remaining refundable balance",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	const marketplace = new Marketplace({
 		bearerToken: accessToken,
 		serverURL: getVercelSdkServerURL(testOptions),
 	});
 
-	await marketplace.updateInvoice({
-		integrationConfigurationId: installationId,
-		invoiceId: vercelInvoiceId,
-		requestBody: {
-			action: "refund",
-			reason,
-			total: toVercelAmountString(amount),
-		},
-	});
-
-	await db
-		.update(invoices)
-		.set({
-			refunded_amount: sql`${invoices.refunded_amount} + ${amount}`,
-		})
-		.where(eq(invoices.stripe_id, stripeInvoice.id));
+	try {
+		await marketplace.updateInvoice({
+			integrationConfigurationId: installationId,
+			invoiceId: vercelInvoiceId,
+			requestBody: {
+				action: "refund",
+				reason,
+				total: toVercelAmountString(amount),
+			},
+		});
+	} catch (error) {
+		await db
+			.update(invoices)
+			.set({
+				refunded_amount: sql`${invoices.refunded_amount} - ${amount}`,
+			})
+			.where(eq(invoices.stripe_id, stripeInvoice.id));
+		throw error;
+	}
 
 	return { vercelInvoiceId, installationId };
 };

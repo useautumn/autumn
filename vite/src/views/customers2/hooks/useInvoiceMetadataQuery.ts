@@ -19,7 +19,7 @@ export const useInvoiceMetadataQuery = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, isError } = useQuery({
 		queryKey: buildKey(["invoice-metadata", customerId, stripeInvoiceId]),
 		queryFn: async (): Promise<InvoiceMetadataResponse> => {
 			const { data } = await axiosInstance.get(
@@ -31,5 +31,5 @@ export const useInvoiceMetadataQuery = ({
 		staleTime: 5 * 60 * 1000,
 	});
 
-	return { metadata: data?.metadata ?? {}, isLoading };
+	return { metadata: data?.metadata ?? {}, isLoading, isError };
 };

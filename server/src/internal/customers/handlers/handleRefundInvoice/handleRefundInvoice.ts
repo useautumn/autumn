@@ -72,7 +72,11 @@ export const handleRefundInvoice = createRoute({
 				db: ctx.db,
 				stripeId: stripe_invoice_id,
 			});
-			if (!customer || !autumnInvoice) {
+			if (
+				!customer ||
+				!autumnInvoice ||
+				autumnInvoice.internal_customer_id !== customer.internal_id
+			) {
 				throw new RecaseError({
 					message: "Invoice not found for this customer",
 					code: ErrCode.InvalidRequest,
@@ -97,6 +101,7 @@ export const handleRefundInvoice = createRoute({
 				stripeInvoice,
 				installationId: vercelInstallationId,
 				amount: refundAmount,
+				refundableAmount: paidAmount,
 				reason,
 				testOptions: ctx.testOptions,
 			});
