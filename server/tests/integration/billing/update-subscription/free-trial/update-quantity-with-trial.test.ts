@@ -3,7 +3,7 @@ import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -82,11 +82,10 @@ test.concurrent(`${chalk.yellowBright("trial-qty: update prepaid quantity while 
 	// Balance should be updated to 200
 	expect(customer.features[TestFeature.Messages].balance).toEqual(200);
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
+	await expectStripeSubscriptionCorrect({
+		ctx,
 		customerId,
-		org: ctx.org,
-		env: ctx.env,
+		options: { status: "trialing" },
 	});
 
 	await expectCustomerInvoiceCorrect({

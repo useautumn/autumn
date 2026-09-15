@@ -383,7 +383,7 @@ test.concurrent(
 			items: [wordsItem],
 		});
 
-		const { customerId, autumnV1, ctx } = await initScenario({
+		const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
 			customerId: "create-schedule-exact-now-set",
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -405,7 +405,7 @@ test.concurrent(
 			],
 		});
 
-		const now = Date.now();
+		const now = advancedTo;
 		await autumnV1.billing.createSchedule({
 			customer_id: customerId,
 			phases: [
