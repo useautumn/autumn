@@ -288,3 +288,42 @@ test("a double-quoted id with escapes decodes the same way", () => {
 		}),
 	).not.toBeNull();
 });
+
+const nestedVariantsSource = `import { plan, variant } from "atmn";
+
+export default atmn({
+	plans: [
+		plan({
+			planId: "team",
+			versionSlug: "v1",
+			variants: [
+				{ variantPlanId: "eu", versionSlug: "v1" },
+				variant({ variantPlanId: "eu", versionSlug: "v2" }),
+			],
+		}),
+	],
+});
+`;
+
+test("a nested element is found whether bare or wrapped in its builder", () => {
+	const shape = { parentBuilder: "plan", arrayProperty: "variants" };
+	const bare = findFixture({
+		source: nestedVariantsSource,
+		builder: shape,
+		idField: "variantPlanId",
+		id: "eu",
+		where: [{ field: "versionSlug", equals: "v1" }],
+	});
+	expect(bare?.kind()).toBe("object");
+
+	// What pull writes: `variant({...})`. Missing it re-appends the row.
+	const wrapped = findFixture({
+		source: nestedVariantsSource,
+		builder: shape,
+		idField: "variantPlanId",
+		id: "eu",
+		where: [{ field: "versionSlug", equals: "v2" }],
+	});
+	expect(wrapped?.kind()).toBe("call_expression");
+	expect(wrapped?.text()).toContain('versionSlug: "v2"');
+});

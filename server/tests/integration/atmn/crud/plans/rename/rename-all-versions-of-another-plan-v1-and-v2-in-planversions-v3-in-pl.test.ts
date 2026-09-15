@@ -8,6 +8,7 @@
 
 import { expect, test } from "bun:test";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -17,7 +18,6 @@ import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 /** Every live version row for a plan_id, oldest first. */
 const livePlanVersions = async ({
@@ -57,7 +57,7 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 39, interval: "month" } }),
+		plan({ active: true, planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 39, interval: "month" } }),
 	],
 }`,
 		});
@@ -70,10 +70,9 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "pro", versionSlug: "v2", name: "Pro", price: { amount: 49, interval: "month" } }),
-	],
-	planVersions: [
-		plan({ planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 39, interval: "month" } }),
+		plan({ active: true, planId: "pro", versionSlug: "v2", name: "Pro", price: { amount: 49, interval: "month" } }),
+	
+		plan({ active: false, planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 39, interval: "month" } }),
 	],
 }`,
 				}),
@@ -85,11 +84,10 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "pro", versionSlug: "v3", name: "Pro", price: { amount: 59, interval: "month" } }),
-	],
-	planVersions: [
-		plan({ planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 39, interval: "month" } }),
-		plan({ planId: "pro", versionSlug: "v2", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "pro", versionSlug: "v3", name: "Pro", price: { amount: 59, interval: "month" } }),
+	
+		plan({ active: false, planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 39, interval: "month" } }),
+		plan({ active: false, planId: "pro", versionSlug: "v2", name: "Pro", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 				}),
@@ -115,11 +113,10 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "proRenamed", versionSlug: "v3", internalId: "${v3.internalId}", name: "Pro" }),
-	],
-	planVersions: [
-		plan({ planId: "proRenamed", versionSlug: "v1", internalId: "${v1.internalId}", name: "Pro" }),
-		plan({ planId: "proRenamed", versionSlug: "v2", internalId: "${v2.internalId}", name: "Pro" }),
+		plan({ active: true, planId: "proRenamed", versionSlug: "v3", internalId: "${v3.internalId}", name: "Pro" }),
+	
+		plan({ active: false, planId: "proRenamed", versionSlug: "v1", internalId: "${v1.internalId}", name: "Pro" }),
+		plan({ active: false, planId: "proRenamed", versionSlug: "v2", internalId: "${v2.internalId}", name: "Pro" }),
 	],
 }`,
 				}),

@@ -7,6 +7,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	enterpriseWithSeats,
 	everyFeatureType,
@@ -18,13 +19,14 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("atmn scenarios/archive: archiving the license plan alone while the active parent still links it is refused")}`,
 	async () => {
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
 			config: `{ features: [${everyFeatureType}], plans: [${seatPlan}${enterpriseWithSeats({})}] }`,
 		});
 
@@ -40,10 +42,12 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "seat", archived: true }),
+		plan({ active: true, planId: "seat", versionSlug: "v1", archived: true }),
 		plan({
+			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
 			licenses: [{ licensePlanId: "seat", included: 25 }],

@@ -130,7 +130,7 @@ test("a fixture whose versionSlug is an expression keeps it", () => {
 			'const slug = "release-7";',
 			"",
 			"export default atmn({",
-			'\tplans: [plan({ internalId: "prod_1", planId: "pro", versionSlug: slug })],',
+			'\tplans: [plan({ internalId: "prod_1", active: true, planId: "pro", versionSlug: slug })],',
 			"});",
 			"",
 		].join("\n"),

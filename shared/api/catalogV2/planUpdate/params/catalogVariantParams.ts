@@ -40,7 +40,7 @@ export const CatalogVariantParamsSchema = z
 		}),
 		archived: z.boolean().optional().meta({
 			description:
-				"Archive or unarchive this variant. Omit to leave archived state unchanged.",
+				"Archive this variant. Omitted or false means the stated variant is live.",
 		}),
 		new_version_slug: z.string().nonempty().regex(idRegex).optional().meta({
 			description:

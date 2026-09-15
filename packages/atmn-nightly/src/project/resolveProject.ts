@@ -13,7 +13,7 @@ export type Project = {
 	repoRoot: string;
 	/** The config file, when one could be found. */
 	configPath: string | null;
-	/** Where fixtures, planVersions/ and skills/ live: the config's folder, else cwd. */
+	/** Where fixtures and skills/ live: the config's folder, else cwd. */
 	configDir: string;
 	/** Where `.env` is looked for, root first: an existing file anywhere here is
 	 * reused, and a new one is created at the root so one file serves every package. */

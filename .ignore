@@ -1,0 +1,2 @@
+# ripgrep reads .ignore ahead of .gitignore, so atmn/ stays untracked but searchable in the editor.
+!/atmn/

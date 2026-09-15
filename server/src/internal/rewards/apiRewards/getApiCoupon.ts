@@ -55,7 +55,7 @@ export const getApiCoupon = ({
 			length,
 		},
 		plan_ids: planIds,
-		promo_codes: reward.promo_codes.map((promoCode) => ({
+		promo_codes: (reward.promo_codes ?? []).map((promoCode) => ({
 			code: promoCode.code,
 			global_max_redemption: getGlobalMaxRedemption(promoCode) ?? null,
 			first_time_transaction: promoCode.first_time_transaction ?? false,

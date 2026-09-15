@@ -213,7 +213,11 @@ const variantsOf = (
 	return { variants: { on, byValue, ...(fallback ? { fallback } : {}) } };
 };
 
-const EXPOSE_NOTHING: Overlay = { collections: {}, exposeInternal: [] };
+const EXPOSE_NOTHING: Overlay = {
+	collections: {},
+	exposeInternal: [],
+	serverOwnedInternal: {},
+};
 
 const shapeOf = ({
 	schema,

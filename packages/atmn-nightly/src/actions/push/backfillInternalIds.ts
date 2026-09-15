@@ -49,7 +49,7 @@ export const identityRowsFromApplied = ({
 }): Record<string, IdentityRow[]> =>
 	Object.fromEntries(
 		Object.entries(COLLECTIONS).map(([collection, spec]) => {
-			const rows = spec.historyKey
+			const rows = spec.versioned
 				? applied[collection]
 				: (
 						applied.results?.[collection] as { action?: string }[] | undefined
@@ -140,7 +140,7 @@ export const backfillInternalIds = ({
 					builder: candidate.builder,
 					idField: candidate.idField,
 					id: row.id,
-					where: candidate.historyKey
+					where: candidate.versioned
 						? [
 								{
 									field: "versionSlug",
@@ -193,7 +193,7 @@ export const backfillInternalIds = ({
 		}
 		// The slug travels with the id: a fixture that never stated one takes the
 		// server's, so a nuke-and-repush or a sandbox-to-prod push keeps its names.
-		if (spec.historyKey) {
+		if (spec.versioned) {
 			for (const row of collectionRows) {
 				if (
 					typeof row.internalId !== "string" ||

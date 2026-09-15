@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -13,18 +14,20 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../catalog-v2/plans/utils/planAliasTestUtils.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const baseConfig = `{
 	plans: [
 		plan({
+			active: true,
 			planId: "base",
 			name: "Base",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			variants: [
 				{
 					variantPlanId: "addon",
 					name: "Addon",
+					versionSlug: "v1",
 					customize: { price: { amount: 79, interval: "month" } },
 				},
 			],
@@ -52,14 +55,16 @@ for (const action of ["renamed", "archived"] as const) {
 
 			const variantEdit =
 				action === "renamed"
-					? `{ variantPlanId: "addon", newPlanId: "addonNew" }`
-					: `{ variantPlanId: "addon", archived: true }`;
+					? `{ variantPlanId: "addon", versionSlug: "v1", newPlanId: "addonNew" }`
+					: `{ variantPlanId: "addon", versionSlug: "v1", archived: true }`;
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "base",
+			versionSlug: "v1",
 			variants: [
 				${variantEdit},
 			],

@@ -1,12 +1,13 @@
 import { productV2ToFrontendProduct } from "@autumn/shared";
-import { ArrowUpRightIcon, UserFocusIcon } from "@phosphor-icons/react";
+import { ArrowUpRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { pushPage } from "@/utils/genUtils";
 import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 import { type PlanCardModel, visiblePlanItems } from "./catalogGrouping";
+import { PlanLicensePreview } from "./PlanLicensePreview";
+import { PlanPreviewItems } from "./PlanPreviewItems";
 import { PlanVariantSelect } from "./PlanVariantSelect";
 
 export function PlanCard({
@@ -19,6 +20,7 @@ export function PlanCard({
 	const options = [card.plan, ...card.variants];
 	const [selectedId, setSelectedId] = useState(card.plan.id);
 	const plan = options.find((option) => option.id === selectedId) ?? card.plan;
+	const licenses = plan.licenses ?? [];
 
 	// Items follow the selection — a variant's whole point is that its terms differ.
 	const isBase = plan.id === card.plan.id;
@@ -40,7 +42,7 @@ export function PlanCard({
 						className="group flex min-w-0 items-center gap-1 rounded-sm"
 					>
 						<span className="truncate text-xs font-medium text-foreground">
-							{card.plan.name}
+							{plan.name}
 						</span>
 						<ArrowUpRightIcon
 							size={10}
@@ -67,41 +69,21 @@ export function PlanCard({
 				)}
 			</div>
 
-			{(items.length > 0 || card.licenses.length > 0) && (
-				<div className="flex min-w-0 flex-col gap-1">
-					{items.map((item, index) => (
-						<div
-							key={`${item.feature_id ?? "price"}-${index}`}
-							className="flex min-w-0 items-center gap-1.5"
-						>
-							<PlanItemLabel item={item} compact />
-						</div>
+			{items.length > 0 && (
+				<PlanPreviewItems
+					items={items}
+					hiddenItemCount={hiddenItemCount}
+					currency={currency}
+				/>
+			)}
+			{licenses.length > 0 && (
+				<ul className="flex min-w-0 flex-col gap-3 pt-1">
+					{licenses.map((license) => (
+						<li key={license.id} className="min-w-0">
+							<PlanLicensePreview license={license} currency={currency} />
+						</li>
 					))}
-
-					{card.licenses.map((license) => (
-						<div
-							key={license.id}
-							className="flex min-w-0 items-center gap-1.5 text-tiny text-tertiary-foreground"
-						>
-							<UserFocusIcon
-								size={12}
-								weight="duotone"
-								className="shrink-0 text-blue-500"
-							/>
-							<span className="truncate">
-								{license.included > 0
-									? `${license.included} × ${license.name}`
-									: license.name}
-							</span>
-						</div>
-					))}
-
-					{hiddenItemCount > 0 && (
-						<span className="text-tiny text-subtle">
-							+{hiddenItemCount} more
-						</span>
-					)}
-				</div>
+				</ul>
 			)}
 		</div>
 	);

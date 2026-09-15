@@ -4,6 +4,10 @@ import {
 	ApiUsageTierWithCurrenciesSchema,
 	additionalCurrencyPlanItemIssues,
 } from "@api/products/components/additionalCurrencies";
+import {
+	AllocatedBilling,
+	AllocatedBillingFieldSchema,
+} from "@api/products/components/allocatedBilling";
 import { BillingMethod } from "@api/products/components/billingMethod";
 import { EntitlementExpirySchema } from "@models/productModels/durationTypes/entitlementDuration";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
@@ -68,6 +72,7 @@ export const PlanItemPriceParamsSchema = z.object({
 		description:
 			"'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.",
 	}),
+	allocated_billing: AllocatedBillingFieldSchema,
 	max_purchase: z.number().nullish().meta({
 		description:
 			"Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.",
@@ -281,12 +286,17 @@ export const planItemParamsIssues = (
 			});
 		}
 
+		const isLegacyAllocated =
+			value.price.billing_method === BillingMethod.UsageBased &&
+			value.price.allocated_billing === AllocatedBilling.ProratedLegacy;
 		if (
 			value.proration &&
-			value.price.billing_method === BillingMethod.UsageBased
+			value.price.billing_method !== BillingMethod.Prepaid &&
+			!isLegacyAllocated
 		) {
 			issues.push({
-				message: "proration is only supported for prepaid features.",
+				message:
+					"proration is only supported for prepaid or legacy allocated prices.",
 				input: value.proration,
 			});
 		}

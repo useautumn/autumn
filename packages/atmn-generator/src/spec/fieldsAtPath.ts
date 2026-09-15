@@ -6,7 +6,11 @@ import {
 import { isInternalField, type Overlay } from "../overlay/overlay";
 import { resolveRef } from "./resolveRef";
 
-const EXPOSE_NOTHING: Overlay = { collections: {}, exposeInternal: [] };
+const EXPOSE_NOTHING: Overlay = {
+	collections: {},
+	exposeInternal: [],
+	serverOwnedInternal: {},
+};
 
 /**
  * The property names an object at a fixture path can have, across every

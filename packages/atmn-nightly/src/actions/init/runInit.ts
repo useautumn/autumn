@@ -372,7 +372,7 @@ export const runInit = async ({
 	}
 	if (!existsSync(configPath)) {
 		scaffoldConfig({ directory: configDir });
-		wrote.push("autumn.config.ts", "planVersions/");
+		wrote.push("autumn.config.ts", "features.ts", "plans.ts", "rewards.ts");
 	}
 	if (wrote.length > 0)
 		prompter.write(`${done(`Wrote ${wrote.join(", ")}`)}\n`);

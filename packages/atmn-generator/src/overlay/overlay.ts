@@ -30,6 +30,13 @@ export type Overlay = {
 	collections: Record<string, CollectionOverlay>;
 	/** Wire names allowed through despite `x-internal` — the ids the CLI must carry. */
 	exposeInternal: string[];
+	/**
+	 * Test-only bookkeeping; changes no generated output. `x-internal` fields
+	 * the server both returns and accepts are already dropped from fixtures,
+	 * and each is named here with why that is a no-op on push; an unnamed one
+	 * fails the generator's round-trip guard.
+	 */
+	serverOwnedInternal: Record<string, string>;
 };
 
 /**
@@ -37,7 +44,18 @@ export type Overlay = {
  * for a fixture that does not exist yet is a guess at a path.
  */
 export const OVERLAY: Overlay = {
-	exposeInternal: ["internal_id", "entity_feature_id"],
+	exposeInternal: ["internal_id", "entity_feature_id", "allocated_billing"],
+	serverOwnedInternal: {
+		price_id: "Row id; the server matches the price by feature and reuses it.",
+		entitlement_id:
+			"Row id; the server matches the entitlement by feature and reuses it.",
+		stripe_price_id:
+			"Processor mapping; carried by `processors.stripe.priceId` when stated.",
+		base_currency:
+			"FX bookkeeping written beside `currencies`; derived from the org's default.",
+		update_items:
+			"A patch lane on a variant; a fixture states the variant's full items instead.",
+	},
 	collections: {
 		plans: {
 			"items.unlimited": {
@@ -77,19 +95,22 @@ export const OVERLAY: Overlay = {
 				reason: "Same default as the base plan's versionSlug.",
 			},
 			"licenses.version_slug": {
-				hidden: true,
 				reason:
-					"A link always follows the child's active version (wire/07_licenses); pinning it from config is a change the server reports forever.",
+					"A catalog fixture must identify the exact child row so the same config links the same version in every environment.",
 			},
 			"variants.customize.upsert_licenses.version_slug": {
-				hidden: true,
 				reason:
-					"Same as licenses.version_slug: a variant's license link follows the child's active version too.",
+					"Customized variant license links use the same explicit child-version anchor as top-level plan licenses.",
 			},
 			name: {
 				required: true,
 				reason:
 					"A fixture states the whole row (PUT), so a plan always has its name.",
+			},
+			active: {
+				required: true,
+				reason:
+					"With every version in one array, membership no longer says which row is live; each row has to.",
 			},
 			new_plan_id: {
 				hidden: true,
@@ -115,6 +136,12 @@ export const OVERLAY: Overlay = {
 				deprecated: true,
 				reason:
 					"Per-entity items are deprecated but existing catalogs carry them, so a config must keep round-tripping the field.",
+			},
+			"items.price.allocated_billing": {
+				describe:
+					"Only pulled as `prorated_legacy` for a price still on the legacy immediate-proration behavior, alongside its `proration` knobs.",
+				reason:
+					"The server only surfaces the legacy value, so a config carrying it must round-trip; dropping it is the migration.",
 			},
 			versioning: {
 				hidden: true,
@@ -161,11 +188,6 @@ export const OVERLAY: Overlay = {
 				required: true,
 				reason:
 					"A fixture states the whole row (PUT), so a feature always has its name.",
-			},
-			event_names: {
-				deprecated: true,
-				reason:
-					"Deprecated on the server, but existing catalogs carry it, so a config must keep round-tripping the field.",
 			},
 		},
 		settings: {

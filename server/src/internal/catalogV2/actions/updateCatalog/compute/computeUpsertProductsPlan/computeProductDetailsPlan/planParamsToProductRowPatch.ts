@@ -39,7 +39,7 @@ export const planParamsToProductRowPatch = ({
 	} else if (planParams.auto_enable !== undefined) {
 		patch.is_default = planParams.auto_enable;
 	}
-	if (planParams.archived !== undefined) patch.archived = planParams.archived;
+	patch.archived = planParams.archived ?? false;
 	if (planParams.active !== undefined) patch.active = planParams.active;
 	if (planParams.new_version_slug !== undefined) {
 		patch.version_slug = planParams.new_version_slug;

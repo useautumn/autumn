@@ -1,5 +1,5 @@
 /**
- * atmn scenarios/motion — a fixture built by a helper or spread (`plan({ ...base, planId })`) → pull errors naming file:line and the exact edit to make, no file written
+ * atmn scenarios/motion — a fixture built by a helper or spread (`plan({ active: true, ...base, planId })`) → pull errors naming file:line and the exact edit to make, no file written
  *
  * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
  *
@@ -18,7 +18,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 // imports runPull that way: the package publishes only its bin.
 
 test.concurrent(
-	"a fixture built by a helper or spread (`plan({ ...base, planId })`) → a remote update it can't apply in place errors naming the fixture, and writes nothing",
+	"a fixture built by a helper or spread (`plan({ active: true, ...base, planId })`) → a remote update it can't apply in place errors naming the fixture, and writes nothing",
 	async () => {
 		const customId = uniqueTestId("atmn_custom");
 
@@ -37,7 +37,7 @@ export default atmn({ plans: [custom] });
 				"plans.ts": `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
 
 const base = { name: "Custom", price: { amount: 20, interval: "month" as const } };
-export const custom = plan({ ...base, planId: "${customId}" });
+export const custom = plan({ active: true, ...base, planId: "${customId}", versionSlug: "v1", });
 `,
 			},
 		});

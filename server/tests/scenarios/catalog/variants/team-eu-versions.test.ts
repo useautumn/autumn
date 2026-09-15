@@ -21,8 +21,11 @@ test(`${chalk.yellowBright("catalog-qa: Team v2 + EU pointing at v2")}`, async (
 	});
 	await autumnV2_3.catalogV2.update({
 		plans: [
-			{ plan_id: teamId, name: "QA Versioned Variant Team" },
-			{ plan_id: euId, name: "QA Versioned Variant EU" },
+			{
+				plan_id: teamId,
+				name: "QA Versioned Variant Team",
+				variants: [{ variant_plan_id: euId, name: "QA Versioned Variant EU" }],
+			},
 		],
 	});
 	await autumnV2_3.catalogV2.update({

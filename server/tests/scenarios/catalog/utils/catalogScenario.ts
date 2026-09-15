@@ -3,6 +3,7 @@ import {
 	CusProductStatus,
 	customerProducts,
 	customers,
+	RewardReceivedBy,
 	RewardTriggerEvent,
 	RewardType,
 	rewardPrograms,
@@ -156,6 +157,7 @@ export const seedRewardOnPlan = async ({
 		created_at: Date.now(),
 		name: "QA Reward",
 		type: RewardType.PercentageDiscount,
+		promo_codes: [],
 		discount_config: {
 			discount_value: 10,
 			duration_type: CouponDurationType.OneOff,
@@ -173,6 +175,7 @@ export const seedRewardOnPlan = async ({
 		internal_reward_id: internalRewardId,
 		product_ids: [planId],
 		when: RewardTriggerEvent.Checkout,
+		received_by: RewardReceivedBy.Referrer,
 		max_redemptions: 1,
 		unlimited_redemptions: false,
 		exclude_trial: false,

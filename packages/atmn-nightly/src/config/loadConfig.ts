@@ -1,5 +1,6 @@
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { COLLECTIONS } from "../generated/emit";
 import { ConfigError, type LintIssue } from "../generated/lintRuntime";
 import { fixtureLocation } from "../surgery/fixtureLocation";
@@ -84,19 +85,34 @@ const withFixtureLocations = ({
  * existed for non-TS producers is gone; this function is the seam a future
  * `--config-json` would slot into.
  */
-/** Bun runs TypeScript natively; the published node binary needs jiti for it. */
+/**
+ * A fresh process per load: the root imports its collection files, and no
+ * in-process import — Bun's `?v=` bust, jiti's `moduleCache: false` — re-reads
+ * a dependency after the first load. A single push never notices; pull edits
+ * the collection files and then re-evaluates the config, so it must.
+ */
 const importConfigModule = async ({
 	path,
 }: {
 	path: string;
 }): Promise<Record<string, unknown> & { default?: WireDocument }> => {
-	if (typeof Bun !== "undefined") {
-		return import(`${path}?v=${Date.now()}`);
+	const onBun = typeof Bun !== "undefined";
+	const script = `import(${JSON.stringify(path)}).then((m) => process.stdout.write(JSON.stringify({ ok: true, module: { ...m, default: m.default } })), (e) => process.stdout.write(JSON.stringify({ ok: false, name: e?.name, message: e?.message, issues: e?.issues })))`;
+	const result = spawnSync(
+		process.execPath,
+		onBun ? ["-e", script] : ["--import", "jiti/register", "-e", script],
+		{ cwd: dirname(path), encoding: "utf8" },
+	);
+	if (result.status !== 0 || result.stdout.length === 0) {
+		throw new Error(result.stderr.trim() || `Failed to load ${path}`);
 	}
-	const { createJiti } = await import("jiti");
-	return createJiti(import.meta.url, { moduleCache: false }).import(
-		path,
-	) as Promise<Record<string, unknown> & { default?: WireDocument }>;
+	const parsed = JSON.parse(result.stdout) as
+		| { ok: true; module: Record<string, unknown> & { default?: WireDocument } }
+		| { ok: false; name?: string; message?: string; issues?: LintIssue[] };
+	if (parsed.ok) return parsed.module;
+	if (parsed.name === "ConfigError" && parsed.issues)
+		throw new ConfigError(parsed.issues);
+	throw new Error(parsed.message ?? `Failed to load ${path}`);
 };
 
 export const loadConfig = async ({

@@ -3,7 +3,7 @@
  *
  * The config is the only shape the CLI can express: the new base version is a
  * second fixture in `plans` with a fresh `versionSlug`, its variant declares the
- * same fresh slug, and the old base + old variant move to `planVersions`.
+ * same fresh slug, and the old base + old variant stay on as inactive history.
  */
 
 import { expect, test } from "bun:test";
@@ -115,7 +115,8 @@ const productAt = async ({
 		version,
 	});
 
-const V1_BASE = `plan({
+const v1Base = ({ active }: { active: boolean }) => `plan({
+			active: ${active},
 			planId: "pro",
 			versionSlug: "v1",
 			name: "Pro",
@@ -132,6 +133,7 @@ const V1_BASE = `plan({
 		})`;
 
 const V2_BASE = `plan({
+			active: true,
 			planId: "pro",
 			versionSlug: "v2",
 			name: "Pro",
@@ -154,7 +156,7 @@ const v1OnlyConfig = `{
 	features: [${FEATURES}
 	],
 	plans: [
-		${V1_BASE},
+		${v1Base({ active: true })},
 	],
 }`;
 
@@ -163,9 +165,7 @@ const v2WithHistoryConfig = `{
 	],
 	plans: [
 		${V2_BASE},
-	],
-	planVersions: [
-		${V1_BASE},
+		${v1Base({ active: false })},
 	],
 }`;
 

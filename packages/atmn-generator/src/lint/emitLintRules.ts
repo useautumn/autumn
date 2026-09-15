@@ -21,12 +21,15 @@ export const emitLintRulesModule = ({
 		paths.map((path) => {
 			const entry = registry[path];
 			const spec = specRules[path];
+			const required = [
+				...new Set([...(spec?.required ?? []), ...(entry?.required ?? [])]),
+			].sort();
 			return [
 				path,
 				{
 					label: entry?.label,
 					idField: entry?.idField,
-					required: spec?.required,
+					required: required.length > 0 ? required : undefined,
 					fields: spec?.fields,
 					keys: spec?.keys,
 					variants: spec?.variants,
