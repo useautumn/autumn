@@ -14,7 +14,7 @@ import { splitWire, type WireDocument } from "../generated/wire";
 import { chooseConfigDir } from "../project/chooseConfigDir";
 import { resolveProject } from "../project/resolveProject";
 import { writeRootMarker } from "../project/rootMarker";
-import { createPrompter, type Prompter } from "../prompt/prompt";
+import { createPrompter, done, type Prompter } from "../prompt/prompt";
 import type { SettingsPreview } from "../render/renderPreview";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { applySettingsPreview } from "./pull/applySettingsPreview";
@@ -245,8 +245,13 @@ export const runPull = async ({
 		const chosen = await chooseConfigDir({ cwd, prompter });
 		scaffoldDir = chosen.configDir;
 		scaffoldPath = join(scaffoldDir, "autumn.config.ts");
-		if (scaffoldDir !== cwd)
-			writeRootMarker({ repoRoot: chosen.repoRoot, configPath: scaffoldPath });
+		if (
+			scaffoldDir !== cwd &&
+			writeRootMarker({ repoRoot: chosen.repoRoot, configPath: scaffoldPath })
+		)
+			prompter.write(
+				`${done("Recorded in package.json so atmn finds it from anywhere")}\n`,
+			);
 	}
 
 	const { path: configPath, wire: document } = await loadOrScaffold({

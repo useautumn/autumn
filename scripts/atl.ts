@@ -47,8 +47,16 @@ const worktreeServerUrl = (): string => {
 };
 
 const cmd = toWorktree
-	? ["bun", join(nightly, "src/cli.ts"), "--base-url", worktreeServerUrl(), ...forwarded]
-	: ["bun", join(nightly, "src/cli.ts"), ...forwarded];
+	? [
+			"bun",
+			join(nightly, "src/cli.ts"),
+			"-c",
+			".",
+			"--base-url",
+			worktreeServerUrl(),
+			...forwarded,
+		]
+	: ["bun", join(nightly, "src/cli.ts"), "-c", ".", ...forwarded];
 
 const child = spawn({
 	cmd,
