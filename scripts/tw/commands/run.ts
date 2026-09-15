@@ -114,6 +114,7 @@ import {
 	registerConnectIngressWebhook,
 	validateStripeKeyPool,
 } from "../helpers/stripe.ts";
+import { stripeBudgetForRun } from "../helpers/stripeBudget.ts";
 import {
 	allPoolKeys,
 	decodeSubAccount,
@@ -621,41 +622,10 @@ const requireSecret = (name: string): string => {
 /** Resolved commit sha for this run (set in run()); workers fast-forward to it. */
 let resolvedTargetSha = "";
 
-/**
- * Per-worker Stripe budget for the TEST process, sized so that every worker
- * sharing a pool key stays under Stripe's ~25 req/s per-key ceiling combined.
- *
- * Workers are assigned keys round-robin, so with more workers than keys each key
- * carries `ceil(workers / keys)` of them — at 300 workers on 152 keys that's 2,
- * and an undivided budget would put ~46 req/s on a 25 req/s key. Dividing keeps
- * a big fan-out correct at the cost of pacing each worker more slowly.
- */
-const FULL_STRIPE_RPS = 14;
-const FULL_STRIPE_IN_FLIGHT = 8;
-const MIN_STRIPE_RPS = 2;
-const MIN_STRIPE_IN_FLIGHT = 2;
-
-const stripeBudgetForRun = ({
-	workers,
-}: {
-	workers: number;
-}): { maxRps: number; maxInFlight: number } => {
-	const workersPerKey = Math.max(1, Math.ceil(workers / stripeKeyPoolSize()));
-
-	return {
-		maxRps: Math.max(
-			MIN_STRIPE_RPS,
-			Math.floor(FULL_STRIPE_RPS / workersPerKey),
-		),
-		maxInFlight: Math.max(
-			MIN_STRIPE_IN_FLIGHT,
-			Math.floor(FULL_STRIPE_IN_FLIGHT / workersPerKey),
-		),
-	};
-};
-
-/** Set once the pool is sized, before any worker env is built. */
-let stripeBudget = stripeBudgetForRun({ workers: 1 });
+let stripeBudget = stripeBudgetForRun({
+	workers: 1,
+	keys: stripeKeyPoolSize(),
+});
 
 const buildWorkerEnv = ({
 	stripeAccountId,
@@ -716,12 +686,11 @@ const buildWorkerEnv = ({
 		// Workers have no trigger.dev key: migrations run inline in-process
 		// (shouldRunMigrationInline) instead of via the durable layer.
 		TW_WORKER_MODE: "1",
-		// Stripe budget for the TEST process (the server/workers/cron take a
-		// smaller slice each — see boot.ts). Stripe sheds per KEY on both
-		// concurrent width and request rate, so the budget is divided by how many
-		// workers share this key.
+		// All processes share the same allocation through this worker's Redis.
+		TW_STRIPE_REDIS_URL: REDIS_URL,
 		TW_STRIPE_MAX_RPS: String(stripeBudget.maxRps),
 		TW_STRIPE_MAX_INFLIGHT: String(stripeBudget.maxInFlight),
+		...(process.env.TW_STRIPE_TRACE === "1" ? { TW_STRIPE_TRACE: "1" } : {}),
 		// The µVM is isolated and has NO AWS creds, so the S3-backed edge configs
 		// (rollout, cache-v2-ramp, redis-v2-cache, blue-green, …) can't be read —
 		// they'd poll S3 every 1s and spam CredentialsProviderError, AND the
@@ -1396,7 +1365,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 
 	// Size the per-worker Stripe budget now that the pool size is final — every
 	// worker env built below reads it.
-	stripeBudget = stripeBudgetForRun({ workers: effectiveWorkers });
+	stripeBudget = stripeBudgetForRun({
+		workers: effectiveWorkers,
+		keys: stripeKeyPoolSize(),
+	});
 
 	// No per-worker webhook cap: the swarm registers ONE shared platform Connect
 	// webhook → the ingress sandbox, which routes each event to the owning worker by
