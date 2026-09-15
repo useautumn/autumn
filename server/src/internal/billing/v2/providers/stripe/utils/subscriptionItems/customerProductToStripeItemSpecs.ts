@@ -3,13 +3,13 @@ import {
 	cusPriceToCusEntWithCusProduct,
 	type FullCusProduct,
 	isConsumablePrice,
-	isFixedPrice,
 	isOneOffPrice,
+	type Price,
 	type StripeItemSpec,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { cusPriceToStripeItemSpec } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/cusPriceToStripeItemSpec/cusPriceToStripeItemSpec";
-import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
+import { isInvoiceCreditMeterSettledByLines } from "@/internal/features/invoiceCredits/isInvoiceCreditMeterSettledByLines.js";
 import { customerLicenseToStripeItemSpecs } from "./customerLicenseToStripeItemSpecs";
 
 /**
@@ -32,7 +32,10 @@ export const customerProductToStripeItemSpecs = ({
 } => {
 	const recurringItems: StripeItemSpec[] = [];
 	const oneOffItems: StripeItemSpec[] = [];
-	const invoiceCreditItems = new Set<StripeItemSpec>();
+	const invoiceCreditSpecs = new Map<
+		StripeItemSpec,
+		FullCusProduct["customer_entitlements"][number]
+	>();
 
 	for (const cusPrice of customerProduct.customer_prices) {
 		const spec = cusPriceToStripeItemSpec({
@@ -50,9 +53,8 @@ export const customerProductToStripeItemSpecs = ({
 				cusPrice,
 				cusEnts: customerProduct.customer_entitlements,
 			});
-			if (isInvoiceCreditCustomerEntitlement({ customerEntitlement })) {
-				invoiceCreditItems.add(spec);
-			}
+			if (customerEntitlement)
+				invoiceCreditSpecs.set(spec, customerEntitlement);
 		}
 
 		if (isOneOffPrice(cusPrice.price)) {
@@ -73,20 +75,17 @@ export const customerProductToStripeItemSpecs = ({
 		}
 	}
 
+	const candidatePrices = recurringItems
+		.map((item) => item.autumnPrice)
+		.filter((price): price is Price => Boolean(price));
 	return {
 		recurringItems: recurringItems.filter((item) => {
-			if (!invoiceCreditItems.has(item)) return true;
-			const creditConfig = item.autumnPrice!.config;
-			// Source debits settle credits; retain the meter only when it supplies the renewal cadence.
-			return !recurringItems.some((candidate) => {
-				const price = candidate.autumnPrice;
-				return (
-					price &&
-					isFixedPrice(price) &&
-					price.config.interval === creditConfig.interval &&
-					(price.config.interval_count ?? 1) ===
-						(creditConfig.interval_count ?? 1)
-				);
+			const customerEntitlement = invoiceCreditSpecs.get(item);
+			if (!customerEntitlement || !item.autumnPrice) return true;
+			return !isInvoiceCreditMeterSettledByLines({
+				price: item.autumnPrice,
+				customerEntitlement,
+				candidatePrices,
 			});
 		}),
 		oneOffItems,

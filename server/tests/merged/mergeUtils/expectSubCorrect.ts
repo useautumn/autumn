@@ -28,6 +28,7 @@ import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductServ
 import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { getUniqueUpcomingSchedulePairs } from "@/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules.js";
+import { isInvoiceCreditMeterSettledByLines } from "@/internal/features/invoiceCredits/isInvoiceCreditMeterSettledByLines.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import {
 	formatPrice,
@@ -100,7 +101,13 @@ const compareActualItems = async ({
 			});
 		}
 
-		expect(actualItem).toBeDefined();
+		if (!actualItem) {
+			const describe = (items: any[]) =>
+				items.map((item) => `${item.price}×${item.quantity ?? 0}`).join(", ");
+			throw new Error(
+				`(${type}) missing item ${expectedItem.price}×${expectedItem.quantity ?? 0} (${expectedItem.priceStr ?? ""}); actual: [${describe(actualItems)}]; expected: [${describe(expectedItems)}]`,
+			);
+		}
 
 		// Treat 0 and undefined as equivalent for quantity
 		const actualQty = actualItem?.quantity ?? 0;
@@ -338,6 +345,17 @@ export const expectSubToBeCorrect = async ({
 			});
 
 			if (isOneOffPrice(price)) continue; // One-off prices are not in the subscription
+			if (
+				isInvoiceCreditMeterSettledByLines({
+					price,
+					customerEntitlement: cusProduct.customer_entitlements.find(
+						(customerEntitlement) =>
+							customerEntitlement.entitlement_id === relatedEnt?.id,
+					),
+					candidatePrices: prices,
+				})
+			)
+				continue;
 
 			const res = priceToStripeItem({
 				price,
