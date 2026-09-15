@@ -86,7 +86,7 @@ export const fetchStripeSubscriptionForBilling = async ({
 
 	// Wrong-customer linkage is a data fault worth surfacing, except to an
 	// immediate cancel — blocking that would strand the plan with no way out.
-	if (sub.customer !== fullCus.processor.id) {
+	if (sub.customer !== fullCus.processor?.id) {
 		if (isImmediateCancelRequest(params)) {
 			return { mismatchedStripeSubscriptionId: subId };
 		}
