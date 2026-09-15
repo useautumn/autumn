@@ -94,18 +94,41 @@ const withFixtureLocations = ({
  * a dependency after the first load. A single push never notices; pull edits
  * the collection files and then re-evaluates the config, so it must.
  */
+/**
+ * Node needs jiti to import a .ts config. `--import jiti/register` would be
+ * resolved from the config's folder, where jiti is not installed; resolving it
+ * here pins the copy that ships with this CLI.
+ */
+export const importConfigArgs = ({
+	path,
+	onBun = typeof Bun !== "undefined",
+}: {
+	path: string;
+	onBun?: boolean;
+}): string[] => {
+	// jiti hands node a CJS module, so the config's default export arrives one
+	// level down as `default.default`; unwrap it so both runtimes agree.
+	const script = `import(${JSON.stringify(path)}).then((m) => { const d = m.default && m.default.__esModule && "default" in m.default ? m.default.default : m.default; process.stdout.write(JSON.stringify({ ok: true, module: { ...m, default: d } })); }, (e) => process.stdout.write(JSON.stringify({ ok: false, name: e?.name, message: e?.message, issues: e?.issues })))`;
+	if (onBun) return ["-e", script];
+	// jiti still uses module.register(), which node 22+ warns about on every run.
+	return [
+		"--no-deprecation",
+		"--import",
+		import.meta.resolve("jiti/register"),
+		"-e",
+		script,
+	];
+};
+
 const importConfigModule = async ({
 	path,
 }: {
 	path: string;
 }): Promise<Record<string, unknown> & { default?: WireDocument }> => {
-	const onBun = typeof Bun !== "undefined";
-	const script = `import(${JSON.stringify(path)}).then((m) => process.stdout.write(JSON.stringify({ ok: true, module: { ...m, default: m.default } })), (e) => process.stdout.write(JSON.stringify({ ok: false, name: e?.name, message: e?.message, issues: e?.issues })))`;
-	const result = spawnSync(
-		process.execPath,
-		onBun ? ["-e", script] : ["--import", "jiti/register", "-e", script],
-		{ cwd: dirname(path), encoding: "utf8" },
-	);
+	const result = spawnSync(process.execPath, importConfigArgs({ path }), {
+		cwd: dirname(path),
+		encoding: "utf8",
+	});
 	if (result.status !== 0 || result.stdout.length === 0) {
 		throw new Error(result.stderr.trim() || `Failed to load ${path}`);
 	}
