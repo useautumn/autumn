@@ -40,7 +40,7 @@ const builderImportsFor = ({
 	return `import { ${builders.join(", ")} } from "${specifier}";`;
 };
 
-const collectionFileSource = ({
+export const collectionFileSource = ({
 	collections,
 	imports,
 }: {
@@ -54,14 +54,26 @@ const collectionFileSource = ({
 		"",
 	].join("\n");
 
-const rootSource = ({ imports }: { imports: ConfigImports }): string => {
-	const collectionImports = Object.entries(COLLECTION_FILES).map(
-		([file, collections]) =>
-			`import { ${collections.join(", ")} } from "./${file.replace(/\.ts$/, "")}";`,
-	);
-	const collectionKeys = Object.values(COLLECTION_FILES).flatMap(
-		(collections) => collections.map((name) => `\t${name},`),
-	);
+/** A collection whose file is not imported stays inline as an empty array. */
+export const rootSource = ({
+	imports,
+	importedFiles = new Set(Object.keys(COLLECTION_FILES)),
+}: {
+	imports: ConfigImports;
+	importedFiles?: ReadonlySet<string>;
+}): string => {
+	const collectionImports: string[] = [];
+	const collectionKeys: string[] = [];
+	for (const [file, collections] of Object.entries(COLLECTION_FILES)) {
+		if (importedFiles.has(file)) {
+			collectionImports.push(
+				`import { ${collections.join(", ")} } from "./${file.replace(/\.ts$/, "")}";`,
+			);
+			collectionKeys.push(...collections.map((name) => `\t${name},`));
+		} else {
+			collectionKeys.push(...collections.map((name) => `\t${name}: [],`));
+		}
+	}
 	return [
 		`import { atmn } from "${imports.atmn}";`,
 		...collectionImports,

@@ -84,7 +84,7 @@ test("by-reference layout: update in place, delete export and reference, append 
 	);
 	writeFileSync(
 		`${dir}/plans.ts`,
-		`${planImport}\nexport const keep = plan({ internalId: "prod_keep", active: true, planId: "keep", name: "Keep", price: { amount: 10, interval: "month" } });\nexport const gone = plan({ active: true, planId: "gone", name: "Gone", price: { amount: 20, interval: "month" } });\n`,
+		`${planImport}\nexport const keep = plan({ internalId: "prod_keep", active: true, planId: "keep", versionSlug: "v1", name: "Keep", price: { amount: 10, interval: "month" } });\nexport const gone = plan({ active: true, planId: "gone", versionSlug: "v1", name: "Gone", price: { amount: 20, interval: "month" } });\n`,
 	);
 	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	const result = await runPull({

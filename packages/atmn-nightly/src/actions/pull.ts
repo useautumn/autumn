@@ -5,7 +5,7 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { ConfigNotFoundError, loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
 import { AutumnApiError, type AutumnClient } from "../generated/client";
@@ -16,7 +16,12 @@ import type { SettingsPreview } from "../render/renderPreview";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
 import { applySettingsPreview } from "./pull/applySettingsPreview";
 import { listSourceFiles } from "./pull/listSourceFiles";
-import { type ConfigImports, scaffoldConfig } from "./pull/scaffoldConfig";
+import { rewriteConfig } from "./pull/rewriteConfig";
+import {
+	type ConfigImports,
+	packageImports,
+	scaffoldConfig,
+} from "./pull/scaffoldConfig";
 import { configSearchDirs } from "./push";
 import {
 	backfillInternalIds,
@@ -42,8 +47,9 @@ export type PullOptions = {
 	/** Module specifiers a scaffolded config imports from; the package by default. */
 	imports?: ConfigImports;
 	/**
-	 * Discard the config on disk and pull as if from an empty directory. The
-	 * way out when the file describes a different org than the key targets.
+	 * Rewrite the config and its collection files from the server, as if from
+	 * an empty directory. Files that do not import the package are left alone.
+	 * The way out when the file describes a different org than the key targets.
 	 */
 	overwrite?: boolean;
 	/** Confirm replacing the local config when overwrite is set. */
@@ -71,16 +77,12 @@ const diffOrExplain = async ({
 	}
 };
 
-/** Every fixture file a previous pull may have written beside the config. */
-const removeSourceFiles = ({ directory }: { directory: string }): void => {
-	for (const file of listSourceFiles({ directory })) unlinkSync(file);
-};
-
 /** No config means a first pull: scaffold one at `cwd`, then pull into it. */
 const loadOrScaffold = async ({
 	dirs,
 	cwd,
 	configPath,
+	existingConfigPath,
 	imports,
 	overwrite,
 	write,
@@ -89,6 +91,8 @@ const loadOrScaffold = async ({
 	cwd: string;
 	/** `-c`: an exact file; scaffolded there when missing. */
 	configPath?: string;
+	/** The config on disk, when there is one. */
+	existingConfigPath: string | null;
 	imports: ConfigImports | undefined;
 	overwrite: boolean;
 	write: (text: string) => void;
@@ -103,9 +107,20 @@ const loadOrScaffold = async ({
 		return loadConfig({ dirs: [cwd], configPath: scaffolded });
 	};
 
-	if (overwrite) {
-		removeSourceFiles({ directory: cwd });
-		return scaffold();
+	// Overwrite never deletes: with no config it is a first pull, otherwise the
+	// config and the collection files it owns are rewritten as a fresh shell.
+	if (overwrite && existingConfigPath === null) return scaffold();
+	if (overwrite && existingConfigPath !== null) {
+		const { rewritten, kept } = rewriteConfig({
+			configPath: existingConfigPath,
+			imports: imports ?? packageImports(),
+		});
+		write(`Rewrote ${rewritten.map((file) => basename(file)).join(", ")}\n`);
+		if (kept.length > 0)
+			write(
+				`Left alone (not atmn files): ${kept.map((file) => basename(file)).join(", ")}\n`,
+			);
+		return loadConfig({ dirs: [cwd], configPath: existingConfigPath });
 	}
 	try {
 		return await loadConfig({
@@ -202,7 +217,7 @@ export const runPull = async ({
 	const project = resolveProject({ cwd, configFlag });
 	if (overwrite && !yes) {
 		write(
-			"This deletes every TypeScript file under your Autumn config directory, then pulls a fresh catalog. Re-run with --yes to overwrite.\n",
+			"This rewrites autumn.config.ts and the features.ts, plans.ts and rewards.ts beside it from your org's catalog. Other files are left alone. Re-run with --yes to overwrite.\n",
 		);
 		return {
 			configPath:
@@ -221,6 +236,7 @@ export const runPull = async ({
 		...(project.source === "flag" && project.configPath !== null
 			? { configPath: project.configPath }
 			: {}),
+		existingConfigPath: project.configPath,
 		imports,
 		overwrite,
 		write,

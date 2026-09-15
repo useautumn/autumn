@@ -435,7 +435,7 @@ Linking a keyless org to an account:
 		.option("--include-mappings", "keep processor mappings in pulled fixtures")
 		.option(
 			"--overwrite",
-			"discard the local config and pull the catalog fresh (e.g. after switching orgs)",
+			"rewrite the config from your org's catalog (e.g. after switching orgs)",
 		)
 		.option("-y, --yes", "overwrite it")
 		.action(

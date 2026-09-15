@@ -85,10 +85,10 @@ atmn pull [options]
 
 | Flag | Description |
 |------|-------------|
-| `--overwrite` | Overwrite config instead of smart in-place update (needs `--yes`) |
+| `--overwrite` | Rewrite the config from Autumn instead of updating it in place (needs `--yes`) |
 | `--include-mappings` | Keep Stripe and RevenueCat mappings in the pulled config |
 
-By default, `pull` does a smart in-place update: it adds new features and plans, updates existing ones, and removes deleted ones while preserving your formatting. Use `--overwrite --yes` to replace the config files entirely.
+By default, `pull` does a smart in-place update: it adds new features and plans, updates existing ones, and removes deleted ones while preserving your formatting. Use `--overwrite --yes` to rewrite `autumn.config.ts`, `features.ts`, `plans.ts` and `rewards.ts` from Autumn. Nothing is deleted, and files that don't import `atmn` are left alone.
 
 ### `atmn reset`
 
