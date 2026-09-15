@@ -33,14 +33,8 @@ function ensureAiSubmoduleSynced(): void {
 		);
 	}
 
-	log("checking out ai submodule main branch");
-	const checkoutCode = shInherit("git", ["checkout", "main"], {
-		cwd: aiDir,
-	});
-	if (checkoutCode !== 0) {
-		fatal(`git checkout main failed in ai submodule (exit ${checkoutCode})`);
-	}
-
+	// No `git checkout main` here: it discarded the pinned commit for a local main
+	// ref nothing fetches, so a stale clone silently rewound ai by weeks.
 	log("ensuring ai deps installed (bun install)");
 	const installCode = shInherit("bun", ["install"], { cwd: aiDir });
 	if (installCode !== 0) {

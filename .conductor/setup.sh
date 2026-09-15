@@ -39,5 +39,15 @@ if ! grep -q 'conductor/shellrc.sh' "$HOME/.bashrc" 2>/dev/null; then
     >> "$HOME/.bashrc"
 fi
 
-# Neon branch, migrations, compose stack, .env.local, test org.
+# `bun dw setup` installs deps itself, but it can never get that far on a fresh
+# workspace: scripts/dw/index.ts imports @autumn/env and dies at module load.
+bun install
+
+# Neon branch, migrations, compose stack, .env.local, test org. Its ai sync is what
+# writes the Executor entry into .mcp.json.
 bun dw setup
+
+# That sync writes Claude's `${EXECUTOR_API_KEY}` placeholder, but Conductor never
+# puts the key in the agent's environment, so it would expand to an empty Bearer.
+# .mcp.json is gitignored, so resolving it here cannot leak the key into a commit.
+bun scripts/setup/conductor/resolveExecutorKey.ts
