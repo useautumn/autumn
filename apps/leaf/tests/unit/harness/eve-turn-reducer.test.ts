@@ -324,3 +324,48 @@ describe("a batch parked after a preview turn", () => {
 		});
 	});
 });
+
+describe("a write the agent process refused", () => {
+	test("is never recorded, so the turn ends without a card", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const requested = reduceEveTurnEvent({
+			event: {
+				actions: [
+					{
+						callId: "call_w",
+						input: { request: { customer_id: "cus_1", plan_id: "pro" } },
+						toolName: "autumn__attach",
+					},
+				],
+				type: "actions.requested",
+			},
+			progress: started.progress,
+		});
+		const refused = reduceEveTurnEvent({
+			event: {
+				result: {
+					callId: "call_w",
+					output:
+						"Error: `attach` was called with a request that was never run through `previewAttach`",
+					toolName: "autumn__attach",
+				},
+				status: "failed",
+				type: "action.result",
+			},
+			progress: requested.progress,
+		});
+		expect(refused.progress.recordedWrites).toEqual([]);
+
+		const terminal = reduceEveTurnEvent({
+			event: { type: "session.completed" },
+			progress: { ...refused.progress, finalText: "Let me re-preview." },
+		});
+		expect(terminal.outcome).toEqual({
+			kind: "answered",
+			text: "Let me re-preview.",
+		});
+	});
+});

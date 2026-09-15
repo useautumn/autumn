@@ -243,7 +243,7 @@ Billing controls follow the same rule: `·` lines under the item they guard, in 
 - Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
 - Don't write `proration` — leave it out and take server defaults.
 - Trial end behavior is `freeTrial.onEnd`: `"bill"` (default) charges when the trial ends, `"revert"` expires it and restores the previous plan.
-- Every plan row carries `versionSlug` and `active`, and every variant row `versionSlug`. A plan's rows are its versions — exactly one `active: true` — and a version row left out of `plans` is deleted. How rows express versions, renames and drafts: `references/atmn.md`.
+- Every plan row carries `versionSlug` and `active`, and every variant row and license link `versionSlug`. A plan's rows are its versions — exactly one `active: true` — and a version row left out of `plans` is deleted. How rows express versions, renames and drafts: `references/atmn.md`.
 
 The config uses the builders `feature`, `plan`, `variant`, `license` as plain function calls with object arguments; items are plain objects inside a plan, and the file's default export is `atmn({...})` naming every collection. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
 

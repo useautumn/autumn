@@ -53,7 +53,7 @@ What a variant's customize can change, when a base edit reaches a variant, and h
 - A variant is an entry in its base row's `variants` array and a license link an entry in the parent row's `licenses` array: `variant({...})` and `license({...})` fixtures, inline or imported from their own files, edited in place there. Pull writes new ones in that form. Every entry the config lists is a declared overlay; there is no `propagate` in a config, so a base edit reaches a variant through the entry you write, not a follow flag.
 - Minting a base version means listing the variant entries again under the new base row, each with the new `versionSlug` and no `internalId`. The old entries stay under the old base row. One variant version cannot serve two base rows; the lint names both rows and says to version and relink the variant.
 - To retire a variant, set `archived: true` on its entry. A variant left out of the array is a deletion, refused while customers hold it.
-- State `versionSlug` on every `license({...})`: the link is pinned to that child version, a config that names it links the same version in every environment, and pull writes it back either way. Minting a child version moves no parent; relinking a parent is editing that slug.
+- Every `license({...})` states `versionSlug` — the lint refuses one without it — because the link is pinned to that child version and a config that names it links the same version in every environment. Pull writes it back. Minting a child version moves no parent; relinking a parent is editing that slug.
 
 ## Config shapes
 
