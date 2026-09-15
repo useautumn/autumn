@@ -26,5 +26,11 @@ ensure_infisical_session() {
 		return 1
 	fi
 	export INFISICAL_TOKEN
+
+	# Later shells and agent sessions get the machine identity but no token, so
+	# cache it for shellrc.sh rather than making each one log in again.
+	umask 077
+	mkdir -p "$HOME/.cache"
+	printf '%s' "$INFISICAL_TOKEN" >"$HOME/.cache/autumn-infisical-token"
 	echo "[conductor] Infisical session ready"
 }
