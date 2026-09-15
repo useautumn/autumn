@@ -21,38 +21,42 @@ Graduated pricing splits usage into tiers, and each tier is charged at its own r
 Use the `tiers` array on a plan item price. By default, tiers use graduated behavior:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const apiCalls = feature({
-  id: 'api_calls',
-  name: 'API Calls',
-  type: 'metered',
+  featureId: "api_calls",
+  name: "API Calls",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: apiCalls.id,
-      reset: { interval: 'month' },
+    {
+      featureId: apiCalls.featureId,
+      reset: { interval: "month" },
       price: {
         tiers: [
           { to: 1000, amount: 0.01 },
           { to: 10000, amount: 0.008 },
-          { to: 'inf', amount: 0.005 },
+          { to: "inf", amount: 0.005 },
         ],
-        billingMethod: 'usage_based',
-        interval: 'month',
+        billingMethod: "usage_based",
+        interval: "month",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [apiCalls], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">

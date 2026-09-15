@@ -3,7 +3,7 @@ title: Proration
 description: Handle mid-cycle plan changes with prorated billing
 ---
 
-Proration adjusts billing when a customer changes their subscription mid-cycle — whether upgrading to a higher plan, downgrading, or changing the quantity of a non-consumable feature like seats. Autumn calculates the prorated amount and either charges or credits the customer.
+Proration adjusts billing when a customer changes their subscription mid-cycle — whether upgrading to a higher plan, downgrading, or changing the quantity of a prepaid item like seats. Autumn calculates the prorated amount and either charges or credits the customer.
 
 > **Example** <br />
 > A customer on a \$20/month plan upgrades to a \$50/month plan halfway through the billing cycle. They're charged \$15 (the prorated difference for the remaining half of the month).
@@ -16,45 +16,49 @@ Proration adjusts billing when a customer changes their subscription mid-cycle �
 Add a `proration` config to a priced plan item:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const seats = feature({
-  id: 'seats',
-  name: 'Seats',
-  type: 'metered',
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: seats.id,
+    {
+      featureId: seats.featureId,
       included: 5,
       price: {
         amount: 10,
-        interval: 'month',
+        interval: "month",
         billingUnits: 1,
-        billingMethod: 'usage_based',
+        billingMethod: "prepaid",
       },
       proration: {
-        onIncrease: 'prorate',
-        onDecrease: 'prorate',
+        onIncrease: "prorate_immediately",
+        onDecrease: "prorate_immediately",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [seats], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">
 
 1. Navigate to **Plans** and edit a plan
-2. Select a **non-consumable** priced feature (e.g., seats)
+2. Select a **prepaid** priced item (e.g., seats)
 3. Under **Advanced**, configure **Proration Behavior**:
    - **On Increase**: what happens when the customer adds more units
    - **On Decrease**: what happens when the customer removes units
@@ -69,18 +73,21 @@ Push changes with `atmn push`.
 
 | Option | Behavior |
 |--------|----------|
-| `prorate` | Charge the prorated difference immediately |
-| `charge_immediately` | Charge the full unit price immediately (no proration) |
+| `prorate_immediately` | Charge the prorated difference immediately |
+| `bill_immediately` | Charge the full unit price immediately (no proration) |
+| `prorate_next_cycle` | Add the prorated difference to the next invoice |
+| `bill_next_cycle` | Charge the full unit price on the next invoice |
 
 ### On Decrease
 
 | Option | Behavior |
 |--------|----------|
-| `prorate` | Credit the prorated difference immediately |
-| `no_action` | No credit or refund — change takes effect at next billing cycle |
+| `prorate_immediately` | Credit the prorated difference immediately |
+| `prorate_next_cycle` | Credit the prorated difference on the next invoice |
+| `no_prorations` | No credit or refund — change takes effect at next billing cycle |
 
 <Note>
-Proration is only relevant for `non-consumable` features (like seats, workspaces). Consumable features (like API requests) are billed based on usage, not quantity changes.
+Item-level proration applies to prepaid items: it decides how a change to the quantity a customer has bought (seats, workspaces) is billed. Usage-based items are billed on what was used, not on quantity changes.
 </Note>
 
 ## Plan-level proration
@@ -163,13 +170,6 @@ await autumn.billing.attach({
 ```
 
 When `custom_line_items` is provided, Autumn skips its own proration calculation and creates an invoice with exactly the line items you specified. Amounts can be negative to represent credits.
-
-## Usage-based proration
-
-For usage-based prices, when a plan change occurs mid-cycle:
-
-1. Outstanding usage at the **old rate** is billed immediately
-2. The new rate applies going forward for the rest of the billing period
 
 ## Stripe integration
 
