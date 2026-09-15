@@ -535,6 +535,7 @@ Change prepaid to usage-based:
 If the customer the customer is NOT on a paid plan (free plan or no plan at all). 2 options:
 
 - No-card trial (default to this): attach with `free_trial` and set `card_required` false. The subscription starts with no card and ends at trial end if none is added. While on it, the customer cannot upgrade or attach another plan until they add a card via the Stripe billing portal.
+- A no-card trial cannot be combined with `invoice_mode`. Stripe rejects a subscription that both cancels on a missing card and collects by invoice, and Autumn rejects the combination (on preview and attach) with "Cannot use invoice mode with a no-card free trial". If the user wants an invoice for a trial, use `card_required: true`; otherwise leave `invoice_mode` off.
 - Card-required trial: attach with `free_trial` and `card_required: true` and `long_lived_checkout` If the customer has no payment method, the attach returns a checkout URL to collect a card; they are charged when the trial ends. This should be done with a long-lived checkout URL param.
 
 The customer already has an active (Stripe) subscription — common in sales-led trials.
