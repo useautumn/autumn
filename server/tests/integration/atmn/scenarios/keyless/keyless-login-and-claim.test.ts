@@ -77,6 +77,15 @@ const makeRepo = ({ name }: { name: string }): string => {
 	const root = mkdtempSync(join(tmpdir(), "atmn-keyless-"));
 	Bun.spawnSync(["git", "init", "-q"], { cwd: root });
 	writeFileSync(join(root, "package.json"), JSON.stringify({ name }));
+	const locked = Bun.spawnSync(["bun", "install", "--lockfile-only"], {
+		cwd: root,
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	if (locked.exitCode !== 0)
+		throw new Error(
+			`${locked.stdout.toString()}${locked.stderr.toString()}`.trim(),
+		);
 	return root;
 };
 

@@ -104,6 +104,15 @@ const makeRepo = ({
 			"\t",
 		),
 	);
+	const locked = Bun.spawnSync(["bun", "install", "--lockfile-only"], {
+		cwd: root,
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	if (locked.exitCode !== 0)
+		throw new Error(
+			`${locked.stdout.toString()}${locked.stderr.toString()}`.trim(),
+		);
 	writeFileSync(join(root, ".env"), `AUTUMN_SECRET_KEY=${secretKey}\n`);
 	return root;
 };
@@ -156,7 +165,7 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 			"✓ Wrote autumn.config.ts, features.ts, plans.ts, rewards.ts",
 		);
 		expect(output).toContain("✓ Added atmn-nightly to package.json");
-		expect(output).toContain("✓ Installed with npm");
+		expect(output).toContain("✓ Installed with bun");
 		expect(output).toContain(
 			'✓ Wrote "atmn" script and marker to package.json',
 		);
