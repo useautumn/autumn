@@ -21,5 +21,5 @@ export const createTwStripeRequestDeadline = ({
 		await delay(Math.min(ms, remainingMs()), undefined, { signal });
 		remainingMs();
 	};
-	return { remainingMs, sleep };
+	return { signal, remainingMs, sleep };
 };

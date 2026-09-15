@@ -28,11 +28,13 @@ export const acquireTwStripePermit = async ({
 	authorization,
 	stripeAccount,
 	timeoutMs,
+	requestTimeoutMs = timeoutMs,
 	signal,
 }: {
 	authorization: string;
 	stripeAccount?: string;
 	timeoutMs: number;
+	requestTimeoutMs?: number;
 	signal?: AbortSignal;
 }) => {
 	const deadline = createTwStripeRequestDeadline({ timeoutMs, signal });
@@ -55,7 +57,8 @@ export const acquireTwStripePermit = async ({
 	];
 	const id = randomUUID();
 	const lane = getTwStripeLane();
-	const leaseMs = Math.max(timeoutMs, 1000) + 5000;
+	// Queueing time must not extend the in-flight lease left behind by a crashed worker.
+	const leaseMs = Math.max(requestTimeoutMs, 1000) + 5000;
 	const accountRps = stripeAccount
 		? Math.min(maxRps, CONNECTED_ACCOUNT_MAX_RPS)
 		: maxRps;

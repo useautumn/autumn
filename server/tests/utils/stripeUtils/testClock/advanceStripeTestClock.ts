@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { createTestWait } from "../../testWait/createTestWait";
 import { getTestClockQueue } from "./getTestClockQueue";
+import { runStripeClockRequest } from "./runStripeClockRequest";
 import { waitForStripeClockReady } from "./waitForStripeClockReady";
 
 export const advanceStripeTestClock = async ({
@@ -42,17 +43,19 @@ export const advanceStripeTestClock = async ({
 				`Stripe test clock target must be after ${clock.frozen_time}`,
 			);
 		try {
-			await wait.run(() =>
-				stripeCli.testHelpers.testClocks.advance(
-					testClockId,
-					{ frozen_time: targetSeconds },
-					{
-						timeout: Math.min(30_000, wait.remainingMs()),
-						maxNetworkRetries: 0,
-						idempotencyKey: randomUUID(),
-					},
-				),
-			);
+			await runStripeClockRequest({
+				wait,
+				run: () =>
+					stripeCli.testHelpers.testClocks.advance(
+						testClockId,
+						{ frozen_time: targetSeconds },
+						{
+							timeout: Math.min(30_000, wait.remainingMs()),
+							maxNetworkRetries: 0,
+							idempotencyKey: randomUUID(),
+						},
+					),
+			});
 			await waitForStripeClockReady({
 				stripeCli,
 				testClockId,

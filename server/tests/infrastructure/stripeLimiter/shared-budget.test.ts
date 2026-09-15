@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import Stripe from "stripe";
 import { stripeBudgetForRun } from "../../../../scripts/tw/helpers/stripeBudget";
 import { applyTwStripeConcurrencyLimit } from "../../../src/external/connect/clientCache/twStripeConcurrencyLimit";
 import { acquireTwStripePermit } from "../../../src/external/connect/clientCache/twStripeLimiter/acquireTwStripePermit";
+import { getTwStripeRedis } from "../../../src/external/connect/clientCache/twStripeLimiter/getTwStripeRedis";
 import {
 	getTwStripeLane,
 	withTwStripeWebhookPriority,
 } from "../../../src/external/connect/clientCache/twStripeLimiter/twStripeRequestContext";
+import { runStripeClockRequest } from "../../utils/stripeUtils/testClock/runStripeClockRequest";
+import { createTestWait } from "../../utils/testWait/createTestWait";
 
 const envNames = [
 	"TW_WORKER_MODE",
@@ -249,6 +253,109 @@ test("a retry receives only the network time remaining after backoff", async () 
 	expect(timeouts).toHaveLength(2);
 	expect(timeouts[0]).toBeLessThanOrEqual(1000);
 	expect(timeouts[0] - timeouts[1]).toBeGreaterThanOrEqual(120);
+});
+
+test("clock admission uses the operation budget while preserving the network timeout", async () => {
+	process.env.TW_STRIPE_MAX_INFLIGHT = "2";
+	const secret = `sk_test_clock_budget_${crypto.randomUUID()}`;
+	const held = await acquireTwStripePermit({
+		authorization: `Bearer ${secret}`,
+		timeoutMs: 1000,
+	});
+	const timeouts: number[] = [];
+	const httpClient = Stripe.createFetchHttpClient(async () =>
+		Response.json({ object: "balance" }),
+	);
+	const makeRequest = httpClient.makeRequest.bind(httpClient);
+	httpClient.makeRequest = (...args) => {
+		timeouts.push(args[7]);
+		return makeRequest(...args);
+	};
+	const client = applyTwStripeConcurrencyLimit({
+		client: new Stripe(secret, { maxNetworkRetries: 0, httpClient }),
+	});
+	const wait = createTestWait({
+		timeoutMs: 1000,
+		description: "clock operation",
+	});
+	const release = setTimeout(() => void held.release(), 120);
+	const started = performance.now();
+	try {
+		await runStripeClockRequest({
+			wait,
+			run: () => client.balance.retrieve({}, { timeout: 40 }),
+		});
+		expect(performance.now() - started).toBeGreaterThanOrEqual(100);
+		expect(timeouts).toEqual([40]);
+	} finally {
+		clearTimeout(release);
+		await held.release();
+		wait.close();
+	}
+});
+
+test("cancelling a clock wait removes its queued SDK request before admission", async () => {
+	process.env.TW_STRIPE_MAX_INFLIGHT = "2";
+	const secret = `sk_test_clock_cancel_${crypto.randomUUID()}`;
+	const held = await acquireTwStripePermit({
+		authorization: `Bearer ${secret}`,
+		timeoutMs: 1000,
+	});
+	let sent = 0;
+	const client = applyTwStripeConcurrencyLimit({
+		client: new Stripe(secret, {
+			maxNetworkRetries: 0,
+			httpClient: Stripe.createFetchHttpClient(async () => {
+				sent++;
+				return Response.json({ object: "balance" });
+			}),
+		}),
+	});
+	const controller = new AbortController();
+	const wait = createTestWait({
+		timeoutMs: 1000,
+		description: "clock operation",
+		signal: controller.signal,
+	});
+	try {
+		const request = runStripeClockRequest({
+			wait,
+			run: () => client.balance.retrieve({}, { timeout: 1000 }),
+		});
+		await Bun.sleep(20);
+		controller.abort(new Error("clock operation cancelled"));
+		await expect(request).rejects.toThrow("clock operation cancelled");
+	} finally {
+		wait.close();
+		await held.release();
+	}
+	await client.balance.retrieve({}, { timeout: 1000 });
+	expect(sent).toBe(1);
+});
+
+test("a long operation budget does not extend a short request's crash lease", async () => {
+	const authorization = `Bearer sk_test_lease_${crypto.randomUUID()}`;
+	const permit = await acquireTwStripePermit({
+		authorization,
+		timeoutMs: 60_000,
+		requestTimeoutMs: 40,
+	});
+	try {
+		const fingerprint = createHash("sha256")
+			.update(authorization)
+			.digest("hex");
+		const entries = await getTwStripeRedis().zrange(
+			`tw:stripe:{${fingerprint}}:active`,
+			0,
+			-1,
+			"WITHSCORES",
+		);
+		expect(entries).toHaveLength(2);
+		expect(Number(entries[1]) - Date.now()).toBeLessThanOrEqual(6000);
+		expect(Number(entries[1]) - Date.now()).toBeGreaterThan(4000);
+	} finally {
+		await permit.release();
+	}
 });
 
 test("webhook priority survives deferred execution without leaking into bulk work", async () => {
