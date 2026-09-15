@@ -13,15 +13,12 @@ import {
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV1Params,
 	type UsagePriceConfig,
-	usagePriceToLineItem,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeRebalancedAutoTopUp } from "@/internal/balances/autoTopUp/compute/computeRebalancedAutoTopUp.js";
-import {
-	buildUpdatedOptions,
-	updateCusEntOptionsInline,
-} from "@/internal/balances/autoTopUp/helpers/autoTopUpUtils.js";
+import { topUpQuantityToLineItem } from "@/internal/balances/autoTopUp/compute/topUpQuantityToLineItem.js";
+import { buildUpdatedOptions } from "@/internal/balances/autoTopUp/helpers/autoTopUpUtils.js";
 import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/entitlementExpiry.js";
 import { assertRoomForExpiringGrants } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
 import { routeRemainderToExpiringGrant } from "@/internal/billing/v2/utils/expiringGrants/routeRemainderToExpiringGrant.js";
@@ -98,14 +95,9 @@ export const computeManualTopUpPlan = ({
 
 	let lineItems: LineItem[] = [];
 	if (!skipBillingChanges) {
-		const inlineCusEnt = updateCusEntOptionsInline({
+		const lineItem = topUpQuantityToLineItem({
 			cusEnt: prepaidCusEnt,
-			feature,
-			quantity: topUpPacks,
-		});
-
-		const lineItem = usagePriceToLineItem({
-			cusEnt: inlineCusEnt,
+			quantity,
 			context: {
 				price: cusPrice.price,
 				product: customerProduct.product,
@@ -115,10 +107,6 @@ export const computeManualTopUpPlan = ({
 				now: currentEpochMs ?? Date.now(),
 				billingTiming: "in_advance",
 			} satisfies LineItemContext,
-			options: {
-				shouldProrateOverride: false,
-				chargeImmediatelyOverride: true,
-			},
 		});
 
 		lineItems = [lineItem];
