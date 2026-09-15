@@ -1809,6 +1809,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				description:
 					"Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.",
 			},
+			{
+				name: "custom_line_items",
+				type: "json",
+				required: false,
+				description:
+					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
+			},
 		],
 	},
 	{
@@ -1954,6 +1961,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.",
+			},
+			{
+				name: "custom_line_items",
+				type: "json",
+				required: false,
+				description:
+					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
 			},
 		],
 	},

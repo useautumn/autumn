@@ -134,6 +134,7 @@ test.concurrent(
 								variants: [
 									{
 										variant_plan_id: variantId,
+										archived: true,
 										customize: {
 											add_items: [dashboardItem()],
 										},

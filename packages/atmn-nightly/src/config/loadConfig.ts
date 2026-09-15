@@ -1,10 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { COLLECTIONS } from "../generated/emit";
 import { ConfigError, type LintIssue } from "../generated/lintRuntime";
 import { fixtureLocation } from "../surgery/fixtureLocation";
 import { configPackageName } from "./configPackageName";
+import { isLegacyConfigText, LegacyConfigError } from "./legacyConfig";
 
 const CONFIG_FILENAMES = ["autumn.config.ts", "autumn.config.js"] as const;
 
@@ -132,6 +133,11 @@ export const loadConfig = async ({
 				: null
 			: findConfigPath({ dirs });
 	if (!path) throw new ConfigNotFoundError(configPath ? [configPath] : dirs);
+	// A 1.x config would die inside the import with "item is not exported";
+	// say what happened and how to move instead.
+	if (isLegacyConfigText({ text: readFileSync(path, "utf8") })) {
+		throw new LegacyConfigError({ path });
+	}
 
 	// Cache-busted because the module cache would otherwise pin the first read
 	// for the life of the process — irrelevant for a single `atmn push`, wrong
@@ -149,11 +155,7 @@ export const loadConfig = async ({
 	}
 	const wire = module.default;
 
-	if (looksLikeV2Config({ module })) {
-		throw new Error(
-			`${path} is an atmn v2 config. v3 writes its own from your catalog: move this file aside, then run \`atmn pull\` to generate the v3 autumn.config.ts.`,
-		);
-	}
+	if (looksLikeV2Config({ module })) throw new LegacyConfigError({ path });
 	if (wire === undefined) {
 		throw new Error(
 			`${path} has no default export. It should end with \`export default atmn({ ... })\`.`,

@@ -123,6 +123,7 @@ export const handleUpdateCatalogErrors = async ({
 	handleUpdateFeatureErrors({ ctx, catalogContext, updateCatalogPlan });
 	validateProjectedInvoiceCreditPooling({ catalogContext, updateCatalogPlan });
 	handleRemoveFeatureErrors({ updateCatalogPlan });
+	handleLicenseAnchorLifecycleErrors({ updateCatalogPlan });
 	handleRemovePlanErrors({
 		updateCatalogPlan,
 		productStatesContext: catalogContext.productStatesContext,
@@ -163,6 +164,5 @@ export const handleUpdateCatalogErrors = async ({
 		productStatesContext: catalogContext.productStatesContext,
 	});
 	handleVariantFamilyErrors({ updateCatalogPlan });
-	handleLicenseAnchorLifecycleErrors({ updateCatalogPlan });
 	await handleRewardErrors({ ctx, params, catalogContext, updateCatalogPlan });
 };

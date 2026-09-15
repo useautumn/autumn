@@ -1,6 +1,7 @@
 import type { ApiField, ApiRoute } from "../../generated/apiRoutes";
 import { API_ROUTES, API_VERSION } from "../../generated/apiRoutes";
 import { AutumnApiError } from "../../generated/client";
+import { autumnFetch } from "../../http/autumnFetch";
 
 export type ApiCallOptions = {
 	route: ApiRoute;
@@ -256,7 +257,7 @@ export const renderApiResponseError = ({
 
 /** One POST, the way the generated client does it, plus the version header the spec pins. */
 export const callApi = async ({
-	fetch = globalThis.fetch,
+	fetch = autumnFetch,
 	...options
 }: ApiCallOptions): Promise<unknown> => {
 	const request = await buildApiRequest(options);

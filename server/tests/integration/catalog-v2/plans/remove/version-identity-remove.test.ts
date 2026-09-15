@@ -7,7 +7,9 @@
  */
 
 import { expect, test } from "bun:test";
+import { ErrCode } from "@autumn/shared";
 import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -47,7 +49,9 @@ const seedV1AndV2 = async ({
 		plans: [{ plan_id: planId, name: "V1" }],
 	});
 	await autumn.catalogV2.update({
-		plans: [{ plan_id: planId, versioning: "new_version", active: true, name: "V2" }],
+		plans: [
+			{ plan_id: planId, versioning: "new_version", active: true, name: "V2" },
+		],
 	});
 };
 
@@ -105,7 +109,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("version identity remove: pin-archive of active v2 leaves the pointer on v2")}`,
+	`${chalk.yellowBright("version identity remove: customered v2 rejects pin-removal; whole-plan archive keeps the pointer")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_rmp_id_arch");
@@ -114,8 +118,16 @@ test.concurrent(
 		try {
 			await seedV1AndV2({ autumn: autumnV2_3, planId });
 			await seedVersionableCustomer({ ctx, planId, version: 2 });
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				errMessage: `archive all versions of ${planId}`,
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						remove_plans: [{ plan_id: planId, version: 2 }],
+					}),
+			});
 			await autumnV2_3.catalogV2.update({
-				remove_plans: [{ plan_id: planId, version: 2 }],
+				remove_plans: [{ plan_id: planId }],
 			});
 
 			const versions = await ProductService.listFull({
@@ -130,7 +142,7 @@ test.concurrent(
 			const v2 = versions.find((product) => product.version === 2);
 			expect(v2?.archived).toBe(true);
 			expect(v2?.active).toBe(true);
-			expect(v1?.archived).toBe(false);
+			expect(v1?.archived).toBe(true);
 			expect(v1?.active).toBe(false);
 		} finally {
 			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });

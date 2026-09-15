@@ -43,6 +43,7 @@ import {
 } from "./env/resolveTarget";
 import type { CreateSandboxParams } from "./generated/client";
 import { createClient } from "./generated/client";
+import { autumnFetch } from "./http/autumnFetch";
 import { type Project, resolveProject } from "./project/resolveProject";
 import {
 	createPrompter,
@@ -156,6 +157,7 @@ const prompterFor = ({ command }: { command: Command }): Prompter =>
 const clientFor = ({ target }: { target: Target }) =>
 	createClient({
 		secretKey: requireSecretKey({ target }),
+		fetch: autumnFetch,
 		...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
 	});
 

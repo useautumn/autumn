@@ -1,4 +1,5 @@
 import { AutumnApiError } from "../generated/client";
+import { autumnFetch } from "../http/autumnFetch";
 
 /**
  * Keyless onboarding: a sandbox org with no owner, minted for an agent or a
@@ -28,7 +29,7 @@ const post = async ({
 	path,
 	body,
 	secretKey,
-	fetch = globalThis.fetch,
+	fetch = autumnFetch,
 }: {
 	baseUrl: string;
 	path: string;
