@@ -8,6 +8,7 @@ import {
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { billingLineItemsToDbEntities } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/convertToDbLineItem/billingLineItemsToDbEntities";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 import type { StoreDeferredInvoiceLineItemsPayload } from "@/queue/workflows";
 
@@ -239,6 +240,9 @@ const deferredInvoiceItemToDbLineItem = ({
 		customer_product_ids: customerProductIds,
 		customer_price_ids: customerPriceIds,
 		customer_entitlement_ids: customerEntitlementIds,
+		entities: billingLineItemsToDbEntities({
+			billingLineItems: [billingLineItem],
+		}),
 		internal_product_id: context.product.internal_id,
 		product_id: context.product.id,
 		internal_feature_id: context.feature?.internal_id ?? null,

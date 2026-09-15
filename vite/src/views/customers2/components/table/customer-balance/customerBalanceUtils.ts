@@ -103,6 +103,24 @@ export const getCustomerBalancePlanName = ({
 		return balance.customer_product.product.name;
 	}
 
+	// An expiring purchase grant outlives its plan; name it by where it came
+	// from so the row reads "Pro · Auto top-up" rather than "No plan".
+	const grantSource = balance.metadata?.source;
+	if (grantSource) {
+		const sourceLabel = {
+			attach: "Purchase",
+			manual_topup: "Top-up",
+			auto_topup: "Auto top-up",
+		}[grantSource];
+		const planName = balance.metadata?.plan_id
+			? fullCustomer?.customer_products.find(
+					(customerProduct) =>
+						customerProduct.product.id === balance.metadata?.plan_id,
+				)?.product.name
+			: undefined;
+		return planName ? `${planName} · ${sourceLabel}` : sourceLabel;
+	}
+
 	if (
 		!fullCustomer ||
 		!isSyntheticPooledBalanceCustomerEntitlement({

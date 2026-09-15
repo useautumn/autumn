@@ -39,8 +39,10 @@ test("restoring a plan on an archived feature is refused by lint", async () => {
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "${planId}",
 			name: "Plan",
+			versionSlug: "v1",
 			items: [{ featureId: "${featureId}" }],
 		}),
 	],

@@ -186,7 +186,7 @@ export const LINT_RULES: LintRules = {
 	plans: {
 		label: "plan",
 		idField: "planId",
-		required: ["planId"],
+		required: ["planId", "versionSlug"],
 		fields: {
 			planId: {
 				minLength: 1,
@@ -233,9 +233,7 @@ export const LINT_RULES: LintRules = {
 				kind: "unique",
 				field: "planId",
 				alongside: "versionSlug",
-				absentMeans: "v1",
-				because:
-					"A plan id plus a version slug names exactly one version; a fixture without a slug is v1.",
+				because: "A plan id plus a version slug names exactly one version.",
 			},
 			{
 				kind: "linkedOnce",
@@ -249,14 +247,12 @@ export const LINT_RULES: LintRules = {
 					"When versioning a base plan with variants linked, you also need to version the variant, and relink the new version to the new variant version.",
 			},
 			{
-				kind: "versionSlugs",
+				kind: "exactlyOneActive",
 				groupBy: "planId",
-				slug: "versionSlug",
+				field: "active",
 				label: "Plan",
-				collection: "variants",
-				identity: "variantPlanId",
-				pins: ["versionSlug", "version"],
-				because: "Add versionSlug to every version so they can be told apart.",
+				because:
+					"Every version of a plan lives in plans; mark the one customers can buy active: true and the rest active: false.",
 			},
 		],
 	},
@@ -563,6 +559,9 @@ export const LINT_RULES: LintRules = {
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
 			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
+			},
 		},
 		rules: [
 			{
@@ -826,6 +825,9 @@ export const LINT_RULES: LintRules = {
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
 			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
+			},
 		},
 	},
 	"plans.licenses.customize.addItems.price.additionalCurrencies": {
@@ -1006,7 +1008,9 @@ export const LINT_RULES: LintRules = {
 		},
 	},
 	"plans.variants": {
-		required: ["variantPlanId"],
+		label: "variant",
+		idField: "variantPlanId",
+		required: ["variantPlanId", "versionSlug"],
 		fields: {
 			variantPlanId: {
 				minLength: 1,
@@ -1211,6 +1215,9 @@ export const LINT_RULES: LintRules = {
 			},
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
+			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
 			},
 		},
 	},
@@ -1547,6 +1554,9 @@ export const LINT_RULES: LintRules = {
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
 			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
+			},
 		},
 	},
 	"plans.variants.customize.items.price.additionalCurrencies": {
@@ -1839,6 +1849,9 @@ export const LINT_RULES: LintRules = {
 			},
 			billingMethod: {
 				enum: ["prepaid", "usage_based"],
+			},
+			allocatedBilling: {
+				enum: ["arrear", "prorated_legacy"],
 			},
 		},
 	},

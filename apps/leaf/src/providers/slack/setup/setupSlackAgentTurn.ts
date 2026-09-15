@@ -27,6 +27,7 @@ export const setupSlackAgentTurn = async ({
 	providerUserId,
 	recentMessages,
 	run,
+	speaker,
 	text,
 	threadId,
 }: SlackAgentTurnParams) => {
@@ -98,6 +99,7 @@ export const setupSlackAgentTurn = async ({
 		})),
 		clientContext,
 		recentMessages,
+		speaker,
 		text: prepared.userText,
 	};
 	const env =

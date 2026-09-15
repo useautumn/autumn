@@ -12,7 +12,7 @@ import {
 import { setSsoHint } from "@/lib/sso/ssoHint";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, isSafeLocalPath } from "@/utils/genUtils";
 import { AuthBackground } from "./components/AuthBackground";
 import { AutumnWordmark } from "./components/AutumnWordmark";
 
@@ -35,6 +35,7 @@ export const SsoCallback = () => {
 	const providerError = searchParams.get("error");
 	const providerErrorDescription = searchParams.get("error_description");
 	const queryProviderId = searchParams.get("providerId");
+	const next = searchParams.get("next");
 
 	useEffect(() => {
 		if (startedRef.current || sessionLoading || providerError) return;
@@ -67,7 +68,14 @@ export const SsoCallback = () => {
 				});
 				setSsoHint(data.hint);
 				clearPendingSsoProviderId();
-				navigate(data.activated ? "/settings?tab=sso" : "/", { replace: true });
+				navigate(
+					isSafeLocalPath(next)
+						? next
+						: data.activated
+							? "/settings?tab=sso"
+							: "/",
+					{ replace: true },
+				);
 			} catch (err) {
 				startedRef.current = false;
 				setError(
@@ -82,6 +90,7 @@ export const SsoCallback = () => {
 		queryProviderId,
 		session,
 		sessionLoading,
+		next,
 	]);
 
 	const displayedError = providerError

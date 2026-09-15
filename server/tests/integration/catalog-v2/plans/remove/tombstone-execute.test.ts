@@ -1,12 +1,8 @@
-/**
- * Pin-remove of an expired-only non-live version tombstones that row.
- * Unpinned remove of expired-only versions tombstones the family; the plan
- * id is then a create (next free version), not an update.
- */
+/** Expired-only non-live versions tombstone, including after a sibling is promoted. */
 
-import { CusProductStatus } from "@autumn/shared";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import { expect, test } from "bun:test";
+import { CusProductStatus } from "@autumn/shared";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -16,6 +12,10 @@ import {
 } from "../../utils/expectCatalogUpdate.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
+import {
+	expectPlanPreviewRowCorrect,
+	parsePlanPreview,
+} from "../preview/utils/expectPlanPreview.js";
 import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 import { expectTombstoneCorrect } from "../utils/expectTombstoneCorrect.js";
@@ -99,6 +99,74 @@ test.concurrent(
 				planId,
 				version: 1,
 				versionSlug: "v1",
+				active: true,
+			});
+		} finally {
+			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 remove: promote a sibling and tombstone the expired active version in one call")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("tomb-promote")}@autumn.test`,
+				}),
+			],
+			actions: [],
+		});
+		const planId = uniqueTestId("cv2_rmp_tomb_promote");
+		await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await seedV1AndDraftV2({ autumn: autumnV2_3, planId });
+			const active = await findVersion({ ctx, planId, version: 1 });
+			const { cusProductId } = await seedVersionableCustomer({
+				ctx,
+				planId,
+				version: 1,
+				status: CusProductStatus.Expired,
+			});
+			const params = {
+				skip_deletions: false,
+				skip_version_deletions: false,
+				plans: [{ plan_id: planId, version_slug: "v2", active: true }],
+			};
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate(params),
+			);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId,
+					currentVersion: 1,
+					action: "delete",
+					versionSlug: "v1",
+					hasCustomers: true,
+					willArchive: false,
+				},
+			});
+
+			await autumnV2_3.catalogV2.update(params);
+			await expectTombstoneCorrect({
+				ctx,
+				autumn: autumnV2_3,
+				planId,
+				version: 1,
+				previousVersionSlug: active.version_slug ?? "v1",
+				internalId: active.internal_id,
+				customerProductId: cusProductId,
+			});
+			await expectVersionIdentityCorrect({
+				ctx,
+				planId,
+				version: 2,
+				versionSlug: "v2",
 				active: true,
 			});
 		} finally {

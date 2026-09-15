@@ -63,6 +63,7 @@ const withInternal: JsonSchema = {
 const overlayExposing = (names: string[]): Overlay => ({
 	collections: {},
 	exposeInternal: names,
+	serverOwnedInternal: {},
 });
 
 test("a synthetic x-internal field is skipped by type, lint and path lookup", () => {

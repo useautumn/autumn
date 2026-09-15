@@ -6,7 +6,7 @@ import { uniqueTestId } from "../../integration/catalog-v2/utils/uniqueTestId.js
 import {
 	type AtmnScenario,
 	runCli,
-	TMP_ROOT,
+	scenarioDir,
 	wireOfConfig,
 } from "./initAtmnScenario.js";
 
@@ -78,8 +78,7 @@ export const expectRoundTrip = async ({
 		wire: await scenario.wireFromConfig(),
 	});
 
-	const freshDir = join(TMP_ROOT, uniqueTestId("atmn_fresh"));
-	mkdirSync(freshDir, { recursive: true });
+	const freshDir = scenarioDir({ id: uniqueTestId("atmn_fresh") });
 	try {
 		const pullFresh = () =>
 			runCli({

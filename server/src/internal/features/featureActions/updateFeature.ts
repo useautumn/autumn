@@ -8,7 +8,6 @@ import {
 	type FeatureUpdateBlocker,
 	isAiCreditSystem,
 	isAnyCreditSystem,
-	isConsumablePrice,
 	type ModelMarkups,
 	notNullish,
 	toProductItem,
@@ -33,7 +32,6 @@ import { handleFeatureUsageTypeChanged } from "../utils/updateFeatureUtils/handl
 import {
 	validateInvoiceCreditPooling,
 	validateInvoiceCreditPrice,
-	validateInvoiceCreditUsageBasedPricing,
 } from "../validateInvoiceCreditPooling.js";
 import { hasCreditRateCardChanged } from "./hasCreditRateCardChanged.js";
 import type { ClearCreditSystemCachePayload } from "./runClearCreditSystemCacheTask.js";
@@ -202,16 +200,6 @@ export const updateFeature = async ({
 				objectsUsingFeature.entitlements.some(
 					(entitlement) => entitlement.pooled,
 				),
-		});
-		validateInvoiceCreditUsageBasedPricing({
-			feature: nextFeature,
-			usageBased: objectsUsingFeature.entitlements.every((entitlement) => {
-				const price = entToPrice({
-					ent: entitlement,
-					prices: objectsUsingFeature.prices,
-				});
-				return price !== undefined && isConsumablePrice(price);
-			}),
 		});
 		if (isEnablingInvoiceCredits) {
 			for (const entitlement of objectsUsingFeature.entitlements) {

@@ -37,6 +37,11 @@ const AcceptInvitation = React.lazy(() =>
 		default: AcceptInvitation,
 	})),
 );
+const ClaimOrg = React.lazy(() =>
+	import("./views/auth/ClaimOrg").then(({ ClaimOrg }) => ({
+		default: ClaimOrg,
+	})),
+);
 const Consent = React.lazy(() =>
 	import("./views/auth/Consent").then(({ Consent }) => ({ default: Consent })),
 );
@@ -168,6 +173,7 @@ export default function App() {
 					<Route path="/pw-sign-in" element={<PasswordSignIn />} />
 					<Route path="/consent" element={<Consent />} />
 					<Route path="/accept" element={<AcceptInvitation />} />
+					<Route path="/claim" element={<ClaimOrg />} />
 					<Route path={SSO_CALLBACK_PATH} element={<SsoCallback />} />
 					<Route path="/close" element={<CloseScreen />} />
 

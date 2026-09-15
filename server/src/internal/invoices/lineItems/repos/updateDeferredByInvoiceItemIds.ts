@@ -1,5 +1,5 @@
 import { type DbInvoiceLineItem, invoiceLineItems } from "@autumn/shared";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
 /**
@@ -19,7 +19,10 @@ export const getDeferredByInvoiceItemIds = async ({
 		.select()
 		.from(invoiceLineItems)
 		.where(
-			inArray(invoiceLineItems.stripe_invoice_item_id, stripeInvoiceItemIds),
+			and(
+				inArray(invoiceLineItems.stripe_invoice_item_id, stripeInvoiceItemIds),
+				isNull(invoiceLineItems.invoice_id),
+			),
 		);
 };
 

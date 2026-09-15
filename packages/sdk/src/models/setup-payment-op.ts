@@ -133,6 +133,10 @@ export type SetupPaymentBasePrice = {
   additionalCurrencies?: Array<SetupPaymentAdditionalCurrency> | undefined;
 };
 
+export type SetupPaymentItemThresholdBilling = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -656,6 +660,10 @@ export type SetupPaymentItemFeatureOverride = {
  */
 export type SetupPaymentItemPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: SetupPaymentItemThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -691,6 +699,10 @@ export type SetupPaymentItemPlanItem = {
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
   featureOverride?: SetupPaymentItemFeatureOverride | undefined;
+};
+
+export type SetupPaymentAddItemThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -1224,6 +1236,10 @@ export type SetupPaymentAddItemFeatureOverride = {
  */
 export type SetupPaymentAddItemPlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: SetupPaymentAddItemThresholdBilling | null | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -1711,6 +1727,10 @@ export type SetupPaymentUpsertLicenseBasePrice = {
   additionalCurrencies?:
     | Array<SetupPaymentUpsertLicenseAdditionalCurrency>
     | undefined;
+};
+
+export type SetupPaymentUpsertLicenseThresholdBilling = {
+  threshold: number;
 };
 
 /**
@@ -2269,6 +2289,13 @@ export type SetupPaymentUpsertLicenseFeatureOverride = {
  */
 export type SetupPaymentUpsertLicensePlanItem = {
   /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?:
+    | SetupPaymentUpsertLicenseThresholdBilling
+    | null
+    | undefined;
+  /**
    * The ID of the feature to configure.
    */
   featureId: string;
@@ -2697,7 +2724,7 @@ export type SetupPaymentFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
+  on_end: string;
 };
 
 /** @internal */
@@ -2709,7 +2736,7 @@ export const SetupPaymentFreeTrialParams$outboundSchema: z.ZodMiniType<
     durationLength: z.number(),
     durationType: z._default(SetupPaymentDurationType$outboundSchema, "month"),
     cardRequired: z._default(z.boolean(), false),
-    onEnd: z.optional(SetupPaymentOnEnd$outboundSchema),
+    onEnd: z._default(SetupPaymentOnEnd$outboundSchema, "bill"),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2765,7 +2792,7 @@ export function setupPaymentAdditionalCurrencyToJSON(
 export type SetupPaymentBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<SetupPaymentAdditionalCurrency$Outbound>
     | undefined;
@@ -2779,7 +2806,7 @@ export const SetupPaymentBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: SetupPaymentPriceInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => SetupPaymentAdditionalCurrency$outboundSchema)),
     ),
@@ -2801,6 +2828,29 @@ export function setupPaymentBasePriceToJSON(
 }
 
 /** @internal */
+export type SetupPaymentItemThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const SetupPaymentItemThresholdBilling$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemThresholdBilling$Outbound,
+  SetupPaymentItemThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function setupPaymentItemThresholdBillingToJSON(
+  setupPaymentItemThresholdBilling: SetupPaymentItemThresholdBilling,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemThresholdBilling$outboundSchema.parse(
+      setupPaymentItemThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const SetupPaymentItemResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof SetupPaymentItemResetInterval
 > = z.enum(SetupPaymentItemResetInterval);
@@ -2808,7 +2858,7 @@ export const SetupPaymentItemResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type SetupPaymentItemReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -2818,7 +2868,7 @@ export const SetupPaymentItemReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: SetupPaymentItemResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3964,6 +4014,10 @@ export function setupPaymentItemFeatureOverrideToJSON(
 
 /** @internal */
 export type SetupPaymentItemPlanItem$Outbound = {
+  threshold_billing?:
+    | SetupPaymentItemThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -3981,6 +4035,9 @@ export const SetupPaymentItemPlanItem$outboundSchema: z.ZodMiniType<
   SetupPaymentItemPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(
+      z.nullable(z.lazy(() => SetupPaymentItemThresholdBilling$outboundSchema)),
+    ),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
@@ -3997,6 +4054,7 @@ export const SetupPaymentItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -4012,6 +4070,29 @@ export function setupPaymentItemPlanItemToJSON(
 }
 
 /** @internal */
+export type SetupPaymentAddItemThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const SetupPaymentAddItemThresholdBilling$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemThresholdBilling$Outbound,
+  SetupPaymentAddItemThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function setupPaymentAddItemThresholdBillingToJSON(
+  setupPaymentAddItemThresholdBilling: SetupPaymentAddItemThresholdBilling,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemThresholdBilling$outboundSchema.parse(
+      setupPaymentAddItemThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const SetupPaymentAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof SetupPaymentAddItemResetInterval
 > = z.enum(SetupPaymentAddItemResetInterval);
@@ -4019,7 +4100,7 @@ export const SetupPaymentAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type SetupPaymentAddItemReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -4029,7 +4110,7 @@ export const SetupPaymentAddItemReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: SetupPaymentAddItemResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5197,6 +5278,10 @@ export function setupPaymentAddItemFeatureOverrideToJSON(
 
 /** @internal */
 export type SetupPaymentAddItemPlanItem$Outbound = {
+  threshold_billing?:
+    | SetupPaymentAddItemThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -5214,11 +5299,16 @@ export const SetupPaymentAddItemPlanItem$outboundSchema: z.ZodMiniType<
   SetupPaymentAddItemPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
+      SetupPaymentAddItemThresholdBilling$outboundSchema
+    ))),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() => SetupPaymentAddItemReset$outboundSchema)),
+    reset: z.optional(z.lazy(() =>
+      SetupPaymentAddItemReset$outboundSchema
+    )),
     price: z.optional(z.lazy(() => SetupPaymentAddItemPrice$outboundSchema)),
     proration: z.optional(
       z.lazy(() => SetupPaymentAddItemProration$outboundSchema),
@@ -5232,6 +5322,7 @@ export const SetupPaymentAddItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -5343,7 +5434,7 @@ export type SetupPaymentCustomizeFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
+  on_end: string;
 };
 
 /** @internal */
@@ -5358,7 +5449,7 @@ export const SetupPaymentCustomizeFreeTrialParams$outboundSchema: z.ZodMiniType<
       "month",
     ),
     cardRequired: z._default(z.boolean(), false),
-    onEnd: z.optional(SetupPaymentCustomizeOnEnd$outboundSchema),
+    onEnd: z._default(SetupPaymentCustomizeOnEnd$outboundSchema, "bill"),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5823,7 +5914,7 @@ export function setupPaymentUpsertLicenseAdditionalCurrencyToJSON(
 export type SetupPaymentUpsertLicenseBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<SetupPaymentUpsertLicenseAdditionalCurrency$Outbound>
     | undefined;
@@ -5837,7 +5928,7 @@ export const SetupPaymentUpsertLicenseBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: SetupPaymentPriceUpsertLicenseInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(z.array(z.lazy(() =>
       SetupPaymentUpsertLicenseAdditionalCurrency$outboundSchema
     ))),
@@ -5861,6 +5952,31 @@ export function setupPaymentUpsertLicenseBasePriceToJSON(
 }
 
 /** @internal */
+export type SetupPaymentUpsertLicenseThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseThresholdBilling$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentUpsertLicenseThresholdBilling$Outbound,
+    SetupPaymentUpsertLicenseThresholdBilling
+  > = z.object({
+    threshold: z.number(),
+  });
+
+export function setupPaymentUpsertLicenseThresholdBillingToJSON(
+  setupPaymentUpsertLicenseThresholdBilling:
+    SetupPaymentUpsertLicenseThresholdBilling,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseThresholdBilling$outboundSchema.parse(
+      setupPaymentUpsertLicenseThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const SetupPaymentUpsertLicenseResetInterval$outboundSchema:
   z.ZodMiniEnum<typeof SetupPaymentUpsertLicenseResetInterval> = z.enum(
     SetupPaymentUpsertLicenseResetInterval,
@@ -5869,7 +5985,7 @@ export const SetupPaymentUpsertLicenseResetInterval$outboundSchema:
 /** @internal */
 export type SetupPaymentUpsertLicenseReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -5879,7 +5995,7 @@ export const SetupPaymentUpsertLicenseReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: SetupPaymentUpsertLicenseResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -7104,6 +7220,10 @@ export function setupPaymentUpsertLicenseFeatureOverrideToJSON(
 
 /** @internal */
 export type SetupPaymentUpsertLicensePlanItem$Outbound = {
+  threshold_billing?:
+    | SetupPaymentUpsertLicenseThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -7123,28 +7243,32 @@ export const SetupPaymentUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
   SetupPaymentUpsertLicensePlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(z.nullable(z.lazy(() =>
+      SetupPaymentUpsertLicenseThresholdBilling$outboundSchema
+    ))),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(
-      z.lazy(() => SetupPaymentUpsertLicenseReset$outboundSchema),
-    ),
-    price: z.optional(
-      z.lazy(() => SetupPaymentUpsertLicensePrice$outboundSchema),
-    ),
-    proration: z.optional(
-      z.lazy(() => SetupPaymentUpsertLicenseProration$outboundSchema),
-    ),
-    rollover: z.optional(
-      z.lazy(() => SetupPaymentUpsertLicenseRollover$outboundSchema),
-    ),
-    featureOverride: z.optional(
-      z.lazy(() => SetupPaymentUpsertLicenseFeatureOverride$outboundSchema),
-    ),
+    reset: z.optional(z.lazy(() =>
+      SetupPaymentUpsertLicenseReset$outboundSchema
+    )),
+    price: z.optional(z.lazy(() =>
+      SetupPaymentUpsertLicensePrice$outboundSchema
+    )),
+    proration: z.optional(z.lazy(() =>
+      SetupPaymentUpsertLicenseProration$outboundSchema
+    )),
+    rollover: z.optional(z.lazy(() =>
+      SetupPaymentUpsertLicenseRollover$outboundSchema
+    )),
+    featureOverride: z.optional(z.lazy(() =>
+      SetupPaymentUpsertLicenseFeatureOverride$outboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });

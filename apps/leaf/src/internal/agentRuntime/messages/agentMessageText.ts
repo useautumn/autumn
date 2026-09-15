@@ -1,8 +1,10 @@
 import type { AutumnOrgContext } from "../../autumnMcp/orgContextService.js";
 import type {
 	AgentTurnParams,
+	AgentTurnSpeaker,
 	PendingApprovalNote,
 } from "../domain/agentTurnContext.js";
+import { EVE_EMPTY_DELIVERY_SENTINEL } from "../eve/emptyDelivery.js";
 
 const USER_MESSAGE_OPEN = "<user_message>";
 const USER_MESSAGE_CLOSE = "</user_message>";
@@ -37,6 +39,29 @@ const pendingApprovalsSection = (
 		].join("\n");
 	});
 	return [...cards, PENDING_APPROVAL_GUIDANCE].join("\n");
+};
+
+const CONDITIONAL_REPLY_GUIDANCE = `Delivery is conditional: several people are in this thread. If this message is a reply to one of them and asks nothing of you, reply with exactly ${EVE_EMPTY_DELIVERY_SENTINEL} and no other text; the message still counts as context. Otherwise answer as usual.`;
+
+const ADDRESSED_TO_OTHERS_GUIDANCE = `This message @-mentions someone else in the thread, not you. Unless it plainly asks you for something, reply with exactly ${EVE_EMPTY_DELIVERY_SENTINEL}.`;
+
+/** Every turn names its speaker: a thread has several people in it, and
+ * without this the model reads a reply meant for someone else as its own.
+ * A message that does not @-mention the agent also makes delivery
+ * conditional, so the model can stay quiet on chatter between people. Keyed
+ * on the mention, not on session age: a recovered session mid-thread is
+ * still a follow-up. */
+const speakerSection = (speaker?: AgentTurnSpeaker) => {
+	if (!speaker) return null;
+	const identity = speaker.email
+		? `${speaker.name} (${speaker.email})`
+		: speaker.name;
+	const lines = [`Speaker: ${identity}`];
+	if (!speaker.mentionsAgent) lines.push(CONDITIONAL_REPLY_GUIDANCE);
+	if (speaker.mentionsOthers && !speaker.mentionsAgent) {
+		lines.push(ADDRESSED_TO_OTHERS_GUIDANCE);
+	}
+	return lines.join("\n");
 };
 
 const adminBypassPreamble = ({
@@ -93,6 +118,7 @@ export const buildAgentMessageText = ({
 		!newSession && !approvalEdit
 			? pendingApprovalsSection(pendingApprovals)
 			: null,
+		speakerSection(params.speaker),
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n");

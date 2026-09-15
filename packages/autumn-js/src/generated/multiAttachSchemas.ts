@@ -10,6 +10,10 @@ export const multiAttachAdditionalCurrencySchema = z.object({
 	amount: z.number(),
 });
 
+export const multiAttachThresholdBillingSchema = z.object({
+	threshold: z.number(),
+});
+
 export const multiAttachItemAdditionalCurrencySchema = z.object({
 	currency: z.string(),
 	amount: z.number(),
@@ -183,7 +187,7 @@ export const multiAttachAdditionalCurrencyOutboundSchema = z.object({
 export const multiAttachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 	additional_currencies: z
 		.union([
 			z.array(multiAttachAdditionalCurrencyOutboundSchema),
@@ -192,9 +196,13 @@ export const multiAttachBasePriceOutboundSchema = z.object({
 		.optional(),
 });
 
+export const multiAttachThresholdBillingOutboundSchema = z.object({
+	threshold: z.number(),
+});
+
 export const multiAttachResetOutboundSchema = z.object({
 	interval: z.string(),
-	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	interval_count: z.number(),
 });
 
 export const multiAttachItemAdditionalCurrencyOutboundSchema = z.object({
@@ -470,6 +478,10 @@ export const multiAttachFeatureOverrideOutboundSchema = z.object({
 });
 
 export const multiAttachPlanItemOutboundSchema = z.object({
+	threshold_billing: z
+		.union([multiAttachThresholdBillingOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -520,7 +532,7 @@ export const multiAttachFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
-	on_end: z.union([z.string(), z.undefined()]).optional(),
+	on_end: z.string(),
 });
 
 export const multiAttachInvoiceModeOutboundSchema = z.object({
@@ -807,6 +819,10 @@ export const multiAttachFeatureOverrideSchema = z.object({
 });
 
 export const multiAttachPlanItemSchema = z.object({
+	thresholdBilling: z
+		.union([multiAttachThresholdBillingSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),

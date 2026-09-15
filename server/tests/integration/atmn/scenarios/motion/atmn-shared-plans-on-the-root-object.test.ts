@@ -7,12 +7,12 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	"a spread object on the root (`atmn({ ...shared, plans })`) never silently appends nowhere for a remote-only feature living inside `shared`",
@@ -27,7 +27,7 @@ import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
 
 export default atmn({
 	...shared,
-	plans: [plan({ planId: "${pro}", name: "Pro" })],
+	plans: [plan({ active: true, planId: "${pro}", name: "Pro", versionSlug: "v1", })],
 });
 `;
 

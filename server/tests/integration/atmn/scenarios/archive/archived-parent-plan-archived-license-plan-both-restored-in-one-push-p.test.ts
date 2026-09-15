@@ -7,6 +7,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	enterpriseWithSeats,
 	everyFeatureType,
@@ -19,7 +20,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type CatalogPlanRow = {
 	id: string;
@@ -54,12 +54,12 @@ const row = ({
 	archived: boolean;
 }): string => {
 	if (planId !== "enterprise") {
-		return `\n\t\t\tplan({ planId: "${planId}", archived: ${archived} }),`;
+		return `\n\t\t\tplan({ active: true, planId: "${planId}", versionSlug: "v1", archived: ${archived} }),`;
 	}
 	const licenses = archived
 		? "[]"
 		: `[{ licensePlanId: "seat", included: 25 }]`;
-	return `\n\t\t\tplan({ planId: "enterprise", archived: ${archived}, licenses: ${licenses} }),`;
+	return `\n\t\t\tplan({ active: true, planId: "enterprise", versionSlug: "v1", archived: ${archived}, licenses: ${licenses} }),`;
 };
 
 const pairBody = ({
@@ -89,7 +89,11 @@ for (const order of [
 		`${chalk.yellowBright(`atmn scenarios/archive: restoring the parent and its license plan together in one push [${order}] restores both with the link intact`)}`,
 		async () => {
 			const scenario = await initAtmnScenario({
-				setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+				setup: [
+					s.platform.create({
+						userEmail: `${uniqueTestId("atmn")}@autumn.test`,
+					}),
+				],
 				config: `{ features: [${everyFeatureType}], plans: [${seatPlan}${enterpriseWithSeats({})}] }`,
 			});
 

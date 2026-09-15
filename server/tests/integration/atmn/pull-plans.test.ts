@@ -197,6 +197,7 @@ const pushProV1ThenV2WithLicensedSeat = async (): Promise<ProFixture> => {
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v1",
@@ -215,6 +216,7 @@ const pushProV1ThenV2WithLicensedSeat = async (): Promise<ProFixture> => {
 			body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v2",
@@ -222,19 +224,23 @@ const pushProV1ThenV2WithLicensedSeat = async (): Promise<ProFixture> => {
 			items: [{ featureId: "${seats}", included: 1 }],
 		}),
 		plan({
+			active: true,
 			planId: "${seatPlan}",
 			name: "Seat",
+			versionSlug: "v1",
 			price: { amount: 15, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${enterprisePlan}",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 200, interval: "month" },
 			licenses: [{ licensePlanId: "${seatPlan}", included: 25 }],
 		}),
-	],
-	planVersions: [
+	
 		plan({
+			active: false,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v1",
@@ -334,6 +340,7 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v2",
@@ -348,19 +355,23 @@ test.concurrent(
 			price: { amount: 59, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${seatPlan}",
 			name: "Seat",
+			versionSlug: "v1",
 			price: { amount: 15, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${enterprisePlan}",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 200, interval: "month" },
 			licenses: [{ licensePlanId: "${seatPlan}", included: 25 }],
 		}),
-	],
-	planVersions: [
+	
 		plan({
+			active: false,
 			planId: "${pro}",
 			name: "Pro",
 			versionSlug: "v1",
@@ -396,7 +407,7 @@ test.concurrent(
 			]);
 
 			const text = readConfigText({ cwd: scenario.cwd });
-			expect(occurrencesOf({ text, needle: "active: false" })).toBe(1);
+			expect(occurrencesOf({ text, needle: "active: false" })).toBe(2);
 		} finally {
 			scenario.cleanup();
 			server.cleanup();

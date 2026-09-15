@@ -25,9 +25,12 @@ import {
 } from "@phosphor-icons/react";
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
+import {
+	clampMaxGroups,
+	useAnalyticsFilterState,
+} from "../hooks/useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import { groupValueLabel } from "../utils/displayLabels";
 
@@ -39,9 +42,7 @@ export const SelectGroupByDropdown = ({
 	const [open, setOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
 
-	const [searchParams] = useSearchParams();
-	const navigate = useNavigate();
-	const location = useLocation();
+	const { filterStates, setFilterStates } = useAnalyticsFilterState();
 
 	const {
 		groupFilter,
@@ -75,10 +76,10 @@ export const SelectGroupByDropdown = ({
 		setPlanDeselected(new Set());
 	};
 
-	const currentGroupBy = searchParams.get("group_by") || "";
-	const customerId = searchParams.get("customer_id");
+	const currentGroupBy = filterStates.group_by ?? "";
+	const customerId = filterStates.customer_id;
 	const showCustomerIdOption = !customerId;
-	const maxGroups = Number(searchParams.get("max_groups")) || 10;
+	const maxGroups = filterStates.max_groups;
 
 	const { queryStates, setQueryStates } = useAnalyticsQueryState();
 	// Without a customer the hook never sends aggregate_on, so the chart shows
@@ -89,7 +90,7 @@ export const SelectGroupByDropdown = ({
 	// it, but the combination can also arrive via URL load or back-navigation.
 	useEffect(() => {
 		if (isDeducted && currentGroupBy === "plan_id") {
-			updateQueryParams({ groupBy: null });
+			updateGroupBy({ groupBy: null });
 		}
 	});
 
@@ -102,33 +103,19 @@ export const SelectGroupByDropdown = ({
 		// Plan grouping isn't served in deducted mode — drop it rather than
 		// leave the chart pointing at a grouping that returns nothing.
 		if (mode === "deductions" && currentGroupBy === "plan_id") {
-			updateQueryParams({ groupBy: null });
+			updateGroupBy({ groupBy: null });
 		}
 	};
 
-	// Built from window.location, NOT react-router's `location.search`: the
-	// Values/Deductions tab writes aggregate_on through nuqs, whose history push
-	// react-router may not have observed yet. Rebuilding from a stale snapshot
-	// silently dropped that param (picking a group-by kicked you out of deducted
-	// mode). window.location is always the real current URL, whoever wrote last.
-	const updateQueryParams = ({ groupBy }: { groupBy: string | null }) => {
-		const params = new URLSearchParams(window.location.search);
-
-		if (groupBy) {
-			params.set("group_by", groupBy);
-		} else {
-			params.delete("group_by");
-			params.delete("max_groups");
-		}
-
-		navigate(`${location.pathname}?${params.toString()}`);
+	// Max groups only means something alongside a grouping, so it leaves with it.
+	const updateGroupBy = ({ groupBy }: { groupBy: string | null }) => {
+		setFilterStates(
+			groupBy ? { group_by: groupBy } : { group_by: null, max_groups: null },
+		);
 	};
 
 	const updateMaxGroups = ({ value }: { value: number }) => {
-		const clamped = Math.min(250, Math.max(1, value));
-		const params = new URLSearchParams(window.location.search);
-		params.set("max_groups", String(clamped));
-		navigate(`${location.pathname}?${params.toString()}`);
+		setFilterStates({ max_groups: clampMaxGroups(value) });
 	};
 
 	const filteredOptions = propertyKeys.filter((key) =>
@@ -136,7 +123,7 @@ export const SelectGroupByDropdown = ({
 	);
 
 	const handleSelect = ({ property }: { property: string | null }) => {
-		updateQueryParams({ groupBy: property });
+		updateGroupBy({ groupBy: property });
 		setOpen(false);
 	};
 

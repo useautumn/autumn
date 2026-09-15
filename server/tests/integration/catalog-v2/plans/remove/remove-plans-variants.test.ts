@@ -1,30 +1,34 @@
-/**
- * catalogV2.update — cannot remove a base that would leave variants
- * without a live unarchived base. Same-call remove of the variant is ok.
- *
- * Contract:
- *   Unpinned delete of Team while EU survives → 400
- *   Unpinned archive of Team while EU survives → 400
- *   Same-call remove Team + EU, no customers → both hard-delete
- */
+/** Base removal cannot strand a retained variant; removing both unused rows is valid. */
 
-import { ErrCode } from "@autumn/shared";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import { test } from "bun:test";
+import { CusProductStatus, ErrCode } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
+import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import {
 	deleteDbPlans,
 	expectCatalogPlansCorrect,
 	expectDbPlansAbsent,
+	expectDbPlansCorrect,
 } from "../utils/expectCatalogPlans.js";
-import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
+import { expectVariantPointerCorrect } from "../variants/utils/expectVariantPointer.js";
 import { seedBaseWithVariant } from "../variants/utils/seedVariantPlans.js";
 
-const cannotRemoveWithVariants = ({ planId }: { planId: string }) =>
-	`Cannot delete or archive plan ${planId} while it still has variants`;
+const cannotRemoveWithVariant = ({
+	action,
+	baseId,
+	variantId,
+	variantArchived = false,
+}: {
+	action: "archive" | "delete";
+	baseId: string;
+	variantId: string;
+	variantArchived?: boolean;
+}) =>
+	`Cannot ${action} plan ${baseId} because ${variantArchived ? "archived variant" : "variant"} ${variantId} would still link to it. Link the variant to another base version before ${action === "archive" ? "archiving" : "deleting"} this plan.`;
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 remove plans: unpinned delete of a base with variants is 400")}`,
@@ -42,7 +46,11 @@ test.concurrent(
 
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
-				errMessage: cannotRemoveWithVariants({ planId: baseId }),
+				errMessage: cannotRemoveWithVariant({
+					action: "delete",
+					baseId,
+					variantId,
+				}),
 				func: () =>
 					autumnV2_3.catalogV2.update({
 						remove_plans: [{ plan_id: baseId }],
@@ -77,7 +85,11 @@ test.concurrent(
 
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
-				errMessage: cannotRemoveWithVariants({ planId: baseId }),
+				errMessage: cannotRemoveWithVariant({
+					action: "archive",
+					baseId,
+					variantId,
+				}),
 				func: () =>
 					autumnV2_3.catalogV2.update({
 						remove_plans: [{ plan_id: baseId }],
@@ -87,6 +99,76 @@ test.concurrent(
 			await expectCatalogPlansCorrect({
 				autumn: autumnV2_3,
 				expected: [{ id: baseId, name: "Team", archived: false }],
+			});
+		} finally {
+			await cleanupPlanCustomerRefs({ ctx, planIds: [baseId, variantId] });
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 remove plans: archive variant plus tombstone base is 400")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [s.platform.create({ setupDefaultFeatures: true })],
+			actions: [],
+		});
+		const baseId = uniqueTestId("cv2_rmp_var_tomb");
+		const variantId = uniqueTestId("cv2_rmp_var_tomb_eu");
+		await cleanupPlanCustomerRefs({ ctx, planIds: [baseId, variantId] });
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: baseId,
+						versioning: "new_version",
+					},
+				],
+			});
+			await seedVersionableCustomer({
+				ctx,
+				planId: baseId,
+				version: 1,
+				status: CusProductStatus.Expired,
+			});
+			await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
+
+			const params = {
+				skip_deletions: false,
+				skip_version_deletions: false,
+				plans: [{ plan_id: baseId, version_slug: "v2", active: true }],
+			};
+			for (const func of [
+				() => autumnV2_3.catalogV2.previewUpdate(params),
+				() => autumnV2_3.catalogV2.update(params),
+			]) {
+				await expectAutumnError({
+					errCode: ErrCode.InvalidRequest,
+					errMessage: cannotRemoveWithVariant({
+						action: "delete",
+						baseId,
+						variantId,
+						variantArchived: true,
+					}),
+					func,
+				});
+			}
+
+			await expectDbPlansCorrect({
+				ctx,
+				expected: [
+					{ id: baseId, version: 1, archived: false },
+					{ id: variantId, version: 1, archived: false },
+				],
+			});
+			await expectVariantPointerCorrect({
+				ctx,
+				variantPlanId: variantId,
+				basePlanId: baseId,
+				baseVersion: 1,
 			});
 		} finally {
 			await cleanupPlanCustomerRefs({ ctx, planIds: [baseId, variantId] });

@@ -14,11 +14,18 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
-const internalIdOf = ({ text, featureId }: { text: string; featureId: string }): string => {
+const internalIdOf = ({
+	text,
+	featureId,
+}: {
+	text: string;
+	featureId: string;
+}): string => {
 	const match = text.match(
 		new RegExp(`internalId: "([^"]+)", featureId: "${featureId}"`),
 	);
-	if (!match) throw new Error(`no backfilled internalId found for ${featureId}`);
+	if (!match)
+		throw new Error(`no backfilled internalId found for ${featureId}`);
 	return match[1];
 };
 
@@ -58,7 +65,9 @@ test.concurrent(
 			};
 			const renamed = catalog.features.find((feature) => feature.id === newId);
 			expect(renamed?.internalId).toBe(internalId);
-			expect(catalog.features.find((feature) => feature.id === oldId)).toBeUndefined();
+			expect(
+				catalog.features.find((feature) => feature.id === oldId),
+			).toBeUndefined();
 
 			// Same row, not a create + delete: exactly one feature with this internalId.
 			expect(
@@ -69,7 +78,9 @@ test.concurrent(
 			const preview = (await scenario.client.previewUpdate(wire)) as {
 				features: Array<{ action?: string }>;
 			};
-			expect(preview.features.filter((row) => row.action !== "none")).toEqual([]);
+			expect(preview.features.filter((row) => row.action !== "none")).toEqual(
+				[],
+			);
 		} finally {
 			scenario.cleanup();
 		}

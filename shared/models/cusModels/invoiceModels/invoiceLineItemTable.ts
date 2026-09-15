@@ -10,7 +10,10 @@ import {
 	unique,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn, sqlNow } from "../../../db/utils.js";
-import type { InvoiceLineItemDiscount } from "./invoiceLineItemModels.js";
+import type {
+	InvoiceLineItemDiscount,
+	InvoiceLineItemEntity,
+} from "./invoiceLineItemModels.js";
 import { invoices } from "./invoiceTable.js";
 
 export const invoiceLineItems = pgTable(
@@ -73,6 +76,12 @@ export const invoiceLineItems = pgTable(
 		discounts: jsonb("discounts")
 			.$type<InvoiceLineItemDiscount>()
 			.array()
+			.default([]),
+
+		// Per-entity attribution: { entity_id, quantity, amount }[]
+		entities: jsonb("entities")
+			.$type<InvoiceLineItemEntity[]>()
+			.notNull()
 			.default([]),
 	},
 	(table) => [

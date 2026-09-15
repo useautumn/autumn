@@ -318,6 +318,12 @@
 								]
 							},
 							{
+								"group": "Invoice",
+								"pages": [
+									"api-reference/webhooks/invoiceFinalized"
+								]
+							},
+							{
 								"group": "Vercel",
 								"pages": [
 									"api-reference/webhooks/vercelResourcesDeleted",

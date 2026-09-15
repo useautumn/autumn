@@ -27,8 +27,14 @@ import {
 	seedBaseWithVariant,
 } from "../variants/utils/seedVariantPlans.js";
 
-const cannotRemoveWithVariants = ({ planId }: { planId: string }) =>
-	`Cannot delete or archive plan ${planId} while it still has variants`;
+const cannotRemoveWithVariant = ({
+	baseId,
+	variantId,
+}: {
+	baseId: string;
+	variantId: string;
+}) =>
+	`Cannot delete plan ${baseId} because variant ${variantId} would still link to it. Link the variant to another base version before deleting this plan.`;
 
 const seedBaseV2WithVariantOnV2 = async ({
 	autumn,
@@ -76,7 +82,7 @@ test.concurrent(
 
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
-				errMessage: cannotRemoveWithVariants({ planId: baseId }),
+				errMessage: cannotRemoveWithVariant({ baseId, variantId }),
 				func: () =>
 					autumnV2_3.catalogV2.update({
 						remove_plans: [{ plan_id: baseId, version: 2 }],
@@ -151,7 +157,7 @@ test.concurrent(
 
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
-				errMessage: cannotRemoveWithVariants({ planId: baseId }),
+				errMessage: cannotRemoveWithVariant({ baseId, variantId }),
 				func: () =>
 					autumnV2_3.catalogV2.update({
 						remove_plans: [{ plan_id: baseId, version: 1 }],

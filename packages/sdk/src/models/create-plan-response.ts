@@ -17,14 +17,12 @@ import {
   CreatePlanBillingControlsResponse$inboundSchema,
   CreatePlanConfigResponse,
   CreatePlanConfigResponse$inboundSchema,
-  CreatePlanCreditSchemaUpsertLicense2,
-  CreatePlanCreditSchemaUpsertLicense2$inboundSchema,
   CreatePlanCustomerEligibility,
   CreatePlanCustomerEligibility$inboundSchema,
-  CreatePlanDimensionsToUpsertLicenseEnum1,
-  CreatePlanDimensionsToUpsertLicenseEnum1$inboundSchema,
-  CreatePlanDimensionsUpsertLicense2,
-  CreatePlanDimensionsUpsertLicense2$inboundSchema,
+  CreatePlanDimensionsUpsertLicense3,
+  CreatePlanDimensionsUpsertLicense3$inboundSchema,
+  CreatePlanDimensionsUpsertLicense4,
+  CreatePlanDimensionsUpsertLicense4$inboundSchema,
   CreatePlanEnv,
   CreatePlanEnv$inboundSchema,
   CreatePlanFreeTrialParams,
@@ -49,14 +47,86 @@ import {
   CreatePlanUpsertLicenseReset$inboundSchema,
   CreatePlanUpsertLicenseRollover,
   CreatePlanUpsertLicenseRollover$inboundSchema,
+  CreatePlanUpsertLicenseThresholdBilling,
+  CreatePlanUpsertLicenseThresholdBilling$inboundSchema,
   CreatePlanVariantDetailsBillingControls,
   CreatePlanVariantDetailsBillingControls$inboundSchema,
-} from "./create-plan-dimensions-to-upsert-license-enum-1.js";
+} from "./create-plan-dimensions-upsert-license-3.js";
 import {
   CreatePlanPriceResponse,
   CreatePlanPriceResponse$inboundSchema,
-} from "./create-plan-item-price-response.js";
+} from "./create-plan-item-billing-method-response.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+export type CreatePlanUpsertLicenseDimensionsUnion2 =
+  | CreatePlanDimensionsUpsertLicense3
+  | CreatePlanDimensionsUpsertLicense4;
+
+export type CreatePlanUpsertLicenseMultipliers2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Multiplies the matched rate. All matching multipliers stack.
+   */
+  factor?: number | undefined;
+  /**
+   * Added to the rate after every factor is applied, in credits per billing-unit group.
+   */
+  add?: number | undefined;
+};
+
+export type CreatePlanCreditSchemaUpsertLicense2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: {
+    [k: string]:
+      | CreatePlanDimensionsUpsertLicense3
+      | CreatePlanDimensionsUpsertLicense4;
+  } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?:
+    | { [k: string]: CreatePlanUpsertLicenseMultipliers2 }
+    | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type CreatePlanDimensionsUpsertLicense2 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
+
+export const CreatePlanDimensionsToUpsertLicenseEnum1 = {
+  Inf: "inf",
+} as const;
+export type CreatePlanDimensionsToUpsertLicenseEnum1 = ClosedEnum<
+  typeof CreatePlanDimensionsToUpsertLicenseEnum1
+>;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
@@ -221,6 +291,10 @@ export type CreatePlanUpsertLicenseFeatureOverride = {
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type CreatePlanUpsertLicensePlanItem = {
+  /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: CreatePlanUpsertLicenseThresholdBilling | null | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -495,6 +569,127 @@ export type CreatePlanResponse = {
 };
 
 /** @internal */
+export const CreatePlanUpsertLicenseDimensionsUnion2$inboundSchema:
+  z.ZodMiniType<CreatePlanUpsertLicenseDimensionsUnion2, unknown> = smartUnion([
+    CreatePlanDimensionsUpsertLicense3$inboundSchema,
+    CreatePlanDimensionsUpsertLicense4$inboundSchema,
+  ]);
+
+export function createPlanUpsertLicenseDimensionsUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreatePlanUpsertLicenseDimensionsUnion2,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanUpsertLicenseDimensionsUnion2$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreatePlanUpsertLicenseDimensionsUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanUpsertLicenseMultipliers2$inboundSchema: z.ZodMiniType<
+  CreatePlanUpsertLicenseMultipliers2,
+  unknown
+> = z.object({
+  match: z.record(z.string(), types.string()),
+  factor: types.optional(types.number()),
+  add: types.optional(types.number()),
+});
+
+export function createPlanUpsertLicenseMultipliers2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanUpsertLicenseMultipliers2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanUpsertLicenseMultipliers2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanUpsertLicenseMultipliers2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanCreditSchemaUpsertLicense2$inboundSchema: z.ZodMiniType<
+  CreatePlanCreditSchemaUpsertLicense2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    dimensions: types.optional(
+      z.record(
+        z.string(),
+        smartUnion([
+          CreatePlanDimensionsUpsertLicense3$inboundSchema,
+          CreatePlanDimensionsUpsertLicense4$inboundSchema,
+        ]),
+      ),
+    ),
+    multipliers: types.optional(z.record(
+      z.string(),
+      z.lazy(() => CreatePlanUpsertLicenseMultipliers2$inboundSchema),
+    )),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createPlanCreditSchemaUpsertLicense2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanCreditSchemaUpsertLicense2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanCreditSchemaUpsertLicense2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanCreditSchemaUpsertLicense2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanDimensionsUpsertLicense2$inboundSchema: z.ZodMiniType<
+  CreatePlanDimensionsUpsertLicense2,
+  unknown
+> = z.pipe(
+  z.object({
+    match: z.record(z.string(), types.string()),
+    priority: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createPlanDimensionsUpsertLicense2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanDimensionsUpsertLicense2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanDimensionsUpsertLicense2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanDimensionsUpsertLicense2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanDimensionsToUpsertLicenseEnum1$inboundSchema:
+  z.ZodMiniEnum<typeof CreatePlanDimensionsToUpsertLicenseEnum1> = z.enum(
+    CreatePlanDimensionsToUpsertLicenseEnum1,
+  );
+
+/** @internal */
 export const CreatePlanDimensionsUpsertLicenseToUnion1$inboundSchema:
   z.ZodMiniType<CreatePlanDimensionsUpsertLicenseToUnion1, unknown> =
     smartUnion([
@@ -581,7 +776,7 @@ export function createPlanDimensionsUpsertLicense1FromJSON(
 export const CreatePlanUpsertLicenseDimensionsUnion1$inboundSchema:
   z.ZodMiniType<CreatePlanUpsertLicenseDimensionsUnion1, unknown> = smartUnion([
     z.lazy(() => CreatePlanDimensionsUpsertLicense1$inboundSchema),
-    CreatePlanDimensionsUpsertLicense2$inboundSchema,
+    z.lazy(() => CreatePlanDimensionsUpsertLicense2$inboundSchema),
   ]);
 
 export function createPlanUpsertLicenseDimensionsUnion1FromJSON(
@@ -692,7 +887,7 @@ export const CreatePlanCreditSchemaUpsertLicense1$inboundSchema: z.ZodMiniType<
       z.string(),
       smartUnion([
         z.lazy(() => CreatePlanDimensionsUpsertLicense1$inboundSchema),
-        CreatePlanDimensionsUpsertLicense2$inboundSchema,
+        z.lazy(() => CreatePlanDimensionsUpsertLicense2$inboundSchema),
       ]),
     )),
     multipliers: types.optional(z.record(
@@ -729,7 +924,7 @@ export const CreatePlanUpsertLicenseCreditSchemaUnion$inboundSchema:
   z.ZodMiniType<CreatePlanUpsertLicenseCreditSchemaUnion, unknown> = smartUnion(
     [
       z.lazy(() => CreatePlanCreditSchemaUpsertLicense1$inboundSchema),
-      CreatePlanCreditSchemaUpsertLicense2$inboundSchema,
+      z.lazy(() => CreatePlanCreditSchemaUpsertLicense2$inboundSchema),
     ],
   );
 
@@ -836,7 +1031,9 @@ export const CreatePlanUpsertLicenseFeatureOverride$inboundSchema:
     z.object({
       credit_schema: types.optional(z.array(smartUnion([
         z.lazy(() => CreatePlanCreditSchemaUpsertLicense1$inboundSchema),
-        CreatePlanCreditSchemaUpsertLicense2$inboundSchema,
+        z.lazy(() =>
+          CreatePlanCreditSchemaUpsertLicense2$inboundSchema
+        ),
       ]))),
       markups: types.optional(z.lazy(() =>
         CreatePlanUpsertLicenseMarkups$inboundSchema
@@ -866,6 +1063,9 @@ export const CreatePlanUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    threshold_billing: z.optional(
+      z.nullable(CreatePlanUpsertLicenseThresholdBilling$inboundSchema),
+    ),
     feature_id: types.string(),
     included: types.optional(types.number()),
     unlimited: types.optional(types.boolean()),
@@ -880,6 +1080,7 @@ export const CreatePlanUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "threshold_billing": "thresholdBilling",
       "feature_id": "featureId",
       "feature_override": "featureOverride",
     });

@@ -53,7 +53,6 @@ import {
 	handleGetSlackAdminInstall,
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
-import { handleSyncCustomerEntitlementAnchors } from "./handleSyncCustomerEntitlementAnchors";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
 import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
 import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
@@ -73,6 +72,7 @@ import { handleUpsertAdminResetJobConfig } from "./handleUpsertAdminResetJobConf
 import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
+import { handleCreateImpersonationCliTokens } from "./impersonation/handleCreateImpersonationCliTokens";
 import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
@@ -237,6 +237,10 @@ honoAdminRouter.patch(
 );
 honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
+honoAdminRouter.post(
+	"/impersonation/cli-tokens",
+	...handleCreateImpersonationCliTokens,
+);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
 honoAdminRouter.get(
 	"/default-stripe-account",
@@ -258,10 +262,6 @@ honoAdminRouter.patch(
 );
 honoAdminRouter.delete("/chat/slack-admin", ...handleDeleteSlackAdminInstall);
 honoAdminRouter.post("/invoice-line-items", ...handleGetInvoiceLineItems);
-honoAdminRouter.post(
-	"/customer-entitlements/sync-anchor",
-	...handleSyncCustomerEntitlementAnchors,
-);
 
 honoAdminRouter.get("/rollouts", ...handleGetRollouts);
 honoAdminRouter.put("/rollouts/:rollout_id", ...handleUpdateRollout);

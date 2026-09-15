@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { Command } from "commander";
+import { registerApiCommands } from "./actions/api/registerApiCommands";
 import { runEnv } from "./actions/env";
 import { fetchOrgInfo } from "./actions/env/fetchOrgInfo";
 import { runInit } from "./actions/init/runInit";
@@ -274,26 +275,20 @@ Two ways in:
   atmn login                       ${CONNECT_OPTIONS.login}
   atmn login --keyless             ${CONNECT_OPTIONS.keyless}
 Linking a keyless org to an account:
-  atmn login --claim you@acme.com  emails a one-time code; pass it back with --otp <code>`,
+  atmn login --claim you@acme.com  creates and emails a secure browser claim link`,
 		)
 		.option("--keyless", CONNECT_OPTIONS.keyless)
 		.option(
 			"--claim <email>",
 			"link the keyless org this key belongs to with an account",
 		)
-		.option(
-			"--otp <code>",
-			"the code --claim emailed (headless: run again with it)",
-		)
 		.action(
 			async (
-				options: { keyless?: boolean; claim?: string; otp?: string },
+				options: { keyless?: boolean; claim?: string },
 				command: Command,
 			) => {
 				if (options.keyless && options.claim !== undefined)
 					throw new Error("Pick one of --keyless and --claim.");
-				if (options.otp !== undefined && options.claim === undefined)
-					throw new Error("--otp answers --claim; pass --claim <email> too.");
 				const target = prepareTarget({ command });
 				const prompter = prompterFor({ command });
 				// A keyless org lives in sandbox, so its key is the main sandbox one
@@ -315,7 +310,6 @@ Linking a keyless org to an account:
 					await runClaim({
 						secretKey: requireSecretKey({ target: mainTarget }),
 						email: options.claim,
-						...(options.otp === undefined ? {} : { otp: options.otp }),
 						deps: keylessDepsFor({ target: mainTarget }),
 						prompter,
 					});
@@ -324,6 +318,11 @@ Linking a keyless org to an account:
 				await runLogin({ target, configPath: configFlagOf({ command }) });
 			},
 		);
+
+	registerApiCommands({
+		program,
+		targetOf: (command) => prepareTarget({ command }),
+	});
 
 	program
 		.command("env")
@@ -432,13 +431,27 @@ Linking a keyless org to an account:
 		.command("pull")
 		.description("write your remote catalog back into autumn.config.ts")
 		.option("--include-mappings", "keep processor mappings in pulled fixtures")
+		.option(
+			"--overwrite",
+			"discard the local config and pull the catalog fresh (e.g. after switching orgs)",
+		)
+		.option("-y, --yes", "overwrite it")
 		.action(
-			async (options: { includeMappings?: boolean }, command: Command) => {
+			async (
+				options: {
+					includeMappings?: boolean;
+					overwrite?: boolean;
+					yes?: boolean;
+				},
+				command: Command,
+			) => {
 				const target = prepareTarget({ command });
 				await runPull({
 					client: clientFor({ target }),
 					configPath: configFlagOf({ command }),
 					includeMappings: options.includeMappings === true,
+					overwrite: options.overwrite === true,
+					yes: options.yes === true,
 				});
 				writeStaleSkillsHint({ command });
 			},

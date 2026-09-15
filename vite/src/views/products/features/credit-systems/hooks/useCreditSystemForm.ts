@@ -13,7 +13,6 @@ export interface CreditSystemFormValues {
 	model_markups: NonNullable<ModelMarkups>;
 	defaultMarkup: number;
 	provider_markups: Record<string, { markup: number }>;
-	stripe_product_id: string | null;
 }
 
 export function useCreditSystemForm({
@@ -41,7 +40,6 @@ export function useCreditSystemForm({
 				(feature?.config
 					?.provider_markups as CreditSystemFormValues["provider_markups"]) ??
 				{},
-			stripe_product_id: feature?.stripe_product_id ?? null,
 		} satisfies CreditSystemFormValues,
 		onSubmit: onSubmit ? ({ value }) => onSubmit(value) : undefined,
 	});

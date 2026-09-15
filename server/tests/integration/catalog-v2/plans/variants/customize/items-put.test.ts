@@ -20,11 +20,11 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import {
 	dashboardItem,
 	messagesItem,
 } from "../../licenses/utils/seedLicensePlans.js";
+import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import { expectVariantPlanCorrect } from "../utils/expectVariantPointer.js";
 import { seedBaseWithVariant } from "../utils/seedVariantPlans.js";
 
@@ -117,6 +117,7 @@ test.concurrent(
 						variants: [
 							{
 								variant_plan_id: variantId,
+								version: 1,
 								customize: { items: [messagesItem(300)] },
 							},
 						],
@@ -167,6 +168,7 @@ test.concurrent(
 						variants: [
 							{
 								variant_plan_id: dropVariantId,
+								version: 1,
 								customize: { items: [messagesItem(300)] },
 							},
 						],
@@ -194,6 +196,7 @@ test.concurrent(
 						variants: [
 							{
 								variant_plan_id: keepVariantId,
+								version: 1,
 								customize: {
 									items: [messagesItem(300), dashboardItem()],
 								},
@@ -241,6 +244,7 @@ test.concurrent(
 								variants: [
 									{
 										variant_plan_id: variantId,
+										version: 1,
 										customize: {
 											items: [messagesItem(300)],
 											add_items: [dashboardItem()],

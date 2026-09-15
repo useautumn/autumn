@@ -12,6 +12,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import yaml from "yaml";
 import { feature } from "../src/generated/features";
+import { license } from "../src/generated/licenses";
 import { plan } from "../src/generated/plans";
 import { atmn } from "../src/generated/wire";
 
@@ -103,27 +104,133 @@ test("collections the CLI cannot express yet stay absent", () => {
 	expect(envelope.properties.plans.default).toBeUndefined();
 }, 30_000);
 
-test("stated history removes what it omits; absent history is not mine", () => {
+test("stated plans are every version: the ones omitted are removed", () => {
 	// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
-	const absent = atmn({ plans: [] }) as any;
-	expect(absent.skip_version_deletions).toBe(true);
-	// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
-	const stated = atmn({ plans: [], planVersions: [] }) as any;
+	const stated = atmn({ plans: [] }) as any;
 	expect(stated.skip_version_deletions).toBe(false);
+	// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
+	const absent = atmn({ features: [] }) as any;
+	expect(Object.hasOwn(absent, "skip_version_deletions")).toBe(false);
 });
 
-test("a declared variant is pinned to follow its base", () => {
+test("declared variants remain PUT state and never generate propagation", () => {
 	const wire = atmn({
 		plans: [
 			plan({
+				active: true,
 				planId: "pro",
 				name: "Pro",
-				variants: [{ variantPlanId: "pro_annual", name: "Pro (annual)" }],
+				versionSlug: "v1",
+				variants: [
+					{
+						variantPlanId: "pro_annual",
+						name: "Pro (annual)",
+						versionSlug: "v2",
+					},
+				],
 			}),
 		],
 		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
 	}) as any;
-	expect(wire.plans[0].propagate).toEqual({
-		variants: [{ plan_id: "pro_annual" }],
+	expect(wire.plans[0].variants).toEqual([
+		{
+			variant_plan_id: "pro_annual",
+			name: "Pro (annual)",
+			version_slug: "v2",
+			customize: null,
+		},
+	]);
+	expect(wire.plans[0].archived).toBeUndefined();
+	expect(wire.plans[0].propagate).toBeUndefined();
+});
+
+test("declared licenses pin the exact child version row", () => {
+	const wire = atmn({
+		plans: [
+			plan({
+				active: true,
+				planId: "team",
+				name: "Team",
+				versionSlug: "v1",
+				licenses: [
+					license({
+						licensePlanId: "seat",
+						versionSlug: "v2",
+						included: 2,
+					}),
+				],
+			}),
+		],
+		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
+	}) as any;
+
+	expect(wire.plans[0].licenses).toEqual([
+		{
+			license_plan_id: "seat",
+			version_slug: "v2",
+			included: 2,
+			customize: null,
+		},
+	]);
+});
+
+test("declared relationship customizations remain explicit", () => {
+	const wire = atmn({
+		plans: [
+			plan({
+				active: true,
+				planId: "team",
+				name: "Team",
+				versionSlug: "v1",
+				licenses: [
+					license({
+						licensePlanId: "seat",
+						customize: {
+							addItems: [{ featureId: "messages", included: 200 }],
+						},
+					}),
+				],
+				variants: [
+					{
+						variantPlanId: "team_eu",
+						name: "Team EU",
+						versionSlug: "v1",
+						customize: { items: [] },
+					},
+				],
+			}),
+		],
+		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
+	}) as any;
+
+	expect(wire.plans[0].licenses[0].customize).toEqual({
+		add_items: [{ feature_id: "messages", included: 200 }],
 	});
+	expect(wire.plans[0].variants[0].customize).toEqual({ items: [] });
+});
+
+test("explicit archived state overrides the live membership default", () => {
+	const wire = atmn({
+		plans: [
+			plan({
+				active: true,
+				planId: "retired",
+				name: "Retired",
+				versionSlug: "v1",
+				archived: true,
+				variants: [
+					{
+						variantPlanId: "retired_eu",
+						name: "Retired EU",
+						versionSlug: "v1",
+						archived: true,
+					},
+				],
+			}),
+		],
+		// biome-ignore lint/suspicious/noExplicitAny: asserting on wire shape
+	}) as any;
+
+	expect(wire.plans[0].archived).toBe(true);
+	expect(wire.plans[0].variants[0].archived).toBe(true);
 });

@@ -1,12 +1,12 @@
 import type { OrgClaimState } from "@autumn/shared";
-import { Button, MiniCopyButton } from "@autumn/ui";
+import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import type { User } from "better-auth";
-import { format } from "date-fns";
+import type { UserWithRole } from "better-auth/plugins";
+import { AdminCreatedAt } from "./components/AdminCreatedAt";
+import { AdminOrgActionsCell } from "./components/AdminOrgActionsCell";
 import { AdminOrgNameCell } from "./components/AdminOrgNameCell";
 import { AdminOrgStatusCell } from "./components/AdminOrgStatusCell";
 import { AdminOrgUsersCell } from "./components/AdminOrgUsersCell";
-import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminOrg = {
 	id: string;
@@ -14,7 +14,7 @@ export type AdminOrg = {
 	slug: string;
 	createdAt: string;
 	claim_state: OrgClaimState | null;
-	users: User[];
+	users: UserWithRole[];
 	requestBlockSummary: {
 		blockAll: boolean;
 		ruleCount: number;
@@ -25,7 +25,6 @@ export type AdminOrg = {
 	} | null;
 };
 
-// AdminOrgNameCell renders the whole mobile card, so nothing else joins it.
 const hiddenOnMobile = { mobileCard: "hidden" as const };
 
 export const createAdminOrgColumns = ({
@@ -55,13 +54,12 @@ export const createAdminOrgColumns = ({
 		),
 	},
 	{
-		id: "status",
-		header: "Status",
-		size: 120,
-		enableSorting: false,
-		meta: hiddenOnMobile,
+		id: "createdAt",
+		header: "Created",
+		accessorKey: "createdAt",
+		size: 92,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
-			<AdminOrgStatusCell org={row.original} />
+			<AdminCreatedAt createdAt={row.original.createdAt} />
 		),
 	},
 	{
@@ -75,15 +73,13 @@ export const createAdminOrgColumns = ({
 		),
 	},
 	{
-		id: "createdAt",
-		header: "Created",
-		accessorKey: "createdAt",
-		size: 92,
+		id: "status",
+		header: "Status",
+		size: 120,
+		enableSorting: false,
 		meta: hiddenOnMobile,
 		cell: ({ row }: { row: Row<AdminOrg> }) => (
-			<span className="whitespace-nowrap text-subtle text-xs">
-				{format(new Date(row.original.createdAt), "dd MMM HH:mm")}
-			</span>
+			<AdminOrgStatusCell org={row.original} />
 		),
 	},
 	{
@@ -99,44 +95,17 @@ export const createAdminOrgColumns = ({
 		),
 	},
 	{
-		// Deliberately not `actions`: that id makes mobile cards pin the buttons
-		// into the card header, squeezing out the org name.
-		id: "orgActions",
+		id: "actions",
 		header: "Actions",
-		size: 200,
+		size: 48,
 		enableSorting: false,
 		enableHiding: false,
-		meta: hiddenOnMobile,
-		cell: ({ row }: { row: Row<AdminOrg> }) => {
-			const firstNonAdminUser = row.original.users.find(
-				(user) => user.role !== "admin",
-			);
-
-			// Org-level admin actions (Block, Redis) must remain reachable even when
-			// the org has only admin users — gating them on `firstNonAdminUser`
-			// would silently hide them. Only `ImpersonateButton` requires a
-			// non-admin user to target.
-			return (
-				<div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => onManageRequestBlocks(row.original)}
-					>
-						Block
-					</Button>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => onManageRedis(row.original)}
-					>
-						Redis
-					</Button>
-					{firstNonAdminUser && (
-						<ImpersonateButton userId={firstNonAdminUser.id} />
-					)}
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<AdminOrg> }) => (
+			<AdminOrgActionsCell
+				onManageRedis={onManageRedis}
+				onManageRequestBlocks={onManageRequestBlocks}
+				org={row.original}
+			/>
+		),
 	},
 ];

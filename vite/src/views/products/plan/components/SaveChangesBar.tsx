@@ -20,9 +20,9 @@ import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { buildCatalogUpdatePlans } from "../catalog/buildUpdateCatalogPlanParams";
 import { catalogPreviewOpensDialog } from "../catalog/catalogPlanPreview";
+import { useVariantRelationshipChange } from "../hooks/useVariantRelationshipChange";
 import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { validateItemsBeforeSave } from "../utils/validateItemsBeforeSave";
-import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import { PlanEditorBar } from "./PlanEditorBar";
 import {
 	commitLicenseChanges,
@@ -51,7 +51,7 @@ export const SaveChangesBar = ({
 	const contentHasChanges = useHasContentChanges();
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
-	const { basePlanId: persistedBasePlanId } = useVariantLinkVisibility(product);
+	const relationship = useVariantRelationshipChange(product);
 	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
 	const { features = [] } = useFeaturesQuery();
 	const fetchPreviewUpdateCatalog = useFetchPreviewUpdateCatalog();
@@ -98,7 +98,7 @@ export const SaveChangesBar = ({
 				features,
 				licenses,
 				includeContent: contentHasChanges || licenseHasChanges,
-				persistedBasePlanId,
+				relationship: relationship.resolve(),
 			});
 		} catch (error) {
 			toast.error(
@@ -113,7 +113,11 @@ export const SaveChangesBar = ({
 				const preview = await fetchPreviewUpdateCatalog({
 					plans,
 				});
-				if (catalogPreviewOpensDialog({ preview: preview.plans[0] })) {
+				// A link save puts the base row first; the dialog is about this plan.
+				const ownPreview =
+					preview.plans.find((row) => row.plan_id === product.id) ??
+					preview.plans[0];
+				if (catalogPreviewOpensDialog({ preview: ownPreview })) {
 					setShowNewVersionDialog(true);
 					return;
 				}

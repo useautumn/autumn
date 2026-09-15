@@ -15,7 +15,9 @@ import {
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
+	applyCustomerProductPatch,
 	applyCustomerProductUpdate,
+	getPatchCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { cusProductToBalances } from "@/internal/customers/cusUtils/apiCusUtils/getApiBalance/cusProductToBalances.js";
@@ -193,11 +195,28 @@ export const billingPlanToChanges = async ({
 		prefix: "outgoing",
 	});
 
+	// A patch-style customize keeps the existing row and carries its new
+	// prices/entitlements as a patch; the incoming plan must render the
+	// patched row, as the Stripe layer does, or the preview shows the old terms.
+	const patchByCustomerProductId = new Map(
+		getPatchCustomerProducts({ autumnBillingPlan: autumn }).map((patch) => [
+			patch.customerProduct.id,
+			patch,
+		]),
+	);
+
 	for (const update of getUpdateCustomerProducts({
 		autumnBillingPlan: autumn,
 	})) {
+		const patch = patchByCustomerProductId.get(update.customerProduct.id);
+		const patchedCustomerProduct = patch
+			? applyCustomerProductPatch({
+					customerProduct: update.customerProduct,
+					patch,
+				})
+			: update.customerProduct;
 		const updatedCustomerProduct = applyCustomerProductUpdate({
-			customerProduct: update.customerProduct,
+			customerProduct: patchedCustomerProduct,
 			updates: update.updates,
 		});
 		const { updates } = update;

@@ -2,12 +2,15 @@ import {
 	type CreditSchemaItem,
 	type Feature,
 	getFeatureName,
+	hasCreditDimensionRules,
 	isAiCreditSystem,
 } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
+import { withoutDimensions } from "../utils/creditDimensionUtils";
 import { creditRateSummary } from "../utils/creditRateSummary";
 import {
 	addTier,
@@ -17,6 +20,7 @@ import {
 } from "../utils/creditSchemaUtils";
 import { CreditBillingUnits } from "./CreditBillingUnits";
 import { CreditNumberInput } from "./CreditNumberInput";
+import { CreditRowDimensions } from "./CreditRowDimensions";
 import { CreditTierRows } from "./CreditTierRows";
 import { FeatureSelectDropdown } from "./FeatureSelectDropdown";
 
@@ -59,6 +63,10 @@ export function CreditRateCardRow({
 		? item.tiers[0]?.credit_amount
 		: item.credit_amount;
 
+	const [dimensionsOpen, setDimensionsOpen] = useState(false);
+	const showDimensions =
+		showRateCardControls && (dimensionsOpen || hasCreditDimensionRules(item));
+
 	const setSingleTierCost = (credit_amount: number) =>
 		onChange(
 			isGraduated(item)
@@ -72,6 +80,23 @@ export function CreditRateCardRow({
 			: setRateType({ item, rateType: "graduated" });
 		onChange(isGraduated(graduated) ? addTier(graduated) : graduated);
 	};
+
+	const removeDimensions = () => {
+		setDimensionsOpen(false);
+		onChange(withoutDimensions(item));
+	};
+
+	const addDimensionButton = showRateCardControls && !showDimensions && (
+		<IconButton
+			type="button"
+			variant="muted"
+			className="shrink-0 text-tertiary-foreground text-xs"
+			icon={<PlusIcon size={10} />}
+			onClick={() => setDimensionsOpen(true)}
+		>
+			Add dimension
+		</IconButton>
+	);
 
 	if (!selectedFeature) {
 		return (
@@ -107,12 +132,12 @@ export function CreditRateCardRow({
 				isExpanded ? "border" : "input-base input-state-open-tiny",
 			)}
 		>
-			<div className="group flex h-9 w-full items-center gap-2 rounded-lg pr-2">
+			<div className="group flex h-10 w-full items-center gap-2 rounded-lg pr-3">
 				<button
 					type="button"
 					aria-expanded={isExpanded}
 					onClick={onToggle}
-					className="flex h-full min-w-0 flex-1 cursor-pointer select-none items-center gap-2 rounded-lg px-2 text-left"
+					className="flex h-full min-w-0 flex-1 cursor-pointer select-none items-center gap-2 rounded-lg px-3 text-left"
 				>
 					<span className="shrink-0">
 						{getFeatureIcon({ feature: selectedFeature })}
@@ -140,19 +165,22 @@ export function CreditRateCardRow({
 			</div>
 
 			{isExpanded && (
-				<div className="flex flex-col gap-2 p-2 pt-0">
+				<div className="flex flex-col gap-3 px-3 pt-1 pb-3">
 					{isMultiTier && showRateCardControls ? (
 						<>
 							<CreditTierRows item={item} onChange={onChange} />
-							<CreditBillingUnits
-								className="w-fit"
-								value={item.feature_amount}
-								unitName={unitName}
-								isAiChild={isAiChild}
-								onValueChange={(feature_amount) =>
-									onChange({ ...item, feature_amount })
-								}
-							/>
+							<div className="flex flex-wrap items-center gap-2">
+								<CreditBillingUnits
+									className="w-fit"
+									value={item.feature_amount}
+									unitName={unitName}
+									isAiChild={isAiChild}
+									onValueChange={(feature_amount) =>
+										onChange({ ...item, feature_amount })
+									}
+								/>
+								{addDimensionButton}
+							</div>
 						</>
 					) : (
 						!isMultiTier && (
@@ -183,6 +211,7 @@ export function CreditRateCardRow({
 										>
 											Add Tier
 										</IconButton>
+										{addDimensionButton}
 									</>
 								) : (
 									<span className="text-tertiary-foreground text-xs">
@@ -191,6 +220,15 @@ export function CreditRateCardRow({
 								)}
 							</div>
 						)
+					)}
+					{showDimensions && (
+						<div className="pt-2">
+							<CreditRowDimensions
+								item={item}
+								onChange={onChange}
+								onRemove={removeDimensions}
+							/>
+						</div>
 					)}
 				</div>
 			)}

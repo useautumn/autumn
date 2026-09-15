@@ -9,14 +9,14 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
 import {
-	expectPlanPreviewRowCorrect,
-	parsePlanPreview,
-} from "../../preview/utils/expectPlanPreview.js";
-import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
-import {
 	messagesItem,
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
+import {
+	expectPlanPreviewRowCorrect,
+	parsePlanPreview,
+} from "../../preview/utils/expectPlanPreview.js";
 import {
 	seedBaseWithVariant,
 	seedVariantNewVersion,
@@ -98,7 +98,7 @@ test.concurrent(
 							{
 								plan_id: baseId,
 								items: [messagesItem(150)],
-								variants: [{ variant_plan_id: variantId }],
+								variants: [{ variant_plan_id: variantId, version: 2 }],
 							},
 						],
 					}),

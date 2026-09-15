@@ -61,7 +61,7 @@ export const getApiFeatureGrant = ({
 		id: reward.id,
 		name: reward.name,
 		grants,
-		promo_codes: reward.promo_codes.map((promoCode) => ({
+		promo_codes: (reward.promo_codes ?? []).map((promoCode) => ({
 			code: promoCode.code,
 			max_uses: getGlobalMaxRedemption(promoCode) ?? null,
 		})),

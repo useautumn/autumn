@@ -8,6 +8,7 @@ import { validateGeneratedSkillDirectory } from "./publicSkills.js";
 const contentRoot = resolve(import.meta.dir, "../content");
 
 const expectedSkillNames = Object.values(config)
+	.filter((entry) => entry.formats.skill?.public)
 	.map((entry) => entry.formats.skill?.file)
 	.filter((file): file is string => Boolean(file))
 	.map((file) => {

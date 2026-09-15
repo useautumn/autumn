@@ -40,6 +40,8 @@ export const freePlan = `
 		plan({
 			planId: "free",
 			name: "Free",
+			active: true,
+			versionSlug: "v1",
 			items: [
 				{ featureId: "messages", included: 100, reset: { interval: "month" } },
 				{ featureId: "seats", included: 1 },
@@ -52,34 +54,43 @@ export const paidMonthly = ({
 	amount = 49,
 	items = "",
 	extra = "",
+	active = true,
+	versionSlug = "v1",
 }: {
 	planId?: string;
 	amount?: number;
 	items?: string;
 	extra?: string;
+	active?: boolean;
+	versionSlug?: string | null;
 } = {}): string => `
 		plan({
 			planId: "${planId}",
 			name: "${planId[0].toUpperCase()}${planId.slice(1)}",
+			active: ${active},
 			price: { amount: ${amount}, interval: "month" },
 			items: [${items}
-			],${extra}
+			],${versionSlug == null ? "" : `\n\t\t\tversionSlug: "${versionSlug}",`}${extra}
 		}),`;
 
 /** The complicated pro: trial, prepaid seats with proration, graduated overage,
- * an unlimited item, a boolean, spend limit and usage alert. Version via `versionSlug`. */
+ * an unlimited item, a boolean, spend limit and usage alert. Version via `versionSlug`;
+ * every version sits in `plans`, so say which one is live. */
 export const versionedPro = ({
 	versionSlug = "v1",
 	amount = 49,
 	extraItems = "",
+	active = true,
 }: {
 	versionSlug?: string;
 	amount?: number;
 	extraItems?: string;
+	active?: boolean;
 } = {}): string => `
 		plan({
 			planId: "pro",
 			versionSlug: "${versionSlug}",
+			active: ${active},
 			name: "Pro",
 			description: "For growing teams.",
 			group: "core",
@@ -122,6 +133,8 @@ export const seatPlan = `
 		plan({
 			planId: "seat",
 			name: "Seat",
+			versionSlug: "v1",
+			active: true,
 			price: { amount: 15, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
 		}),`;
@@ -133,24 +146,25 @@ export const enterpriseWithSeats = ({
 		plan({
 			planId: "enterprise",
 			name: "Enterprise",
+			versionSlug: "v1",
+			active: true,
 			price: { amount: 999, interval: "month" },
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
 			licenses: [{ licensePlanId: "seat", included: ${included} }],
 		}),`;
 
 /** The `atmn({...})` body from collection sources. Omit a key to leave that
- * collection alone on the server; pass "" to state it empty. */
+ * collection alone on the server; pass "" to state it empty. Every version
+ * of a plan goes in `plans`, each stating `active`. */
 export const configBody = ({
 	features,
 	plans,
-	planVersions,
 	rewards,
 	referralPrograms,
 	settings,
 }: {
 	features?: string;
 	plans?: string;
-	planVersions?: string;
 	rewards?: string;
 	referralPrograms?: string;
 	/** The `settings` block's members, as source: `multiCurrency: true`. */
@@ -159,8 +173,6 @@ export const configBody = ({
 	const lines: string[] = [];
 	if (features !== undefined) lines.push(`\tfeatures: [${features}\n\t],`);
 	if (plans !== undefined) lines.push(`\tplans: [${plans}\n\t],`);
-	if (planVersions !== undefined)
-		lines.push(`\tplanVersions: [${planVersions}\n\t],`);
 	if (rewards !== undefined) lines.push(`\trewards: [${rewards}\n\t],`);
 	if (referralPrograms !== undefined)
 		lines.push(`\treferralPrograms: [${referralPrograms}\n\t],`);

@@ -34,8 +34,10 @@ for (const [name, modifier] of Object.entries(MODIFIERS)) {
 					raw: `${atmnImports()}
 const corePlans = [
 	plan({
+		active: true,
 		planId: "${planId}",
 		name: "Pro",
+		versionSlug: "v1",
 		price: { amount: 20, interval: "month" },
 	}),
 ] ${modifier};
@@ -85,8 +87,10 @@ export default atmn({
 					raw: `${atmnImports()}
 const corePlans = [
 	plan({
+		active: true,
 		planId: "${existingId}",
 		name: "Existing",
+		versionSlug: "v1",
 		price: { amount: 20, interval: "month" },
 	}),
 ] ${modifier};

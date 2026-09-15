@@ -218,6 +218,14 @@ openapi: "api/openapi.yml webhook billing.updated"
             <ParamField body="items" type="object[]" required>
               Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
               <Expandable title="properties">
+                <ParamField body="threshold_billing" type="object | null">
+                  Bills this many feature units when outstanding overage reaches it.
+                  <Expandable title="properties">
+                    <ParamField body="threshold" type="number" required />
+
+                  </Expandable>
+                </ParamField>
+
                 <ParamField body="feature_id" type="string" required>
                   The ID of the feature this item configures.
                 </ParamField>
@@ -847,9 +855,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           Billing interval (e.g. 'month', 'year').
                         </ParamField>
 
-                        <ParamField body="interval_count" type="number">
-                          Number of intervals per billing cycle. Defaults to 1.
-                        </ParamField>
+                        <ParamField body="interval_count" type="number" />
 
                         <ParamField body="additional_currencies" type="object[]">
                           Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -871,6 +877,14 @@ openapi: "api/openapi.yml webhook billing.updated"
                     <ParamField body="add_items" type="object[]">
                       Items to add to the plan.
                       <Expandable title="properties">
+                        <ParamField body="threshold_billing" type="object | null">
+                          Bills this many feature units when outstanding overage reaches it.
+                          <Expandable title="properties">
+                            <ParamField body="threshold" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="feature_id" type="string" required>
                           The ID of the feature to configure.
                         </ParamField>
@@ -894,9 +908,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                             </ParamField>
 
-                            <ParamField body="interval_count" type="number">
-                              Number of intervals between resets. Defaults to 1.
-                            </ParamField>
+                            <ParamField body="interval_count" type="number" />
 
                           </Expandable>
                         </ParamField>
@@ -1172,9 +1184,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
                         </ParamField>
 
-                        <ParamField body="on_end" type="'bill' | 'revert'">
-                          Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-                        </ParamField>
+                        <ParamField body="on_end" type="'bill' | 'revert'" />
 
                       </Expandable>
                     </ParamField>
@@ -1183,7 +1193,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                       Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
                       <Expandable title="properties">
                         <ParamField body="auto_topups" type="object[]">
-                          List of auto top-up configurations per feature.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
                               The ID of the feature (credit balance) to auto top-up.
@@ -1231,7 +1240,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                         <ParamField body="spend_limits" type="object[]">
-                          List of overage spend limits per feature (caps overage spend).
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string">
                               Optional feature ID this spend limit applies to.
@@ -1257,7 +1265,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                         <ParamField body="usage_limits" type="object[]">
-                          List of hard usage caps per feature (max units per interval).
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
                               The feature this usage limit applies to.
@@ -1291,7 +1298,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                         <ParamField body="usage_alerts" type="object[]">
-                          List of usage alert configurations per feature.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string">
                               The feature ID this alert applies to.
@@ -1329,7 +1335,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                         <ParamField body="overage_allowed" type="object[]">
-                          List of overage allowed controls per feature. When enabled, usage can exceed balance.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
                               The feature ID this overage allowed control applies to.
@@ -1369,9 +1374,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Billing interval (e.g. 'month', 'year').
                                 </ParamField>
 
-                                <ParamField body="interval_count" type="number">
-                                  Number of intervals per billing cycle. Defaults to 1.
-                                </ParamField>
+                                <ParamField body="interval_count" type="number" />
 
                                 <ParamField body="additional_currencies" type="object[]">
                                   Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -1392,6 +1395,14 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                             <ParamField body="add_items" type="object[]">
                               <Expandable title="properties">
+                                <ParamField body="threshold_billing" type="object | null">
+                                  Bills this many feature units when outstanding overage reaches it.
+                                  <Expandable title="properties">
+                                    <ParamField body="threshold" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="feature_id" type="string" required>
                                   The ID of the feature to configure.
                                 </ParamField>
@@ -1415,9 +1426,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                       Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                                     </ParamField>
 
-                                    <ParamField body="interval_count" type="number">
-                                      Number of intervals between resets. Defaults to 1.
-                                    </ParamField>
+                                    <ParamField body="interval_count" type="number" />
 
                                   </Expandable>
                                 </ParamField>
@@ -2174,6 +2183,14 @@ openapi: "api/openapi.yml webhook billing.updated"
             <ParamField body="item" type="object" required>
               The plan item snapshot that was added or removed.
               <Expandable title="properties">
+                <ParamField body="threshold_billing" type="object | null">
+                  Bills this many feature units when outstanding overage reaches it.
+                  <Expandable title="properties">
+                    <ParamField body="threshold" type="number" required />
+
+                  </Expandable>
+                </ParamField>
+
                 <ParamField body="feature_id" type="string" required>
                   The ID of the feature this item configures.
                 </ParamField>
@@ -2516,9 +2533,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                   Billing interval (e.g. 'month', 'year').
                 </ParamField>
 
-                <ParamField body="interval_count" type="number">
-                  Number of intervals per billing cycle. Defaults to 1.
-                </ParamField>
+                <ParamField body="interval_count" type="number" />
 
                 <ParamField body="additional_currencies" type="object[]">
                   Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -2540,6 +2555,14 @@ openapi: "api/openapi.yml webhook billing.updated"
             <ParamField body="add_items" type="object[]">
               Items to add to the plan.
               <Expandable title="properties">
+                <ParamField body="threshold_billing" type="object | null">
+                  Bills this many feature units when outstanding overage reaches it.
+                  <Expandable title="properties">
+                    <ParamField body="threshold" type="number" required />
+
+                  </Expandable>
+                </ParamField>
+
                 <ParamField body="feature_id" type="string" required>
                   The ID of the feature to configure.
                 </ParamField>
@@ -2563,9 +2586,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                       Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                     </ParamField>
 
-                    <ParamField body="interval_count" type="number">
-                      Number of intervals between resets. Defaults to 1.
-                    </ParamField>
+                    <ParamField body="interval_count" type="number" />
 
                   </Expandable>
                 </ParamField>
@@ -2841,9 +2862,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                   If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
                 </ParamField>
 
-                <ParamField body="on_end" type="'bill' | 'revert'">
-                  Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-                </ParamField>
+                <ParamField body="on_end" type="'bill' | 'revert'" />
 
               </Expandable>
             </ParamField>
@@ -2852,7 +2871,6 @@ openapi: "api/openapi.yml webhook billing.updated"
               Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
               <Expandable title="properties">
                 <ParamField body="auto_topups" type="object[]">
-                  List of auto top-up configurations per feature.
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string" required>
                       The ID of the feature (credit balance) to auto top-up.
@@ -2900,7 +2918,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                 </ParamField>
 
                 <ParamField body="spend_limits" type="object[]">
-                  List of overage spend limits per feature (caps overage spend).
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string">
                       Optional feature ID this spend limit applies to.
@@ -2926,7 +2943,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                 </ParamField>
 
                 <ParamField body="usage_limits" type="object[]">
-                  List of hard usage caps per feature (max units per interval).
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string" required>
                       The feature this usage limit applies to.
@@ -2960,7 +2976,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                 </ParamField>
 
                 <ParamField body="usage_alerts" type="object[]">
-                  List of usage alert configurations per feature.
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string">
                       The feature ID this alert applies to.
@@ -2998,7 +3013,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                 </ParamField>
 
                 <ParamField body="overage_allowed" type="object[]">
-                  List of overage allowed controls per feature. When enabled, usage can exceed balance.
                   <Expandable title="properties">
                     <ParamField body="feature_id" type="string" required>
                       The feature ID this overage allowed control applies to.
@@ -3038,9 +3052,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           Billing interval (e.g. 'month', 'year').
                         </ParamField>
 
-                        <ParamField body="interval_count" type="number">
-                          Number of intervals per billing cycle. Defaults to 1.
-                        </ParamField>
+                        <ParamField body="interval_count" type="number" />
 
                         <ParamField body="additional_currencies" type="object[]">
                           Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -3061,6 +3073,14 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                     <ParamField body="add_items" type="object[]">
                       <Expandable title="properties">
+                        <ParamField body="threshold_billing" type="object | null">
+                          Bills this many feature units when outstanding overage reaches it.
+                          <Expandable title="properties">
+                            <ParamField body="threshold" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="feature_id" type="string" required>
                           The ID of the feature to configure.
                         </ParamField>
@@ -3084,9 +3104,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                             </ParamField>
 
-                            <ParamField body="interval_count" type="number">
-                              Number of intervals between resets. Defaults to 1.
-                            </ParamField>
+                            <ParamField body="interval_count" type="number" />
 
                           </Expandable>
                         </ParamField>
@@ -3491,6 +3509,14 @@ openapi: "api/openapi.yml webhook billing.updated"
                 <ParamField body="items" type="object[]" required>
                   Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
                   <Expandable title="properties">
+                    <ParamField body="threshold_billing" type="object | null">
+                      Bills this many feature units when outstanding overage reaches it.
+                      <Expandable title="properties">
+                        <ParamField body="threshold" type="number" required />
+
+                      </Expandable>
+                    </ParamField>
+
                     <ParamField body="feature_id" type="string" required>
                       The ID of the feature this item configures.
                     </ParamField>
@@ -4120,9 +4146,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Billing interval (e.g. 'month', 'year').
                             </ParamField>
 
-                            <ParamField body="interval_count" type="number">
-                              Number of intervals per billing cycle. Defaults to 1.
-                            </ParamField>
+                            <ParamField body="interval_count" type="number" />
 
                             <ParamField body="additional_currencies" type="object[]">
                               Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -4144,6 +4168,14 @@ openapi: "api/openapi.yml webhook billing.updated"
                         <ParamField body="add_items" type="object[]">
                           Items to add to the plan.
                           <Expandable title="properties">
+                            <ParamField body="threshold_billing" type="object | null">
+                              Bills this many feature units when outstanding overage reaches it.
+                              <Expandable title="properties">
+                                <ParamField body="threshold" type="number" required />
+
+                              </Expandable>
+                            </ParamField>
+
                             <ParamField body="feature_id" type="string" required>
                               The ID of the feature to configure.
                             </ParamField>
@@ -4167,9 +4199,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                                 </ParamField>
 
-                                <ParamField body="interval_count" type="number">
-                                  Number of intervals between resets. Defaults to 1.
-                                </ParamField>
+                                <ParamField body="interval_count" type="number" />
 
                               </Expandable>
                             </ParamField>
@@ -4445,9 +4475,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                               If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
                             </ParamField>
 
-                            <ParamField body="on_end" type="'bill' | 'revert'">
-                              Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-                            </ParamField>
+                            <ParamField body="on_end" type="'bill' | 'revert'" />
 
                           </Expandable>
                         </ParamField>
@@ -4456,7 +4484,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                           Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
                           <Expandable title="properties">
                             <ParamField body="auto_topups" type="object[]">
-                              List of auto top-up configurations per feature.
                               <Expandable title="properties">
                                 <ParamField body="feature_id" type="string" required>
                                   The ID of the feature (credit balance) to auto top-up.
@@ -4504,7 +4531,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                             </ParamField>
 
                             <ParamField body="spend_limits" type="object[]">
-                              List of overage spend limits per feature (caps overage spend).
                               <Expandable title="properties">
                                 <ParamField body="feature_id" type="string">
                                   Optional feature ID this spend limit applies to.
@@ -4530,7 +4556,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                             </ParamField>
 
                             <ParamField body="usage_limits" type="object[]">
-                              List of hard usage caps per feature (max units per interval).
                               <Expandable title="properties">
                                 <ParamField body="feature_id" type="string" required>
                                   The feature this usage limit applies to.
@@ -4564,7 +4589,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                             </ParamField>
 
                             <ParamField body="usage_alerts" type="object[]">
-                              List of usage alert configurations per feature.
                               <Expandable title="properties">
                                 <ParamField body="feature_id" type="string">
                                   The feature ID this alert applies to.
@@ -4602,7 +4626,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                             </ParamField>
 
                             <ParamField body="overage_allowed" type="object[]">
-                              List of overage allowed controls per feature. When enabled, usage can exceed balance.
                               <Expandable title="properties">
                                 <ParamField body="feature_id" type="string" required>
                                   The feature ID this overage allowed control applies to.
@@ -4642,9 +4665,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                       Billing interval (e.g. 'month', 'year').
                                     </ParamField>
 
-                                    <ParamField body="interval_count" type="number">
-                                      Number of intervals per billing cycle. Defaults to 1.
-                                    </ParamField>
+                                    <ParamField body="interval_count" type="number" />
 
                                     <ParamField body="additional_currencies" type="object[]">
                                       Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -4665,6 +4686,14 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                 <ParamField body="add_items" type="object[]">
                                   <Expandable title="properties">
+                                    <ParamField body="threshold_billing" type="object | null">
+                                      Bills this many feature units when outstanding overage reaches it.
+                                      <Expandable title="properties">
+                                        <ParamField body="threshold" type="number" required />
+
+                                      </Expandable>
+                                    </ParamField>
+
                                     <ParamField body="feature_id" type="string" required>
                                       The ID of the feature to configure.
                                     </ParamField>
@@ -4688,9 +4717,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                           Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                                         </ParamField>
 
-                                        <ParamField body="interval_count" type="number">
-                                          Number of intervals between resets. Defaults to 1.
-                                        </ParamField>
+                                        <ParamField body="interval_count" type="number" />
 
                                       </Expandable>
                                     </ParamField>
@@ -5103,6 +5130,14 @@ openapi: "api/openapi.yml webhook billing.updated"
                     <ParamField body="items" type="object[]" required>
                       Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
                       <Expandable title="properties">
+                        <ParamField body="threshold_billing" type="object | null">
+                          Bills this many feature units when outstanding overage reaches it.
+                          <Expandable title="properties">
+                            <ParamField body="threshold" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="feature_id" type="string" required>
                           The ID of the feature this item configures.
                         </ParamField>
@@ -5732,9 +5767,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   Billing interval (e.g. 'month', 'year').
                                 </ParamField>
 
-                                <ParamField body="interval_count" type="number">
-                                  Number of intervals per billing cycle. Defaults to 1.
-                                </ParamField>
+                                <ParamField body="interval_count" type="number" />
 
                                 <ParamField body="additional_currencies" type="object[]">
                                   Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -5756,6 +5789,14 @@ openapi: "api/openapi.yml webhook billing.updated"
                             <ParamField body="add_items" type="object[]">
                               Items to add to the plan.
                               <Expandable title="properties">
+                                <ParamField body="threshold_billing" type="object | null">
+                                  Bills this many feature units when outstanding overage reaches it.
+                                  <Expandable title="properties">
+                                    <ParamField body="threshold" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
                                 <ParamField body="feature_id" type="string" required>
                                   The ID of the feature to configure.
                                 </ParamField>
@@ -5779,9 +5820,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                       Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                                     </ParamField>
 
-                                    <ParamField body="interval_count" type="number">
-                                      Number of intervals between resets. Defaults to 1.
-                                    </ParamField>
+                                    <ParamField body="interval_count" type="number" />
 
                                   </Expandable>
                                 </ParamField>
@@ -6057,9 +6096,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                   If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
                                 </ParamField>
 
-                                <ParamField body="on_end" type="'bill' | 'revert'">
-                                  Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-                                </ParamField>
+                                <ParamField body="on_end" type="'bill' | 'revert'" />
 
                               </Expandable>
                             </ParamField>
@@ -6068,7 +6105,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
                               <Expandable title="properties">
                                 <ParamField body="auto_topups" type="object[]">
-                                  List of auto top-up configurations per feature.
                                   <Expandable title="properties">
                                     <ParamField body="feature_id" type="string" required>
                                       The ID of the feature (credit balance) to auto top-up.
@@ -6116,7 +6152,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                                 </ParamField>
 
                                 <ParamField body="spend_limits" type="object[]">
-                                  List of overage spend limits per feature (caps overage spend).
                                   <Expandable title="properties">
                                     <ParamField body="feature_id" type="string">
                                       Optional feature ID this spend limit applies to.
@@ -6142,7 +6177,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                                 </ParamField>
 
                                 <ParamField body="usage_limits" type="object[]">
-                                  List of hard usage caps per feature (max units per interval).
                                   <Expandable title="properties">
                                     <ParamField body="feature_id" type="string" required>
                                       The feature this usage limit applies to.
@@ -6176,7 +6210,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                                 </ParamField>
 
                                 <ParamField body="usage_alerts" type="object[]">
-                                  List of usage alert configurations per feature.
                                   <Expandable title="properties">
                                     <ParamField body="feature_id" type="string">
                                       The feature ID this alert applies to.
@@ -6214,7 +6247,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                                 </ParamField>
 
                                 <ParamField body="overage_allowed" type="object[]">
-                                  List of overage allowed controls per feature. When enabled, usage can exceed balance.
                                   <Expandable title="properties">
                                     <ParamField body="feature_id" type="string" required>
                                       The feature ID this overage allowed control applies to.
@@ -6254,9 +6286,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                           Billing interval (e.g. 'month', 'year').
                                         </ParamField>
 
-                                        <ParamField body="interval_count" type="number">
-                                          Number of intervals per billing cycle. Defaults to 1.
-                                        </ParamField>
+                                        <ParamField body="interval_count" type="number" />
 
                                         <ParamField body="additional_currencies" type="object[]">
                                           Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -6277,6 +6307,14 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                                     <ParamField body="add_items" type="object[]">
                                       <Expandable title="properties">
+                                        <ParamField body="threshold_billing" type="object | null">
+                                          Bills this many feature units when outstanding overage reaches it.
+                                          <Expandable title="properties">
+                                            <ParamField body="threshold" type="number" required />
+
+                                          </Expandable>
+                                        </ParamField>
+
                                         <ParamField body="feature_id" type="string" required>
                                           The ID of the feature to configure.
                                         </ParamField>
@@ -6300,9 +6338,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                                               Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                                             </ParamField>
 
-                                            <ParamField body="interval_count" type="number">
-                                              Number of intervals between resets. Defaults to 1.
-                                            </ParamField>
+                                            <ParamField body="interval_count" type="number" />
 
                                           </Expandable>
                                         </ParamField>
@@ -7059,6 +7095,14 @@ openapi: "api/openapi.yml webhook billing.updated"
                     <ParamField body="item" type="object" required>
                       The plan item snapshot that was added or removed.
                       <Expandable title="properties">
+                        <ParamField body="threshold_billing" type="object | null">
+                          Bills this many feature units when outstanding overage reaches it.
+                          <Expandable title="properties">
+                            <ParamField body="threshold" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="feature_id" type="string" required>
                           The ID of the feature this item configures.
                         </ParamField>
@@ -7401,9 +7445,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           Billing interval (e.g. 'month', 'year').
                         </ParamField>
 
-                        <ParamField body="interval_count" type="number">
-                          Number of intervals per billing cycle. Defaults to 1.
-                        </ParamField>
+                        <ParamField body="interval_count" type="number" />
 
                         <ParamField body="additional_currencies" type="object[]">
                           Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
@@ -7425,6 +7467,14 @@ openapi: "api/openapi.yml webhook billing.updated"
                     <ParamField body="add_items" type="object[]">
                       Items to add to the plan.
                       <Expandable title="properties">
+                        <ParamField body="threshold_billing" type="object | null">
+                          Bills this many feature units when outstanding overage reaches it.
+                          <Expandable title="properties">
+                            <ParamField body="threshold" type="number" required />
+
+                          </Expandable>
+                        </ParamField>
+
                         <ParamField body="feature_id" type="string" required>
                           The ID of the feature to configure.
                         </ParamField>
@@ -7448,9 +7498,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                               Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
                             </ParamField>
 
-                            <ParamField body="interval_count" type="number">
-                              Number of intervals between resets. Defaults to 1.
-                            </ParamField>
+                            <ParamField body="interval_count" type="number" />
 
                           </Expandable>
                         </ParamField>
@@ -7726,9 +7774,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                           If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
                         </ParamField>
 
-                        <ParamField body="on_end" type="'bill' | 'revert'">
-                          Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-                        </ParamField>
+                        <ParamField body="on_end" type="'bill' | 'revert'" />
 
                       </Expandable>
                     </ParamField>
@@ -7737,7 +7783,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                       Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
                       <Expandable title="properties">
                         <ParamField body="auto_topups" type="object[]">
-                          List of auto top-up configurations per feature.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
                               The ID of the feature (credit balance) to auto top-up.
@@ -7785,7 +7830,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                         <ParamField body="spend_limits" type="object[]">
-                          List of overage spend limits per feature (caps overage spend).
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string">
                               Optional feature ID this spend limit applies to.
@@ -7811,7 +7855,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                         <ParamField body="usage_limits" type="object[]">
-                          List of hard usage caps per feature (max units per interval).
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
                               The feature this usage limit applies to.
@@ -7845,7 +7888,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                         <ParamField body="usage_alerts" type="object[]">
-                          List of usage alert configurations per feature.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string">
                               The feature ID this alert applies to.
@@ -7883,7 +7925,6 @@ openapi: "api/openapi.yml webhook billing.updated"
                         </ParamField>
 
                         <ParamField body="overage_allowed" type="object[]">
-                          List of overage allowed controls per feature. When enabled, usage can exceed balance.
                           <Expandable title="properties">
                             <ParamField body="feature_id" type="string" required>
                               The feature ID this overage allowed control applies to.
@@ -7895,6 +7936,358 @@ openapi: "api/openapi.yml webhook billing.updated"
 
                           </Expandable>
                         </ParamField>
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="upsert_licenses" type="object[]">
+                      License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
+                      <Expandable title="properties">
+                        <ParamField body="license_plan_id" type="string" required />
+
+                        <ParamField body="version_slug" type="string" />
+
+                        <ParamField body="included" type="integer" />
+
+                        <ParamField body="prepaid_only" type="boolean" />
+
+                        <ParamField body="customize" type="object | null">
+                          <Expandable title="properties">
+                            <ParamField body="price" type="object | null">
+                              Base price configuration for a plan.
+                              <Expandable title="properties">
+                                <ParamField body="amount" type="number" required>
+                                  Base price amount for the plan, in major currency units (e.g. dollars).
+                                </ParamField>
+
+                                <ParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                                  Billing interval (e.g. 'month', 'year').
+                                </ParamField>
+
+                                <ParamField body="interval_count" type="number" />
+
+                                <ParamField body="additional_currencies" type="object[]">
+                                  Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                                  <Expandable title="properties">
+                                    <ParamField body="currency" type="string" required>
+                                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    </ParamField>
+
+                                    <ParamField body="amount" type="number" required>
+                                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="add_items" type="object[]">
+                              <Expandable title="properties">
+                                <ParamField body="threshold_billing" type="object | null">
+                                  Bills this many feature units when outstanding overage reaches it.
+                                  <Expandable title="properties">
+                                    <ParamField body="threshold" type="number" required />
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="feature_id" type="string" required>
+                                  The ID of the feature to configure.
+                                </ParamField>
+
+                                <ParamField body="included" type="number">
+                                  Number of free units included. Balance resets to this each interval for consumable features.
+                                </ParamField>
+
+                                <ParamField body="unlimited" type="boolean">
+                                  If true, customer has unlimited access to this feature.
+                                </ParamField>
+
+                                <ParamField body="pooled" type="boolean">
+                                  Whether entity-level grants contribute to a shared customer balance.
+                                </ParamField>
+
+                                <ParamField body="reset" type="object">
+                                  Reset configuration for consumable features. Omit for non-consumable features like seats.
+                                  <Expandable title="properties">
+                                    <ParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                                      Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                                    </ParamField>
+
+                                    <ParamField body="interval_count" type="number" />
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="price" type="object">
+                                  Pricing for usage beyond included units. Omit for free features.
+                                  <Expandable title="properties">
+                                    <ParamField body="amount" type="number">
+                                      Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                                    </ParamField>
+
+                                    <ParamField body="additional_currencies" type="object[]">
+                                      Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                                      <Expandable title="properties">
+                                        <ParamField body="currency" type="string" required>
+                                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        </ParamField>
+
+                                        <ParamField body="amount" type="number" required>
+                                          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                    <ParamField body="tiers" type="object[]">
+                                      Tiered pricing. Either 'amount' or 'tiers' is required.
+                                      <Expandable title="properties">
+                                        <ParamField body="to" type="number" required />
+
+                                        <ParamField body="amount" type="number" required />
+
+                                        <ParamField body="flat_amount" type="number" />
+
+                                        <ParamField body="additional_currencies" type="object[]">
+                                          <Expandable title="properties">
+                                            <ParamField body="currency" type="string" required>
+                                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                            </ParamField>
+
+                                            <ParamField body="amount" type="number">
+                                              Per-unit amount for this tier in this currency.
+                                            </ParamField>
+
+                                            <ParamField body="flat_amount" type="number">
+                                              Flat amount for this tier in this currency, if the tier uses one.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                    <ParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                                    <ParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                                      Billing interval. For consumable features, should match reset.interval.
+                                    </ParamField>
+
+                                    <ParamField body="interval_count" type="number">
+                                      Number of intervals per billing cycle. Defaults to 1.
+                                    </ParamField>
+
+                                    <ParamField body="billing_units" type="number">
+                                      Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                                    </ParamField>
+
+                                    <ParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                                      'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                                    </ParamField>
+
+                                    <ParamField body="max_purchase" type="number | null">
+                                      Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="proration" type="object">
+                                  Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+                                  <Expandable title="properties">
+                                    <ParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                                      Billing behavior when quantity increases mid-cycle.
+                                    </ParamField>
+
+                                    <ParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                                      Credit behavior when quantity decreases mid-cycle.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="rollover" type="object">
+                                  Rollover config for unused units. If set, unused included units carry over.
+                                  <Expandable title="properties">
+                                    <ParamField body="max" type="number">
+                                      Max rollover units. Omit for unlimited rollover.
+                                    </ParamField>
+
+                                    <ParamField body="max_percentage" type="number">
+                                      Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                                    </ParamField>
+
+                                    <ParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                                      When rolled over units expire.
+                                    </ParamField>
+
+                                    <ParamField body="expiry_duration_length" type="number">
+                                      Number of periods before expiry.
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                                <ParamField body="feature_override" type="object">
+                                  Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
+                                  <Expandable title="properties">
+                                    <ParamField body="credit_schema" type="object | object[]">
+                                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                      <Expandable title="properties">
+                                        <ParamField body="metered_feature_id" type="string">
+                                          ID of the metered feature that draws from this credit system.
+                                        </ParamField>
+
+                                        <ParamField body="billing_units" type="number">
+                                          Number of metered-feature units priced together. Defaults to one when omitted.
+                                        </ParamField>
+
+                                        <ParamField body="dimensions.{key}" type="object">
+                                          Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                          <Expandable title="properties">
+                                            <ParamField body="match.{key}" type="string" required>
+                                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                            </ParamField>
+
+                                            <ParamField body="priority" type="integer">
+                                              Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                            </ParamField>
+
+                                            <ParamField body="tier_behavior" type="string" required />
+
+                                            <ParamField body="tiers" type="object[]" required>
+                                              <Expandable title="properties">
+                                                <ParamField body="to" type="number" required>
+                                                  Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                </ParamField>
+
+                                                <ParamField body="credit_cost" type="number" required>
+                                                  Credits consumed per billing-unit group within this tier.
+                                                </ParamField>
+
+                                              </Expandable>
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="multipliers.{key}" type="object">
+                                          Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+                                          <Expandable title="properties">
+                                            <ParamField body="match.{key}" type="string" required>
+                                              Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                            </ParamField>
+
+                                            <ParamField body="factor" type="number">
+                                              Multiplies the matched rate. All matching multipliers stack.
+                                            </ParamField>
+
+                                            <ParamField body="add" type="number">
+                                              Added to the rate after every factor is applied, in credits per billing-unit group.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="tier_behavior" type="string" />
+
+                                        <ParamField body="tiers" type="object[]">
+                                          <Expandable title="properties">
+                                            <ParamField body="to" type="number" required>
+                                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                            </ParamField>
+
+                                            <ParamField body="credit_cost" type="number" required>
+                                              Credits consumed per billing-unit group within this tier.
+                                            </ParamField>
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="credit_cost" type="number">
+                                          Credits consumed per billing-unit group.
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                    <ParamField body="markups" type="object">
+                                      For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+                                      <Expandable title="properties">
+                                        <ParamField body="default_markup" type="number">
+                                          Default percentage markup for customers on this plan. Use -100 to make usage free.
+                                        </ParamField>
+
+                                        <ParamField body="provider_markups.{key}" type="object | null">
+                                          Per-provider markup percentages for customers on this plan.
+                                          <Expandable title="properties">
+                                            <ParamField body="markup" type="number" required />
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                        <ParamField body="model_markups.{key}" type="object | null">
+                                          Per-model markup overrides for customers on this plan.
+                                          <Expandable title="properties">
+                                            <ParamField body="markup" type="number" />
+
+                                            <ParamField body="input_cost" type="number" />
+
+                                            <ParamField body="output_cost" type="number" />
+
+                                          </Expandable>
+                                        </ParamField>
+
+                                      </Expandable>
+                                    </ParamField>
+
+                                  </Expandable>
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                            <ParamField body="remove_items" type="object[]">
+                              <Expandable title="properties">
+                                <ParamField body="feature_id" type="string">
+                                  Match items linked to this feature.
+                                </ParamField>
+
+                                <ParamField body="billing_method" type="'prepaid' | 'usage_based'">
+                                  Match items with this billing method (prepaid or usage_based).
+                                </ParamField>
+
+                                <ParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                  Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+                                </ParamField>
+
+                                <ParamField body="interval_count" type="integer">
+                                  Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+                                </ParamField>
+
+                                <ParamField body="included" type="number">
+                                  Match items whose grant equals this included usage. Omitted is a wildcard.
+                                </ParamField>
+
+                              </Expandable>
+                            </ParamField>
+
+                          </Expandable>
+                        </ParamField>
+
+                        <ParamField body="metadata" type="object" />
+
+                      </Expandable>
+                    </ParamField>
+
+                    <ParamField body="remove_licenses" type="object[]">
+                      License links to drop, keyed by license_plan_id. Parallel to remove_items.
+                      <Expandable title="properties">
+                        <ParamField body="license_plan_id" type="string" required />
 
                       </Expandable>
                     </ParamField>
@@ -7925,6 +8318,14 @@ openapi: "api/openapi.yml webhook billing.updated"
         <ParamField body="item" type="object" required>
           The plan item snapshot that was added or removed.
           <Expandable title="properties">
+            <ParamField body="threshold_billing" type="object | null">
+              Bills this many feature units when outstanding overage reaches it.
+              <Expandable title="properties">
+                <ParamField body="threshold" type="number" required />
+
+              </Expandable>
+            </ParamField>
+
             <ParamField body="feature_id" type="string" required>
               The ID of the feature this item configures.
             </ParamField>

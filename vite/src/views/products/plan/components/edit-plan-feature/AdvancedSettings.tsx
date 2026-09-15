@@ -14,9 +14,9 @@ import {
 	getFeatureCreditSystem,
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
+import { ExpiryConfig } from "./advanced-settings/ExpiryConfig";
 import { FeatureOverrideConfig } from "./advanced-settings/FeatureOverrideConfig";
 import { PooledBalanceConfig } from "./advanced-settings/PooledBalanceConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
@@ -26,7 +26,6 @@ import { StripePriceConfig } from "./advanced-settings/StripePriceConfig";
 import { UsageLimit } from "./advanced-settings/UsageLimit";
 
 export function AdvancedSettings() {
-	const { isAdmin } = useAdmin();
 	const { features } = useFeaturesQuery();
 	const { item } = useProductItemContext();
 	const { product } = useProduct();
@@ -39,11 +38,14 @@ export function AdvancedSettings() {
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	const showFeatureOverride =
-		isAdmin &&
-		isAnyCreditSystem(
-			features.find((feature) => feature.id === item.feature_id)?.type,
-		);
+	// Purchased credits only: the cadence of a recurring item already bounds it.
+	const showExpiry =
+		isPriced &&
+		item.usage_model === UsageModel.Prepaid &&
+		itemToBillingInterval({ item }) === BillingInterval.OneOff;
+	const showFeatureOverride = isAnyCreditSystem(
+		features.find((feature) => feature.id === item.feature_id)?.type,
+	);
 	// Deprecated in favor of licenses. Surface it whenever any item in the plan
 	// uses an entity feature, so all items in such plans keep working.
 	const showEntityFeature =
@@ -83,6 +85,9 @@ export function AdvancedSettings() {
 
 					{/* Rollover */}
 					{showRollover && <RolloverConfig />}
+
+					{/* Expiry on purchased credits */}
+					{showExpiry && <ExpiryConfig />}
 
 					{/* Credit rate card override */}
 					{showFeatureOverride && <FeatureOverrideConfig />}

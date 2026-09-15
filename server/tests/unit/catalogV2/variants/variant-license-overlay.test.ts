@@ -101,6 +101,159 @@ describe("variant license overlay — read side", () => {
 });
 
 describe("variant license overlay — diff side", () => {
+	test("content-only customize applies the base's declared child version to every stated variant version", () => {
+		const declaredV2 = [
+			{
+				license_plan_id: "seat",
+				version_slug: "v2",
+				included: 1,
+				customize: null,
+			},
+		];
+		const variantV1: FullProduct = {
+			...proAnnual,
+			licenses: [planLicense({ parent: proAnnual, licenseProduct: seat })],
+		};
+		const variantV2: FullProduct = {
+			...variantV1,
+			internal_id: "internal_pro_annual_v2",
+			version: 2,
+			version_slug: "v2",
+		};
+		const contentOnlyCustomize = {
+			add_items: [],
+			remove_items: [],
+		};
+
+		for (const variantProduct of [variantV1, variantV2]) {
+			expect(
+				buildVariantEditDiff({
+					variantProduct,
+					baseCurrent: pro,
+					baseNext: pro,
+					follow: false,
+					customize: contentOnlyCustomize,
+					declaredLicenses: declaredV2,
+				}),
+			).toEqual({
+				upsert_licenses: [
+					{
+						license_plan_id: "seat",
+						version_slug: "v2",
+						included: 1,
+						prepaid_only: true,
+					},
+				],
+			});
+		}
+	});
+
+	test("content-only customize adopts the base's declared license customize", () => {
+		const declaredCustomized = [
+			{
+				license_plan_id: "seat",
+				included: 1,
+				customize: { add_items: [{ feature_id: "messages", included: 50 }] },
+			},
+		];
+		const stockVariant: FullProduct = {
+			...proAnnual,
+			licenses: [planLicense({ parent: proAnnual, licenseProduct: seat })],
+		};
+
+		expect(
+			buildVariantEditDiff({
+				variantProduct: stockVariant,
+				baseCurrent: pro,
+				baseNext: pro,
+				follow: false,
+				customize: { add_items: [], remove_items: [] },
+				declaredLicenses: declaredCustomized,
+			}),
+		).toEqual({
+			upsert_licenses: [
+				{
+					license_plan_id: "seat",
+					version_slug: "v1",
+					included: 1,
+					prepaid_only: true,
+					customize: {
+						add_items: [{ feature_id: "messages", included: 50 }],
+					},
+				},
+			],
+		});
+	});
+
+	test("a variant's own license customize wins over the base's declared license customize", () => {
+		const declaredCustomized = [
+			{
+				license_plan_id: "seat",
+				included: 1,
+				customize: { add_items: [{ feature_id: "messages", included: 50 }] },
+			},
+		];
+		const stockVariant: FullProduct = {
+			...proAnnual,
+			licenses: [planLicense({ parent: proAnnual, licenseProduct: seat })],
+		};
+
+		expect(
+			buildVariantEditDiff({
+				variantProduct: stockVariant,
+				baseCurrent: pro,
+				baseNext: pro,
+				follow: false,
+				customize: {
+					upsert_licenses: [
+						{
+							license_plan_id: "seat",
+							customize: {
+								add_items: [{ feature_id: "messages", included: 500 }],
+							},
+						},
+					],
+				},
+				declaredLicenses: declaredCustomized,
+			}),
+		).toMatchObject({
+			upsert_licenses: [
+				{
+					license_plan_id: "seat",
+					version_slug: "v1",
+					included: 1,
+					prepaid_only: true,
+					customize: {
+						add_items: [{ feature_id: "messages", included: 500 }],
+					},
+				},
+			],
+		});
+	});
+
+	test("null customize restores the variant to its base content", () => {
+		expect(
+			buildVariantEditDiff({
+				variantProduct: proAnnual,
+				baseCurrent: pro,
+				baseNext: pro,
+				follow: false,
+				customize: null,
+				declaredLicenses: declaredProLicenses,
+			}),
+		).toEqual({
+			remove_licenses: [{ license_plan_id: "seat_annual" }],
+			upsert_licenses: [
+				{
+					license_plan_id: "seat",
+					version_slug: "v1",
+					included: 1,
+					prepaid_only: true,
+				},
+			],
+		});
+	});
+
 	test("unchanged config: declared overlay over the base's licenses[] is a no-op edit", () => {
 		expect(
 			buildVariantEditDiff({

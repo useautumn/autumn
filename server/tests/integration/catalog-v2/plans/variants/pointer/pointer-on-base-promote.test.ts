@@ -12,9 +12,12 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { deleteDbPlans, expectPlanVersionsCorrect } from "../../utils/expectCatalogPlans.js";
-import { forceActiveVersion } from "../../utils/expectVersionIdentity.js";
 import { messagesItem } from "../../licenses/utils/seedLicensePlans.js";
+import {
+	deleteDbPlans,
+	expectPlanVersionsCorrect,
+} from "../../utils/expectCatalogPlans.js";
+import { forceActiveVersion } from "../../utils/expectVersionIdentity.js";
 import {
 	expectVariantPlanCorrect,
 	expectVariantPointerCorrect,

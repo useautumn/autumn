@@ -24,12 +24,14 @@ import {
   PreviewUpdateCustomizeFreeTrialParams,
   PreviewUpdateCustomizeFreeTrialParams$Outbound,
   PreviewUpdateCustomizeFreeTrialParams$outboundSchema,
-  PreviewUpdateDimensionsUpsertLicense3,
-  PreviewUpdateDimensionsUpsertLicense3$Outbound,
-  PreviewUpdateDimensionsUpsertLicense3$outboundSchema,
+  PreviewUpdateDimensionsToUpsertLicenseEnum2,
+  PreviewUpdateDimensionsToUpsertLicenseEnum2$outboundSchema,
   PreviewUpdateDimensionsUpsertLicense4,
   PreviewUpdateDimensionsUpsertLicense4$Outbound,
   PreviewUpdateDimensionsUpsertLicense4$outboundSchema,
+  PreviewUpdateDimensionsUpsertLicenseMatch3,
+  PreviewUpdateDimensionsUpsertLicenseMatch3$Outbound,
+  PreviewUpdateDimensionsUpsertLicenseMatch3$outboundSchema,
   PreviewUpdateFeatureQuantityRequestBody,
   PreviewUpdateFeatureQuantityRequestBody$Outbound,
   PreviewUpdateFeatureQuantityRequestBody$outboundSchema,
@@ -57,8 +59,42 @@ import {
   PreviewUpdateUpsertLicenseRollover,
   PreviewUpdateUpsertLicenseRollover$Outbound,
   PreviewUpdateUpsertLicenseRollover$outboundSchema,
-} from "./preview-update-dimensions-upsert-license-3.js";
+  PreviewUpdateUpsertLicenseThresholdBilling,
+  PreviewUpdateUpsertLicenseThresholdBilling$Outbound,
+  PreviewUpdateUpsertLicenseThresholdBilling$outboundSchema,
+} from "./preview-update-dimensions-to-upsert-license-enum-2.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type PreviewUpdateDimensionsUpsertLicenseToUnion2 =
+  | number
+  | PreviewUpdateDimensionsToUpsertLicenseEnum2;
+
+export type PreviewUpdateDimensionsUpsertLicenseTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | PreviewUpdateDimensionsToUpsertLicenseEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PreviewUpdateDimensionsUpsertLicense3 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: PreviewUpdateDimensionsUpsertLicenseMatch3 };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PreviewUpdateDimensionsUpsertLicenseTier2>;
+};
 
 export type PreviewUpdateUpsertLicenseDimensionsUnion2 =
   | PreviewUpdateDimensionsUpsertLicense3
@@ -313,6 +349,13 @@ export type PreviewUpdateUpsertLicenseFeatureOverride = {
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type PreviewUpdateUpsertLicensePlanItem = {
+  /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?:
+    | PreviewUpdateUpsertLicenseThresholdBilling
+    | null
+    | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -1075,6 +1118,111 @@ export type PreviewUpdateResponse = {
 };
 
 /** @internal */
+export type PreviewUpdateDimensionsUpsertLicenseToUnion2$Outbound =
+  | number
+  | string;
+
+/** @internal */
+export const PreviewUpdateDimensionsUpsertLicenseToUnion2$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateDimensionsUpsertLicenseToUnion2$Outbound,
+    PreviewUpdateDimensionsUpsertLicenseToUnion2
+  > = smartUnion([
+    z.number(),
+    PreviewUpdateDimensionsToUpsertLicenseEnum2$outboundSchema,
+  ]);
+
+export function previewUpdateDimensionsUpsertLicenseToUnion2ToJSON(
+  previewUpdateDimensionsUpsertLicenseToUnion2:
+    PreviewUpdateDimensionsUpsertLicenseToUnion2,
+): string {
+  return JSON.stringify(
+    PreviewUpdateDimensionsUpsertLicenseToUnion2$outboundSchema.parse(
+      previewUpdateDimensionsUpsertLicenseToUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateDimensionsUpsertLicenseTier2$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PreviewUpdateDimensionsUpsertLicenseTier2$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateDimensionsUpsertLicenseTier2$Outbound,
+    PreviewUpdateDimensionsUpsertLicenseTier2
+  > = z.pipe(
+    z.object({
+      to: smartUnion([
+        z.number(),
+        PreviewUpdateDimensionsToUpsertLicenseEnum2$outboundSchema,
+      ]),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function previewUpdateDimensionsUpsertLicenseTier2ToJSON(
+  previewUpdateDimensionsUpsertLicenseTier2:
+    PreviewUpdateDimensionsUpsertLicenseTier2,
+): string {
+  return JSON.stringify(
+    PreviewUpdateDimensionsUpsertLicenseTier2$outboundSchema.parse(
+      previewUpdateDimensionsUpsertLicenseTier2,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateDimensionsUpsertLicense3$Outbound = {
+  match: { [k: string]: PreviewUpdateDimensionsUpsertLicenseMatch3$Outbound };
+  priority?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<PreviewUpdateDimensionsUpsertLicenseTier2$Outbound>;
+};
+
+/** @internal */
+export const PreviewUpdateDimensionsUpsertLicense3$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateDimensionsUpsertLicense3$Outbound,
+    PreviewUpdateDimensionsUpsertLicense3
+  > = z.pipe(
+    z.object({
+      match: z.record(
+        z.string(),
+        PreviewUpdateDimensionsUpsertLicenseMatch3$outboundSchema,
+      ),
+      priority: z.optional(z.int()),
+      tierBehavior: z.literal("graduated"),
+      tiers: z.array(
+        z.lazy(() => PreviewUpdateDimensionsUpsertLicenseTier2$outboundSchema),
+      ),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        tierBehavior: "tier_behavior",
+      });
+    }),
+  );
+
+export function previewUpdateDimensionsUpsertLicense3ToJSON(
+  previewUpdateDimensionsUpsertLicense3: PreviewUpdateDimensionsUpsertLicense3,
+): string {
+  return JSON.stringify(
+    PreviewUpdateDimensionsUpsertLicense3$outboundSchema.parse(
+      previewUpdateDimensionsUpsertLicense3,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateUpsertLicenseDimensionsUnion2$Outbound =
   | PreviewUpdateDimensionsUpsertLicense3$Outbound
   | PreviewUpdateDimensionsUpsertLicense4$Outbound;
@@ -1085,7 +1233,7 @@ export const PreviewUpdateUpsertLicenseDimensionsUnion2$outboundSchema:
     PreviewUpdateUpsertLicenseDimensionsUnion2$Outbound,
     PreviewUpdateUpsertLicenseDimensionsUnion2
   > = smartUnion([
-    PreviewUpdateDimensionsUpsertLicense3$outboundSchema,
+    z.lazy(() => PreviewUpdateDimensionsUpsertLicense3$outboundSchema),
     PreviewUpdateDimensionsUpsertLicense4$outboundSchema,
   ]);
 
@@ -1180,15 +1328,13 @@ export const PreviewUpdateCreditSchemaUpsertLicense2$outboundSchema:
     z.object({
       meteredFeatureId: z.string(),
       billingUnits: z.optional(z.number()),
-      dimensions: z.optional(
-        z.record(
-          z.string(),
-          smartUnion([
-            PreviewUpdateDimensionsUpsertLicense3$outboundSchema,
-            PreviewUpdateDimensionsUpsertLicense4$outboundSchema,
-          ]),
-        ),
-      ),
+      dimensions: z.optional(z.record(
+        z.string(),
+        smartUnion([
+          z.lazy(() => PreviewUpdateDimensionsUpsertLicense3$outboundSchema),
+          PreviewUpdateDimensionsUpsertLicense4$outboundSchema,
+        ]),
+      )),
       multipliers: z.optional(z.record(
         z.string(),
         z.lazy(() => PreviewUpdateUpsertLicenseMultipliers2$outboundSchema),
@@ -1804,6 +1950,10 @@ export function previewUpdateUpsertLicenseFeatureOverrideToJSON(
 
 /** @internal */
 export type PreviewUpdateUpsertLicensePlanItem$Outbound = {
+  threshold_billing?:
+    | PreviewUpdateUpsertLicenseThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -1823,6 +1973,9 @@ export const PreviewUpdateUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
   PreviewUpdateUpsertLicensePlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(
+      z.nullable(PreviewUpdateUpsertLicenseThresholdBilling$outboundSchema),
+    ),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
@@ -1837,6 +1990,7 @@ export const PreviewUpdateUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });

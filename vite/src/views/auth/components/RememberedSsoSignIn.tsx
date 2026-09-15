@@ -1,6 +1,7 @@
 import { IconButton } from "@autumn/ui";
 import { LockKeyIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { isSafeSsoRedirectUrl } from "@/lib/sso/ssoCallback";
 import { clearSsoHint } from "@/lib/sso/ssoHint";
@@ -25,11 +26,13 @@ export const RememberedSsoSignIn = ({
 	onForget: () => void;
 }) => {
 	const [isLoading, setIsLoading] = useState(false);
+	const [searchParams] = useSearchParams();
+	const next = searchParams.get("next") ?? undefined;
 
 	const handleContinue = async () => {
 		setIsLoading(true);
 		try {
-			const result = await resolveSso({ providerId: hint.providerId });
+			const result = await resolveSso({ providerId: hint.providerId, next });
 			if (result.action === "sso" && isSafeSsoRedirectUrl(result.url)) {
 				window.location.assign(result.url);
 				return;

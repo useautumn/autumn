@@ -16,10 +16,10 @@ export type CollectionSpec = {
 	readonly required?: readonly string[];
 	/** Every fixture path a config may state, collection-relative (no `entitlementId`, `versioning`, …). */
 	readonly paths: readonly string[];
-	/** The spec's default at each fixture path that states one; a pulled value equal to it is left out. */
+	/** The emission default at each fixture path; a pulled value equal to it is left out. */
 	readonly defaults?: Readonly<Record<string, unknown>>;
-	/** Config key holding past versions, when the collection has history. */
-	readonly historyKey?: string;
+	/** Rows sharing idField are versions; pull keys them by id and slug. */
+	readonly versioned?: boolean;
 	/** Whether pull can address entries by idField alone. */
 	readonly pull: boolean;
 	/** Wire-named, item-rooted paths kept for existing catalogs only. */
@@ -106,6 +106,12 @@ export type SingletonSpec = {
 	}[];
 };
 
+export type EmitFixtureContext = {
+	readonly featureTypes?: Readonly<Record<string, string>>;
+	/** Fixture builders registered for nested array paths, such as `variants`. */
+	readonly nestedBuilders?: Readonly<Record<string, string>>;
+};
+
 const PLAIN_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 const keyText = (key: string): string =>
@@ -185,6 +191,7 @@ const serialize = ({
 	indent,
 	includeMappings,
 	required,
+	context,
 }: {
 	value: unknown;
 	path: string;
@@ -192,6 +199,7 @@ const serialize = ({
 	indent: string;
 	includeMappings: boolean;
 	required: ReadonlySet<string>;
+	context?: EmitFixtureContext;
 }): string => {
 	if (typeof value === "string") return JSON.stringify(value);
 	if (typeof value === "number" || typeof value === "boolean")
@@ -200,10 +208,23 @@ const serialize = ({
 
 	if (Array.isArray(value)) {
 		if (value.length === 0) return "[]";
-		const items = value.map(
-			(entry) =>
-				`${indent}\t${serialize({ includeMappings, required, value: entry, path, index, indent: `${indent}\t` })},`,
-		);
+		const nestedBuilder = context?.nestedBuilders?.[path];
+		const items = value.map((entry) => {
+			const serialized = serialize({
+				includeMappings,
+				required,
+				value: entry,
+				path,
+				index,
+				indent: `${indent}\t`,
+				context,
+			});
+			const fixture =
+				nestedBuilder === undefined
+					? serialized
+					: `${nestedBuilder}(${serialized})`;
+			return `${indent}\t${fixture},`;
+		});
 		return `[\n${items.join("\n")}\n${indent}]`;
 	}
 
@@ -225,7 +246,7 @@ const serialize = ({
 	if (entries.length === 0) return "{}";
 	const items = entries.map(([key, entry]) => {
 		const childPath = childPathOf(key);
-		return `${indent}\t${keyText(key)}: ${serialize({ includeMappings, required, value: entry, path: childPath, index, indent: `${indent}\t` })},`;
+		return `${indent}\t${keyText(key)}: ${serialize({ includeMappings, required, value: entry, path: childPath, index, indent: `${indent}\t`, context })},`;
 	});
 	return `{\n${items.join("\n")}\n${indent}}`;
 };
@@ -242,12 +263,14 @@ const pruneDefaults = ({
 	index,
 	defaults,
 	required,
+	context,
 }: {
 	value: unknown;
 	path: string;
 	index: PathIndex;
 	defaults: Readonly<Record<string, unknown>>;
 	required: ReadonlySet<string>;
+	context?: EmitFixtureContext;
 }): unknown => {
 	if (required.has(path)) return value;
 	if (path in defaults && valuesEqual(value, defaults[path])) return undefined;
@@ -256,14 +279,26 @@ const pruneDefaults = ({
 	if (Array.isArray(value)) {
 		return value.map(
 			(entry) =>
-				pruneDefaults({ value: entry, path, index, defaults, required }) ??
-				(entry !== null && typeof entry === "object" ? {} : entry),
+				pruneDefaults({
+					value: entry,
+					path,
+					index,
+					defaults,
+					required,
+					context,
+				}) ?? (entry !== null && typeof entry === "object" ? {} : entry),
 		);
 	}
 	const isRecord = index.records.has(path);
 	if (!isRecord && !index.parents.has(path)) return value;
+	const record = value as Record<string, unknown>;
+	const isBooleanFeatureItem =
+		typeof record.featureId === "string" &&
+		context?.featureTypes?.[record.featureId] === "boolean";
 	const pruned: Record<string, unknown> = {};
-	for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+	for (const [key, entry] of Object.entries(record)) {
+		if (isBooleanFeatureItem && (key === "included" || key === "unlimited"))
+			continue;
 		const childPath = isRecord ? `${path}.*` : `${path}.${key}`;
 		const child = pruneDefaults({
 			value: entry,
@@ -271,6 +306,7 @@ const pruneDefaults = ({
 			index,
 			defaults,
 			required,
+			context,
 		});
 		if (child !== undefined) pruned[key] = child;
 	}
@@ -317,8 +353,6 @@ const rowValueOf = ({
 	const value = row[key];
 	if (key === "display") return displayOf(value);
 	if (key === "creditSchema") return creditSchemaOf(value);
-	// Membership in `plans` stamps true; only a draft's `false` is fixture-worthy.
-	if (key === "active") return value === false ? false : undefined;
 	// A deprecated field is kept only while it carries data.
 	if (
 		isDeprecatedKey({ spec, key }) &&
@@ -370,12 +404,14 @@ export const emitFixtureProperty = ({
 	key,
 	includeMappings,
 	indent,
+	context,
 }: {
 	spec: CollectionSpec;
 	row: Record<string, unknown>;
 	key: string;
 	includeMappings: boolean;
 	indent: string;
+	context?: EmitFixtureContext;
 }): string | null => {
 	const { spec, row } = resolveBranch({
 		spec: collectionSpec,
@@ -389,6 +425,7 @@ export const emitFixtureProperty = ({
 		index,
 		defaults: spec.defaults ?? {},
 		required,
+		context,
 	});
 	if (value === undefined) return null;
 	if (value === null && !required.has(key)) return null;
@@ -399,7 +436,48 @@ export const emitFixtureProperty = ({
 		path: key,
 		index,
 		indent: `${indent}\t`,
+		context,
 	});
+};
+
+/** One element of a nested array path (`variants`) as fixture text, builder-wrapped. */
+export const emitNestedFixture = ({
+	spec,
+	path,
+	row,
+	includeMappings,
+	indent,
+	context,
+}: {
+	spec: CollectionSpec;
+	path: string;
+	row: Record<string, unknown>;
+	includeMappings: boolean;
+	indent: string;
+	context?: EmitFixtureContext;
+}): string => {
+	const required = new Set(spec.required ?? []);
+	const index = pathIndexOf(spec.paths);
+	const value =
+		pruneDefaults({
+			value: row,
+			path,
+			index,
+			defaults: spec.defaults ?? {},
+			required,
+			context,
+		}) ?? {};
+	const serialized = serialize({
+		includeMappings,
+		required,
+		value,
+		path,
+		index,
+		indent,
+		context,
+	});
+	const builder = context?.nestedBuilders?.[path];
+	return builder === undefined ? serialized : `${builder}(${serialized})`;
 };
 
 export const emitFixture = ({
@@ -407,11 +485,13 @@ export const emitFixture = ({
 	row: collectionRow,
 	includeMappings,
 	indent,
+	context,
 }: {
 	spec: CollectionSpec;
 	row: Record<string, unknown>;
 	includeMappings: boolean;
 	indent: string;
+	context?: EmitFixtureContext;
 }): string => {
 	const { spec, row } = resolveBranch({
 		spec: collectionSpec,
@@ -427,13 +507,14 @@ export const emitFixture = ({
 			index,
 			defaults: spec.defaults ?? {},
 			required,
+			context,
 		});
 		if (value === undefined) continue;
 		// A required key states null rather than vanishing: the fixture type
 		// demands it, so dropping it emits source that does not compile.
 		if (value === null && !required.has(key)) continue;
 		lines.push(
-			`${indent}\t${keyText(key)}: ${serialize({ includeMappings, required, value, path: key, index, indent: `${indent}\t` })},`,
+			`${indent}\t${keyText(key)}: ${serialize({ includeMappings, required, value, path: key, index, indent: `${indent}\t`, context })},`,
 		);
 	}
 	lines.push(`${indent}})`);

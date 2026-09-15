@@ -82,8 +82,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
-						plans: versionedPro({ versionSlug: "v2", amount: 59 }),
-						planVersions: versionedPro({ versionSlug: "v1" }),
+						plans: `${versionedPro({ versionSlug: "v2", amount: 59 })}${versionedPro({ versionSlug: "v1", active: false })}`,
 					}),
 				}),
 			);
@@ -92,8 +91,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
-						plans: versionedPro({ versionSlug: "v3", amount: 69 }),
-						planVersions: `${versionedPro({ versionSlug: "v1" })}${versionedPro({ versionSlug: "v2", amount: 59 })}`,
+						plans: `${versionedPro({ versionSlug: "v3", amount: 69 })}${versionedPro({ versionSlug: "v1", active: false })}${versionedPro({ versionSlug: "v2", amount: 59, active: false })}`,
 					}),
 				}),
 			);
@@ -112,12 +110,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
-						plans: versionedPro({
-							versionSlug: "v3",
-							amount: 69,
-							extraItems: EXTRA_ITEM,
-						}),
-						planVersions: `${versionedPro({ versionSlug: "v1", extraItems: EXTRA_ITEM })}${versionedPro({ versionSlug: "v2", amount: 59, extraItems: EXTRA_ITEM })}`,
+						plans: `${versionedPro({ versionSlug: "v3", amount: 69, extraItems: EXTRA_ITEM })}${versionedPro({ versionSlug: "v1", extraItems: EXTRA_ITEM, active: false })}${versionedPro({ versionSlug: "v2", amount: 59, extraItems: EXTRA_ITEM, active: false })}`,
 					}),
 				}),
 			);

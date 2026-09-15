@@ -1,3 +1,4 @@
+import { allocatedBillingToBehavior } from "@api/products/components/allocatedBilling";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
 import { Infinite } from "@models/productModels/productEnums";
 import {
@@ -81,18 +82,31 @@ const planItemV0ToItemConfig = ({
 
 	const rollover = toItemRollover();
 	const proration = toItemProration();
+	const expiry = planItemV0.expiry ?? undefined;
 	const featureOverride = planItemV0.feature_override
 		? apiFeatureOverrideToDb(planItemV0.feature_override)
 		: undefined;
 	const thresholdBilling = planItemV0.threshold_billing ?? undefined;
+	const allocatedBillingBehavior = allocatedBillingToBehavior(
+		planItemV0.price?.allocated_billing,
+	);
 
-	if (rollover || proration || featureOverride || thresholdBilling) {
+	if (
+		rollover ||
+		proration ||
+		featureOverride ||
+		thresholdBilling ||
+		expiry ||
+		allocatedBillingBehavior
+	) {
 		return {
 			rollover,
+			expiry,
 			on_increase: proration?.on_increase,
 			on_decrease: proration?.on_decrease,
 			feature_override: featureOverride,
 			threshold_billing: thresholdBilling,
+			allocated_billing_behavior: allocatedBillingBehavior,
 		} satisfies ProductItemConfig;
 	}
 	return undefined;

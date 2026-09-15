@@ -1,7 +1,7 @@
 import { productV2ToFrontendProduct } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
-import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 import type { PlanVariant } from "@/services/products/ProductService";
+import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 
 export function VariantPrice({ variant }: { variant: PlanVariant }) {
 	const { org } = useOrg();

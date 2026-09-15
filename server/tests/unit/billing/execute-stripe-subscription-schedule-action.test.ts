@@ -101,9 +101,23 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 		expect(mockState.updateCalls).toEqual([
 			{
 				scheduleId: "sched_standalone",
-				params,
+				params: {
+					...params,
+					metadata: {
+						autumn_managed_at: expect.any(String),
+					},
+				},
 			},
 		]);
+
+		const updateParams = mockState.updateCalls[0] as {
+			params: {
+				metadata: {
+					autumn_managed_at: string;
+				};
+			};
+		};
+		expect(Number(updateParams.params.metadata.autumn_managed_at)).toBeFinite();
 		expect(mockState.releaseCalls).toEqual([]);
 		expect(mockState.createCalls).toEqual([]);
 		expect(result?.id).toBe("sched_standalone");

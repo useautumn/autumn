@@ -9,6 +9,7 @@
 import { expect, test } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -16,7 +17,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("renamed license plan → the parent's link follows (by internal id), attach with license quantities still resolves")}`,
@@ -32,10 +32,12 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ planId: "seat", name: "Seat", price: { amount: 15, interval: "month" } }),
+		plan({ active: true, planId: "seat", name: "Seat", versionSlug: "v1", price: { amount: 15, interval: "month" } }),
 		plan({
+			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
 			licenses: [{ licensePlanId: "seat", included: 25 }],
 		}),
@@ -59,10 +61,12 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "seatNew", internalId: "${seat.internal_id}", name: "Seat" }),
+		plan({ active: true, planId: "seatNew", internalId: "${seat.internal_id}", name: "Seat", versionSlug: "v1", }),
 		plan({
+			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
 			licenses: [{ licensePlanId: "seat", included: 25 }],
 		}),

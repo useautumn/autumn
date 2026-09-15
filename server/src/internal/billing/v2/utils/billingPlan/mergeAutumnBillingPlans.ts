@@ -1,4 +1,6 @@
-import { type AutumnBillingPlan, addSafe } from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
+import { mergeById, mergeByKey } from "./mergeByKey";
+import { mergePooledBalancePlans } from "./mergePooledBalancePlans";
 
 export const mergeAutumnBillingPlans = ({
 	base,
@@ -91,48 +93,10 @@ export const mergeAutumnBillingPlans = ({
 		incoming: incoming.updateCustomerEntitlements,
 		getKey: (update) => update.customerEntitlement.id,
 	}),
-	pooledBalancePlan:
-		base.pooledBalancePlan || incoming.pooledBalancePlan
-			? {
-					insertPoolBalances:
-						mergeByKey({
-							base: base.pooledBalancePlan?.insertPoolBalances,
-							incoming: incoming.pooledBalancePlan?.insertPoolBalances,
-							getKey: (pooledCustomerEntitlement) =>
-								pooledCustomerEntitlement.id,
-						}) ?? [],
-					updatePoolBalances: mergePooledBalanceUpdates({
-						base: base.pooledBalancePlan?.updatePoolBalances,
-						incoming: incoming.pooledBalancePlan?.updatePoolBalances,
-					}),
-					expirePoolBalanceCandidates:
-						mergeByKey({
-							base: base.pooledBalancePlan?.expirePoolBalanceCandidates,
-							incoming: incoming.pooledBalancePlan?.expirePoolBalanceCandidates,
-							getKey: (expiry) => expiry.pooledCustomerEntitlement.id,
-						}) ?? [],
-					insertPoolRollovers:
-						mergeById({
-							base: base.pooledBalancePlan?.insertPoolRollovers,
-							incoming: incoming.pooledBalancePlan?.insertPoolRollovers,
-						}) ?? [],
-					insertPoolContributions:
-						mergeById({
-							base: base.pooledBalancePlan?.insertPoolContributions,
-							incoming: incoming.pooledBalancePlan?.insertPoolContributions,
-						}) ?? [],
-					updatePoolContributions:
-						mergeById({
-							base: base.pooledBalancePlan?.updatePoolContributions,
-							incoming: incoming.pooledBalancePlan?.updatePoolContributions,
-						}) ?? [],
-					deletePoolContributions:
-						mergeById({
-							base: base.pooledBalancePlan?.deletePoolContributions,
-							incoming: incoming.pooledBalancePlan?.deletePoolContributions,
-						}) ?? [],
-				}
-			: undefined,
+	pooledBalancePlan: mergePooledBalancePlans({
+		base: base.pooledBalancePlan,
+		incoming: incoming.pooledBalancePlan,
+	}),
 	autoTopupRebalance:
 		base.autoTopupRebalance || incoming.autoTopupRebalance
 			? {
@@ -163,69 +127,6 @@ export const mergeAutumnBillingPlans = ({
 	upsertInvoice: incoming.upsertInvoice ?? base.upsertInvoice,
 	refundPlan: incoming.refundPlan ?? base.refundPlan,
 });
-
-const mergeById = <T extends { id: string }>({
-	base,
-	incoming,
-}: {
-	base?: T[];
-	incoming?: T[];
-}): T[] => mergeByKey({ base, incoming, getKey: (item) => item.id }) ?? [];
-
-const mergeByKey = <T>({
-	base,
-	incoming,
-	getKey,
-}: {
-	base?: T[];
-	incoming?: T[];
-	getKey: (item: T) => string;
-}): T[] | undefined => {
-	if (!base?.length && !incoming?.length) return undefined;
-
-	const itemByKey = new Map<string, T>();
-	for (const item of base ?? []) itemByKey.set(getKey(item), item);
-	for (const item of incoming ?? []) itemByKey.set(getKey(item), item);
-
-	return Array.from(itemByKey.values());
-};
-
-type PooledBalanceUpdate = NonNullable<
-	AutumnBillingPlan["pooledBalancePlan"]
->["updatePoolBalances"][number];
-
-const mergePooledBalanceUpdates = ({
-	base,
-	incoming,
-}: {
-	base?: PooledBalanceUpdate[];
-	incoming?: PooledBalanceUpdate[];
-}): PooledBalanceUpdate[] => {
-	const updatesByPoolId = new Map<string, PooledBalanceUpdate>();
-
-	for (const update of [...(base ?? []), ...(incoming ?? [])]) {
-		const poolId = update.pooledCustomerEntitlement.id;
-		const existing = updatesByPoolId.get(poolId);
-		updatesByPoolId.set(
-			poolId,
-			existing
-				? {
-						pooledCustomerEntitlement: update.pooledCustomerEntitlement,
-						balanceDelta: addSafe({
-							left: existing.balanceDelta,
-							right: update.balanceDelta,
-						}),
-						grantedDelta: addSafe({
-							left: existing.grantedDelta,
-							right: update.grantedDelta,
-						}),
-					}
-				: update,
-		);
-	}
-
-	return Array.from(updatesByPoolId.values());
-};
 
 type PatchCustomerProduct = NonNullable<
 	AutumnBillingPlan["patchCustomerProducts"]

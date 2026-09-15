@@ -7,6 +7,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -16,7 +17,6 @@ import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 const activeInternalId = async ({
 	ctx,
@@ -44,7 +44,7 @@ test.concurrent(
 			],
 			config: `{
 	plans: [
-		plan({ planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),
+		plan({ active: true, planId: "pro", name: "Pro", versionSlug: "v1", price: { amount: 49, interval: "month" } }),
 	],
 }`,
 		});
@@ -60,7 +60,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "proNew", internalId: "${internalId}", name: "Pro" }),
+		plan({ active: true, planId: "proNew", internalId: "${internalId}", name: "Pro", versionSlug: "v1", }),
 	],
 }`,
 				}),
@@ -80,7 +80,7 @@ test.concurrent(
 				atmnConfigSource({
 					body: `{
 	plans: [
-		plan({ planId: "pro", internalId: "${internalId}", name: "Pro" }),
+		plan({ active: true, planId: "pro", internalId: "${internalId}", name: "Pro", versionSlug: "v1", }),
 	],
 }`,
 				}),

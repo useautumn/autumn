@@ -3,6 +3,7 @@ import type { CatalogPlanPreview } from "@autumn/shared";
 import { getTime, isValid, parseISO } from "date-fns";
 import { catalogPlanNeedingDecision } from "../../../internal/agentRuntime/actions/resolveCatalogDecision/catalogDecisionPolicy.js";
 import { streamEveEvents } from "../../../internal/agentRuntime/eve/client.js";
+import { isEmptyDelivery } from "../../../internal/agentRuntime/eve/emptyDelivery.js";
 import {
 	displayEveToolLabel,
 	isPreviewToolName,
@@ -198,7 +199,8 @@ export const replayEveThread = async ({
 			}
 		} else if (event.type === "message.completed") {
 			const text = event.message;
-			if (!text.trim()) continue;
+			// A declined reply (empty-delivery marker) has nothing to replay.
+			if (!text || !text.trim() || isEmptyDelivery(text)) continue;
 			const assistant = assistantForTurn(event.turnId, ts);
 			if (event.finishReason === "tool-calls") {
 				assistant.msg.parts.push({
