@@ -148,6 +148,17 @@ vercelTestApiRouter.post(
 			body,
 			receivedAt: Date.now(),
 		});
+		// Tests encode the desired failure in the invoice id: `vi_reject_*` → 409,
+		// `vi_flaky_*` → 503 (ambiguous, refund may have been accepted).
+		if (invoiceId.startsWith("vi_reject_")) {
+			return c.json(
+				{ error: { code: "bad_request", message: "rejected" } },
+				409,
+			);
+		}
+		if (invoiceId.startsWith("vi_flaky_")) {
+			return c.json({ error: { code: "internal", message: "flaky" } }, 503);
+		}
 		return c.body(null, 204);
 	},
 );

@@ -1,4 +1,5 @@
 import { type Customer, ErrCode, invoices, RecaseError } from "@autumn/shared";
+import { VercelError } from "@vercel/sdk/models/vercelerror.js";
 import { Marketplace } from "@vercel/sdk/sdk/marketplace.js";
 import { and, eq, sql } from "drizzle-orm";
 import type Stripe from "stripe";
@@ -14,6 +15,11 @@ export const DEFAULT_VERCEL_REFUND_REASON = "Refund issued from Autumn";
 /** Vercel's Invoice Actions API takes `total` as a dollar-based decimal string. */
 export const toVercelAmountString = (amount: number): string =>
 	amount.toFixed(2);
+
+const isDefinitiveVercelRejection = (error: unknown): boolean =>
+	error instanceof VercelError &&
+	error.statusCode >= 400 &&
+	error.statusCode < 500;
 
 const roundToCents = (amount: number): number => Math.round(amount * 100) / 100;
 
@@ -142,13 +148,24 @@ export const refundVercelInvoice = async ({
 			},
 		});
 	} catch (error) {
-		await db
-			.update(invoices)
-			.set({
-				refunded_amount: sql`${invoices.refunded_amount} - ${amount}`,
-			})
-			.where(eq(invoices.stripe_id, stripeInvoice.id));
-		throw error;
+		// Only a definitive 4xx rejection releases the reservation. Timeouts,
+		// network drops and 5xx are ambiguous — Vercel may have accepted the
+		// refund — so the amount stays reserved to prevent a duplicate.
+		if (isDefinitiveVercelRejection(error)) {
+			await db
+				.update(invoices)
+				.set({
+					refunded_amount: sql`${invoices.refunded_amount} - ${amount}`,
+				})
+				.where(eq(invoices.stripe_id, stripeInvoice.id));
+			throw error;
+		}
+		throw new RecaseError({
+			message:
+				"Vercel did not confirm the refund. The amount has been recorded as refunded; verify the invoice in Vercel before retrying.",
+			code: ErrCode.InternalError,
+			statusCode: 502,
+		});
 	}
 
 	return { vercelInvoiceId, installationId };

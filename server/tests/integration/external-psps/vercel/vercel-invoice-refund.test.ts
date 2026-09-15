@@ -361,3 +361,48 @@ test(`${chalk.yellowBright(
 	);
 	expect(refundCalls).toHaveLength(1);
 }, 60000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST 8: definitive 4xx from Vercel releases the reservation; 5xx keeps it
+// ─────────────────────────────────────────────────────────────────────────────
+
+test(`${chalk.yellowBright(
+	"vercel-invoice-refund: 4xx releases the reserved amount, ambiguous 5xx keeps it",
+)}`, async () => {
+	const [rejected, flaky] = await Promise.all([
+		setupPaidVercelInvoice({ suffix: "reject" }),
+		setupPaidVercelInvoice({ suffix: "flaky" }),
+	]);
+
+	await ctx.stripeCli.invoices.update(rejected.stripeInvoiceId, {
+		metadata: { vercel_invoice_id: "vi_reject_1" },
+	});
+	await expect(
+		autumn.post(
+			`/customers/${rejected.customerId}/invoices/${rejected.stripeInvoiceId}/refund`,
+			{ mode: "full" },
+			MOCK_HEADERS,
+		),
+	).rejects.toThrow();
+	const rejectedInvoice = await InvoiceService.getByStripeId({
+		db: ctx.db,
+		stripeId: rejected.stripeInvoiceId,
+	});
+	expect(rejectedInvoice?.refunded_amount).toBe(0);
+
+	await ctx.stripeCli.invoices.update(flaky.stripeInvoiceId, {
+		metadata: { vercel_invoice_id: "vi_flaky_1" },
+	});
+	await expect(
+		autumn.post(
+			`/customers/${flaky.customerId}/invoices/${flaky.stripeInvoiceId}/refund`,
+			{ mode: "full" },
+			MOCK_HEADERS,
+		),
+	).rejects.toThrow(/did not confirm/i);
+	const flakyInvoice = await InvoiceService.getByStripeId({
+		db: ctx.db,
+		stripeId: flaky.stripeInvoiceId,
+	});
+	expect(flakyInvoice?.refunded_amount).toBe(20);
+}, 90000);
