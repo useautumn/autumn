@@ -7,7 +7,7 @@ const env = createBalanceWorkerEnv({
 	KAFKA_AUTH_MODE: "none",
 });
 const admin = ({
-	count = 8,
+	count = 512,
 	policy = "compact",
 }: {
 	count?: number;
@@ -60,15 +60,17 @@ describe("balance worker topic validation", () => {
 			}),
 		).resolves.toBeUndefined();
 	});
-	test.each([{ count: 1 }, { policy: "compact,delete" }, { policy: "delete" }])(
-		"rejects unsafe topic layout %j",
-		async (options) => {
-			await expect(
-				validateBalanceWorkerTopics({
-					admin: admin(options),
-					env,
-				}),
-			).rejects.toThrow();
-		},
-	);
+	test.each([
+		{ count: 1 },
+		{ count: 8 },
+		{ policy: "compact,delete" },
+		{ policy: "delete" },
+	])("rejects unsafe topic layout %j", async (options) => {
+		await expect(
+			validateBalanceWorkerTopics({
+				admin: admin(options),
+				env,
+			}),
+		).rejects.toThrow();
+	});
 });

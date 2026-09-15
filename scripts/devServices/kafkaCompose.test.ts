@@ -60,7 +60,7 @@ function provisionsTopicsOnTheEnvironmentBroker(): void {
 		BALANCE_WORKER_DEPLOYMENT: "production",
 		BALANCE_WORKER_METERING_TOPIC: "custom.metering",
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "custom.ownership",
-		BALANCE_WORKER_PARTITION_COUNT: "8",
+		BALANCE_WORKER_PARTITION_COUNT: "512",
 	};
 	const spawn = spyOn(Bun, "spawnSync").mockReturnValue(successfulProcess);
 	try {

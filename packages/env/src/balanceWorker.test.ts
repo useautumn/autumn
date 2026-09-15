@@ -13,23 +13,25 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_HOST).toBe("127.0.0.1");
 		expect(env.BALANCE_WORKER_PORT).toBe(8082);
 		expect(env.BALANCE_WORKER_ENDPOINT).toBe("http://127.0.0.1:8082");
-		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(8);
+		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(512);
 	});
-	test("accepts a deployment setting matching the staging constant", () => {
+	test("accepts a deployment setting matching the fixed layout", () => {
 		expect(
-			createBalanceWorkerEnv({ ...valid, BALANCE_WORKER_PARTITION_COUNT: "8" })
-				.BALANCE_WORKER_PARTITION_COUNT,
-		).toBe(8);
+			createBalanceWorkerEnv({
+				...valid,
+				BALANCE_WORKER_PARTITION_COUNT: "512",
+			}).BALANCE_WORKER_PARTITION_COUNT,
+		).toBe(512);
 	});
-	test.each(["4", "16", "0", "not-a-number"])(
-		"rejects a partition count that differs from the staging constant: %s",
+	test.each(["4", "8", "16", "0", "not-a-number"])(
+		"rejects a partition count that differs from the fixed layout: %s",
 		(partitionCount) => {
 			expect(() =>
 				createBalanceWorkerEnv({
 					...valid,
 					BALANCE_WORKER_PARTITION_COUNT: partitionCount,
 				}),
-			).toThrow("BALANCE_WORKER_PARTITION_COUNT is fixed at 8 for staging");
+			).toThrow("BALANCE_WORKER_PARTITION_COUNT is fixed at 512");
 		},
 	);
 	test("derives advertised endpoint from configured port", () => {

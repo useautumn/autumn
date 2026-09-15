@@ -222,7 +222,7 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
 		KAFKA_BROKERS: "broker:9092",
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "ownership",
-		BALANCE_WORKER_PARTITION_COUNT: "8",
+		BALANCE_WORKER_PARTITION_COUNT: "512",
 		BALANCE_WORKER_REQUEST_TIMEOUT_MS: "200",
 	});
 	await ownership.startOwnershipConsumer();
@@ -258,7 +258,7 @@ async function startsAndMemoizesOnlyWhenEnabled(): Promise<void> {
 	expect(createClient).toHaveBeenCalledTimes(1);
 	expect(createClient).toHaveBeenCalledWith({
 		ctx: { owners: consumer },
-		config: { partitionCount: 8, timeoutMs: 200 },
+		config: { partitionCount: 512, timeoutMs: 200 },
 	});
 	await ownership.stopOwnershipConsumer();
 	expect(stops).toBe(1);

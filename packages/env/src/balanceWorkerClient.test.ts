@@ -86,20 +86,20 @@ test(
 	"development uses the shared worker topic and partition configuration",
 	readsBalanceWorkerEnvironment,
 );
-test("client uses eight staging partitions without an environment setting", () => {
+test("client uses 512 partitions without an environment setting", () => {
 	expect(
 		createBalanceWorkerClientEnv(localEnv).BALANCE_WORKER_PARTITION_COUNT,
-	).toBe(8);
+	).toBe(512);
 });
-test.each(["4", "16", "0", "not-a-number"])(
-	"client rejects a partition count that differs from the staging constant: %s",
+test.each(["4", "8", "16", "0", "not-a-number"])(
+	"client rejects a partition count that differs from the fixed layout: %s",
 	(partitionCount) => {
 		expect(() =>
 			createBalanceWorkerClientEnv({
 				...localEnv,
 				BALANCE_WORKER_PARTITION_COUNT: partitionCount,
 			}),
-		).toThrow("BALANCE_WORKER_PARTITION_COUNT is fixed at 8 for staging");
+		).toThrow("BALANCE_WORKER_PARTITION_COUNT is fixed at 512");
 	},
 );
 
@@ -152,7 +152,7 @@ function readsBalanceWorkerEnvironment() {
 		BALANCE_WORKER_ROLLOUT_ENABLED: "true",
 		KAFKA_BROKERS: "127.0.0.1:19092, localhost:29092",
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "test-ownership",
-		BALANCE_WORKER_PARTITION_COUNT: "8",
+		BALANCE_WORKER_PARTITION_COUNT: "512",
 		BALANCE_WORKER_REQUEST_TIMEOUT_MS: "2500",
 	});
 	expect(env).toEqual({
@@ -161,7 +161,7 @@ function readsBalanceWorkerEnvironment() {
 		BALANCE_WORKER_ROLLOUT_ENABLED: true,
 		KAFKA_BROKERS: ["127.0.0.1:19092", "localhost:29092"],
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "test-ownership",
-		BALANCE_WORKER_PARTITION_COUNT: 8,
+		BALANCE_WORKER_PARTITION_COUNT: 512,
 		BALANCE_WORKER_REQUEST_TIMEOUT_MS: 2500,
 	});
 }
