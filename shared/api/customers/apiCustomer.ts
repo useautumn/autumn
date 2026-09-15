@@ -3,7 +3,10 @@ import { ApiCusRewardsSchema } from "@api/others/apiDiscount";
 import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1";
 import { z } from "zod/v4";
 import { BaseApiCustomerSchema } from "./baseApiCustomer";
-import { ApiCusReferralSchema } from "./components/apiCusReferral";
+import {
+	ApiCusReferralSchema,
+	ApiCusReferredBySchema,
+} from "./components/apiCusReferral";
 import { ApiInvoicePreviewV0Schema } from "./components/apiInvoicePreview/apiInvoicePreviewV0";
 import { ApiTrialsUsedV1Schema } from "./components/apiTrialsUsed/apiTrialsUsedV1";
 import { ApiBalanceSchema } from "./cusFeatures/apiBalance";
@@ -33,6 +36,9 @@ export const ApiCusExpandSchema = z.object({
 	}),
 	referrals: z.array(ApiCusReferralSchema).optional().meta({
 		description: "Referral records for this customer.",
+	}),
+	referred_by: z.array(ApiCusReferredBySchema).optional().meta({
+		description: "Referral records where this customer was referred.",
 	}),
 	payment_method: z.any().nullish().meta({
 		description: "The customer's default payment method.",
