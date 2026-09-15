@@ -6,21 +6,21 @@
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
-import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
-import {
-	deleteDbPlans,
-	expectDbPlansCorrect,
-} from "../utils/expectCatalogPlans.js";
-import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 import { expectLicenseLinkCorrect } from "../licenses/utils/expectLicenseLinkCorrect.js";
 import {
 	dashboardItem,
 	messagesItem,
 	withCatalogPlans,
 } from "../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
+import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
+import {
+	deleteDbPlans,
+	expectDbPlansCorrect,
+} from "../utils/expectCatalogPlans.js";
 import { expectVariantPlanCorrect } from "../variants/utils/expectVariantPointer.js";
 import { seedBaseWithVariant } from "../variants/utils/seedVariantPlans.js";
 
@@ -60,9 +60,7 @@ test.concurrent(
 						},
 					],
 				});
-				const childRow = preview.plans.find(
-					(row) => row.plan_id === childId,
-				);
+				const childRow = preview.plans.find((row) => row.plan_id === childId);
 				expect(childRow?.license_parents ?? []).toEqual([]);
 
 				await autumnV2_3.catalogV2.update({
@@ -136,6 +134,7 @@ test.concurrent(
 								variants: [
 									{
 										variant_plan_id: variantId,
+										archived: true,
 										customize: {
 											add_items: [dashboardItem()],
 										},
@@ -188,9 +187,12 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 remove plans: archived variants skip settings; archived:false unarchives; no draft")}`,
+	`${chalk.yellowBright("catalogV2 remove plans: stating archived plans and variants restores them; no draft")}`,
 	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [s.platform.create({ setupDefaultFeatures: true })],
+			actions: [],
+		});
 		const baseId = uniqueTestId("cv2_rmp_set_b");
 		const variantId = uniqueTestId("cv2_rmp_set_eu");
 		const archivedId = uniqueTestId("cv2_rmp_draft");
@@ -228,14 +230,28 @@ test.concurrent(
 				expected: [{ id: variantId, archived: true }],
 			});
 
-			await autumnV2_3.catalogV2.update({
+			const restoreParams = {
 				plans: [
 					{
 						plan_id: baseId,
-						variants: [{ variant_plan_id: variantId, archived: false }],
+						variants: [{ variant_plan_id: variantId }],
 					},
 				],
-			});
+			};
+			const restorePreview =
+				await autumnV2_3.catalogV2.previewUpdate(restoreParams);
+			expect(
+				restorePreview.plans.some(
+					(plan) =>
+						plan.plan_id === baseId &&
+						plan.variants?.some(
+							(variant) =>
+								variant.plan_id === variantId &&
+								variant.plan_change?.previous_attributes?.archived === true,
+						),
+				),
+			).toBe(true);
+			await autumnV2_3.catalogV2.update(restoreParams);
 			await expectDbPlansCorrect({
 				ctx,
 				expected: [{ id: variantId, archived: false }],
@@ -260,7 +276,7 @@ test.concurrent(
 			expect(response.migrations ?? []).toEqual([]);
 			await expectDbPlansCorrect({
 				ctx,
-				expected: [{ id: archivedId, name: "Still Archived", archived: true }],
+				expected: [{ id: archivedId, name: "Still Archived", archived: false }],
 			});
 		} finally {
 			await cleanupPlanCustomerRefs({

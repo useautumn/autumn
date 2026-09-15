@@ -150,8 +150,8 @@ const buildProduct = ({
 	version: 1,
 	version_slug: "v1",
 	active: true,
-deleted_at: null,
-previous_version_slug: null,
+	deleted_at: null,
+	previous_version_slug: null,
 	processor: null,
 	base_variant_id: null,
 	base_internal_product_id: null,
@@ -369,6 +369,7 @@ const buildCustomerEntitlement = ({
 	external_id: `bal_${key}_${suffix}`,
 	expired: null,
 	reset_by_invoice: null,
+	metadata: null,
 });
 
 const buildRollover = ({

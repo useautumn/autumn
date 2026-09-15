@@ -45,8 +45,11 @@ test(`${chalk.yellowBright("catalog-qa: archived relatives")}`, async () => {
 	});
 	await autumnV2_3.catalogV2.update({
 		plans: [
-			{ plan_id: baseId, name: "QA Archived Base" },
-			{ plan_id: euId, name: "QA Archived EU" },
+			{
+				plan_id: baseId,
+				name: "QA Archived Base",
+				variants: [{ variant_plan_id: euId, name: "QA Archived EU" }],
+			},
 		],
 	});
 	await autumnV2_3.catalogV2.update({

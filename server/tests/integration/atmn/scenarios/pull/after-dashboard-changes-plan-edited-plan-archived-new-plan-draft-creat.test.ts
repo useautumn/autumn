@@ -18,8 +18,10 @@ const baseConfig = (planId: string) =>
 export default atmn({
 	plans: [
 		plan({
+			active: true,
 			planId: "${planId}",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 		}),
 	],

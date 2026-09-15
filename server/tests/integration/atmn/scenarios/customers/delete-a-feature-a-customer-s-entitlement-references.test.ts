@@ -39,7 +39,9 @@ const catalogConfig = ({
 	plans: [
 		{
 			planId: "${planId}",
+			active: true,
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 			items: [${includeFeature ? `{ featureId: "${featureId}", included: 100, reset: { interval: "month" } }` : ""}],
 			createInStripe: false,

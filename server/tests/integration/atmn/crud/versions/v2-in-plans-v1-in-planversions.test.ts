@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	configBody,
 	everyFeatureType,
@@ -13,7 +14,6 @@ import {
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type CatalogPlanRow = {
 	id: string;
@@ -34,8 +34,7 @@ test.concurrent(
 			],
 			config: configBody({
 				features: everyFeatureType,
-				plans: versionedPro({ versionSlug: "v2", amount: 49 }),
-				planVersions: versionedPro({ versionSlug: "v1", amount: 39 }),
+				plans: `${versionedPro({ versionSlug: "v2", amount: 49 })}${versionedPro({ versionSlug: "v1", amount: 39, active: false })}`,
 			}),
 		});
 

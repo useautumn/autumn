@@ -31,7 +31,12 @@ export const computeBillingCycleAnchorEntitlementUpdates = ({
 		}
 
 		const naturalResetAt = getCycleEnd({
-			anchor: billingContext.resetCycleAnchorMs,
+			anchor:
+				scheduledResetAt === undefined
+					? billingContext.resetCycleAnchorMs
+					: (customerEntitlement.reset_cycle_anchor ??
+						customerProduct.billing_cycle_anchor ??
+						billingContext.resetCycleAnchorMs),
 			interval: customerEntitlement.entitlement.interval!,
 			intervalCount: customerEntitlement.entitlement.interval_count,
 			now: billingContext.currentEpochMs,

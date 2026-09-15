@@ -2,8 +2,7 @@ import type { McpFormat } from "../../config/types.js";
 import type { McpResource } from "./types.js";
 
 /**
- * Build an MCP resource from a composed body. The `# Title` + body shape
- * mirrors the legacy resources-v2 compiler for byte-parity.
+ * Build an MCP resource from a composed body: a `# Title` heading over the body.
  */
 export const toMcpResource = ({
 	title,

@@ -18,8 +18,8 @@ import {
 	isFixedPrice,
 } from "@autumn/shared";
 import {
-	expectPriceStripeReuseCorrect,
 	expectPriceStripeResourcesPresent,
+	expectPriceStripeReuseCorrect,
 	findFeaturePrice,
 } from "@tests/integration/utils/expectStripePriceResources.js";
 import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
@@ -167,6 +167,7 @@ test.concurrent(
 						variants: [
 							{
 								variant_plan_id: variantId,
+								version: 1,
 								customize: {
 									items: [prepaidMessagesItem({ amount: 10 })],
 								},
@@ -241,6 +242,7 @@ test.concurrent(
 						variants: [
 							{
 								variant_plan_id: variantId,
+								version: 1,
 								customize: {
 									items: [prepaidMessagesItem({ amount: 500 })],
 								},
@@ -309,6 +311,7 @@ test.concurrent(
 						variants: [
 							{
 								variant_plan_id: variantId,
+								version: 1,
 								customize: {
 									items: [
 										prepaidMessagesItem({

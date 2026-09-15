@@ -16,42 +16,46 @@ Free plans let you give every new customer access to a limited set of features a
 Create a plan with no `price` and set `autoEnable: true`:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const apiRequests = feature({
-  id: 'api_requests',
-  name: 'API Requests',
-  type: 'metered',
+  featureId: "api_requests",
+  name: "API Requests",
+  type: "metered",
   consumable: true,
 });
 
 export const workspaces = feature({
-  id: 'workspaces',
-  name: 'Workspaces',
-  type: 'metered',
+  featureId: "workspaces",
+  name: "Workspaces",
+  type: "metered",
   consumable: false,
 });
 
 export const free = plan({
-  id: 'free',
-  name: 'Free',
-  group: 'main',
+  planId: "free",
+  versionSlug: "v1",
+  active: true,
+  name: "Free",
+  group: "main",
   autoEnable: true,
   items: [
-    item({
-      featureId: apiRequests.id,
+    {
+      featureId: apiRequests.featureId,
       included: 100,
-      reset: { interval: 'month' },
-    }),
-    item({
-      featureId: workspaces.id,
+      reset: { interval: "month" },
+    },
+    {
+      featureId: workspaces.featureId,
       included: 1,
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [apiRequests, workspaces], plans: [free] });
 ```
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">

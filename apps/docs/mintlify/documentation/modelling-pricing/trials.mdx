@@ -16,38 +16,42 @@ Free trials give customers temporary access to a paid plan before they're charge
 Add a `freeTrial` object to your plan:
 
 ```ts autumn.config.ts expandable
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const messages = feature({
-  id: 'messages',
-  name: 'Messages',
-  type: 'metered',
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  group: 'main',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  group: "main",
+  price: { amount: 20, interval: "month" },
   freeTrial: {
     durationLength: 14,
-    durationType: 'day',
+    durationType: "day",
     cardRequired: true,
   },
   items: [
-    item({
-      featureId: messages.id,
+    {
+      featureId: messages.featureId,
       included: 1000,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
+
+export default atmn({ features: [messages], plans: [pro] });
 ```
 
 Trial duration types: `day`, `month`, `year`.
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">

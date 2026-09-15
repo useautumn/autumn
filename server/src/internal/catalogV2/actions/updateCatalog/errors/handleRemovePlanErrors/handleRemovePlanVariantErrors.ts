@@ -19,13 +19,18 @@ export const handleRemovePlanVariantErrors = ({
 		const base = remainingByInternalId.get(pointer);
 		if (base && !base.archived) continue;
 
-		const planId =
-			base?.id ??
-			removePlans.find((row) => row.current?.internal_id === pointer)?.planId;
+		const removedBase = removePlans.find(
+			(row) => row.current?.internal_id === pointer,
+		);
+		const planId = base?.id ?? removedBase?.planId;
 		if (!planId) continue;
+		const action =
+			base?.archived || removedBase?.willArchive ? "archive" : "delete";
+		const variant = product.archived ? "archived variant" : "variant";
+		const actionGerund = action === "archive" ? "archiving" : "deleting";
 
 		throw new RecaseError({
-			message: `Cannot delete or archive plan ${planId} while it still has variants`,
+			message: `Cannot ${action} plan ${planId} because ${variant} ${product.id} would still link to it. Link the variant to another base version before ${actionGerund} this plan.`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

@@ -12,6 +12,7 @@ const PRO_SOURCE = [
 	'import { plan } from "../../../src/generated/plans";',
 	"",
 	"export const pro = plan({",
+	"\tactive: true,",
 	'\tplanId: "pro",',
 	'\tname: "Pro",',
 	'\tprice: { amount: 20, interval: "month" },',
@@ -69,6 +70,7 @@ test("an inline variant object takes internalId first and versionSlug, once", ()
 			"",
 			"export const pro = plan({",
 			'\tinternalId: "prod_pro",',
+			"\tactive: true,",
 			'\tplanId: "pro",',
 			'\tname: "Pro",',
 			'\tprice: { amount: 20, interval: "month" },',
@@ -102,6 +104,7 @@ test("a stated slug picks the matching inline entry when two versions share the 
 			'import { plan } from "../../../src/generated/plans";',
 			"",
 			"export const proV2 = plan({",
+			"\tactive: true,",
 			'\tplanId: "pro",',
 			'\tversionSlug: "v2",',
 			'\tname: "Pro",',
@@ -111,6 +114,7 @@ test("a stated slug picks the matching inline entry when two versions share the 
 			"});",
 			"",
 			"export const proV1 = plan({",
+			"\tactive: false,",
 			'\tplanId: "pro",',
 			'\tversionSlug: "v1",',
 			'\tname: "Pro",',
@@ -172,6 +176,7 @@ test("two base versions each holding a slug-less inline entry take their own ids
 			'import { plan } from "../../../src/generated/plans";',
 			"",
 			"export const proV2 = plan({",
+			"\tactive: true,",
 			'\tplanId: "pro",',
 			'\tversionSlug: "v2",',
 			'\tname: "Pro",',
@@ -181,6 +186,7 @@ test("two base versions each holding a slug-less inline entry take their own ids
 			"});",
 			"",
 			"export const proV1 = plan({",
+			"\tactive: false,",
 			'\tplanId: "pro",',
 			'\tversionSlug: "v1",',
 			'\tname: "Pro",',
@@ -228,10 +234,10 @@ test("two base versions each holding a slug-less inline entry take their own ids
 
 	const source = readFileSync(`${dir}/pro.ts`, "utf8");
 	expect(source).toContain(
-		'export const proV2 = plan({\n\tinternalId: "prod_pro_v2",\n\tplanId: "pro",\n\tversionSlug: "v2",\n\tname: "Pro",\n\tvariants: [\n\t\t{ internalId: "prod_yearly_v2", variantPlanId: "proYearly", name: "Pro Yearly", versionSlug: "v2" },',
+		'export const proV2 = plan({\n\tinternalId: "prod_pro_v2",\n\tactive: true,\n\tplanId: "pro",\n\tversionSlug: "v2",\n\tname: "Pro",\n\tvariants: [\n\t\t{ internalId: "prod_yearly_v2", variantPlanId: "proYearly", name: "Pro Yearly", versionSlug: "v2" },',
 	);
 	expect(source).toContain(
-		'export const proV1 = plan({\n\tinternalId: "prod_pro_v1",\n\tplanId: "pro",\n\tversionSlug: "v1",\n\tname: "Pro",\n\tvariants: [\n\t\t{ internalId: "prod_yearly_v1", variantPlanId: "proYearly", name: "Pro Yearly", versionSlug: "v1" },',
+		'export const proV1 = plan({\n\tinternalId: "prod_pro_v1",\n\tactive: false,\n\tplanId: "pro",\n\tversionSlug: "v1",\n\tname: "Pro",\n\tvariants: [\n\t\t{ internalId: "prod_yearly_v1", variantPlanId: "proYearly", name: "Pro Yearly", versionSlug: "v1" },',
 	);
 	expect(backfillInternalIds({ rows: twoVersions, configPath })).toEqual({
 		backfilled: [],

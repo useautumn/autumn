@@ -119,11 +119,13 @@ This step usually means explaining Autumn to the user in plain words. Do.
 
 <versions>
 
-- A plan's versions are parallel definitions that different groups of customers live on — not a timeline. One version is marked **active**; that's what new customers get.
-- Versions used to be numbered steps where the newest was automatically live. That changed: now you create a version and **promote** it to active when it's ready.
-- When is a change a new version? If it applies to everyone (adding a feature to all versions), it's an edit, not a version. If existing customers should keep their old terms (a base price increase with grandfathering), it's a new version — old customers stay on theirs.
-- Non-active versions have a second use: staging plans during a migration from another billing setup, holding those customer groups before cutover.
-- Each version has a `version_slug` (a user-facing name); renaming a slug does not create a new version.
+- A version is one definition of a plan that a group of customers lives on. A plan's versions sit side by side — they are not a timeline, and a newer one is not "the" plan.
+- The test for a new version: **should existing customers keep the old terms?** Yes (a base price increase they are grandfathered on) → a new version; they stay on theirs. No (a feature everyone gets) → an edit to the version they are on, or to every version at once — not a new version.
+- Exactly one version of a plan is **active**: the one `billing.attach` puts a customer on when no version is named, and the one reads resolve to by default. Promoting a version moves that pointer; it moves no customer.
+- A version that is not active is a **draft**: minted, not yet sold. Two flows: mint and promote in one step, or mint as a draft, review it, promote later. Drafts also stage customer groups while migrating from another billing system.
+- `version_slug` is the version's name (`v1`, `2026-q3`), unique within the plan. Renaming a slug renames the version; it never mints one. The server also numbers versions in creation order — an internal label, not a meaning.
+- Customers do not move when the pointer moves. Editing a version in place changes what its customers have; moving customers to another version is a **migration**, drafted and run on its own.
+- Variants and licenses are versioned with the plan. A variant's customize is a diff over one base version. A license link is pinned to one child version; moving a parent onto another child version is an explicit change to that link. How a catalog update expresses these is the `autumn-catalog` skill's.
 - A plan can also have **aliases**: after a plan id rename, the old id still resolves to the plan.
 
 </versions>
@@ -132,10 +134,10 @@ This step usually means explaining Autumn to the user in plain words. Do.
 
 - Variants group related plans under one base definition and store each variant's diff as `variant_details.customize`.
 - `plans.list` returns a flat plan list; each variant plan points back to its base through `variant_details`.
-- In `catalog.preview_update` / `catalog.update`, define or customize variants under the base plan's `plans[n].variants`.
-- Updating a base plan can propagate its diff to selected variants through the catalog update flow.
+- In a catalog update, variants are defined or customized under the base plan's `variants`, never as top-level plans.
+- A base edit does not reach a variant on its own: each variant either follows the change or keeps its current definition, and the update preview says which for every variant.
 - Common variant uses: billing intervals, A/B price packages, and volume ladders.
-- A variant's stored diff can change the price, add or remove items, and change the trial — it cannot replace the whole item list, and a variant cannot be the default plan or have variants of its own.
+- A variant's stored diff can change the price, replace the item list (`items`) or patch it (`add_items` / `remove_items`), and change the trial. A variant cannot be the default plan or have variants of its own.
 
 Annual interval variant:
 
@@ -242,7 +244,7 @@ A license lets a parent plan hand out another plan per seat. "Team is $40/seat, 
 
 - **Child plan** — the actual product for the child: an ordinary plan whose items are what one seat gets. It needs its own `group`, otherwise attaching it would replace its parent.
 - **License** — the link plus the customized definition: the parent's `licenses: [{ license_plan_id, included }]` entry. `included` is how many seats come free with the parent. The license can also customize the child *for this parent only* — a different price, items added or removed — while the child plan itself stays shared.
-- **CustomerLicense** — the runtime record per customer: how many seats they have (`granted` = included + paid), how many are assigned to entities, how many are free. Its identity (`link_id`) is stable across plan versions, so seats never jump around when plans change.
+- **CustomerLicense** — the runtime record per customer: how many seats they have (`granted` = included + paid), how many are in use (`usage`), how many remain (`remaining`). Its identity is stable across plan versions, so seats never jump around when plans change.
 
 ```json
 {
@@ -314,20 +316,26 @@ Tempting (wrong): per-unit seat item + one big summaries allowance on the team p
 
 Why it breaks: the allowance doesn't grow when they add a 6th seat, and seats have no identity — no per-seat balance, no assigning seat #3 to Alice.
 
-Right: the seat is a **license** — a small plan of its own (own group, $40 price, grants 100 summaries) that the team plan hands out per seat. `included` on the license link is how many come free with the parent; extras bill at the seat plan's price:
+Right: the seat is a **license** — a small plan of its own (own group, $40 price, grants 100 summaries) that the team plan hands out per seat. The link is a `license({...})` fixture in the parent's `licenses`, naming the child's version; `included` is how many come free with the parent, and extras bill at the seat plan's price:
 
 ```ts
 export const seat = plan({
-  id: "seat",
+  planId: "seat",
+  versionSlug: "v1",
+  active: true,
+  name: "Seat",
   group: "seat",
   price: { amount: 40, interval: "month" },
-  items: [item({ featureId: summaries.id, included: 100, reset: { interval: "month" } })],
+  items: [{ featureId: summaries.featureId, included: 100, reset: { interval: "month" } }],
 });
 
 export const team = plan({
-  id: "team",
+  planId: "team",
+  versionSlug: "v1",
+  active: true,
+  name: "Team",
   price: { amount: 500, interval: "month" },
-  licenses: [{ licensePlanId: seat.id, included: 5 }],
+  licenses: [license({ licensePlanId: seat.planId, versionSlug: seat.versionSlug, included: 5 })],
 });
 ```
 
@@ -341,26 +349,27 @@ The shape, schematically:
 
 ```ts
 export const <child> = plan({
-  id: "<child>",
+  planId: "<child>",
   group: "<child>",                       // own group, or attaching replaces the parent
   price: { amount: <mainline unit price>, interval: "month" },
   items: [ <mainline grant>, <booleans every unit has> ],
 });
 
 export const <parentA> = plan({           // gets the mainline take: link only
-  licenses: [{ licensePlanId: <child>.id, included: <n> }],
+  licenses: [license({ licensePlanId: <child>.planId, versionSlug: <child>.versionSlug, included: <n> })],
 });
 
 export const <parentB> = plan({           // differs: diff on the license, never a second child plan
-  licenses: [{
-    licensePlanId: <child>.id,
+  licenses: [license({
+    licensePlanId: <child>.planId,
+    versionSlug: <child>.versionSlug,
     included: <m>,
     customize: {
       price: { amount: <parentB unit price>, interval: "month" },
-      addItems: [ <parentB's grant> ],
       removeItems: [ <filter matching the mainline grant> ],
+      addItems: [ <parentB's grant> ],
     },
-  }],
+  })],
 });
 ```
 
@@ -368,41 +377,51 @@ Worked example — an agency platform: Studio ($90/mo) and Agency ($450/mo) both
 
 ```ts
 export const site = plan({
-  id: "site",
+  planId: "site",
+  versionSlug: "v1",
+  active: true,
+  name: "Site",
   group: "site",
   price: { amount: 8, interval: "month" },
   items: [
-    item({ featureId: renders.id, included: 2000, reset: { interval: "month" } }),
-    item({ featureId: ssl.id }),
+    { featureId: renders.featureId, included: 2000, reset: { interval: "month" } },
+    { featureId: ssl.featureId },
   ],
 });
 
 export const agency = plan({
-  id: "agency",
+  planId: "agency",
+  versionSlug: "v1",
+  active: true,
+  name: "Agency",
   price: { amount: 450, interval: "month" },
-  licenses: [{ licensePlanId: site.id, included: 10 }],
+  licenses: [license({ licensePlanId: site.planId, versionSlug: site.versionSlug, included: 10 })],
 });
 
 export const studio = plan({
-  id: "studio",
+  planId: "studio",
+  versionSlug: "v1",
+  active: true,
+  name: "Studio",
   price: { amount: 90, interval: "month" },
-  licenses: [{
-    licensePlanId: site.id,
+  licenses: [license({
+    licensePlanId: site.planId,
+    versionSlug: site.versionSlug,
     included: 2,
     customize: {
       price: { amount: 12, interval: "month" },
-      addItems: [item({ featureId: renders.id, included: 750, reset: { interval: "month" } })],
-      removeItems: [{ featureId: renders.id }],
+      removeItems: [{ featureId: renders.featureId }],
+      addItems: [{ featureId: renders.featureId, included: 750, reset: { interval: "month" } }],
     },
-  }],
+  })],
 });
 ```
 
 WRONG — child duplicated per parent:
 
 ```ts
-export const studioSite = plan({ id: "studio_site", price: { amount: 12, ... }, items: [ /* 750 renders, SSL */ ] });
-export const agencySite = plan({ id: "agency_site", price: { amount: 8, ... },  items: [ /* 2000 renders, SSL */ ] });
+export const studioSite = plan({ planId: "studio_site", price: { amount: 12, ... }, items: [ /* 750 renders, SSL */ ] });
+export const agencySite = plan({ planId: "agency_site", price: { amount: 8, ... },  items: [ /* 2000 renders, SSL */ ] });
 ```
 
 RIGHT — the `site` config above: one `site` plan, two license entries, studio's diff in `customize`. Duplicated children break sharing — an SSL change now needs two edits, and a customer moving Studio→Agency gets a brand-new site plan instead of the same one on new terms.
@@ -454,18 +473,19 @@ Tempting (wrong): fold the tiers into Starter as one prepaid volume-tiered item.
 Right — each tier IS the subscription, so each is a variant of the base plan:
 
 ```ts
-export const starter60k = starter.variant({
-  id: "starter_60k",
+export const starter60k = variant({
+  variantPlanId: "starter_60k",
+  versionSlug: "v1",
   name: "Starter 60K",
   customize: {
     price: { amount: 39, interval: "month" },
-    addItems: [item({ featureId: minutes.id, included: 60_000, reset: { interval: "month" }, price: minuteOverage })],
-    removeItems: [{ featureId: minutes.id }],
+    removeItems: [{ featureId: minutes.featureId }],
+    addItems: [{ featureId: minutes.featureId, included: 60_000, reset: { interval: "month" }, price: minuteOverage }],
   },
 });
 ```
 
-The base plan stays untouched; customers upgrade between tiers like between plans.
+`starter` lists it in `variants: [starter60k]`. The base plan stays untouched; customers upgrade between tiers like between plans.
 
 ## When one prepaid item IS right
 
@@ -675,7 +695,7 @@ Landing a guardrail answer means picking the right control — windowed cap vs o
 - "Track it but don't bill it" / "let them run over, we'll invoice manually" → overage knobs on the plan, not a $0 price.
 - Auto-recharge needs its one-off prepaid item (already on the per-item list) AND the `autoTopups` control.
 
-**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push` (a preview; nothing is applied until `--yes`), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
+**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn push` (a preview; nothing is applied until `--yes`), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
 
 ### Showing the catalog
 
@@ -715,14 +735,15 @@ Billing controls follow the same rule: `·` lines under the item they guard, in 
 - A default/auto-enabled plan can't be paid: no base price, no paid items.
 - A prepaid quantity **includes** the included amount, and so does each tier's `to` — the first tier's `to` must exceed `included`.
 - `billingUnits` rounds usage **up** when billing.
-- Set explicitly, never lean on defaults: `billingMethod`, `tierBehavior`, all three trial fields. Explicit defaults cause no spurious diffs.
+- Set explicitly, never lean on defaults: `billingMethod` and `interval` on every item price, `tierBehavior` on tiered prices, and every trial field (`durationLength`, `durationType`, `cardRequired`, `onEnd`). Explicit defaults cause no spurious diffs.
 - Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
 - Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
 - `billingControls` is a plain object on the plan with camelCase fields like the rest of the config (`featureId`, `overageLimit`); each control list replaces wholesale on update.
 - Pooled balances are config: `pooled: true` on the entity plan's item. Concluding "shared across workspaces" in Shape and then omitting the flag is the classic miss.
 - Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
 - Don't write `proration` — leave it out and take server defaults.
-- Trial end behavior is `freeTrial.onEnd` (`"bill"` default, `"revert"`). Not writable in config — say so and set via the dashboard after push: item display text.
+- Trial end behavior is `freeTrial.onEnd`: `"bill"` (default) charges when the trial ends, `"revert"` expires it and restores the previous plan.
+- Every plan row carries `versionSlug` and `active`, and every variant row and license link `versionSlug`. A plan's rows are its versions — exactly one `active: true` — and a version row left out of `plans` is deleted. How rows express versions, renames and drafts: `references/atmn.md`.
 
 The config uses the builders `feature`, `plan`, `variant`, `license` as plain function calls with object arguments; items are plain objects inside a plan, and the file's default export is `atmn({...})` naming every collection. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
 
@@ -739,6 +760,7 @@ export const credits = feature({
 export const pro = plan({
   planId: "pro",
   versionSlug: "v1",
+  active: true,
   name: "Pro",
   price: { amount: 20, interval: "month" },
   items: [
@@ -760,58 +782,43 @@ Pay-per-use (usage-based) pricing charges customers based on how much of a featu
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Create a consumable feature with a `usage_based` price:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const notifications = feature({
-  id: 'notifications',
-  name: 'Notifications',
-  type: 'metered',
+  featureId: "notifications",
+  name: "Notifications",
+  type: "metered",
   consumable: true,
 });
 
 export const payAsYouGo = plan({
-  id: 'pay_as_you_go',
-  name: 'Pay As You Go',
-  group: 'main',
+  planId: "pay_as_you_go",
+  versionSlug: "v1",
+  active: true,
+  name: "Pay As You Go",
+  group: "main",
   items: [
-    item({
-      featureId: notifications.id,
+    {
+      featureId: notifications.featureId,
       included: 1000,
-      reset: { interval: 'month' },
+      reset: { interval: "month" },
       price: {
         amount: 1,
-        interval: 'month',
+        interval: "month",
         billingUnits: 1000,
-        billingMethod: 'usage_based',
+        billingMethod: "usage_based",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [notifications], plans: [payAsYouGo] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create a plan
-2. Add a **consumable** feature (e.g., notifications)
-3. Set an optional **included** amount (free usage before charges begin)
-4. Add a **price** with:
-   - **Billing method**: Usage-based
-   - **Amount**: price per billing unit (e.g., $1)
-   - **Billing units**: the package size (e.g., 1,000 notifications)
-   - **Interval**: billing frequency (e.g., monthly)
-5. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How it works
 
@@ -903,7 +910,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response">
 ```json
 {
   "allowed": true,
@@ -919,7 +925,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
   }
 }
 ```
-</Expandable>
 
 ## Combining with free tiers
 
@@ -944,69 +949,58 @@ This is in contrast to [usage-based pricing](/documentation/modelling-pricing/us
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Create your features and add them to a plan with `prepaid` prices:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const apiCredits = feature({
-  id: 'api_credits',
-  name: 'API Credits',
-  type: 'metered',
+  featureId: "api_credits",
+  name: "API Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const seats = feature({
-  id: 'seats',
-  name: 'Seats',
-  type: 'metered',
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: apiCredits.id,
+    {
+      featureId: apiCredits.featureId,
       included: 500,
       price: {
         amount: 10,
         billingUnits: 1000,
-        billingMethod: 'prepaid',
-        interval: 'month',
+        billingMethod: "prepaid",
+        interval: "month",
       },
-    }),
-    item({
-      featureId: seats.id,
+    },
+    {
+      featureId: seats.featureId,
       included: 3,
       price: {
         amount: 5,
-        billingMethod: 'prepaid',
-        interval: 'month',
+        billingMethod: "prepaid",
+        interval: "month",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [apiCredits, seats], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create or edit a plan
-2. Add your features:
-   - A `metered`, `consumable` feature for credits (e.g., "API Credits") — set an **included** amount (500), a **price** ($10 per 1,000 per month), and billing method **Prepaid**
-   - A `metered`, `non-consumable` feature for seats (e.g., "Seats") — set an **included** amount (3), a **price** ($5 per seat per month), and billing method **Prepaid**
-3. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How it works
 
@@ -1223,69 +1217,58 @@ Volume-based pricing uses tiers to determine a single flat charge based on the t
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Use the `tiers` array with `tierBehavior: 'volume'` on a plan item price:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const records = feature({
-  id: 'records',
-  name: 'Records Processed',
-  type: 'metered',
+  featureId: "records",
+  name: "Records Processed",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 50, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 50, interval: "month" },
   items: [
-    item({
-      featureId: records.id,
-      reset: { interval: 'month' },
+    {
+      featureId: records.featureId,
+      reset: { interval: "month" },
       price: {
         tiers: [
           { to: 1000, flatAmount: 100 },
           { to: 10000, flatAmount: 500 },
-          { to: 'inf', flatAmount: 1000 },
+          { to: "inf", flatAmount: 1000 },
         ],
-        tierBehavior: 'volume',
-        billingMethod: 'usage_based',
-        interval: 'month',
+        tierBehavior: "volume",
+        billingMethod: "prepaid",
+        interval: "month",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [records], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create or edit a plan
-2. Add a **consumable** feature
-3. Under **Price**, select **Tiered**
-4. Switch the tier behavior to **Volume**
-5. Add tiers with the upper limit (`to`) and flat amount (`flat_amount`) for each range
-6. Set the billing method to **Usage-based** and the billing interval
-7. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How volume-based pricing works
 
-At the end of the billing period, Autumn:
+Autumn:
 
-1. Looks at the total usage for the feature
+1. Looks at the total volume for the feature
 2. Finds the tier the total falls into
 3. Charges the flat amount for that tier
 
-| Total usage | Matching tier | Charge |
+Volume tiers are prepaid-only.
+
+| Total volume | Matching tier | Charge |
 |-------------|---------------|--------|
 | 500 | 0–1,000 | **$100** |
 | 5,000 | 1,001–10,000 | **$500** |
@@ -1298,25 +1281,25 @@ Each tier has the following fields:
 | Field | Type | Description |
 |-------|------|-------------|
 | `to` | number or `"inf"` | The upper boundary of this tier |
-| `flat_amount` | number | Flat fee charged when total usage falls in this tier |
-| `amount` | number | Optional per-unit price applied to the total usage when this tier is the matching tier |
+| `flatAmount` | number | Flat fee charged when the total volume falls in this tier (`flat_amount` over the API) |
+| `amount` | number | Optional per-unit price applied to the total volume when this tier is the matching tier |
 
 Tiers must be in ascending order by `to`. The final tier should use `"inf"`.
 
 ## Combining flat and per-unit amounts
 
-Each tier can include both `flat_amount` and `amount` — a fixed fee plus a per-unit charge when that tier is the matching tier. This is useful for combining a base fee with per-unit volume pricing.
+Each tier can include both `flatAmount` and `amount`: a fixed fee plus a per-unit charge when that tier is the matching tier. This is useful for combining a base fee with per-unit volume pricing.
 
 ```ts
 price: {
   tiers: [
-    { to: 1000, amount: 0.10, flat_amount: 0 },
-    { to: 10000, amount: 0.08, flat_amount: 50 },
-    { to: 'inf', amount: 0.05, flat_amount: 100 },
+    { to: 1000, amount: 0.10, flatAmount: 0 },
+    { to: 10000, amount: 0.08, flatAmount: 50 },
+    { to: "inf", amount: 0.05, flatAmount: 100 },
   ],
-  tierBehavior: 'volume',
-  billingMethod: 'usage_based',
-  interval: 'month',
+  tierBehavior: "volume",
+  billingMethod: "prepaid",
+  interval: "month",
 }
 ```
 
@@ -1340,56 +1323,41 @@ Per-unit pricing charges customers based on the quantity of a resource they use 
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Create a `non-consumable` metered feature and add it to a plan with a per-unit price:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const seats = feature({
-  id: 'seats',
-  name: 'Seats',
-  type: 'metered',
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: seats.id,
+    {
+      featureId: seats.featureId,
       included: 5,
       price: {
         amount: 10,
-        interval: 'month',
-        billingMethod: 'usage_based',
+        interval: "month",
+        billingMethod: "usage_based",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [seats], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create or edit a plan
-2. Add a `metered`, `non-consumable` feature (e.g., "Seats")
-3. Set an **included** amount (e.g., 5 seats for free)
-4. Add a **price** per unit (e.g., $10 per seat per month)
-5. Choose the **billing method**:
-   - **Prepaid** — customer selects quantity at checkout, charged upfront
-   - **Usage-based** — billed for actual usage at end of billing cycle
-6. Under **Advanced**, configure [proration](/documentation/modelling-pricing/proration) behavior for mid-cycle changes
-7. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## Billing methods
 
@@ -1609,49 +1577,37 @@ Recurring plans let you grant customers a fixed allowance of consumable features
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Define a recurring plan in your `autumn.config.ts`:
 
 ```ts autumn.config.ts expandable
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const messages = feature({
-  id: 'messages',
-  name: 'Messages',
-  type: 'metered',
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: messages.id,
+    {
+      featureId: messages.featureId,
       included: 1000,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
+
+export default atmn({ features: [messages], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** in the Autumn dashboard
-2. Click **Create Plan**
-3. Set a **name** and **ID** for the plan (e.g., "Pro", `pro`)
-4. Under **Price**, set the amount and select a billing interval (`month`, `quarter`, `semi_annual`, or `year`)
-5. Add consumable features to the plan -- set grant amounts and reset intervals. These will be granted to the customer each billing period once they subscribe.
-6. Save your changes
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## Attaching a subscription
 
@@ -1705,7 +1661,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 
 </CodeGroup>
 
-<Expandable title="customer object after attaching">
 ```json
 {
   "id": "user_123",
@@ -1768,7 +1723,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
   }
 }
 ```
-</Expandable>
 
 When a subscription is created, Autumn:
 
@@ -1827,52 +1781,40 @@ One-off purchases are single-charge plans that don't recur. They're used for one
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
-Set the plan's `price.interval` to `one_off`, or omit `interval` on the item price for a one-time charge:
+Set `interval: "one_off"` on the plan's `price`, or on the item price, for a one-time charge:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const creditTopUp = plan({
-  id: 'credit_top_up',
-  name: 'Credit Top-Up',
+  planId: "credit_top_up",
+  versionSlug: "v1",
+  active: true,
+  name: "Credit Top-Up",
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       price: {
         amount: 10,
         billingUnits: 500,
-        billingMethod: 'prepaid',
-        interval: 'one_off',
+        billingMethod: "prepaid",
+        interval: "one_off",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [credits], plans: [creditTopUp] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and click **Create Plan**
-2. Set the plan name and ID
-3. Under **Price**, select **One-off** as the interval — or leave no base price if pricing is purely feature-based
-4. Add a feature with a **prepaid** price. The customer will select a quantity at checkout
-5. Toggle **Add-on** if this should be purchasable alongside other plans
-6. Click **Create**
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How it works
 
@@ -1948,50 +1890,40 @@ This is useful for setup fees, one-time credit grants, or any charge that should
 > **Example** <br />
 > A Pro plan charges $20/month plus a one-time $50 setup fee. The customer's first invoice is $70, and subsequent invoices are $20.
 
-<Tabs>
-<Tab title="CLI">
-
 Add a non-consumable feature for the setup fee, then include it as a separate one-off item alongside the recurring base price:
 
 ```ts autumn.config.ts expandable
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const setupFee = feature({
-  id: 'setup_fee',
-  name: 'Setup Fee',
-  type: 'metered',
+  featureId: "setup_fee",
+  name: "Setup Fee",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: setupFee.id,
+    {
+      featureId: setupFee.featureId,
       price: {
         amount: 50,
-        billingMethod: 'prepaid',
-        interval: 'one_off',
+        billingMethod: "prepaid",
+        interval: "one_off",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [setupFee], plans: [pro] });
 ```
 
 When you attach the plan, you can select a quantity for the setup fee. The $20/month base price recurs on every invoice. The setup fee item is charged once on the first invoice only.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Create a **boolean** feature for the setup fee (e.g., `setup_fee`)
-2. Create a plan with a **recurring** base price (e.g., $20/month)
-3. Add the setup fee feature as an item and set its price interval to **One-off**
-4. The recurring charge will bill every cycle; the one-off charge applies to the first invoice only
-
-</Tab>
-</Tabs>
 
 ## Balance stacking
 
@@ -2020,60 +1952,46 @@ Auto top-ups require:
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Auto top-ups are configured per customer, not in `autumn.config.ts`. Your plan needs a one-off prepaid item for the feature you want to auto top-up:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const standard = plan({
-  id: 'standard',
-  name: 'Standard',
-  price: { amount: 50, interval: 'month' },
+  planId: "standard",
+  versionSlug: "v1",
+  active: true,
+  name: "Standard",
+  price: { amount: 50, interval: "month" },
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       included: 5000,
-      reset: { interval: 'month' },
-    }),
-    item({
-      featureId: credits.id,
+      reset: { interval: "month" },
+    },
+    {
+      featureId: credits.featureId,
       price: {
         amount: 10,
         billingUnits: 1000,
-        interval: 'one_off',
-        billingMethod: 'prepaid',
+        interval: "one_off",
+        billingMethod: "prepaid",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [credits], plans: [standard] });
 ```
 
 The one-off prepaid item (`$10 per 1,000 credits`) is what Autumn uses to replenish the balance. Configure auto top-ups per customer via the API (see below).
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to the **Plans** page and select (or create) the plan you want to add auto top-ups to
-2. Add a new item for the feature with:
-   - **Interval** set to **One-Off**
-   - **Billing method** set to **Prepaid**
-   - Configure the price and billing units (e.g. $10 per 1,000 credits)
-3. Configure auto top-ups per customer via the API (see below)
-
-The same feature can appear as multiple items on a plan. For example, you might have a monthly allowance of 5,000 credits **and** a one-off prepaid item for top-ups — both referencing the same feature.
-
-</Tab>
-</Tabs>
 
 ## Configuring auto top-ups via API
 
@@ -2188,56 +2106,42 @@ Rollovers let unused feature balances carry forward to the next billing cycle in
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Add a `rollover` config to a plan item:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       included: 1000,
-      reset: { interval: 'month' },
+      reset: { interval: "month" },
       rollover: {
         max: 2000,
-        expiryDurationType: 'forever',
+        expiryDurationType: "forever",
         expiryDurationLength: 1,
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [credits], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and edit a plan
-2. Select a **consumable** feature on the plan
-3. Under **Advanced**, toggle on **Rollovers**
-4. Set the **maximum rollover cap** — the most unused balance that can be carried over (leave empty for no cap)
-5. Set the **expiry**:
-   - **Forever** — rollover balances never expire
-   - **Month** — rollover balances expire after a set number of months
-6. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## Rollover configuration
 
@@ -2261,7 +2165,6 @@ At the end of each billing cycle, when a feature's balance resets:
 
 Rollover balances appear in the `breakdown` array when you retrieve a customer's balances. Each rollover entry has its own expiry date:
 
-<Expandable title="customer balance with rollovers">
 ```json
 {
   "balances": {
@@ -2291,7 +2194,6 @@ Rollover balances appear in the `breakdown` array when you retrieve a customer's
   }
 }
 ```
-</Expandable>
 
 ## Deduction order
 
@@ -2317,58 +2219,45 @@ Free trials give customers temporary access to a paid plan before they're charge
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Add a `freeTrial` object to your plan:
 
 ```ts autumn.config.ts expandable
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const messages = feature({
-  id: 'messages',
-  name: 'Messages',
-  type: 'metered',
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  group: 'main',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  group: "main",
+  price: { amount: 20, interval: "month" },
   freeTrial: {
     durationLength: 14,
-    durationType: 'day',
+    durationType: "day",
     cardRequired: true,
   },
   items: [
-    item({
-      featureId: messages.id,
+    {
+      featureId: messages.featureId,
       included: 1000,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
+
+export default atmn({ features: [messages], plans: [pro] });
 ```
 
 Trial duration types: `day`, `month`, `year`.
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and open your plan (or create a new one)
-2. Under **Plan Settings**, toggle on **Free Trial**
-3. Set the **duration** (e.g., 14 days)
-4. Choose whether a **card is required**:
-   - **Card required**: customer goes through Stripe Checkout, but isn't charged until the trial ends
-   - **Card not required**: no checkout needed — the plan can be attached directly
-5. Save your changes
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## Card required trials
 
@@ -2569,9 +2458,6 @@ You can override any of these behaviors by passing `customize.freeTrial` on the 
 
 You can override the default trial behavior on any `/attach` or `/update-subscription` call by passing `customize.freeTrial`:
 
-<Tabs>
-<Tab title="Custom trial">
-
 Pass a `freeTrial` object to start a trial with a custom duration. This **bypasses deduplication** — the customer always gets the trial, even if they've trialed this plan before.
 
 <CodeGroup>
@@ -2623,9 +2509,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 
 </CodeGroup>
 
-</Tab>
-<Tab title="End / skip trial">
-
 Pass `freeTrial: null` to skip the trial entirely and begin billing immediately — even if the plan has a trial configured.
 
 <CodeGroup>
@@ -2664,9 +2547,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 
 You can also pass `freeTrial: null` on `/update-subscription` to end an active trial early and start billing right away.
 
-</Tab>
-<Tab title="Extend trial">
-
 To extend a trial, call `/update-subscription` with a new `customize.freeTrial`. The new trial duration is computed **from now** — it replaces the current trial end date rather than adding to it.
 
 <CodeGroup>
@@ -2702,9 +2582,6 @@ await autumn.update_subscription(
 </CodeGroup>
 
 Trial extensions are **replacement**, not additive. If a customer is 5 days into a 14-day trial and you set a new 14-day trial, they get 14 days from today (19 days total from the original start), not 14 days added to the remaining 9.
-
-</Tab>
-</Tabs>
 
 ## Trials with shared subscriptions
 
@@ -2816,58 +2693,54 @@ Entities are created with a `feature_id` identifying their type (e.g. a non-cons
 
 Create your plans as normal — no entity-specific configuration on the plan itself. Put plans that should replace each other on upgrade/downgrade in the same `group`.
 
-<Tabs>
-<Tab title="CLI">
-
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const requests = feature({
-  id: 'requests',
-  name: 'API Requests',
-  type: 'metered',
+  featureId: "requests",
+  name: "API Requests",
+  type: "metered",
   consumable: true,
 });
 
 export const workspaceFree = plan({
-  id: 'workspace_free',
-  name: 'Workspace Free',
-  group: 'workspace',
+  planId: "workspace_free",
+  versionSlug: "v1",
+  active: true,
+  name: "Workspace Free",
+  group: "workspace",
   items: [
-    item({
-      featureId: requests.id,
+    {
+      featureId: requests.featureId,
       included: 100,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
 
 export const workspacePro = plan({
-  id: 'workspace_pro',
-  name: 'Workspace Pro',
-  group: 'workspace',
-  price: { amount: 20, interval: 'month' },
+  planId: "workspace_pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Workspace Pro",
+  group: "workspace",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: requests.id,
+    {
+      featureId: requests.featureId,
       included: 10000,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
+});
+
+export default atmn({
+  features: [requests],
+  plans: [workspaceFree, workspacePro],
 });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Create your plan tiers as normal (e.g. "Workspace Free", "Workspace Pro")
-2. Set the same **group** on plans that should replace each other on upgrade/downgrade
-3. Entity-level attachment is handled via the API — no extra dashboard configuration needed
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 #### Create the entity
 
@@ -3004,61 +2877,57 @@ team plan  ──licenses: [{ seat, included: 1 }]──►  pool of seats
 
 The pool has a `granted` size (included seats plus any paid seats), a `usage` count (seats currently assigned), and a `remaining` count. Assigning consumes a seat; releasing gives it back.
 
-<Tabs>
-<Tab title="CLI">
-
 Create the feature each seat consumes, then a license plan holding what one seat gets. Link it from the parent plan via `licenses`:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, license, plan } from "atmn";
 
 export const summaries = feature({
-  id: 'summaries',
-  name: 'Meeting Summaries',
-  type: 'metered',
+  featureId: "summaries",
+  name: "Meeting Summaries",
+  type: "metered",
   consumable: true,
 });
 
 // Everything one seat gets, priced per seat.
 export const seat = plan({
-  id: 'seat',
-  name: 'Seat',
-  group: 'licenses',
-  price: { amount: 30, interval: 'month' },
+  planId: "seat",
+  versionSlug: "v1",
+  active: true,
+  name: "Seat",
+  group: "licenses",
+  price: { amount: 30, interval: "month" },
   items: [
-    item({
-      featureId: summaries.id,
+    {
+      featureId: summaries.featureId,
       included: 50,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
 
 export const team = plan({
-  id: 'team',
-  name: 'Team',
+  planId: "team",
+  versionSlug: "v1",
+  active: true,
+  name: "Team",
   licenses: [
-    { licensePlanId: seat.id, included: 1 },
+    license({
+      licensePlanId: seat.planId,
+      versionSlug: seat.versionSlug,
+      included: 1,
+    }),
   ],
 });
+
+export default atmn({ features: [summaries], plans: [seat, team] });
 ```
 
 `included: 1` means the Team plan comes with one free seat. Seats beyond that are paid at the license plan's own price.
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 Give the license plan its own `group`. Attaching a plan replaces other plans in the same group, so a license plan sharing a group with its parent would knock the parent off.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create the license plan (e.g. "Seat") — give it its own group, its per-seat price, and the features one seat receives (e.g. 50 Meeting Summaries per month)
-2. Create or edit the parent plan (e.g. "Team")
-3. Under **Licenses**, add the Seat plan and set how many seats are **included**
-4. Save the plan
-
-</Tab>
-</Tabs>
 
 #### Buy seats
 
@@ -3310,65 +3179,57 @@ A credit system is made up of a list of [features](/documentation/concepts/featu
   Make sure you have some metered features created before creating a credit
   system.
 
-<Tabs>
-<Tab title="CLI">
-
 Define metered features, then create a `credit_system` feature with a `creditSchema` that maps each feature to a credit cost:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const basicMessage = feature({
-  id: 'basic_message',
-  name: 'Basic Message',
-  type: 'metered',
+  featureId: "basic_message",
+  name: "Basic Message",
+  type: "metered",
   consumable: true,
 });
 
 export const premiumMessage = feature({
-  id: 'premium_message',
-  name: 'Premium Message',
-  type: 'metered',
+  featureId: "premium_message",
+  name: "Premium Message",
+  type: "metered",
   consumable: true,
 });
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'credit_system',
+  featureId: "credits",
+  name: "Credits",
+  type: "credit_system",
   creditSchema: [
-    { meteredFeatureId: basicMessage.id, creditCost: 1 },
-    { meteredFeatureId: premiumMessage.id, creditCost: 10 },
+    { meteredFeatureId: basicMessage.featureId, creditCost: 1 },
+    { meteredFeatureId: premiumMessage.featureId, creditCost: 10 },
   ],
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       included: 200,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
+});
+
+export default atmn({
+  features: [basicMessage, premiumMessage, credits],
+  plans: [pro],
 });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to the features page, under Plans.
-2. Click "Create Credit System"
-4. Add the features that can draw from this credit system.
-5. For each feature, define how many credits each unit of usage should cost (eg, 3 credits per "premium request").
-6. Click "Create"
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 **Example**
 
@@ -3426,7 +3287,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response">
 The response will contain the balance for the credit system that is being deducted from.
 
 ```json
@@ -3446,7 +3306,6 @@ The response will contain the balance for the credit system that is being deduct
 }
 ```
 
-</Expandable>
 In this case, we have a balance of 100 credits remaining, so we're allowed to use our 6 "premium requests" feature.
 
   If a feature is not defined in the credit system, it will return `allowed: false`
@@ -3495,7 +3354,6 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 
 </CodeGroup>
 
-<Expandable title="track response">
 ```json
 {
   "customerId": "user_123",
@@ -3511,9 +3369,85 @@ curl -X POST "https://api.useautumn.com/v1/track" \
   }
 }
 ```
-</Expandable>
 
 Since the customer started with a balance of 100 credits, and used 18 credits, their remaining balance is 82 credits.
+
+## Rate cards and dimensions
+
+The `creditSchema` is the credit system's **rate card**: one row per metered feature. A row's rate can be flat, graduated by usage, or vary by the properties you send with each event.
+
+### Billing units
+
+`billingUnits` prices a bundle of usage at once: `{ meteredFeatureId: 'tokens', billingUnits: 1000, creditCost: 1 }` charges 1 credit per 1,000 tokens.
+
+### Graduated rates
+
+A graduated row steps the credit cost as usage in the current cycle grows. Tier boundaries are in units and the cost is per `billingUnits`, priced tier by tier: below, the first 10,000 tokens cost 1 credit per 1,000 tokens (10 credits), and everything after costs 0.5 credits per 1,000 tokens.
+
+```ts autumn.config.ts
+{
+  meteredFeatureId: tokens.featureId,
+  billingUnits: 1000,
+  tierBehavior: 'graduated',
+  tiers: [
+    { to: 10_000, creditCost: 1 },
+    { to: 'inf', creditCost: 0.5 },
+  ],
+}
+```
+
+The final tier must use `'inf'`, and boundaries must strictly increase.
+
+### Dimensions
+
+A **dimension** is a named alternative rate that applies when an event's `properties` match. Pass the properties on `track` and `check`:
+
+```ts
+await autumn.track({
+  customer_id: 'cus_123',
+  feature_id: 'actions',
+  value: 1,
+  properties: { size: 'large', region: 'eu' },
+});
+```
+
+```ts autumn.config.ts
+{
+  meteredFeatureId: actions.featureId,
+  creditCost: 1,
+  dimensions: {
+    size_large: { match: { size: 'large' }, creditCost: 16 },
+    size_large_region_eu: {
+      match: { size: 'large', region: 'eu' },
+      creditCost: 20,
+    },
+    size_xl: {
+      match: { size: 'xl' },
+      tierBehavior: 'graduated',
+      tiers: [
+        { to: 5, creditCost: 2 },
+        { to: 'inf', creditCost: 1 },
+      ],
+    },
+  },
+  multipliers: {
+    lifecycle_spot: { match: { lifecycle: 'spot' }, factor: 0.3 },
+  },
+}
+```
+
+How a rate is chosen for an event:
+
+1. The dimension whose `match` has the **most keys** that all match the event wins. `{ size: 'large', region: 'eu' }` beats `{ size: 'large' }`.
+2. Ties on key count are broken by `priority` (higher wins). Two dimensions that could both match the same event with the same key count and no priority are rejected when you save.
+3. If no dimension matches, the row's own rate applies.
+4. **Multipliers** then scale the chosen rate: every matching multiplier's `factor` is multiplied together and every `add` is summed. A multiplier set that could push a rate below zero is rejected at save time.
+
+Property values are compared as strings, so `{ size: 1 }` and `{ size: '1' }` match the same dimension. Dimension names must be at most 64 characters and cannot contain `::`.
+
+Usage is attributed per dimension, so graduated dimensions progress through their own tiers, and invoice credit line items are broken down by feature and dimension.
+
+  A plan item can override its credit system's rate card for customers on that plan via `featureOverride: { creditSchema: [...] }`. The override replaces the rate card entirely, dimensions included.
 
 ## Stacking with direct balances
 
@@ -3545,16 +3479,13 @@ See the credits pricing guide for a more detailed example of setting up a moneta
 
 For AI applications that need to track token usage with per-model pricing, you can create an AI credit system. This lets you define markup percentages for each model and automatically calculate costs based on input/output tokens.
 
-<Tabs>
-<Tab title="CLI">
-
 Markups are optional. `defaultMarkup` applies to every model unless overridden — by `providerMarkups` (keyed by the first segment of the model ID, e.g. `openrouter`), or by `modelMarkups` for a specific model, which takes highest priority. With no markups set, models are billed at their Models.dev base cost.
 
 A markup of `-100` makes the model free: usage events are still recorded, but nothing is deducted from the balance.
 
 ```ts Simplest setup — one markup for everything
 export const aiCredits = feature({
-  id: 'ai_credits',
+  featureId: 'ai_credits',
   name: 'AI Credits',
   type: 'ai_credit_system',
   defaultMarkup: 30, // every model billed at models.dev cost + 30%
@@ -3564,12 +3495,12 @@ export const aiCredits = feature({
 Or mix the levels for finer control:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const aiCredits = feature({
-  id: 'ai_credits',
-  name: 'AI Credits',
-  type: 'ai_credit_system',
+  featureId: "ai_credits",
+  name: "AI Credits",
+  type: "ai_credit_system",
   // Global fallback markup
   defaultMarkup: 30,
   // Per-provider defaults
@@ -3578,43 +3509,33 @@ export const aiCredits = feature({
   },
   // Per-model overrides (highest priority)
   modelMarkups: {
-    'anthropic/claude-opus-4-5': { markup: 20 },
-    'anthropic/claude-sonnet-4-5': { markup: 15 },
-    'openai/gpt-4o-mini': { markup: -100 }, // free for customers
+    "anthropic/claude-opus-4-5": { markup: 20 },
+    "anthropic/claude-sonnet-4-5": { markup: 15 },
+    "openai/gpt-4o-mini": { markup: -100 }, // free for customers
     // For custom/self-hosted models, specify input/output costs in $/M tokens
-    'custom/my-model': { markup: 25, inputCost: 0.01, outputCost: 0.03 },
+    "custom/my-model": { markup: 25, inputCost: 0.01, outputCost: 0.03 },
   },
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 50, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 50, interval: "month" },
   items: [
-    item({
-      featureId: aiCredits.id,
+    {
+      featureId: aiCredits.featureId,
       included: 10, // $10 worth of AI credits
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
+
+export default atmn({ features: [aiCredits], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to the features page, under Plans.
-2. Click "Create Credit System"
-3. Toggle "AI Credit System" to enable model-based pricing
-4. Set a default markup %, and optionally add providers with their own default markups
-5. Add the models you want to support, overriding the markup per model where needed
-6. For custom models, also specify input/output costs per million tokens
-7. Click "Create"
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ### Model ID Format
 
@@ -3683,59 +3604,49 @@ Free plans let you give every new customer access to a limited set of features a
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Create a plan with no `price` and set `autoEnable: true`:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const apiRequests = feature({
-  id: 'api_requests',
-  name: 'API Requests',
-  type: 'metered',
+  featureId: "api_requests",
+  name: "API Requests",
+  type: "metered",
   consumable: true,
 });
 
 export const workspaces = feature({
-  id: 'workspaces',
-  name: 'Workspaces',
-  type: 'metered',
+  featureId: "workspaces",
+  name: "Workspaces",
+  type: "metered",
   consumable: false,
 });
 
 export const free = plan({
-  id: 'free',
-  name: 'Free',
-  group: 'main',
+  planId: "free",
+  versionSlug: "v1",
+  active: true,
+  name: "Free",
+  group: "main",
   autoEnable: true,
   items: [
-    item({
-      featureId: apiRequests.id,
+    {
+      featureId: apiRequests.featureId,
       included: 100,
-      reset: { interval: 'month' },
-    }),
-    item({
-      featureId: workspaces.id,
+      reset: { interval: "month" },
+    },
+    {
+      featureId: workspaces.featureId,
       included: 1,
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [apiRequests, workspaces], plans: [free] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and click **Create Plan**
-2. Set the plan name and ID (e.g., "Free", `free`)
-3. Toggle **Auto-enable** so the plan is automatically assigned to new customers
-4. Add features and save your changes
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How it works
 
@@ -3800,71 +3711,66 @@ Add-ons are plans that can be purchased alongside a customer's existing plan, ra
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Set `addOn: true` on the plan:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const storage = feature({
-  id: 'storage',
-  name: 'Storage (GB)',
-  type: 'metered',
+  featureId: "storage",
+  name: "Storage (GB)",
+  type: "metered",
   consumable: false,
 });
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const storageAddOn = plan({
-  id: 'storage_add_on',
-  name: 'Extra Storage',
+  planId: "storage_add_on",
+  versionSlug: "v1",
+  active: true,
+  name: "Extra Storage",
   addOn: true,
-  price: { amount: 5, interval: 'month' },
+  price: { amount: 5, interval: "month" },
   items: [
-    item({
-      featureId: storage.id,
+    {
+      featureId: storage.featureId,
       included: 100,
-    }),
+    },
   ],
 });
 
 export const creditTopUp = plan({
-  id: 'credit_top_up',
-  name: 'Credit Top-Up',
+  planId: "credit_top_up",
+  versionSlug: "v1",
+  active: true,
+  name: "Credit Top-Up",
   addOn: true,
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       price: {
         amount: 10,
         billingUnits: 500,
-        billingMethod: 'prepaid',
+        billingMethod: "prepaid",
+        interval: "one_off",
       },
-    }),
+    },
   ],
+});
+
+export default atmn({
+  features: [storage, credits],
+  plans: [storageAddOn, creditTopUp],
 });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and click **Create Plan**
-2. Set the plan name and ID
-3. Toggle the **Add-on** flag
-4. Configure the price and features as needed
-5. Click **Create**
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How add-ons work
 
@@ -3990,81 +3896,74 @@ Variants are most useful for:
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
-Define variants from a base plan in `autumn.config.ts`:
+Each variant is its own `variant({...})` fixture, listed in the base plan's `variants`:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan, variant } from "atmn";
 
 export const emails = feature({
-  id: 'emails',
-  name: 'Emails',
-  type: 'metered',
+  featureId: "emails",
+  name: "Emails",
+  type: "metered",
   consumable: true,
 });
 
-export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
-  items: [
-    item({
-      featureId: emails.id,
-      included: 10000,
-      price: {
-        amount: 1,
-        billingUnits: 1000,
-        billingMethod: 'usage_based',
-        interval: 'month',
-      },
-    }),
-  ],
-});
-
-export const proAnnual = pro.variant({
-  id: 'pro_annual',
-  name: 'Pro Annual',
+export const proAnnual = variant({
+  variantPlanId: "pro_annual",
+  versionSlug: "v1",
+  name: "Pro Annual",
   customize: {
-    price: { amount: 200, interval: 'year' },
+    price: { amount: 200, interval: "year" },
   },
 });
 
-export const pro100k = pro.variant({
-  id: 'pro_100k',
-  name: 'Pro 100k',
+export const pro100k = variant({
+  variantPlanId: "pro_100k",
+  versionSlug: "v1",
+  name: "Pro 100k",
   customize: {
-    price: { amount: 35, interval: 'month' },
-    removeItems: [{ featureId: emails.id, billingMethod: 'usage_based' }],
+    price: { amount: 35, interval: "month" },
+    removeItems: [{ featureId: emails.featureId, billingMethod: "usage_based" }],
     addItems: [
-      item({
-        featureId: emails.id,
+      {
+        featureId: emails.featureId,
         included: 100000,
         price: {
           amount: 0.9,
           billingUnits: 1000,
-          billingMethod: 'usage_based',
-          interval: 'month',
+          billingMethod: "usage_based",
+          interval: "month",
         },
-      }),
+      },
     ],
   },
 });
+
+export const pro = plan({
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [
+    {
+      featureId: emails.featureId,
+      included: 10000,
+      price: {
+        amount: 1,
+        billingUnits: 1000,
+        billingMethod: "usage_based",
+        interval: "month",
+      },
+    },
+  ],
+  variants: [proAnnual, pro100k],
+});
+
+export default atmn({ features: [emails], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Create or open the base plan
-2. Create a variant from that plan
-3. Change only the fields that differ, such as price or specific feature items
-4. Save the variant
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How variants work
 
@@ -4088,59 +3987,116 @@ Before finishing: re-check the STRICT RULES at the top against the config you wr
 
 # atmn catalog flows
 
+Contents: commands · when to use it · the config is the catalog's state (versions, renames, drafts) · variants and licenses · config shapes · splitting the config · update loop · pull · sandboxes and keys · what to show the user.
+
 Use `atmn` when a project has or should have an `autumn.config.ts` source of truth.
 
 Commands — these two, not `atmn preview` (that does not exist):
 
 ```sh
-atmn --headless push          # validates and previews the diff; applies nothing
-atmn --headless push --yes    # apply exactly what the preview showed
+atmn push          # lints, then previews the diff; applies nothing
+atmn push --yes    # apply exactly what the preview showed
 ```
 
-`--headless push` without `--yes` is always a dry run, on a clean org too. Nothing reaches the server as a write until `--yes`.
+`push` without `--yes` is always a dry run, on a clean org too, and it never asks anything: `--yes` is the only gate. The commands that do ask (`init`, `login --keyless`, `sandbox use`, `skills install`) print the flag to pass instead whenever there is no TTY, which is every agent run; `--headless` forces that in a terminal.
 
 ## When to use it
 
-- New project: run `atmn init`. It signs in (or goes keyless), places the config, pulls whatever the sandbox already holds, and installs these skills beside it.
-- Existing project: if `autumn.config.ts` exists, inspect and edit it before pushing. `atmn pull` writes the server's catalog back into it in place.
+- New project: run `atmn init`. It connects (sign in, or keyless), places the config, pulls whatever the org already holds, and installs these skills beside it.
+- Existing project: if `autumn.config.ts` exists, run `atmn pull` first so every row carries its server ids, then edit and push. Never rewrite a config that predates you from scratch.
 - Use MCP/API directly when the user wants dashboard/API-first changes or there is no local config workflow.
+
+## The config is the catalog's state
+
+The document is the whole desired catalog for every collection it states. A plan or feature missing from a stated `plans` / `features` is a deletion (archived when customers depend on it). A collection left out entirely is not managed. That rule reaches down to versions: **a version row missing from `plans` is deleted too**.
+
+Every version of a plan is a row in `plans`. Rows of one plan share a `planId`; each names its version with `versionSlug`; exactly one is `active: true` and the rest `active: false`. There is no history collection and no timeline — array order means nothing. What a version *is* (a group of customers, not a step in time) is the `autumn-concepts` skill's: read `references/plan.md` in the `autumn-concepts` skill. This file owns how rows express it.
+
+Two fields make a row addressable:
+
+- `planId` + `versionSlug` — what you write. The pair names exactly one version. `versionSlug` is required on every plan row and every variant row, including a plan's only version; an omitted slug is a lint error, never an implicit `v1`.
+- `internalId` — the server's stable id. It is minted on the first `push --yes` and written back into the fixture; `pull` writes it for every row that lacks one. A fixture carrying it can be renamed (`planId`, `featureId`, `versionSlug`) and the server treats that as a rename, not a delete plus create.
+
+**This is where atmn differs from the API and the dashboard.** Those send one plan entry plus flags — `versioning`, `active`, `propagate` — as `references/catalog-update.md` describes. A config has none of those flags. The intent is read off the rows — which rows exist, which one is active, which carry an `internalId` — and the preview reports what the server derived. If the preview says something other than what you meant, change the rows and preview again; never look for a flag.
+
+| You want | Row edit | Preview shows |
+|---|---|---|
+| Change a version in place (active or history) | edit that row; keep its `versionSlug` and `internalId` | `~ pro@v1`, a migration for its customers |
+| The same change on every version | make the edit on every row of the plan | one `~` per row |
+| A new version; customers stay on the old one | add a row: same `planId`, new `versionSlug`, `active: true`, **no `internalId`**; flip the old row to `active: false` | `+ pro@v2`, and `active: true -> false` on the old row |
+| A draft nobody can buy yet | add the row with `active: false` beside the active one | `+` with no pointer move |
+| Rename the plan id | change `planId` on **every** row of the plan (all carry `internalId`) | a rename, not `-` + `+` |
+| Rename a version | change `versionSlug` on a row that carries `internalId` | `Version slug` rename |
+| Retire a version | remove its row | `-`; refused while customers are on it (it names both exits: migrate them, or archive the whole plan) |
+
+Guards the lint applies before anything is sent: a plan with no active row or two active rows (`mark the one customers can buy active: true and the rest active: false`), a missing `versionSlug`, the same `planId` + `versionSlug` twice. A plan whose only row is `active: false` is refused — a draft needs an active sibling.
+
+Numbers vs slugs: the server numbers versions in creation order and the preview labels rows with that number (`pro@v2`). The config never states numbers, only slugs. Push a `v1` row after `v2` already exists and the server numbers it higher; the slug still says `v1`. Never read a preview number back as the slug.
+
+## Variants and licenses
+
+What a variant's customize can change, when a base edit reaches a variant, and how a license link anchors to a child version are catalog-wide: `references/catalog-update.md`. What is atmn's:
+
+- A variant is an entry in its base row's `variants` array and a license link an entry in the parent row's `licenses` array: `variant({...})` and `license({...})` fixtures, inline or imported from their own files, edited in place there. Pull writes new ones in that form. Every entry the config lists is a declared overlay; there is no `propagate` in a config, so a base edit reaches a variant through the entry you write, not a follow flag.
+- Minting a base version means listing the variant entries again under the new base row, each with the new `versionSlug` and no `internalId`. The old entries stay under the old base row. One variant version cannot serve two base rows; the lint names both rows and says to version and relink the variant.
+- To retire a variant, set `archived: true` on its entry. A variant left out of the array is a deletion, refused while customers hold it.
+- Every `license({...})` states `versionSlug` — the lint refuses one without it — because the link is pinned to that child version and a config that names it links the same version in every environment. Pull writes it back. Minting a child version moves no parent; relinking a parent is editing that slug.
 
 ## Config shapes
 
 `autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `planId`, `billingMethod`, `billingUnits`, `freeTrial`, `intervalCount`, `versionSlug`. Follow the exported types from the package when editing config. Amounts are plain dollars: $20 is `20`, never `2000`.
 
-Core builders — `feature`, `plan`, `variant`, `license`. Items are plain objects on the plan. A variant is its own `variant({...})` fixture, listed by name in its base plan's `variants`; its `customize` carries what differs from the base (`price`, `items` to replace the list, `addItems` / `removeItems` to patch it).
+Builders — `feature`, `plan`, `variant`, `license`. Items are plain objects on the plan; there is no `item()` builder and fixtures expose `featureId` / `planId`, never `.id`. A plan with an active `v2`, its `v1` kept for the customers still on it, each with an annual variant:
 
 ```ts
-const messages = feature({
+import { atmn, feature, plan, variant } from "atmn";
+
+export const messages = feature({
   featureId: "messages",
   name: "Messages",
   type: "metered",
   consumable: true,
 });
 
-export const proAnnual = variant({
+export const proAnnualV2 = variant({
   variantPlanId: "pro_annual",
+  versionSlug: "v2",
+  name: "Pro Annual",
+  customize: { price: { amount: 250, interval: "year" } },
+});
+
+export const proAnnualV1 = variant({
+  variantPlanId: "pro_annual",
+  versionSlug: "v1",
   name: "Pro Annual",
   customize: { price: { amount: 200, interval: "year" } },
 });
 
-export const pro = plan({
+export const proV2 = plan({
   planId: "pro",
+  versionSlug: "v2",
+  active: true,
   name: "Pro",
-  price: { amount: 20, interval: "month" },
-  items: [
-    {
-      featureId: messages.featureId,
-      included: 10000,
-      reset: { interval: "month" },
-    },
-  ],
-  variants: [proAnnual],
+  price: { amount: 25, interval: "month" },
+  items: [{ featureId: messages.featureId, included: 10000, reset: { interval: "month" } }],
+  variants: [proAnnualV2],
 });
 
-export default atmn({ features: [messages], plans: [pro] });
+export const proV1 = plan({
+  internalId: "prod_…", // written back by push --yes / pull
+  planId: "pro",
+  versionSlug: "v1",
+  active: false,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [{ featureId: messages.featureId, included: 5000, reset: { interval: "month" } }],
+  variants: [proAnnualV1],
+});
+
+export default atmn({ features: [messages], plans: [proV2, proV1] });
 ```
+
+Before `proV2` existed, `proV1` was the active row; minting `v2` was adding `proV2` without an `internalId` and flipping `proV1` to `active: false`.
 
 Usage-priced item:
 
@@ -4158,155 +4114,120 @@ Usage-priced item:
 }
 ```
 
-The document is the whole desired catalog for every collection it states: a plan or feature missing from a stated `plans` / `features` is a deletion (archived when customers depend on it). A collection left out entirely is not managed.
-
-Two fields make a fixture addressable, and both are typed optional only because they come from the server:
-
-- `internalId` — the row's stable id. The server mints it on the first `push --yes` and the CLI writes it back into the fixture; `pull` writes it for every row that lacks one. A fixture that carries it can be renamed (`planId`, `featureId`) and the server treats that as a rename. Run `atmn pull` before editing a config that predates you, so every fixture already carries its id.
-- `versionSlug` — the version's name (`"v1"`, `"2026-q3"`). State it on every plan row you write, active or history, including the first version: it is how the config tells versions of one plan apart, and the lint refuses a second version without one.
-
 ## Splitting the config
 
-`autumn.config.ts` is ordinary TypeScript, so a catalog can be laid out however the user likes: everything in one file, or fixtures exported from their own files and imported into the root arrays. A common shape is one plan per file with `planVersions/` holding the history rows, which is why `atmn init` scaffolds that folder. `pull` follows imports and edits fixtures where they live.
+`atmn init` scaffolds four files: `autumn.config.ts` (the root, `export default atmn({...})`), `features.ts`, `plans.ts`, `rewards.ts`. Every version of every plan lives in the `plans` array — active and history rows side by side. The config is ordinary TypeScript, so a row can be lifted into its own file under any export name and referenced from the array; `pull` follows imports and edits each fixture where it lives, and appends rows it has to add to the imported array. What it cannot do is edit a fixture that is not a plain literal — a spread, a helper call, a `.map()` — and it says so and writes nothing rather than guess.
 
-## Headless update loop
+## Update loop
 
 1. Inspect or create `autumn.config.ts`.
 2. Edit the config to represent the desired catalog.
-3. Run `atmn --headless push` to preview changes.
-4. Show the user the plan diffs, the customer impact, which plans mint a new version, and the draft migrations it would create. If the versioning is not what they meant, move rows (see "Versions: code in motion") and preview again.
-5. Rerun `atmn --headless push --yes` to apply the same preview.
-6. Report created/updated/deleted/archived features and plans, and the migration links the output prints.
+3. Run `atmn push` to preview changes.
+4. Show the user the plan diffs, the customer impact, which plans mint a new version, and the draft migrations it would create. If the versioning is not what they meant, change the rows (table above) and preview again.
+5. Rerun `atmn push --yes` to apply the same preview.
+6. Report created/updated/deleted/archived features and plans, and the draft migrations the output lists. `push --yes` also writes `internalId` (and any `versionSlug` the server assigned) back into the fixtures — say so; those edits are expected.
 
-If the user changes the catalog shape, edit `autumn.config.ts` and preview again before pushing.
+Two notes push prints that are worth relaying: a plan removed while an id-less plan appears looks like a rename — pull first so the fixture carries its id; and a config still stating a deprecated field (`entityFeatureId`) gets a note naming the replacement.
 
-## Versions: code in motion
+## Pull
 
-There are no decision flags. Versioning is stated by where a row sits and what it says; the server derives the rest and the preview shows it. `plans` holds each plan's active version, `planVersions` its history, and every row names its version with `versionSlug`. On a plan with customers:
+`atmn pull` writes the server's catalog back into the config in place: it flips `active` where the dashboard promoted a version, appends versions the config never mentioned, and backfills `internalId` and `versionSlug`. Run it after anyone touches the dashboard, and before editing a config you did not write.
 
-- **Change every version.** Make the edit on the active row in `plans` and on each history row in `planVersions/`. Each row is updated in place; a draft migration is offered for the customers on each.
-- **Change only the active version.** Edit the row in `plans`, keep its `versionSlug`. It is updated in place, history untouched; customers on it get a draft migration.
-- **Mint a new version, leaving customers where they are.** Move the current active fixture to `planVersions/` (its file, and its entry from `plans` into `planVersions` in the root config — a row still listed in `plans` is still the active one). Write the new active row in `plans` with the same `planId`, a new `versionSlug`, and no `internalId`: an absent id is what tells the server this is a new row, and `push --yes` writes the minted one back. The preview lists it as a new version with the old one going inactive.
+`atmn pull --overwrite` is different: it deletes every TypeScript file in the config folder and rescaffolds from the server. It needs `--yes`, and it is the right move only when the config describes a different org than the key — the tell is `Your config no longer matches this org's catalog`. Anywhere else, a plain `pull` is what you want.
 
-Variants move with their base. An in-place edit to the base reaches each variant listed under it unless that variant's `customize` overrides the field. Minting a new base version means minting a new version of every variant linked to it: the new active base row lists variant fixtures carrying the same new `versionSlug` (and no `internalId`), and the old variant fixtures move to `planVersions/` alongside the old base. A new base version that still points at the old variant rows is refused by the lint, since one variant version cannot serve two base versions.
-
-## Sandboxes
+## Sandboxes and keys
 
 - `atmn sandbox use <name>` pins a named sandbox; every command after it targets that sandbox until `atmn sandbox use --clear`.
 - `atmn reset --yes` empties the pinned sandbox; `atmn push --yes` rebuilds it from the config.
 - `atmn env --json` says which org, sandbox and key a command would hit, with `notes` on what to do when something is off.
+- A missing key fails fast and names the fix: `AUTUMN_SECRET_KEY is not set. Run atmn login, or atmn login --keyless if you don't have an account.` — hand that to the setup flow, don't ask the user to paste a key.
 
 ## What to show the user
 
 - Which plans mint a new version, and the draft migrations that come with them.
-- Feature/plan deletions that will archive instead because dependencies or customers exist.
+- Feature/plan/version deletions that will archive instead because dependencies or customers exist.
 - Which sandbox is pinned before applying anything.
 
 # Catalog update flow
 
-Use this when the user is already running Autumn — customers are on these plans — and wants to change pricing or plans. (A half-built config from an earlier setup session is NOT this: keep building with the normal workflow.) This workflow is still growing — the ground rules below always apply; the rest of this file carries the preview/decide/apply mechanics.
+Contents: ground rules · the update model (desired state, two ways to state it, addressing a row, versioning, variants, licenses, features) · loop · reading the preview · deciding per plan · what to report.
+
+Use this when customers are on these plans and the user wants to change pricing or plans. A half-built config from a setup session is not this — keep building with the normal workflow. What a version, a draft and `active` mean is the `autumn-concepts` skill's: read `references/plan.md` in the `autumn-concepts` skill. How rows in `autumn.config.ts` express the same intents: `references/atmn.md`.
 
 ## Ground rules
 
-- **Never run the new-catalog interview against a live catalog.** Read `autumn.config.ts` (or `atmn pull`) first; the existing catalog is the truth to diff against, not a draft to replace.
-- **Touch only what the change names.** Every other plan, item, and id stays byte-identical — rewriting untouched plans is the classic update failure.
-- **Match the existing config's patterns** — if sibling plans model a thing one way, the change follows that way.
-- The questions here are "who's affected", not "what do you sell": new version or update in place? propagate to variants or not? migrate existing customers or grandfather them? Never decide these alone — preview, show the choices, let the user pick.
-- Structural changes ("add seats", "make credits shared") re-enter the Shape forks (licenses, pooled, add-on, variants) exactly as a new catalog would.
-- Preview before every write, apply only the exact previewed change.
+- Never run the new-catalog interview against a live catalog. Read the current catalog first; it is the truth to diff against, not a draft to replace.
+- Touch only what the change names. Every other plan, item and id stays byte-identical — rewriting untouched plans is the classic update failure.
+- Match the existing catalog's patterns; if sibling plans model a thing one way, the change follows that way.
+- The questions are "who's affected", not "what do you sell": new version or edit in place? all versions? which variants and license parents follow? migrate customers or grandfather them?
+- Structural changes ("add seats", "make credits shared") re-enter the Shape forks exactly as a new catalog would.
+- Preview before every write; apply only the exact previewed params.
+
+## The update model
+
+Read with `catalogV2.get` (`include_versions: true` to see every version). Preview with `catalogV2.preview_update`, apply with `catalogV2.update` — the same params, so a preview is always exactly what apply would do. `catalogV2.diff` is a read-only delta with no write validation, for reconciling a local copy.
+
+**The payload is desired state, per collection.** `features`, `plans`, `rewards`, `referral_programs`: a collection left out is untouched. With `skip_deletions: false` a stated collection is complete and anything missing from it is removed; with `skip_version_deletions: false` the same holds for a stated plan's versions. Removal archives rather than deletes whenever customers hold the row. `remove_plans` (optionally pinned to one version) and `remove_features` remove by name under the default; `skip_plan_ids` shields plans from a complete payload.
+
+**Two ways to state a change.** A targeted payload states only the plan being changed and says who follows through `propagate` — that is how the dashboard and API or MCP callers work. A whole-catalog payload states every plan, every version and every variant, and flips both `skip_*_deletions` off — that is what `autumn.config.ts` sends. Both reach the same server; pick the one matching the surface you are on and don't mix them.
+
+**If the surface is atmn**, the same model applies with these differences, which decide whether an edit does what you meant (mechanics in `references/atmn.md`):
+
+- The config is the complete state of every collection it names. A plan, version or variant left out is a deletion, not "unchanged".
+- There are no `versioning`, `propagate` or follow flags. Intent is read off the rows: a row with a new `versionSlug` and no `internalId` mints a version, flipping `active` promotes, every variant the base lists is an explicit overlay, and a license link names its child version.
+- Rows are addressed by the stable `internalId` the CLI writes back after `push --yes` and `pull`. Renaming a plan id, feature id or version slug is safe only on a row that carries it — so run `atmn pull` before editing a config you did not write.
+- The lint runs before anything is sent, and preview then apply are `atmn push` and `atmn push --yes` with the same config, so a push previews exactly what it would apply.
+
+**Addressing a row.** `plan_id` names the plan; `version_slug` pins one version, and omitting it targets the active row. `internal_id` addresses a row by its stable id, which is what makes `plan_id` and `version_slug` renames safe; without it, `new_plan_id` renames and is blocked while customers or reward programs reference the id.
+
+**Versioning.** `versioning` is `existing` (default: edit the addressed row), `all_versions` (the same edit on every version), or `new_version` (mint the next version; customers stay where they are). `active: true` promotes the minted row; omit it to mint a draft. `new_version_slug` names the minted row. `migration: { draft: true }` creates a migration draft for customers on an in-place or all-versions edit; it is rejected with `new_version`, because minting is the choice to leave customers alone.
+
+**Variants.** They live under the base entry's `variants[]`, never as top-level plans. Each entry is a declared overlay: `customize.items` replaces the item list, `add_items` / `remove_items` patch it, `price` and `free_trial` override. Declaring an entry is not the same as following: a base edit reaches a variant only when `propagate.variants` names it (pinned by `version_slug`), and relatives not named are frozen. When the base mints a new version, a following or overlaid variant with customers mints its next version too. To retire a variant, set `archived: true` on its entry. Nesting an entry under a base links it there; `base_variant_id: null` detaches it.
+
+**Licenses.** A parent's `licenses[]` entry names `license_plan_id`, `included`, `prepaid_only`, an optional `version_slug` and a `customize` (price, add or remove items). A link is pinned to one child version, named by `version_slug`. Versioning the child moves no parent: moving a parent onto the new child version is an explicit change to its link. `propagate.license_parents` lets named parents follow a child edit; anything not named stays pinned. The preview's `license_parents` lists the parents pointing at a child row being changed.
+
+**Features.** `new_feature_id` renames; `archived` archives or restores. A plan may reference a feature stated in the same payload.
 
 ## Loop
 
-1. Inspect the current catalog and the proposed catalog.
-2. Build `catalog.preview_update` params: `features`, `plans`, optional `skip_deletions`, `skip_feature_ids`, `skip_plan_ids`, `expand`.
-3. Run `catalog.preview_update`; never skip this before a write.
-4. Summarize the preview and ask for decisions per feature and per base plan family.
-5. Revise params or config based on the decisions, then preview again if anything changed.
-6. Run `catalog.update` with the exact previewed params, following the global write approval rules.
+1. Read the current catalog and the proposed change.
+2. Build params for only what changes.
+3. Preview. Never skip this before a write.
+4. Summarize what the preview reports (below) and settle the decisions per plan.
+5. If anything changed, revise and preview again.
+6. Apply with the exact previewed params, under the global write-approval rules.
+7. Report, including any migration draft — it moves nobody until it is reviewed and run.
 
-For single-plan updates, pass that plan inside `catalog.preview_update.plans[]`. Include `include_versions: true` and `include_variants: true` when the plan has customers, historical versions, or variants so the user can choose the right scope.
+## Reading the preview
 
-## Preview summary checklist
+Per plan entry:
 
-- Feature changes: created, updated, skipped, removed, archived, and any blockers.
-- Plan changes: created, updated, deleted, skipped, unchanged, and whether deletion archives because customers exist.
-- For each changed plan: `customize`, `price_change`, `item_changes`, `previous_attributes`, `has_customers`, `customer_count`, and `versionable`.
-- Variants: affected variant IDs, `will_apply`, `plan.variants[n].update_source` (`direct` vs `propagated`), conflicts, and whether selected variants have customers.
-- Other versions: historical versions that can receive the same diff.
-- Migration: whether preview returned a draft, which plan IDs it covers, whether it includes custom plans, and whether billing changes exist.
+- `action` is per plan id: `create` means no live version existed, `update` covers edits and minting alike; `will_archive` says a removal archives instead. `state.usage` carries capped customer counts; `state.reasons` are ready-made lines for why something archives or is blocked.
+- `versioning` says what actually happens (`new_version` is null when an existing row is edited) and `options` lists the strategies available for this plan today — offer only those.
+- `sibling_versions`: the other versions that could receive the same edit, each with the slots it had diverged on that the edit would overwrite.
+- `variants[]`: each resolved as `unchanged` (frozen), `propagated` (followed) or `explicit` (the payload declared it), with conflicts — slots the variant already overrides. Conflicts inform the decision; they never block.
+- `license_parents[]`: the same three states for parents whose link points at this row.
+- Feature entries carry blockers that would reject the update; check them before applying.
+- Top level: the migration drafts the update would create.
 
-## Per-plan family decisions
+## Deciding, per plan
 
-For each changed base plan or plan family, ask decisions in the same order as the dashboard:
+1. **Versioning.** If the change touches no base price and no priced item, edit in place (`existing`, or `all_versions` when every customer group should get it) and say so — no question needed. If it changes a base price or a priced item on a plan with customers, ask: new version (they keep their terms) or in place plus a migration draft (they move to the new terms)? Offer only what `options` lists.
+2. **Relatives.** Default to following conflict-free variants and license parents; ask before following into a conflict, showing what would be overwritten.
+3. **Migration.** For an in-place edit on a plan with customers, offer the draft. Never create one alongside `new_version`.
 
-1. Versioning strategy.
-2. Variant handling: propagation choices for `propagated` variants, standalone update choices for `direct` variants.
-3. Migration draft.
+## What to report
 
-### Versioning
+Which plans mint a new version and which are edited in place; which variants and parents follow; deletions that archive because customers or dependencies exist; and the migration drafts created, with the reminder that they still have to be run.
 
-Use `versionable`, `has_customers`, `customer_count`, and `other_versions` to explain why this matters.
+# Rewards
 
-- Create new version: omit `disable_version`; existing customers remain on their current version.
-- Update current version: send `disable_version: true`; existing customers keep their rows unless a migration draft is created and run.
-- Update all versions: send `all_versions: true`; do not combine with `disable_version`.
-- Force a new version even without customers only when the user explicitly asks: `force_version: true`.
-- Skip a plan by adding its ID to `skip_plan_ids`, then preview again.
+Rewards are coupons or feature grants; referral programs hand them out. In a catalog update they are stated collections like plans: `rewards` and `referralPrograms` in `autumn.config.ts`, `rewards` and `referral_programs` in the API payload. Omit a collection to leave it untouched; an empty one under a complete payload deletes every reward. List existing rewards first and confirm plan and feature ids before creating one.
 
-`create_version` is usually the safest live choice because it grandfathers existing customers. `update_current` and `update_all_versions` patch existing versions, so they may need a migration draft if customers should move to the new shape.
+Rules:
 
-### Variant propagation
-
-- `update_variant_ids` propagates the base plan diff to selected variant plan IDs.
-- `variants` contains direct variant updates or new variant definitions under the base plan.
-- If `plan.variants[n].update_source` is `propagated`, the variant would receive the base plan diff. Show its ID/name, customer impact, item/price changes, and conflicts, then ask whether to include it in `update_variant_ids`.
-- Default to selecting conflict-free propagated variants only. Ask explicitly before propagating into variants with conflicts.
-- If `plan.variants[n].update_source` is `direct`, treat it like updating that variant plan itself. It can have its own `create_version` / `update_current` choice and its own migration draft question when it has customers.
-- Variants cannot use `update_all_versions` in atmn headless mode.
-
-### Migration
-
-If updating in place or all versions and the user wants affected customers moved, include `migration: { "draft": true }`. Add `include_custom: true` only when the user explicitly wants custom plan versions included.
-
-Migration drafts do not move customers by themselves. The returned migration must be reviewed/run separately.
-
-## Dashboard plan edit flow
-
-Mirror the dashboard's `PlanChangeDialog` when asking a human:
-
-1. Review the backend preview: price, item, trial, billing control, and settings changes.
-2. Choose strategy: create a new version, update the current version, or update all versions.
-3. Choose variant propagation when variants exist; default to conflict-free variants only.
-4. Review migration targets. If customers should move, create a migration draft and send the user to run/review it.
-5. Apply the write with the exact previewed params, following the global write approval rules.
-
-Metadata-only edits apply across all versions and variants. A past version cannot create a new version from the dashboard flow; update that version or all versions instead.
-
-## API param mapping
-
-```json
-{
-  "plan_id": "pro",
-  "price": { "amount": 29, "interval": "month" },
-  "items": [],
-  "disable_version": true,
-  "update_variant_ids": ["pro_annual"],
-  "migration": { "draft": true }
-}
-```
-
-- New version: remove `disable_version`, `all_versions`, and `migration` unless explicitly needed.
-- Update current version: set `disable_version: true`.
-- Update all versions: set `all_versions: true`; remove `disable_version`.
-- Propagate to variants: set `update_variant_ids` to the selected variant plan IDs.
-- Directly update variants: include `variants[]` under the base plan.
-- Migration draft: set `migration: { "draft": true }` on the plan, or use top-level catalog `migration` only when every relevant plan should share it.
-- Skip a plan or variant: add its ID to `skip_plan_ids`.
-
-Direct variant migration drafts cannot be mixed with incompatible direct variant updates; follow the preview/tool error and split the work if needed.
-
-## catalog.update ordering
-
-`catalog.update` applies features first, then plans, then missing plan removals, then missing feature removals. With `skip_deletions: false`, missing plans/features are removed; customer-bearing plans are archived instead of deleted.
-
-`catalog.preview_update` previews feature writes first and then plan writes, so plan previews can reference features created in the same catalog update. `catalog.update` follows the same ordering.
+- Each reward is exactly one of `coupon` or `feature_grant`.
+- Coupons are `percentage_discount` (at most 100) or `fixed_discount` (major currency units). `plan_ids: null` means every plan; otherwise name current plan ids.
+- Duration: `months` needs a positive `length`; `one_off` and `forever` need `length: null`.
+- A feature grant needs at least one grant and one promo code. A boolean feature is granted with `included: null`; metered and credit features need a positive amount.
+- Reward ids, promo codes, plan ids and feature ids within one reward are unique.

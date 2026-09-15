@@ -28,8 +28,10 @@ type CatalogPlanRow = {
 // unresolved (no real Stripe existence check), same as the base-price case.
 const proPlan = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			createInStripe: false,
 			price: { amount: 49, interval: "month" },
 			items: [

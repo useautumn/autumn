@@ -88,6 +88,7 @@ export const computeUpdateSubscriptionPlan = async ({
 		ctx,
 		plan,
 		billingContext,
+		params,
 	});
 
 	// When skipBillingChanges is true, Stripe is never called, so the post-Stripe

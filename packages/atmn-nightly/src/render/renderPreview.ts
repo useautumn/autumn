@@ -83,7 +83,10 @@ type VariantChange = {
 
 type PlanChange = PreviewChange & {
 	planId?: string;
+	newPlanId?: string;
 	version?: number;
+	versionSlug?: string;
+	newVersionSlug?: string;
 	active?: boolean;
 	planChange?: PlanChangeLite | null;
 	/** `new_version` says the row is minted by this update, not edited. */
@@ -646,7 +649,7 @@ const isFreshRow = (plan: PlanChange): boolean =>
 	plan.action === "create" || isMintedVersion(plan);
 
 /** The plan's own line — a marker when it changes, context when its variants
- * are the only work — then its diff, then those variants. */
+ * are the only work — then its identity moves, its diff, then those variants. */
 const renderPlanRow = ({ plan }: { plan: PlanChange }): string[] => {
 	const id = planRowId(plan);
 	const fresh = isFreshRow(plan);
@@ -654,6 +657,7 @@ const renderPlanRow = ({ plan }: { plan: PlanChange }): string[] => {
 		isChange(plan)
 			? line({ action: fresh ? "create" : plan.action, id, label: plan.name })
 			: contextLine({ id, label: plan.name }),
+		...renderIdentityChanges({ row: plan, indent: DETAIL_INDENT }),
 		...(plan.planChange
 			? renderPlanChangeDetail({
 					planChange: plan.planChange,
@@ -664,6 +668,31 @@ const renderPlanRow = ({ plan }: { plan: PlanChange }): string[] => {
 			: []),
 		...renderVariantLanes({ plan }),
 	];
+};
+
+/** A row that keeps its stable id but changes what it is called: plan id, version slug. */
+const renderIdentityChanges = ({
+	row,
+	indent,
+}: {
+	row: Pick<
+		PlanChange,
+		"planId" | "newPlanId" | "versionSlug" | "newVersionSlug"
+	>;
+	indent: string;
+}): string[] => {
+	const { symbol, paint } = marker("update");
+	const moves: [string, string | undefined, string | undefined][] = [
+		["Plan id", row.planId, row.newPlanId],
+		["Version slug", row.versionSlug, row.newVersionSlug],
+	];
+	return moves.flatMap(([label, previous, next]) =>
+		next === undefined || next === previous
+			? []
+			: [
+					`${indent}${paint(`${symbol} ${label}: ${formatValue(previous)} -> ${formatValue(next)}`)}`,
+				],
+	);
 };
 
 /** A migration the preview says a push would draft: no id yet, only its targets. */

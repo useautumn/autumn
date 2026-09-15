@@ -26,13 +26,14 @@ const proWithVariant = ({ amount }: { amount: number }): string => `{
 	],
 	plans: [
 		plan({
+			active: true,
 			planId: "pro",
 			versionSlug: "v1",
 			name: "Pro",
 			price: { amount: ${amount}, interval: "month" },
 			items: [{ featureId: "seats", included: 5 }],
 			variants: [
-				{ variantPlanId: "pro_plus", name: "Pro Plus" },
+				{ variantPlanId: "pro_plus", name: "Pro Plus", versionSlug: "v1" },
 			],
 		}),
 	],
@@ -91,6 +92,7 @@ test.concurrent(
 					result.preview.migrations as unknown as PreviewMigrations,
 					"pro_plus",
 				),
+				JSON.stringify(result.preview.migrations ?? [], null, 2),
 			).toBe(true);
 		} finally {
 			scenario.cleanup();
@@ -131,6 +133,7 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "pro",
 			versionSlug: "v2",
 			name: "Pro",
@@ -140,9 +143,9 @@ test.concurrent(
 				{ variantPlanId: "pro_plus", name: "Pro Plus", versionSlug: "v2" },
 			],
 		}),
-	],
-	planVersions: [
+	
 		plan({
+			active: false,
 			planId: "pro",
 			versionSlug: "v1",
 			name: "Pro",

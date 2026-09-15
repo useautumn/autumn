@@ -31,8 +31,10 @@ for (const interval of PLAN_INTERVALS) {
 			config: configBody({
 				plans: `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "${interval}" },
 			items: [],
 		}),`,

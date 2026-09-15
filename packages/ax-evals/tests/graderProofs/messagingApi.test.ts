@@ -149,6 +149,8 @@ test("seed-tier-variants: siblings as standalone plan() fail the variant verdict
 	const standalone = messagingApiConfig({
 		extraPlans: `		plan({
 			planId: "api_pro_100k",
+			versionSlug: "v1",
+			active: true,
 			name: "API Pro 100K",
 			group: "api",
 			price: { amount: 45, interval: "month" },
@@ -168,6 +170,8 @@ test("seed-tier-variants: siblings as standalone plan() fail the variant verdict
 		}),
 		plan({
 			planId: "api_pro_200k",
+			versionSlug: "v1",
+			active: true,
 			name: "API Pro 200K",
 			group: "api",
 			price: { amount: 80, interval: "month" },
@@ -187,6 +191,8 @@ test("seed-tier-variants: siblings as standalone plan() fail the variant verdict
 		}),
 		plan({
 			planId: "campaigns_pro_25k",
+			versionSlug: "v1",
+			active: true,
 			name: "Campaigns Pro 25K",
 			group: "campaigns",
 			price: { amount: 150, interval: "month" },
@@ -194,6 +200,8 @@ test("seed-tier-variants: siblings as standalone plan() fail the variant verdict
 		}),
 		plan({
 			planId: "campaigns_pro_100k",
+			versionSlug: "v1",
+			active: true,
 			name: "Campaigns Pro 100K",
 			group: "campaigns",
 			price: { amount: 400, interval: "month" },

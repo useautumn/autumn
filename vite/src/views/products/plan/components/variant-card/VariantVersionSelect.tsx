@@ -1,9 +1,4 @@
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-} from "@autumn/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import type { PlanVariant } from "@/services/products/ProductService";
 import { ActiveVersionDot } from "../PlanVersionOption";

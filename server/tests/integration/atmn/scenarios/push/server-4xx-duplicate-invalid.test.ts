@@ -28,13 +28,17 @@ const CASES: Record<
 		body: (id) => `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${id}",
 			name: "First",
+			versionSlug: "v1",
 			price: { amount: 10, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${id}",
 			name: "Second",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 		}),
 	],
@@ -47,10 +51,12 @@ const CASES: Record<
 		body: (id) => `{
 	plans: [
 		plan({
+			active: true,
 			planId: "${id}",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
-			licenses: [{ licensePlanId: "${id}_no_such_plan", included: 25 }],
+			licenses: [{ licensePlanId: "${id}_no_such_plan", versionSlug: "v1", included: 25 }],
 		}),
 	],
 }`,

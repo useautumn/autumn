@@ -5,9 +5,11 @@ import {
 	ApiUsageTierWithCurrenciesSchema,
 	additionalCurrencyPlanItemIssues,
 } from "@api/products/components/additionalCurrencies.js";
+import { AllocatedBillingFieldSchema } from "@api/products/components/allocatedBilling.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { DisplaySchema } from "@api/products/components/display.js";
 import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
+import { EntitlementExpirySchema } from "@models/productModels/durationTypes/entitlementDuration.js";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
@@ -132,6 +134,7 @@ export const ApiPlanItemV1Schema = z
 					description:
 						"'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.",
 				}),
+				allocated_billing: AllocatedBillingFieldSchema,
 				max_purchase: z.number().nullable().meta({
 					description:
 						"Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.",
@@ -188,6 +191,11 @@ export const ApiPlanItemV1Schema = z
 			.meta({
 				internal: true,
 			}),
+
+		expiry: EntitlementExpirySchema.nullish().meta({
+			description:
+				"Purchased units expire this long after each purchase. One-off prepaid consumable items only.",
+		}),
 
 		feature_override: ApiFeatureOverrideSchema.optional().meta({
 			description:

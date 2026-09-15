@@ -206,6 +206,87 @@ export const config = {
 		},
 	}),
 
+	/** some history row (`active: false`) structurally matches the spec */
+	historyVersion: (label: string, spec: PlanSpec): Expectation => ({
+		name: `keeps history version: ${label}`,
+		kind: "config",
+		score: (output) => {
+			const history = output.config.inactivePlans ?? [];
+			const matched = history.some((plan) => planMatches(spec, plan));
+			return {
+				name: `keeps history version: ${label}`,
+				score: matched ? 1 : 0,
+				metadata: matched
+					? undefined
+					: {
+							why:
+								history.length === 0
+									? "the config has no inactive version rows"
+									: `none of the ${history.length} inactive rows match`,
+							spec,
+							history,
+						},
+			};
+		},
+	}),
+
+	/** the plan has exactly `count` version rows, active and inactive together */
+	versionsOf: ({
+		planId,
+		count,
+	}: {
+		planId: string;
+		count: number;
+	}): Expectation => {
+		const name = `${planId} has ${count} versions in the config`;
+		return {
+			name,
+			kind: "config",
+			score: (output) => {
+				const rows = [
+					...output.config.plans,
+					...(output.config.inactivePlans ?? []),
+				].filter((plan) => plan.id === planId);
+				return {
+					name,
+					score: rows.length === count ? 1 : 0,
+					metadata:
+						rows.length === count
+							? undefined
+							: { why: `found ${rows.length} rows of ${planId}` },
+				};
+			},
+		};
+	},
+
+	/** the plan's active row still carries the server id it was pulled with —
+	 * catches a rewrite-from-scratch that would delete and recreate the plan */
+	keepsInternalId: (planId: string): Expectation => {
+		const name = `${planId} keeps its internalId`;
+		return {
+			name,
+			kind: "config",
+			score: (output) => {
+				const plan = output.config.plans.find((entry) => entry.id === planId) as
+					| { internal_id?: unknown }
+					| undefined;
+				const kept =
+					typeof plan?.internal_id === "string" && plan.internal_id !== "";
+				return {
+					name,
+					score: kept ? 1 : 0,
+					metadata: kept
+						? undefined
+						: {
+								why: plan
+									? `${planId} has no internalId — it would be recreated, not updated`
+									: `no plan ${planId} in the config`,
+							},
+				};
+			},
+		};
+	},
+
 	/** exactly n plans were modeled */
 	planCount: (count: number): Expectation => ({
 		name: `modeled exactly ${count} plans`,

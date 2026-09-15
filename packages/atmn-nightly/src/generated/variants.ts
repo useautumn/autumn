@@ -134,6 +134,7 @@ export type Variant = {
 				billingUnits?: number;
 				/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 				billingMethod: "prepaid" | "usage_based";
+				allocatedBilling?: "arrear" | "prorated_legacy";
 				/** Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit. */
 				maxPurchase?: number | null;
 			};
@@ -359,6 +360,7 @@ export type Variant = {
 				billingUnits?: number;
 				/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 				billingMethod: "prepaid" | "usage_based";
+				allocatedBilling?: "arrear" | "prorated_legacy";
 				/** Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit. */
 				maxPurchase?: number | null;
 			};
@@ -642,6 +644,7 @@ export type Variant = {
 		/** License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance. */
 		upsertLicenses?: Array<{
 			licensePlanId: string;
+			versionSlug?: string;
 			included?: number;
 			prepaidOnly?: boolean;
 			customize?: {
@@ -736,6 +739,7 @@ export type Variant = {
 						billingUnits?: number;
 						/** 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go. */
 						billingMethod: "prepaid" | "usage_based";
+						allocatedBilling?: "arrear" | "prorated_legacy";
 						/** Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit. */
 						maxPurchase?: number | null;
 					};

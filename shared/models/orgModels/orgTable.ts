@@ -70,6 +70,13 @@ export const OrgClaimState = {
 
 export type OrgClaimState = (typeof OrgClaimState)[keyof typeof OrgClaimState];
 
+export const OrgProvisioningSource = {
+	Agent: "agent",
+} as const;
+
+export type OrgProvisioningSource =
+	(typeof OrgProvisioningSource)[keyof typeof OrgProvisioningSource];
+
 export const organizations = pgTable(
 	"organizations",
 	{
@@ -127,6 +134,9 @@ export const organizations = pgTable(
 		sandbox_icon: text("sandbox_icon"),
 
 		redis_config: jsonb("redis_config").$type<OrgRedisConfig>(),
+		provisioning_source: text(
+			"provisioning_source",
+		).$type<OrgProvisioningSource>(),
 		claim_state: text("claim_state").$type<OrgClaimState>(),
 		claim_token_hash: text("claim_token_hash"),
 		claim_expires_at: timestamp("claim_expires_at", { withTimezone: true }),

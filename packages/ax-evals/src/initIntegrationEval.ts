@@ -1,7 +1,5 @@
-import { execFile } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { promisify } from "node:util";
 import { currentSpan, Eval } from "braintrust";
 import chalk from "chalk";
 import {
@@ -39,38 +37,8 @@ import {
 	seedEvalCustomer,
 } from "./workspace/evalOrg.ts";
 import { saveFixtureDiff } from "./workspace/saveFixtureDiff.ts";
+import { seedCatalog } from "./workspace/seedCatalog.ts";
 import { sweepStaleWorkspaces } from "./workspace/sweepStaleWorkspaces.ts";
-
-const run = promisify(execFile);
-
-/** Push the case's catalog into the run org before the agent starts — the
- * fixture integrates against an org whose plans already exist. */
-const seedCatalog = async ({
-	workspaceDir,
-	config,
-	backendUrl,
-	secretKey,
-}: {
-	workspaceDir: string;
-	config: string;
-	backendUrl: string;
-	secretKey: string;
-}) => {
-	await writeFile(join(workspaceDir, "autumn.config.ts"), config);
-	// PATH already has the nightly wrapper from linkAtmn; --yes applies.
-	await run("atmn", ["push", "--yes"], {
-		cwd: workspaceDir,
-		env: {
-			...process.env,
-			PATH: `${join(workspaceDir, "node_modules/.bin")}:${process.env.PATH ?? ""}`,
-			AUTUMN_BASE_URL: backendUrl,
-			ATMN_CONFIG_PACKAGE: "atmn",
-			AUTUMN_SECRET_KEY: secretKey,
-		},
-	});
-	// The config stays in the workspace on purpose: it's how a real post-setup
-	// repo looks, and it's the agent's reference for plan/feature ids.
-};
 
 const logTurnToBraintrust = (turn: CompletedTurn) => {
 	currentSpan().traced(

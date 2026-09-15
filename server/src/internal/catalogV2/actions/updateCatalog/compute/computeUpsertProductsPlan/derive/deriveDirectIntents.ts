@@ -66,6 +66,34 @@ const resolvePinnedVersion = ({
 	});
 };
 
+/**
+ * A row addressed by internal_id under a different version_slug IS a slug
+ * rename — the config states the slug the row should carry now, the same way
+ * a differing plan_id beside internal_id states its new id.
+ */
+const slugRenameFromInternalId = ({
+	planParams,
+	planId,
+	productStatesContext,
+	internalIdRefs,
+}: {
+	planParams: UpdateCatalogPlanParams;
+	planId: string;
+	productStatesContext: ProductStatesContext;
+	internalIdRefs: InternalIdRefs;
+}): Pick<UpdateCatalogPlanParams, "new_version_slug"> => {
+	if (planParams.new_version_slug !== undefined) return {};
+	if (planParams.internal_id === undefined) return {};
+	if (planParams.version_slug === undefined) return {};
+	const ref = internalIdRefs.get(planParams.internal_id);
+	if (!ref) return {};
+	const current = (productStatesContext.versionsByPlanId[planId] ?? []).find(
+		(product) => product.version === ref.version,
+	);
+	if (!current || current.version_slug === planParams.version_slug) return {};
+	return { new_version_slug: planParams.version_slug };
+};
+
 /** Explicit pins first (incl. resolved slugs), then omit→active / new_version max+1.
  * Unknown `version_slug` is excluded here; versioning errors reject it. */
 const resolveVersionsForPlan = ({
@@ -86,7 +114,15 @@ const resolveVersionsForPlan = ({
 			productStatesContext,
 			internalIdRefs,
 		});
-		return version !== undefined ? { ...planParams, version } : planParams;
+		const slugRename = slugRenameFromInternalId({
+			planParams,
+			planId,
+			productStatesContext,
+			internalIdRefs,
+		});
+		return version !== undefined
+			? { ...planParams, ...slugRename, version }
+			: planParams;
 	});
 
 	const withExplicitVersion = resolved

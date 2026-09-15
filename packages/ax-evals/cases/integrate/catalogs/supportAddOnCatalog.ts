@@ -22,6 +22,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 180, interval: "month" },
 			items: [
@@ -34,6 +36,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "support_addon",
+			versionSlug: "v1",
+			active: true,
 			name: "Priority Support Add-on",
 			addOn: true,
 			price: { amount: 50, interval: "month" },

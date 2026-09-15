@@ -1,6 +1,7 @@
 import { ErrCode, ProductNotFoundError, RecaseError } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
+import { handlePartialPlanArchiveErrors } from "./handlePartialPlanArchiveErrors";
 import { handleRemovePlanVariantErrors } from "./handleRemovePlanVariantErrors";
 
 /** Throws when a removal is unknown, or contradicted by the same request. */
@@ -44,5 +45,6 @@ export const handleRemovePlanErrors = ({
 		}
 	}
 
+	handlePartialPlanArchiveErrors({ updateCatalogPlan });
 	handleRemovePlanVariantErrors({ updateCatalogPlan });
 };

@@ -3,6 +3,7 @@ import { publicServiceUrlsFromDashboard } from "../devProxy/cloudflareConfig.ts"
 import type { RegistryEntry, WorktreeAliases } from "../types.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
 import {
+	aliasesFor,
 	checkoutPortFor,
 	EMULATE_PORT,
 	leafPortFor,
@@ -37,6 +38,32 @@ export function loopbackServiceUrls({
 		emulate: `http://localhost:${EMULATE_PORT}`,
 		leaf: `http://localhost:${leafPortFor(worktreeNum)}`,
 		vite: `http://localhost:${vitePortFor(worktreeNum)}`,
+	};
+}
+
+/** Local dashboard / API URLs for this worktree (portless aliases when provisioned). */
+export function localServiceUrls({
+	entry,
+}: {
+	entry: Pick<RegistryEntry, "worktreeNum" | "branchName">;
+}): PublicServiceUrls {
+	const n = entry.worktreeNum;
+	if (entry.branchName) {
+		const aliases = aliasesFor(n);
+		return {
+			api: aliases.apiUrl,
+			checkout: `http://localhost:${checkoutPortFor(n)}`,
+			emulate: emulateGoogleUrl({}),
+			leaf: `http://localhost:${leafPortFor(n)}`,
+			vite: aliases.viteUrl,
+		};
+	}
+	return {
+		api: `http://localhost:${serverPortFor(n)}`,
+		checkout: `http://localhost:${checkoutPortFor(n)}`,
+		emulate: emulateGoogleUrl({}),
+		leaf: `http://localhost:${leafPortFor(n)}`,
+		vite: `http://localhost:${vitePortFor(n)}`,
 	};
 }
 

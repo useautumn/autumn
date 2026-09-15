@@ -7,52 +7,40 @@ One-off purchases are single-charge plans that don't recur. They're used for one
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
-Set the plan's `price.interval` to `one_off`, or omit `interval` on the item price for a one-time charge:
+Set `interval: "one_off"` on the plan's `price`, or on the item price, for a one-time charge:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const creditTopUp = plan({
-  id: 'credit_top_up',
-  name: 'Credit Top-Up',
+  planId: "credit_top_up",
+  versionSlug: "v1",
+  active: true,
+  name: "Credit Top-Up",
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       price: {
         amount: 10,
         billingUnits: 500,
-        billingMethod: 'prepaid',
-        interval: 'one_off',
+        billingMethod: "prepaid",
+        interval: "one_off",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [credits], plans: [creditTopUp] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and click **Create Plan**
-2. Set the plan name and ID
-3. Under **Price**, select **One-off** as the interval — or leave no base price if pricing is purely feature-based
-4. Add a feature with a **prepaid** price. The customer will select a quantity at checkout
-5. Toggle **Add-on** if this should be purchasable alongside other plans
-6. Click **Create**
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How it works
 
@@ -128,50 +116,40 @@ This is useful for setup fees, one-time credit grants, or any charge that should
 > **Example** <br />
 > A Pro plan charges $20/month plus a one-time $50 setup fee. The customer's first invoice is $70, and subsequent invoices are $20.
 
-<Tabs>
-<Tab title="CLI">
-
 Add a non-consumable feature for the setup fee, then include it as a separate one-off item alongside the recurring base price:
 
 ```ts autumn.config.ts expandable
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const setupFee = feature({
-  id: 'setup_fee',
-  name: 'Setup Fee',
-  type: 'metered',
+  featureId: "setup_fee",
+  name: "Setup Fee",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: setupFee.id,
+    {
+      featureId: setupFee.featureId,
       price: {
         amount: 50,
-        billingMethod: 'prepaid',
-        interval: 'one_off',
+        billingMethod: "prepaid",
+        interval: "one_off",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [setupFee], plans: [pro] });
 ```
 
 When you attach the plan, you can select a quantity for the setup fee. The $20/month base price recurs on every invoice. The setup fee item is charged once on the first invoice only.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Create a **boolean** feature for the setup fee (e.g., `setup_fee`)
-2. Create a plan with a **recurring** base price (e.g., $20/month)
-3. Add the setup fee feature as an item and set its price interval to **One-off**
-4. The recurring charge will bill every cycle; the one-off charge applies to the first invoice only
-
-</Tab>
-</Tabs>
 
 ## Balance stacking
 

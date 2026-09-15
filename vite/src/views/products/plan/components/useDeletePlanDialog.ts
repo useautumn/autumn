@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useProductQuery } from "@/views/products/product/hooks/useProductQuery";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { useProductQuery } from "@/views/products/product/hooks/useProductQuery";
 import {
 	canChooseDeleteScope,
 	canDeleteThisVersion,
