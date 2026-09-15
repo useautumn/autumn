@@ -95,7 +95,7 @@ export default function AgentPromptPane({ active }: { active: boolean }) {
 	};
 
 	return (
-		<div className="border border-[#2A2A2A] bg-[#000000]/90">
+		<div className="border border-b-0 border-[#2A2A2A] bg-[#000000]/90">
 			<div className="flex items-center justify-between border-b border-[#2A2A2A] bg-[#000000] px-4 py-2">
 				<div className="flex items-center gap-2.5">
 					<span className="flex items-center gap-1.5 text-[#FFFFFF66]">

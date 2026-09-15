@@ -131,7 +131,7 @@ export default function AutumnConfig({
 	return (
 		<div
 			ref={containerRef}
-			className="@container w-full max-w-[520px] flex flex-col gap-4"
+			className="@container w-full max-w-[520px] flex flex-col"
 		>
 			<AgentPromptPane active={started} />
 
