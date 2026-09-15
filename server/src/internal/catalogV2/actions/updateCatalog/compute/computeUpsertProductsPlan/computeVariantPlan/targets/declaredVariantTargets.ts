@@ -57,7 +57,9 @@ export const declaredVariantTargets = ({
 				...(variant.processors !== undefined
 					? { processors: variant.processors }
 					: {}),
-				archived: variant.archived ?? false,
+				...(variant.archived !== undefined
+					? { archived: variant.archived }
+					: {}),
 				...(variant.new_version_slug
 					? { newVersionSlug: variant.new_version_slug }
 					: {}),
