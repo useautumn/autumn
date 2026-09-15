@@ -4,35 +4,40 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { loadPlannedCustomerProducts } from "@/internal/billing/v2/execute/loadPlannedCustomerProducts";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
+/**
+ * Promotes pending rows in place and drops every already-materialized row
+ * from the plan, so a webhook retry after a partial execution never
+ * re-inserts what the first attempt already wrote.
+ */
 export const promotePendingCustomerProducts = async ({
 	ctx,
 	autumnBillingPlan,
 	fullCustomer,
-	metadataId,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	fullCustomer: FullCustomer;
-	metadataId: string;
 }) => {
-	const pendingCustomerProducts = await CusProductService.getByMetadataId({
-		db: ctx.db,
-		metadataId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		inStatuses: [CusProductStatus.Pending],
+	const existingCustomerProducts = await loadPlannedCustomerProducts({
+		ctx,
+		autumnBillingPlan,
 	});
 
-	if (!pendingCustomerProducts.length) return autumnBillingPlan;
+	if (!existingCustomerProducts.length) return autumnBillingPlan;
 
-	const promotedIds = new Set<string>();
+	const existingIds = new Set(
+		existingCustomerProducts.map((customerProduct) => customerProduct.id),
+	);
 
-	for (const customerProduct of pendingCustomerProducts) {
+	for (const customerProduct of existingCustomerProducts) {
+		if (customerProduct.status !== CusProductStatus.Pending) continue;
+
 		const plannedCustomerProduct =
-			autumnBillingPlan.insertCustomerProducts?.find(
+			autumnBillingPlan.insertCustomerProducts.find(
 				(planned) => planned.id === customerProduct.id,
 			);
 		if (!plannedCustomerProduct) continue;
@@ -55,8 +60,6 @@ export const promotePendingCustomerProducts = async ({
 				customerProduct,
 			});
 		}
-
-		promotedIds.add(customerProduct.id);
 	}
 
 	return {
@@ -64,9 +67,8 @@ export const promotePendingCustomerProducts = async ({
 		customPrices: undefined,
 		customEntitlements: undefined,
 		customFreeTrial: undefined,
-		insertCustomerProducts:
-			autumnBillingPlan.insertCustomerProducts?.filter(
-				(planned) => !promotedIds.has(planned.id),
-			) ?? [],
+		insertCustomerProducts: autumnBillingPlan.insertCustomerProducts.filter(
+			(planned) => !existingIds.has(planned.id),
+		),
 	};
 };

@@ -17,6 +17,7 @@ import {
 } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { hasMaterializedCustomerProducts } from "@/internal/billing/v2/execute/hasMaterializedCustomerProducts";
 import { promotePendingCustomerProducts } from "@/internal/billing/v2/execute/promotePendingCustomerProducts";
 import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -85,13 +86,29 @@ const executeCheckoutSessionMetadataV2 = async ({
 		checkoutContext,
 	});
 
+	// A webhook retry after a partial execution: the first attempt already applied
+	// the plan to Stripe (and the customer may have moved plans since), so every
+	// Stripe write and every freshly-generated row below is skipped.
+	const alreadyMaterialized = await hasMaterializedCustomerProducts({
+		ctx,
+		autumnBillingPlan: deferredData.billingPlan.autumn,
+	});
+	if (alreadyMaterialized) {
+		ctx.logger.warn(
+			`[checkout.completed] Metadata ${metadata.id} already materialized, skipping Stripe updates`,
+		);
+	}
+
 	// 1b. Fold in Stripe Checkout "optional items" the caller didn't request via
 	// plan_id but the customer selected and paid for. Skipped for create-schedule
 	// checkouts: the deferred phase bookkeeping only knows about the products it
 	// was told about ahead of time, and can't place an unplanned product into a
 	// phase after the fact.
 	let dataWithOptionalItems = deferredData;
-	if (!isCreateScheduleBillingContext(deferredData.billingContext)) {
+	if (
+		!alreadyMaterialized &&
+		!isCreateScheduleBillingContext(deferredData.billingContext)
+	) {
 		const optionalItemMatch = await matchOptionalInvoiceItemsToProducts({
 			ctx,
 			checkoutContext,
@@ -133,17 +150,21 @@ const executeCheckoutSessionMetadataV2 = async ({
 	});
 
 	// 3. Modify Stripe subscription to include other interval prices / 0 quantity prices
-	await modifyStripeSubscriptionFromCheckout({
-		ctx,
-		checkoutContext,
-		deferredData: updatedDeferredData,
-	});
+	if (!alreadyMaterialized) {
+		await modifyStripeSubscriptionFromCheckout({
+			ctx,
+			checkoutContext,
+			deferredData: updatedDeferredData,
+		});
+	}
 
-	const stripeScheduleId = await createStripeScheduleFromCheckout({
-		ctx,
-		checkoutContext,
-		deferredData: updatedDeferredData,
-	});
+	const stripeScheduleId = alreadyMaterialized
+		? null
+		: await createStripeScheduleFromCheckout({
+				ctx,
+				checkoutContext,
+				deferredData: updatedDeferredData,
+			});
 
 	if (stripeScheduleId) {
 		addStripeSubscriptionScheduleIdToBillingPlan({
@@ -170,7 +191,6 @@ const executeCheckoutSessionMetadataV2 = async ({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
-		metadataId: metadata.id,
 	});
 
 	// Execute autumn billing plan (includes customer products, upsertSubscription, upsertInvoice)
@@ -179,6 +199,10 @@ const executeCheckoutSessionMetadataV2 = async ({
 		autumnBillingPlan: autumnBillingPlanToExecute,
 		stripeInvoice: checkoutContext.stripeInvoice,
 	});
+
+	// Deleted right after the DB commit: a retry past this point would re-apply
+	// balance deltas, so a redelivery after a failure below must find no metadata.
+	await MetadataService.delete({ db: ctx.db, id: metadata.id });
 
 	await persistDeferredCreateSchedule({
 		ctx,
@@ -204,9 +228,6 @@ const executeCheckoutSessionMetadataV2 = async ({
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 		originalFullCustomer: updatedDeferredData.billingContext.fullCustomer,
 	});
-
-	// Delete metadata after successful execution
-	await MetadataService.delete({ db: ctx.db, id: metadata.id });
 
 	const newCustomerProducts =
 		updatedDeferredData.billingPlan.autumn.insertCustomerProducts;
