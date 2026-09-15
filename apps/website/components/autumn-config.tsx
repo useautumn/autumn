@@ -161,13 +161,6 @@ export default function AutumnConfig({
 							<SyntaxHighlighter
 								language="javascript"
 								style={autumnTheme}
-								showLineNumbers
-								lineNumberStyle={{
-									color: "#FFFFFF4D",
-									minWidth: "2rem",
-									paddingRight: "1rem",
-									userSelect: "none",
-								}}
 								customStyle={{
 									background: "transparent",
 									padding: 0,
