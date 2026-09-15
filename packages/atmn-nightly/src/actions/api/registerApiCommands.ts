@@ -107,10 +107,12 @@ export const registerApiCommands = ({
 						const response = await callApi(call);
 						process.stdout.write(`${JSON.stringify(response, null, 2)}\n`);
 					} catch (error) {
-						// The server's reply is the answer, so it is shown whole; the
-						// status line goes to stderr so stdout stays the body alone.
+						// The server's reply is the answer, so it is shown whole: the
+						// status line on stderr, the body on stdout like a success.
 						if (!(error instanceof ApiResponseError)) throw error;
-						process.stderr.write(`${renderApiResponseError({ error })}\n`);
+						const { statusLine, body } = renderApiResponseError({ error });
+						process.stderr.write(`${statusLine}\n`);
+						process.stdout.write(`${body}\n`);
 						process.exitCode = 1;
 					}
 				},
