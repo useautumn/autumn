@@ -56,6 +56,11 @@ export const registerApiCommands = ({
 			.argument("[fields...]", "body fields as key=value")
 			.option("--body <json>", "the whole JSON body; - reads stdin")
 			.option(
+				"-H, --header <header>",
+				'an extra request header, "name: value"; repeatable',
+				(value: string, previous: string[] = []) => [...previous, value],
+			)
+			.option(
 				"--curl",
 				"print the request as a curl command instead of sending it",
 			)
@@ -63,7 +68,7 @@ export const registerApiCommands = ({
 			.action(
 				async (
 					args: string[],
-					options: { body?: string; curl?: boolean },
+					options: { body?: string; header?: string[]; curl?: boolean },
 					command: Command,
 				) => {
 					const target = targetOf(command);
@@ -73,6 +78,7 @@ export const registerApiCommands = ({
 						secretKey: requireSecretKey({ target }),
 						...(options.body === undefined ? {} : { body: options.body }),
 						fields: parseFieldArgs({ args }),
+						headers: options.header ?? [],
 					};
 					if (options.curl === true) {
 						process.stdout.write(

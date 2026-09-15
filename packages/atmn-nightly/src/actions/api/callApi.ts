@@ -10,6 +10,8 @@ export type ApiCallOptions = {
 	body?: string;
 	/** `key=value` arguments, keyed by wire name; a JSON-typed field arrives as text. */
 	fields?: Record<string, string>;
+	/** `-H "name: value"`, repeatable; a stated header wins over the default. */
+	headers?: string[];
 	readStdin?: () => Promise<string>;
 	fetch?: typeof globalThis.fetch;
 };
@@ -136,6 +138,25 @@ const defaultReadStdin = async (): Promise<string> => {
 	return Buffer.concat(chunks).toString("utf8");
 };
 
+/** `-H "x-api-version: 2.3.0"` → `["x-api-version", "2.3.0"]`; the name is lowercased like fetch does. */
+export const parseHeaderArgs = ({
+	headers,
+}: {
+	headers: string[];
+}): Record<string, string> => {
+	const parsed: Record<string, string> = {};
+	for (const header of headers) {
+		const at = header.indexOf(":");
+		const name = at > 0 ? header.slice(0, at).trim().toLowerCase() : "";
+		if (name === "")
+			throw new Error(
+				`Expected -H "name: value", got ${JSON.stringify(header)}.`,
+			);
+		parsed[name] = header.slice(at + 1).trim();
+	}
+	return parsed;
+};
+
 export type ApiRequest = {
 	url: string;
 	headers: Record<string, string>;
@@ -148,6 +169,7 @@ export const buildApiRequest = async ({
 	secretKey,
 	body,
 	fields,
+	headers = [],
 	readStdin,
 }: Omit<ApiCallOptions, "fetch">): Promise<ApiRequest> => ({
 	url: `${baseUrl}${route.path}`,
@@ -155,6 +177,7 @@ export const buildApiRequest = async ({
 		authorization: `Bearer ${secretKey}`,
 		"content-type": "application/json",
 		"x-api-version": API_VERSION,
+		...parseHeaderArgs({ headers }),
 	},
 	body: JSON.stringify(
 		(await buildApiBody({ route, body, fields, readStdin })) ?? {},
@@ -163,7 +186,8 @@ export const buildApiRequest = async ({
 
 const shellQuote = (text: string): string => `'${text.replace(/'/g, "'\\''")}'`;
 
-/** The same request as a curl line; the key is elided so the line is safe to paste anywhere. */
+/** The same request as a curl line. The key is replaced by its env var, in
+ * double quotes so the shell expands it; everything else is single-quoted. */
 export const renderCurl = ({
 	request,
 	secretKeyName,
@@ -174,9 +198,10 @@ export const renderCurl = ({
 }): string =>
 	[
 		`curl -X POST ${shellQuote(request.url)}`,
-		...Object.entries(request.headers).map(
-			([name, value]) =>
-				`  -H ${shellQuote(`${name}: ${name === "authorization" ? `Bearer $${secretKeyName}` : value}`)}`,
+		...Object.entries(request.headers).map(([name, value]) =>
+			name === "authorization"
+				? `  -H "authorization: Bearer $${secretKeyName}"`
+				: `  -H ${shellQuote(`${name}: ${value}`)}`,
 		),
 		`  -d ${shellQuote(request.body)}`,
 	].join(" \\\n");

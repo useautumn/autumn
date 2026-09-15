@@ -11,6 +11,7 @@ import {
 	callApi,
 	findApiRoute,
 	parseFieldArgs,
+	parseHeaderArgs,
 	renderCurl,
 } from "../src/actions/api/callApi";
 import { API_ROUTES, API_VERSION } from "../src/generated/apiRoutes";
@@ -143,6 +144,20 @@ test("a failure surfaces the server's message", async () => {
 	).rejects.toThrow(AutumnApiError);
 });
 
+test("-H adds a header and can override the api version", async () => {
+	const request = await buildApiRequest({
+		route: check,
+		baseUrl: "https://api.useautumn.com",
+		secretKey: "sk",
+		headers: ["Idempotency-Key: abc", "X-Api-Version: 2.3.0"],
+	});
+	expect(request.headers["idempotency-key"]).toBe("abc");
+	expect(request.headers["x-api-version"]).toBe("2.3.0");
+	expect(() => parseHeaderArgs({ headers: ["nocolon"] })).toThrow(
+		'Expected -H "name: value"',
+	);
+});
+
 test("--curl prints the request with the key's env var in place of the key", async () => {
 	const request = await buildApiRequest({
 		route: check,
@@ -152,7 +167,8 @@ test("--curl prints the request with the key's env var in place of the key", asy
 	});
 	const curl = renderCurl({ request, secretKeyName: "AUTUMN_PROD_SECRET_KEY" });
 	expect(curl).not.toContain("sk_secret");
-	expect(curl).toContain("Bearer $AUTUMN_PROD_SECRET_KEY");
+	// Double-quoted so a shell expands the variable; single quotes would send it literally.
+	expect(curl).toContain('-H "authorization: Bearer $AUTUMN_PROD_SECRET_KEY"');
 	expect(curl).toContain("'https://api.useautumn.com/v1/balances.check'");
 	expect(curl).toContain(`-d '{"customer_id":"it'\\''s"}'`);
 });
