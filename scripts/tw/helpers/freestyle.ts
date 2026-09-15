@@ -352,11 +352,7 @@ const warmServerEnv = (): Record<string, string> => {
 		AUTUMN_EDGE_CONFIG_OVERRIDE_B64: EDGE_CONFIG_OVERRIDE_B64,
 		TW_WORKER_MODE: "1",
 	};
-	// Baked unconditionally: only the svix shard binds an app, so it's inert
-	// on every other worker but present when that shard's server sends.
-	if (process.env.SVIX_API_KEY) {
-		env.SVIX_API_KEY = process.env.SVIX_API_KEY;
-	}
+
 	return env;
 };
 

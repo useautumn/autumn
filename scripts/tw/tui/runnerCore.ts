@@ -286,9 +286,9 @@ const runWithReschedule = async (params: {
 export const runSwarmTests = async (
 	files: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number },
+	opts: { maxParallel: number; totalFiles?: number },
 ): Promise<void> => {
-	setRunTotal(files.length);
+	setRunTotal(opts.totalFiles ?? files.length);
 	const limit = pLimit(opts.maxParallel);
 
 	const runFileWithRetry = async (file: string): Promise<void> => {

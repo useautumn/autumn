@@ -38,7 +38,6 @@ import {
 import chalk from "chalk";
 import pLimit from "p-limit";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
-import type { TestExecutor } from "../../testScripts/testExecutor.ts";
 import {
 	DATABASE_CRITICAL_URL,
 	DATABASE_URL,
@@ -91,6 +90,7 @@ import {
 	sandboxName,
 	vercelTags,
 } from "../helpers/owner.ts";
+import { planShardWorkers } from "../helpers/planShardWorkers.ts";
 import { WorkerPool } from "../helpers/pool.ts";
 import {
 	createWarmSandbox,
@@ -132,7 +132,7 @@ import {
 	createSvixApp as orchestratorCreateSvixApp,
 	partitionShards,
 } from "../helpers/svix.ts";
-import { runSwarmTests } from "../tui/runnerCore.ts";
+import { runShardTests } from "../tui/runShardTests.ts";
 import {
 	bumpAccountDone,
 	bumpSandboxDone,
@@ -1017,7 +1017,6 @@ const provisionWorker = async ({
 	runId,
 	warmName,
 	isSvixShard,
-	svixAppId,
 	ownerEmail,
 	ingressUrl,
 	ingressToken,
@@ -1030,7 +1029,6 @@ const provisionWorker = async ({
 	runId: string;
 	warmName: string;
 	isSvixShard: boolean;
-	svixAppId?: string;
 	ownerEmail: string;
 	ingressUrl: string;
 	ingressToken: string;
@@ -1067,6 +1065,12 @@ const provisionWorker = async ({
 	}
 	bumpStripeDone();
 	const stripeMs = Date.now() - fanoutStart;
+
+	let svixAppId: string | undefined;
+	if (isSvixShard) {
+		svixAppId = await provisionSvixApp(() => orchestratorCreateSvixApp(orgId));
+		await registry.addSvixApp({ runId, svixAppId });
+	}
 
 	// 2. Fork the worker with its per-worker env (fork does NOT copy env). The SDK
 	//    forks from the warm parent's NAME (its current snapshot is the warm one).
@@ -1121,6 +1125,8 @@ const provisionWorker = async ({
 
 	return { handle, sandbox, timing: { stripeMs, createMs, tunnelMs, readyMs } };
 };
+
+const provisionSvixApp = pLimit(10);
 
 // ============================================================================
 // Teardown (§9a — idempotent, orchestrator-driven from the registry)
@@ -1268,10 +1274,8 @@ const teardown = async ({
 		);
 	}
 
-	if (entry.svixAppId) {
-		await timeBoxed(`delete svix app ${entry.svixAppId}`, () =>
-			deleteSvixApp(entry.svixAppId as string),
-		);
+	for (const appId of registry.getSvixAppIds(entry)) {
+		await timeBoxed(`delete svix app ${appId}`, () => deleteSvixApp(appId));
 	}
 
 	// Delete sandboxes concurrently too (bounded) — terminating N µVMs serially is
@@ -1344,28 +1348,16 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 
 	const { svixFiles, normalFiles } = await partitionShards(allFiles);
 
-	// Svix/webhook tests are skipped for now: they need a Trigger.dev runner
-	// (TRIGGER_SECRET_KEY) plus a browser (Kernel/Playwright) that aren't wired
-	// into the swarm yet, so they would only ever fail. Drop them from the run and
-	// surface the count. The remaining files run mixed into the pool with no
-	// dedicated shard — no blocking, no --max>=2 requirement.
-	if (svixFiles.length > 0) {
-		warn(
-			`skipping ${svixFiles.length} svix/webhook file(s) for now (Trigger + browser not wired into the swarm)`,
-		);
-	}
-	if (normalFiles.length === 0) {
-		throw new Error(
-			"no runnable test files after skipping svix/webhook files — nothing to run",
-		);
-	}
-	log(`running ${normalFiles.length} file(s) on the pool (svix skipped)`);
-
-	// Pool sizing: never over-provision (plan §8.7). One worker covers ≥1 file.
-	// No dedicated svix shard anymore, so the whole pool runs the normal files.
 	const requestedWorkers = Math.max(1, args.workers);
-	const effectiveWorkers = Math.min(requestedWorkers, normalFiles.length);
-	const needsSvixShard = false;
+	const { totalWorkers: effectiveWorkers, svixWorkers } = planShardWorkers({
+		workers: requestedWorkers,
+		normalFileCount: normalFiles.length,
+		svixFileCount: svixFiles.length,
+	});
+	if (svixWorkers > 0) requireSecret("SVIX_API_KEY");
+	log(
+		`running ${normalFiles.length} normal and ${svixFiles.length} Svix files on ${effectiveWorkers} isolated workers`,
+	);
 
 	// Size the per-worker Stripe budget now that the pool size is final — every
 	// worker env built below reads it.
@@ -1542,17 +1534,6 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		);
 
 		// ----- FAN-OUT --------------------------------------------------------
-		// Worker 0 is the dedicated svix shard when svix files exist (plan §7).
-		// The orchestrator creates + RECORDS the one svix app BEFORE that worker
-		// boots, so a fork/boot failure can never orphan an untracked Svix app
-		// (§9a); the worker only binds the recorded id into svix_config.
-		let svixAppId: string | undefined;
-		if (needsSvixShard) {
-			log("creating dedicated svix shard app (orchestrator-driven, §9a)");
-			svixAppId = await orchestratorCreateSvixApp(TEST_ORG_CONFIG.id);
-			await registry.setSvixApp(runId, svixAppId);
-			log(`svix app ${svixAppId} created and recorded`);
-		}
 
 		// Claim pooled Stripe sub-accounts (reuse clean, create the shortfall) under
 		// the cross-machine git-ref lock — Stripe metadata read-modify-write is racy
@@ -1600,7 +1581,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const fanoutStart = Date.now();
 		const provisionTasks: Promise<ProvisionedWorker>[] = [];
 		for (let idx = 0; idx < effectiveWorkers; idx++) {
-			const isSvixShard = needsSvixShard && idx === 0;
+			const isSvixShard = idx < svixWorkers;
 			const workerName = expectedNames[idx];
 			provisionTasks.push(
 				provisionWorker({
@@ -1609,7 +1590,6 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					runId,
 					warmName,
 					isSvixShard,
-					svixAppId: isSvixShard ? svixAppId : undefined,
 					ownerEmail,
 					ingressUrl: ingress.publicUrl,
 					ingressToken: ingress.token,
@@ -1732,89 +1712,62 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			sandboxByName.set(handle.name, sandbox);
 		}
 
-		const svixShard = needsSvixShard
-			? provisioned.find(({ handle }) => handle.isSvixShard)
-			: undefined;
-		// If the dedicated svix shard was the worker that failed to provision, its
-		// files can't run — surface that loudly rather than silently dropping them.
-		if (needsSvixShard && !svixShard && svixFiles.length > 0) {
-			warn(
-				`fan-out: the svix shard failed to provision — ${svixFiles.length} svix file(s) will be SKIPPED this run`,
-			);
-		}
-
 		const resolveSandbox = (
 			worker: WorkerHandle,
 		): ProviderSandbox | undefined => sandboxByName.get(worker.name);
+		const svixHandles = provisioned
+			.filter(({ handle }) => handle.isSvixShard)
+			.map(({ handle }) => handle);
+		const normalHandles = provisioned
+			.filter(({ handle }) => !handle.isSvixShard)
+			.map(({ handle }) => handle);
+		if (svixFiles.length > 0 && svixHandles.length === 0)
+			throw new Error(
+				"No Svix workers provisioned; cannot run selected Svix tests",
+			);
+		if (normalFiles.length > 0 && normalHandles.length === 0)
+			throw new Error(
+				"No normal workers provisioned; cannot run selected tests",
+			);
 
-		// Drive the swarm TUI's RUN phase.
+		const svixPool = new WorkerPool(svixHandles, 1);
+		const normalPool = new WorkerPool(
+			normalHandles,
+			Math.max(1, args.perWorker),
+		);
+
+		const stopCulling = startCulling(normalPool, resolveSandbox);
 		milestone(
-			"run: executing tests across the pool — live progress in the dashboard",
+			"run: executing tests across both pools — live progress in the dashboard",
 		);
 		setPhase("run");
-
-		// Wall-clock of the RUN phase — the correct parallel-aware test duration
-		// (the per-file durations summed by the runner over-count by ~Nx).
 		const runPhaseStart = Date.now();
-
-		// Route svix files onto the svix shard, normal onto the rest. The routing
-		// constraint is a build-time partition (plan §7): the svix files run on a
-		// pool of exactly the one svix shard, the normal files on a pool of the
-		// rest. When there's no svix shard, the whole pool runs the normal files.
-		if (svixShard && svixFiles.length > 0) {
-			log(`running ${svixFiles.length} svix file(s) on the dedicated shard`);
-			const svixPool = new WorkerPool(
-				[svixShard.handle],
-				Math.max(1, args.perWorker),
-			);
-			const svixExecutor = new RemoteExecutor({
-				pool: svixPool,
-				resolveSandbox,
-				toWorkerPath: toSandboxPath,
+		try {
+			await runShardTests({
+				shards: [
+					{
+						files: svixFiles,
+						executor: new RemoteExecutor({
+							pool: svixPool,
+							resolveSandbox,
+							toWorkerPath: toSandboxPath,
+						}),
+						maxParallel: Math.max(1, svixHandles.length),
+					},
+					{
+						files: normalFiles,
+						executor: new RemoteExecutor({
+							pool: normalPool,
+							resolveSandbox,
+							toWorkerPath: toSandboxPath,
+						}),
+						maxParallel: Math.max(1, normalHandles.length * args.perWorker),
+					},
+				],
 			});
-			await runFiles(svixFiles, svixExecutor, {
-				maxParallel: Math.max(1, args.perWorker),
-			});
+		} finally {
+			stopCulling();
 			svixPool.close();
-		}
-
-		if (normalFiles.length > 0) {
-			log(`running ${normalFiles.length} normal file(s) on the pool`);
-			const normalHandles = provisioned
-				.filter(({ handle }) => !(svixShard && handle.isSvixShard))
-				.map(({ handle }) => handle);
-			// Never construct a WorkerPool([]) while files remain: an empty pool's
-			// `acquire()` parks forever and hangs the run. The worker-count guard
-			// above should make this unreachable, but fail loud rather than hang.
-			if (normalHandles.length === 0) {
-				throw new Error(
-					`${normalFiles.length} normal file(s) remain but no normal workers are available (svix shard consumed the only worker) — pass --max>=2`,
-				);
-			}
-			const normalPool = new WorkerPool(
-				normalHandles,
-				Math.max(1, args.perWorker),
-			);
-			const normalExecutor = new RemoteExecutor({
-				pool: normalPool,
-				resolveSandbox,
-				toWorkerPath: toSandboxPath,
-			});
-			const normalParallel = Math.max(
-				1,
-				normalHandles.length * Math.max(1, args.perWorker),
-			);
-			// Demand-tracked culling: terminate idle workers beyond a 30%-of-initial
-			// buffer while the run drains, so we stop paying for the ~N idle sandboxes
-			// the stragglers leave behind. Busy workers are never culled.
-			const stopCulling = startCulling(normalPool, resolveSandbox);
-			try {
-				await runFiles(normalFiles, normalExecutor, {
-					maxParallel: normalParallel,
-				});
-			} finally {
-				stopCulling();
-			}
 			normalPool.close();
 		}
 
@@ -2017,22 +1970,4 @@ let lastRunCost: CostEstimate | undefined;
 export const getLastRunWallMs = (): number => lastRunWallMs;
 export const getLastRunCost = (): CostEstimate | undefined => lastRunCost;
 
-/**
- * Run a file set through the headless swarm runner (`runSwarmTests`), which drives
- * the opentui store. The pLimit window + two-phase retry + worker-death reschedule
- * live in `tui/runnerCore.ts`; this is a thin await. `bun t` keeps its own Ink
- * runner (`runTestsV2.tsx`) — the swarm no longer touches it.
- */
-const runFiles = async (
-	files: string[],
-	executor: TestExecutor,
-	opts: { maxParallel: number },
-): Promise<void> => {
-	if (files.length === 0) {
-		return;
-	}
-	await runSwarmTests(files, executor, { maxParallel: opts.maxParallel });
-};
-
-/** Propagate the worst test verdict to the process exit code (set in `index.ts`). */
 export const getLastRunExitCode = (): number => lastRunExitCode;

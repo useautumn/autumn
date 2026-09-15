@@ -7,6 +7,8 @@ const activeTempPaths: string[] = [
 	// Deferred logic review: loading another entity overwrites shared tracked usage.
 	"integration/billing/stripe-webhooks/invoice-created/invoice-created-per-entity-consumable.test.ts",
 	"integration/billing/stripe-webhooks/invoice-created/invoice-created-per-entity-consumable-advanced.test.ts",
+	// Deferred logic review: continuous events postpone the debounce flush past assertions.
+	"integration/balances/lock/check-with-lock-credit-system.test.ts",
 ];
 
 export const temp: TestGroup = {
