@@ -180,4 +180,10 @@ see remove-features t5. Locked in `catalog_update_ordering` plan, rule 1.)
 | Manual balance update on the unstamped balance succeeds | ✓ |
 | Price-shape predicate matrix (P1–P9) | ✓ unit `features/invoice-credit-item.test.ts` |
 | Flag flip is not a blockable change, no customer blocker | ✓ unit `features/invoice-credit-activation.test.ts` |
+| Legacy attach path stamps and itemizes | ✓ `billing/attach/invoice-credits/invoice-credits-edge-cases.test.ts` E1 |
+| Entity-scoped 1:1 balances itemize per entity; a zero-net entity adds no lines | ✓ E2 |
+| Usage during a free trial is not charged when the trial converts | ✓ E3 |
+| Customer billed in eur is itemized at the eur rate | ✓ E4 |
+| Mid-cycle switch to a non-1:1 plan itemizes the old balance and stamps the new one false | ✓ E5 |
+| Dashboard QA seeds (1:1, per-hundred, fractional, locked vs editable, playbook) | scenario `scenarios/balances/invoice-credit-stamp-scenario.test.ts` |
 
