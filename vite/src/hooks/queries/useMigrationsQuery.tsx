@@ -1,9 +1,17 @@
-import type { Migration, MigrationFilter, Operations } from "@autumn/shared";
+import type {
+	Migration,
+	MigrationFilter,
+	MigrationStatus,
+	Operations,
+} from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export type MigrationWithRunInfo = Migration & {
+	status: MigrationStatus;
+	/** Id of the migration whose executing run blocks this one, while waiting. */
+	blocked_by: string | null;
 	has_live_runs: boolean;
 	/** Whether a plain run of this migration takes the batch lane. */
 	batch_eligible: boolean;
