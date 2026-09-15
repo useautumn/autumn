@@ -3,11 +3,12 @@ import {
 	member,
 	type Organization,
 	OrgClaimState,
+	OrgProvisioningSource,
 	organizations,
 	session,
 	user,
 } from "@autumn/shared";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, notExists, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { AGENT_PROVISIONING_KEY_SOURCE } from "../agentAuthScopeKeys.js";
@@ -35,6 +36,7 @@ export const createPendingAgentOrg = async ({
 			createdAt: new Date(),
 			metadata: "",
 			deployed: false,
+			provisioning_source: OrgProvisioningSource.Agent,
 			claim_state: OrgClaimState.Pending,
 			claim_token_hash: org.claimTokenHash,
 			claim_expires_at: org.claimExpiresAt,
@@ -60,8 +62,20 @@ export const findPendingAgentOrg = async ({
 	db.query.organizations.findFirst({
 		where: and(
 			eq(organizations.claim_token_hash, claimTokenHash),
+			eq(organizations.provisioning_source, OrgProvisioningSource.Agent),
 			eq(organizations.claim_state, OrgClaimState.Pending),
 			gt(organizations.claim_expires_at, now),
+			notExists(
+				db
+					.select({ id: member.id })
+					.from(member)
+					.where(
+						and(
+							eq(member.organizationId, organizations.id),
+							eq(member.role, "owner"),
+						),
+					),
+			),
 		),
 	});
 
@@ -82,8 +96,20 @@ export const findPendingAgentOrgBySetupKeyHash = async ({
 			and(
 				eq(apiKeys.hashed_key, hashedKey),
 				sql`${apiKeys.meta}->>'source' = ${AGENT_PROVISIONING_KEY_SOURCE}`,
+				eq(organizations.provisioning_source, OrgProvisioningSource.Agent),
 				eq(organizations.claim_state, OrgClaimState.Pending),
 				gt(organizations.claim_expires_at, now),
+				notExists(
+					db
+						.select({ id: member.id })
+						.from(member)
+						.where(
+							and(
+								eq(member.organizationId, organizations.id),
+								eq(member.role, "owner"),
+							),
+						),
+				),
 			),
 		)
 		.limit(1);
@@ -97,7 +123,7 @@ export const claimPendingAgentOrg = async ({
 	userId,
 	now,
 }: {
-	db: Pick<DrizzleCli, "query" | "update" | "insert">;
+	db: Pick<DrizzleCli, "query" | "select" | "update" | "insert">;
 	claimTokenHash: string;
 	userId: string;
 	now: Date;
@@ -117,8 +143,20 @@ export const claimPendingAgentOrg = async ({
 		.where(
 			and(
 				eq(organizations.claim_token_hash, claimTokenHash),
+				eq(organizations.provisioning_source, OrgProvisioningSource.Agent),
 				eq(organizations.claim_state, OrgClaimState.Pending),
 				gt(organizations.claim_expires_at, now),
+				notExists(
+					db
+						.select({ id: member.id })
+						.from(member)
+						.where(
+							and(
+								eq(member.organizationId, organizations.id),
+								eq(member.role, "owner"),
+							),
+						),
+				),
 			),
 		)
 		.returning();

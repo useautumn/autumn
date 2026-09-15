@@ -29,13 +29,6 @@ const randomSlugSuffix = (): string =>
 const createClaimToken = (): string =>
 	crypto.randomBytes(32).toString("base64url");
 
-const buildClaimUrl = ({ claimToken }: { claimToken: string }): string => {
-	const frontendUrl = (
-		process.env.CLIENT_URL ?? "http://localhost:3000"
-	).replace(/\/$/, "");
-	return `${frontendUrl}/claim?token=${encodeURIComponent(claimToken)}`;
-};
-
 export const provisionAgentOrg = async ({
 	db,
 	name,
@@ -116,7 +109,6 @@ export const provisionAgentOrg = async ({
 		organization: provisioned,
 		apiKey,
 		claimToken,
-		claimUrl: buildClaimUrl({ claimToken }),
 		claimExpiresAt: provisioned.claim_expires_at!,
 	};
 };

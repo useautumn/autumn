@@ -38,6 +38,7 @@ export const handleClaimAgentOrg = createRoute({
 		}
 
 		return c.json({
+			claim_url: challenge.claimUrl,
 			expires_at: challenge.expiresAt.toISOString(),
 		});
 	},
