@@ -71,6 +71,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "team",
+			versionSlug: "v1",
+			active: true,
 			name: "Team",
 			price: { amount: 600, interval: "month" },
 			items: [
@@ -149,6 +151,8 @@ test("seed-starter-reuse: minting a second seat plan fails the one-license verdi
 		"\t],\n});\n",
 		`		plan({
 			planId: "starter_seat",
+			versionSlug: "v1",
+			active: true,
 			name: "Starter Seat",
 			price: { amount: 10, interval: "month" },
 			items: [
@@ -161,6 +165,8 @@ test("seed-starter-reuse: minting a second seat plan fails the one-license verdi
 		}),
 		plan({
 			planId: "starter",
+			versionSlug: "v1",
+			active: true,
 			name: "Starter",
 			items: [
 				{
@@ -175,8 +181,9 @@ test("seed-starter-reuse: minting a second seat plan fails the one-license verdi
 				},
 			],
 			licenses: [
-				{
+				license({
 					licensePlanId: "starter_seat",
+					versionSlug: "v1",
 					included: 1,
 					customize: {
 						price: { amount: 15, interval: "month" },
@@ -189,7 +196,7 @@ test("seed-starter-reuse: minting a second seat plan fails the one-license verdi
 						],
 						removeItems: [{ featureId: "credits" }],
 					},
-				},
+				}),
 			],
 		}),
 	],

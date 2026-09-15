@@ -9,11 +9,13 @@ export const computeFeatureOptionsChange = ({
 	updatedOptions,
 	quantityDifferenceForEntitlements,
 	customerPrice,
+	applyImmediately = false,
 }: {
 	previousOptions: FeatureOptions;
 	updatedOptions: FeatureOptions;
 	quantityDifferenceForEntitlements: number;
 	customerPrice: FullCustomerPrice;
+	applyImmediately?: boolean;
 }): FeatureOptions => {
 	const isUpgrade = quantityDifferenceForEntitlements > 0;
 
@@ -22,12 +24,14 @@ export const computeFeatureOptionsChange = ({
 		isUpgrade,
 	});
 
-	if (!isUpgrade && !shouldApplyProration) {
+	if (!applyImmediately && !isUpgrade && !shouldApplyProration) {
 		return {
 			...previousOptions,
 			upcoming_quantity: updatedOptions.quantity,
 		};
 	}
 
-	return updatedOptions;
+	return applyImmediately
+		? { ...updatedOptions, upcoming_quantity: null }
+		: updatedOptions;
 };

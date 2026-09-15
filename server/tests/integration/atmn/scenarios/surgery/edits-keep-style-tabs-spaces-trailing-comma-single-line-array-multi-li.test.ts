@@ -17,12 +17,12 @@ type StyleCase = {
 	raw: (editId: string, keepId: string) => string;
 };
 
-/** The `plan({...})` call naming `planId`, verbatim — balances parens rather
+/** The `plan({ active: true,...})` call naming `planId`, verbatim — balances parens rather
  * than assuming a shape, since push backfills `internalId` into it first. */
 const extractPlanBlock = (text: string, planId: string): string => {
 	const markerIndex = text.indexOf(`planId: "${planId}"`);
 	if (markerIndex === -1) throw new Error(`planId ${planId} not found`);
-	const start = text.lastIndexOf("plan({", markerIndex);
+	const start = text.lastIndexOf("plan({ active: true,", markerIndex);
 	let depth = 0;
 	let end = start;
 	for (; end < text.length; end++) {
@@ -44,13 +44,17 @@ const STYLES: Record<string, StyleCase> = {
 export default atmn({
 	plans: [
 		plan({
+			active: true,
 			planId: "${editId}",
 			name: "Edit",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 		}),
 		plan({
+			active: true,
 			planId: "${keepId}",
 			name: "Keep",
+			versionSlug: "v1",
 			price: { amount: 5, interval: "month" },
 		}),
 	],
@@ -62,13 +66,17 @@ export default atmn({
 export default atmn({
   plans: [
     plan({
+      active: true,
       planId: "${editId}",
       name: "Edit",
+      versionSlug: "v1",
       price: { amount: 20, interval: "month" },
     }),
     plan({
+      active: true,
       planId: "${keepId}",
       name: "Keep",
+      versionSlug: "v1",
       price: { amount: 5, interval: "month" },
     }),
   ],
@@ -79,8 +87,8 @@ export default atmn({
 		raw: (editId, keepId) => `${atmnImports()}
 export default atmn({
 	plans: [
-		plan({ planId: "${editId}", name: "Edit", price: { amount: 20, interval: "month" } }),
-		plan({ planId: "${keepId}", name: "Keep", price: { amount: 5, interval: "month" } }),
+		plan({ active: true, planId: "${editId}", name: "Edit", versionSlug: "v1", price: { amount: 20, interval: "month" } }),
+		plan({ active: true, planId: "${keepId}", name: "Keep", versionSlug: "v1", price: { amount: 5, interval: "month" } }),
 	],
 });
 `,
@@ -88,7 +96,7 @@ export default atmn({
 	"single-line array": {
 		raw: (editId, keepId) => `${atmnImports()}
 export default atmn({
-	plans: [plan({ planId: "${editId}", name: "Edit", price: { amount: 20, interval: "month" } }), plan({ planId: "${keepId}", name: "Keep", price: { amount: 5, interval: "month" } })],
+	plans: [plan({ active: true, planId: "${editId}", name: "Edit", versionSlug: "v1", price: { amount: 20, interval: "month" } }), plan({ active: true, planId: "${keepId}", name: "Keep", versionSlug: "v1", price: { amount: 5, interval: "month" } })],
 });
 `,
 	},
@@ -97,16 +105,20 @@ export default atmn({
 export default atmn({
 	plans: [
 		plan({
+			active: true,
 			planId: "${editId}",
 			name: "Edit",
+			versionSlug: "v1",
 			price: {
 				amount: 20,
 				interval: "month",
 			},
 		}),
 		plan({
+			active: true,
 			planId: "${keepId}",
 			name: "Keep",
+			versionSlug: "v1",
 			price: {
 				amount: 5,
 				interval: "month",
@@ -182,9 +194,11 @@ test.concurrent("edits keep style [comments inside the literal]", async () => {
 export default atmn({
 	plans: [
 		plan({
+			active: true,
 			planId: "${editId}",
 			// A note living inside the fixture literal.
 			name: "Edit",
+			versionSlug: "v1",
 			price: { amount: 20, interval: "month" },
 		}),
 	],

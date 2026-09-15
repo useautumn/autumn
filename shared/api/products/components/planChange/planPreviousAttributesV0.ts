@@ -20,6 +20,7 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 	archived: true,
 	metadata: true,
 	processors: true,
+	base_variant_id: true,
 })
 	.partial()
 	.extend({
@@ -41,6 +42,18 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 		processors: ApiPlanProcessorsSchema.nullable().optional().meta({
 			description:
 				"Previous payment processors when they changed. Null when the plan had none.",
+		}),
+		base_variant_id: ApiPlanV1Schema.shape.base_variant_id.optional().meta({
+			description:
+				"The base plan this variant pointed at before this update re-anchored it. Null when it was standalone.",
+		}),
+		base_version: z.number().int().min(1).nullable().optional().meta({
+			description:
+				"The base row version this variant pointed at before this update. Null when it was standalone.",
+		}),
+		base_version_slug: z.string().nullable().optional().meta({
+			description:
+				"The base row version slug this variant pointed at before this update. Null when it was standalone.",
 		}),
 		free_trial: ApiFreeTrialV2Schema.nullable().optional().meta({
 			description:

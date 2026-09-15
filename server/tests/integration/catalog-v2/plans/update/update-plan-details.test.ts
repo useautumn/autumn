@@ -360,7 +360,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 update details: archive / unarchive; omit preserves")}`,
+	`${chalk.yellowBright("catalogV2 update details: stated plans default live; archived true wins")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_det_arch");
@@ -384,15 +384,15 @@ test.concurrent(
 			});
 			await expectCatalogPlansCorrect({
 				autumn: autumnV2_3,
-				expected: [{ id: planId, name: "Still Archived", archived: true }],
+				expected: [{ id: planId, name: "Still Archived", archived: false }],
 			});
 
 			await autumnV2_3.catalogV2.update({
-				plans: [{ plan_id: planId, archived: false }],
+				plans: [{ plan_id: planId, archived: true }],
 			});
 			await expectCatalogPlansCorrect({
 				autumn: autumnV2_3,
-				expected: [{ id: planId, archived: false }],
+				expected: [{ id: planId, archived: true }],
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });

@@ -100,6 +100,7 @@ test.concurrent(
 							variants: [
 								{
 									variant_plan_id: variantId,
+									version: 1,
 									customize: {
 										upsert_licenses: [
 											{
@@ -160,6 +161,7 @@ test.concurrent(
 							variants: [
 								{
 									variant_plan_id: variantId,
+									version: 1,
 									customize: {
 										upsert_licenses: [
 											{

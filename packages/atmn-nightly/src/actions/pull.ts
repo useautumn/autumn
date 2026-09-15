@@ -8,9 +8,9 @@ import {
 import { dirname, join } from "node:path";
 import { ConfigNotFoundError, loadConfig } from "../config/loadConfig";
 import { loadEnvFiles } from "../env/loadEnv";
-import type { AutumnClient } from "../generated/client";
-import { COLLECTIONS, SINGLETONS } from "../generated/emit";
-import { splitWire } from "../generated/wire";
+import { AutumnApiError, type AutumnClient } from "../generated/client";
+import { COLLECTIONS, NESTED_FIXTURES, SINGLETONS } from "../generated/emit";
+import { splitWire, type WireDocument } from "../generated/wire";
 import { resolveProject } from "../project/resolveProject";
 import type { SettingsPreview } from "../render/renderPreview";
 import { applyPreview, type PreviewEntry } from "./pull/applyPreview";
@@ -41,6 +41,39 @@ export type PullOptions = {
 	write?: (text: string) => void;
 	/** Module specifiers a scaffolded config imports from; the package by default. */
 	imports?: ConfigImports;
+	/**
+	 * Discard the config on disk and pull as if from an empty directory. The
+	 * way out when the file describes a different org than the key targets.
+	 */
+	overwrite?: boolean;
+	/** Confirm replacing the local config when overwrite is set. */
+	yes?: boolean;
+};
+
+const OVERWRITE_HINT =
+	"Your config no longer matches this org's catalog. To replace it with the server's catalog: atmn pull --overwrite";
+
+/** Only a rejected catalog diff earns the overwrite hint. */
+const diffOrExplain = async ({
+	client,
+	wire,
+}: {
+	client: AutumnClient;
+	wire: WireDocument;
+}) => {
+	try {
+		return await client.diff(wire);
+	} catch (error) {
+		if (error instanceof AutumnApiError && error.status === 400) {
+			throw new Error(`${error.message}\n  ${OVERWRITE_HINT}`);
+		}
+		throw error;
+	}
+};
+
+/** Every fixture file a previous pull may have written beside the config. */
+const removeSourceFiles = ({ directory }: { directory: string }): void => {
+	for (const file of listSourceFiles({ directory })) unlinkSync(file);
 };
 
 /** No config means a first pull: scaffold one at `cwd`, then pull into it. */
@@ -49,6 +82,7 @@ const loadOrScaffold = async ({
 	cwd,
 	configPath,
 	imports,
+	overwrite,
 	write,
 }: {
 	dirs: string[];
@@ -56,15 +90,10 @@ const loadOrScaffold = async ({
 	/** `-c`: an exact file; scaffolded there when missing. */
 	configPath?: string;
 	imports: ConfigImports | undefined;
+	overwrite: boolean;
 	write: (text: string) => void;
 }) => {
-	try {
-		return await loadConfig({
-			dirs,
-			...(configPath === undefined ? {} : { configPath }),
-		});
-	} catch (error) {
-		if (!(error instanceof ConfigNotFoundError)) throw error;
+	const scaffold = () => {
 		const scaffolded = scaffoldConfig({
 			directory: cwd,
 			...(configPath === undefined ? {} : { configPath }),
@@ -72,6 +101,20 @@ const loadOrScaffold = async ({
 		});
 		write(`Scaffolded ${scaffolded}\n`);
 		return loadConfig({ dirs: [cwd], configPath: scaffolded });
+	};
+
+	if (overwrite) {
+		removeSourceFiles({ directory: cwd });
+		return scaffold();
+	}
+	try {
+		return await loadConfig({
+			dirs,
+			...(configPath === undefined ? {} : { configPath }),
+		});
+	} catch (error) {
+		if (!(error instanceof ConfigNotFoundError)) throw error;
+		return scaffold();
 	}
 };
 
@@ -153,8 +196,22 @@ export const runPull = async ({
 	includeMappings = false,
 	write = (text) => process.stdout.write(text),
 	imports,
+	overwrite = false,
+	yes = false,
 }: PullOptions): Promise<PullResult> => {
 	const project = resolveProject({ cwd, configFlag });
+	if (overwrite && !yes) {
+		write(
+			"This deletes every TypeScript file under your Autumn config directory, then pulls a fresh catalog. Re-run with --yes to overwrite.\n",
+		);
+		return {
+			configPath:
+				project.configPath ?? join(project.configDir, "autumn.config.ts"),
+			appended: [],
+			replaced: [],
+			deleted: [],
+		};
+	}
 	const dirs = configSearchDirs({ cwd, configPath: configFlag });
 	loadEnvFiles({ dirs: project.envDirs });
 
@@ -165,13 +222,14 @@ export const runPull = async ({
 			? { configPath: project.configPath }
 			: {}),
 		imports,
+		overwrite,
 		write,
 	});
 	const { catalog: wire, singletons } = splitWire(document);
 
 	const [preview, catalog, settingsPreview] = await Promise.all([
-		client.previewUpdate(wire),
-		// History rows too: pull routes them into plans or planVersions.
+		diffOrExplain({ client, wire }),
+		// Every version: each is a row in plans, with `active` on it.
 		client.get({ include_versions: true }),
 		// Always asked, even with no `settings` stated: a non-default flag the
 		// config omits is exactly what a first pull should write.
@@ -197,6 +255,9 @@ export const runPull = async ({
 	const previewRows = preview as unknown as Record<string, unknown>;
 	const catalogRows = catalog as unknown as Record<string, unknown>;
 	const featureTypes = featureTypesOf({ rows: rowsOf(catalogRows.features) });
+	const nestedBuilders = Object.fromEntries(
+		Object.values(NESTED_FIXTURES).map(({ path, builder }) => [path, builder]),
+	);
 
 	for (const [collection, spec] of Object.entries(COLLECTIONS)) {
 		// Versions share an id; until internal_id lands, pull cannot address them.
@@ -206,11 +267,11 @@ export const runPull = async ({
 			spec,
 			entries: entriesOf(previewRows[collection]),
 			catalogRows: withVariantIdentity(rowsOf(catalogRows[collection])),
-			statedRows: rowsOf((wire as Record<string, unknown>)[collection]),
 			configPath,
 			files,
 			includeMappings,
 			featureTypes,
+			nestedBuilders,
 		});
 		appended.push(...applied.appended);
 		replaced.push(...applied.replaced);

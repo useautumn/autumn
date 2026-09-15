@@ -28,6 +28,7 @@ export function useCreateVariant(product: ProductV2) {
 				plans: [
 					{
 						plan_id: product.id,
+						version: product.version,
 						variants: [
 							{
 								variant_plan_id: variantId.trim(),

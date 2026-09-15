@@ -12,8 +12,11 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import {
+	dashboardItem,
+	messagesItem,
+} from "../../licenses/utils/seedLicensePlans.js";
 import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
-import { dashboardItem, messagesItem } from "../../licenses/utils/seedLicensePlans.js";
 import {
 	expectVariantPlanCorrect,
 	expectVariantPointerCorrect,
@@ -81,10 +84,10 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-					versioning: "new_version",
-					active: true,
-					items: [messagesItem(100), dashboardItem()],
-					propagate: { variants: [{ plan_id: variantId }] },
+						versioning: "new_version",
+						active: true,
+						items: [messagesItem(100), dashboardItem()],
+						propagate: { variants: [{ plan_id: variantId }] },
 					},
 				],
 			});

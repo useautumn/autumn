@@ -13,6 +13,10 @@ import { toCatalogBillingControls } from "@/components/billing-controls/clearedB
 import { alignTierCurrencyShapes } from "../utils/currencyUtils";
 import { versionSlugRenamed } from "../utils/versionSlug";
 import { frontendProductToApiPlanV1 } from "../versioning/buildMigrationDraft";
+import {
+	type VariantRelationshipChange,
+	variantRelationshipPlanParams,
+} from "./variantRelationshipChange";
 
 const omitStripePriceId = <T extends object>(
 	value: T,
@@ -171,47 +175,32 @@ export const buildUpdateCatalogPlanParams = ({
 	};
 };
 
-const requestedBasePlanId = ({
-	editedProduct,
-	persistedBasePlanId,
-}: {
-	editedProduct: FrontendProduct;
-	persistedBasePlanId?: string | null;
-}): string | null => {
-	if (editedProduct.base_id === undefined) return persistedBasePlanId ?? null;
-	return editedProduct.base_id;
-};
-
-/** Content row plus a nest/unlink companion when the base-plan picker changed. */
+/**
+ * Relationship rows first, then the content row when there is content to
+ * write. A pure link/unlink save has no content row: the relationship rows
+ * already name every version, and a bare content row would be a second
+ * (partial) statement about the same plan.
+ */
 export const buildCatalogUpdatePlans = ({
-	persistedBasePlanId,
+	relationship = { kind: "unchanged" },
 	...args
 }: Parameters<typeof buildUpdateCatalogPlanParams>[0] & {
-	persistedBasePlanId?: string | null;
+	relationship?: VariantRelationshipChange;
 }): UpdateCatalogPlanParamsInput[] => {
 	const content = buildUpdateCatalogPlanParams(args);
-	const previousBasePlanId = persistedBasePlanId ?? null;
-	const nextBasePlanId = requestedBasePlanId({
-		editedProduct: args.editedProduct,
-		persistedBasePlanId,
+	const relationshipRows = variantRelationshipPlanParams({
+		variantPlanId: content.plan_id,
+		change: relationship,
 	});
-	const includeContent = args.includeContent !== false;
-
-	if (nextBasePlanId === null && previousBasePlanId !== null) {
-		return includeContent
-			? [{ ...content, base_variant_id: null }]
-			: [{ plan_id: content.plan_id, base_variant_id: null }];
-	}
-
-	if (nextBasePlanId !== null && nextBasePlanId !== previousBasePlanId) {
-		const nest: UpdateCatalogPlanParamsInput = {
-			plan_id: nextBasePlanId,
-			variants: [{ variant_plan_id: content.plan_id }],
-		};
-		return includeContent ? [nest, content] : [nest];
-	}
-
-	return [content];
+	const includeContent =
+		args.includeContent !== false || relationship.kind === "unchanged";
+	if (!includeContent) return relationshipRows;
+	if (relationship.kind !== "unlink") return [...relationshipRows, content];
+	// One statement per row: the content row carries its own version's unlink.
+	return [
+		...relationshipRows.filter((row) => row.version !== content.version),
+		{ ...content, base_variant_id: null },
+	];
 };
 
 export const tryBuildUpdateCatalogPlanParams = (

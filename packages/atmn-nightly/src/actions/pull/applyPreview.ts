@@ -1,13 +1,15 @@
-import { dirname, join } from "node:path";
+import { NESTED_FIXTURES } from "../../generated/emit";
 import {
 	branchSpecs,
 	type CollectionSpec,
 	emitFixture,
 	emitFixtureProperty,
+	emitNestedFixture,
 	resolveBranch,
 } from "../../generated/emitRuntime";
 import { appendToBinding } from "../../surgery/appendToBinding";
 import { appendToCollection } from "../../surgery/appendToCollection";
+import { appendToFixtureArray } from "../../surgery/appendToFixtureArray";
 import { deleteFixtureLiteral } from "../../surgery/deleteFixtureLiteral";
 import { deleteReference } from "../../surgery/deleteReference";
 import { ensureBuilderImport } from "../../surgery/ensureBuilderImport";
@@ -21,20 +23,19 @@ import {
 	patchFixtureProperty,
 } from "../../surgery/patchFixtureProperty";
 import { replaceFixture } from "../../surgery/replaceFixture";
-import { appendPlanVersionFixture } from "./appendPlanVersionFixture";
 import { changedFixtureKeys } from "./changedFixtureKeys";
 import { type FixtureConstraint, locateFixture } from "./locateFixture";
-import {
-	collectionTargetReferenceName,
-	resolveCollectionTarget,
-} from "./resolveCollectionTarget";
-import { activeVersionOf, routePlanRow } from "./routePlanRow";
+import { resolveCollectionTarget } from "./resolveCollectionTarget";
 
 export type PreviewEntry = { action?: string } & Record<string, unknown>;
 
-const DRAFT_FLAG = /\bactive:\s*false\b/;
-const snakeOf = (camel: string): string =>
-	camel.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+const NESTED_VARIANT = NESTED_FIXTURES.variants;
+const nestedVariantEdges = (
+	row: Record<string, unknown>,
+): Record<string, unknown>[] =>
+	Array.isArray(row[NESTED_VARIANT.path])
+		? (row[NESTED_VARIANT.path] as Record<string, unknown>[])
+		: [];
 
 export type ApplyPreviewArgs = {
 	collection: string;
@@ -43,13 +44,12 @@ export type ApplyPreviewArgs = {
 	entries: PreviewEntry[];
 	/** The catalog's server rows for this collection. */
 	catalogRows: Record<string, unknown>[];
-	/** The executed config's wire rows for this collection: what the code states. */
-	statedRows: Record<string, unknown>[];
 	configPath: string;
 	/** In-memory file sources, mutated in place; nothing touches disk here. */
 	files: Map<string, string>;
 	includeMappings: boolean;
 	featureTypes?: Readonly<Record<string, string>>;
+	nestedBuilders?: Readonly<Record<string, string>>;
 };
 
 export type ApplyPreviewResult = {
@@ -72,11 +72,11 @@ export const applyPreview = ({
 	spec,
 	entries,
 	catalogRows,
-	statedRows,
 	configPath,
 	files,
 	includeMappings,
 	featureTypes,
+	nestedBuilders,
 }: ApplyPreviewArgs): ApplyPreviewResult => {
 	const result: ApplyPreviewResult = {
 		appended: [],
@@ -85,9 +85,8 @@ export const applyPreview = ({
 		lines: [],
 		unlocated: [],
 	};
-
 	// Versioned collections key rows by id AND slug; a row without a slug is v1.
-	const versioned = spec.historyKey !== undefined;
+	const versioned = spec.versioned === true;
 	const slugOf = (row: Record<string, unknown>): string =>
 		typeof row.versionSlug === "string" ? row.versionSlug : "v1";
 	const keyOf = ({ id, slug }: { id: string; slug: string }): string =>
@@ -103,40 +102,27 @@ export const applyPreview = ({
 		bodyOf(row)[specFor(row).responseIdField];
 
 	const rowsById = new Map<string, Record<string, unknown>>();
-	const rowsByPlan = new Map<string, Record<string, unknown>[]>();
+	// A variant row lives in its parent's `variants[]`, never top-level: the
+	// preview still names it by its own plan id and slug, so it is indexed too.
+	const nestedRowsById = new Map<
+		string,
+		{ edge: Record<string, unknown>; parent: Record<string, unknown> }
+	>();
 	for (const row of catalogRows) {
 		// Archived rows are server history, not something a pull should write.
 		if (row.archived === true) continue;
 		const id = idOfRow(row);
 		if (typeof id !== "string") continue;
 		rowsById.set(keyOf({ id, slug: slugOf(row) }), row);
-		rowsByPlan.set(id, [...(rowsByPlan.get(id) ?? []), row]);
+		for (const edge of nestedVariantEdges(row)) {
+			const variantId = edge[NESTED_VARIANT.idField];
+			if (typeof variantId !== "string") continue;
+			nestedRowsById.set(keyOf({ id: variantId, slug: slugOf(edge) }), {
+				edge,
+				parent: row,
+			});
+		}
 	}
-
-	// The wire is snake_case; `active` there is membership: plans or history.
-	const statedActive = new Map<string, boolean>();
-	const wireIdField = snakeOf(spec.idField);
-	for (const row of statedRows) {
-		const active = row.active !== false;
-		if (typeof row.internal_id === "string")
-			statedActive.set(row.internal_id, active);
-		const id = row[wireIdField];
-		if (typeof id !== "string") continue;
-		const slug = typeof row.version_slug === "string" ? row.version_slug : "v1";
-		statedActive.set(keyOf({ id, slug }), active);
-	}
-	const configActiveOf = ({
-		id,
-		entry,
-	}: {
-		id: string;
-		entry: PreviewEntry;
-	}): boolean | undefined => {
-		const internalId = internalIdOf(entry);
-		if (internalId !== null && statedActive.has(internalId))
-			return statedActive.get(internalId);
-		return statedActive.get(keyOf({ id, slug: slugOf(entry) }));
-	};
 
 	const constraintsFor = (
 		entry: PreviewEntry,
@@ -146,106 +132,32 @@ export const applyPreview = ({
 			: undefined;
 	const internalIdOf = (entry: PreviewEntry): string | null =>
 		typeof entry.internalId === "string" ? entry.internalId : null;
-	const historyFileFor = ({
-		id,
+	const ensureNestedBuilderImports = ({
+		file,
 		row,
 	}: {
-		id: string;
+		file: string;
 		row: Record<string, unknown>;
-	}): string => {
-		const planRows = rowsByPlan.get(id) ?? [];
-		const activeVersion = activeVersionOf({
-			rows: planRows as { active?: boolean; version?: number }[],
-		});
-		const nonRootFiles = new Map(
-			[...files].filter(([file]) => file !== configPath),
-		);
-		for (const sibling of planRows) {
-			if (sibling === row) continue;
-			const route = routePlanRow({
-				row: sibling as { active?: boolean; version?: number },
-				activeVersion,
-			});
-			if (route.collection !== "planVersions") continue;
-			const siblingId = idOfRow(sibling);
-			if (typeof siblingId !== "string") continue;
-			const located = locateFixture({
-				configPath: "",
-				files: nonRootFiles,
-				builder: specFor(sibling).builder,
-				idField: specFor(sibling).idField,
-				id: siblingId,
-				internalId:
-					typeof sibling.internalId === "string" ? sibling.internalId : null,
-				where: [
-					{
-						field: "versionSlug",
-						equals: slugOf(sibling),
-						absentMeans: "v1",
-					},
-				],
-			});
-			if (located !== null) return located.file;
-		}
-		return join(dirname(configPath), "planVersions", `${id}.ts`);
-	};
-	const collectionForRemoval = ({
-		name,
-		fixtureFile,
-	}: {
-		name: string;
-		fixtureFile: string;
-	}): { targetCollection: string; referenceName: string } | null => {
-		const collectionTargets = [collection, spec.historyKey].flatMap(
-			(targetCollection) => {
-				if (targetCollection === undefined) return [];
-				const target = resolveCollectionTarget({
-					configPath,
-					files,
-					collection: targetCollection,
-				});
-				return target === null ? [] : [{ targetCollection, target }];
-			},
-		);
-		const membershipMatches = collectionTargets.flatMap(
-			({ targetCollection, target }) => {
-				const referenceName = collectionTargetReferenceName({
-					target,
-					files,
-					collection: targetCollection,
-					name,
-					fixtureFile,
-				});
-				return referenceName === null
-					? []
-					: [{ targetCollection, referenceName }];
-			},
-		);
-		if (membershipMatches.length === 1) return membershipMatches[0];
-		const locationMatches = collectionTargets.filter(
-			({ target }) => target.file === fixtureFile,
-		);
-		if (locationMatches.length === 1)
-			return { ...locationMatches[0], referenceName: name };
-		return null;
-	};
-	const deleteExportReference = ({
-		name,
-		targetCollection,
-	}: {
-		name: string;
-		targetCollection: string;
 	}): void => {
-		const target = resolveCollectionTarget({
-			configPath,
-			files,
-			collection: targetCollection,
-		});
-		if (target === null) return;
-		files.set(
-			target.file,
-			deleteReference({ source: files.get(target.file) ?? "", name }),
-		);
+		for (const [path, builder] of Object.entries(nestedBuilders ?? {})) {
+			if (!Array.isArray(row[path]) || row[path].length === 0) continue;
+			files.set(
+				file,
+				ensureBuilderImport({
+					source: files.get(file) ?? "",
+					builder,
+					collection: path,
+				}),
+			);
+		}
+	};
+	const deleteExportReferences = ({ name }: { name: string }): void => {
+		const referenceFiles = new Set([configPath]);
+		const target = resolveCollectionTarget({ configPath, files, collection });
+		if (target !== null) referenceFiles.add(target.file);
+		for (const file of referenceFiles) {
+			files.set(file, deleteReference({ source: files.get(file) ?? "", name }));
+		}
 	};
 
 	const removeFixture = ({
@@ -284,44 +196,98 @@ export const applyPreview = ({
 			where: located.where,
 		});
 		if (removed === null) return;
-		const ownership =
-			removed.exportedName === undefined
-				? null
-				: collectionForRemoval({
-						name: removed.exportedName,
-						fixtureFile: located.file,
-					});
-		if (removed.exportedName !== undefined && ownership === null) {
-			result.unlocated.push({
-				id,
-				action:
-					"remove its exported reference by hand: collection ownership is ambiguous",
-			});
-			return;
-		}
 		files.set(located.file, removed.source);
-		if (ownership !== null)
-			deleteExportReference({
-				name: ownership.referenceName,
-				targetCollection: ownership.targetCollection,
-			});
+		if (removed.exportedName !== undefined)
+			deleteExportReferences({ name: removed.exportedName });
 		result.deleted.push(id);
 		result.lines.push(`- ${id}`);
+	};
+
+	/** A server-only variant version goes back where the server holds it: its parent's `variants[]`. */
+	const appendNestedVariant = ({
+		key,
+		entry,
+	}: {
+		key: string;
+		entry: PreviewEntry;
+	}): boolean => {
+		const nested = nestedRowsById.get(key);
+		if (nested === undefined) return false;
+		const { edge, parent } = nested;
+		const parentId = idOfRow(parent);
+		if (typeof parentId !== "string") return false;
+		const parentSpec = specFor(parent);
+		const alreadyStated =
+			locateFixture({
+				configPath,
+				files,
+				builder: {
+					parentBuilder: parentSpec.builder,
+					arrayProperty: NESTED_VARIANT.path,
+				},
+				idField: NESTED_VARIANT.idField,
+				id: String(edge[NESTED_VARIANT.idField]),
+				internalId:
+					typeof edge.internalId === "string" ? edge.internalId : null,
+				where: constraintsFor(entry),
+			}) !== null;
+		if (alreadyStated) return false;
+		const located = locateFixture({
+			configPath,
+			files,
+			builder: parentSpec.builder,
+			idField: parentSpec.idField,
+			id: parentId,
+			internalId:
+				typeof parent.internalId === "string" ? parent.internalId : null,
+			where: [
+				{ field: "versionSlug", equals: slugOf(parent), absentMeans: "v1" },
+			],
+			allowDynamic: true,
+		});
+		if (located === null) return false;
+		const text = (elementIndent: string) =>
+			emitNestedFixture({
+				spec: parentSpec,
+				path: NESTED_VARIANT.path,
+				row: edge,
+				includeMappings,
+				indent: elementIndent,
+				context: { featureTypes, nestedBuilders },
+			});
+		const updated = appendToFixtureArray({
+			source: located.source,
+			builder: located.builder,
+			idField: located.idField,
+			id: located.id,
+			where: located.where,
+			property: NESTED_VARIANT.path,
+			text,
+		});
+		if (updated === null) return false;
+		files.set(
+			located.file,
+			ensureBuilderImport({
+				source: updated,
+				builder: NESTED_VARIANT.builder,
+				collection: NESTED_VARIANT.path,
+			}),
+		);
+		result.appended.push(key);
+		result.lines.push(`+ ${key}`);
+		return true;
 	};
 
 	const appendRow = ({
 		id,
 		entry,
-		placement,
 	}: {
 		id: string;
 		entry: PreviewEntry;
-		/** Known membership beats the numeric route: where a moved row goes. */
-		placement?: "plans" | "history";
 	}): boolean => {
 		const key = keyOf({ id, slug: slugOf(entry) });
 		const row = rowsById.get(key);
-		if (row === undefined) return false;
+		if (row === undefined) return appendNestedVariant({ key, entry });
 		const rowSpec = specFor(row);
 		const locatedEntry =
 			typeof row.internalId === "string"
@@ -342,110 +308,48 @@ export const applyPreview = ({
 			replaceRow({ id, entry: locatedEntry });
 			return true;
 		}
-		let target = collection;
-		let emitted: Record<string, unknown> = row;
-		if (versioned) {
-			const route =
-				placement !== undefined
-					? { collection: placement, draft: false }
-					: routePlanRow({
-							row: row as { active?: boolean; version?: number },
-							activeVersion: activeVersionOf({
-								rows: (rowsByPlan.get(id) ?? []) as {
-									active?: boolean;
-									version?: number;
-								}[],
-							}),
-						});
-			target =
-				route.collection === "plans"
-					? collection
-					: (spec.historyKey ?? collection);
-			// Variants come back nested under their base; pulling them is later work.
-			// Membership says active; only a draft spells it out.
-			// Variants stay nested: that is the form the server edits them through.
-			const { active: _stamped, ...bare } = row;
-			emitted = route.draft ? { ...bare, active: false } : bare;
-		}
 		// A config that never mentioned the collection gets the key, then the row.
 		// Unless the object spreads another one: the key may live there, and a
 		// second `features:` after the spread would silently override it.
 		const configSource = files.get(configPath) ?? "";
-		const withKey = insertCollection({
-			source: configSource,
-			collection: target,
-		});
+		const withKey = insertCollection({ source: configSource, collection });
 		if (withKey === null) return false;
 		const spreads = rootSpreadNames({ source: configSource });
 		if (withKey !== configSource && spreads.length > 0) {
 			result.unlocated.push({
 				id: key,
-				action: `append to \`${target}\` by hand: atmn() spreads \`${spreads.join("`, `")}\`, which may already hold it`,
+				action: `append to \`${collection}\` by hand: atmn() spreads \`${spreads.join("`, `")}\`, which may already hold it`,
 			});
 			return false;
 		}
 		files.set(configPath, withKey);
 		// The array may be a const the config names, in this file or an imported one.
-		const resolved = resolveCollectionTarget({
-			configPath,
-			files,
-			collection: target,
-		});
+		const resolved = resolveCollectionTarget({ configPath, files, collection });
 		if (resolved === null) {
 			result.unlocated.push({
 				id: key,
-				action: `append to \`${target}\` by hand: it is not an array literal`,
+				action: `append to \`${collection}\` by hand: it is not an array literal`,
 			});
 			return false;
 		}
 		// The surgery indents the first line; the emitter indents the rest.
-		if (versioned && target === spec.historyKey) {
-			const versionSlug = slugOf(row);
-			const appended = appendPlanVersionFixture({
-				configPath,
-				files,
-				target: resolved,
-				fixtureFile: historyFileFor({ id, row }),
-				planId: id,
-				versionSlug,
-				fixture: emitFixture({
-					spec,
-					row: emitted,
-					includeMappings,
-					indent: "",
-				}),
-				builder: rowSpec.builder,
-				targetCollection: target,
-				builderCollection: collection,
-			});
-			if (!appended) {
-				result.unlocated.push({
-					id: key,
-					action: `append to \`${target}\` by hand: it is not an array literal`,
-				});
-				return false;
-			}
-			result.appended.push(key);
-			result.lines.push(`+ ${key}`);
-			return true;
-		}
 		const text = (elementIndent: string) =>
 			emitFixture({
 				spec,
-				row: emitted,
+				row,
 				includeMappings,
 				indent: elementIndent,
-				context: { featureTypes },
+				context: { featureTypes, nestedBuilders },
 			});
 		const targetSource = files.get(resolved.file) ?? "";
 		const updated =
 			resolved.kind === "inline"
-				? appendToCollection({ source: targetSource, collection: target, text })
+				? appendToCollection({ source: targetSource, collection, text })
 				: appendToBinding({ source: targetSource, name: resolved.name, text });
 		if (updated === null) {
 			result.unlocated.push({
 				id: key,
-				action: `append to \`${target}\` by hand: it is not an array literal`,
+				action: `append to \`${collection}\` by hand: it is not an array literal`,
 			});
 			return false;
 		}
@@ -458,6 +362,7 @@ export const applyPreview = ({
 				collection,
 			}),
 		);
+		ensureNestedBuilderImports({ file: resolved.file, row });
 		result.appended.push(key);
 		result.lines.push(`+ ${key}`);
 		return true;
@@ -500,7 +405,7 @@ export const applyPreview = ({
 				key: property,
 				includeMappings,
 				indent,
-				context: { featureTypes },
+				context: { featureTypes, nestedBuilders },
 			});
 			const next = patchFixtureProperty({
 				source,
@@ -562,63 +467,8 @@ export const applyPreview = ({
 			return;
 		}
 		const key = keyOf({ id, slug: slugOf(entry) });
-		let emitted: Record<string, unknown> = row;
-		if (versioned) {
-			// Membership is state, and the config's own statement is the truth
-			// about where a row sits: version numbers are creation order on the
-			// server, so history pushed later is numbered higher, not newer.
-			const serverActive = row.active === true;
-			const configActive = configActiveOf({ id, entry });
-			const moves = configActive !== undefined && configActive !== serverActive;
-			// A sibling version only matters when its state changed.
-			if (entry.siblingOf !== undefined && !moves) return;
-			if (moves) {
-				const removed = deleteFixtureLiteral({
-					source: located.source,
-					builder: rowSpec.builder,
-					idField: located.idField,
-					id: located.id,
-					where: located.where,
-				});
-				if (removed === null) return;
-				const ownership =
-					removed.exportedName === undefined
-						? null
-						: collectionForRemoval({
-								name: removed.exportedName,
-								fixtureFile: located.file,
-							});
-				if (removed.exportedName !== undefined && ownership === null) {
-					result.unlocated.push({
-						id,
-						action:
-							"move its exported reference by hand: collection ownership is ambiguous",
-					});
-					return;
-				}
-				files.set(located.file, removed.source);
-				if (ownership !== null)
-					deleteExportReference({
-						name: ownership.referenceName,
-						targetCollection: ownership.targetCollection,
-					});
-				const appended = appendRow({
-					id,
-					entry,
-					placement: serverActive ? "plans" : "history",
-				});
-				if (!appended) return;
-				result.appended.pop();
-				result.lines.pop();
-				result.replaced.push(key);
-				result.lines.push(`~ ${key}`);
-				return;
-			}
-			// Rewritten where it is; a draft keeps its spelled-out flag.
-			const isDraft = DRAFT_FLAG.test(located.node.text());
-			const { active: _stamped, ...bare } = row;
-			emitted = isDraft ? { ...bare, active: false } : bare;
-		}
+		// A sibling version rides the preview for context; only its own diff is work.
+		if (entry.siblingOf !== undefined && entry.planChange == null) return;
 		// The emitter's indent is the found call's own line indent, so the
 		// closing `})` lines up with the text it replaces.
 		const indent = leadingIndentOfLine(
@@ -629,20 +479,21 @@ export const applyPreview = ({
 		// fixture keeps its bytes. A diff without fields rewrites the whole call.
 		const patched = patchChangedProperties({
 			entry,
-			row: emitted,
+			row,
 			indent,
 			located,
 			rowSpec,
 		});
 		if (patched !== null) {
 			files.set(located.file, patched);
+			ensureNestedBuilderImports({ file: located.file, row });
 			result.replaced.push(key);
 			result.lines.push(`~ ${key}`);
 			return;
 		}
 		const text = emitFixture({
 			spec,
-			row: emitted,
+			row,
 			includeMappings,
 			indent,
 			context: { featureTypes },
@@ -657,6 +508,7 @@ export const applyPreview = ({
 		});
 		if (updated === null) return;
 		files.set(located.file, updated);
+		ensureNestedBuilderImports({ file: located.file, row });
 		result.replaced.push(key);
 		result.lines.push(`~ ${key}`);
 	};

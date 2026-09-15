@@ -132,6 +132,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 180, interval: "month" },
 			items: [
@@ -155,6 +157,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "pro_annual",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro (Annual)",
 			price: { amount: 1800, interval: "year" },
 			items: [
@@ -178,6 +182,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "growth",
+			versionSlug: "v1",
+			active: true,
 			name: "Growth",
 			price: { amount: 500, interval: "month" },
 			items: [
@@ -201,6 +207,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "growth_annual",
+			versionSlug: "v1",
+			active: true,
 			name: "Growth (Annual)",
 			price: { amount: 5000, interval: "year" },
 			items: [
@@ -226,6 +234,8 @@ ${
 	withPacks
 		? `		plan({
 			planId: "credits_pack",
+			versionSlug: "v1",
+			active: true,
 			name: "Credits Pack",
 			addOn: true,
 			items: [

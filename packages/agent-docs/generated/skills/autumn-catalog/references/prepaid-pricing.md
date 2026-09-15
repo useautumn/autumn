@@ -13,69 +13,58 @@ This is in contrast to [usage-based pricing](/documentation/modelling-pricing/us
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Create your features and add them to a plan with `prepaid` prices:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const apiCredits = feature({
-  id: 'api_credits',
-  name: 'API Credits',
-  type: 'metered',
+  featureId: "api_credits",
+  name: "API Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const seats = feature({
-  id: 'seats',
-  name: 'Seats',
-  type: 'metered',
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: apiCredits.id,
+    {
+      featureId: apiCredits.featureId,
       included: 500,
       price: {
         amount: 10,
         billingUnits: 1000,
-        billingMethod: 'prepaid',
-        interval: 'month',
+        billingMethod: "prepaid",
+        interval: "month",
       },
-    }),
-    item({
-      featureId: seats.id,
+    },
+    {
+      featureId: seats.featureId,
       included: 3,
       price: {
         amount: 5,
-        billingMethod: 'prepaid',
-        interval: 'month',
+        billingMethod: "prepaid",
+        interval: "month",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [apiCredits, seats], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create or edit a plan
-2. Add your features:
-   - A `metered`, `consumable` feature for credits (e.g., "API Credits") — set an **included** amount (500), a **price** ($10 per 1,000 per month), and billing method **Prepaid**
-   - A `metered`, `non-consumable` feature for seats (e.g., "Seats") — set an **included** amount (3), a **price** ($5 per seat per month), and billing method **Prepaid**
-3. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How it works
 

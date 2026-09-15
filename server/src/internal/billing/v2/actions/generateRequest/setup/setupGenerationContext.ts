@@ -26,7 +26,6 @@ const compactPlan = ({
 	const productV2 = mapToProductV2({ features, product });
 	const apiPlan = productV2ToApiPlanV1({
 		features,
-		includeProration: true,
 		product: productV2,
 	});
 	return {

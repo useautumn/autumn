@@ -7,71 +7,66 @@ Add-ons are plans that can be purchased alongside a customer's existing plan, ra
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Set `addOn: true` on the plan:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const storage = feature({
-  id: 'storage',
-  name: 'Storage (GB)',
-  type: 'metered',
+  featureId: "storage",
+  name: "Storage (GB)",
+  type: "metered",
   consumable: false,
 });
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const storageAddOn = plan({
-  id: 'storage_add_on',
-  name: 'Extra Storage',
+  planId: "storage_add_on",
+  versionSlug: "v1",
+  active: true,
+  name: "Extra Storage",
   addOn: true,
-  price: { amount: 5, interval: 'month' },
+  price: { amount: 5, interval: "month" },
   items: [
-    item({
-      featureId: storage.id,
+    {
+      featureId: storage.featureId,
       included: 100,
-    }),
+    },
   ],
 });
 
 export const creditTopUp = plan({
-  id: 'credit_top_up',
-  name: 'Credit Top-Up',
+  planId: "credit_top_up",
+  versionSlug: "v1",
+  active: true,
+  name: "Credit Top-Up",
   addOn: true,
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       price: {
         amount: 10,
         billingUnits: 500,
-        billingMethod: 'prepaid',
+        billingMethod: "prepaid",
+        interval: "one_off",
       },
-    }),
+    },
   ],
+});
+
+export default atmn({
+  features: [storage, credits],
+  plans: [storageAddOn, creditTopUp],
 });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and click **Create Plan**
-2. Set the plan name and ID
-3. Toggle the **Add-on** flag
-4. Configure the price and features as needed
-5. Click **Create**
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How add-ons work
 

@@ -1,6 +1,7 @@
 import type { ToolUse } from "../driver/types/toolUse.ts";
 import type { ProbeResult } from "../grading/fixtureProbe.ts";
 import type {
+	OracleCatalog,
 	OracleCustomer,
 	OracleLicenseAssignment,
 } from "../grading/sandboxOracle.ts";
@@ -39,4 +40,6 @@ export type AxRunOutput = {
 	licenseAssignments?: OracleLicenseAssignment[];
 	/** integration cases: unified diff of the agent's fixture edits */
 	fixtureDiff?: string;
+	/** existing-catalog cases: every plan version the org holds after the run */
+	catalog?: OracleCatalog;
 };

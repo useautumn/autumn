@@ -271,6 +271,7 @@ test("plans: nested server extras do not leak into the fixture", () => {
 					licensePlanId: "seat",
 					included: 25,
 					version: 1,
+					versionSlug: "legacy-seat",
 					plan: { id: "seat" },
 				},
 			],
@@ -282,12 +283,14 @@ test("plans: nested server extras do not leak into the fixture", () => {
 	expect(text).toContain('featureId: "seats"');
 	expect(text).toContain("included: 5");
 	expect(text).toContain('licensePlanId: "seat"');
+	expect(text).toContain('versionSlug: "legacy-seat"');
 	expect(text).toContain('internalId: "prod_1"');
 	expect(text).not.toContain("entitlementId");
 	expect(text).not.toContain("priceId");
 	expect(text).not.toContain("version:");
 	expect(text).not.toContain("plan:");
-	expect(text).not.toContain("active");
+	// Every row states its flag: it is the only thing telling versions apart.
+	expect(text).toContain("active: true");
 });
 
 test("plans: boolean items omit grant values while metered items keep meaningful values", () => {

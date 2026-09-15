@@ -7,8 +7,11 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import {
+	dashboardItem,
+	messagesItem,
+} from "../../licenses/utils/seedLicensePlans.js";
 import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
-import { dashboardItem, messagesItem } from "../../licenses/utils/seedLicensePlans.js";
 import { expectVariantPlanCorrect } from "../utils/expectVariantPointer.js";
 import { seedBaseWithVariant } from "../utils/seedVariantPlans.js";
 
@@ -34,6 +37,7 @@ test.concurrent(
 						variants: [
 							{
 								variant_plan_id: variantId,
+								version: 1,
 								customize: {
 									items: [
 										messagesItem(200),

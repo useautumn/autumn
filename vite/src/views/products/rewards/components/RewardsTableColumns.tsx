@@ -24,7 +24,7 @@ export const createRewardsTableColumns = (): ColumnDef<Reward, unknown>[] => {
 			accessorKey: "promo_codes",
 			cell: ({ row }: { row: Row<Reward> }) => {
 				const reward = row.original;
-				const promoCodes = reward.promo_codes
+				const promoCodes = (reward.promo_codes ?? [])
 					.map((promoCode) => promoCode.code)
 					.join(", ");
 				return (

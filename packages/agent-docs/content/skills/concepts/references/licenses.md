@@ -6,7 +6,7 @@ A license lets a parent plan hand out another plan per seat. "Team is $40/seat, 
 
 - **Child plan** — the actual product for the child: an ordinary plan whose items are what one seat gets. It needs its own `group`, otherwise attaching it would replace its parent.
 - **License** — the link plus the customized definition: the parent's `licenses: [{ license_plan_id, included }]` entry. `included` is how many seats come free with the parent. The license can also customize the child *for this parent only* — a different price, items added or removed — while the child plan itself stays shared.
-- **CustomerLicense** — the runtime record per customer: how many seats they have (`granted` = included + paid), how many are assigned to entities, how many are free. Its identity (`link_id`) is stable across plan versions, so seats never jump around when plans change.
+- **CustomerLicense** — the runtime record per customer: how many seats they have (`granted` = included + paid), how many are in use (`usage`), how many remain (`remaining`). Its identity is stable across plan versions, so seats never jump around when plans change.
 
 ```json
 {

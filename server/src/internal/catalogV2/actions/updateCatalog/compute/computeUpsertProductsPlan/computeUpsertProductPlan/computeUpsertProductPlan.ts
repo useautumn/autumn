@@ -15,14 +15,12 @@ export const computeUpsertProductPlan = ({
 	productStatesContext,
 	claimedProductKeys,
 	declaredVariants,
-	fullState,
 }: {
 	ctx: AutumnContext;
 	intent: ProductUpsertIntent;
 	productStatesContext: ProductStatesContext;
 	claimedProductKeys: Set<string>;
 	declaredVariants?: DeclaredVariantsMap;
-	fullState?: boolean;
 }): {
 	targetProductPlan: UpsertProductPlan;
 	upsertProductPlans: UpsertProductPlan[];
@@ -32,7 +30,6 @@ export const computeUpsertProductPlan = ({
 		intent,
 		productStatesContext,
 		declaredVariants,
-		fullState,
 	});
 	const demotedProductPlan = computeDemotedProductPlan({
 		ctx,

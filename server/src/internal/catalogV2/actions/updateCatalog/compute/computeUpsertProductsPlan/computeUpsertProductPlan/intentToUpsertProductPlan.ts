@@ -42,13 +42,11 @@ export const intentToUpsertProductPlan = ({
 	intent,
 	productStatesContext,
 	declaredVariants,
-	fullState,
 }: {
 	ctx: AutumnContext;
 	intent: ProductUpsertIntent;
 	productStatesContext: ProductStatesContext;
 	declaredVariants?: DeclaredVariantsMap;
-	fullState?: boolean;
 }): UpsertProductPlan => {
 	const { productKey, source, baseInternalProductId } = intent;
 	const { currentFullProduct, customerUsage } = productKeyToState({
@@ -109,7 +107,6 @@ export const intentToUpsertProductPlan = ({
 		version: productKey.version,
 		baseFullProduct,
 		currentActive,
-		fullState,
 		latestExistingVersion: maxVersion === 0 ? undefined : maxVersion,
 		...(pointer !== undefined ? { baseInternalProductId: pointer } : {}),
 		...(variantBaseFullProduct

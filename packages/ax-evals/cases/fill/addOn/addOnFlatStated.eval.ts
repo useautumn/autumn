@@ -64,6 +64,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 30, interval: "month" },
 			items: [
@@ -76,6 +78,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "sso_add_on",
+			versionSlug: "v1",
+			active: true,
 			name: "SSO",
 			addOn: true,
 			price: { amount: 50, interval: "month" },

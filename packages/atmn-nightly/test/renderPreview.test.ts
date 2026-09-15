@@ -29,6 +29,40 @@ test("renames a plan and shows old -> new name", () => {
 	expect(out).toContain('~ Name: "Pro" -> "Pro Plus"');
 });
 
+test("a version slug rename is named on the row, not hidden in its diff", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				version: 2,
+				versionSlug: "v2",
+				newVersionSlug: "legacy",
+				action: "update",
+				name: "Pro Plus",
+			},
+		],
+	});
+	expect(out).toContain("~ pro@v2");
+	expect(out).toContain('~ Version slug: "v2" -> "legacy"');
+});
+
+test("a plan id rename is named on the row", () => {
+	const out = render({
+		features: [],
+		plans: [
+			{
+				planId: "pro",
+				newPlanId: "pro_plus",
+				version: 2,
+				action: "update",
+				name: "Pro Plus",
+			},
+		],
+	});
+	expect(out).toContain('~ Plan id: "pro" -> "pro_plus"');
+});
+
 test("shows a price change as old -> new", () => {
 	const out = render({
 		features: [],

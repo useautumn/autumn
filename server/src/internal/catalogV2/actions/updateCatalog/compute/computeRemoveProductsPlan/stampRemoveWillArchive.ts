@@ -30,12 +30,25 @@ const shareUnpinnedVerdict = ({
 	);
 };
 
+const isProjectedActiveVersion = ({
+	current,
+	projected,
+}: {
+	current: FullProduct;
+	projected: ProjectedCatalog;
+}): boolean =>
+	projected.products.find(
+		(product) => product.internal_id === current.internal_id,
+	)?.active ?? current.active;
+
 const pass1FromCustomersAndRewards = ({
 	targets,
 	catalogContext,
+	projected,
 }: {
 	targets: RemovePlanTarget[];
 	catalogContext: UpdateCatalogContext;
+	projected: ProjectedCatalog;
 }): RemovePlanPlan[] => {
 	const { productStatesContext } = catalogContext;
 	return shareUnpinnedVerdict({
@@ -58,13 +71,15 @@ const pass1FromCustomersAndRewards = ({
 			const hasCustomers = customerUsage.hasAnyCustomerProducts;
 			const hasVersionableCustomers =
 				customerUsage.hasVersionableCustomerProducts;
-			const hasExpiredOnlyCustomers =
-				hasCustomers && !hasVersionableCustomers;
+			const hasExpiredOnlyCustomers = hasCustomers && !hasVersionableCustomers;
 			const hasRewards =
 				(productStatesContext.rewardProgramsByPlanId[target.planId] ?? [])
 					.length > 0;
 			const isWholePlan = target.allVersions;
-			const isLiveVersion = target.current.active;
+			const isLiveVersion = isProjectedActiveVersion({
+				current: target.current,
+				projected,
+			});
 			const pinBlocksLive = !isWholePlan && isLiveVersion;
 			const willTombstone =
 				hasExpiredOnlyCustomers && !hasRewards && !pinBlocksLive;
@@ -85,9 +100,7 @@ const parentStillOffersChild = ({
 	parent: FullProduct;
 	childPlanId: string;
 }): boolean =>
-	(parent.licenses ?? []).some(
-		(license) => license.product.id === childPlanId,
-	);
+	(parent.licenses ?? []).some((license) => license.product.id === childPlanId);
 
 const pass2FromSurvivingLicenseParents = ({
 	rows,
@@ -98,9 +111,7 @@ const pass2FromSurvivingLicenseParents = ({
 }): RemovePlanPlan[] => {
 	const hardDeletedKeys = new Set(
 		rows
-			.filter(
-				(row) => row.current && !row.willArchive && !row.willTombstone,
-			)
+			.filter((row) => row.current && !row.willArchive && !row.willTombstone)
 			.map((row) => rowKey({ planId: row.planId, version: row.version })),
 	);
 
@@ -138,6 +149,10 @@ export const stampRemoveWillArchive = ({
 	projected: ProjectedCatalog;
 }): RemovePlanPlan[] =>
 	pass2FromSurvivingLicenseParents({
-		rows: pass1FromCustomersAndRewards({ targets, catalogContext }),
+		rows: pass1FromCustomersAndRewards({
+			targets,
+			catalogContext,
+			projected,
+		}),
 		projected,
 	});

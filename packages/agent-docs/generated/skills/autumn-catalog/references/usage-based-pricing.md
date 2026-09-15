@@ -7,58 +7,43 @@ Pay-per-use (usage-based) pricing charges customers based on how much of a featu
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Create a consumable feature with a `usage_based` price:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const notifications = feature({
-  id: 'notifications',
-  name: 'Notifications',
-  type: 'metered',
+  featureId: "notifications",
+  name: "Notifications",
+  type: "metered",
   consumable: true,
 });
 
 export const payAsYouGo = plan({
-  id: 'pay_as_you_go',
-  name: 'Pay As You Go',
-  group: 'main',
+  planId: "pay_as_you_go",
+  versionSlug: "v1",
+  active: true,
+  name: "Pay As You Go",
+  group: "main",
   items: [
-    item({
-      featureId: notifications.id,
+    {
+      featureId: notifications.featureId,
       included: 1000,
-      reset: { interval: 'month' },
+      reset: { interval: "month" },
       price: {
         amount: 1,
-        interval: 'month',
+        interval: "month",
         billingUnits: 1000,
-        billingMethod: 'usage_based',
+        billingMethod: "usage_based",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [notifications], plans: [payAsYouGo] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and create a plan
-2. Add a **consumable** feature (e.g., notifications)
-3. Set an optional **included** amount (free usage before charges begin)
-4. Add a **price** with:
-   - **Billing method**: Usage-based
-   - **Amount**: price per billing unit (e.g., $1)
-   - **Billing units**: the package size (e.g., 1,000 notifications)
-   - **Interval**: billing frequency (e.g., monthly)
-5. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How it works
 
@@ -150,7 +135,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response">
 ```json
 {
   "allowed": true,
@@ -166,7 +150,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
   }
 }
 ```
-</Expandable>
 
 ## Combining with free tiers
 

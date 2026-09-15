@@ -195,7 +195,7 @@ Landing a guardrail answer means picking the right control — windowed cap vs o
 - "Track it but don't bill it" / "let them run over, we'll invoice manually" → overage knobs on the plan, not a $0 price.
 - Auto-recharge needs its one-off prepaid item (already on the per-item list) AND the `autoTopups` control.
 
-**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push` (a preview; nothing is applied until `--yes`), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
+**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn push` (a preview; nothing is applied until `--yes`), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
 
 ### Showing the catalog
 
@@ -235,14 +235,15 @@ Billing controls follow the same rule: `·` lines under the item they guard, in 
 - A default/auto-enabled plan can't be paid: no base price, no paid items.
 - A prepaid quantity **includes** the included amount, and so does each tier's `to` — the first tier's `to` must exceed `included`.
 - `billingUnits` rounds usage **up** when billing.
-- Set explicitly, never lean on defaults: `billingMethod`, `tierBehavior`, all three trial fields. Explicit defaults cause no spurious diffs.
+- Set explicitly, never lean on defaults: `billingMethod` and `interval` on every item price, `tierBehavior` on tiered prices, and every trial field (`durationLength`, `durationType`, `cardRequired`, `onEnd`). Explicit defaults cause no spurious diffs.
 - Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
 - Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
 - `billingControls` is a plain object on the plan with camelCase fields like the rest of the config (`featureId`, `overageLimit`); each control list replaces wholesale on update.
 - Pooled balances are config: `pooled: true` on the entity plan's item. Concluding "shared across workspaces" in Shape and then omitting the flag is the classic miss.
 - Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
 - Don't write `proration` — leave it out and take server defaults.
-- Trial end behavior is `freeTrial.onEnd` (`"bill"` default, `"revert"`). Not writable in config — say so and set via the dashboard after push: item display text.
+- Trial end behavior is `freeTrial.onEnd`: `"bill"` (default) charges when the trial ends, `"revert"` expires it and restores the previous plan.
+- Every plan row carries `versionSlug` and `active`, and every variant row `versionSlug`. A plan's rows are its versions — exactly one `active: true` — and a version row left out of `plans` is deleted. How rows express versions, renames and drafts: `references/atmn.md`.
 
 The config uses the builders `feature`, `plan`, `variant`, `license` as plain function calls with object arguments; items are plain objects inside a plan, and the file's default export is `atmn({...})` naming every collection. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
 
@@ -259,6 +260,7 @@ export const credits = feature({
 export const pro = plan({
   planId: "pro",
   versionSlug: "v1",
+  active: true,
   name: "Pro",
   price: { amount: 20, interval: "month" },
   items: [
@@ -303,3 +305,5 @@ Before finishing: re-check the STRICT RULES at the top against the config you wr
 For using atmn, autumn.config.ts, or headless push flows, read `references/atmn.md`.
 
 For changing an existing catalog: previewing, versioning, migrations, variant propagation, read `references/catalog-update.md`.
+
+For creating or changing coupons, promo codes, feature grants, or referral programs, read `references/rewards.md`.

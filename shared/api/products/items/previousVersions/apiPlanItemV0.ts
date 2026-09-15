@@ -1,5 +1,6 @@
 import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
+import { AllocatedBillingFieldSchema } from "@api/products/components/allocatedBilling.js";
 import { DisplaySchema } from "@api/products/components/display.js";
 import { ApiPriceProcessorsSchema } from "@api/products/components/processors";
 import { EntitlementExpirySchema } from "@models/productModels/durationTypes/entitlementDuration.js";
@@ -56,6 +57,7 @@ export const ApiPlanItemV0Schema = z
 
 				billing_units: z.number(),
 				usage_model: z.enum(UsageModel),
+				allocated_billing: AllocatedBillingFieldSchema,
 				max_purchase: z.number().nullable(),
 			})
 			.nullable(),

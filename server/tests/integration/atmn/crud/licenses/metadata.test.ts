@@ -29,11 +29,13 @@ const METADATA = { tier: "gold", region: "us" };
 
 const enterpriseLicensingSeat = `
 		plan({
+			active: true,
 			planId: "enterprise",
 			name: "Enterprise",
+			versionSlug: "v1",
 			price: { amount: 999, interval: "month" },
 			items: [{ featureId: "sso" }, { featureId: "audit_log" }],
-			licenses: [{ licensePlanId: "seat", included: 25, metadata: ${JSON.stringify(METADATA)} }],
+			licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: 25, metadata: ${JSON.stringify(METADATA)} }],
 		}),`;
 
 test.concurrent("license link metadata round-trips untouched", async () => {

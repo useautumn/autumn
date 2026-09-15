@@ -91,7 +91,6 @@ curl -X POST 'https://api.useautumn.com/v1/billing.preview_attach' \
 
 </CodeGroup>
 
-<Expandable title="Example response">
 ```json
 {
   "customerId": "user_123",
@@ -115,7 +114,6 @@ curl -X POST 'https://api.useautumn.com/v1/billing.preview_attach' \
   }
 }
 ```
-</Expandable>
 
 ### Step 2: Confirm and charge
 

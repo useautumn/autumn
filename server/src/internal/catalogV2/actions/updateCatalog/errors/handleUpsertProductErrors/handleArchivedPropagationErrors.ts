@@ -60,7 +60,7 @@ export const handleArchivedPropagationErrors = ({
 
 	const anchorInternalIds = editedBaseInternalIds({ upsert });
 	for (const variant of upsert.declaredVariants ?? []) {
-		if (variant.archived === false) continue;
+		if (variant.archived !== true) continue;
 		if (!variant.customize) continue;
 		const product = variantRowForDeclaredEntry({
 			variant,
@@ -69,7 +69,7 @@ export const handleArchivedPropagationErrors = ({
 		});
 		if (product?.archived) {
 			throw new RecaseError({
-				message: `Cannot customize archived variant ${variant.variant_plan_id}. Pass archived: false to unarchive it first.`,
+				message: `Cannot customize archived variant ${variant.variant_plan_id} while archived is true.`,
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

@@ -66,7 +66,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response">
 ```json
 {
   "allowed": true,
@@ -83,7 +82,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
   }
 }
 ```
-</Expandable>
 
 Even if your product doesn't have usage limits (ie your feature is purely usage-based), you can still use the above method to prevent usage if a customer's payment fails.
 

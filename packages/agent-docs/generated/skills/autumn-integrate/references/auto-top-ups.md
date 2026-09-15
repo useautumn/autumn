@@ -13,60 +13,46 @@ Auto top-ups require:
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Auto top-ups are configured per customer, not in `autumn.config.ts`. Your plan needs a one-off prepaid item for the feature you want to auto top-up:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const standard = plan({
-  id: 'standard',
-  name: 'Standard',
-  price: { amount: 50, interval: 'month' },
+  planId: "standard",
+  versionSlug: "v1",
+  active: true,
+  name: "Standard",
+  price: { amount: 50, interval: "month" },
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       included: 5000,
-      reset: { interval: 'month' },
-    }),
-    item({
-      featureId: credits.id,
+      reset: { interval: "month" },
+    },
+    {
+      featureId: credits.featureId,
       price: {
         amount: 10,
         billingUnits: 1000,
-        interval: 'one_off',
-        billingMethod: 'prepaid',
+        interval: "one_off",
+        billingMethod: "prepaid",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [credits], plans: [standard] });
 ```
 
 The one-off prepaid item (`$10 per 1,000 credits`) is what Autumn uses to replenish the balance. Configure auto top-ups per customer via the API (see below).
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to the **Plans** page and select (or create) the plan you want to add auto top-ups to
-2. Add a new item for the feature with:
-   - **Interval** set to **One-Off**
-   - **Billing method** set to **Prepaid**
-   - Configure the price and billing units (e.g. $10 per 1,000 credits)
-3. Configure auto top-ups per customer via the API (see below)
-
-The same feature can appear as multiple items on a plan. For example, you might have a monthly allowance of 5,000 credits **and** a one-off prepaid item for top-ups — both referencing the same feature.
-
-</Tab>
-</Tabs>
 
 ## Configuring auto top-ups via API
 

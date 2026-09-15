@@ -23,6 +23,7 @@ import {
 	billingUpdateContract,
 } from "./billingContract.js";
 import {
+	catalogV2DiffContract,
 	catalogV2GetContract,
 	catalogV2PreviewUpdateContract,
 	catalogV2UpdateContract,
@@ -56,7 +57,6 @@ import {
 import {
 	insertInvoicesContract,
 	listInvoicesContract,
-	payInvoiceContract,
 } from "./invoicesContract.js";
 import {
 	keysMintContract,
@@ -163,7 +163,6 @@ export const v2_3ContractRouter = oc.router({
 	// Invoices
 	invoicesInsert: insertInvoicesContract,
 	invoicesList: listInvoicesContract,
-	invoicesPay: payInvoiceContract,
 
 	// Licenses
 	licensesAttach: attachLicenseContract,
@@ -222,6 +221,7 @@ export const v2_3InternalContractRouter = oc.router({
 
 	// catalogV2 (internal — see catalogContract.ts)
 	catalogV2Get: catalogV2GetContract,
+	catalogV2Diff: catalogV2DiffContract,
 	catalogV2PreviewUpdate: catalogV2PreviewUpdateContract,
 	catalogV2Update: catalogV2UpdateContract,
 

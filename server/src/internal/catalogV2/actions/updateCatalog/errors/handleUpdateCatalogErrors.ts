@@ -9,6 +9,7 @@ import { assertInternalIdAgrees } from "@/internal/catalogV2/actions/updateCatal
 import { handleActivePointerErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleActivePointerErrors";
 import { handleDeclaredVariantAnchorErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleDeclaredVariantAnchorErrors";
 import { handleLicenseAnchorLifecycleErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleLicenseAnchorLifecycleErrors";
+import { handlePlanFamilyErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handlePlanFamilyErrors";
 import { handleRemoveFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemoveFeatureErrors/handleRemoveFeatureErrors";
 import { handleRemovePlanErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemovePlanErrors/handleRemovePlanErrors";
 import { handleRewardErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRewardErrors";
@@ -18,6 +19,7 @@ import { handleUpsertProductErrors } from "@/internal/catalogV2/actions/updateCa
 import { handleUpsertProductRenameErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductRenameErrors";
 import { handleUpsertProductVersioningErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersioningErrors";
 import { handleUpsertProductVersionSlugErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersionSlugErrors";
+import { handleVariantFamilyErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleVariantFamilyErrors";
 import { handleVariantSharedAcrossVersionsErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleVariantSharedAcrossVersionsErrors";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
@@ -142,6 +144,11 @@ export const handleUpdateCatalogErrors = async ({
 		params,
 		productStatesContext: catalogContext.productStatesContext,
 	});
+	handlePlanFamilyErrors({
+		params,
+		internalIdRefs: catalogContext.internalIdRefs,
+		productStatesContext: catalogContext.productStatesContext,
+	});
 	await handleUpsertProductRenameErrors({
 		ctx,
 		params,
@@ -155,6 +162,7 @@ export const handleUpdateCatalogErrors = async ({
 		updateCatalogPlan,
 		productStatesContext: catalogContext.productStatesContext,
 	});
+	handleVariantFamilyErrors({ updateCatalogPlan });
 	handleLicenseAnchorLifecycleErrors({ updateCatalogPlan });
 	await handleRewardErrors({ ctx, params, catalogContext, updateCatalogPlan });
 };

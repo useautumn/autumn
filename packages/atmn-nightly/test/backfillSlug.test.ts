@@ -15,7 +15,7 @@ const config = [
 	"",
 	"export default atmn({",
 	"\tplans: [",
-	'\t\tplan({ planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),',
+	'\t\tplan({ active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),',
 	"\t],",
 	"});",
 	"",
@@ -58,7 +58,7 @@ test("a first push writes internalId and versionSlug into the fixture, once", as
 
 	const after = readFileSync(`${dir}/autumn.config.ts`, "utf8");
 	expect(after).toContain(
-		'plan({ internalId: "prod_1", planId: "pro", name: "Pro", price: { amount: 49, interval: "month" }, versionSlug: "v1" })',
+		'plan({ internalId: "prod_1", active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" }, versionSlug: "v1" })',
 	);
 	expect(printed.join("")).toContain(
 		"Wrote internalId into 1 fixture and versionSlug into 1 fixture.",

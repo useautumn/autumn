@@ -12,20 +12,190 @@ import { BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
 import { expectLicenseLinkCorrect } from "../../licenses/utils/expectLicenseLinkCorrect.js";
 import {
+	bumpChild,
 	dashboardItem,
 	messagesItem,
 	messagesOverride,
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
-import { seedBaseVariantWithChildLicense } from "../utils/seedVariantPlans.js";
+import {
+	seedBaseVariantWithChildLicense,
+	seedVariantNewVersion,
+} from "../utils/seedVariantPlans.js";
 
 const monthPrice = (amount: number) => ({
 	amount,
 	interval: BillingInterval.Month,
 });
+
+const seedStockVariantVersionsOnChildV1 = async ({
+	autumn,
+	baseId,
+	variantId,
+	childId,
+}: {
+	autumn: AutumnInt;
+	baseId: string;
+	variantId: string;
+	childId: string;
+}) => {
+	await seedBaseVariantWithChildLicense({
+		autumn,
+		baseId,
+		variantId,
+		childId,
+		customizeLicenses: false,
+	});
+	await seedVariantNewVersion({ autumn, variantId });
+	await bumpChild({
+		autumn,
+		childId,
+		items: [messagesItem(20)],
+		versioning: "new_version",
+	});
+};
+
+const contentOnlyVariantCustomize = (messages: number) => ({
+	remove_items: [{ feature_id: TestFeature.Messages }],
+	add_items: [messagesItem(messages)],
+});
+
+const statedVariantVersions = (variantId: string) => [
+	{
+		variant_plan_id: variantId,
+		version: 1,
+		customize: contentOnlyVariantCustomize(200),
+	},
+	{
+		variant_plan_id: variantId,
+		version: 2,
+		customize: contentOnlyVariantCustomize(200),
+	},
+];
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants licenses: stated content-only variants adopt the base's declared child version")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_reb_anchor");
+		const variantId = uniqueTestId("cv2_var_reb_anchor_eu");
+		const childId = uniqueTestId("cv2_var_reb_anchor_seat");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId, childId],
+			run: async () => {
+				await seedStockVariantVersionsOnChildV1({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+					childId,
+				});
+
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: baseId,
+							version: 1,
+							licenses: [
+								{
+									license_plan_id: childId,
+									version_slug: "v2",
+									included: 2,
+									customize: null,
+								},
+							],
+							variants: statedVariantVersions(variantId),
+						},
+					],
+				});
+
+				await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: baseId,
+					licensePlanId: childId,
+					licenseVersion: 2,
+					messagesAllowance: 20,
+					customized: false,
+				});
+				for (const parentVersion of [1, 2]) {
+					await expectLicenseLinkCorrect({
+						ctx,
+						parentPlanId: variantId,
+						parentVersion,
+						licensePlanId: childId,
+						licenseVersion: 2,
+						messagesAllowance: 20,
+						customized: false,
+					});
+				}
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants licenses: stated content-only variants adopt the base's declared license customize")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_reb_liccus");
+		const variantId = uniqueTestId("cv2_var_reb_liccus_eu");
+		const childId = uniqueTestId("cv2_var_reb_liccus_seat");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId, childId],
+			run: async () => {
+				await seedStockVariantVersionsOnChildV1({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+					childId,
+				});
+
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: baseId,
+							version: 1,
+							licenses: [
+								{
+									license_plan_id: childId,
+									version_slug: "v1",
+									included: 2,
+									customize: messagesOverride(30),
+								},
+							],
+							variants: statedVariantVersions(variantId),
+						},
+					],
+				});
+
+				await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: baseId,
+					licensePlanId: childId,
+					licenseVersion: 1,
+					messagesAllowance: 30,
+					customized: true,
+				});
+				for (const parentVersion of [1, 2]) {
+					await expectLicenseLinkCorrect({
+						ctx,
+						parentPlanId: variantId,
+						parentVersion,
+						licensePlanId: childId,
+						licenseVersion: 1,
+						messagesAllowance: 30,
+						customized: true,
+					});
+				}
+			},
+		});
+	},
+);
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants licenses: follow add Dashboard keeps 200 — not Team's 100")}`,

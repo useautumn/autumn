@@ -16,12 +16,14 @@
  */
 
 import { test } from "bun:test";
+import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import { messagesItem } from "../../licenses/utils/seedLicensePlans.js";
+import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import {
 	expectVariantPlanCorrect,
 	expectVariantPointerCorrect,
@@ -32,10 +34,21 @@ import {
 	seedVariantNewVersion,
 } from "../utils/seedVariantPlans.js";
 
+const initVariantScenario = () =>
+	initScenario({
+		setup: [
+			s.platform.create({
+				userEmail: `${uniqueTestId("cv2_var_unlink")}@autumn.test`,
+				setupDefaultFeatures: true,
+			}),
+		],
+		actions: [],
+	});
+
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants: omit + top-level unlinks every variant version")}`,
 	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const { autumnV2_3, ctx } = await initVariantScenario();
 		const baseId = uniqueTestId("cv2_var_unl_all");
 		const variantId = uniqueTestId("cv2_var_unl_all_eu");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
@@ -44,10 +57,7 @@ test.concurrent(
 			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
 
 			await autumnV2_3.catalogV2.update({
-				plans: [
-					{ plan_id: baseId, variants: [] },
-					{ plan_id: variantId },
-				],
+				plans: [{ plan_id: baseId, variants: [] }, { plan_id: variantId }],
 			});
 
 			await expectVariantUnlinkedCorrect({
@@ -67,9 +77,193 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: split nested and top-level versions are rejected")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initVariantScenario();
+		const baseId = uniqueTestId("cv2_var_split");
+		const variantId = uniqueTestId("cv2_var_split_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+
+			for (const func of [
+				() =>
+					autumnV2_3.catalogV2.previewUpdate({
+						plans: [
+							{
+								plan_id: baseId,
+								variants: [{ variant_plan_id: variantId, version_slug: "v1" }],
+							},
+							{ plan_id: variantId, version_slug: "v2" },
+						],
+					}),
+				() =>
+					autumnV2_3.catalogV2.update({
+						plans: [
+							{
+								plan_id: baseId,
+								variants: [{ variant_plan_id: variantId, version_slug: "v1" }],
+							},
+							{ plan_id: variantId, version_slug: "v2" },
+						],
+					}),
+			]) {
+				await expectAutumnError({
+					errCode: ErrCode.InvalidRequest,
+					errMessage: `Plan ${variantId} cannot appear both as a top-level plan and in variants[]`,
+					func,
+				});
+			}
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: enumerated nested unlink detaches exactly the stated versions")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initVariantScenario();
+		const baseId = uniqueTestId("cv2_var_unl_enum");
+		const variantId = uniqueTestId("cv2_var_unl_enum_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: baseId,
+						version: 1,
+						variants: [
+							{ variant_plan_id: variantId, version: 1, base_variant_id: null },
+							{ variant_plan_id: variantId, version: 2, base_variant_id: null },
+						],
+					},
+				],
+			});
+
+			await expectVariantUnlinkedCorrect({
+				ctx,
+				variantPlanId: variantId,
+				versions: [1, 2],
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: unlinking one of two linked versions is rejected")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initVariantScenario();
+		const baseId = uniqueTestId("cv2_var_unl_part");
+		const variantId = uniqueTestId("cv2_var_unl_part_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+
+			const partial = {
+				plans: [
+					{
+						plan_id: baseId,
+						variants: [
+							{ variant_plan_id: variantId, version: 1, base_variant_id: null },
+						],
+					},
+				],
+			};
+			for (const func of [
+				() => autumnV2_3.catalogV2.previewUpdate(partial),
+				() => autumnV2_3.catalogV2.update(partial),
+			]) {
+				await expectAutumnError({
+					errCode: ErrCode.VariantCrossPlanAnchor,
+					errMessage: `All versions of ${variantId} must share one base plan or all be standalone`,
+					func,
+				});
+			}
+			await expectVariantPointerCorrect({
+				ctx,
+				variantPlanId: variantId,
+				basePlanId: baseId,
+				variantVersion: 1,
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: versions split across base plan ids are rejected")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initVariantScenario();
+		const baseId = uniqueTestId("cv2_var_split_a");
+		const otherBaseId = uniqueTestId("cv2_var_split_b");
+		const variantId = uniqueTestId("cv2_var_split_eu");
+		await deleteDbPlans({
+			ctx,
+			planIds: [baseId, otherBaseId, variantId],
+		});
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: otherBaseId, name: "Enterprise" }],
+			});
+
+			for (const func of [
+				() =>
+					autumnV2_3.catalogV2.previewUpdate({
+						plans: [
+							{
+								plan_id: baseId,
+								variants: [{ variant_plan_id: variantId, version_slug: "v1" }],
+							},
+							{
+								plan_id: otherBaseId,
+								variants: [{ variant_plan_id: variantId, version_slug: "v2" }],
+							},
+						],
+					}),
+				() =>
+					autumnV2_3.catalogV2.update({
+						plans: [
+							{
+								plan_id: baseId,
+								variants: [{ variant_plan_id: variantId, version_slug: "v1" }],
+							},
+							{
+								plan_id: otherBaseId,
+								variants: [{ variant_plan_id: variantId, version_slug: "v2" }],
+							},
+						],
+					}),
+			]) {
+				await expectAutumnError({
+					errCode: ErrCode.VariantCrossPlanAnchor,
+					errMessage: `All versions of ${variantId} must share one base plan or all be standalone`,
+					func,
+				});
+			}
+		} finally {
+			await deleteDbPlans({
+				ctx,
+				planIds: [baseId, otherBaseId, variantId],
+			});
+		}
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants: omission or top-level edit alone stays linked")}`,
 	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const { autumnV2_3, ctx } = await initVariantScenario();
 		const baseId = uniqueTestId("cv2_var_unl_keep");
 		const variantId = uniqueTestId("cv2_var_unl_keep_eu");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
@@ -104,7 +298,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants: unlinked variant stops following base edits")}`,
 	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const { autumnV2_3, ctx } = await initVariantScenario();
 		const baseId = uniqueTestId("cv2_var_unl_fol");
 		const variantId = uniqueTestId("cv2_var_unl_fol_eu");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
@@ -112,10 +306,7 @@ test.concurrent(
 			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
 
 			await autumnV2_3.catalogV2.update({
-				plans: [
-					{ plan_id: baseId, variants: [] },
-					{ plan_id: variantId },
-				],
+				plans: [{ plan_id: baseId, variants: [] }, { plan_id: variantId }],
 			});
 			await expectVariantUnlinkedCorrect({
 				ctx,
@@ -128,10 +319,7 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-						items: [
-							messagesItem(100),
-							{ feature_id: TestFeature.Dashboard },
-						],
+						items: [messagesItem(100), { feature_id: TestFeature.Dashboard }],
 					},
 				],
 			});
@@ -150,7 +338,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants: base_variant_id null on the variant detaches every version")}`,
 	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const { autumnV2_3, ctx } = await initVariantScenario();
 		const baseId = uniqueTestId("cv2_var_unl_flag");
 		const variantId = uniqueTestId("cv2_var_unl_flag_eu");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
@@ -181,7 +369,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants: nested base_variant_id null detaches every version")}`,
 	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const { autumnV2_3, ctx } = await initVariantScenario();
 		const baseId = uniqueTestId("cv2_var_unl_nest");
 		const variantId = uniqueTestId("cv2_var_unl_nest_eu");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
@@ -193,9 +381,7 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-						variants: [
-							{ variant_plan_id: variantId, base_variant_id: null },
-						],
+						variants: [{ variant_plan_id: variantId, base_variant_id: null }],
 					},
 				],
 			});

@@ -15,6 +15,7 @@ import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatur
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
 import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
+import { useSheetBrowserBack } from "../hooks/useSheetBrowserBack";
 import { featureToCatalogFeatureParams } from "../utils/buildFeatureMutationParams";
 
 interface UpdateFeatureSheetProps {
@@ -35,6 +36,7 @@ function UpdateFeatureSheet({
 	const setBaseFeature = useFeatureStore((s) => s.setBaseFeature);
 
 	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
+	useSheetBrowserBack({ enabled: open });
 
 	// Initialize feature store when selectedFeature changes
 	useEffect(() => {

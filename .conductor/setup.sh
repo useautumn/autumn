@@ -2,35 +2,23 @@
 # Runs once when Conductor creates a workspace (settings.toml -> scripts.setup).
 # Everything slow and one-time lives here; workspace.sh only starts the stack.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
-# The machine snapshot carries Docker images but not a running daemon, and these
-# boxes have no systemd. if/then rather than `a || b &`, which would background
-# the whole list instead of just the fallback.
-if ! docker info >/dev/null 2>&1; then
-  echo "[conductor] starting docker daemon"
-  if ! sudo systemctl start docker 2>/dev/null; then
-    sudo setsid dockerd >/tmp/dockerd.log 2>&1 </dev/null &
-  fi
-  for _ in $(seq 1 30); do
-    docker info >/dev/null 2>&1 && break
-    sleep 2
-  done
-  docker info >/dev/null 2>&1 \
-    || { echo "[conductor] docker failed to start; see /tmp/dockerd.log" >&2; exit 1; }
-fi
+# Conductor keeps setup output in its own UI only, so a failed provision leaves
+# nothing on the box to debug. Keep a copy.
+exec > >(tee /tmp/conductor-setup.log) 2>&1
 
-# `dnf install docker` ships the engine but not the Compose plugin, so dw logs
-# "docker compose not available; skipping infra stack" and every service that
-# needs Redis/SQS/DynamoDB dies on ECONNREFUSED.
-if ! docker compose version >/dev/null 2>&1; then
-  echo "[conductor] installing docker compose plugin"
-  sudo mkdir -p /usr/libexec/docker/cli-plugins
-  sudo curl -fsSL \
-    "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" \
-    -o /usr/libexec/docker/cli-plugins/docker-compose
-  sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
-  docker compose version
-fi
+# Nothing here may assume the Cloud computer install script provided anything:
+# it is org-level UI state and emptying it silently removes bun and docker.
+. "$(dirname "$0")/ensureTooling.sh"
+ensure_bun_installed || exit 1
+ensure_neonctl_installed || exit 1
+ensure_psql_installed || exit 1
+
+. "$(dirname "$0")/startDocker.sh"
+start_docker_daemon || exit 1
+
+ensure_compose_plugin
 
 # Interactive terminals get the local aliases/PATH. Non-secret only — see the
 # header in shellrc.sh.
@@ -39,5 +27,20 @@ if ! grep -q 'conductor/shellrc.sh' "$HOME/.bashrc" 2>/dev/null; then
     >> "$HOME/.bashrc"
 fi
 
-# Neon branch, migrations, compose stack, .env.local, test org.
+# `bun dw setup` installs deps itself, but it can never get that far on a fresh
+# workspace: scripts/dw/index.ts imports @autumn/env and dies at module load.
+bun install
+
+# The Infisical CLI ships in node_modules, so this has to follow bun install.
+export PATH="$PWD/node_modules/.bin:$PATH"
+. "$(dirname "$0")/ensureInfisical.sh"
+ensure_infisical_session || exit 1
+
+# Neon branch, migrations, compose stack, .env.local, test org. Its ai sync is what
+# writes the Executor entry into .mcp.json.
 bun dw setup
+
+# That sync writes Claude's `${EXECUTOR_API_KEY}` placeholder, but Conductor never
+# puts the key in the agent's environment, so it would expand to an empty Bearer.
+# .mcp.json is gitignored, so resolving it here cannot leak the key into a commit.
+bun scripts/setup/conductor/resolveExecutorKey.ts

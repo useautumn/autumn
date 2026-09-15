@@ -7,19 +7,18 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	"comments inside a fixture literal do not survive a remote-driven in-place rewrite of that fixture",
 	async () => {
 		const proId = uniqueTestId("atmn_pro");
-		const comment =
-			"// pricing set by finance, don't change without approval";
+		const comment = "// pricing set by finance, don't change without approval";
 
 		const rootConfig = `import { pro } from "./plans";
 import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
@@ -36,9 +35,11 @@ export default atmn({ plans: [pro] });
 				"plans.ts": `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
 
 export const pro = plan({
+	active: true,
 	planId: "${proId}",
 	${comment}
 	name: "Pro",
+	versionSlug: "v1",
 	price: { amount: 49, interval: "month" },
 });
 `,

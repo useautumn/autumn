@@ -151,6 +151,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "api_free",
+			versionSlug: "v1",
+			active: true,
 			name: "API Free",
 			group: "api",
 			autoEnable: true,
@@ -164,6 +166,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "api_pro",
+			versionSlug: "v1",
+			active: true,
 			name: "API Pro",
 			group: "api",
 			price: { amount: 25, interval: "month" },
@@ -180,6 +184,7 @@ ${
 		? `			variants: [
 				variant({
 					variantPlanId: "api_pro_100k",
+					versionSlug: "v1",
 					name: "API Pro 100K",
 					customize: {
 						price: { amount: 45, interval: "month" },
@@ -195,6 +200,7 @@ ${
 				}),
 				variant({
 					variantPlanId: "api_pro_200k",
+					versionSlug: "v1",
 					name: "API Pro 200K",
 					customize: {
 						price: { amount: 80, interval: "month" },
@@ -214,6 +220,8 @@ ${
 }		}),
 		plan({
 			planId: "campaigns_free",
+			versionSlug: "v1",
+			active: true,
 			name: "Campaigns Free",
 			group: "campaigns",
 			autoEnable: true,
@@ -221,6 +229,8 @@ ${
 		}),
 		plan({
 			planId: "campaigns_pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Campaigns Pro",
 			group: "campaigns",
 			price: { amount: 40, interval: "month" },
@@ -230,6 +240,7 @@ ${
 		? `			variants: [
 				variant({
 					variantPlanId: "campaigns_pro_25k",
+					versionSlug: "v1",
 					name: "Campaigns Pro 25K",
 					customize: {
 						price: { amount: 150, interval: "month" },
@@ -238,6 +249,7 @@ ${
 				}),
 				variant({
 					variantPlanId: "campaigns_pro_100k",
+					versionSlug: "v1",
 					name: "Campaigns Pro 100K",
 					customize: {
 						price: { amount: 400, interval: "month" },
@@ -250,6 +262,8 @@ ${
 }		}),
 		plan({
 			planId: "sso_add_on",
+			versionSlug: "v1",
+			active: true,
 			name: "SSO",
 			addOn: true,
 			price: { amount: 150, interval: "month" },

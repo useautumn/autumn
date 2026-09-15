@@ -1,14 +1,15 @@
-import type {
-	BillingContext,
-	FullCusProduct,
-	FullCustomerLicense,
-	LicenseBillingPriceRow,
-	LineItem,
+import {
+	type BillingContext,
+	type FullCusProduct,
+	type FullCustomerLicense,
+	type LicenseBillingPriceRow,
+	type LineItem,
+	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { customerLicenseToUnusedPrepaidRows } from "./customerLicenseToUnusedPrepaidRows";
-import { licenseBillingRowToLineItem } from "./licenseBillingRowToLineItem";
-import { resolveLicenseBillingRowsThroughDefinition } from "./resolveLicenseBillingRowsThroughDefinition";
+import { customerLicenseToUnusedPrepaidRows } from "./customerLicenseToUnusedPrepaidRows.js";
+import { licenseBillingRowToLineItem } from "./licenseBillingRowToLineItem.js";
+import { resolveLicenseBillingRowsThroughDefinition } from "./resolveLicenseBillingRowsThroughDefinition.js";
 
 /** One row per price with summed quantities, so a direction bills its full
  * quantity picture as a single line (mirroring feature-quantity updates). */
@@ -72,8 +73,8 @@ export const customerLicenseToLineItems = ({
 		}),
 	);
 
-	return mergeLicenseBillingRowsByPrice(licenseBillingRows).map(
-		(licenseBillingRow) =>
+	return mergeLicenseBillingRowsByPrice(licenseBillingRows)
+		.map((licenseBillingRow) =>
 			licenseBillingRowToLineItem({
 				ctx,
 				billingContext,
@@ -82,5 +83,6 @@ export const customerLicenseToLineItems = ({
 				customerProduct,
 				direction,
 			}),
-	);
+		)
+		.filter(notNullish);
 };

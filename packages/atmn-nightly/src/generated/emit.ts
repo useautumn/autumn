@@ -82,13 +82,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 		],
 		defaults: {},
 		pull: true,
-		deprecated: [
-			{
-				path: "event_names",
-				reason:
-					"Deprecated on the server, but existing catalogs carry it, so a config must keep round-tripping the field.",
-			},
-		],
+		deprecated: [],
 	},
 	plans: {
 		builder: "plan",
@@ -118,6 +112,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"baseVariantId",
 		],
 		required: [
+			"active",
 			"billingControls.autoTopups.featureId",
 			"billingControls.autoTopups.purchaseLimit.interval",
 			"billingControls.autoTopups.purchaseLimit.limit",
@@ -397,6 +392,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"items.price.additionalCurrencies",
 			"items.price.additionalCurrencies.amount",
 			"items.price.additionalCurrencies.currency",
+			"items.price.allocatedBilling",
 			"items.price.amount",
 			"items.price.billingMethod",
 			"items.price.billingUnits",
@@ -469,6 +465,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"licenses.customize.addItems.price.additionalCurrencies",
 			"licenses.customize.addItems.price.additionalCurrencies.amount",
 			"licenses.customize.addItems.price.additionalCurrencies.currency",
+			"licenses.customize.addItems.price.allocatedBilling",
 			"licenses.customize.addItems.price.amount",
 			"licenses.customize.addItems.price.billingMethod",
 			"licenses.customize.addItems.price.billingUnits",
@@ -515,6 +512,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"licenses.licensePlanId",
 			"licenses.metadata",
 			"licenses.prepaidOnly",
+			"licenses.versionSlug",
 			"metadata",
 			"name",
 			"planId",
@@ -580,6 +578,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.addItems.price.additionalCurrencies",
 			"variants.customize.addItems.price.additionalCurrencies.amount",
 			"variants.customize.addItems.price.additionalCurrencies.currency",
+			"variants.customize.addItems.price.allocatedBilling",
 			"variants.customize.addItems.price.amount",
 			"variants.customize.addItems.price.billingMethod",
 			"variants.customize.addItems.price.billingUnits",
@@ -690,6 +689,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.items.price.additionalCurrencies",
 			"variants.customize.items.price.additionalCurrencies.amount",
 			"variants.customize.items.price.additionalCurrencies.currency",
+			"variants.customize.items.price.allocatedBilling",
 			"variants.customize.items.price.amount",
 			"variants.customize.items.price.billingMethod",
 			"variants.customize.items.price.billingUnits",
@@ -774,6 +774,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.upsertLicenses.customize.addItems.price.additionalCurrencies",
 			"variants.customize.upsertLicenses.customize.addItems.price.additionalCurrencies.amount",
 			"variants.customize.upsertLicenses.customize.addItems.price.additionalCurrencies.currency",
+			"variants.customize.upsertLicenses.customize.addItems.price.allocatedBilling",
 			"variants.customize.upsertLicenses.customize.addItems.price.amount",
 			"variants.customize.upsertLicenses.customize.addItems.price.billingMethod",
 			"variants.customize.upsertLicenses.customize.addItems.price.billingUnits",
@@ -820,6 +821,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.upsertLicenses.licensePlanId",
 			"variants.customize.upsertLicenses.metadata",
 			"variants.customize.upsertLicenses.prepaidOnly",
+			"variants.customize.upsertLicenses.versionSlug",
 			"variants.internalId",
 			"variants.name",
 			"variants.newVersionSlug",
@@ -903,7 +905,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.upsertLicenses.customize.addItems.unlimited": false,
 			"variants.customize.upsertLicenses.customize.price.intervalCount": 1,
 		},
-		historyKey: "planVersions",
+		versioned: true,
 		pull: true,
 		deprecated: [
 			{

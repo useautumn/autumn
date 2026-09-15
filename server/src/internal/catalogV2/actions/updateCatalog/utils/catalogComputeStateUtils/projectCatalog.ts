@@ -77,9 +77,9 @@ export const projectCatalog = ({
 	// Keyed by row, not plan: removing one version beside an upsert of a
 	// sibling version must still drop the removed row from the projection.
 	const upsertedRows = new Set(
-		plan.upsertProducts.map(
-			(upsert) => `${upsert.row.planId}@${upsert.row.version}`,
-		),
+		plan.upsertProducts
+			.filter((upsert) => upsert.row.source !== "demoted_product")
+			.map((upsert) => `${upsert.row.planId}@${upsert.row.version}`),
 	);
 	const hardDeletedInternalIds = new Set(
 		plan.removePlans.flatMap((removePlan) =>

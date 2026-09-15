@@ -55,6 +55,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "free",
+			versionSlug: "v1",
+			active: true,
 			name: "Free",
 			autoEnable: true,
 			items: [

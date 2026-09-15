@@ -137,8 +137,8 @@ test("seed-packs-fork: the seeded base config alone fails the pack verdicts", as
 
 test("seed-packs-fork: packs duplicated onto base plans fail the negative anchor", async () => {
 	const pollutedGolden = knowledgePlatformGoldenConfig().replace(
-		'\t\t\tplanId: "credits_pack",\n\t\t\tname: "Credits Pack",\n\t\t\taddOn: true,',
-		'\t\t\tplanId: "credits_pack",\n\t\t\tname: "Credits Pack",',
+		'\t\t\tplanId: "credits_pack",\n\t\t\tversionSlug: "v1",\n\t\t\tactive: true,\n\t\t\tname: "Credits Pack",\n\t\t\taddOn: true,',
+		'\t\t\tplanId: "credits_pack",\n\t\t\tversionSlug: "v1",\n\t\t\tactive: true,\n\t\t\tname: "Credits Pack",',
 	);
 	expect(pollutedGolden).not.toContain("addOn: true");
 	const scores = await scoreConfigExpectations({

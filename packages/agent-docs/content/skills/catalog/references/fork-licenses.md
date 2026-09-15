@@ -16,20 +16,26 @@ Tempting (wrong): per-unit seat item + one big summaries allowance on the team p
 
 Why it breaks: the allowance doesn't grow when they add a 6th seat, and seats have no identity — no per-seat balance, no assigning seat #3 to Alice.
 
-Right: the seat is a **license** — a small plan of its own (own group, $40 price, grants 100 summaries) that the team plan hands out per seat. `included` on the license link is how many come free with the parent; extras bill at the seat plan's price:
+Right: the seat is a **license** — a small plan of its own (own group, $40 price, grants 100 summaries) that the team plan hands out per seat. The link is a `license({...})` fixture in the parent's `licenses`, naming the child's version; `included` is how many come free with the parent, and extras bill at the seat plan's price:
 
 ```ts
 export const seat = plan({
-  id: "seat",
+  planId: "seat",
+  versionSlug: "v1",
+  active: true,
+  name: "Seat",
   group: "seat",
   price: { amount: 40, interval: "month" },
-  items: [item({ featureId: summaries.id, included: 100, reset: { interval: "month" } })],
+  items: [{ featureId: summaries.featureId, included: 100, reset: { interval: "month" } }],
 });
 
 export const team = plan({
-  id: "team",
+  planId: "team",
+  versionSlug: "v1",
+  active: true,
+  name: "Team",
   price: { amount: 500, interval: "month" },
-  licenses: [{ licensePlanId: seat.id, included: 5 }],
+  licenses: [license({ licensePlanId: seat.planId, versionSlug: seat.versionSlug, included: 5 })],
 });
 ```
 
@@ -43,26 +49,27 @@ The shape, schematically:
 
 ```ts
 export const <child> = plan({
-  id: "<child>",
+  planId: "<child>",
   group: "<child>",                       // own group, or attaching replaces the parent
   price: { amount: <mainline unit price>, interval: "month" },
   items: [ <mainline grant>, <booleans every unit has> ],
 });
 
 export const <parentA> = plan({           // gets the mainline take: link only
-  licenses: [{ licensePlanId: <child>.id, included: <n> }],
+  licenses: [license({ licensePlanId: <child>.planId, versionSlug: <child>.versionSlug, included: <n> })],
 });
 
 export const <parentB> = plan({           // differs: diff on the license, never a second child plan
-  licenses: [{
-    licensePlanId: <child>.id,
+  licenses: [license({
+    licensePlanId: <child>.planId,
+    versionSlug: <child>.versionSlug,
     included: <m>,
     customize: {
       price: { amount: <parentB unit price>, interval: "month" },
-      addItems: [ <parentB's grant> ],
       removeItems: [ <filter matching the mainline grant> ],
+      addItems: [ <parentB's grant> ],
     },
-  }],
+  })],
 });
 ```
 
@@ -70,41 +77,51 @@ Worked example — an agency platform: Studio ($90/mo) and Agency ($450/mo) both
 
 ```ts
 export const site = plan({
-  id: "site",
+  planId: "site",
+  versionSlug: "v1",
+  active: true,
+  name: "Site",
   group: "site",
   price: { amount: 8, interval: "month" },
   items: [
-    item({ featureId: renders.id, included: 2000, reset: { interval: "month" } }),
-    item({ featureId: ssl.id }),
+    { featureId: renders.featureId, included: 2000, reset: { interval: "month" } },
+    { featureId: ssl.featureId },
   ],
 });
 
 export const agency = plan({
-  id: "agency",
+  planId: "agency",
+  versionSlug: "v1",
+  active: true,
+  name: "Agency",
   price: { amount: 450, interval: "month" },
-  licenses: [{ licensePlanId: site.id, included: 10 }],
+  licenses: [license({ licensePlanId: site.planId, versionSlug: site.versionSlug, included: 10 })],
 });
 
 export const studio = plan({
-  id: "studio",
+  planId: "studio",
+  versionSlug: "v1",
+  active: true,
+  name: "Studio",
   price: { amount: 90, interval: "month" },
-  licenses: [{
-    licensePlanId: site.id,
+  licenses: [license({
+    licensePlanId: site.planId,
+    versionSlug: site.versionSlug,
     included: 2,
     customize: {
       price: { amount: 12, interval: "month" },
-      addItems: [item({ featureId: renders.id, included: 750, reset: { interval: "month" } })],
-      removeItems: [{ featureId: renders.id }],
+      removeItems: [{ featureId: renders.featureId }],
+      addItems: [{ featureId: renders.featureId, included: 750, reset: { interval: "month" } }],
     },
-  }],
+  })],
 });
 ```
 
 WRONG — child duplicated per parent:
 
 ```ts
-export const studioSite = plan({ id: "studio_site", price: { amount: 12, ... }, items: [ /* 750 renders, SSL */ ] });
-export const agencySite = plan({ id: "agency_site", price: { amount: 8, ... },  items: [ /* 2000 renders, SSL */ ] });
+export const studioSite = plan({ planId: "studio_site", price: { amount: 12, ... }, items: [ /* 750 renders, SSL */ ] });
+export const agencySite = plan({ planId: "agency_site", price: { amount: 8, ... },  items: [ /* 2000 renders, SSL */ ] });
 ```
 
 RIGHT — the `site` config above: one `site` plan, two license entries, studio's diff in `customize`. Duplicated children break sharing — an SSL change now needs two edits, and a customer moving Studio→Agency gets a brand-new site plan instead of the same one on new terms.

@@ -24,8 +24,10 @@ import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/g
 // price), plus a feature-level mapping.
 const proPlan = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			createInStripe: false,
 			processors: { stripe: { productId: "prod_fake_depth_plan" } },
 			price: {

@@ -29,15 +29,19 @@ type CatalogPlanRow = {
 /** The license link has no version_slug field on the wire — it can only ever
  * point at the license plan_id, never a specific version. */
 const seatVersion = ({
-	versionSlug,
+	versionSlug = "v1",
 	amount,
+	active = true,
 }: {
 	versionSlug?: string;
 	amount: number;
+	active?: boolean;
 }): string => `
 		plan({
+			active: ${active},
 			planId: "seat",
-			name: "Seat",${versionSlug ? `\n\t\t\tversionSlug: "${versionSlug}",` : ""}
+			name: "Seat",
+			versionSlug: "${versionSlug}",
 			price: { amount: ${amount}, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
 		}),`;
@@ -72,8 +76,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
-						plans: `${seatVersion({ versionSlug: "v2", amount: 20 })}${enterpriseWithSeats({ included: 25 })}`,
-						planVersions: seatVersion({ versionSlug: "v1", amount: 15 }),
+						plans: `${seatVersion({ versionSlug: "v2", amount: 20 })}${enterpriseWithSeats({ included: 25 })}${seatVersion({ versionSlug: "v1", amount: 15, active: false })}`,
 					}),
 				}),
 			);

@@ -48,11 +48,13 @@
 
 <versions>
 
-- A plan's versions are parallel definitions that different groups of customers live on — not a timeline. One version is marked **active**; that's what new customers get.
-- Versions used to be numbered steps where the newest was automatically live. That changed: now you create a version and **promote** it to active when it's ready.
-- When is a change a new version? If it applies to everyone (adding a feature to all versions), it's an edit, not a version. If existing customers should keep their old terms (a base price increase with grandfathering), it's a new version — old customers stay on theirs.
-- Non-active versions have a second use: staging plans during a migration from another billing setup, holding those customer groups before cutover.
-- Each version has a `version_slug` (a user-facing name); renaming a slug does not create a new version.
+- A version is one definition of a plan that a group of customers lives on. A plan's versions sit side by side — they are not a timeline, and a newer one is not "the" plan.
+- The test for a new version: **should existing customers keep the old terms?** Yes (a base price increase they are grandfathered on) → a new version; they stay on theirs. No (a feature everyone gets) → an edit to the version they are on, or to every version at once — not a new version.
+- Exactly one version of a plan is **active**: the one `billing.attach` puts a customer on when no version is named, and the one reads resolve to by default. Promoting a version moves that pointer; it moves no customer.
+- A version that is not active is a **draft**: minted, not yet sold. Two flows: mint and promote in one step, or mint as a draft, review it, promote later. Drafts also stage customer groups while migrating from another billing system.
+- `version_slug` is the version's name (`v1`, `2026-q3`), unique within the plan. Renaming a slug renames the version; it never mints one. The server also numbers versions in creation order — an internal label, not a meaning.
+- Customers do not move when the pointer moves. Editing a version in place changes what its customers have; moving customers to another version is a **migration**, drafted and run on its own.
+- Variants and licenses are versioned with the plan. A variant's customize is a diff over one base version. A license link is pinned to one child version; moving a parent onto another child version is an explicit change to that link. How a catalog update expresses these is the `autumn-catalog` skill's.
 - A plan can also have **aliases**: after a plan id rename, the old id still resolves to the plan.
 
 </versions>
@@ -61,10 +63,10 @@
 
 - Variants group related plans under one base definition and store each variant's diff as `variant_details.customize`.
 - `plans.list` returns a flat plan list; each variant plan points back to its base through `variant_details`.
-- In `catalog.preview_update` / `catalog.update`, define or customize variants under the base plan's `plans[n].variants`.
-- Updating a base plan can propagate its diff to selected variants through the catalog update flow.
+- In a catalog update, variants are defined or customized under the base plan's `variants`, never as top-level plans.
+- A base edit does not reach a variant on its own: each variant either follows the change or keeps its current definition, and the update preview says which for every variant.
 - Common variant uses: billing intervals, A/B price packages, and volume ladders.
-- A variant's stored diff can change the price, add or remove items, and change the trial — it cannot replace the whole item list, and a variant cannot be the default plan or have variants of its own.
+- A variant's stored diff can change the price, replace the item list (`items`) or patch it (`add_items` / `remove_items`), and change the trial. A variant cannot be the default plan or have variants of its own.
 
 Annual interval variant:
 

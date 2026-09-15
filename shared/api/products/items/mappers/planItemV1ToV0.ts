@@ -1,6 +1,6 @@
-import type { CreatePlanItemParamsV1 } from "@api/models";
 import { RecaseError } from "@api/errors/base/RecaseError";
 import { ProductErrorCode } from "@api/errors/codes/productErrCodes";
+import type { CreatePlanItemParamsV1 } from "@api/models";
 import { BillingMethod } from "@api/products/components/billingMethod";
 import { billingMethodToUsageModel } from "@api/products/components/mappers/billingMethodTousageModel";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
@@ -62,9 +62,7 @@ export function planItemV1ToV0({
 		price: price
 			? {
 					stripe_price_id:
-						"stripe_price_id" in price
-							? price.stripe_price_id
-							: undefined,
+						"stripe_price_id" in price ? price.stripe_price_id : undefined,
 					processors: "processors" in price ? price.processors : undefined,
 					amount: price.amount,
 					tiers: internalTiers,
@@ -75,6 +73,7 @@ export function planItemV1ToV0({
 					interval_count: price.interval_count,
 					billing_units: billingUnits,
 					usage_model: billingMethodToUsageModel(price.billing_method),
+					allocated_billing: price.allocated_billing,
 					max_purchase: price.max_purchase ?? null,
 				}
 			: null,

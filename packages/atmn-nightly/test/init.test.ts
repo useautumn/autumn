@@ -12,7 +12,7 @@
  *   path
  *     - monorepo                            → --path and --name are asked (hinted headless)
  *     - single repo                         → config in cwd, no questions
- *     - monorepo writes package.json (dep on atmn-nightly), config + planVersions/,
+ *     - monorepo writes package.json (dep on atmn-nightly), config + collection files,
  *       the root marker `"atmn": { "config" }` and an `"atmn"` root script
  *   pull
  *     - the pull runs against the config dir; its line count is reported
@@ -198,7 +198,7 @@ test("single repo, valid key: no questions, config in cwd, skills beside it", as
 	expect(calls.pull).toEqual([root]);
 	expect(result.configDir).toBe(root);
 	expect(existsSync(join(root, "autumn.config.ts"))).toBe(true);
-	expect(existsSync(join(root, "planVersions"))).toBe(true);
+	expect(existsSync(join(root, "plans.ts"))).toBe(true);
 	for (const skill of SKILLS)
 		expect(existsSync(join(root, "skills", skill.name, "SKILL.md"))).toBe(true);
 	const text = lines.join("");
@@ -470,7 +470,7 @@ test("monorepo, headless: hints --path, then --name, then does everything", asyn
 	expect(pkg.private).toBe(true);
 	expect(pkg.dependencies["atmn-nightly"]).toBeDefined();
 	expect(existsSync(join(pkgDir, "autumn.config.ts"))).toBe(true);
-	expect(existsSync(join(pkgDir, "planVersions"))).toBe(true);
+	expect(existsSync(join(pkgDir, "plans.ts"))).toBe(true);
 	expect(existsSync(join(pkgDir, "skills"))).toBe(true);
 
 	const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));

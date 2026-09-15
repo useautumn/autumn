@@ -26,6 +26,7 @@ import {
 	variantVersions,
 } from "./catalogPlanPreview";
 import { resolvePlanChangePreview } from "./resolvePlanChangePreview";
+import type { VariantRelationshipChange } from "./variantRelationshipChange";
 
 export const usePlanChangeCatalogPreview = ({
 	open,
@@ -39,7 +40,7 @@ export const usePlanChangeCatalogPreview = ({
 	includeCustom,
 	isLatest,
 	namesByPlanId,
-	persistedBasePlanId,
+	resolveRelationship,
 }: {
 	open: boolean;
 	baseProduct?: FrontendProduct | null;
@@ -52,7 +53,8 @@ export const usePlanChangeCatalogPreview = ({
 	includeCustom: boolean;
 	isLatest: boolean;
 	namesByPlanId: Record<string, string>;
-	persistedBasePlanId?: string | null;
+	/** Resolved at save time so a still-loading version list fails the save, not the render. */
+	resolveRelationship?: () => VariantRelationshipChange;
 }) => {
 	const contentParams = tryBuildUpdateCatalogPlanParams({
 		baseProduct,
@@ -175,7 +177,7 @@ export const usePlanChangeCatalogPreview = ({
 				migrate && migrateNeeded && model.strategy !== "new_version"
 					? { draft: true, include_custom: includeCustom }
 					: undefined,
-			persistedBasePlanId,
+			relationship: resolveRelationship?.(),
 		});
 	};
 

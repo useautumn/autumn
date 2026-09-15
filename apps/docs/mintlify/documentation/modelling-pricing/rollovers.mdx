@@ -16,35 +16,39 @@ Rollovers let unused feature balances carry forward to the next billing cycle in
 Add a `rollover` config to a plan item:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       included: 1000,
-      reset: { interval: 'month' },
+      reset: { interval: "month" },
       rollover: {
         max: 2000,
-        expiryDurationType: 'forever',
+        expiryDurationType: "forever",
         expiryDurationLength: 1,
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [credits], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">

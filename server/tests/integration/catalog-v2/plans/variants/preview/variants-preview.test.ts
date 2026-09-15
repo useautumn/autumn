@@ -19,7 +19,7 @@
 
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
 import {
@@ -45,6 +45,132 @@ const messagesValueDivergence = {
 	feature_name: "Messages",
 	item_filter: { feature_id: TestFeature.Messages },
 };
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants preview: reparented versions nest under the base that now owns them")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [s.platform.create({ setupDefaultFeatures: true })],
+			actions: [],
+		});
+		const baseId = uniqueTestId("cv2_var_prv_rep");
+		const variantId = uniqueTestId("cv2_var_prv_rep_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: baseId, versioning: "new_version", active: true }],
+			});
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{
+							plan_id: baseId,
+							version: 2,
+							variants: [
+								{ variant_plan_id: variantId, version: 1 },
+								{ variant_plan_id: variantId, version: 2 },
+							],
+						},
+						{ plan_id: baseId, version: 1, variants: [] },
+					],
+					skip_deletions: false,
+				}),
+			);
+
+			const movedFromV1 = {
+				base_variant_id: baseId,
+				base_version: 1,
+				base_version_slug: "v1",
+			};
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId: baseId,
+					currentVersion: 2,
+					variants: [
+						{
+							planId: variantId,
+							version: 2,
+							variantAction: "explicit",
+							previousAttributes: movedFromV1,
+							siblingVersions: [
+								{
+									version: 1,
+									variantAction: "explicit",
+									previousAttributes: movedFromV1,
+								},
+							],
+						},
+					],
+				},
+			});
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: { planId: baseId, currentVersion: 1, variants: null },
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants preview: slug-pinned declared entries classify every stated version as explicit")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_prv_slug");
+		const variantId = uniqueTestId("cv2_var_prv_slug_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+			const overlay = {
+				remove_items: [{ feature_id: TestFeature.Messages }],
+				add_items: [messagesItem(300)],
+			};
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{
+							plan_id: baseId,
+							variants: [
+								{
+									variant_plan_id: variantId,
+									version_slug: "v1",
+									customize: overlay,
+								},
+								{
+									variant_plan_id: variantId,
+									version_slug: "v2",
+									customize: overlay,
+								},
+							],
+						},
+					],
+				}),
+			);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId: baseId,
+					variants: [
+						{
+							planId: variantId,
+							version: 2,
+							variantAction: "explicit",
+							siblingVersions: [{ version: 1, variantAction: "explicit" }],
+						},
+					],
+				},
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants preview: two variants, only listed is propagated")}`,
@@ -180,6 +306,7 @@ test.concurrent(
 							variants: [
 								{
 									variant_plan_id: variantId,
+									version: 1,
 									customize: {
 										remove_items: [{ feature_id: TestFeature.Messages }],
 										add_items: [messagesItem(300)],
@@ -430,7 +557,8 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							propagate: { variants: [{ plan_id: variantId }] },
 						},
 					],
@@ -468,7 +596,8 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							propagate: { variants: [{ plan_id: variantId }] },
 						},
 					],
@@ -631,9 +760,7 @@ test.concurrent(
 									planId: variantId,
 									version: 2,
 									variantAction: "unchanged",
-									siblingVersions: [
-										{ version: 1, variantAction: "unchanged" },
-									],
+									siblingVersions: [{ version: 1, variantAction: "unchanged" }],
 								},
 							],
 						},

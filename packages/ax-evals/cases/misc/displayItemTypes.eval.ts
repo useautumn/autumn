@@ -109,6 +109,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "free",
+			versionSlug: "v1",
+			active: true,
 			name: "Free",
 			autoEnable: true,
 			items: [
@@ -121,6 +123,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 20, interval: "month" },
 			items: [
@@ -151,6 +155,7 @@ export default atmn({
 			variants: [
 				variant({
 					variantPlanId: "pro_annual",
+					versionSlug: "v1",
 					name: "Pro Annual",
 					customize: {
 						price: { amount: 200, interval: "year" },
@@ -160,6 +165,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "message_pack",
+			versionSlug: "v1",
+			active: true,
 			name: "Message Pack",
 			addOn: true,
 			items: [

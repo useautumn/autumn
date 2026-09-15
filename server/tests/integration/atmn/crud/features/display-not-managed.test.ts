@@ -32,7 +32,7 @@ test.concurrent("display is neither pushed nor pulled", async () => {
 
 	try {
 		const { freshFiles } = await expectRoundTrip({ scenario });
-		expect(freshFiles.get("autumn.config.ts")).not.toContain("display");
+		expect(freshFiles.get("features.ts")).not.toContain("display");
 
 		// A display set elsewhere survives a push and still stays out of a pull.
 		await scenario.client.update({
