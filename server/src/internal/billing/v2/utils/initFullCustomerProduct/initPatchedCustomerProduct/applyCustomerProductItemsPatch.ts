@@ -44,9 +44,13 @@ export const applyCustomerProductItemsPatch = ({
 			),
 			...insertCustomerEntitlements,
 		],
-		customer_licenses: [
-			...(customerProduct.customer_licenses ?? []),
-			...insertCustomerLicenses,
-		],
+		...(insertCustomerLicenses.length > 0
+			? {
+					customer_licenses: [
+						...(customerProduct.customer_licenses ?? []),
+						...insertCustomerLicenses,
+					],
+				}
+			: {}),
 	};
 };
