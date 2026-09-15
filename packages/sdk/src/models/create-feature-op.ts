@@ -318,10 +318,6 @@ export type CreateFeatureParams = {
     >
     | undefined;
   /**
-   * Whether usage of this classic credit system should be itemized as invoice credits.
-   */
-  invoiceCredit?: boolean | undefined;
-  /**
    * Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
    */
   modelMarkups?:
@@ -758,10 +754,6 @@ export type CreateFeatureResponse = {
       | CreateFeatureCreditSchemaResponse3
     >
     | undefined;
-  /**
-   * Whether usage of this classic credit system should be itemized as invoice credits.
-   */
-  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -1614,7 +1606,6 @@ export type CreateFeatureParams$Outbound = {
       | CreateFeatureCreditSchemaRequestBody2$Outbound
     >
     | undefined;
-  invoice_credit?: boolean | undefined;
   model_markups?:
     | { [k: string]: CreateFeatureModelMarkupsRequestBody$Outbound }
     | null
@@ -1646,7 +1637,6 @@ export const CreateFeatureParams$outboundSchema: z.ZodMiniType<
         CreateFeatureCreditSchemaRequestBody2$outboundSchema
       ),
     ]))),
-    invoiceCredit: z.optional(z.boolean()),
     modelMarkups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => CreateFeatureModelMarkupsRequestBody$outboundSchema),
@@ -1662,7 +1652,6 @@ export const CreateFeatureParams$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       creditSchema: "credit_schema",
-      invoiceCredit: "invoice_credit",
       modelMarkups: "model_markups",
       defaultMarkup: "default_markup",
       providerMarkups: "provider_markups",
@@ -2475,7 +2464,6 @@ export const CreateFeatureResponse$inboundSchema: z.ZodMiniType<
       ),
       z.lazy(() => CreateFeatureCreditSchemaResponse3$inboundSchema),
     ]))),
-    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => CreateFeatureModelMarkupsResponse$inboundSchema),
@@ -2497,7 +2485,6 @@ export const CreateFeatureResponse$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
-      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

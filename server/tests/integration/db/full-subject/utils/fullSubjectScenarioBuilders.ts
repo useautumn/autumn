@@ -345,6 +345,7 @@ const buildCustomerEntitlement = ({
 	id: `ce_${key}_${suffix}`,
 	customer_product_id: customerProductId,
 	entitlement_id: entitlement.id,
+	invoice_credit: false,
 	internal_customer_id: customer.internal_id,
 	internal_entity_id: internalEntityId,
 	internal_feature_id: entitlement.internal_feature_id,

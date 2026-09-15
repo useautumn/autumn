@@ -17,7 +17,6 @@ interface BuildFeatureMarkupParamsArgs {
 	defaultMarkup?: number | null;
 	providerMarkups?: ProviderMarkups;
 	schema?: CreditSchemaItem[];
-	invoiceCredit?: boolean;
 }
 
 interface FeatureMarkupParams {
@@ -25,7 +24,6 @@ interface FeatureMarkupParams {
 	default_markup?: number | null;
 	provider_markups?: ProviderMarkups;
 	credit_schema?: ApiCreditSchemaItem[];
-	invoice_credit?: boolean;
 }
 
 /**
@@ -39,7 +37,6 @@ export const buildFeatureMarkupParams = ({
 	defaultMarkup,
 	providerMarkups,
 	schema,
-	invoiceCredit,
 }: BuildFeatureMarkupParamsArgs): FeatureMarkupParams => {
 	const ai = isAiCreditSystem(type);
 	return {
@@ -47,7 +44,6 @@ export const buildFeatureMarkupParams = ({
 		default_markup: ai ? defaultMarkup : undefined,
 		provider_markups: ai ? providerMarkups : undefined,
 		credit_schema: ai || !schema ? undefined : creditSchemaToApi(schema),
-		invoice_credit: ai ? undefined : invoiceCredit,
 	};
 };
 
@@ -83,7 +79,6 @@ export const featureToCatalogFeatureParams = ({
 			defaultMarkup: feature.config?.default_markup,
 			providerMarkups: feature.config?.provider_markups,
 			schema: feature.config?.schema,
-			invoiceCredit: feature.config?.invoice_credit,
 		}),
 		...(archived !== undefined ? { archived } : {}),
 	};

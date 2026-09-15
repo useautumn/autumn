@@ -24,10 +24,6 @@ import {
 } from "@autumn/shared";
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
 import { StatusCodes } from "http-status-codes";
-import {
-	validateInvoiceCreditPooling,
-	validateInvoiceCreditPrice,
-} from "@/internal/features/validateInvoiceCreditPooling.js";
 import { validateItemFeatureOverride } from "@/internal/features/validateItemFeatureOverride.js";
 import {
 	isBooleanFeatureItem,
@@ -74,8 +70,6 @@ const validateProductItem = ({
 		});
 	}
 
-	validateInvoiceCreditPooling({ feature, pooled: item.pooled });
-	validateInvoiceCreditPrice({ feature, item });
 	validateItemFeatureOverride({ item, feature, features });
 
 	if (

@@ -46,16 +46,6 @@ export const isInvoiceCreditFeature = ({
 	feature?.type === FeatureType.CreditSystem &&
 	feature.config?.invoice_credit === true;
 
-export const isEnablingInvoiceCreditFeature = ({
-	currentFeature,
-	nextFeature,
-}: {
-	currentFeature: Feature;
-	nextFeature: Feature;
-}): boolean =>
-	!isInvoiceCreditFeature({ feature: currentFeature }) &&
-	isInvoiceCreditFeature({ feature: nextFeature });
-
 export const invalidCreditRateCard = ({
 	featureId,
 	creditSystemId,
@@ -223,21 +213,24 @@ const getCreditSchemaItem = ({
 	});
 };
 
+/** `invoiceCredit` is the customer entitlement's stamp; flat rows only ship a rate card when it is set. */
 export const getCreditRateCard = ({
 	sourceFeature,
 	creditSystem,
 	eventProperties,
+	invoiceCredit,
 }: {
 	sourceFeature: Feature;
 	creditSystem: Feature;
 	eventProperties?: EventProperties;
+	invoiceCredit: boolean;
 }): CreditRateCard | undefined => {
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return undefined;
 	}
 
 	if (sourceFeature.id === creditSystem.id) {
-		return creditSystem.config.invoice_credit
+		return invoiceCredit
 			? {
 					source_internal_feature_id: sourceFeature.internal_id,
 					feature_amount: 1,
@@ -268,7 +261,7 @@ export const getCreditRateCard = ({
 		};
 	}
 
-	return creditSystem.config.invoice_credit
+	return invoiceCredit
 		? {
 				...base,
 				credit_amount: schemaItem.credit_amount,

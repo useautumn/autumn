@@ -144,11 +144,6 @@ const fieldComparisons: FieldComparison[] = [
 			creditSchemasEqual(from.credit_schema, to.credit_schema),
 	},
 	{
-		key: "invoice_credit",
-		isSame: (from, to) =>
-			(from.invoice_credit ?? false) === (to.invoice_credit ?? false),
-	},
-	{
 		key: "default_markup",
 		isSame: (from, to) =>
 			nullableNumbersEqual(from.default_markup, to.default_markup),

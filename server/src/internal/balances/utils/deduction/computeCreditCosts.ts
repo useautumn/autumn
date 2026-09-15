@@ -17,6 +17,7 @@ import {
 	getCreditCost,
 	getCreditRateCard,
 } from "@/internal/features/creditSystemUtils.js";
+import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
 const DEFAULT_CREDIT_COST = 1;
@@ -64,6 +65,9 @@ export const computeCreditCosts = ({
 						sourceFeature: deduction.feature,
 						creditSystem,
 						eventProperties,
+						invoiceCredit: isInvoiceCreditCustomerEntitlement({
+							customerEntitlement: ce,
+						}),
 					})
 				: undefined;
 			if (
@@ -132,7 +136,7 @@ export const computeCreditCosts = ({
 			if (
 				currentCreditSystem &&
 				currentSchemaItem &&
-				(currentCreditSystem.config.invoice_credit ||
+				(isInvoiceCreditCustomerEntitlement({ customerEntitlement: ce }) ||
 					currentSchemaItem.tier_behavior === "graduated" ||
 					hasCreditDimensionRules(currentSchemaItem))
 			) {

@@ -153,11 +153,11 @@ see remove-features t5. Locked in `catalog_update_ordering` plan, rule 1.)
 
 | Case | Covered |
 |---|---|
-| Create flat + graduated rows; update rates; `invoice_credit` persisted | ✓ t1 |
-| Blocked: enabling invoice credits with a pooled plan item | ✓ t2 |
-| Blocked: enabling invoice credits with an included-only plan item | ✓ t3 |
-| Unpool + enable invoice credits in one call | ✓ t4 |
-| Included → priced usage + enable invoice credits in one call | ✓ t5 |
+| Create flat + graduated rows; update rates | ✓ t1 |
+| Rate card update saves on a feature with a pooled plan item | ✓ t2 |
+| Rate card update saves on a feature with an included-only plan item | ✓ t3 |
+| Unpool + price a credit item in one call with a rate card update | ✓ t4 |
+| Included → priced usage in one call with a rate card update | ✓ t5 |
 | Empty `credit_schema` on a classic credit system → 400 | — (unit: `featureUtils.ts:81`) |
 
 ## Credit dimensions — `credit-dimensions.test.ts`
@@ -168,3 +168,16 @@ see remove-features t5. Locked in `catalog_update_ordering` plan, rule 1.)
 | Blocked: two same-specificity dimensions that can match one event (catalog + features.update) | ✓ t2 |
 | Plan-item `feature_override.credit_schema` carries a dimensioned row | ✓ t3 |
 | CLI round-trip of dimensions + multipliers | ✓ `atmn/crud/features/credit-system-dimensions-multipliers.test.ts` |
+
+## Invoice-credit stamp — `billing/attach/invoice-credits/attach-stamps-invoice-credit.test.ts`
+
+| Case | Covered |
+|---|---|
+| Pay-per-use $1/credit item → `customer_entitlements.invoice_credit = true` | ✓ |
+| Included-only item on a flagged feature → stamp false, attach succeeds | ✓ |
+| Track on stamped balance writes `usage_attribution` | ✓ |
+| Track on unstamped balance deducts plainly, no attribution | ✓ |
+| Manual balance update on the unstamped balance succeeds | ✓ |
+| Price-shape predicate matrix (P1–P9) | ✓ unit `features/invoice-credit-item.test.ts` |
+| Flag flip is not a blockable change, no customer blocker | ✓ unit `features/invoice-credit-activation.test.ts` |
+

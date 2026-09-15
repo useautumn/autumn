@@ -8,6 +8,7 @@ import {
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
+import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import { mergeEntitiesWithExistingUsages } from "./mergeEntitiesWithExistingUsages";
 
@@ -74,10 +75,8 @@ export const applyExistingUsages = ({
 			internalFeatureIds: [internalFeatureId],
 		});
 		const attributionOwnerId = existingUsage.usageAttribution
-			? (cusEnts.find(
-					(customerEntitlement) =>
-						customerEntitlement.entitlement.feature.config?.invoice_credit ===
-						true,
+			? (cusEnts.find((customerEntitlement) =>
+					isInvoiceCreditCustomerEntitlement({ customerEntitlement }),
 				)?.id ?? cusEnts[0]?.id)
 			: undefined;
 

@@ -7,9 +7,10 @@ import {
 	enrichEntitlementWithFeature,
 	type Feature,
 	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { validateInvoiceCreditBalanceMutation } from "@/internal/balances/utils/validateInvoiceCreditBalanceMutation.js";
+import { validateInvoiceCreditBalanceMutationForFeature } from "@/internal/balances/utils/validateInvoiceCreditBalanceMutation.js";
 import { initCustomerEntitlement } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlement";
 import { toFeature } from "@/internal/products/product-items/productItemUtils/itemToPriceAndEnt";
 
@@ -27,7 +28,13 @@ export const prepareNewBalanceForInsertion = async ({
 	newEntitlement: Entitlement;
 	newCustomerEntitlement: CustomerEntitlement;
 }> => {
-	validateInvoiceCreditBalanceMutation({ feature });
+	validateInvoiceCreditBalanceMutationForFeature({
+		customerEntitlements: fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			featureId: feature.id,
+		}),
+		featureId: feature.id,
+	});
 
 	const planItem = createBalanceParamsV0ToPlanItemV0({
 		ctx,

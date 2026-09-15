@@ -19,6 +19,7 @@ import {
 	type ProductOptions,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { isInvoiceCreditEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditEntitlement.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/initNextResetAt.js";
@@ -205,6 +206,10 @@ export const initCusEntitlement = ({
 		entities: newEntities,
 		usage_allowed: usageAllowed,
 		separate_interval: entitlementAndPriceHaveSeparateInterval({
+			entitlement,
+			price: relatedPrice,
+		}),
+		invoice_credit: isInvoiceCreditEntitlement({
 			entitlement,
 			price: relatedPrice,
 		}),

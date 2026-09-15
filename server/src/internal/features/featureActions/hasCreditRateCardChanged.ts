@@ -37,13 +37,6 @@ export const hasCreditRateCardChanged = ({
 	oldConfig: CreditSystemConfig | undefined;
 	newConfig: CreditSystemConfig | undefined;
 }): boolean => {
-	if (
-		(oldConfig?.invoice_credit ?? false) !==
-		(newConfig?.invoice_credit ?? false)
-	) {
-		return true;
-	}
-
 	const oldSchema = oldConfig?.schema ?? [];
 	const newSchema = newConfig?.schema ?? [];
 	if (oldSchema.length !== newSchema.length) return true;

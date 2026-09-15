@@ -144,7 +144,6 @@ test.concurrent(
 			feature_id: creditSystemId,
 			name: "CV2 Diff Credits",
 			type: FeatureType.CreditSystem,
-			invoice_credit: true,
 			credit_schema: creditSchema,
 		};
 		await deleteDbFeatures({ ctx, featureIds });
@@ -213,18 +212,6 @@ test.concurrent(
 						featureId: creditSystemId,
 						action: "update",
 						previousAttributes: { credit_schema: creditSchema },
-					},
-				],
-			});
-
-			// Invoice itemization change → previous value captured exactly
-			expectCatalogPreviewCorrect({
-				preview: await previewCreditSystem({ invoice_credit: false }),
-				features: [
-					{
-						featureId: creditSystemId,
-						action: "update",
-						previousAttributes: { invoice_credit: true },
 					},
 				],
 			});

@@ -46,6 +46,7 @@ export const initLicensePooledBalanceGraph = ({
 		additional_balance: 0,
 		usage_allowed: false,
 		separate_interval: false,
+		invoice_credit: false,
 		is_pooled_balance: false,
 		pooled_balance_id: null,
 		pooled_contribution_id: null,
