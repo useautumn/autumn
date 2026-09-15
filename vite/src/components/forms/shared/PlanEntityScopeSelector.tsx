@@ -3,6 +3,7 @@ import type { SearchableSelectFooter } from "@autumn/ui";
 import { SearchableSelect } from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { EntityOptionRow } from "@/components/forms/shared/EntityOptionRow";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 // Non-empty sentinel: cmdk derives a value from text content for empty ones,
@@ -93,19 +94,18 @@ export function PlanEntityScopeSelector({
 					{option === undefined ? getLabel(null) : getLabel(option)}
 				</span>
 			)}
-			renderOption={(option, isSelected) => (
-				<>
-					<div className="flex min-w-0 flex-1 items-center gap-2">
-						<span className="shrink-0 text-sm">{getLabel(option)}</span>
-						{option && option !== INHERITED_VALUE && option.name && (
-							<span className="min-w-0 truncate font-mono text-xs text-tertiary-foreground">
-								{option.id || option.internal_id}
-							</span>
-						)}
-					</div>
-					{isSelected && <CheckIcon className="size-4 shrink-0" />}
-				</>
-			)}
+			renderOption={(option, isSelected) => {
+				const isEntity = option !== null && option !== INHERITED_VALUE;
+				if (isEntity) {
+					return <EntityOptionRow entity={option} isSelected={isSelected} />;
+				}
+				return (
+					<>
+						<span className="flex-1 truncate text-sm">{getLabel(option)}</span>
+						{isSelected && <CheckIcon className="size-4 shrink-0" />}
+					</>
+				);
+			}}
 			footer={footer}
 		/>
 	);

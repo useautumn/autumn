@@ -17,9 +17,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui";
-import { CheckIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { EntityOptionRow } from "@/components/forms/shared/EntityOptionRow";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { useLicenseBalancesQuery } from "@/hooks/queries/useLicenseBalancesQuery";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -146,17 +146,7 @@ export function AssignLicenseToEntityDialog({
 						options={entities}
 						placeholder="Select entity"
 						renderOption={(entity: Entity, isSelected: boolean) => (
-							<>
-								<div className="flex gap-2 items-center min-w-0 flex-1">
-									{entity.name && (
-										<span className="text-sm shrink-0">{entity.name}</span>
-									)}
-									<span className="truncate text-tertiary-foreground font-mono text-xs min-w-0">
-										{entity.id || PLACEHOLDER}
-									</span>
-								</div>
-								{isSelected && <CheckIcon className="size-4 shrink-0" />}
-							</>
+							<EntityOptionRow entity={entity} isSelected={isSelected} />
 						)}
 						searchable
 						searchPlaceholder="Search entities..."
