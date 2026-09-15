@@ -1,6 +1,7 @@
 /**
- * A v2 config in a v3 directory is the migration case: name it, and say what
- * to do, instead of "no default export".
+ * A config from the old atmn (plain-object fixtures, no root `atmn()` export)
+ * is the migration case: name it and say what to do, instead of "no default
+ * export". The `item`-import shape is covered in legacyConfig.test.ts.
  */
 
 import { expect, test } from "bun:test";
@@ -24,7 +25,7 @@ test("a v2 default export is named as a v2 config, with the way out", async () =
 `,
 	});
 	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(
-		/atmn v2 config.*move this file aside.*atmn pull/s,
+		/written for atmn 1\.x.*bunx atmn pull --overwrite --yes/s,
 	);
 });
 
@@ -35,7 +36,9 @@ test("v2 named fixture exports are named as a v2 config too", async () => {
 export const pro = { id: "pro", name: "Pro", items: [] };
 `,
 	});
-	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(/atmn v2 config/);
+	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(
+		/written for atmn 1\.x/,
+	);
 });
 
 test("a v2 plan without items is still a v2 config", async () => {
@@ -45,7 +48,9 @@ test("a v2 plan without items is still a v2 config", async () => {
 		source: `export const pro = { id: "pro", name: "Pro", is_add_on: false };
 `,
 	});
-	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(/atmn v2 config/);
+	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(
+		/written for atmn 1\.x/,
+	);
 });
 
 test("a v2 default object beside named fixtures is still a v2 config", async () => {
@@ -57,7 +62,9 @@ test("a v2 default object beside named fixtures is still a v2 config", async () 
 export default { name: "my catalog" };
 `,
 	});
-	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(/atmn v2 config/);
+	await expect(loadConfig({ dirs: [dir] })).rejects.toThrow(
+		/written for atmn 1\.x/,
+	);
 });
 
 test("an explicit -c that does not exist is an error, never another config", async () => {
