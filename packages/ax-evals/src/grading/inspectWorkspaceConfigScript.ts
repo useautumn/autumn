@@ -6,6 +6,7 @@ import type { InspectedConfig } from "./types/inspectedConfig.ts";
 type WirePlan = {
 	plan_id?: string;
 	name?: string;
+	active?: boolean;
 	variants?: WireVariant[];
 	items?: Record<string, unknown>[];
 	[key: string]: unknown;
@@ -86,11 +87,18 @@ const inspect = async (workspaceDir: string): Promise<InspectedConfig> => {
 		const features = Array.isArray(wire.features)
 			? (wire.features as { feature_id?: string; type?: string }[])
 			: [];
-		const plans = Array.isArray(wire.plans) ? (wire.plans as WirePlan[]) : [];
+		const rows = Array.isArray(wire.plans) ? (wire.plans as WirePlan[]) : [];
+		// Graders count what the catalog sells; history rows (active: false) are
+		// kept apart for the version graders.
+		const plans = rows.filter((plan) => plan.active !== false);
+		const inactivePlans = rows
+			.filter((plan) => plan.active === false)
+			.map(asPlan);
 		const { plans: materialized, variantPlanIds } = materializeVariants(plans);
 		return {
 			configFound: true,
 			plans: materialized,
+			inactivePlans,
 			variantPlanIds,
 			features: features.map((feature) => ({
 				id: String(feature.feature_id ?? ""),

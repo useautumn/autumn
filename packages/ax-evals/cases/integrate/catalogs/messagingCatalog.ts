@@ -32,6 +32,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "transactional_free",
+			versionSlug: "v1",
+			active: true,
 			name: "Transactional Free",
 			group: "transactional",
 			autoEnable: true,
@@ -45,6 +47,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "transactional_pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Transactional Pro",
 			group: "transactional",
 			price: { amount: 20, interval: "month" },
@@ -58,6 +62,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "marketing_free",
+			versionSlug: "v1",
+			active: true,
 			name: "Marketing Free",
 			group: "marketing",
 			autoEnable: true,
@@ -65,6 +71,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "marketing_pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Marketing Pro",
 			group: "marketing",
 			price: { amount: 25, interval: "month" },
@@ -72,6 +80,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "email_addon",
+			versionSlug: "v1",
+			active: true,
 			name: "Extra Emails",
 			addOn: true,
 			price: { amount: 5, interval: "month" },
@@ -85,6 +95,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "automations",
+			versionSlug: "v1",
+			active: true,
 			name: "Automations",
 			addOn: true,
 			items: [

@@ -18,6 +18,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "pro_trial",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro Trial",
 			autoEnable: true,
 			freeTrial: { durationLength: 14, durationType: "day", cardRequired: false },
@@ -31,6 +33,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 180, interval: "month" },
 			items: [
@@ -43,6 +47,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "pro_annual",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro (Annual)",
 			price: { amount: 1800, interval: "year" },
 			items: [
