@@ -146,6 +146,53 @@ export const conduct = {
 		},
 	}),
 
+	/** the catalog reached the org through the CLI (`push --yes`) — the
+	 * activation checkpoint for cases whose outcome is org state */
+	appliedViaAtmn: (): Expectation => ({
+		name: "applied the catalog with atmn push --yes",
+		kind: "conduct",
+		score: (output) => {
+			const applied = output.toolUses.some(
+				(tool) =>
+					tool.name === "Bash" &&
+					/\bpush\b[^\n]*(--yes|-y\b)/.test(String(tool.input.command ?? "")),
+			);
+			return {
+				name: "applied the catalog with atmn push --yes",
+				score: applied ? 1 : 0,
+				metadata: applied ? undefined : { why: "no `push --yes` was run" },
+			};
+		},
+	}),
+
+	/** invariant: nothing was applied in the opening turn — approval can only
+	 * arrive in a later user reply */
+	noApplyBeforeReply: (): Expectation => ({
+		name: "did not apply before the user replied",
+		kind: "conduct",
+		score: (output) => {
+			const early = output.toolUses.filter(
+				(tool) =>
+					tool.turn === 0 &&
+					tool.name === "Bash" &&
+					/\bpush\b[^\n]*(--yes|-y\b)/.test(String(tool.input.command ?? "")),
+			);
+			return {
+				name: "did not apply before the user replied",
+				score: early.length === 0 ? 1 : 0,
+				metadata:
+					early.length === 0
+						? undefined
+						: {
+								why: "ran `push --yes` in the opening turn, before the user could approve",
+								commands: early.map((tool) =>
+									String(tool.input.command ?? "").slice(0, 100),
+								),
+							},
+			};
+		},
+	}),
+
 	/** the config was written at some point (any turn) */
 	wroteConfig: (): Expectation => ({
 		name: "wrote autumn.config.ts",

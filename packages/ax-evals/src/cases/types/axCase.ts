@@ -1,4 +1,5 @@
 import type { Expectation } from "../../grading/types/expectation.ts";
+import type { SeedCustomerSpec } from "../../workspace/evalOrg.ts";
 
 /** The starting world of a step-tier case: state the environment instead of
  * making the agent rediscover (and pay for) it every run. atmn itself is
@@ -9,6 +10,22 @@ export type Scenario = {
 	primer?: string;
 	/** skip seeding the starter autumn.config.ts (for from-nothing cases) */
 	seedConfig?: false;
+	/** a config pushed into the run org before the agent starts; it stays in
+	 * the workspace with the ids push wrote back (existing-catalog cases) */
+	seedCatalog?: string;
+	/** mint the org with a Stripe sub-account (needed to seed paid subscribers) */
+	withStripe?: boolean;
+	/** subscribers seeded after the catalog, e.g. customers on a live plan */
+	seedCustomers?: SeedCustomerSpec[];
+	/** server-side change made after seeding and before the agent's first
+	 * turn — the "someone edited it in the dashboard" step */
+	beforeAgent?: (org: {
+		backendUrl: string;
+		secretKey: string;
+	}) => Promise<void>;
+	/** read the org's catalog after the run so `org.*` expectations can grade it
+	 * (implied by seedCatalog) */
+	captureCatalog?: boolean;
 };
 
 /** A tau-style LLM-simulated user: goal + private facts brief. */
@@ -18,6 +35,8 @@ export type SimulatedUserBrief = {
 	/** the private brief, one fact per line — the agent must ask to learn them */
 	facts: string;
 	maxUserTurns?: number;
+	/** this user says yes when the agent asks to push; default users decline */
+	approvesPush?: boolean;
 };
 
 /** One eval case: what the user says, how they answer questions, and what
