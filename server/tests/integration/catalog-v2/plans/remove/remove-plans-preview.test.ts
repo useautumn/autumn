@@ -2,16 +2,16 @@
  * catalogV2.preview_update — remove_plans dialog reasons.
  */
 
+import { test } from "bun:test";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
-import { test } from "bun:test";
 import chalk from "chalk";
-import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { expectCatalogPreviewCorrect } from "../../utils/expectCatalogUpdate.js";
+import { uniqueTestId } from "../../utils/uniqueTestId.js";
+import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
-import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 import { seedBaseWithVariant } from "../variants/utils/seedVariantPlans.js";
 
 test.concurrent(
@@ -125,10 +125,7 @@ test.concurrent(
 			await seedVersionableCustomer({ ctx, planId: withCustomersId });
 
 			const preview = await autumnV2_3.catalogV2.previewUpdate({
-				remove_plans: [
-					{ plan_id: withCustomersId },
-					{ plan_id: freeId },
-				],
+				remove_plans: [{ plan_id: withCustomersId }, { plan_id: freeId }],
 			});
 			expectCatalogPreviewCorrect({
 				preview,
@@ -177,7 +174,7 @@ test.concurrent(
 			});
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
-				errMessage: `Cannot delete or archive plan ${baseId} while it still has variants`,
+				errMessage: `Cannot delete plan ${baseId} because variant ${variantId} would still link to it. Link the variant to another base version before deleting this plan.`,
 				func: () =>
 					autumnV2_3.catalogV2.previewUpdate({
 						remove_plans: [{ plan_id: baseId }],

@@ -1354,6 +1354,7 @@ license parents that still exist after the batch. Same-call upsert+remove is
 | Unpinned archive of a base that still has variants → 400 | ✓ `remove/remove-plans-variants.test.ts` |
 | Preview of unpinned delete with variants → 400, not detach warning | ✓ `remove/remove-plans-preview.test.ts` |
 | Same-call remove base + variant (no customers) → both hard delete | ✓ `remove/remove-plans-variants.test.ts` |
+| Same-call promote sibling + tombstone base + archive retained variant → 400, atomic | ✓ `remove/remove-plans-variants.test.ts` |
 | Pin-delete a referenced base version → 400 (no silent repoint) | ✓ `remove/remove-plans-repoint.test.ts` |
 | Pin-delete an old base version the variant does not point at → v1 gone, pointer stays | ✓ `remove/remove-plans-repoint.test.ts` |
 | Pin-delete last remaining base version while a variant survives → 400 | ✓ `remove/remove-plans-repoint.test.ts` |
@@ -1469,6 +1470,7 @@ Draft mint (`new_version` without `active`) does not take the pointer.
 | `new_version` after tombstoned v2 mints v3 | `versions/tombstone-hide.test.ts` |
 | Pin expired-only draft → preview `will_archive: false`; unpinned expired-only also tombstones | `remove/tombstone-verdict.test.ts` |
 | Pin expired-only draft execute writes `deleted_at` and keeps expired CPs | `remove/tombstone-execute.test.ts` |
+| Promote sibling + omit expired active version → old row tombstones atomically | `remove/tombstone-execute.test.ts` |
 | Tombstone all versions → same `plan_id` preview/update is `create` at max+1 | `remove/tombstone-execute.test.ts` |
 
 ## 26. Unit 3 — `new_version_slug` on propagate targets
