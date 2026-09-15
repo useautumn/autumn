@@ -6,18 +6,9 @@
 # hit repeatedly.
 set -euo pipefail
 
-# A resumed workspace comes back without a running daemon, and these boxes have
-# no systemd. if/then rather than `a || b &`, which backgrounds the whole list.
-if ! docker info >/dev/null 2>&1; then
-  echo "[conductor] starting docker daemon"
-  if ! sudo systemctl start docker 2>/dev/null; then
-    sudo setsid dockerd >/tmp/dockerd.log 2>&1 </dev/null &
-  fi
-  for _ in $(seq 1 30); do
-    docker info >/dev/null 2>&1 && break
-    sleep 2
-  done
-fi
+# A resumed workspace comes back without a running daemon.
+. "$(dirname "$0")/startDocker.sh"
+start_docker_daemon || true
 
 # setup.sh is still shadowed at runtime by an untracked settings.local.toml that
 # only does ai-sync, so a fresh workspace often arrives unprovisioned. Without
