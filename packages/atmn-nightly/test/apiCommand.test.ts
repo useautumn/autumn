@@ -14,6 +14,7 @@ import {
 	parseHeaderArgs,
 	renderCurl,
 } from "../src/actions/api/callApi";
+import { summarize } from "../src/actions/api/registerApiCommands";
 import { API_ROUTES, API_VERSION } from "../src/generated/apiRoutes";
 import { AutumnApiError } from "../src/generated/client";
 
@@ -171,4 +172,15 @@ test("--curl prints the request with the key's env var in place of the key", asy
 	expect(curl).toContain('-H "authorization: Bearer $AUTUMN_PROD_SECRET_KEY"');
 	expect(curl).toContain("'https://api.useautumn.com/v1/balances.check'");
 	expect(curl).toContain(`-d '{"customer_id":"it'\\''s"}'`);
+});
+
+test("the group listing shows one clipped sentence per route", () => {
+	expect(summarize({ text: "Short one. Then more." })).toBe("Short one.");
+	expect(summarize({ text: "Costs $1.50 per unit. Next." })).toBe(
+		"Costs $1.50 per unit.",
+	);
+	const long = `${"word ".repeat(30)}end. Second sentence.`;
+	const clipped = summarize({ text: long });
+	expect(clipped.length).toBeLessThanOrEqual(80);
+	expect(clipped).toEndWith("…");
 });

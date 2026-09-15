@@ -12,6 +12,16 @@ import {
 	renderCurl,
 } from "./callApi";
 
+const SUMMARY_MAX = 80;
+
+/** The first sentence, clipped: the group listing is a table, the method's own --help carries the rest. */
+export const summarize = ({ text }: { text: string }): string => {
+	const sentence = /^.*?[.!?](?=\s|$)/.exec(text)?.[0] ?? text;
+	return sentence.length <= SUMMARY_MAX
+		? sentence
+		: `${sentence.slice(0, SUMMARY_MAX - 1).trimEnd()}…`;
+};
+
 const fieldHelp = ({ route }: { route: ApiRoute }): string => {
 	if (route.body === "none") return "\nTakes no body.";
 	if (route.body === "array")
@@ -52,6 +62,7 @@ export const registerApiCommands = ({
 		}
 		group
 			.command(route.method)
+			.summary(summarize({ text: route.description ?? route.path }))
 			.description(route.description ?? route.path)
 			.argument("[fields...]", "body fields as key=value")
 			.option("--body <json>", "the whole JSON body; - reads stdin")
