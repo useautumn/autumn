@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import type { ExpandedStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { storeVercelInvoiceId } from "@/external/vercel/misc/vercelInvoiceUtils";
 import {
 	submitBillingDataToVercel,
 	submitInvoiceToVercel,
@@ -110,7 +111,7 @@ export const processVercelInvoice = async ({
 			testOptions: ctx.testOptions,
 		});
 
-		await submitInvoiceToVercel({
+		const submitted = await submitInvoiceToVercel({
 			installationId: vercelInstallationId,
 			invoice: stripeInvoice,
 			customer: fullCustomer,
@@ -119,6 +120,13 @@ export const processVercelInvoice = async ({
 			features,
 			logger,
 			testOptions: ctx.testOptions,
+		});
+
+		await storeVercelInvoiceId({
+			stripeCli,
+			stripeInvoiceId: stripeInvoice.id,
+			vercelInvoiceId: submitted?.invoiceId,
+			installationId: vercelInstallationId,
 		});
 	} catch (error) {
 		logCaughtError({

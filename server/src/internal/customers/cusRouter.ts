@@ -16,6 +16,7 @@ import { handlePostCustomer } from "./handlers/handleGetOrCreateCustomer/handleG
 import { handleListCustomerProducts } from "./handlers/handleListCustomerProducts.js";
 import { handleListCustomers } from "./handlers/handleListCustomers.js";
 import { handleListCustomersV2 } from "./handlers/handleListCustomersV2.js";
+import { handleGetInvoiceMetadata } from "./handlers/handleRefundInvoice/handleGetInvoiceMetadata.js";
 import { handleRefundInvoice } from "./handlers/handleRefundInvoice/handleRefundInvoice.js";
 import { handleRemoveCouponFromCusV2 } from "./handlers/handleRemoveCouponFromCusV2.js";
 import { handleTransferProductV2 } from "./handlers/handleTransferProductV2.js";
@@ -43,6 +44,10 @@ cusRouter.post("/:customer_id/transfer", ...handleTransferProductV2);
 cusRouter.post(
 	"/:customer_id/invoices/:stripe_invoice_id/refund",
 	...handleRefundInvoice,
+);
+cusRouter.get(
+	"/:customer_id/invoices/:stripe_invoice_id/metadata",
+	...handleGetInvoiceMetadata,
 );
 
 // Billing portal

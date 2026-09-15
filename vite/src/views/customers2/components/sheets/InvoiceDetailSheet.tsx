@@ -5,7 +5,15 @@ import {
 	InvoiceStatus,
 	ProcessorType,
 } from "@autumn/shared";
-import { Badge, Button, InfoRow, MiniCopyButton } from "@autumn/ui";
+import {
+	Badge,
+	Button,
+	InfoRow,
+	MiniCopyButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
@@ -31,6 +39,7 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useInvoiceMetadataQuery } from "@/views/customers2/hooks/useInvoiceMetadataQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
 
@@ -92,6 +101,15 @@ export function InvoiceDetailSheet({
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+
+	const invoiceIsStripe =
+		(invoice?.processor_type ?? ProcessorType.Stripe) === ProcessorType.Stripe;
+	const { metadata: invoiceMetadata, isLoading: metadataLoading } =
+		useInvoiceMetadataQuery({
+			customerId: customer?.id || customer?.internal_id,
+			stripeInvoiceId: invoice?.stripe_id,
+			enabled: invoiceIsStripe && invoice?.status === InvoiceStatus.Paid,
+		});
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -170,17 +188,22 @@ export function InvoiceDetailSheet({
 	if (!invoice) return null;
 
 	const invoiceProcessor = invoice.processor_type ?? ProcessorType.Stripe;
-	const invoiceIsStripe = invoiceProcessor === ProcessorType.Stripe;
 	const processorLabel =
 		invoiceProcessor === ProcessorType.RevenueCat ? "RevenueCat" : "Stripe";
 	const idLabel = `${processorLabel} ID`;
 	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
 	const isFullyRefunded =
 		invoice.refunded_amount > 0 && invoice.refunded_amount >= refundableAmount;
+	const isVercelInvoice = Boolean(invoiceMetadata.vercel_installation_id);
+	// Vercel invoices before the mapping existed can't be refunded from Autumn.
+	const vercelRefundBlocked =
+		isVercelInvoice && !invoiceMetadata.vercel_invoice_id;
 	const canRefund =
 		invoiceIsStripe &&
 		invoice.status === InvoiceStatus.Paid &&
-		!isFullyRefunded;
+		!isFullyRefunded &&
+		!metadataLoading &&
+		!vercelRefundBlocked;
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
@@ -402,6 +425,22 @@ export function InvoiceDetailSheet({
 						<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
 						Refund Invoice
 					</Button>
+				)}
+				{vercelRefundBlocked && !isFullyRefunded && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className="flex-1">
+								<Button variant="primary" className="w-full" disabled>
+									<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
+									Refund Invoice
+								</Button>
+							</span>
+						</TooltipTrigger>
+						<TooltipContent className="max-w-64">
+							This Vercel invoice predates refund support in Autumn. Refund it
+							via Vercel support.
+						</TooltipContent>
+					</Tooltip>
 				)}
 			</div>
 			{canRefund && (
