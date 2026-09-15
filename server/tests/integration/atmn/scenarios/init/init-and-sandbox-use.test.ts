@@ -170,16 +170,21 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 			'✓ Wrote "atmn" script and marker to package.json',
 		);
 		expect(output).toContain("✓ Pulled 1 entry");
+		expect(output).toContain("✓ Path autumn");
 		expect(output).toContain(
-			"✓ Skills: skills/autumn-setup, autumn-catalog, autumn-integrate, autumn-concepts",
+			"✓ Skills: autumn/skills/autumn-setup, autumn-catalog, autumn-integrate, autumn-concepts",
 		);
 
-		expect(readFileSync(join(root, "features.ts"), "utf8")).toContain(messages);
-		expect(existsSync(join(root, "skills/autumn-catalog/SKILL.md"))).toBe(true);
+		expect(readFileSync(join(root, "autumn/features.ts"), "utf8")).toContain(
+			messages,
+		);
+		expect(
+			existsSync(join(root, "autumn/skills/autumn-catalog/SKILL.md")),
+		).toBe(true);
 		const manifest = JSON.parse(
 			readFileSync(join(root, "package.json"), "utf8"),
 		);
-		expect(manifest.atmn).toEqual({ config: "autumn.config.ts" });
+		expect(manifest.atmn).toEqual({ config: "autumn/autumn.config.ts" });
 
 		// C5 — the marker means a plain push from the root finds the config.
 		const pushed = runCliHeadless({ cwd: root, args: ["push"], baseUrl });

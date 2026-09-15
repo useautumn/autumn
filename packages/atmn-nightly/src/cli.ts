@@ -241,7 +241,10 @@ export const buildProgram = (): Command => {
 			"after",
 			"\nWith no AUTUMN_SECRET_KEY on disk, init asks how to connect in a terminal; headless it prints --login / --keyless and stops.",
 		)
-		.option("--path <dir>", "folder for the Autumn package (monorepos)")
+		.option(
+			"--path <dir>",
+			"folder for the config: autumn/ by default, packages/autumn/ in a monorepo",
+		)
 		.option("--name <name>", "the package's name (monorepos)")
 		.option("--login", CONNECT_OPTIONS.login)
 		.option("--keyless", CONNECT_OPTIONS.keyless)

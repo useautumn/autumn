@@ -8,7 +8,7 @@ import {
 } from "../../env/loadEnv";
 import { SANDBOX_PIN_NAME, sandboxKeyName } from "../../env/sandboxKeyName";
 import { AutumnApiError } from "../../generated/client";
-import { readMarker } from "../../project/resolveProject";
+import { readMarker, resolveProject } from "../../project/resolveProject";
 import { writeRootMarker } from "../../project/rootMarker";
 import {
 	ask,
@@ -55,7 +55,7 @@ export type InitOptions = {
 	cwd?: string;
 	/** What the new package depends on for the builders; the published CLI by default. */
 	dependencySpec?: string;
-	/** Folder for the Autumn package, repo-root relative; asked for in a monorepo. */
+	/** Folder for the config, repo-root relative: autumn/ by default, asked for in a monorepo. */
 	path?: string;
 	/** The package's name; asked for in a monorepo. */
 	name?: string;
@@ -73,6 +73,7 @@ export type InitResult = {
 };
 
 const DEFAULT_PACKAGE_DIR = "packages/autumn";
+const DEFAULT_CONFIG_DIR = "autumn";
 const DEFAULT_PACKAGE_NAME = "autumn";
 const PACKAGE_NAME = configPackageName();
 
@@ -317,6 +318,15 @@ export const runInit = async ({
 			defaultValue: DEFAULT_PACKAGE_NAME,
 		});
 		prompter.write(`${done(`Name ${packageName}`)}\n`);
+	} else {
+		// A plain project gets its own folder too, unless a config already
+		// sits beside cwd or the marker names one.
+		const found = resolveProject({ cwd }).configPath;
+		configDir = resolve(
+			repoRoot,
+			path ?? (found === null ? DEFAULT_CONFIG_DIR : dirname(found)),
+		);
+		prompter.write(`${done(`Path ${relative(repoRoot, configDir) || "."}`)}\n`);
 	}
 
 	const configPath = join(configDir, "autumn.config.ts");

@@ -47,7 +47,7 @@ atmn env
 
 ### `atmn init`
 
-Create an `autumn.config.ts` in your project, pull your existing plans into it, and install the agent skills. Prompts for login if you haven't authenticated yet.
+Create an `autumn` folder with `autumn.config.ts` in your project (its own package in a monorepo), pull your existing plans into it, and install the agent skills. Prompts for login if you haven't authenticated yet.
 
 ```bash
 atmn init
@@ -57,7 +57,7 @@ atmn init
 |------|-------------|
 | `--login` | Sign in on the web |
 | `--keyless` | Create a sandbox org without an account |
-| `--path <dir>` | Folder for the config package (monorepos) |
+| `--path <dir>` | Folder for the config (default `autumn`, or `packages/autumn` in a monorepo) |
 | `--name <name>` | Name of the config package (monorepos) |
 
 ### `atmn push`
