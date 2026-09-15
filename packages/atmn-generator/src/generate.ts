@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { COLLECTIONS, NESTED_FIXTURES, SINGLETONS } from "./collections";
 import { copyRuntime } from "./emit/copyRuntime";
+import { emitApiRoutesModule } from "./emit/emitApiRoutes";
 import { type ClientOperation, emitClientModule } from "./emit/emitClient";
 import {
 	emitBranchedCollectionModule,
@@ -22,6 +23,7 @@ import {
 	catalogUpdateSchema,
 	collectionItemSchema,
 	loadSpec,
+	PUBLIC_SPEC_PATH,
 	requestBodySchema,
 	responseSchema,
 	serverBaseUrl,
@@ -324,6 +326,13 @@ export const generate = async (): Promise<string[]> => {
 	});
 
 	write({ name: "skills.ts", source: await emitSkillsModule() });
+
+	// `atmn api` mirrors the published surface: the public spec, never the
+	// internal one, so a field the docs hide cannot leak through a flag.
+	write({
+		name: "apiRoutes.ts",
+		source: emitApiRoutesModule({ spec: loadSpec({ path: PUBLIC_SPEC_PATH }) }),
+	});
 
 	await formatWithBiome({ paths: written });
 	return written;
