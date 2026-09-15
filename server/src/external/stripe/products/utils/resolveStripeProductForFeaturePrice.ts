@@ -45,13 +45,19 @@ export const resolveStripeProductForFeaturePrice = async ({
 		},
 	);
 
+	// Stripe replays this idempotency key for 24h, so `created` can be a stale
+	// body describing a product that has since been archived.
+	const liveProduct =
+		(await retrieveLiveStripeProduct({ stripeCli, productId: created.id })) ??
+		created;
+
 	await updateFeatureStripeProductIdIfUnset({
 		db,
 		featureInternalId: feature.internal_id,
-		newId: created.id,
+		newId: liveProduct.id,
 		previousId: feature.stripe_product_id,
 	});
 
-	config.stripe_product_id = created.id;
-	return created.id;
+	config.stripe_product_id = liveProduct.id;
+	return liveProduct.id;
 };
