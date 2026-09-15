@@ -11,6 +11,8 @@ const activeTempPaths: string[] = [
 	"integration/balances/lock/check-with-lock-credit-system.test.ts",
 	// Deferred logic review: delivered webhooks include entity_id: null; previews omit it.
 	"integration/billing/migrations-v2/batch-migrations/replace-items/batch-replace-item-events-webhooks.test.ts",
+	// Deferred logic review: scheduled free-plan activation is emitted as updated, not activated.
+	"integration/billing/autumn-webhooks/billing-updated/billing-updated-subscription-deleted.test.ts",
 ];
 
 export const temp: TestGroup = {
