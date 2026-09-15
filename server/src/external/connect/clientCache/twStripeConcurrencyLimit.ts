@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
 import type Stripe from "stripe";
+import { createTwStripeRequestDeadline } from "./twStripeLimiter/createTwStripeRequestDeadline";
 import { isTwWorkerMode } from "./twStripeLimiter/twStripeMode";
 
 export { isTwWorkerMode } from "./twStripeLimiter/twStripeMode";
@@ -26,6 +26,7 @@ export const applyTwStripeConcurrencyLimit = ({
 
 	httpClient.makeRequest = async (...args: MakeRequestArgs) => {
 		if (!isTwWorkerMode()) return originalMakeRequest(...args);
+		const deadline = createTwStripeRequestDeadline({ timeoutMs: args[7] });
 		// Redis is never initialized or imported by the production request path.
 		const { acquireTwStripePermit } = await import(
 			"./twStripeLimiter/acquireTwStripePermit"
@@ -44,13 +45,15 @@ export const applyTwStripeConcurrencyLimit = ({
 				authorization,
 				stripeAccount:
 					typeof stripeAccount === "string" ? stripeAccount : undefined,
-				timeoutMs: args[7],
+				timeoutMs: deadline.remainingMs(),
 			});
 			const startedAt = performance.now();
 			let networkMs = 0;
 			let response: Awaited<ReturnType<StripeHttpClient["makeRequest"]>>;
 			try {
-				response = await originalMakeRequest(...args);
+				const requestArgs: MakeRequestArgs = [...args];
+				requestArgs[7] = deadline.remainingMs();
+				response = await originalMakeRequest(...requestArgs);
 				networkMs = Math.round(performance.now() - startedAt);
 			} finally {
 				await permit.release();
@@ -84,7 +87,9 @@ export const applyTwStripeConcurrencyLimit = ({
 			if (response.getStatusCode() !== 429 || attempt >= MAX_RETRIES)
 				return response;
 			const backoffMs = BASE_BACKOFF_MS * 2 ** attempt;
-			await delay(backoffMs / 2 + (Math.random() * backoffMs) / 2);
+			const retryDelayMs = backoffMs / 2 + (Math.random() * backoffMs) / 2;
+			if (retryDelayMs >= deadline.remainingMs()) return response;
+			await deadline.sleep(retryDelayMs);
 		}
 	};
 	return client;

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
+import { createTwStripeRequestDeadline } from "./createTwStripeRequestDeadline";
 import { getTwStripeRedis } from "./getTwStripeRedis";
 import admissionScript from "./stripeAdmission.lua" with { type: "text" };
 import { getTwStripeLane } from "./twStripeRequestContext";
@@ -35,6 +35,7 @@ export const acquireTwStripePermit = async ({
 	timeoutMs: number;
 	signal?: AbortSignal;
 }) => {
+	const deadline = createTwStripeRequestDeadline({ timeoutMs, signal });
 	const redis = getTwStripeRedis();
 	const { maxRps, maxInFlight } = getBudget();
 	const fingerprint = createHash("sha256").update(authorization).digest("hex");
@@ -79,7 +80,7 @@ export const acquireTwStripePermit = async ({
 
 	try {
 		for (;;) {
-			signal?.throwIfAborted();
+			deadline.remainingMs();
 			const result = (await redis.eval(
 				admissionScript,
 				keys.length,
@@ -87,14 +88,14 @@ export const acquireTwStripePermit = async ({
 				"acquire",
 				...args,
 			)) as [number, number];
-			signal?.throwIfAborted();
+			deadline.remainingMs();
 			if (result[0] === 1)
 				return {
 					release,
 					lane,
 					waitMs: Math.round(performance.now() - startedAt),
 				};
-			await delay(result[1], undefined, { signal });
+			await deadline.sleep(result[1]);
 		}
 	} catch (error) {
 		await release().catch(() => {});

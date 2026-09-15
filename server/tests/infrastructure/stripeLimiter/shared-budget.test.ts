@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import Stripe from "stripe";
 import { stripeBudgetForRun } from "../../../../scripts/tw/helpers/stripeBudget";
 import { applyTwStripeConcurrencyLimit } from "../../../src/external/connect/clientCache/twStripeConcurrencyLimit";
+import { acquireTwStripePermit } from "../../../src/external/connect/clientCache/twStripeLimiter/acquireTwStripePermit";
 import {
 	getTwStripeLane,
 	withTwStripeWebhookPriority,
@@ -170,6 +171,84 @@ test("transport failures release their in-flight permit", async () => {
 	await expect(client.balance.retrieve()).rejects.toThrow();
 	await client.balance.retrieve();
 	expect(attempts).toBe(2);
+});
+
+test("a Stripe request expires in the admission queue without being sent later", async () => {
+	process.env.TW_STRIPE_MAX_INFLIGHT = "2";
+	const secret = `sk_test_deadline_${crypto.randomUUID()}`;
+	const held = await acquireTwStripePermit({
+		authorization: `Bearer ${secret}`,
+		timeoutMs: 1000,
+	});
+	let sent = 0;
+	const client = applyTwStripeConcurrencyLimit({
+		client: new Stripe(secret, {
+			maxNetworkRetries: 0,
+			httpClient: Stripe.createFetchHttpClient(async () => {
+				sent++;
+				return Response.json({ object: "balance" });
+			}),
+		}),
+	});
+	const release = setTimeout(() => void held.release(), 200);
+	try {
+		await expect(
+			client.balance.retrieve({}, { timeout: 40 }),
+		).rejects.toThrow();
+		expect(sent).toBe(0);
+	} finally {
+		clearTimeout(release);
+		await held.release();
+	}
+	await client.balance.retrieve({}, { timeout: 1000 });
+	expect(sent).toBe(1);
+});
+
+test("429 backoff consumes the request deadline instead of restarting it", async () => {
+	let sent = 0;
+	const client = applyTwStripeConcurrencyLimit({
+		client: new Stripe(`sk_test_deadline_${crypto.randomUUID()}`, {
+			maxNetworkRetries: 0,
+			httpClient: Stripe.createFetchHttpClient(async () => {
+				sent++;
+				return Response.json(
+					{ error: { message: "synthetic limit" } },
+					{ status: 429 },
+				);
+			}),
+		}),
+	});
+	const started = performance.now();
+	await expect(client.balance.retrieve({}, { timeout: 40 })).rejects.toThrow();
+	expect(sent).toBe(1);
+	expect(performance.now() - started).toBeLessThan(500);
+});
+
+test("a retry receives only the network time remaining after backoff", async () => {
+	const timeouts: number[] = [];
+	const httpClient = Stripe.createFetchHttpClient(async () =>
+		timeouts.length === 1
+			? Response.json(
+					{ error: { message: "synthetic limit" } },
+					{ status: 429 },
+				)
+			: Response.json({ object: "balance" }),
+	);
+	const makeRequest = httpClient.makeRequest.bind(httpClient);
+	httpClient.makeRequest = (...args) => {
+		timeouts.push(args[7]);
+		return makeRequest(...args);
+	};
+	const client = applyTwStripeConcurrencyLimit({
+		client: new Stripe(`sk_test_deadline_${crypto.randomUUID()}`, {
+			maxNetworkRetries: 0,
+			httpClient,
+		}),
+	});
+	await client.balance.retrieve({}, { timeout: 1000 });
+	expect(timeouts).toHaveLength(2);
+	expect(timeouts[0]).toBeLessThanOrEqual(1000);
+	expect(timeouts[0] - timeouts[1]).toBeGreaterThanOrEqual(120);
 });
 
 test("webhook priority survives deferred execution without leaking into bulk work", async () => {
