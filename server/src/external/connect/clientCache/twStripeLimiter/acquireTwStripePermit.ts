@@ -5,6 +5,8 @@ import admissionScript from "./stripeAdmission.lua" with { type: "text" };
 import { getTwStripeLane } from "./twStripeRequestContext";
 import type { TwStripeBudget } from "./types/twStripeAdmission";
 
+const CONNECTED_ACCOUNT_MAX_RPS = 5;
+
 const getBudget = (): TwStripeBudget => {
 	const maxRps = Number(process.env.TW_STRIPE_MAX_RPS);
 	const maxInFlight = Number(process.env.TW_STRIPE_MAX_INFLIGHT);
@@ -23,27 +25,42 @@ const getBudget = (): TwStripeBudget => {
 
 export const acquireTwStripePermit = async ({
 	authorization,
+	stripeAccount,
 	timeoutMs,
 }: {
 	authorization: string;
+	stripeAccount?: string;
 	timeoutMs: number;
 }) => {
 	const redis = getTwStripeRedis();
 	const { maxRps, maxInFlight } = getBudget();
 	const fingerprint = createHash("sha256").update(authorization).digest("hex");
 	const prefix = `tw:stripe:{${fingerprint}}`;
+	const account = stripeAccount
+		? createHash("sha256").update(stripeAccount).digest("hex")
+		: "platform";
 	const keys = [
-		"state",
-		"bulk",
-		"webhook",
-		"waiting",
-		"active",
-		"activeBulk",
-	].map((suffix) => `${prefix}:${suffix}`);
+		...["state", "bulk", "webhook", "waiting"].map(
+			(suffix) => `${prefix}:${account}:${suffix}`,
+		),
+		`${prefix}:active`,
+		`${prefix}:activeBulk`,
+		`${prefix}:state`,
+	];
 	const id = randomUUID();
 	const lane = getTwStripeLane();
 	const leaseMs = Math.max(timeoutMs, 1000) + 5000;
-	const args = [id, lane, 1000 / maxRps, maxInFlight, leaseMs];
+	const accountRps = stripeAccount
+		? Math.min(maxRps, CONNECTED_ACCOUNT_MAX_RPS)
+		: maxRps;
+	const args = [
+		id,
+		lane,
+		1000 / maxRps,
+		maxInFlight,
+		leaseMs,
+		1000 / accountRps,
+	];
 	const startedAt = performance.now();
 	let released = false;
 	const release = async () => {

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import type Stripe from "stripe";
 import { isTwWorkerMode } from "./twStripeLimiter/twStripeMode";
@@ -31,12 +32,18 @@ export const applyTwStripeConcurrencyLimit = ({
 		);
 		const headers = args[4] as Record<string, unknown>;
 		const authorization = headers.Authorization ?? headers.authorization;
+		const stripeAccount =
+			headers["Stripe-Account"] ?? headers["stripe-account"];
 		if (typeof authorization !== "string")
 			throw new Error("Stripe request has no authorization header");
+		const traceRequestId =
+			process.env.TW_STRIPE_TRACE === "1" ? randomUUID() : undefined;
 
 		for (let attempt = 0; ; attempt++) {
 			const permit = await acquireTwStripePermit({
 				authorization,
+				stripeAccount:
+					typeof stripeAccount === "string" ? stripeAccount : undefined,
 				timeoutMs: args[7],
 			});
 			const startedAt = performance.now();
@@ -49,10 +56,23 @@ export const applyTwStripeConcurrencyLimit = ({
 				await permit.release();
 			}
 			if (process.env.TW_STRIPE_TRACE === "1") {
+				const responseHeaders = response.getHeaders();
+				// Only allow known resource names; paths and queries can contain customer data.
+				const endpoint =
+					args[2].match(
+						/^\/(v1\/(?:accounts|balance|billing|billing_portal|charges|checkout|coupons|customers|events|invoiceitems|invoices|payment_intents|payment_methods|prices|products|promotion_codes|setup_intents|subscription_items|subscription_schedules|subscriptions|tax|test_helpers|webhook_endpoints)|v2\/core\/accounts)(?:[/?]|$)/,
+					)?.[1] ?? "other";
 				console.log(
 					JSON.stringify({
 						event: "tw.stripe.request",
 						at: new Date().toISOString(),
+						traceRequestId,
+						pid: process.pid,
+						method: args[3],
+						endpoint,
+						stripeRequestId: responseHeaders["request-id"] ?? null,
+						rateLimitedReason:
+							responseHeaders["stripe-rate-limited-reason"] ?? null,
 						lane: permit.lane,
 						waitMs: permit.waitMs,
 						networkMs,

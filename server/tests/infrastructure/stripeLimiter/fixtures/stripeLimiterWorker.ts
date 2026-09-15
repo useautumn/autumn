@@ -7,6 +7,7 @@ if (!secret?.startsWith("sk_test_processes_"))
 const sent: number[] = [];
 const client = applyTwStripeConcurrencyLimit({
 	client: new Stripe(secret, {
+		stripeAccount: process.env.TW_STRIPE_PROBE_ACCOUNT,
 		maxNetworkRetries: 0,
 		httpClient: Stripe.createFetchHttpClient(async () => {
 			sent.push(Date.now());

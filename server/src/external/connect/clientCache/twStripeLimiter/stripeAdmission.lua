@@ -1,6 +1,7 @@
-local state, bulk, webhook, waiting, active, activeBulk = unpack(KEYS)
+local state, bulk, webhook, waiting, active, activeBulk, platform = unpack(KEYS)
 local operation, id, lane = ARGV[1], ARGV[2], ARGV[3]
 local interval, maximum, lease = tonumber(ARGV[4]), tonumber(ARGV[5]), tonumber(ARGV[6])
+local accountInterval = tonumber(ARGV[7])
 local time = redis.call('TIME')
 local now = tonumber(time[1]) * 1000 + tonumber(time[2]) / 1000
 
@@ -24,12 +25,17 @@ if operation == 'release' then
   return {0, 0}
 end
 
-local configuredInterval = tonumber(redis.call('HGET', state, 'interval'))
-local configuredMaximum = tonumber(redis.call('HGET', state, 'maximum'))
+local configuredInterval = tonumber(redis.call('HGET', platform, 'interval'))
+local configuredMaximum = tonumber(redis.call('HGET', platform, 'maximum'))
 if configuredInterval and (configuredInterval ~= interval or configuredMaximum ~= maximum) then
   return redis.error_reply('Stripe budget differs between worker processes')
 end
-redis.call('HSET', state, 'interval', interval, 'maximum', maximum)
+local configuredAccountInterval = tonumber(redis.call('HGET', state, 'interval'))
+if configuredAccountInterval and configuredAccountInterval ~= accountInterval then
+  return redis.error_reply('Stripe account budget differs between worker processes')
+end
+redis.call('HSET', platform, 'interval', interval, 'maximum', maximum)
+redis.call('HSET', state, 'interval', accountInterval)
 
 for _, expired in ipairs(redis.call('ZRANGEBYSCORE', waiting, '-inf', now)) do
   removeWaiting(expired)
@@ -55,7 +61,9 @@ if webhookHead and (not bulkHead or streak < 3 or not bulkHasCapacity) then
   selected = webhookHead
 end
 
-local nextAt = tonumber(redis.call('HGET', state, 'nextAt')) or 0
+local accountNextAt = tonumber(redis.call('HGET', state, 'nextAt')) or 0
+local platformNextAt = tonumber(redis.call('HGET', platform, 'nextAt')) or 0
+local nextAt = math.max(accountNextAt, platformNextAt)
 local rank = redis.call('ZRANK', queue, id) or 0
 local delay = math.max(1, nextAt - now)
 if selected ~= id then
@@ -69,6 +77,7 @@ if now < nextAt then return {0, math.ceil(delay)} end
 removeWaiting(id)
 redis.call('ZADD', active, now + lease, id)
 if lane == 'bulk' then redis.call('ZADD', activeBulk, now + lease, id) end
-redis.call('HSET', state, 'nextAt', now + interval, 'webhookStreak', lane == 'webhook' and streak + 1 or 0)
+redis.call('HSET', platform, 'nextAt', now + interval)
+redis.call('HSET', state, 'nextAt', now + accountInterval, 'webhookStreak', lane == 'webhook' and streak + 1 or 0)
 extendExpiry()
 return {1, 0}

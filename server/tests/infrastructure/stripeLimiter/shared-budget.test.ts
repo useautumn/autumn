@@ -55,6 +55,60 @@ test("clients sharing a Stripe secret share one allowance across client cache ke
 	expect(sent[2] - sent[0]).toBeGreaterThanOrEqual(90);
 });
 
+// Connected-account traffic previously used only the faster platform allowance.
+test("connected-account clients share five requests per second across default and per-request headers", async () => {
+	const secret = `sk_test_limiter_${crypto.randomUUID()}`;
+	const account = `acct_${crypto.randomUUID()}`;
+	const sent: number[] = [];
+	const clients = [account, undefined].map((stripeAccount) =>
+		applyTwStripeConcurrencyLimit({
+			client: new Stripe(secret, {
+				stripeAccount,
+				maxNetworkRetries: 0,
+				httpClient: Stripe.createFetchHttpClient(async () => {
+					sent.push(performance.now());
+					return Response.json({ object: "balance" });
+				}),
+			}),
+		}),
+	);
+	await Promise.all(
+		Array.from({ length: 6 }, (_, index) =>
+			index % 2 === 0
+				? clients[0].balance.retrieve()
+				: clients[1].balance.retrieve({}, { stripeAccount: account }),
+		),
+	);
+	expect(sent).toHaveLength(6);
+	for (let index = 1; index < sent.length; index++)
+		expect(sent[index] - sent[index - 1]).toBeGreaterThanOrEqual(190);
+});
+
+test("another connected account can use the platform budget while a busy account waits", async () => {
+	const sent: string[] = [];
+	const first = Promise.withResolvers<void>();
+	const client = applyTwStripeConcurrencyLimit({
+		client: new Stripe(`sk_test_limiter_${crypto.randomUUID()}`, {
+			maxNetworkRetries: 0,
+			httpClient: Stripe.createFetchHttpClient(
+				async (_url: RequestInfo | URL, options?: RequestInit) => {
+					const account = new Headers(options?.headers).get("stripe-account")!;
+					sent.push(account);
+					first.resolve();
+					return Response.json({ object: "balance" });
+				},
+			),
+		}),
+	});
+	const busy = Array.from({ length: 6 }, () =>
+		client.balance.retrieve({}, { stripeAccount: "acct_busy" }),
+	);
+	await first.promise;
+	await client.balance.retrieve({}, { stripeAccount: "acct_other" });
+	expect(sent.indexOf("acct_other")).toBeLessThan(3);
+	await Promise.all(busy);
+});
+
 test("a webhook overtakes queued bulk reads without waiting for the batch to drain", async () => {
 	const sent: string[] = [];
 	const first = Promise.withResolvers<void>();
@@ -147,29 +201,36 @@ test("worker allocations never multiply the per-key budget", () => {
 	);
 });
 
-test("three independent test processes share the same allowance", async () => {
-	const secret = `sk_test_processes_${crypto.randomUUID()}`;
-	const fixture = `${import.meta.dir}/fixtures/stripeLimiterWorker.ts`;
-	const children = Array.from({ length: 3 }, () =>
-		Bun.spawn([process.execPath, fixture], {
-			cwd: "/tmp",
-			stdout: "pipe",
-			stderr: "pipe",
-			env: { ...process.env, TW_STRIPE_PROBE_SECRET: secret },
-		}),
-	);
-	const outputs = await Promise.all(
-		children.map(async (child) => {
-			const [stdout, stderr, exitCode] = await Promise.all([
-				new Response(child.stdout).text(),
-				new Response(child.stderr).text(),
-				child.exited,
-			]);
-			expect(exitCode, stderr).toBe(0);
-			return JSON.parse(stdout) as number[];
-		}),
-	);
-	const sent = outputs.flat().sort((a, b) => a - b);
-	expect(sent).toHaveLength(9);
-	expect(sent[8] - sent[0]).toBeGreaterThanOrEqual(380);
-});
+test.each([undefined, "acct_process_shared"])(
+	"three independent test processes share the same allowance for %s",
+	async (account) => {
+		const secret = `sk_test_processes_${crypto.randomUUID()}`;
+		const fixture = `${import.meta.dir}/fixtures/stripeLimiterWorker.ts`;
+		const children = Array.from({ length: 3 }, () =>
+			Bun.spawn([process.execPath, fixture], {
+				cwd: "/tmp",
+				stdout: "pipe",
+				stderr: "pipe",
+				env: {
+					...process.env,
+					TW_STRIPE_PROBE_SECRET: secret,
+					TW_STRIPE_PROBE_ACCOUNT: account,
+				},
+			}),
+		);
+		const outputs = await Promise.all(
+			children.map(async (child) => {
+				const [stdout, stderr, exitCode] = await Promise.all([
+					new Response(child.stdout).text(),
+					new Response(child.stderr).text(),
+					child.exited,
+				]);
+				expect(exitCode, stderr).toBe(0);
+				return JSON.parse(stdout) as number[];
+			}),
+		);
+		const sent = outputs.flat().sort((a, b) => a - b);
+		expect(sent).toHaveLength(9);
+		expect(sent[8] - sent[0]).toBeGreaterThanOrEqual(account ? 1580 : 380);
+	},
+);

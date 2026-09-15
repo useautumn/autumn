@@ -15,27 +15,35 @@ afterAll(async () => {
 	redis.disconnect();
 });
 
-const createAdmission = ({ maximum = 8 }: { maximum?: number } = {}) => {
-	const prefix = `tw:stripe:test:${crypto.randomUUID()}`;
+const createAdmission = ({
+	maximum = 8,
+	platformPrefix = `tw:stripe:test:${crypto.randomUUID()}`,
+}: {
+	maximum?: number;
+	platformPrefix?: string;
+} = {}) => {
+	const prefix = `${platformPrefix}:${crypto.randomUUID()}`;
 	const keys = [
-		"state",
-		"bulk",
-		"webhook",
-		"waiting",
-		"active",
-		"activeBulk",
-	].map((suffix) => `${prefix}:${suffix}`);
+		...["state", "bulk", "webhook", "waiting"].map(
+			(suffix) => `${prefix}:${suffix}`,
+		),
+		`${platformPrefix}:active`,
+		`${platformPrefix}:activeBulk`,
+		`${platformPrefix}:state`,
+	];
 	ownedKeys.push(...keys);
 	const attempt = async ({
 		id,
 		lane = "bulk",
 		interval = 50,
+		accountInterval = 200,
 		lease = 85000,
 		operation = "acquire",
 	}: {
 		id: string;
 		lane?: TwStripeLane;
 		interval?: number;
+		accountInterval?: number;
 		lease?: number;
 		operation?: string;
 	}) =>
@@ -49,9 +57,11 @@ const createAdmission = ({ maximum = 8 }: { maximum?: number } = {}) => {
 			interval,
 			maximum,
 			lease,
+			accountInterval,
 		)) as [number, number];
 	const ready = async () => {
 		await redis.hset(keys[0], "nextAt", 0);
+		await redis.hset(keys[6], "nextAt", 0);
 	};
 	const pause = async () => {
 		await redis.hset(keys[0], "nextAt", Date.now() + 60000);
@@ -134,4 +144,37 @@ test("processes with different budget settings fail rather than mint extra capac
 		gate.attempt({ id: "mismatched", interval: 100 }),
 	).rejects.toThrow("differs between worker processes");
 	expect(await redis.zscore(gate.keys[1], "mismatched")).toBeNull();
+});
+
+test("account queues are independent but admission consumes both account and platform allowances", async () => {
+	const platformPrefix = `tw:stripe:test:${crypto.randomUUID()}`;
+	const first = createAdmission({ platformPrefix });
+	const second = createAdmission({ platformPrefix });
+	expect((await first.attempt({ id: "first" }))[0]).toBe(1);
+	await first.pause();
+	await redis.hset(first.keys[6], "nextAt", Date.now() + 60000);
+	expect((await second.attempt({ id: "other" }))[0]).toBe(0);
+	await redis.hset(first.keys[6], "nextAt", 0);
+	expect((await first.attempt({ id: "queued" }))[0]).toBe(0);
+	expect((await second.attempt({ id: "other" }))[0]).toBe(1);
+	expect(Number(await redis.hget(first.keys[6], "nextAt"))).toBeGreaterThan(0);
+	expect(Number(await redis.hget(second.keys[0], "nextAt"))).toBeGreaterThan(0);
+});
+
+test("separate accounts share in-flight capacity and preserve the webhook slot", async () => {
+	const platformPrefix = `tw:stripe:test:${crypto.randomUUID()}`;
+	const first = createAdmission({ platformPrefix, maximum: 2 });
+	const second = createAdmission({ platformPrefix, maximum: 2 });
+	expect((await first.attempt({ id: "bulk" }))[0]).toBe(1);
+	await second.ready();
+	expect((await second.attempt({ id: "other-bulk" }))[0]).toBe(0);
+	expect((await second.attempt({ id: "hook", lane: "webhook" }))[0]).toBe(1);
+	await second.ready();
+	expect((await second.attempt({ id: "next-hook", lane: "webhook" }))[0]).toBe(
+		0,
+	);
+	await first.attempt({ id: "bulk", operation: "release" });
+	expect((await second.attempt({ id: "next-hook", lane: "webhook" }))[0]).toBe(
+		1,
+	);
 });
