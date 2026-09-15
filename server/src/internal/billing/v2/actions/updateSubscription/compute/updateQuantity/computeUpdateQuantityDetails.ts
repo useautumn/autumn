@@ -17,32 +17,22 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeFeatureOptionsChange } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeFeatureOptionsChange";
 import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/getLineItemBillingPeriod";
-import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences";
-import { computeUpdateQuantityCustomerEntitlementChanges } from "./computeUpdateQuantityCustomerEntitlementChanges";
-import { computeUpdateQuantityLineItems } from "./computeUpdateQuantityLineItems";
-import { computeUpdateQuantityPooledContributionUpdate } from "./computeUpdateQuantityPooledContributionUpdate";
+import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences.js";
+import { computeUpdateQuantityCustomerEntitlementChanges } from "./computeUpdateQuantityCustomerEntitlementChanges.js";
+import { computeUpdateQuantityLineItems } from "./computeUpdateQuantityLineItems.js";
+import { computeUpdateQuantityPooledContributionUpdate } from "./computeUpdateQuantityPooledContributionUpdate.js";
 
-/**
- * Computes all details needed for a feature quantity update operation.
- *
- * Orchestrates extraction of price config, quantity differences, billing period,
- * proration amounts, and entitlement changes. Pure function with no side effects.
- *
- * @param ctx - Autumn context with features
- * @param previousOptions - Current feature options
- * @param updatedOptions - Desired feature options
- * @param updateSubscriptionContext - Context containing customerProduct, stripeSubscription, currentEpochMs
- * @returns Complete details for executing the quantity update
- * @throws {InternalError} When internal_feature_id is missing or feature not found
- */
+/** Computes quantity differences, billing lines and entitlement updates without side effects. */
 export const computeUpdateQuantityDetails = ({
 	ctx,
 	updatedOptions,
 	updateSubscriptionContext,
+	applyImmediately = false,
 }: {
 	ctx: AutumnContext;
 	updatedOptions: FeatureOptions;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
+	applyImmediately?: boolean;
 }): {
 	featureId: string;
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
@@ -122,6 +112,7 @@ export const computeUpdateQuantityDetails = ({
 	});
 
 	updatedOptions = computeFeatureOptionsChange({
+		applyImmediately,
 		previousOptions,
 		updatedOptions,
 		quantityDifferenceForEntitlements:
@@ -131,6 +122,7 @@ export const computeUpdateQuantityDetails = ({
 
 	const updateCustomerEntitlements =
 		computeUpdateQuantityCustomerEntitlementChanges({
+			applyImmediately,
 			ctx,
 			updateSubscriptionContext,
 			quantityDifference: quantityDifferences.quantityDifferenceForEntitlements,

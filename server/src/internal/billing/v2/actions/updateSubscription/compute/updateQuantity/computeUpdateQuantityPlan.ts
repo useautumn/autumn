@@ -4,12 +4,14 @@ import type {
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getCurrentBillingCycleAnchorMs } from "@/internal/billing/v2/utils/billingContext/getCurrentBillingCycleAnchorMs.js";
 import { emptyPooledBalancePlan } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
-import { computeLicenseQuantityDetails } from "./computeLicenseQuantityDetails";
+import { computeLicenseQuantityDetails } from "./computeLicenseQuantityDetails.js";
 import {
 	computePrepaidQuantityDetails,
 	type PrepaidQuantityDetails,
-} from "./computePrepaidQuantityDetails";
+} from "./computePrepaidQuantityDetails.js";
+import { computeUpdateQuantityAnchorResetPlan } from "./computeUpdateQuantityAnchorResetPlan.js";
 
 const untouchedPrepaidQuantities: PrepaidQuantityDetails = {
 	updatedOptions: [],
@@ -32,15 +34,33 @@ export const computeUpdateQuantityPlan = ({
 	params: UpdateSubscriptionV1Params;
 }): AutumnBillingPlan => {
 	const { customerProduct } = billingContext;
+	const currentBillingCycleAnchorMs = getCurrentBillingCycleAnchorMs({
+		billingContext,
+	});
+	const quantityContext: UpdateSubscriptionBillingContext =
+		billingContext.requestedBillingCycleAnchor === undefined
+			? billingContext
+			: {
+					...billingContext,
+					billingCycleAnchorMs: currentBillingCycleAnchorMs,
+					resetCycleAnchorMs: currentBillingCycleAnchorMs,
+				};
 
 	// featureQuantities always carries current options as fallback, so a
 	// seat-only request must skip the prepaid facet to leave options untouched.
 	const prepaid = isLicenseOnlyRequest({ params })
 		? untouchedPrepaidQuantities
-		: computePrepaidQuantityDetails({ ctx, billingContext });
-	const license = computeLicenseQuantityDetails({ ctx, billingContext });
+		: computePrepaidQuantityDetails({
+				ctx,
+				billingContext: quantityContext,
+				params,
+			});
+	const license = computeLicenseQuantityDetails({
+		ctx,
+		billingContext: quantityContext,
+	});
 
-	return {
+	const plan: AutumnBillingPlan = {
 		customerId: billingContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		customPrices: [],
@@ -60,6 +80,9 @@ export const computeUpdateQuantityPlan = ({
 				}
 			: {}),
 	};
+	return billingContext.requestedBillingCycleAnchor === "now"
+		? computeUpdateQuantityAnchorResetPlan({ ctx, billingContext, plan })
+		: plan;
 };
 
 const isLicenseOnlyRequest = ({

@@ -1,16 +1,17 @@
-import type { CarryOverUsages } from "../../../api/billing/common/carryOverUsages";
-import { UpdateSubscriptionIntent } from "./updateSubscriptionBillingContext";
+import type { CarryOverUsages } from "../../../api/billing/common/carryOverUsages.js";
+import { UpdateSubscriptionIntent } from "./updateSubscriptionBillingContext.js";
 
-/** Whether this transition clears the customer's usage balances. The executor
- * resets them on exactly this condition, so the preview asks the same question
- * rather than inferring one of its own. */
+/** Shared usage-reset policy for computation and preview. */
 export const billingContextResetsUsage = (billingContext: unknown): boolean => {
 	const context = billingContext as {
 		carryOverUsages?: CarryOverUsages;
 		intent?: unknown;
+		requestedBillingCycleAnchor?: unknown;
 	} | null;
 	return (
-		context?.intent === UpdateSubscriptionIntent.UpdatePlan &&
+		(context?.intent === UpdateSubscriptionIntent.UpdatePlan ||
+			(context?.intent === UpdateSubscriptionIntent.UpdateQuantity &&
+				context.requestedBillingCycleAnchor === "now")) &&
 		context.carryOverUsages?.enabled === false
 	);
 };

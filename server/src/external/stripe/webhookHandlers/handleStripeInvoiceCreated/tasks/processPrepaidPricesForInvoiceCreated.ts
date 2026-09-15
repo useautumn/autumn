@@ -8,7 +8,9 @@ import {
 	type FullCustomerPrice,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
 	notNullish,
+	secondsToMs,
 } from "@autumn/shared";
+import { isStripeInvoiceForNewPeriod } from "@/external/stripe/invoices/utils/classifyStripeInvoice.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { isStripeSubscriptionVercel } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
@@ -20,7 +22,7 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
-import { logPrepaidPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing";
+import { logPrepaidPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing.js";
 
 /**
  * Handle reset balance?
@@ -31,11 +33,13 @@ const processPrepaidPrice = async ({
 	eventContext,
 	customerPrice,
 	customerEntitlement,
+	resetsBillingCycleAnchor,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
 	customerPrice: FullCustomerPrice;
 	customerEntitlement: FullCusEntWithFullCusProduct;
+	resetsBillingCycleAnchor: boolean;
 }) => {
 	const options = customerEntitlementToOptions({
 		customerEntitlement,
@@ -140,6 +144,13 @@ const processPrepaidPrice = async ({
 		updates: {
 			...resetUpdate,
 			next_reset_at: nextResetAt,
+			...(resetsBillingCycleAnchor
+				? {
+						reset_cycle_anchor: secondsToMs(
+							stripeSubscription.billing_cycle_anchor,
+						),
+					}
+				: {}),
 		},
 	});
 
@@ -164,9 +175,15 @@ export const processPrepaidPricesForInvoiceCreated = async ({
 }): Promise<void> => {
 	const { stripeInvoice, customerProducts, stripeSubscription } = eventContext;
 
-	const isNewPeriod = stripeInvoice.billing_reason === "subscription_cycle";
+	const isNewPeriod = isStripeInvoiceForNewPeriod(stripeInvoice);
+	const anchorResetCustomerProductIds = new Set(
+		eventContext.billingCycleAnchorResetCustomerProductIds,
+	);
+	const isAnchorResetInvoice =
+		stripeInvoice.billing_reason === "subscription_update" &&
+		anchorResetCustomerProductIds.size > 0;
 	const isVercelSubscription = isStripeSubscriptionVercel(stripeSubscription);
-	if (!isNewPeriod || isVercelSubscription) return;
+	if ((!isNewPeriod && !isAnchorResetInvoice) || isVercelSubscription) return;
 
 	const customerPrices = getCustomerPricesWithCustomerProducts({
 		customerProducts,
@@ -178,6 +195,10 @@ export const processPrepaidPricesForInvoiceCreated = async ({
 	for (const customerPrice of customerPrices) {
 		const cusProduct = customerPrice.customer_product;
 		if (!cusProduct) continue;
+		const resetsBillingCycleAnchor = anchorResetCustomerProductIds.has(
+			cusProduct.id,
+		);
+		if (!isNewPeriod && !resetsBillingCycleAnchor) continue;
 
 		const cusEnt = customerPriceToCustomerEntitlement({
 			customerPrice,
@@ -196,6 +217,7 @@ export const processPrepaidPricesForInvoiceCreated = async ({
 			eventContext,
 			customerPrice,
 			customerEntitlement: cusEntWithProduct,
+			resetsBillingCycleAnchor,
 		});
 	}
 };
