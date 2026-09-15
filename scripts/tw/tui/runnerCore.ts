@@ -19,7 +19,12 @@ import {
 	getFileOutput,
 	isSkipRequested,
 } from "../dashboard/hub.ts";
-import { setRunTotal, type TuiTestFile, upsertTestFile } from "./store.ts";
+import {
+	getTuiState,
+	setRunTotal,
+	type TuiTestFile,
+	upsertTestFile,
+} from "./store.ts";
 import {
 	extractCurrentTest,
 	type ParsedTest,
@@ -128,6 +133,7 @@ const emit = (result: InternalResult, willRetry: boolean): void => {
 		attempt: result.attempt,
 		willRetry,
 		passedOnRetry: result.passedOnRetry,
+		workerDeaths: getTuiState().files.get(result.file)?.workerDeaths ?? 0,
 		failedTests: toFailedTests(failures),
 		crashError: result.crashError,
 	});
@@ -245,6 +251,13 @@ const runWithReschedule = async (params: {
 				throw error;
 			}
 			lastWorkerDeath = error;
+			const current = getTuiState().files.get(params.file);
+			if (current) {
+				upsertTestFile({
+					...current,
+					workerDeaths: (current.workerDeaths ?? 0) + 1,
+				});
+			}
 		}
 	}
 

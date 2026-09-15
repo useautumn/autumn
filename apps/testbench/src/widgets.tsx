@@ -194,7 +194,21 @@ export const sortFilesForTriage = <T extends { status: string; name: string }>(
 			a.name.localeCompare(b.name),
 	);
 
-export function FileStatusBadge({ status }: { status: string }) {
+export function FileStatusBadge({
+	status,
+	passedOnRetry = false,
+	workerDeaths = 0,
+}: {
+	status: string;
+	passedOnRetry?: boolean;
+	workerDeaths?: number;
+}) {
+	if (status === "passed" && passedOnRetry) {
+		return <Pill tone="yellow">passed after retry</Pill>;
+	}
+	if (status === "passed" && workerDeaths > 0) {
+		return <Pill tone="yellow">passed after reschedule</Pill>;
+	}
 	const s = FILE_STATUS[status] ?? FILE_STATUS.pending;
 	return <Pill tone={s.tone}>{s.label}</Pill>;
 }

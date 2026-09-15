@@ -225,6 +225,10 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 }
 
 function LiveStats({ snap }: { snap: Snapshot }) {
+	const recoveredFiles = snap.files.filter((file) => file.passedOnRetry).length;
+	const rescheduledFiles = snap.files.filter(
+		(file) => file.workerDeaths > 0,
+	).length;
 	if (snap.summary) {
 		return (
 			<div className="flex flex-col gap-1.5">
@@ -235,6 +239,11 @@ function LiveStats({ snap }: { snap: Snapshot }) {
 					value={snap.summary.filesFailed ?? snap.summary.failed}
 				/>
 				<InfoRow label="crashed" value={snap.summary.crashed} />
+				<InfoRow label="files passed after retry" value={recoveredFiles} />
+				<InfoRow
+					label="files rescheduled after worker death"
+					value={rescheduledFiles}
+				/>
 				<InfoRow label="wall" mono value={fmtWall(snap.summary.wallMs)} />
 				{snap.summary.costLine ? (
 					<InfoRow label="cost" mono value={snap.summary.costLine} />
@@ -296,7 +305,11 @@ function FileTable({
 								{f.name}
 							</TableCell>
 							<TableCell className="h-4 px-2">
-								<FileStatusBadge status={f.status} />
+								<FileStatusBadge
+									status={f.status}
+									passedOnRetry={f.passedOnRetry}
+									workerDeaths={f.workerDeaths}
+								/>
 							</TableCell>
 							<TableCell className="h-4 px-2 font-mono text-xs tabular-nums">
 								<span className="text-green-500">{f.passed}</span>

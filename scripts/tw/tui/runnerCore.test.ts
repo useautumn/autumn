@@ -5,7 +5,9 @@ import { join } from "node:path";
 import {
 	LocalExecutor,
 	type TestExecutor,
+	WorkerDeathError,
 } from "../../testScripts/testExecutor";
+import { getDashboardSnapshot } from "../dashboard/server";
 import { runSwarmTests } from "./runnerCore";
 import { getTuiState, resetTui } from "./store";
 
@@ -34,6 +36,33 @@ test("streamed stderr verdicts are counted once and retry failures remain visibl
 		attempt: 2,
 		passedOnRetry: true,
 		failedTests: [{ name: "example" }],
+	});
+	expect(getDashboardSnapshot().files[0]).toMatchObject({
+		attempt: 2,
+		passedOnRetry: true,
+		workerDeaths: 0,
+	});
+});
+
+test("worker death rescheduling remains visible after a successful first test attempt", async () => {
+	let dispatches = 0;
+	const executor: TestExecutor = {
+		async run({ onChunk }) {
+			if (++dispatches === 1)
+				throw new WorkerDeathError({ workerName: "worker-1" });
+			const stderr = "(pass) example [1ms]\n";
+			onChunk(stderr);
+			return { exitCode: 0, stderr };
+		},
+	};
+
+	await runSwarmTests(["example.test.ts"], executor, { maxParallel: 1 });
+
+	expect(getDashboardSnapshot().files[0]).toMatchObject({
+		status: "passed",
+		attempt: 1,
+		passedOnRetry: false,
+		workerDeaths: 1,
 	});
 });
 

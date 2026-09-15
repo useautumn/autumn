@@ -64,6 +64,7 @@ import {
 } from "../dashboard/hub.ts";
 import {
 	type DashboardServer,
+	getDashboardSnapshot,
 	startDashboardServer,
 } from "../dashboard/server.ts";
 import {
@@ -1852,6 +1853,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				costLine,
 				logFile: runLogFile,
 			});
+			writeFileSync(
+				runLogFile.replace(/\.log$/, ".json"),
+				JSON.stringify({ runId, snapshot: getDashboardSnapshot() }, null, 2),
+			);
 		};
 		// Preliminary publish — sandboxes are about to be torn down, so this
 		// lifetime is within a few seconds of the final.
