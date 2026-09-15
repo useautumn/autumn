@@ -1,6 +1,7 @@
 import { afterAll } from "bun:test";
 import { type Browser, chromium } from "playwright-core";
 import { getChromiumPath, HEADLESS } from "./browserConfig.js";
+import { limitStripeBrowserRequests } from "./limitStripeBrowserRequests.js";
 
 /**
  * Singleton Playwright browser pool for local development.
@@ -57,13 +58,17 @@ class PlaywrightPool {
 		const context = await browser.newContext({
 			viewport: { width: 1280, height: 800 },
 		});
-		const page = await context.newPage();
-
+		let admission: Awaited<ReturnType<typeof limitStripeBrowserRequests>>;
 		try {
+			admission = await limitStripeBrowserRequests({ context });
+			const page = await context.newPage();
 			return await fn({ page, ...args });
 		} finally {
-			await page.close();
-			await context.close();
+			try {
+				await context.close();
+			} finally {
+				await admission?.close();
+			}
 		}
 	}
 

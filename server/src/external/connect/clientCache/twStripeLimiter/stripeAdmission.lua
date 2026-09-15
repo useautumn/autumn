@@ -1,7 +1,8 @@
-local state, bulk, webhook, waiting, active, activeBulk, platform = unpack(KEYS)
+local state, bulk, webhook, waiting, active, activeBulk, platform, accountActive, accountActiveBulk = unpack(KEYS)
 local operation, id, lane = ARGV[1], ARGV[2], ARGV[3]
 local interval, maximum, lease = tonumber(ARGV[4]), tonumber(ARGV[5]), tonumber(ARGV[6])
 local accountInterval = tonumber(ARGV[7])
+local accountMaximum = tonumber(ARGV[8])
 local time = redis.call('TIME')
 local now = tonumber(time[1]) * 1000 + tonumber(time[2]) / 1000
 
@@ -22,6 +23,8 @@ if operation == 'release' then
   removeWaiting(id)
   redis.call('ZREM', active, id)
   redis.call('ZREM', activeBulk, id)
+  redis.call('ZREM', accountActive, id)
+  redis.call('ZREM', accountActiveBulk, id)
   return {0, 0}
 end
 
@@ -31,17 +34,20 @@ if configuredInterval and (configuredInterval ~= interval or configuredMaximum ~
   return redis.error_reply('Stripe budget differs between worker processes')
 end
 local configuredAccountInterval = tonumber(redis.call('HGET', state, 'interval'))
-if configuredAccountInterval and configuredAccountInterval ~= accountInterval then
+local configuredAccountMaximum = tonumber(redis.call('HGET', state, 'maximum'))
+if configuredAccountInterval and (configuredAccountInterval ~= accountInterval or (configuredAccountMaximum and configuredAccountMaximum ~= accountMaximum)) then
   return redis.error_reply('Stripe account budget differs between worker processes')
 end
 redis.call('HSET', platform, 'interval', interval, 'maximum', maximum)
-redis.call('HSET', state, 'interval', accountInterval)
+redis.call('HSET', state, 'interval', accountInterval, 'maximum', accountMaximum)
 
 for _, expired in ipairs(redis.call('ZRANGEBYSCORE', waiting, '-inf', now)) do
   removeWaiting(expired)
 end
 redis.call('ZREMRANGEBYSCORE', active, '-inf', now)
 redis.call('ZREMRANGEBYSCORE', activeBulk, '-inf', now)
+redis.call('ZREMRANGEBYSCORE', accountActive, '-inf', now)
+redis.call('ZREMRANGEBYSCORE', accountActiveBulk, '-inf', now)
 
 local queue = lane == 'webhook' and webhook or bulk
 if not redis.call('ZSCORE', queue, id) then
@@ -55,7 +61,7 @@ local bulkHead = redis.call('ZRANGE', bulk, 0, 0)[1]
 local webhookHead = redis.call('ZRANGE', webhook, 0, 0)[1]
 local streak = tonumber(redis.call('HGET', state, 'webhookStreak')) or 0
 -- A Stripe mutation can wait for a webhook, so bulk must leave one slot free.
-local bulkHasCapacity = redis.call('ZCARD', activeBulk) < maximum - 1
+local bulkHasCapacity = redis.call('ZCARD', activeBulk) < maximum - 1 and redis.call('ZCARD', accountActiveBulk) < accountMaximum - 1
 local selected = bulkHead
 if webhookHead and (not bulkHead or streak < 3 or not bulkHasCapacity) then
   selected = webhookHead
@@ -69,14 +75,18 @@ local delay = math.max(1, nextAt - now)
 if selected ~= id then
   return {0, math.ceil(math.max(delay, math.min(1000, interval * (rank + 1))))}
 end
-if redis.call('ZCARD', active) >= maximum or (lane == 'bulk' and not bulkHasCapacity) then
+if redis.call('ZCARD', active) >= maximum or redis.call('ZCARD', accountActive) >= accountMaximum or (lane == 'bulk' and not bulkHasCapacity) then
   return {0, math.ceil(math.max(delay, interval))}
 end
 if now < nextAt then return {0, math.ceil(delay)} end
 
 removeWaiting(id)
 redis.call('ZADD', active, now + lease, id)
-if lane == 'bulk' then redis.call('ZADD', activeBulk, now + lease, id) end
+redis.call('ZADD', accountActive, now + lease, id)
+if lane == 'bulk' then
+  redis.call('ZADD', activeBulk, now + lease, id)
+  redis.call('ZADD', accountActiveBulk, now + lease, id)
+end
 redis.call('HSET', platform, 'nextAt', now + interval)
 redis.call('HSET', state, 'nextAt', now + accountInterval, 'webhookStreak', lane == 'webhook' and streak + 1 or 0)
 extendExpiry()

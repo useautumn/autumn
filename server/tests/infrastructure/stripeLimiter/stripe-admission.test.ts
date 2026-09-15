@@ -17,9 +17,11 @@ afterAll(async () => {
 
 const createAdmission = ({
 	maximum = 8,
+	accountMaximum = maximum,
 	platformPrefix = `tw:stripe:test:${crypto.randomUUID()}`,
 }: {
 	maximum?: number;
+	accountMaximum?: number;
 	platformPrefix?: string;
 } = {}) => {
 	const prefix = `${platformPrefix}:${crypto.randomUUID()}`;
@@ -30,6 +32,8 @@ const createAdmission = ({
 		`${platformPrefix}:active`,
 		`${platformPrefix}:activeBulk`,
 		`${platformPrefix}:state`,
+		`${prefix}:active`,
+		`${prefix}:activeBulk`,
 	];
 	ownedKeys.push(...keys);
 	const attempt = async ({
@@ -58,6 +62,7 @@ const createAdmission = ({
 			maximum,
 			lease,
 			accountInterval,
+			accountMaximum,
 		)) as [number, number];
 	const ready = async () => {
 		await redis.hset(keys[0], "nextAt", 0);
@@ -123,9 +128,34 @@ test("expired callers cannot strand queue entries or in-flight permits", async (
 	await redis.zadd(gate.keys[3], 0, "dead-waiter");
 	await redis.zadd(gate.keys[4], 0, "dead-active");
 	await redis.zadd(gate.keys[5], 0, "dead-active");
+	await redis.zadd(gate.keys[7], 0, "dead-active");
+	await redis.zadd(gate.keys[8], 0, "dead-active");
 	expect((await gate.attempt({ id: "healthy" }))[0]).toBe(1);
 	expect(await redis.zscore(gate.keys[1], "dead-waiter")).toBeNull();
 	expect(await redis.zcard(gate.keys[4])).toBe(1);
+});
+
+test("an account has its own in-flight bound and reserved webhook slot", async () => {
+	const platformPrefix = `tw:stripe:test:${crypto.randomUUID()}`;
+	const first = createAdmission({ platformPrefix, accountMaximum: 5 });
+	const second = createAdmission({ platformPrefix, accountMaximum: 5 });
+	for (let index = 0; index < 4; index++) {
+		await first.ready();
+		expect((await first.attempt({ id: `bulk-${index}` }))[0]).toBe(1);
+	}
+	await first.ready();
+	expect((await first.attempt({ id: "queued-bulk" }))[0]).toBe(0);
+	expect((await first.attempt({ id: "hook", lane: "webhook" }))[0]).toBe(1);
+	await first.ready();
+	expect((await first.attempt({ id: "queued-hook", lane: "webhook" }))[0]).toBe(
+		0,
+	);
+	expect((await second.attempt({ id: "other-account" }))[0]).toBe(1);
+	await first.attempt({ id: "bulk-0", operation: "release" });
+	await first.ready();
+	expect((await first.attempt({ id: "queued-hook", lane: "webhook" }))[0]).toBe(
+		1,
+	);
 });
 
 test("a shorter request cannot shorten the lifetime of an existing permit", async () => {

@@ -6,6 +6,7 @@ import { getTwStripeLane } from "./twStripeRequestContext";
 import type { TwStripeBudget } from "./types/twStripeAdmission";
 
 const CONNECTED_ACCOUNT_MAX_RPS = 5;
+const CONNECTED_ACCOUNT_MAX_INFLIGHT = 5;
 
 const getBudget = (): TwStripeBudget => {
 	const maxRps = Number(process.env.TW_STRIPE_MAX_RPS);
@@ -27,10 +28,12 @@ export const acquireTwStripePermit = async ({
 	authorization,
 	stripeAccount,
 	timeoutMs,
+	signal,
 }: {
 	authorization: string;
 	stripeAccount?: string;
 	timeoutMs: number;
+	signal?: AbortSignal;
 }) => {
 	const redis = getTwStripeRedis();
 	const { maxRps, maxInFlight } = getBudget();
@@ -46,6 +49,8 @@ export const acquireTwStripePermit = async ({
 		`${prefix}:active`,
 		`${prefix}:activeBulk`,
 		`${prefix}:state`,
+		`${prefix}:${account}:active`,
+		`${prefix}:${account}:activeBulk`,
 	];
 	const id = randomUUID();
 	const lane = getTwStripeLane();
@@ -60,6 +65,9 @@ export const acquireTwStripePermit = async ({
 		maxInFlight,
 		leaseMs,
 		1000 / accountRps,
+		stripeAccount
+			? Math.min(maxInFlight, CONNECTED_ACCOUNT_MAX_INFLIGHT)
+			: maxInFlight,
 	];
 	const startedAt = performance.now();
 	let released = false;
@@ -71,6 +79,7 @@ export const acquireTwStripePermit = async ({
 
 	try {
 		for (;;) {
+			signal?.throwIfAborted();
 			const result = (await redis.eval(
 				admissionScript,
 				keys.length,
@@ -78,13 +87,14 @@ export const acquireTwStripePermit = async ({
 				"acquire",
 				...args,
 			)) as [number, number];
+			signal?.throwIfAborted();
 			if (result[0] === 1)
 				return {
 					release,
 					lane,
 					waitMs: Math.round(performance.now() - startedAt),
 				};
-			await delay(result[1]);
+			await delay(result[1], undefined, { signal });
 		}
 	} catch (error) {
 		await release().catch(() => {});
