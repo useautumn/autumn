@@ -12,6 +12,7 @@ import {
 	BillWhen,
 	type FullCustomer,
 	PriceType,
+	TierBehavior,
 } from "@autumn/shared";
 import { fullCustomerToAutoTopupObjects } from "@/internal/balances/autoTopUp/helpers/fullCustomerToAutoTopupObjects.js";
 
@@ -22,17 +23,20 @@ const oneOffPrepaidPrice = ({
 	entitlementId,
 	customerProductId,
 	amount,
+	tierBehavior,
 }: {
 	priceId: string;
 	entitlementId: string;
 	customerProductId: string;
 	amount: number;
+	tierBehavior?: TierBehavior;
 }) => ({
 	id: priceId,
 	customer_product_id: customerProductId,
 	price: {
 		id: priceId,
 		entitlement_id: entitlementId,
+		tier_behavior: tierBehavior,
 		config: {
 			type: PriceType.Usage,
 			interval: BillingInterval.OneOff,
@@ -48,10 +52,12 @@ const planWithOneOff = ({
 	id,
 	createdAt,
 	amount,
+	tierBehavior,
 }: {
 	id: string;
 	createdAt: number;
 	amount: number;
+	tierBehavior?: TierBehavior;
 }) => {
 	const entitlementId = `ent_${id}`;
 	const cusEntId = `cusent_${id}`;
@@ -67,6 +73,7 @@ const planWithOneOff = ({
 				entitlementId,
 				customerProductId: id,
 				amount,
+				tierBehavior,
 			}),
 		],
 		customer_entitlements: [
@@ -90,7 +97,12 @@ const buildFullCustomer = ({
 	threshold = 20,
 	quantity = 100,
 }: {
-	plans: Array<{ id: string; createdAt: number; amount: number }>;
+	plans: Array<{
+		id: string;
+		createdAt: number;
+		amount: number;
+		tierBehavior?: TierBehavior;
+	}>;
 	threshold?: number;
 	quantity?: number;
 }) =>
@@ -155,5 +167,25 @@ describe("fullCustomerToAutoTopupObjects — most-recently-attached price wins",
 		});
 
 		expect(result?.customerEntitlement.customer_product_id).toBe("cp_only");
+	});
+});
+
+describe("fullCustomerToAutoTopupObjects — tiered one-off prices are charge sources", () => {
+	test("a volume-tiered one-off prepaid price resolves as the charge source", () => {
+		const result = fullCustomerToAutoTopupObjects({
+			fullCustomer: buildFullCustomer({
+				plans: [
+					{
+						id: "cp_volume",
+						createdAt: NOW,
+						amount: 0.18,
+						tierBehavior: TierBehavior.VolumeBased,
+					},
+				],
+			}),
+			featureId: FEATURE,
+		});
+
+		expect(result?.customerEntitlement.customer_product_id).toBe("cp_volume");
 	});
 });
