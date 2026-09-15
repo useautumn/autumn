@@ -32,6 +32,7 @@ ensure_infisical_session || exit 1
 # --- machine tooling --------------------------------------------------------
 ensure_neonctl_installed || exit 1
 ensure_psql_installed || exit 1
+ensure_dw_binaries_installed || exit 1
 
 . "$here/startDocker.sh"
 start_docker_daemon || exit 1

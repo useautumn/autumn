@@ -64,3 +64,19 @@ ensure_infisical_cli_installed() {
 	export PATH="$(npm prefix -g 2>/dev/null)/bin:$PATH"
 	command -v infisical >/dev/null 2>&1 || { echo "[conductor] infisical CLI install failed" >&2; return 1; }
 }
+
+# `bun dw run` shells out to lsof (killOwnPorts) and tmux (session management),
+# both of which came from the Cloud computer install script.
+ensure_dw_binaries_installed() {
+	local missing=()
+	command -v lsof >/dev/null 2>&1 || missing+=(lsof)
+	command -v tmux >/dev/null 2>&1 || missing+=(tmux)
+	[ ${#missing[@]} -eq 0 ] && return 0
+
+	echo "[conductor] installing ${missing[*]}"
+	sudo dnf install -y "${missing[@]}" >/dev/null 2>&1 || true
+	for b in "${missing[@]}"; do
+		command -v "$b" >/dev/null 2>&1 || sudo dnf reinstall -y "$b" >/dev/null 2>&1 || true
+		command -v "$b" >/dev/null 2>&1 || { echo "[conductor] $b install failed" >&2; return 1; }
+	done
+}
