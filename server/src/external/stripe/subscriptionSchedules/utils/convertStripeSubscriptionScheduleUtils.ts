@@ -16,3 +16,15 @@ export const stripeSubscriptionScheduleToPhaseIndex = ({
 			(phase.end_date ? phase.end_date > nowSeconds : true),
 	);
 };
+
+export const stripeSchedulePhaseItemToPriceId = (
+	item: Stripe.SubscriptionSchedule.Phase.Item,
+): string => (typeof item.price === "string" ? item.price : item.price.id);
+
+/** Converts a live schedule phase item back into the shape an update accepts. */
+export const stripeSchedulePhaseItemToUpdateParam = (
+	item: Stripe.SubscriptionSchedule.Phase.Item,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.Item => ({
+	price: stripeSchedulePhaseItemToPriceId(item),
+	quantity: item.quantity ?? undefined,
+});
