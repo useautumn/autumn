@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import AgentPromptPane from "./build-with-agents";
 import { Light as RawSyntaxHighlighter } from "react-syntax-highlighter";
 import js from "react-syntax-highlighter/dist/esm/languages/hljs/javascript";
 
@@ -45,7 +47,6 @@ const autumnTheme = {
 	"hljs-punctuation": { color: "#BFBFBF" },
 };
 
-const TOTAL_LINES = 19;
 const LINE_HEIGHT = 24;
 
 const codeContent = `// Your entire billing integration
@@ -60,6 +61,7 @@ if (allowed) {
   });
 }`;
 
+const TOTAL_LINES = codeContent.split("\n").length;
 const TYPING_SPEED = 10;
 
 export default function AutumnConfig({
@@ -129,8 +131,9 @@ export default function AutumnConfig({
 	return (
 		<div
 			ref={containerRef}
-			className="@container w-full max-w-[520px] border border-[#2A2A2A] bg-[#000000]/90"
+			className="@container w-full max-w-[520px] flex flex-col gap-4"
 		>
+			<div className="border border-[#2A2A2A] bg-[#000000]/90">
 			{/* Title bar */}
 			{/* <div className="flex items-center justify-between border-b border-[#2A2A2A] px-4 py-0.5 gap-3 w-full">
         <div className="flex-1 min-w-0 overflow-hidden flex justify-end items-center h-[21px]">
@@ -242,20 +245,22 @@ export default function AutumnConfig({
 					/>
 				</div>
 
-				<div className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-linear-to-t from-[#000000] via-[#000000]/70 to-transparent z-10" />
+			</div>
 
-				<div className="px-1 sm:px-2">
-					<div className="absolute left-2 right-2 sm:left-3 sm:right-3 bottom-[10px] flex items-center justify-between border border-[#9564ff] bg-[#20143C] px-2 sm:px-4 py-2 sm:py-2.5 font-mono text-[10px] sm:text-sm shadow-[0_4px_20px_rgba(149,100,255,0.1)] z-20">
-						<div className="flex items-center gap-1 sm:gap-2">
-							<span className="text-[#959494]">allowed:</span>
-							<span className="text-[#2B8C3F]">true</span>
-							<span className="text-[#959494] ml-0.5 sm:ml-0">remaining:</span>
-							<span className="text-[#9564ff]">8976</span>
-						</div>
-						<span className="text-[#9564ff] ml-1">92ms</span>
+			<div className="px-3 pb-3">
+				<div className="flex items-center justify-between border border-[#9564ff] bg-[#20143C] px-2 sm:px-4 py-2 sm:py-2.5 font-mono text-[10px] sm:text-sm shadow-[0_4px_20px_rgba(149,100,255,0.1)]">
+					<div className="flex items-center gap-1 sm:gap-2">
+						<span className="text-[#959494]">allowed:</span>
+						<span className="text-[#2B8C3F]">true</span>
+						<span className="text-[#959494] ml-0.5 sm:ml-0">remaining:</span>
+						<span className="text-[#9564ff]">8976</span>
 					</div>
+					<span className="text-[#9564ff] ml-1">92ms</span>
 				</div>
 			</div>
+			</div>
+
+			<AgentPromptPane active={started} />
 		</div>
 	);
 }
