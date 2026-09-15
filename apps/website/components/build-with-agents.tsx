@@ -113,15 +113,15 @@ export default function AgentPromptPane({ active }: { active: boolean }) {
 				type="button"
 				onClick={copyPrompt}
 				aria-label="Copy the Autumn setup prompt"
-				className="group flex w-full items-center gap-2.5 border border-[#2A2A2A] bg-[#0F0F0F] px-3 py-2.5 font-mono text-left cursor-pointer hover:border-[#3A3A3A] transition-colors duration-300"
+				className="group flex w-full items-start gap-2.5 border border-[#2A2A2A] bg-[#0F0F0F] px-3 py-2.5 font-mono text-left cursor-pointer hover:border-[#3A3A3A] transition-colors duration-300"
 			>
 				<span
 					aria-hidden="true"
-					className="text-[#9564ff] shrink-0 text-[13px] leading-none"
+					className="text-[#9564ff] shrink-0 text-[12px] md:text-[13px] leading-[18px]"
 				>
 					&#8250;
 				</span>
-				<span className="flex-1 min-w-0 truncate text-[#BFBFBF] group-hover:text-white text-[13px] tracking-[-2%] leading-none transition-colors duration-300">
+				<span className="flex-1 min-w-0 break-words text-[#BFBFBF] group-hover:text-white text-[12px] md:text-[13px] tracking-[-2%] leading-[18px] transition-colors duration-300">
 					{typed}
 					<span
 						aria-hidden="true"
@@ -132,7 +132,7 @@ export default function AgentPromptPane({ active }: { active: boolean }) {
 						}}
 					/>
 				</span>
-				<span className="w-6 h-6 border border-[#2A2A2A] flex items-center justify-center shrink-0 text-[#FFFFFF99] group-hover:text-white group-hover:bg-white/5 transition-colors">
+				<span className="w-6 h-6 -my-[3px] border border-[#2A2A2A] flex items-center justify-center shrink-0 text-[#FFFFFF99] group-hover:text-white group-hover:bg-white/5 transition-colors">
 					{copied ? (
 						<IconTick className="w-3.5 h-3.5" />
 					) : (
