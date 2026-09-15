@@ -209,31 +209,11 @@ export const stripeCheckout = async ({
 		await saveWithLink.uncheck();
 	}
 
-	// Submit via JS click — Stripe overlays (Link, phone) can obscure the
-	// button and break Playwright's actionability check.
-	const submitBtn = page.locator(".SubmitButton-TextContainer").first();
-	if ((await submitBtn.count()) === 0) {
-		throw new Error(".SubmitButton-TextContainer not found");
-	}
-
-	// A JS click on a DISABLED button silently does nothing, and Stripe keeps
-	// submit disabled until it has validated the form — longer on sessions that
-	// also render an express-payment block. Wait for enabled before clicking.
+	// Quantity changes can keep an overlay over an otherwise enabled Submit button.
 	await page
-		.waitForFunction(
-			() => {
-				const button = document.querySelector<HTMLButtonElement>(
-					"button.SubmitButton, button[type=submit]",
-				);
-				return Boolean(button) && !button?.disabled;
-			},
-			{ timeout: 60_000 },
-		)
-		.catch(() => {
-			console.log("[stripeCheckout] Submit never enabled; clicking anyway");
-		});
-
-	await submitBtn.evaluate((el) => (el as HTMLElement).click());
+		.locator("button.SubmitButton, button[type=submit]")
+		.first()
+		.click({ timeout: 60_000 });
 	console.log("[stripeCheckout] Submit clicked");
 
 	// Stripe redirects off checkout.stripe.com once the session completes, so
