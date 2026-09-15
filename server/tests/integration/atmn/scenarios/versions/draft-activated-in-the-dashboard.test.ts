@@ -31,13 +31,13 @@ test.concurrent(
 		const v1 = paidMonthly({
 			planId: "pro",
 			amount: 20,
-			extra: `\n\t\t\t\tversionSlug: "v1",`,
+			versionSlug: "v1",
 		});
 		const v2Draft = paidMonthly({
 			planId: "pro",
 			amount: 30,
 			active: false,
-			extra: `\n\t\t\t\tversionSlug: "v2",`,
+			versionSlug: "v2",
 		});
 		const scenario = await initAtmnScenario({
 			setup: [

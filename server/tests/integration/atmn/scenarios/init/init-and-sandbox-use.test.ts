@@ -19,7 +19,6 @@
 import { expect, test } from "bun:test";
 import {
 	existsSync,
-	mkdirSync,
 	mkdtempSync,
 	readFileSync,
 	rmSync,
@@ -151,7 +150,7 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 			args: ["init"],
 			baseUrl,
 		});
-		expect(exitCode).toBe(0);
+		expect(exitCode, output).toBe(0);
 		expect(output).toContain("✓ Logged in as");
 		expect(output).toContain(
 			"✓ Wrote autumn.config.ts, features.ts, plans.ts, rewards.ts",
@@ -166,9 +165,7 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 			"✓ Skills: skills/autumn-setup, autumn-catalog, autumn-integrate, autumn-concepts",
 		);
 
-		expect(readFileSync(join(root, "features.ts"), "utf8")).toContain(
-			messages,
-		);
+		expect(readFileSync(join(root, "features.ts"), "utf8")).toContain(messages);
 		expect(existsSync(join(root, "skills/autumn-catalog/SKILL.md"))).toBe(true);
 		const manifest = JSON.parse(
 			readFileSync(join(root, "package.json"), "utf8"),
@@ -217,7 +214,7 @@ test(`${chalk.yellowBright("atmn init: a monorepo is hint-driven headless, and t
 			args: ["init", "--path", "packages/autumn", "--name", "@app/autumn"],
 			baseUrl,
 		});
-		expect(third.exitCode).toBe(0);
+		expect(third.exitCode, third.output).toBe(0);
 		expect(third.output).toContain("✓ Name @app/autumn");
 		expect(third.output).toContain(
 			"Sandbox matches the config; nothing to pull",

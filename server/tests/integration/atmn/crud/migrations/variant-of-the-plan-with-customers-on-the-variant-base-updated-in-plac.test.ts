@@ -92,6 +92,7 @@ test.concurrent(
 					result.preview.migrations as unknown as PreviewMigrations,
 					"pro_plus",
 				),
+				JSON.stringify(result.preview.migrations ?? [], null, 2),
 			).toBe(true);
 		} finally {
 			scenario.cleanup();

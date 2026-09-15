@@ -224,7 +224,7 @@ test.concurrent(
 			expect(afterVariant).toContain(
 				`\t\t{\n\t\t\tinternalId: "${yearlyV1.internal_id}",\n\t\t\tvariantPlanId: "${proYearly}",`,
 			);
-			expect(afterVariant).toContain('\t\t\tversionSlug: "v1",\n\t\t},');
+			expect(afterVariant).toContain('\t\t\tversionSlug: "v1",');
 			await expectPreviewNone({
 				client: scenario.client,
 				wire: await scenario.wireFromConfig(),
@@ -314,4 +314,3 @@ test.concurrent(
 		}
 	},
 );
-

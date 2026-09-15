@@ -35,6 +35,7 @@ export default atmn({
 	active: true,
 	planId,
 	name: "Pro",
+	versionSlug: "v1",
 	price: { amount: 20, interval: "month" },
 });
 export default atmn({

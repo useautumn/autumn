@@ -147,7 +147,7 @@ test(`${chalk.yellowBright("atmn init --keyless: provisions, then sets the repo 
 	const root = makeRepo({ name: "keyless-init" });
 	try {
 		const init = runCliHeadless({ cwd: root, args: ["init", "--keyless"] });
-		expect(init.exitCode).toBe(0);
+		expect(init.exitCode, init.output).toBe(0);
 		expect(init.output).toContain("✓ Created sandbox org keyless-init");
 		expect(envValue({ cwd: root, key: "AUTUMN_SECRET_KEY" })).toMatch(
 			/^am_sk_test_/,

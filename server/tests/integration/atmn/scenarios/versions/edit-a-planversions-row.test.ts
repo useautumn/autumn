@@ -42,7 +42,7 @@ test.concurrent(
 			setup: [
 				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 			],
-			config: `{ plans: [${paidMonthly({ planId: "pro", amount: 20, extra: `\n\t\t\t\tversionSlug: "v1",` })}] }`,
+			config: `{ plans: [${paidMonthly({ planId: "pro", amount: 20, versionSlug: "v1" })}] }`,
 		});
 
 		try {
@@ -51,7 +51,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}${paidMonthly({ planId: "pro", amount: 20, active: false, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
+	plans: [${paidMonthly({ planId: "pro", amount: 30, versionSlug: "v2" })}${paidMonthly({ planId: "pro", amount: 20, active: false, versionSlug: "v1" })}],
 }`,
 				}),
 			);
@@ -61,7 +61,7 @@ test.concurrent(
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	plans: [${paidMonthly({ planId: "pro", amount: 30, extra: `\n\t\t\t\tversionSlug: "v2",` })}${paidMonthly({ planId: "pro", amount: 25, active: false, extra: `\n\t\t\t\tversionSlug: "v1",` })}],
+	plans: [${paidMonthly({ planId: "pro", amount: 30, versionSlug: "v2" })}${paidMonthly({ planId: "pro", amount: 25, active: false, versionSlug: "v1" })}],
 }`,
 				}),
 			);
