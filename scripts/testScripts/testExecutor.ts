@@ -13,22 +13,15 @@
 
 import { spawn } from "bun";
 
-/**
- * The seam between the runner and the thing that actually produces test output.
- *
- * `run` streams raw stdout bytes through `onChunk` (which the runner feeds into
- * the existing parser) and resolves with the *test command's* exit code plus its
- * drained stderr. The exit code MUST come from the test command itself — never
- * from the transport — so worker death cannot masquerade as a non-zero exit
- * (see §8.4 and {@link WorkerDeathError}).
- */
+/** Both streams reach onChunk exactly once; returned stderr is diagnostic-only.
+ * The exit code belongs to the test process, not the transport. */
 export interface TestExecutor {
 	run(args: {
 		/** Absolute (local) or worker-relative path to the `.test.ts` file. */
 		file: string;
 		/** Failed test names from a prior attempt → `--test-name-pattern`. */
 		failedTestNames?: string[];
-		/** Raw stdout bytes, decoded to text, in arrival order. */
+		/** Combined stdout/stderr, decoded to text, in arrival order. */
 		onChunk: (text: string) => void;
 		/** Cooperative cancellation (e.g. SIGINT teardown). */
 		signal?: AbortSignal;
@@ -109,12 +102,7 @@ const buildTestCommand = ({
  */
 export const runningProcesses = new Set<ReturnType<typeof spawn>>();
 
-/**
- * The default executor: spawns `bun test --timeout 0 [--test-name-pattern …]
- * <file>` locally, streams stdout into `onChunk`, drains stderr, and resolves
- * with the process exit code. This is the leaf that `bun t` has always used,
- * moved behind the {@link TestExecutor} interface unchanged.
- */
+/** Drains both pipes concurrently so a full stderr pipe cannot stall stdout. */
 export class LocalExecutor implements TestExecutor {
 	async run({
 		file,
@@ -159,17 +147,24 @@ export class LocalExecutor implements TestExecutor {
 			const stdoutDecoder = new TextDecoder();
 			const stderrDecoder = new TextDecoder();
 
-			if (proc.stdout) {
-				for await (const chunk of proc.stdout) {
-					onChunk(stdoutDecoder.decode(chunk));
-				}
-			}
-
-			if (proc.stderr) {
-				for await (const chunk of proc.stderr) {
-					stderrOutput += stderrDecoder.decode(chunk);
-				}
-			}
+			await Promise.all([
+				(async () => {
+					for await (const chunk of proc.stdout) {
+						onChunk(stdoutDecoder.decode(chunk, { stream: true }));
+					}
+					onChunk(stdoutDecoder.decode());
+				})(),
+				(async () => {
+					for await (const chunk of proc.stderr) {
+						const text = stderrDecoder.decode(chunk, { stream: true });
+						stderrOutput += text;
+						onChunk(text);
+					}
+					const remaining = stderrDecoder.decode();
+					stderrOutput += remaining;
+					onChunk(remaining);
+				})(),
+			]);
 
 			const exitCode = await proc.exited;
 

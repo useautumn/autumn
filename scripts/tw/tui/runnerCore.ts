@@ -180,8 +180,7 @@ const runOneFile = async (params: {
 			failedTestNames,
 			onChunk,
 		});
-		const combined = stderr ? `${output}${stderr}` : output;
-		const tests = parseTestOutput(combined, file);
+		const tests = parseTestOutput(output, file);
 		const hasFailures = tests.some((test) => test.status === "failed");
 		const isFailed = hasFailures || exitCode !== 0;
 		const result: InternalResult = {
