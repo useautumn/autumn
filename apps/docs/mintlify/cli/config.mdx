@@ -238,6 +238,8 @@ Plan items define what each plan includes: usage limits, pricing, and billing be
   How to handle mid-cycle quantity changes on prepaid items:
   - `onIncrease:` `"prorate_immediately"` | `"bill_immediately"` | `"prorate_next_cycle"` | `"bill_next_cycle"`
   - `onDecrease:` `"prorate_immediately"` | `"prorate_next_cycle"` | `"no_prorations"`
+
+  Leave it out to prorate immediately on both. `pull` only writes it when a plan uses something else.
 </ParamField>
 
 <ParamField body="rollover" type="object">

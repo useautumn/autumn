@@ -79,6 +79,10 @@ test("the generated spec carries the defaults the emitter elides", () => {
 		"freeTrial.onEnd": "bill",
 		"billingControls.usageLimits": [],
 		"billingControls.usageLimits.enabled": true,
+		"items.proration": {
+			onIncrease: "prorate_immediately",
+			onDecrease: "prorate_immediately",
+		},
 	});
 	expect(COLLECTIONS.plans.defaults).not.toHaveProperty("items");
 	expect(COLLECTIONS.features.defaults).toEqual({});
@@ -251,4 +255,58 @@ test("a flag switched off removes the config pair instead of writing the default
 	expect(text).toContain(
 		'plan({ internalId: "prod_B", active: true, planId: "pro", versionSlug: "v1", name: "Pro" }),',
 	);
+});
+
+test("proration at the server default is not written; any other pair is", () => {
+	const prepaid = (proration: Record<string, string>) => ({
+		featureId: "seats",
+		price: { amount: 10, interval: "month", billingMethod: "prepaid" },
+		proration,
+	});
+	const stock = emitPlan({
+		items: [
+			prepaid({
+				onIncrease: "prorate_immediately",
+				onDecrease: "prorate_immediately",
+			}),
+		],
+	});
+	expect(stock).not.toContain("proration");
+	expect(stock).toContain('billingMethod: "prepaid"');
+
+	const legacy = emitPlan({
+		items: [prepaid({ onIncrease: "bill_immediately", onDecrease: "none" })],
+	});
+	expect(legacy).toContain('onIncrease: "bill_immediately"');
+	expect(legacy).toContain('onDecrease: "none"');
+
+	// One knob at its default is not the default pair: both are written.
+	const half = emitPlan({
+		items: [prepaid({ onIncrease: "prorate_immediately", onDecrease: "none" })],
+	});
+	expect(half).toContain('onIncrease: "prorate_immediately"');
+	expect(half).toContain('onDecrease: "none"');
+});
+
+test("legacy allocated: allocatedBilling stays, its default proration is dropped", () => {
+	const text = emitPlan({
+		items: [
+			{
+				featureId: "seats",
+				included: 2,
+				price: {
+					amount: 10,
+					interval: "month",
+					billingMethod: "usage_based",
+					allocatedBilling: "prorated_legacy",
+				},
+				proration: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+			},
+		],
+	});
+	expect(text).toContain('allocatedBilling: "prorated_legacy"');
+	expect(text).not.toContain("proration");
 });
