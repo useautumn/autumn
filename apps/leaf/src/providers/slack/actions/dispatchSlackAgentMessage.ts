@@ -21,7 +21,11 @@ import { errorNotice, runStoppedByUserNotice } from "../../../ui/messages.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
 import { createRunProgress } from "../../../ui/runProgress.js";
 import { getSlackWorkspaceId } from "../context.js";
-import { slackMentionedUserIds, slackMessageMentionsUser } from "../events.js";
+import {
+	slackMentionedUserIds,
+	slackMessageMentionsUser,
+	slackSpeakerMentions,
+} from "../events.js";
 import { createEveSlackPresenter } from "../evePresenter.js";
 import {
 	fetchSlackAttachmentFallback,
@@ -108,17 +112,11 @@ const runAndReply = async ({
 		}
 		// A subscribed thread delivers every reply; the model is told who spoke
 		// and whom they addressed, and declines replies meant for someone else.
-		const mentionedUserIds = slackMentionedUserIds({ raw });
-		const botUserId = installation.bot_user_id ?? undefined;
-		// An installation without a stored bot id can't prove it was addressed;
-		// unknown reads as not mentioned, so delivery stays conditional.
-		const mentionsAgent = Boolean(
-			botUserId && mentionedUserIds.includes(botUserId),
-		);
-		const mentionsOthers = mentionedUserIds.some((id) => id !== botUserId);
-		const speaker = author
-			? { ...author, mentionsAgent, mentionsOthers }
-			: undefined;
+		const mentions = slackSpeakerMentions({
+			botUserId: installation.bot_user_id,
+			mentionedUserIds: slackMentionedUserIds({ raw }),
+		});
+		const speaker = author ? { ...author, ...mentions } : undefined;
 
 		const session = createLeafSessionContext({
 			channelId,
