@@ -7,58 +7,45 @@ Free trials give customers temporary access to a paid plan before they're charge
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Add a `freeTrial` object to your plan:
 
 ```ts autumn.config.ts expandable
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const messages = feature({
-  id: 'messages',
-  name: 'Messages',
-  type: 'metered',
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  group: 'main',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  group: "main",
+  price: { amount: 20, interval: "month" },
   freeTrial: {
     durationLength: 14,
-    durationType: 'day',
+    durationType: "day",
     cardRequired: true,
   },
   items: [
-    item({
-      featureId: messages.id,
+    {
+      featureId: messages.featureId,
       included: 1000,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
+
+export default atmn({ features: [messages], plans: [pro] });
 ```
 
 Trial duration types: `day`, `month`, `year`.
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and open your plan (or create a new one)
-2. Under **Plan Settings**, toggle on **Free Trial**
-3. Set the **duration** (e.g., 14 days)
-4. Choose whether a **card is required**:
-   - **Card required**: customer goes through Stripe Checkout, but isn't charged until the trial ends
-   - **Card not required**: no checkout needed — the plan can be attached directly
-5. Save your changes
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## Card required trials
 
@@ -259,9 +246,6 @@ You can override any of these behaviors by passing `customize.freeTrial` on the 
 
 You can override the default trial behavior on any `/attach` or `/update-subscription` call by passing `customize.freeTrial`:
 
-<Tabs>
-<Tab title="Custom trial">
-
 Pass a `freeTrial` object to start a trial with a custom duration. This **bypasses deduplication** — the customer always gets the trial, even if they've trialed this plan before.
 
 <CodeGroup>
@@ -313,9 +297,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 
 </CodeGroup>
 
-</Tab>
-<Tab title="End / skip trial">
-
 Pass `freeTrial: null` to skip the trial entirely and begin billing immediately — even if the plan has a trial configured.
 
 <CodeGroup>
@@ -354,9 +335,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 
 You can also pass `freeTrial: null` on `/update-subscription` to end an active trial early and start billing right away.
 
-</Tab>
-<Tab title="Extend trial">
-
 To extend a trial, call `/update-subscription` with a new `customize.freeTrial`. The new trial duration is computed **from now** — it replaces the current trial end date rather than adding to it.
 
 <CodeGroup>
@@ -392,9 +370,6 @@ await autumn.update_subscription(
 </CodeGroup>
 
 Trial extensions are **replacement**, not additive. If a customer is 5 days into a 14-day trial and you set a new 14-day trial, they get 14 days from today (19 days total from the original start), not 14 days added to the remaining 9.
-
-</Tab>
-</Tabs>
 
 ## Trials with shared subscriptions
 

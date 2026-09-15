@@ -7,56 +7,42 @@ Rollovers let unused feature balances carry forward to the next billing cycle in
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Add a `rollover` config to a plan item:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const credits = feature({
-  id: 'credits',
-  name: 'Credits',
-  type: 'metered',
+  featureId: "credits",
+  name: "Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: credits.id,
+    {
+      featureId: credits.featureId,
       included: 1000,
-      reset: { interval: 'month' },
+      reset: { interval: "month" },
       rollover: {
         max: 2000,
-        expiryDurationType: 'forever',
+        expiryDurationType: "forever",
         expiryDurationLength: 1,
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [credits], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** and edit a plan
-2. Select a **consumable** feature on the plan
-3. Under **Advanced**, toggle on **Rollovers**
-4. Set the **maximum rollover cap** — the most unused balance that can be carried over (leave empty for no cap)
-5. Set the **expiry**:
-   - **Forever** — rollover balances never expire
-   - **Month** — rollover balances expire after a set number of months
-6. Save the plan
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## Rollover configuration
 
@@ -80,7 +66,6 @@ At the end of each billing cycle, when a feature's balance resets:
 
 Rollover balances appear in the `breakdown` array when you retrieve a customer's balances. Each rollover entry has its own expiry date:
 
-<Expandable title="customer balance with rollovers">
 ```json
 {
   "balances": {
@@ -110,7 +95,6 @@ Rollover balances appear in the `breakdown` array when you retrieve a customer's
   }
 }
 ```
-</Expandable>
 
 ## Deduction order
 

@@ -53,7 +53,6 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 
 </CodeGroup>
 
-<Expandable title="track response">
 ```json
 {
   "customerId": "user_123",
@@ -69,7 +68,6 @@ curl -X POST "https://api.useautumn.com/v1/track" \
   }
 }
 ```
-</Expandable>
 
   You can also send a negative `value` to increase the balance counter, which is
   useful for increasing a feature limit (eg, if a customer removes a seat).

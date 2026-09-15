@@ -7,49 +7,37 @@ Recurring plans let you grant customers a fixed allowance of consumable features
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
 Define a recurring plan in your `autumn.config.ts`:
 
 ```ts autumn.config.ts expandable
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const messages = feature({
-  id: 'messages',
-  name: 'Messages',
-  type: 'metered',
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
   consumable: true,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: messages.id,
+    {
+      featureId: messages.featureId,
       included: 1000,
-      reset: { interval: 'month' },
-    }),
+      reset: { interval: "month" },
+    },
   ],
 });
+
+export default atmn({ features: [messages], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Navigate to **Plans** in the Autumn dashboard
-2. Click **Create Plan**
-3. Set a **name** and **ID** for the plan (e.g., "Pro", `pro`)
-4. Under **Price**, set the amount and select a billing interval (`month`, `quarter`, `semi_annual`, or `year`)
-5. Add consumable features to the plan -- set grant amounts and reset intervals. These will be granted to the customer each billing period once they subscribe.
-6. Save your changes
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## Attaching a subscription
 
@@ -103,7 +91,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 
 </CodeGroup>
 
-<Expandable title="customer object after attaching">
 ```json
 {
   "id": "user_123",
@@ -166,7 +153,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
   }
 }
 ```
-</Expandable>
 
 When a subscription is created, Autumn:
 
