@@ -28,13 +28,13 @@ export * from "./api/entities/crud/getEntityParams";
 export * from "./api/entities/crud/listEntitiesParamsV2_3";
 // Customer keys (per-customer JWTs)
 export * from "./api/keys/keysModels";
-export * from "./api/orgs/onboardingStatusModels";
 // Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
 export * from "./api/migrations/operations/index";
 export * from "./api/migrations/webhooks/migrationWebhookEvents";
 // API MODELS
 export * from "./api/models";
+export * from "./api/orgs/onboardingStatusModels";
 // Sandboxes (isolated sub-orgs)
 export * from "./api/sandboxes/sandboxesModels";
 // API VERSIONING SYSTEM
@@ -171,6 +171,7 @@ export * from "./models/migrationModels/migrationModels";
 export * from "./models/migrationV2Models/migrationItemRunSchema";
 export * from "./models/migrationV2Models/migrationItemRunTable";
 export * from "./models/migrationV2Models/migrationRunTable";
+export * from "./models/migrationV2Models/migrationStatus";
 export * from "./models/migrationV2Models/migrationTable";
 export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/agent/agentRules";

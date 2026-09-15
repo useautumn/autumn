@@ -79,6 +79,8 @@ import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
 import { CustomerSearchToolbar } from "../shared/CustomerSearchToolbar";
+import { MigrationStatusBadge } from "../shared/MigrationStatusBadge";
+import { isRunDisabled, runButtonLabel } from "../shared/migrationStatus";
 import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { ActiveDot } from "./ActiveDot";
@@ -101,6 +103,7 @@ type CustomerRow = MigrationPreviewCustomer & {
 	_event?: MigrationItemEvent;
 	_activeStatus?: ActiveRunStatus;
 	_activeRunId?: string;
+	_waitingOnOtherMigration?: boolean;
 };
 
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
@@ -116,10 +119,13 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 
 		if (status.kind === "running" || status.kind === "queued") {
 			const isQueued = status.kind === "queued";
+			const queuedLabel = row.original._waitingOnOtherMigration
+				? "Waiting"
+				: "Queued";
 			return (
 				<Badge variant="muted" className="gap-1.5">
 					<ActiveDot color={isQueued ? "orange" : "green"} />
-					{isQueued ? "Queued" : "Running"}
+					{isQueued ? queuedLabel : "Running"}
 				</Badge>
 			);
 		}
@@ -273,6 +279,8 @@ export function MigrationLiveView({
 	const {
 		itemEvents,
 		runs,
+		status: migrationStatus,
+		blockedBy,
 		isActive: hasActiveRun,
 		invalidate: invalidateRuns,
 	} = useMigrationRunsQuery({ migrationId });
@@ -287,7 +295,11 @@ export function MigrationLiveView({
 		triggerRun,
 		isRunning,
 	} = useRealtimeSubscriptions({ migrationId, invalidateRuns });
-	const isRunInProgress = isRunning || hasActiveRun || hasRealtimeActive;
+	const isRunInProgress =
+		isRunning ||
+		hasActiveRun ||
+		hasRealtimeActive ||
+		isRunDisabled(migrationStatus);
 
 	const {
 		customers,
@@ -371,6 +383,7 @@ export function MigrationLiveView({
 					_event: event,
 					_activeStatus: activeStatus,
 					_activeRunId: activeRunId ?? undefined,
+					_waitingOnOtherMigration: migrationStatus === "waiting",
 				};
 			}),
 		[
@@ -380,6 +393,7 @@ export function MigrationLiveView({
 			activeRunId,
 			activeRunOnlyIds,
 			isActiveRunScoped,
+			migrationStatus,
 		],
 	);
 
@@ -427,6 +441,11 @@ export function MigrationLiveView({
 			)}
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
+				<MigrationStatusBadge
+					status={migrationStatus}
+					blockedBy={blockedBy}
+					className="mr-1"
+				/>
 				{headerActions}
 				{activeRun && (
 					<Button
@@ -449,7 +468,7 @@ export function MigrationLiveView({
 						disabled={isRunInProgress}
 					>
 						<PlayIcon size={14} weight="fill" />
-						Run All
+						{runButtonLabel(migrationStatus)}
 					</Button>
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
