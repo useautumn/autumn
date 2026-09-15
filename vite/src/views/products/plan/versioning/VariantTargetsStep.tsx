@@ -3,12 +3,9 @@ import {
 	type VariantTarget,
 	variantTargetMintsInSelection,
 } from "../catalog/catalogPlanPreview";
+import { effectiveMintSlug, type MintSlugSelection } from "./mintTargetSlugs";
 import { PlanScopeTargetsStep } from "./PlanScopeTargetsStep";
 import { TargetVersionSlugControl } from "./TargetVersionSlugControl";
-import {
-	effectiveMintSlug,
-	type MintSlugSelection,
-} from "./mintTargetSlugs";
 
 export function VariantTargetsStep({
 	features,

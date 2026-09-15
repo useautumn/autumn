@@ -3,9 +3,9 @@ import { ProductService } from "@/internal/products/ProductService";
 import type { CronContext } from "../utils/CronContext";
 import {
 	type ExpiredTrialRow,
-	type OrgEnvExpiredTrials,
 	fetchExpiredTrialProducts,
 	groupByOrgEnv,
+	type OrgEnvExpiredTrials,
 } from "./fetchExpiredTrialProducts";
 import { processExpiredTrialRow } from "./processExpiredTrialRow";
 

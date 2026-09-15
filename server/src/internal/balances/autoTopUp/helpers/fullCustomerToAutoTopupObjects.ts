@@ -23,6 +23,11 @@ const getThreshold = (cusEnt: FullCusEntWithFullCusProduct) =>
 const isThresholdEntitlement = (cusEnt: FullCusEntWithFullCusProduct) =>
 	getThreshold(cusEnt) !== undefined;
 
+/** Expiring grants are loose and carry no price, so they never match — but
+ * the pin makes the intent explicit: the charge source is the plan's own row. */
+const isChargeSource = (cusEnt: FullCusEntWithFullCusProduct) =>
+	cusEnt.customer_product_id != null && cusEnt.expires_at == null;
+
 const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
 	const customerPrice = cusEntToCusPrice({ cusEnt });
 	return Boolean(
@@ -91,13 +96,14 @@ export const fullCustomerToAutoTopupObjects = ({
 		customerEntitlement = cusEnts.find(
 			(ce) =>
 				ce.customer_product?.internal_product_id === sourceProductInternalId &&
-				isOneOffPrepaid(ce),
+				isOneOffPrepaid(ce) &&
+				isChargeSource(ce),
 		);
 	} else {
 		// Customer-level config has no source plan, so charge the MOST RECENTLY
 		// attached plan's one-off price.
 		customerEntitlement = cusEnts
-			.filter(isOneOffPrepaid)
+			.filter((ce) => isOneOffPrepaid(ce) && isChargeSource(ce))
 			.sort(
 				(left, right) =>
 					(right.customer_product?.created_at ?? 0) -

@@ -12,6 +12,8 @@ import {
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToInvoiceAddLinesParams.js";
+import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/entitlementExpiry.js";
+import { routeRemainderToExpiringGrant } from "@/internal/billing/v2/utils/expiringGrants/routeRemainderToExpiringGrant.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
 import {
 	buildUpdatedOptions,
@@ -44,14 +46,20 @@ export const computeAutoTopupPlan = ({
 	const priceConfig = cusPrice.price.config as UsagePriceConfig;
 	const billingUnits = priceConfig.billing_units || 1;
 	const topUpPacks = new Decimal(quantity).div(billingUnits).toNumber();
-	const updateCustomerProduct = isThresholdBilling
-		? undefined
-		: {
-				customerProduct: cusProduct,
-				updates: {
-					options: buildUpdatedOptions({ cusProduct, feature, topUpPacks }),
-				},
-			};
+	// Expiring items keep their option quantity for the charge only — each
+	// purchase is recorded on its own loose grant instead.
+	const hasExpiry = Boolean(
+		entitlementToExpiry({ entitlement: customerEntitlement.entitlement }),
+	);
+	const updateCustomerProduct =
+		isThresholdBilling || hasExpiry
+			? undefined
+			: {
+					customerProduct: cusProduct,
+					updates: {
+						options: buildUpdatedOptions({ cusProduct, feature, topUpPacks }),
+					},
+				};
 
 	const inlineCusEnt = isThresholdBilling
 		? { ...customerEntitlement, balance: -quantity }
@@ -90,12 +98,21 @@ export const computeAutoTopupPlan = ({
 
 	// C. Compute paydown + prepaid remainder deltas from the context's FullCustomer.
 	// Deltas apply atomically at execute time via `balance + delta` SQL increments.
-	const { deltas } = computeRebalancedAutoTopUp({
+	const rebalance = computeRebalancedAutoTopUp({
 		fullCustomer: autoTopupContext.fullCustomer,
 		featureId: feature.id,
 		quantity,
 		prepaidCustomerEntitlementId: customerEntitlement.id,
 	});
+
+	const { deltas, customEntitlements, insertCustomerEntitlements } =
+		routeRemainderToExpiringGrant({
+			deltas: rebalance.deltas,
+			customerEntitlement,
+			source: "auto_topup",
+			orgId: org.id,
+			now: Date.now(),
+		});
 
 	// D. Build autumn billing plan. `options.quantity` bumps by the FULL topUpPacks
 	// because the customer is charged for the full purchase regardless of where the
@@ -106,6 +123,10 @@ export const computeAutoTopupPlan = ({
 		lineItems: [lineItem],
 		updateCustomerEntitlements: [],
 		autoTopupRebalance: { deltas },
+		...(customEntitlements.length ? { customEntitlements } : {}),
+		...(insertCustomerEntitlements.length
+			? { insertCustomerEntitlements }
+			: {}),
 		...(updateCustomerProduct ? { updateCustomerProduct } : {}),
 	};
 

@@ -77,6 +77,7 @@ const subjectBalanceToFullCustomerEntitlement = ({
 		cache_version: subjectBalance.cache_version ?? 0,
 		entities: subjectBalance.entities,
 		external_id: subjectBalance.external_id,
+		metadata: subjectBalance.metadata ?? null,
 		customer_id: subjectBalance.customer_id,
 		entitlement: subjectBalance.entitlement,
 		replaceables,

@@ -14,8 +14,10 @@ export const cusEntsToUsage = ({
 }) => {
 	const grantedBalance = cusEntsToGrantedBalance({ cusEnts, entityId });
 
+	// An expiring item's purchases live on loose grant rows; its option
+	// quantity only sizes the charge, so counting it here would invent usage.
 	const prepaidQuantity = cusEntsToPrepaidQuantity({
-		cusEnts,
+		cusEnts: cusEnts.filter((cusEnt) => !cusEnt.entitlement.expiry_duration),
 		sumAcrossEntities: nullish(entityId),
 	});
 

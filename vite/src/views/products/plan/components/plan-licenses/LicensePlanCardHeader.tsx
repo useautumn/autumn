@@ -28,8 +28,8 @@ import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { useProductQuery } from "@/views/products/product/hooks/useProductQuery";
 import { VersionSlugBadge } from "../VersionSlugBadge";
 import { versionLabel } from "../versionLabel";
-import { licenseEditorQueryParams } from "./planLicenseNavigation";
 import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
+import { licenseEditorQueryParams } from "./planLicenseNavigation";
 import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
 
 /** Staged removals stay mounted so their edited configuration survives until save. */
