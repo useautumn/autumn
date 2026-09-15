@@ -10,6 +10,7 @@ pass() { echo "ok: $*"; }
 
 INFISICAL="$ROOT/.conductor/ensureInfisical.sh"
 SETUP="$ROOT/.conductor/setup.sh"
+WORKTREE_INCLUDE="$ROOT/.worktreeinclude"
 
 # --- missing machine identity must not fail setup (local Conductor) ------
 if ! env -u INFISICAL_TOKEN -u INFISICAL_CLIENT_ID -u INFISICAL_CLIENT_SECRET \
@@ -59,6 +60,18 @@ dw_line="$(rg -n '^bun dw setup$' "$SETUP" | head -1 | cut -d: -f1)"
 [[ -n "$install_line" && -n "$dw_line" && "$install_line" -lt "$dw_line" ]] \
 	|| fail "setup.sh must bun install before bun dw setup"
 pass "setup.sh bun installs, then bun dw setup"
+
+# --- generated MCP configs must exist before the first agent starts ----------
+for pattern in \
+	'.env*' \
+	'/.mcp.json' \
+	'/.codex/config.toml' \
+	'/.cursor/mcp.json' \
+	'/.opencode/opencode.json'; do
+	grep -qxF "$pattern" "$WORKTREE_INCLUDE" \
+		|| fail ".worktreeinclude must copy $pattern"
+done
+pass "all bun ai sync MCP outputs are copied before agent startup"
 
 python3 - "$ROOT/package.json" <<'PY'
 import json, sys
