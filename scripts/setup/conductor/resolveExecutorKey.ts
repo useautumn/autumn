@@ -28,6 +28,17 @@ const fetchExecutorKey = async ({
 	const localCli = join(PROJECT_ROOT, "node_modules/.bin/infisical");
 	const cli = (await Bun.file(localCli).exists()) ? localCli : "infisical";
 
+	// Only a login shell picks the token up from shellrc, and this runs from
+	// plain ones too, where infisical would prompt for a hosting option.
+	const env = { ...process.env };
+	if (!env.INFISICAL_TOKEN) {
+		const cached = Bun.file(
+			`${process.env.HOME}/.cache/autumn-infisical-token`,
+		);
+		if (await cached.exists())
+			env.INFISICAL_TOKEN = (await cached.text()).trim();
+	}
+
 	const result = Bun.spawnSync(
 		[
 			cli,
@@ -40,7 +51,7 @@ const fetchExecutorKey = async ({
 			"--plain",
 			"--silent",
 		],
-		{ stderr: "ignore" },
+		{ stderr: "ignore", env },
 	);
 	return result.exitCode === 0 ? result.stdout.toString().trim() : "";
 };
