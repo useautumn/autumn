@@ -349,8 +349,17 @@ const actionPhrases = ({
 				};
 			}
 			case "updateCustomer": {
+				const renamedId = getString(request.id);
+				const renamedLabel = renamedId
+					? autumnDashboardLabel({
+							env,
+							id: renamedId,
+							label: customerText ?? renamedId,
+							resource: "customers",
+						})
+					: customerLabel;
 				return {
-					done: `Updated ${customerLabel}`,
+					done: `Updated ${renamedLabel}`,
 					failed: `Couldn't update ${customerLabel}`,
 					pending: `Update ${customerLabel}`,
 					running: `Updating ${customerLabel}`,
@@ -631,7 +640,8 @@ const humanizeKey = (key: string) =>
 	key.replace(/_/g, " ").replace(/^./, (char) => char.toUpperCase());
 
 const compactValue = (value: unknown): string | null => {
-	if (value === null || value === undefined) return null;
+	if (value === null) return "cleared";
+	if (value === undefined) return null;
 	if (typeof value === "string") {
 		if (!value.trim()) return null;
 		return value.length > REQUEST_FIELD_VALUE_MAX
@@ -648,21 +658,46 @@ const compactValue = (value: unknown): string | null => {
 		: json;
 };
 
-// Bare CRUD writes (update customer, create entity…) have no billing preview —
-// show what's being written as label/value fields so the card is never empty.
-const requestSummaryFields = (
+const requestFieldEntries = (
 	toolArgs?: Record<string, unknown>,
-): FieldElement[] => {
+): { label: string; value: string }[] => {
 	const request = toolRequestFromArgs(toolArgs) ?? {};
-	const fields: FieldElement[] = [];
+	const entries: { label: string; value: string }[] = [];
 	for (const [key, value] of Object.entries(request)) {
 		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
 		const rendered = compactValue(value);
 		if (rendered === null) continue;
-		fields.push(Field({ label: humanizeKey(key), value: rendered }));
-		if (fields.length >= MAX_REQUEST_FIELDS) break;
+		entries.push({ label: humanizeKey(key), value: rendered });
 	}
-	return fields;
+	return entries;
+};
+
+// Bare CRUD writes (update customer, create entity…) have no billing preview —
+// the fields being written render as the change table so the card is never empty.
+const requestChangesTable = (
+	toolArgs?: Record<string, unknown>,
+): CardChild | null => {
+	const entries = requestFieldEntries(toolArgs);
+	if (entries.length === 0) return null;
+	return Table({
+		align: ["left", "left"],
+		caption: "Changes",
+		headers: ["Field", "Change"],
+		rows: entries.map((entry) => [entry.label, entry.value]),
+	});
+};
+
+/** One-line summary of a bare write's fields, for fan-out rows where the
+ * per-card table has no room. */
+const requestChangesText = (
+	toolArgs?: Record<string, unknown>,
+): string | null => {
+	const entries = requestFieldEntries(toolArgs);
+	const shown = entries.slice(0, MAX_REQUEST_FIELDS);
+	const overflow = entries.length - shown.length;
+	const parts = shown.map((entry) => `${entry.label}: ${entry.value}`);
+	if (overflow > 0) parts.push(`+${overflow} more`);
+	return parts.length ? parts.join(" · ") : null;
 };
 
 const catalogApprovalContext = (preview: unknown) => {
@@ -699,7 +734,7 @@ const approvalTitle = ({
 	toolName: string;
 }) => {
 	const fallback = toolLabel(toolName);
-	if (!["updateCatalog", "updatePlan"].includes(normalizeToolName(toolName))) {
+	if (!CATALOG_TOOLS.has(normalizeToolName(toolName))) {
 		return fallback;
 	}
 	const { plan, planName } = catalogApprovalContext(preview);
@@ -851,6 +886,8 @@ const BILLING_ACTION_TOOLS = new Set([
 	"updateSubscription",
 ]);
 
+const CATALOG_TOOLS = new Set(["updateCatalog", "updatePlan"]);
+
 /** A homogeneous group shows one heading and one row per target instead of
  * repeating the whole body. */
 const isHomogeneousGroup = ({
@@ -865,6 +902,18 @@ const isHomogeneousGroup = ({
 		(write) =>
 			normalizeToolName(write.toolName) === normalizeToolName(toolName),
 	);
+
+/** Catalog writes carry structured previews a fan-out row cannot hold, so a
+ * grouped catalog card keeps a titled section per write. */
+const rendersAsFanOut = ({
+	writes,
+	toolName,
+}: {
+	writes: ReadonlyArray<{ toolName: string }>;
+	toolName: string;
+}) =>
+	isHomogeneousGroup({ writes, toolName }) &&
+	!CATALOG_TOOLS.has(normalizeToolName(toolName));
 
 const writeTotal = (preview?: unknown) =>
 	getNumber(getPreviewBody(preview).total) ?? 0;
@@ -892,6 +941,24 @@ const fanOutBlocks = ({
 	toolName: string;
 }): CardChild[] => {
 	const all = [{ input: toolArgs, preview, toolName }, ...writes];
+	if (!BILLING_ACTION_TOOLS.has(normalizeToolName(toolName))) {
+		return [
+			fanOutTable({
+				align: ["left", "left"],
+				caption: `${all.length} customers`,
+				headers: ["Customer", "Update"],
+				rows: all.map((write) => [
+					actionPhrases({
+						env,
+						preview: write.preview,
+						toolArgs: write.input,
+						toolName: write.toolName,
+					}).labels.plainCustomer,
+					requestChangesText(write.input) ?? "—",
+				]),
+			}),
+		];
+	}
 	const rows = all.map((write) => {
 		const phrases = actionPhrases({
 			env,
@@ -925,6 +992,12 @@ const fanOutBlocks = ({
  * the tense tracks whether the card is still in progress. */
 type StepTense = "done" | "failed" | "running";
 
+const STEP_TENSE_ICONS: Record<StepTense, string> = {
+	done: "✅ ",
+	failed: "⚠️ ",
+	running: "",
+};
+
 const withheldWriteBlocks = ({
 	env,
 	writes,
@@ -947,7 +1020,9 @@ const withheldWriteBlocks = ({
 			CardText(
 				`*${approvalTitle({ preview: write.preview, toolName: write.toolName })}*`,
 			),
-			CardText(phrases[tense]),
+			// Every write in a resolved group carries its own marker; without one
+			// the later writes read as unapplied next to the first write's tick.
+			CardText(`${STEP_TENSE_ICONS[tense]}${phrases[tense]}`),
 			...approvalPreviewBlocks({
 				env,
 				preview: write.preview,
@@ -975,7 +1050,7 @@ const approvalBodyBlocks = ({
 	toolName: string;
 }): CardChild[] => {
 	const groupedWrites = writes ?? withheldWritesFromToolArgs(toolArgs);
-	if (isHomogeneousGroup({ writes: groupedWrites, toolName })) {
+	if (rendersAsFanOut({ writes: groupedWrites, toolName })) {
 		return fanOutBlocks({
 			env,
 			preview,
@@ -1004,10 +1079,9 @@ const approvalPreviewBlocks = ({
 	const blocks: CardChild[] = [];
 	const normalizedToolName = normalizeToolName(toolName);
 	if (isFailedApprovalPreview(preview)) {
-		blocks.push(
-			CardText(PREVIEW_UNAVAILABLE_MESSAGE, { style: "muted" }),
-			Fields(requestSummaryFields(toolArgs)),
-		);
+		blocks.push(CardText(PREVIEW_UNAVAILABLE_MESSAGE, { style: "muted" }));
+		const changes = requestChangesTable(toolArgs);
+		if (changes) blocks.push(changes);
 		return blocks;
 	}
 	const structured = previewElements(preview);
@@ -1032,8 +1106,8 @@ const approvalPreviewBlocks = ({
 		pushMoney();
 		// Nothing structured to show — fall back to the write's own fields.
 		if (blocks.length === 0) {
-			const fields = requestSummaryFields(toolArgs);
-			if (fields.length) blocks.push(Fields(fields));
+			const changes = requestChangesTable(toolArgs);
+			if (changes) blocks.push(changes);
 		}
 		const mutedLine = contextLine([
 			structured ? null : nextCycleNote(preview),
@@ -1460,7 +1534,7 @@ export const approvalCard = ({
 	const editable = normalizeToolName(toolName) === "attach";
 	const groupedWrites = writes ?? withheldWritesFromToolArgs(toolArgs);
 
-	const fanOut = isHomogeneousGroup({
+	const fanOut = rendersAsFanOut({
 		writes: groupedWrites,
 		toolName,
 	});
