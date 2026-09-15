@@ -1,22 +1,14 @@
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
 import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
-import { ADMIN_BALANCE_SHADOW_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { BalanceShadowEdgeConfigSchema } from "@/internal/balances/shadow/balanceShadowEdgeConfig.js";
+import { balanceShadowStore } from "@/internal/balances/shadow/balanceShadowStore.js";
 import { createBalanceShadowController } from "@/internal/balances/shadow/createBalanceShadowController.js";
 import { startBalanceShadowSession } from "@/internal/balances/shadow/startBalanceShadowSession.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
-import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 import { createServerOwnershipConsumer } from "./getOwnershipConsumer.js";
 
-const store = createEdgeConfigStore({
-	s3Key: ADMIN_BALANCE_SHADOW_CONFIG_KEY,
-	schema: BalanceShadowEdgeConfigSchema,
-	defaultValue: () => ({ enabled: false as const }),
-});
-
 const controller = createBalanceShadowController({
-	readConfig: store.get,
+	readConfig: balanceShadowStore.get,
 	runtimeEnv: process.env,
 	startSession: ({ config }) => {
 		const env = getBalanceWorkerClientEnv();
@@ -62,7 +54,7 @@ const controller = createBalanceShadowController({
 registerEdgeConfig({
 	store: {
 		refresh: async (options) => {
-			await store.refresh(options);
+			await balanceShadowStore.refresh(options);
 			await controller.refresh();
 		},
 	},
