@@ -203,6 +203,12 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(5000);
 	}
 
+	// Optional Link enrollment can default on and require a phone number.
+	const saveWithLink = page.locator("#enableStripePass");
+	if (await saveWithLink.isVisible()) {
+		await saveWithLink.uncheck();
+	}
+
 	// Submit via JS click — Stripe overlays (Link, phone) can obscure the
 	// button and break Playwright's actionability check.
 	const submitBtn = page.locator(".SubmitButton-TextContainer").first();
