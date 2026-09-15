@@ -15,6 +15,8 @@ export const DEFAULT_VERCEL_REFUND_REASON = "Refund issued from Autumn";
 export const toVercelAmountString = (amount: number): string =>
 	amount.toFixed(2);
 
+const roundToCents = (amount: number): number => Math.round(amount * 100) / 100;
+
 export const calculateVercelRefundAmount = ({
 	mode,
 	amount,
@@ -34,9 +36,10 @@ export const calculateVercelRefundAmount = ({
 		});
 	}
 
-	if (mode === "full") return refundableAmount;
+	if (mode === "full") return roundToCents(refundableAmount);
 
-	if (!amount || amount <= 0) {
+	const centAmount = amount ? roundToCents(amount) : 0;
+	if (centAmount <= 0) {
 		throw new RecaseError({
 			message: "Amount is required for partial refunds",
 			code: ErrCode.InvalidRequest,
@@ -44,7 +47,7 @@ export const calculateVercelRefundAmount = ({
 		});
 	}
 
-	if (amount > refundableAmount) {
+	if (centAmount > refundableAmount) {
 		throw new RecaseError({
 			message: `Refund amount exceeds the refundable balance of ${refundableAmount} ${currency.toUpperCase()}`,
 			code: ErrCode.InvalidRequest,
@@ -52,7 +55,7 @@ export const calculateVercelRefundAmount = ({
 		});
 	}
 
-	return amount;
+	return centAmount;
 };
 
 /**

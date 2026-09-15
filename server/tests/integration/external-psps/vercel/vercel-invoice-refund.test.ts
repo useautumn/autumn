@@ -9,8 +9,8 @@
  * Flow under test:
  * 1. `processVercelInvoice` stores the returned `invoiceId` on the Stripe
  *    invoice as `metadata.vercel_invoice_id`.
- * 2. `GET /customers/:id/invoices/:stripe_id/metadata` exposes it so the
- *    dashboard sheet can gate the refund button.
+ * 2. Internal `GET /customers/:id/invoices/:stripe_id/metadata` (dashboard
+ *    session auth) exposes it so the invoice sheet can gate the refund button.
  * 3. `POST /customers/:id/invoices/:stripe_id/refund` calls Vercel's
  *    `updateInvoice` with `{ action: "refund", reason, total }` and increments
  *    `refunded_amount` on the Autumn invoice.
@@ -23,6 +23,10 @@ import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
+import {
+	createDashboardSession,
+	dashboardGet,
+} from "@tests/utils/testInitUtils/dashboardSession";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli";
@@ -167,11 +171,21 @@ test(`${chalk.yellowBright(
 		suffix: "getmeta",
 	});
 
-	const res = await autumn.get(
-		`/customers/${customerId}/invoices/${stripeInvoiceId}/metadata`,
-	);
-	expect(res.metadata.vercel_invoice_id).toMatch(/^vi_test_/);
-	expect(typeof res.metadata.vercel_installation_id).toBe("string");
+	const session = await createDashboardSession(ctx);
+	try {
+		const { status, data } = await dashboardGet<{
+			metadata: Record<string, string>;
+		}>(
+			ctx,
+			session,
+			`/customers/${customerId}/invoices/${stripeInvoiceId}/metadata`,
+		);
+		expect(status).toBe(200);
+		expect(data.metadata.vercel_invoice_id).toMatch(/^vi_test_/);
+		expect(typeof data.metadata.vercel_installation_id).toBe("string");
+	} finally {
+		await session.cleanup();
+	}
 }, 60000);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -228,7 +242,7 @@ test(`${chalk.yellowBright(
 
 	await autumn.post(
 		`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
-		{ mode: "partial", amount: 7.5 },
+		{ mode: "partial", amount: 7.499 },
 		MOCK_HEADERS,
 	);
 
