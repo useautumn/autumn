@@ -7,18 +7,7 @@ set -euo pipefail
 . "$(dirname "$0")/startDocker.sh"
 start_docker_daemon || exit 1
 
-# `dnf install docker` ships the engine but not the Compose plugin, so dw logs
-# "docker compose not available; skipping infra stack" and every service that
-# needs Redis/SQS/DynamoDB dies on ECONNREFUSED.
-if ! docker compose version >/dev/null 2>&1; then
-  echo "[conductor] installing docker compose plugin"
-  sudo mkdir -p /usr/libexec/docker/cli-plugins
-  sudo curl -fsSL \
-    "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" \
-    -o /usr/libexec/docker/cli-plugins/docker-compose
-  sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
-  docker compose version
-fi
+ensure_compose_plugin
 
 # Interactive terminals get the local aliases/PATH. Non-secret only — see the
 # header in shellrc.sh.
