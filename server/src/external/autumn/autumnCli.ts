@@ -43,6 +43,7 @@ import {
 	type ListEntitiesParams,
 	type Migration,
 	type MigrationFilter,
+	type MigrationItemRun,
 	type MigrationRun,
 	type MigrationStatus,
 	type MultiUpdateParamsV0Input,
@@ -93,6 +94,37 @@ export type MigrationRunsListResponse = {
 	list: (MigrationRun & { item_run_counts: MigrationRunItemCounts })[];
 	status: MigrationStatus;
 	blocked_by: string | null;
+};
+
+export type MigrationFilterPreviewParams = {
+	filter?: MigrationFilter["customer"];
+	search?: string;
+	cursor?: string;
+	pageSize?: number;
+	includeCount?: boolean;
+	countOnly?: boolean;
+	migrationId?: string;
+	source?: "filter" | "item_runs";
+	executionStatuses?: (
+		| "queued"
+		| "running"
+		| "succeeded"
+		| "skipped"
+		| "failed"
+		| "not_run"
+	)[];
+	migrationRunId?: string;
+	migrationRunDryRun?: boolean;
+};
+
+export type MigrationFilterPreviewResponse = {
+	count: number | null;
+	customers: (Record<string, unknown> & {
+		internal_id: string;
+		id: string | null;
+		migration_item_run: MigrationItemRun | null;
+	})[];
+	next_cursor: string | null;
 };
 
 /** Update-request billing controls: usage limits may be counter-only writes. */
@@ -1241,6 +1273,12 @@ export class AutumnInt {
 				run_id: string;
 				canceled: boolean;
 			};
+		},
+		filterPreview: async (
+			params: MigrationFilterPreviewParams,
+		): Promise<MigrationFilterPreviewResponse> => {
+			const data = await this.post(`/migrations.filter.preview`, params);
+			return data as MigrationFilterPreviewResponse;
 		},
 		listRuns: async (params: {
 			migrationId: string;
