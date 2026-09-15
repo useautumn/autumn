@@ -32,5 +32,16 @@ ensure_infisical_session() {
 	umask 077
 	mkdir -p "$HOME/.cache"
 	printf '%s' "$INFISICAL_TOKEN" >"$HOME/.cache/autumn-infisical-token"
+
+	# Every `bun t` / `bun dw` / `bun d` is `infisical run -- …` with no
+	# --projectId, so the CLI needs a token or it opens an interactive host
+	# picker. bun auto-loads .env for `bun run`, which reaches plain shells that
+	# never source shellrc. .env* is gitignored.
+	touch .env
+	{ grep -v '^INFISICAL_TOKEN=' .env || true; } >.env.conductor-tmp
+	printf 'INFISICAL_TOKEN=%s\n' "$INFISICAL_TOKEN" >>.env.conductor-tmp
+	mv .env.conductor-tmp .env
+	chmod 600 .env
+
 	echo "[conductor] Infisical session ready"
 }

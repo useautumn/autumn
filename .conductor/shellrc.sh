@@ -25,7 +25,7 @@ alias dwl='bun dw logs'
 alias urls='bun dw identify | grep -E "URL|port"'
 
 # --- paths -------------------------------------------------------------------
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/autumn/node_modules/.bin:$HOME/.bun/bin:$HOME/.local/bin:$PATH"
 
 # Land in the repo rather than the sandbox home.
 if [ -d "$HOME/autumn" ] && [ "$PWD" = "$HOME" ]; then
