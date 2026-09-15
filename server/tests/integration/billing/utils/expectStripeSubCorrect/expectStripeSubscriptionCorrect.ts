@@ -63,7 +63,7 @@ export const expectStripeSubscriptionCorrect = async ({
 	for (const subResult of result.subscriptions) {
 		expect(
 			subResult.mismatches,
-			`[sub:${subResult.stripe_subscription_id}] mismatches`,
+			`[sub:${subResult.stripe_subscription_id}] mismatches: ${JSON.stringify(subResult.mismatches)}`,
 		).toEqual([]);
 	}
 
