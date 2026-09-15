@@ -241,18 +241,18 @@ export class ApiResponseError extends AutumnApiError {
 	}
 }
 
-/** `HTTP 404 Not Found` and the body as the server sent it, pretty-printed when it is JSON. */
+/** `HTTP 404 Not Found`, and the body as the server sent it, pretty-printed when it is JSON. */
 export const renderApiResponseError = ({
 	error,
 }: {
 	error: ApiResponseError;
-}): string => {
-	const body =
+}): { statusLine: string; body: string } => ({
+	statusLine: `HTTP ${error.status} ${error.statusText}`,
+	body:
 		typeof error.body === "string"
 			? error.body
-			: JSON.stringify(error.body, null, 2);
-	return `HTTP ${error.status} ${error.statusText}\n${body}`;
-};
+			: JSON.stringify(error.body, null, 2),
+});
 
 /** One POST, the way the generated client does it, plus the version header the spec pins. */
 export const callApi = async ({

@@ -164,13 +164,14 @@ test("a server error renders as the status line and the whole body", async () =>
 	}).catch((caught: unknown) => caught);
 	if (!(error instanceof ApiResponseError))
 		throw new Error("expected ApiResponseError");
-	expect(renderApiResponseError({ error })).toBe(
-		`HTTP 404 Not Found\n${JSON.stringify(
+	expect(renderApiResponseError({ error })).toEqual({
+		statusLine: "HTTP 404 Not Found",
+		body: JSON.stringify(
 			{ message: "Customer nope not found", code: "customer_not_found" },
 			null,
 			2,
-		)}`,
-	);
+		),
+	});
 });
 
 test("-H adds a header and can override the api version", async () => {
