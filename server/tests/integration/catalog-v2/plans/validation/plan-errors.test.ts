@@ -39,7 +39,8 @@ test.concurrent(
 			});
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
-				errMessage: 'versioning "new_version" cannot be combined with an explicit version',
+				errMessage:
+					'versioning "new_version" cannot be combined with an explicit version',
 				func: () =>
 					autumnV2_3.catalogV2.update({
 						plans: [
@@ -47,7 +48,8 @@ test.concurrent(
 								plan_id: planId,
 								version: 1,
 								name: "Next",
-								versioning: "new_version", active: true,
+								versioning: "new_version",
+								active: true,
 							},
 						],
 					}),
@@ -77,7 +79,8 @@ test.concurrent(
 						plans: [
 							{
 								plan_id: planId,
-								versioning: "new_version", active: true,
+								versioning: "new_version",
+								active: true,
 								name: "Next",
 								migration: { draft: true },
 							},
@@ -106,7 +109,8 @@ test.concurrent(
 							{
 								plan_id: planId,
 								name: "Ghost",
-								versioning: "new_version", active: true,
+								versioning: "new_version",
+								active: true,
 							},
 						],
 					}),
@@ -523,7 +527,8 @@ test.concurrent(
 		await deleteDbPlans({ ctx, planIds: [planId] });
 		try {
 			await expectAutumnError({
-				errMessage: "proration is only supported for prepaid features",
+				errMessage:
+					"proration is only supported for prepaid or legacy allocated prices.",
 				func: () =>
 					autumnV2_3.catalogV2.update({
 						plans: [

@@ -85,9 +85,12 @@ test.concurrent(
 				{
 					plan_id: pro.id,
 					items: [
-						allocatedUsersItem({
-							allocatedBilling: AllocatedBilling.ProratedLegacy,
-						}),
+						{
+							...allocatedUsersItem({
+								allocatedBilling: AllocatedBilling.ProratedLegacy,
+							}),
+							proration: usersItemOf(plan).proration,
+						},
 					],
 				},
 			],

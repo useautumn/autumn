@@ -17,6 +17,10 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import {
+	expectPlanPreviewRowCorrect,
+	parsePlanPreview,
+} from "../preview/utils/expectPlanPreview.js";
+import {
 	deleteDbPlans,
 	expectDbPlansCorrect,
 } from "../utils/expectCatalogPlans.js";
@@ -24,10 +28,6 @@ import {
 	expectVersionIdentityCorrect,
 	forceActiveVersion,
 } from "../utils/expectVersionIdentity.js";
-import {
-	expectPlanPreviewRowCorrect,
-	parsePlanPreview,
-} from "../preview/utils/expectPlanPreview.js";
 
 const messagesItem = (included: number) => ({
 	feature_id: TestFeature.Messages,
@@ -88,9 +88,7 @@ test.concurrent(
 					newVersionSlug: null,
 					active: false,
 					versioningOptions: ["existing", "all_versions"],
-					siblingVersions: [
-						{ version: 2, hasPlanChange: false },
-					],
+					siblingVersions: [{ version: 2, hasPlanChange: false }],
 				},
 			});
 
@@ -249,7 +247,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("version identity target: archived slug pin still edits that row")}`,
+	`${chalk.yellowBright("version identity target: stating an archived slug restores and edits that row")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_vid_tarch");
@@ -258,6 +256,10 @@ test.concurrent(
 			await seedV1AndV2({ autumn: autumnV2_3, planId });
 			await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: planId, version: 1, archived: true }],
+			});
+			await expectDbPlansCorrect({
+				ctx,
+				expected: [{ id: planId, version: 1, archived: true }],
 			});
 
 			await autumnV2_3.catalogV2.update({
@@ -277,7 +279,7 @@ test.concurrent(
 						id: planId,
 						version: 1,
 						name: "Archived Edited",
-						archived: true,
+						archived: false,
 					},
 					{ id: planId, version: 2, name: "V2", archived: false },
 				],

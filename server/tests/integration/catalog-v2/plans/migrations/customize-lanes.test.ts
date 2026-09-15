@@ -14,6 +14,8 @@ import {
 	BillingInterval,
 	BillingMethod,
 	FreeTrialDuration,
+	OnDecrease,
+	OnIncrease,
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -121,6 +123,10 @@ test.concurrent(
 												billing_method: BillingMethod.Prepaid,
 												billing_units: 100,
 												max_purchase: null,
+											},
+											proration: {
+												on_increase: OnIncrease.ProrateImmediately,
+												on_decrease: OnDecrease.ProrateImmediately,
 											},
 										},
 									],
@@ -357,10 +363,7 @@ test.concurrent(
 
 			await deleteMigrations({
 				ctx,
-				ids: [
-					dropped.migrations![0]!.id,
-					mixed.migrations![0]!.id,
-				],
+				ids: [dropped.migrations![0]!.id, mixed.migrations![0]!.id],
 			});
 		} finally {
 			await cleanupPlanCustomerRefs({ ctx, planIds });
