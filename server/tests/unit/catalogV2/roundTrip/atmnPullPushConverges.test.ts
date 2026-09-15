@@ -62,6 +62,7 @@ const expectConverges = async ({
 		cwd: dir,
 		imports,
 		overwrite: true,
+		yes: true,
 		write: quiet,
 	});
 	expect(first.appended.sort()).toEqual(
