@@ -3,9 +3,9 @@ title: "Configuration reference"
 description: "Define features, plans, versions and rewards in autumn.config.ts"
 ---
 
-`autumn.config.ts` is your catalog as code. It imports builders from the `atmn` package and passes the collections to `atmn()`. `atmn push` previews it against the server and `--yes` applies it; `atmn pull` writes the server's catalog back into it.
+`autumn.config.ts` is your catalog as code. It imports builders from the `atmn` package and passes your collections to `atmn()`. `atmn push` previews the file against the server and `--yes` applies it. `atmn pull` writes the server's catalog back into the file.
 
-Field names are camelCase (`featureId`, `planId`, `billingMethod`, `versionSlug`), and amounts are plain major units — $20 is `20`, never `2000`.
+Field names are camelCase (`featureId`, `planId`, `billingMethod`, `versionSlug`). Amounts are in dollars, not cents: $20 is `20`.
 
 ## The root config
 
@@ -24,25 +24,25 @@ export default atmn({
 });
 ```
 
-Each collection you state is the complete desired state for it. A feature, plan, version or variant missing from a stated collection is a deletion — archived instead when customers hold it. `[]` means "mine, and empty"; a collection left out of `atmn({...})` entirely is not managed at all.
+Each collection you pass is the full list. A feature, plan, version or variant missing from it is deleted on push, or archived if customers are on it. `[]` means "I manage this and it's empty". A collection you leave out of `atmn()` is left alone.
 
-`settings` is different: only the fields you state are written, and an omitted field keeps its value.
+`settings` works differently: only the fields you set are written. Fields you leave out keep their current value.
 
-`atmn init` splits this across four files (`autumn.config.ts`, `features.ts`, `plans.ts`, `rewards.ts`), but the config is ordinary TypeScript — a row can live in its own file under any export name. The one thing `pull` cannot edit is a fixture that is not a plain literal (a spread, a helper call, a `.map()`); it reports those rows and writes nothing.
+`atmn init` splits the config across four files (`autumn.config.ts`, `features.ts`, `plans.ts`, `rewards.ts`), but it is normal TypeScript. A row can live in any file under any export name. The only thing `pull` cannot edit is a row that isn't a plain object literal (a spread, a helper call, a `.map()`). It tells you which rows those are and writes nothing.
 
 ## Builders
 
 | Builder | Builds |
 |---------|--------|
 | `feature({...})` | an entry in `features` |
-| `plan({...})` | one version row in `plans` |
+| `plan({...})` | one version of a plan, in `plans` |
 | `variant({...})` | an entry in a plan's `variants` |
 | `license({...})` | an entry in a plan's `licenses` |
-| `coupon({...})` | a discount entry in `rewards` |
-| `featureGrant({...})` | a feature-grant entry in `rewards` |
+| `coupon({...})` | a discount in `rewards` |
+| `featureGrant({...})` | a feature grant in `rewards` |
 | `referralProgram({...})` | an entry in `referralPrograms` |
 
-Plan items are plain objects inside `items` — there is no `item()` builder. Fixtures expose `featureId` and `planId`, never `.id`.
+Plan items are plain objects inside `items`. There is no `item()` builder. To reference a feature from a plan, use `featureId`.
 
 ## Features
 
@@ -59,19 +59,19 @@ Plan items are plain objects inside `items` — there is no `item()` builder. Fi
 </ParamField>
 
 <ParamField body="consumable" type="boolean">
-  Applies to `metered` features. `true` for things that reset and are consumed (messages, API calls); `false` for allocated things (seats, workspaces).
+  For `metered` features. `true` for things that get used up and reset (messages, API calls). `false` for things a customer holds (seats, workspaces).
 </ParamField>
 
 <ParamField body="creditSchema" type="array">
-  For `credit_system` features: maps metered feature IDs to credit costs. Flat: `{ meteredFeatureId, creditCost, billingUnits? }`. Graduated: `{ meteredFeatureId, tierBehavior: "graduated", tiers: [{ to: number | "inf", creditCost }] }`. Entries may carry `dimensions` and `multipliers` to price by event properties.
+  For `credit_system` features. Maps metered feature IDs to credit costs. Flat: `{ meteredFeatureId, creditCost, billingUnits? }`. Graduated: `{ meteredFeatureId, tierBehavior: "graduated", tiers: [{ to: number | "inf", creditCost }] }`.
 </ParamField>
 
 <ParamField body="modelMarkups / providerMarkups / defaultMarkup" type="object">
-  For `ai_credit_system` features: per-model, per-provider and default markup percentages.
+  For `ai_credit_system` features. Markup percentages per model, per provider, and as a default.
 </ParamField>
 
 <ParamField body="internalId" type="string">
-  The server's stable id, written back by `push --yes` and `pull`. A row carrying it can have its `featureId` changed and the server treats that as a rename.
+  The server's stable ID. `push --yes` and `pull` write it into your config. A feature with an `internalId` can have its `featureId` changed and the server treats it as a rename.
 </ParamField>
 
 <ParamField body="archived" type="boolean">
@@ -80,22 +80,22 @@ Plan items are plain objects inside `items` — there is no `item()` builder. Fi
 
 ## Plans
 
-Every version of a plan is its own row in `plans`. Rows of one plan share a `planId`, each names its version with `versionSlug`, and exactly one is `active: true`.
+Every version of a plan is its own row in `plans`. Rows of the same plan share a `planId`. Each row names its version with `versionSlug`, and exactly one row is `active: true`.
 
 <ParamField body="planId" type="string" required>
   The plan's ID. Shared by every version of the plan.
 </ParamField>
 
-<ParamField body="versionSlug" type="string">
-  Names this version row. Required on every plan row — including a plan's only version. An omitted slug is a lint error, never an implicit `v1`.
+<ParamField body="versionSlug" type="string" required>
+  The name of this version, like `"v1"`. Required on every row, including a plan's only version.
 </ParamField>
 
 <ParamField body="active" type="boolean" required>
-  Whether this row is the version customers can buy. Exactly one row per `planId` may be `true`; the rest are `false`. A plan whose only row is `active: false` is refused.
+  Whether this is the version new customers get. Exactly one row per `planId` can be `true`.
 </ParamField>
 
 <ParamField body="internalId" type="string">
-  The server's stable id, written back by `push --yes` and `pull`. It makes `planId` and `versionSlug` renames safe — without it, a renamed row is a delete plus a create.
+  The server's stable ID, written by `push --yes` and `pull`. It lets you rename `planId` or `versionSlug` without the server treating it as a delete and a create.
 </ParamField>
 
 <ParamField body="name" type="string" required>
@@ -103,58 +103,58 @@ Every version of a plan is its own row in `plans`. Rows of one plan share a `pla
 </ParamField>
 
 <ParamField body="group" type="string">
-  Groups mutually exclusive plans. Plans in one group replace each other.
+  Plans in the same group replace each other when a customer switches.
 </ParamField>
 
 <ParamField body="price" type="object">
-  Base recurring price: `amount`, `interval` (`"one_off"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`), optional `intervalCount` and `additionalCurrencies`. `null` removes it.
+  Base price: `amount`, `interval` (`"one_off"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`), and optionally `intervalCount` and `additionalCurrencies`. `null` removes it.
 </ParamField>
 
 <ParamField body="items" type="array">
-  What the plan includes and how usage beyond it is charged. See [plan items](#plan-items).
+  What the plan includes and how extra usage is charged. See [plan items](#plan-items).
 </ParamField>
 
 <ParamField body="variants" type="array">
-  `variant({...})` overlays on this version row. See [variants](#variants).
+  `variant({...})` entries for this version. See [variants](#variants).
 </ParamField>
 
 <ParamField body="licenses" type="array">
-  `license({...})` links to a child plan this one licenses. See [licenses](#licenses).
+  `license({...})` links to a child plan this plan hands out. See [licenses](#licenses).
 </ParamField>
 
 <ParamField body="freeTrial" type="object">
-  `durationLength`, `durationType` (`"day"` | `"month"` | `"year"`), `cardRequired`, and `onEnd` (`"bill"` charges when the trial ends, `"revert"` restores the previous plan). `null` removes the trial.
+  `durationLength`, `durationType` (`"day"` | `"month"` | `"year"`), `cardRequired`, and `onEnd` (`"bill"` charges the customer when the trial ends, `"revert"` puts them back on their previous plan). `null` removes the trial.
 </ParamField>
 
 <ParamField body="autoEnable" type="boolean" default="false">
-  Attach this plan to new customers automatically. Typically the free plan.
+  Attach this plan to new customers automatically. Usually the free plan.
 </ParamField>
 
 <ParamField body="addOn" type="boolean" default="false">
-  The plan can be bought alongside another plan instead of replacing it.
+  Customers can buy this plan on top of another plan instead of replacing it.
 </ParamField>
 
 <ParamField body="billingControls" type="object">
-  Customer defaults for this plan: `autoTopups`, `spendLimits`, `usageLimits`, `usageAlerts` and `overageAllowed`, each an array keyed by `featureId`.
+  Defaults for customers on this plan: `autoTopups`, `spendLimits`, `usageLimits`, `usageAlerts` and `overageAllowed`. Each is an array keyed by `featureId`.
 </ParamField>
 
 <ParamField body="description / archived / metadata / config" type="object">
-  Optional description, archive state, arbitrary metadata shared across versions, and `config.ignorePastDue`.
+  Optional description, archive state, metadata shared across versions, and `config.ignorePastDue`.
 </ParamField>
 
 ### Versioning
 
-There are no `versioning` or `propagate` flags in a config — the intent is read off the rows.
+There are no versioning flags in the config. The CLI works out what you mean from the rows.
 
 | You want | Row edit |
 |---|---|
-| Change a version in place | edit that row; keep its `versionSlug` and `internalId` |
-| Mint a new version, customers stay put | add a row with the same `planId`, a new `versionSlug`, `active: true` and **no** `internalId`; flip the old row to `active: false` |
-| A draft nobody can buy yet | add the row with `active: false` beside the active one |
-| Rename a plan | change `planId` on every row of the plan (each carrying its `internalId`) |
-| Retire a version | remove its row — refused while customers are on it |
+| Change a version in place | edit that row. Keep its `versionSlug` and `internalId` |
+| Create a new version and keep existing customers on the old one | add a row with the same `planId`, a new `versionSlug`, `active: true` and no `internalId`. Set the old row to `active: false` |
+| A draft nobody can buy yet | add the row with `active: false` next to the active one |
+| Rename a plan | change `planId` on every row of the plan |
+| Remove a version | delete its row. This is refused while customers are on it |
 
-The server numbers versions in creation order and the preview labels rows with that number (`pro@v2`). The config only ever states slugs; never read a preview number back as a slug.
+The server also numbers versions in the order they were created, and the preview shows that number (`pro@v2`). The config only uses slugs, so don't copy a preview number into the config as a slug.
 
 ## Plan items
 
@@ -171,42 +171,42 @@ The server numbers versions in creation order and the preview labels rows with t
 </ParamField>
 
 <ParamField body="pooled" type="boolean" default="false">
-  Entity-level grants contribute to a shared customer balance.
+  Entity-level grants go into one shared customer balance.
 </ParamField>
 
 <ParamField body="reset" type="object">
-  For consumable features: `interval` (`"one_off"` | `"minute"` | `"hour"` | `"day"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`) and `intervalCount`. Omit for non-consumable features like seats.
+  For consumable features: `interval` (`"one_off"` | `"minute"` | `"hour"` | `"day"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`) and `intervalCount`. Leave it out for non-consumable features like seats.
 </ParamField>
 
 <ParamField body="price" type="object">
-  Pricing beyond the included units. Omit for free items.
+  How usage beyond `included` is charged. Leave it out for free items.
 
-  - `amount` — price per `billingUnits`. Mutually exclusive with `tiers`.
-  - `tiers` — `[{ to: number | "inf", amount?, flatAmount? }]`; the last tier must be `"inf"`.
-  - `tierBehavior` — `"graduated"` | `"volume"`.
-  - `interval` (required) — billing interval; should match `reset.interval` for consumable features.
-  - `intervalCount` — intervals per billing cycle, default `1`.
-  - `billingUnits` — units per price increment, default `1`. Usage is rounded up.
-  - `billingMethod` (required) — `"prepaid"` for upfront quantities (seats), `"usage_based"` for pay-as-you-go.
-  - `maxPurchase` — cap on units purchasable beyond `included`.
-  - `additionalCurrencies` — per-currency amounts, set on the price or per tier.
+  - `amount`: price per `billingUnits`. Use this or `tiers`, not both.
+  - `tiers`: `[{ to: number | "inf", amount?, flatAmount? }]`. The last tier must be `"inf"`.
+  - `tierBehavior`: `"graduated"` | `"volume"`.
+  - `interval` (required): billing interval. Should match `reset.interval` for consumable features.
+  - `intervalCount`: intervals per billing cycle. Default `1`.
+  - `billingUnits`: units per price increment. Default `1`. Usage is rounded up.
+  - `billingMethod` (required): `"prepaid"` for quantities bought upfront (seats), `"usage_based"` for pay as you go.
+  - `maxPurchase`: the most units a customer can buy beyond `included`.
+  - `additionalCurrencies`: amounts per currency, on the price or on each tier.
 </ParamField>
 
 <ParamField body="rollover" type="object">
-  Carry unused units forward: `max` or `maxPercentage` (mutually exclusive), `expiryDurationType` (`"month"` | `"forever"`) and `expiryDurationLength`.
+  Carry unused units into the next period: `max` or `maxPercentage` (one or the other), `expiryDurationType` (`"month"` | `"forever"`) and `expiryDurationLength`.
 </ParamField>
 
 <ParamField body="proration" type="object">
-  For prepaid items, how mid-cycle quantity changes bill: `onIncrease` (`"bill_immediately"` | `"prorate_immediately"` | `"prorate_next_cycle"` | `"bill_next_cycle"`) and `onDecrease` (`"prorate"` | `"prorate_immediately"` | `"prorate_next_cycle"` | `"none"` | `"no_prorations"`).
+  For prepaid items. How to bill quantity changes mid-cycle: `onIncrease` (`"bill_immediately"` | `"prorate_immediately"` | `"prorate_next_cycle"` | `"bill_next_cycle"`) and `onDecrease` (`"prorate"` | `"prorate_immediately"` | `"prorate_next_cycle"` | `"none"` | `"no_prorations"`).
 </ParamField>
 
 <ParamField body="thresholdBilling / featureOverride" type="object">
-  Bill outstanding overage once it reaches a threshold, and override the feature's credit schema or markups for customers on this plan.
+  Bill overage once it reaches a threshold, and override the feature's credit schema or markups for customers on this plan.
 </ParamField>
 
 ## Variants
 
-A variant is an entry in its base row's `variants` array: an overlay on that specific version.
+A variant is an entry in its base plan's `variants` array. It stores only what differs from that version of the base.
 
 ```ts
 variant({
@@ -217,14 +217,14 @@ variant({
 });
 ```
 
-- `variantPlanId` and `versionSlug` name the variant version; `internalId` makes renames safe.
-- `customize` overrides `price` or `freeTrial`, replaces the item list with `items`, or patches it with `addItems` / `removeItems`.
-- Minting a new base version means listing the variant entries again under the new base row, each with the new `versionSlug` and no `internalId`. One variant version cannot serve two base rows.
-- Set `archived: true` to retire a variant. A variant left out of the array is a deletion, refused while customers hold it.
+- `variantPlanId` and `versionSlug` name the variant version. `internalId` makes renames safe.
+- `customize` can override `price` or `freeTrial`, replace the item list with `items`, or patch it with `addItems` and `removeItems`.
+- When you create a new version of the base, list the variants again under the new row, with the new `versionSlug` and no `internalId`. A variant version can only belong to one base version.
+- Set `archived: true` to retire a variant. A variant missing from the array is deleted, which is refused while customers are on it.
 
 ## Licenses
 
-A license link is an entry in the parent plan's `licenses` array, pinned to one version of the child plan.
+A license is an entry in the parent plan's `licenses` array. It points at one version of the child plan.
 
 ```ts
 license({
@@ -235,7 +235,7 @@ license({
 });
 ```
 
-State `versionSlug` on every link: versioning the child moves no parent, so relinking a parent is editing that slug. `customize` overrides the child's `price` or patches its items with `addItems` / `removeItems`.
+`versionSlug` is required. Creating a new version of the child plan does not move any parent. To move a parent onto the new version, change the slug on its license. `customize` can override the child's `price` or patch its items with `addItems` and `removeItems`.
 
 ## Rewards and referral programs
 
@@ -247,11 +247,11 @@ State `versionSlug` on every link: versioning the child moves no parent, so reli
 
 ## Settings
 
-`settings` carries org-level booleans: `cancelOnPastDue`, `reverseDeductionOrder`, `blockOverdueEntitlements`, `invoiceMemos`, `disableOverageBilling`, `paydownOverages`, `automaticTax` and `multiCurrency`. They are previewed and applied ahead of the catalog, because a flag like `multiCurrency` changes what the catalog accepts.
+`settings` holds org-level flags: `cancelOnPastDue`, `reverseDeductionOrder`, `blockOverdueEntitlements`, `invoiceMemos`, `disableOverageBilling`, `paydownOverages`, `automaticTax` and `multiCurrency`. They are applied before the catalog, because a flag like `multiCurrency` changes what the catalog accepts.
 
 ## Full example
 
-A free plan, a paid plan with a trial, an annual variant, a licensed seat plan, a kept `v1` for existing customers, a top-up add-on, and rewards — as a single file:
+A free plan, a paid plan with a trial and an annual variant, a licensed seat plan, an older version kept for existing customers, a top-up add-on, and rewards, all in one file:
 
 ```ts autumn.config.ts
 import {

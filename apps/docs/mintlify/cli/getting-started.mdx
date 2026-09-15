@@ -3,11 +3,11 @@ title: "Getting started"
 description: "Set up the atmn CLI, then push and pull your catalog as code"
 ---
 
-The `atmn` CLI keeps your Autumn catalog — features, plans, versions, rewards — in an `autumn.config.ts` file. `atmn push` makes the server match the file; `atmn pull` writes the server's catalog back into it.
+The `atmn` CLI keeps your Autumn catalog (features, plans, versions and rewards) in an `autumn.config.ts` file. `atmn push` makes the server match the file. `atmn pull` writes the server's catalog back into the file.
 
 ## Installation
 
-Run it straight from your package manager:
+Run it with your package manager:
 
 <CodeGroup>
 
@@ -25,7 +25,7 @@ pnpm dlx atmn
 
 </CodeGroup>
 
-`atmn init` adds the package as a dependency and writes an `atmn` script to your root `package.json`, so afterwards you can run `bun atmn push`, `npm run atmn push`, and so on.
+`atmn init` adds the package as a dependency and an `atmn` script to your root `package.json`. After that you can run `bun atmn push`, `npm run atmn push`, and so on.
 
 ## Initialize a project
 
@@ -33,16 +33,16 @@ pnpm dlx atmn
 bunx atmn init
 ```
 
-`init` does the whole setup: "connect to Autumn, place the config, pull your catalog, install the skills".
+`init` does the whole setup:
 
-1. **Connect.** With no usable `AUTUMN_SECRET_KEY` on disk, it asks how you want to connect:
-   - `--login` — "sign in on the web (opens a browser; prints the URL if it can't)". Writes `AUTUMN_SECRET_KEY` (sandbox) and `AUTUMN_PROD_SECRET_KEY` (production) to your `.env`.
-   - `--keyless` — "create a sandbox org now, no account needed; link it to an account later with `atmn login --claim <email>`". Writes only `AUTUMN_SECRET_KEY`.
+1. **Connect.** If there is no `AUTUMN_SECRET_KEY` in your `.env`, it asks how you want to connect:
+   - `--login` opens a browser to sign in. It writes `AUTUMN_SECRET_KEY` (sandbox) and `AUTUMN_PROD_SECRET_KEY` (production) to your `.env`.
+   - `--keyless` creates a sandbox org right away, no account needed. You can link it to an account later with `atmn login --claim <email>`. It writes `AUTUMN_SECRET_KEY` only.
 
-   Without a TTY (or with `--headless`) it prints the two flags and stops instead of prompting, so re-running with the flag continues from there.
-2. **Place the config.** Scaffolds `autumn.config.ts`, `features.ts`, `plans.ts` and `rewards.ts`, adds `atmn` to `package.json`, and installs dependencies. In a monorepo it asks where the package should live (`--path <dir>`) and what to call it (`--name <name>`).
-3. **Pull your catalog.** Whatever the org already has is written into the collection files.
-4. **Install the skills.** The bundled agent skills are written to `<config folder>/skills`, so your coding agent can read them. `npx skills add <dir> -y` makes them visible to the agent.
+   If there is no terminal to ask in (for example in CI or from an agent), it prints the two flags and stops. Run it again with the flag you want.
+2. **Create the config.** It writes `autumn.config.ts`, `features.ts`, `plans.ts` and `rewards.ts`, adds `atmn` to `package.json` and installs it. In a monorepo it asks where to put the package (`--path <dir>`) and what to call it (`--name <name>`).
+3. **Pull your catalog.** Anything the org already has is written into those files.
+4. **Install the skills.** The agent skills bundled with the CLI are written to `<config folder>/skills`. Run `npx skills add <dir> -y` so your coding agent can find them.
 
 ```bash .env
 AUTUMN_SECRET_KEY=am_sk_test_...
@@ -50,7 +50,7 @@ AUTUMN_PROD_SECRET_KEY=am_sk_live_...
 ```
 
 <Check>
-`bunx atmn env` prints the org, environment and key your commands would target, plus notes on anything that looks wrong. `--json` gives an agent-readable version.
+`bunx atmn env` shows which org, environment and key your commands will use, and flags anything that looks wrong. Add `--json` for machine-readable output.
 </Check>
 
 ## Edit the config
@@ -72,7 +72,7 @@ export default atmn({
 });
 ```
 
-The collection files hold the fixtures:
+The other files hold the definitions:
 
 ```ts plans.ts
 import { plan } from "atmn";
@@ -95,30 +95,30 @@ export const plans = [
 ];
 ```
 
-Each collection you state is the complete desired state for it: a plan, version or variant you leave out is a deletion (archived when customers hold it). A collection you leave out of `atmn({...})` entirely is not managed. See the [configuration reference](/cli/config) for every field.
+Each collection you pass to `atmn()` is the full state. If a plan, version or variant is missing from the file, it gets deleted on push (or archived, if customers are on it). A collection you leave out of `atmn()` is left alone. See the [configuration reference](/cli/config) for every field.
 
 ## Push
 
-`atmn push` is the preview. It never prompts and never writes:
+`atmn push` shows you what would change. It does not write anything:
 
 ```bash
 bunx atmn push
 ```
 
-It lints the config, sends it to the server as a preview, and prints the diff: created, updated, deleted and archived rows, the customers affected, and any migration drafts the change would create.
+It checks the config, sends it to the server as a preview, and prints the diff: what gets created, updated, deleted or archived, which customers are affected, and any migration drafts the change would create.
 
-Apply exactly what the preview showed with `--yes`:
+To apply what the preview showed, add `--yes`:
 
 ```bash
 bunx atmn push --yes
 ```
 
-`push --yes` also writes each row's server-side `internalId` (and any `versionSlug` the server assigned) back into your fixtures. Those edits are expected — a row carrying an `internalId` can be renamed instead of deleted and recreated.
+After a successful push, the CLI writes each row's `internalId` back into your config (and a `versionSlug`, if the server assigned one). That is expected. A row with an `internalId` can be renamed later instead of being deleted and recreated.
 
-Use `-d`/`--dry-run` to force preview-only behaviour even when `--yes` is passed.
+Use `-d` or `--dry-run` to force a preview even when `--yes` is passed.
 
 <Warning>
-Commands target your sandbox by default. Add `-p` to target production: `bunx atmn push -p --yes`.
+Commands use your sandbox by default. Add `-p` to target production: `bunx atmn push -p --yes`.
 </Warning>
 
 ## Pull
@@ -127,15 +127,15 @@ Commands target your sandbox by default. Add `-p` to target production: `bunx at
 bunx atmn pull
 ```
 
-`pull` writes the server's catalog back into the config in place: it appends rows the config never mentioned, flips `active` where someone promoted a version in the dashboard, and backfills `internalId` and `versionSlug`. Run it after anyone edits the dashboard, and before editing a config you did not write.
+`pull` updates your config in place. It adds rows the file did not have, flips `active` if someone promoted a version in the dashboard, and fills in `internalId` and `versionSlug`. Run it after someone edits the dashboard, and before you edit a config you did not write.
 
-`atmn pull --overwrite --yes` is the escape hatch: it deletes every TypeScript file in the config folder and rescaffolds from the server. Reach for it only when the config describes a different org than your key.
+`atmn pull --overwrite --yes` deletes every TypeScript file in the config folder and rebuilds it from the server. Only use it when the config belongs to a different org than your key.
 
 ## Sandboxes
 
-`atmn sandbox create <name>` mints an isolated sandbox and saves its key; `atmn sandbox use <name|id>` pins `AUTUMN_SANDBOX_ID` so every later command targets it, until `atmn sandbox use --clear`.
+`atmn sandbox create <name>` creates a separate sandbox and saves its key. `atmn sandbox use <name>` pins it, so every later command targets it until you run `atmn sandbox use --clear`.
 
-`atmn reset --yes` wipes the targeted sandbox's catalog and customers (keys and settings stay), and `atmn push --yes` rebuilds it from your config.
+`atmn reset --yes` wipes the sandbox's catalog and customers (keys and settings stay). `atmn push --yes` then rebuilds it from your config.
 
 **Next: Configuration reference**
 

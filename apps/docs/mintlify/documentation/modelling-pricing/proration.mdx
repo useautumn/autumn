@@ -3,7 +3,7 @@ title: Proration
 description: Handle mid-cycle plan changes with prorated billing
 ---
 
-Proration adjusts billing when a customer changes their subscription mid-cycle — whether upgrading to a higher plan, downgrading, or changing the quantity of a prepaid item like seats. Autumn calculates the prorated amount and either charges or credits the customer.
+Proration adjusts billing when a customer changes their subscription mid-cycle. That could be an upgrade, a downgrade, or a change to the quantity of a prepaid item like seats. Autumn works out the prorated amount and either charges or credits the customer.
 
 > **Example** <br />
 > A customer on a \$20/month plan upgrades to a \$50/month plan halfway through the billing cycle. They're charged \$15 (the prorated difference for the remaining half of the month).
@@ -84,10 +84,10 @@ Preview with `atmn push`, then apply with `atmn push --yes`.
 |--------|----------|
 | `prorate_immediately` | Credit the prorated difference immediately |
 | `prorate_next_cycle` | Credit the prorated difference on the next invoice |
-| `no_prorations` | No credit or refund — change takes effect at next billing cycle |
+| `no_prorations` | No credit or refund. The change takes effect at the next billing cycle |
 
 <Note>
-Item-level proration applies to prepaid items: it decides how a change to the quantity a customer has bought (seats, workspaces) is billed. Usage-based items are billed on what was used, not on quantity changes.
+Item-level proration only applies to prepaid items. It decides how to bill a change in the quantity a customer bought, like seats or workspaces. Usage-based items are billed on what was used, so quantity changes don't apply.
 </Note>
 
 ## Plan-level proration
