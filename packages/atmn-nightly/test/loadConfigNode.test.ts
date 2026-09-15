@@ -1,6 +1,6 @@
 /**
- * Under node the config is imported through jiti. The hook must resolve from
- * this package, not from the config's folder: a user's project has no jiti.
+ * Under node the config is imported through jiti, resolved from this package:
+ * a user's project has no jiti of its own.
  */
 
 import { expect, test } from "bun:test";
@@ -11,16 +11,17 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { importConfigArgs } from "../src/config/loadConfig";
 
-test("the node loader pins this package's jiti register hook", () => {
+test("the node loader imports through this package's jiti, not the config's folder", () => {
 	const args = importConfigArgs({
 		path: "/nowhere/autumn.config.ts",
 		onBun: false,
 	});
-	expect(args.slice(0, 2)).toEqual(["--no-deprecation", "--import"]);
-	const hook = args[2] ?? "";
-	expect(hook).toStartWith("file://");
-	expect(fileURLToPath(hook)).toContain("/node_modules/jiti/");
-	expect(existsSync(fileURLToPath(hook))).toBe(true);
+	expect(args[0]).toBe("-e");
+	const script = args[1] ?? "";
+	const jitiUrl = /import\("(file:[^"]+)"\)/.exec(script)?.[1] ?? "";
+	expect(fileURLToPath(jitiUrl)).toContain("/node_modules/jiti/");
+	expect(existsSync(fileURLToPath(jitiUrl))).toBe(true);
+	expect(script).toContain("createJiti");
 });
 
 test("node imports a .ts config from a folder with no jiti installed", () => {
@@ -31,7 +32,7 @@ test("node imports a .ts config from a folder with no jiti installed", () => {
 		const path = join(dir, "autumn.config.ts");
 		writeFileSync(
 			path,
-			"const answer: number = 42;\nexport default { answer };\n",
+			'const answer: number = 42;\nexport const named = "kept";\nexport default { answer };\n',
 		);
 		const result = spawnSync("node", importConfigArgs({ path, onBun: false }), {
 			cwd: dir,
@@ -40,7 +41,7 @@ test("node imports a .ts config from a folder with no jiti installed", () => {
 		expect(result.stderr).toBe("");
 		expect(JSON.parse(result.stdout)).toEqual({
 			ok: true,
-			module: { default: { answer: 42 } },
+			module: { named: "kept", default: { answer: 42 } },
 		});
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
