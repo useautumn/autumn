@@ -1,16 +1,32 @@
 #!/usr/bin/env bash
-# Exchanges the machine identity for an Infisical token. Sourced by setup.sh.
+# Resolves an Infisical token for setup.sh.
 #
-# Conductor injects INFISICAL_CLIENT_ID/SECRET but no INFISICAL_TOKEN, so
-# `infisical run` drops into an interactive host picker and dies on EOF.
-# The CLI ships in node_modules, so this must run after `bun install`.
+# Cloud Conductor injects INFISICAL_CLIENT_ID/SECRET but no INFISICAL_TOKEN, so
+# `infisical run` drops into an interactive host picker and dies on EOF. Local
+# Conductor injects neither — fail-closed on that used to abort every Mac
+# workspace. Cloud installs the CLI globally before this runs; locally it falls
+# back to node_modules/.bin, so run it after `bun install` there.
 
 ensure_infisical_session() {
 	[ -n "${INFISICAL_TOKEN:-}" ] && return 0
 
+	# setup.sh caches a token for later shells (and the Run button's non-login env).
+	if [ -s "$HOME/.cache/autumn-infisical-token" ]; then
+		INFISICAL_TOKEN="$(cat "$HOME/.cache/autumn-infisical-token")"
+		INFISICAL_TOKEN="${INFISICAL_TOKEN%%$'\n'*}"
+		if [ -n "$INFISICAL_TOKEN" ]; then
+			export INFISICAL_TOKEN
+			echo "[conductor] Infisical session ready (cached)"
+			return 0
+		fi
+	fi
+
 	if [ -z "${INFISICAL_CLIENT_ID:-}" ] || [ -z "${INFISICAL_CLIENT_SECRET:-}" ]; then
-		echo "[conductor] no Infisical machine identity in the environment" >&2
-		return 1
+		# Local Conductor never injects a machine identity. Failing here is why
+		# setup always died in the UI — `bun dw` already uses the CLI login
+		# on this Mac.
+		echo "[conductor] no Infisical machine identity — using existing CLI session"
+		return 0
 	fi
 
 	local cli="node_modules/.bin/infisical"
