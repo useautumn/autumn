@@ -27,20 +27,17 @@ function ensureAiSubmoduleSynced(): void {
 		["submodule", "update", "--init", "--recursive"],
 		{ cwd: PROJECT_ROOT },
 	);
+	// ai/ carries agent config only, and it is a private repo a Conductor setup
+	// script cannot clone — GH_TOKEN is an agent-session credential. Warn so the
+	// database, infra and test org still provision; a session can sync it later.
 	if (submoduleCode !== 0) {
-		fatal(
-			`git submodule update --init --recursive failed (exit ${submoduleCode})`,
-		);
+		log(`WARNING: ai submodule unavailable (exit ${submoduleCode})`);
+		log("WARNING: run `bun ai/src/cli.ts sync` once the checkout succeeds");
+		return;
 	}
 
-	log("checking out ai submodule main branch");
-	const checkoutCode = shInherit("git", ["checkout", "main"], {
-		cwd: aiDir,
-	});
-	if (checkoutCode !== 0) {
-		fatal(`git checkout main failed in ai submodule (exit ${checkoutCode})`);
-	}
-
+	// No `git checkout main` here: it discarded the pinned commit for a local main
+	// ref nothing fetches, so a stale clone silently rewound ai by weeks.
 	log("ensuring ai deps installed (bun install)");
 	const installCode = shInherit("bun", ["install"], { cwd: aiDir });
 	if (installCode !== 0) {
