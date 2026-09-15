@@ -173,7 +173,7 @@ export default function Hero() {
 					  so mobile never downloads them, and desktop fills the
 					  already-reserved space once it hydrates.
 					*/}
-					<div className="hero-reveal lg:opacity-0 relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:block">
+					<div className="hero-reveal lg:opacity-0 relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:flex flex-col justify-end">
 						{isXl && (
 							<>
 								<div className="absolute inset-0 z-0 pointer-events-none">
