@@ -21,14 +21,20 @@ export interface StripeSubscriptionForBilling {
 	mismatchedStripeSubscriptionId?: string;
 }
 
-/** An immediate cancel only detaches Autumn-side state, so a subscription it
- *  will never touch must not block it. */
-const isImmediateCancelRequest = (
+/** An immediate cancel only detaches Autumn-side state and no_billing_changes
+ *  never writes to Stripe, so a subscription neither will touch must not block them. */
+const neverWritesToStripeSubscription = (
 	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params,
-) =>
-	params !== undefined &&
-	"cancel_action" in params &&
-	params.cancel_action === "cancel_immediately";
+) => {
+	if (params === undefined) return false;
+
+	const isImmediateCancel =
+		"cancel_action" in params && params.cancel_action === "cancel_immediately";
+	const isNoBillingChanges =
+		"no_billing_changes" in params && params.no_billing_changes === true;
+
+	return isImmediateCancel || isNoBillingChanges;
+};
 
 /**
  * Fetches a Stripe subscription with expanded discounts for billing operations.
@@ -84,10 +90,10 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	// Wrong-customer linkage is a data fault worth surfacing, except to an
-	// immediate cancel — blocking that would strand the plan with no way out.
+	// Wrong-customer linkage is a data fault worth surfacing, except to a request
+	// that never touches the sub — blocking that would strand the plan with no way out.
 	if (sub.customer !== fullCus.processor?.id) {
-		if (isImmediateCancelRequest(params)) {
+		if (neverWritesToStripeSubscription(params)) {
 			return { mismatchedStripeSubscriptionId: subId };
 		}
 

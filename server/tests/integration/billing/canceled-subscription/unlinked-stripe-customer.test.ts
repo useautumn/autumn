@@ -10,7 +10,8 @@
  *                 "null is not an object (evaluating 'fullCus.processor.id')".
  * Green (after):  cancel_immediately succeeds and leaves the old subscription
  *                 untouched; cancel_end_of_cycle rejects with
- *                 "is not for the current customer".
+ *                 "is not for the current customer" unless no_billing_changes
+ *                 is set, in which case it cancels Autumn-only.
  */
 
 import { expect, test } from "bun:test";
@@ -141,4 +142,39 @@ test(`${chalk.yellowBright("unlinked stripe customer: cancel_end_of_cycle reject
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		active: [pro.id],
 	});
+});
+
+test(`${chalk.yellowBright("unlinked stripe customer: no_billing_changes cancel_end_of_cycle succeeds Autumn-only")}`, async () => {
+	const customerId = "unlinked-stripe-cancel-nbc";
+
+	const { autumnV1, autumnV2_4, ctx, pro, unlinkedSubscriptionId } =
+		await setupUnlinkedStripeCustomer({ customerId });
+
+	await autumnV2_4.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+		{
+			customer_id: customerId,
+			plan_id: pro.id,
+			cancel_action: "cancel_end_of_cycle",
+			no_billing_changes: true,
+		},
+	);
+
+	await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		cancel_action: "cancel_end_of_cycle",
+		no_billing_changes: true,
+	});
+
+	await expectCustomerProducts({
+		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+		canceling: [pro.id],
+	});
+
+	const unlinkedSubscription = await ctx.stripeCli.subscriptions.retrieve(
+		unlinkedSubscriptionId,
+	);
+	expect(unlinkedSubscription.status).toBe("active");
+	expect(unlinkedSubscription.cancel_at_period_end).toBe(false);
+	expect(unlinkedSubscription.canceled_at).toBeNull();
 });
