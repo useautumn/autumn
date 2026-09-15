@@ -12,6 +12,7 @@
  */
 
 import { spawn } from "bun";
+import { getTestExecutionArgs } from "./testExecutionArgs";
 
 /** Both streams reach onChunk exactly once; returned stderr is diagnostic-only.
  * The exit code belongs to the test process, not the transport. */
@@ -75,7 +76,7 @@ const buildTestCommand = ({
 	file: string;
 	failedTestNames?: string[];
 }): string[] => {
-	const command = ["bun", "test", "--timeout", "0"];
+	const command = ["bun", "test", ...getTestExecutionArgs()];
 
 	if (failedTestNames && failedTestNames.length > 0) {
 		// Bun matches --test-name-pattern against SPACE-joined describe>test
