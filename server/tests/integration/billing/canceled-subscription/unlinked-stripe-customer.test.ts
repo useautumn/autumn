@@ -109,19 +109,36 @@ test(`${chalk.yellowBright("unlinked stripe customer: cancel_immediately succeed
 	expect(unlinkedSubscription.canceled_at).toBeNull();
 });
 
-test(`${chalk.yellowBright("unlinked stripe customer: cancel_end_of_cycle preview rejects with the ownership fault")}`, async () => {
+test(`${chalk.yellowBright("unlinked stripe customer: cancel_end_of_cycle rejects with the ownership fault")}`, async () => {
 	const customerId = "unlinked-stripe-cancel-eoc";
 
-	const { autumnV2_4, pro, unlinkedSubscriptionId } =
+	const { autumnV1, autumnV2_4, pro, unlinkedSubscriptionId } =
 		await setupUnlinkedStripeCustomer({ customerId });
 
+	const ownershipFault = `Subscription ${unlinkedSubscriptionId} is not for the current customer`;
+
 	await expectAutumnError({
-		errMessage: `Subscription ${unlinkedSubscriptionId} is not for the current customer`,
+		errMessage: ownershipFault,
 		func: () =>
 			autumnV2_4.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>({
 				customer_id: customerId,
 				plan_id: pro.id,
 				cancel_action: "cancel_end_of_cycle",
 			}),
+	});
+
+	await expectAutumnError({
+		errMessage: ownershipFault,
+		func: () =>
+			autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				cancel_action: "cancel_end_of_cycle",
+			}),
+	});
+
+	await expectCustomerProducts({
+		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+		active: [pro.id],
 	});
 });
