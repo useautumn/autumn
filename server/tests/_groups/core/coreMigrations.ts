@@ -31,5 +31,7 @@ export const coreMigrations: TestGroup = {
 		// Computed migration status (draft/waiting/running/run).
 		"integration/billing/migrations-v2/status/migration-run-claim-status.test.ts",
 		"integration/billing/migrations-v2/status/migration-status-lifecycle.test.ts",
+		// Frozen post-run customer list (filter.preview source=item_runs).
+		"integration/billing/migrations-v2/preview/filter-preview-item-runs-source.test.ts",
 	],
 };

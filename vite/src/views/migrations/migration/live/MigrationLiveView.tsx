@@ -96,6 +96,10 @@ import {
 	buildEventsByCustomer,
 	resolveMigrationItemStatus,
 } from "./migrationItemStatus";
+import {
+	executionStatusOptionsForSource,
+	previewSourceForStatus,
+} from "./previewSource";
 import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
 import { useMigrationSheetStore } from "./useMigrationSheetStore";
 
@@ -301,6 +305,12 @@ export function MigrationLiveView({
 		hasRealtimeActive ||
 		isRunDisabled(migrationStatus);
 
+	const previewSource = previewSourceForStatus(migrationStatus);
+	const executionStatusOptions = executionStatusOptionsForSource(
+		previewSource,
+		EXECUTION_STATUS_VALUES,
+	);
+
 	const {
 		customers,
 		count,
@@ -313,9 +323,18 @@ export function MigrationLiveView({
 		cursor: cursorPagination.currentCursor,
 		pageSize,
 		migrationId,
+		source: previewSource,
 		executionStatuses,
 		isActive: hasActiveRun || hasRealtimeActive,
 	});
+	// A Run All (or Run again) re-evaluates the live filter, so the run dialog
+	// counts filter matches even while the table shows the frozen list.
+	const { count: liveFilterCount } = useMigrationFilterPreview({
+		filter: filter.customer ?? {},
+		migrationId,
+		includeRows: false,
+	});
+	const runScopeCount = previewSource === "filter" ? count : liveFilterCount;
 
 	const setSelectedCustomer = useMigrationSheetStore(
 		(s) => s.setSelectedCustomer,
@@ -559,8 +578,8 @@ export function MigrationLiveView({
 								/>
 							}
 							customerLabel={
-								count !== null
-									? `${count.toLocaleString()} ${count === 1 ? "customer" : "customers"}`
+								runScopeCount !== null
+									? `${runScopeCount.toLocaleString()} ${runScopeCount === 1 ? "customer" : "customers"}`
 									: "All matched customers"
 							}
 							operations={operations}
@@ -570,7 +589,7 @@ export function MigrationLiveView({
 						<MigrationRunControls
 							value={runControls}
 							onChange={setRunControls}
-							webhooksOnByDefault={webhooksDefaultOn({ count })}
+							webhooksOnByDefault={webhooksDefaultOn({ count: runScopeCount })}
 							hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
 							batchEligible={batchEligible}
@@ -782,6 +801,7 @@ export function MigrationLiveView({
 							<ExecutionStatusSubMenu
 								selected={executionStatuses}
 								onChange={handleExecutionStatusesChange}
+								options={executionStatusOptions}
 							/>
 						}
 						hasActiveExtraFilters={hasActiveExecutionFilters(executionStatuses)}
@@ -809,7 +829,10 @@ export function MigrationLiveView({
 					isLoading: isLoadingCustomers,
 					onRowClick: setSelectedCustomer,
 					rowClassName: "h-10",
-					emptyStateText: "No customers match this filter",
+					emptyStateText:
+						previewSource === "filter"
+							? "No customers match this filter"
+							: "No customers have been run yet",
 					flexibleTableColumns: true,
 					virtualization: {
 						containerHeight: tableContainerHeight,
