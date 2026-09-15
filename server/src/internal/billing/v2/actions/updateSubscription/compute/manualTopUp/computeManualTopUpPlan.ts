@@ -2,11 +2,12 @@ import {
 	type AutumnBillingPlan,
 	billingContextToCurrency,
 	cusEntToCusPrice,
+	cusProductToPrices,
 	type FullCusEntWithFullCusProduct,
+	findPrepaidQuantityTargetPrice,
 	fullCustomerToCustomerEntitlements,
 	InternalError,
-	isOneOffCustomerEntitlement,
-	isPrepaidCustomerEntitlement,
+	isOneOffPrice,
 	type LineItem,
 	type LineItemContext,
 	type UpdateSubscriptionBillingContext,
@@ -25,6 +26,7 @@ import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/
 import { assertRoomForExpiringGrants } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
 import { routeRemainderToExpiringGrant } from "@/internal/billing/v2/utils/expiringGrants/routeRemainderToExpiringGrant.js";
 
+/** Charge the same one-off prepaid price the ManualTopUp intent was routed on. */
 const findTargetCusEnt = ({
 	billingContext,
 	featureId,
@@ -34,6 +36,12 @@ const findTargetCusEnt = ({
 }): FullCusEntWithFullCusProduct | undefined => {
 	const { fullCustomer, customerProduct } = billingContext;
 
+	const targetPrice = findPrepaidQuantityTargetPrice({
+		prices: cusProductToPrices({ cusProduct: customerProduct }),
+		featureId,
+	});
+	if (!targetPrice || !isOneOffPrice(targetPrice)) return undefined;
+
 	const cusEntsForFeature = fullCustomerToCustomerEntitlements({
 		fullCustomer,
 		featureId,
@@ -42,8 +50,7 @@ const findTargetCusEnt = ({
 	return cusEntsForFeature.find(
 		(ce) =>
 			ce.customer_product?.id === customerProduct.id &&
-			isOneOffCustomerEntitlement(ce) &&
-			isPrepaidCustomerEntitlement(ce),
+			cusEntToCusPrice({ cusEnt: ce })?.price.id === targetPrice.id,
 	);
 };
 
