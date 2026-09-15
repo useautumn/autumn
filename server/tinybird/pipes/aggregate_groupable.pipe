@@ -19,9 +19,9 @@ DESCRIPTION >
 
 TOKEN "aggregate_groupable_read" READ
 
-NODE base
+NODE rollup
 DESCRIPTION >
-    Aggregate raw data by period, event_name, and group_value.
+    Aggregate complete rollup intervals by period, event_name, and group_value.
 SQL >
     %
     {% set no_property_filters = (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
@@ -42,6 +42,10 @@ SQL >
     {% set read_customer_monthly = use_no_props and not read_org_dimension_rollup and monthly_requested %}
     {% set use_daily_property_rollup = use_property_rollup and not read_org_property_rollup and not read_property_monthly and defined(use_daily_rollup) and String(use_daily_rollup, '0') == '1' %}
 
+    WITH
+        toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
+        if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
+        toStartOfHour(toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})) AS full_hours_end
     {% if read_org_dimension_monthly %}
     SELECT
         period,
@@ -84,8 +88,8 @@ SQL >
             AND env = {{ String(env, 'test') }}
             AND dimension = {{ String(group_column, 'customer_id') }}
             AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-            AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+            AND hour >= full_hours_start
+            AND hour < full_hours_end
             AND (
                 hour < if(
                     toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) = toDateTime(toStartOfMonth(toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}))),
@@ -118,8 +122,8 @@ SQL >
         AND env = {{ String(env, 'test') }}
         AND dimension = {{ String(group_column, 'customer_id') }}
         AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        AND hour >= full_hours_start
+        AND hour < full_hours_end
     GROUP BY period, event_name, group_value
     {% elif read_org_property_monthly %}
     SELECT
@@ -165,8 +169,8 @@ SQL >
             AND event_name IN {{ Array(event_names, 'String', default='[]') }}
             AND property_key = {{ String(property_key, '') }}
             AND property_value != ''
-            AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-            AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+            AND hour >= full_hours_start
+            AND hour < full_hours_end
             AND (
                 hour < if(
                     toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) = toDateTime(toStartOfMonth(toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}))),
@@ -200,8 +204,8 @@ SQL >
         AND event_name IN {{ Array(event_names, 'String', default='[]') }}
         AND property_key = {{ String(property_key, '') }}
         AND property_value != ''
-        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        AND hour >= full_hours_start
+        AND hour < full_hours_end
     GROUP BY period, event_name, group_value
     {% elif read_property_monthly %}
     SELECT
@@ -253,8 +257,8 @@ SQL >
             AND event_name IN {{ Array(event_names, 'String', default='[]') }}
             AND property_key = {{ String(property_key, '') }}
             AND property_value != ''
-            AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-            AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+            AND hour >= full_hours_start
+            AND hour < full_hours_end
             AND (
                 hour < if(
                     toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) = toDateTime(toStartOfMonth(toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}))),
@@ -332,8 +336,8 @@ SQL >
             org_id = {{ String(org_id, '') }}
             AND env = {{ String(env, 'test') }}
             AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-            AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+            AND hour >= full_hours_start
+            AND hour < full_hours_end
             AND (
                 hour < if(
                     toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) = toStartOfDay(toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})),
@@ -414,8 +418,8 @@ SQL >
             org_id = {{ String(org_id, '') }}
             AND env = {{ String(env, 'test') }}
             AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-            AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+            AND hour >= full_hours_start
+            AND hour < full_hours_end
             AND (
                 hour < if(
                     toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) = toDateTime(toStartOfMonth(toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}))),
@@ -473,8 +477,8 @@ SQL >
         org_id = {{ String(org_id, '') }}
         AND env = {{ String(env, 'test') }}
         AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
-        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        AND hour >= full_hours_start
+        AND hour < full_hours_end
         {% if use_property_rollup %}
         AND property_key = {{ String(property_key, '') }}
         {% end %}
@@ -511,6 +515,91 @@ SQL >
         {% end %}
     GROUP BY period, event_name, group_value
     {% end %}
+
+NODE raw_edges
+SQL >
+    %
+    WITH
+        toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
+        toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
+        if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
+        toStartOfHour(window_end) AS full_hours_end
+    SELECT
+        {% if String(bin_size, 'day') == 'hour' %}
+        formatDateTime(toStartOfHour(timestamp), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'month' %}
+        formatDateTime(toStartOfMonth(toStartOfHour(timestamp), {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'week' %}
+        formatDateTime(toStartOfWeek(toStartOfHour(timestamp), 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% else %}
+        formatDateTime(toStartOfDay(toStartOfHour(timestamp), {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% end %}
+        event_name,
+        {% if String(group_column, 'property') == 'customer_id' %}
+        customer_id as group_value,
+        {% elif String(group_column, 'property') == 'entity_id' %}
+        entity_id as group_value,
+        {% elif String(group_column, 'property') == 'plan_id' %}
+        coalesce(internal_product_id, '') as group_value,
+        {% else %}
+        {{ column('properties.' + String(property_key, '')) }}::String as group_value,
+        {% end %}
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+        AND timestamp >= window_start
+        AND timestamp <= window_end
+        AND (
+            timestamp < full_hours_start
+            OR timestamp >= full_hours_end
+        )
+        {% if defined(customer_id) and String(customer_id, '') != '' %}
+        AND customer_id = {{ String(customer_id) }}
+        {% end %}
+        {% if defined(entity_id) and String(entity_id, '') != '' %}
+        AND entity_id = {{ String(entity_id) }}
+        {% end %}
+        {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_0, '')) }}::String = {{ String(filter_value_0, '') }}
+        {% end %}
+        {% if defined(filter_key_1) and String(filter_key_1, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_1, '')) }}::String = {{ String(filter_value_1, '') }}
+        {% end %}
+        {% if defined(filter_key_2) and String(filter_key_2, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_2, '')) }}::String = {{ String(filter_value_2, '') }}
+        {% end %}
+        {% if defined(filter_key_3) and String(filter_key_3, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_3, '')) }}::String = {{ String(filter_value_3, '') }}
+        {% end %}
+        {% if defined(filter_key_4) and String(filter_key_4, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_4, '')) }}::String = {{ String(filter_value_4, '') }}
+        {% end %}
+        {% if String(group_column, 'property') == 'entity_id' %}
+        AND entity_id IS NOT NULL AND entity_id != ''
+        {% elif String(group_column, 'property') == 'property' %}
+        AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
+        AND {{ column('properties.' + String(property_key, '')) }}::String != ''
+        {% end %}
+    GROUP BY period, event_name, group_value
+
+NODE base
+SQL >
+    SELECT
+        period,
+        event_name,
+        group_value,
+        sum(total_value) as total_value,
+        sum(event_count) as event_count
+    FROM (
+        SELECT period, event_name, group_value, total_value, event_count FROM rollup
+        UNION ALL
+        SELECT period, event_name, group_value, total_value, event_count FROM raw_edges
+    )
+    GROUP BY period, event_name, group_value
 
 NODE ranked
 SQL >
