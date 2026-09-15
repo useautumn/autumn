@@ -547,6 +547,13 @@
       "when": 1789415136700,
       "tag": "0077_big_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1789465281154,
+      "tag": "0078_amusing_zodiak",
+      "breakpoints": true
     }
   ]
 }
