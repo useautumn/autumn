@@ -30,8 +30,10 @@ afterEach(() => {
 
 const createFixture = ({
 	clockStatus = "advancing",
+	hasTestClock = true,
 }: {
 	clockStatus?: string;
+	hasTestClock?: boolean;
 } = {}) => {
 	const requests: { path: string; method: string; headers: Headers }[] = [];
 	const clockRead = Promise.withResolvers<void>();
@@ -56,7 +58,7 @@ const createFixture = ({
 								? {
 										id: "sub_sched_fixture",
 										object: "subscription_schedule",
-										test_clock: clock,
+										test_clock: hasTestClock ? clock : null,
 									}
 								: clock,
 						);
@@ -100,7 +102,7 @@ test("schedule release waits for clock readiness without sending rejected mutati
 		(value) => ({ value }),
 		(error) => ({ error }),
 	);
-	await Promise.race([fixture.clockRead, Bun.sleep(100)]);
+	await fixture.clockRead;
 	expect(
 		fixture.requests.filter((request) => request.method === "POST"),
 	).toHaveLength(0);
@@ -121,6 +123,7 @@ test("a failed clock prevents mutation and fails immediately", async () => {
 			{ timeout: 1000 },
 		),
 	).rejects.toThrow();
+	expect(fixture.requests).toHaveLength(1);
 	expect(
 		fixture.requests.filter((request) => request.method === "POST"),
 	).toHaveLength(0);
@@ -137,6 +140,7 @@ test("clock waiting consumes the existing deadline and never sends a late mutati
 			{ timeout: 80 },
 		),
 	).rejects.toThrow();
+	expect(fixture.requests).toHaveLength(1);
 	fixture.ready();
 	await Bun.sleep(100);
 	expect(
@@ -176,7 +180,7 @@ test("waiting schedules leave renewal invoice writes able to proceed", async () 
 			),
 	});
 	const outcome = waiting.catch((error) => error);
-	await Promise.race([fixture.clockRead, Bun.sleep(100)]);
+	await fixture.clockRead;
 	await withTwStripeWebhookPriority(() =>
 		fixture.client.invoiceItems.create({
 			customer: "cus_fixture",
@@ -184,13 +188,24 @@ test("waiting schedules leave renewal invoice writes able to proceed", async () 
 			currency: "usd",
 		}),
 	);
+	const cancelledAt = performance.now();
 	controller.abort(new Error("test finished"));
 	await outcome;
+	expect(performance.now() - cancelledAt).toBeLessThan(500);
 	expect(
 		fixture.requests
 			.filter((request) => request.method === "POST")
 			.map((request) => request.path),
 	).toEqual(["/v1/invoiceitems"]);
+});
+
+test("a schedule without a test clock needs no clock polling", async () => {
+	const fixture = createFixture({ clockStatus: "ready", hasTestClock: false });
+	await fixture.client.subscriptionSchedules.release("sub_sched_fixture");
+	expect(fixture.requests.map((request) => request.method)).toEqual([
+		"GET",
+		"POST",
+	]);
 });
 
 test("production and non-TW schedule mutations do not run readiness checks", async () => {
