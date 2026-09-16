@@ -1,15 +1,10 @@
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
-import {
-	migrationProgressDenominator,
-	migrationProgressPercent,
-} from "./migrationProgress";
+import { migrationProgress } from "./migrationProgress";
 
-const EASE_OUT = [0.32, 0.72, 0, 1] as const;
-const FILL_TRANSITION = { duration: 0.45, ease: EASE_OUT };
+const FILL_TRANSITION = { duration: 0.45, ease: [0.32, 0.72, 0, 1] as const };
 
-/** Reserved-height progress slot: the bar and its counts never change the
- * layout when a run starts, updates or finishes. */
+/** Reserved-height slot so count updates never shift the layout. */
 export function MigrationRunProgress({
 	completed,
 	running,
@@ -26,8 +21,11 @@ export function MigrationRunProgress({
 	active: boolean;
 }) {
 	const shouldReduceMotion = useReducedMotion();
-	const percent = migrationProgressPercent({ completed, total, expected });
-	const denominator = migrationProgressDenominator({ total, expected });
+	const { percent, denominator } = migrationProgress({
+		completed,
+		total,
+		expected,
+	});
 	const visible = active || completed > 0 || running > 0;
 
 	return (

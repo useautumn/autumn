@@ -40,8 +40,7 @@ const PreviewFilterBody = z.object({
 		.optional()
 		.default(DEFAULT_PAGE_SIZE),
 	migrationId: z.string().optional(),
-	/** "item_runs" pages the customers a live run claimed instead of the
-	 * live filter — the frozen list a migration shows once it has run. */
+	/** "item_runs" pages the customers a live run claimed instead of the filter. */
 	source: z.enum(["filter", "item_runs"]).optional().default("filter"),
 	executionStatuses: z
 		.array(

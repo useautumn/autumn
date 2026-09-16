@@ -72,7 +72,6 @@ export type BatchMigrationPageResult = {
 	/** Customers with no batch-eligible customer product — marked skipped;
 	 * retryable via retry_item_statuses through the per-customer lane. */
 	skipped: BatchMigrationPageCustomer[];
-	/** Why each skipped customer was skipped, keyed by internal customer id. */
 	skipReasons?: Record<string, MigrationItemRunSkipReason>;
 	/** Rows inserted this page, in patch order. */
 	insertedItems: BatchMigrationInsertedItem[];

@@ -27,6 +27,17 @@ export const ACTIVE_MIGRATION_RUN_STATUSES = [
 	MigrationRunStatus.Running,
 ] as const;
 
+/** Computed from migration_runs on read; never stored on the migration. */
+export const MigrationStatus = {
+	Draft: "draft",
+	Waiting: "waiting",
+	Running: "running",
+	Run: "run",
+} as const;
+
+export type MigrationStatus =
+	(typeof MigrationStatus)[keyof typeof MigrationStatus];
+
 export const migrationRuns = pgTable(
 	"migration_runs",
 	{

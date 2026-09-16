@@ -22,8 +22,7 @@ function isNoOpResponse(response: Record<string, unknown> | null): boolean {
 	);
 }
 
-/** Label for a skipped item. The stored skip_reason wins; rows written
- * before it existed fall back to sniffing an empty preview. */
+/** Rows written before skip_reason existed fall back to an empty-preview sniff. */
 export function skipBadgeSpec({
 	skipReason,
 	response,

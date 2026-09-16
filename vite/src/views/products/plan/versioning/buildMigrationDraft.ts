@@ -153,8 +153,6 @@ export type MigrationScope = "this_version" | "all_customers";
 
 export type VersionMigrateScope = "all" | number;
 
-/** The item diff from one source version to the latest, or undefined when
- * the versions already agree (or the products aren't loaded yet). */
 function versionCustomize({
 	fromProduct,
 	latestProduct,
@@ -174,9 +172,8 @@ function versionCustomize({
 	return Object.keys(diff).length > 0 ? diff : undefined;
 }
 
-/** Version transitions pair `version` with the from→to item diff so the
- * customer keeps their existing items and only the changed ones move;
- * `version` alone would replace every item with the target catalog. */
+/** Pairs `version` with the from→to item diff; `version` alone would replace
+ * every customer item with the target catalog. */
 export function buildVersionMigrationDraft({
 	productId,
 	latestVersion,
