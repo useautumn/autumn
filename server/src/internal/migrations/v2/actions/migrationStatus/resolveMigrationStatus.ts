@@ -21,7 +21,6 @@ export const resolveMigrationStatus = ({
 }: {
 	migrationInternalId: string;
 	runs: MigrationRun[];
-	/** Every queued/running run in the org and env, this migration's included. */
 	orgActiveRuns: MigrationRun[];
 	hasStartedRunAll?: boolean;
 }): {

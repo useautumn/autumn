@@ -26,7 +26,6 @@ export type MigrationPreviewCustomer = CustomerWithProducts & {
 	migration_item_run?: MigrationItemRun | null;
 };
 
-/** "item_runs" pages the customers a live run claimed instead of the filter. */
 export type MigrationPreviewSource = "filter" | "item_runs";
 
 type CustomerListFilters = {

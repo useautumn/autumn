@@ -28,7 +28,6 @@ const DEFAULT_PAGE_SIZE = 50;
 const PreviewFilterBody = z.object({
 	filter: CustomerFilterSchema.optional().default({}),
 	search: z.string().optional().default(""),
-	/** Only the list filters the preview query applies. */
 	customerFilters: CustomerListFiltersSchema.pick({
 		status: true,
 		version: true,
@@ -46,7 +45,6 @@ const PreviewFilterBody = z.object({
 		.optional()
 		.default(DEFAULT_PAGE_SIZE),
 	migrationId: z.string().optional(),
-	/** "item_runs" pages the customers a live run claimed instead of the filter. */
 	source: z.enum(["filter", "item_runs"]).optional().default("filter"),
 	executionStatuses: z
 		.array(

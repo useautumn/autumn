@@ -10,8 +10,6 @@ const ENTER_TRANSITION = { duration: 0.3, ease: EASE_OUT };
 const EXIT_TRANSITION = { duration: 0.25, ease: EASE_OUT, delay: 0.55 };
 const FILL_TRANSITION = { duration: 0.45, ease: EASE_OUT };
 
-/** Pinned to the page's footer slot while a run is active, mirroring the
- * customer export sheet. Renders inline when no slot is mounted. */
 export function MigrationRunProgress({
 	completed,
 	running,
@@ -28,7 +26,6 @@ export function MigrationRunProgress({
 	expected: number | null;
 	label: string;
 	active: boolean;
-	/** Pulses the bar while the run is queued behind another migration. */
 	waiting?: boolean;
 	slot?: HTMLElement | null;
 }) {

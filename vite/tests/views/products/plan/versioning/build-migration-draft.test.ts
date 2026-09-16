@@ -196,6 +196,10 @@ describe("buildVersionMigrationDraft", () => {
 			latestVersion: 3,
 			scope: "all",
 			pastVersions: [1, 2],
+			hasPricingChange: false,
+			latestProduct: undefined,
+			versionProducts: new Map(),
+			features: [],
 		});
 
 		expect(draft.filter.customer?.plan).toMatchObject({
@@ -221,6 +225,7 @@ describe("buildVersionMigrationDraft", () => {
 				[2, versionProduct(2)],
 			]),
 			features,
+			hasPricingChange: false,
 		});
 
 		const ops = (draft.operations.customer ?? []).filter(
@@ -250,6 +255,7 @@ describe("buildVersionMigrationDraft", () => {
 			latestProduct: versionProduct(3, [creditsItem]),
 			versionProducts: new Map([[2, versionProduct(2, [creditsItem])]]),
 			features,
+			hasPricingChange: false,
 		});
 
 		const op = firstUpdatePlan(draft);
@@ -264,6 +270,10 @@ describe("buildVersionMigrationDraft", () => {
 			scope: 2,
 			pastVersions: [1, 2],
 			includeCustom: true,
+			hasPricingChange: false,
+			latestProduct: undefined,
+			versionProducts: new Map(),
+			features: [],
 		});
 
 		expect(draft.filter.customer?.plan).toEqual({

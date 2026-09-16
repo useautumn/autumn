@@ -52,7 +52,6 @@ export function ItemEventStatusBadge({
 	status: MigrationItemEventStatus;
 	dryRun?: boolean;
 	response?: Record<string, unknown> | null;
-	/** From the item run row; falls back to the event response. */
 	skipReason?: MigrationItemRunSkipReason | null;
 }) {
 	if (status === "skipped") {

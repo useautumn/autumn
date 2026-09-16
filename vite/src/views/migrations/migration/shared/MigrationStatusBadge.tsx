@@ -32,7 +32,6 @@ export function MigrationStatusBadge({
 }: {
 	status: MigrationStatus;
 	blockedBy: string | null;
-	/** Off where the column is narrow; the tooltip still names the blocker. */
 	labelBlocker?: boolean;
 	className?: string;
 }) {

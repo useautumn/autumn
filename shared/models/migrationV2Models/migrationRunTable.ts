@@ -27,7 +27,6 @@ export const ACTIVE_MIGRATION_RUN_STATUSES = [
 	MigrationRunStatus.Running,
 ] as const;
 
-/** Computed from migration_runs on read; never stored on the migration. */
 export const MigrationStatus = {
 	Draft: "draft",
 	Waiting: "waiting",
@@ -81,7 +80,6 @@ export const migrationRuns = pgTable(
 		index("migration_runs_migration_internal_id_idx")
 			.on(table.migration_internal_id)
 			.concurrently(),
-		// Org-wide "who is running right now" for the computed migration status.
 		index("migration_runs_active_org_idx")
 			.on(table.org_id, table.env)
 			.where(sql`${table.status} IN ('queued', 'running')`)

@@ -11,7 +11,8 @@ export function runProgressLabel({
 }): string {
 	if (migrationStatus === "waiting")
 		return `Waiting for ${blockedBy ?? "another migration"}`;
-	return activeRun?.dry_run ? "Dry run in progress" : "Migrating customers";
+	if (!activeRun) return "Run complete";
+	return activeRun.dry_run ? "Dry run in progress" : "Migrating customers";
 }
 
 /** Claims land page by page, so `total` grows mid-run; the expected scope

@@ -12,7 +12,6 @@ const sourceVersions = (planFilter: UpdatePlanOp["plan_filter"]): number[] => {
 	return [];
 };
 
-/** "v2 → v3" when the op pins its source version(s), else "→ v3". */
 export function formatVersionTransition({
 	planFilter,
 	version,
