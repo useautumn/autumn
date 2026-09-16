@@ -54,7 +54,7 @@ const createInvoicePage = async ({
 				document.body.append(iframe);
 				iframe.onload = () => document.querySelector('button').disabled = false;
 			}, 200);
-			document.querySelector('button').onclick = () => document.querySelector('iframe').contentWindow.postMessage('pay', '*');
+			document.querySelector('button').onclick = () => document.querySelector('iframe[title]').contentWindow.postMessage('pay', '*');
 			window.addEventListener('message', async ({data}) => {
 				if (data !== 'submitted') return;
 				await fetch('/submitted');
