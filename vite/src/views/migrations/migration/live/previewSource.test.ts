@@ -1,9 +1,21 @@
 import { expect, test } from "bun:test";
 import { EXECUTION_STATUS_VALUES } from "./ExecutionStatusSubMenu";
 import {
+	effectiveExecutionStatuses,
 	executionStatusOptionsForSource,
 	previewSourceForStatus,
 } from "./previewSource";
+
+test("a selection carried into the frozen list drops the filter-only statuses", () => {
+	expect(
+		effectiveExecutionStatuses("item_runs", ["not_run", "queued", "skipped"]),
+	).toEqual(["skipped"]);
+	expect(effectiveExecutionStatuses("item_runs", ["not_run"])).toEqual([]);
+	expect(effectiveExecutionStatuses("filter", ["not_run", "skipped"])).toEqual([
+		"not_run",
+		"skipped",
+	]);
+});
 
 test("draft migrations preview the live filter", () => {
 	expect(previewSourceForStatus("draft")).toBe("filter");

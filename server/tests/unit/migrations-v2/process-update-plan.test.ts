@@ -67,13 +67,16 @@ await mockModuleWithRestore(
 		}) => {
 			state.projectedCustomers.push(projectedFullCustomer);
 			return {
-				billingContext: {
-					fullCustomer: projectedFullCustomer,
-				} as UpdateSubscriptionBillingContext,
-				params: {},
-				preparedIds: {
-					priceIds: new Set<string>(),
-					entitlementIds: new Set<string>(),
+				outcome: "ready" as const,
+				context: {
+					billingContext: {
+						fullCustomer: projectedFullCustomer,
+					} as UpdateSubscriptionBillingContext,
+					params: {},
+					preparedIds: {
+						priceIds: new Set<string>(),
+						entitlementIds: new Set<string>(),
+					},
 				},
 			};
 		},

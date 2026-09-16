@@ -1,6 +1,7 @@
-import type {
-	AutumnBillingPlan,
-	UpdateSubscriptionBillingContext,
+import {
+	type AutumnBillingPlan,
+	MigrationItemRunSkipReason,
+	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan.js";
@@ -66,7 +67,7 @@ export const processUpdatePlan = async ({
 	let unchangedCustomerProductCount = 0;
 
 	for (const customerProduct of matchedCustomerProducts) {
-		const productContext = await setupUpdatePlanProductContext({
+		const setup = await setupUpdatePlanProductContext({
 			ctx,
 			context,
 			op,
@@ -74,11 +75,13 @@ export const processUpdatePlan = async ({
 			projectedFullCustomer: nextProjectedFullCustomer,
 			customerProduct,
 		});
-		if (!productContext) {
+		if (setup.outcome === "skipped") {
 			matchedCustomerProductCount -= 1;
-			unchangedCustomerProductCount += 1;
+			if (setup.skipReason === MigrationItemRunSkipReason.NoUpdatesNeeded)
+				unchangedCustomerProductCount += 1;
 			continue;
 		}
+		const productContext = setup.context;
 
 		appendMigrationBillingLog({
 			ctx,

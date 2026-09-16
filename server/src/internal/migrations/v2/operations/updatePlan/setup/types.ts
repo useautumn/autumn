@@ -1,5 +1,6 @@
 import type {
 	FullCusProduct,
+	MigrationItemRunSkipReason,
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -11,3 +12,9 @@ export interface UpdatePlanProductContext {
 	billingContext: UpdateSubscriptionBillingContext;
 	preparedIds: PreparedUpdatePlanArtifactIds;
 }
+
+/** A matched customer product either gets a billing context or is skipped
+ * with the reason the item run will carry. */
+export type UpdatePlanProductSetup =
+	| { outcome: "ready"; context: UpdatePlanProductContext }
+	| { outcome: "skipped"; skipReason: MigrationItemRunSkipReason };
