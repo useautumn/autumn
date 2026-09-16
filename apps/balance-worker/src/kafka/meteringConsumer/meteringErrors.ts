@@ -86,3 +86,35 @@ export class StateBehindKafkaLogStartError extends Error {
 		this.logStartOffset = logStartOffset;
 	}
 }
+
+export class StateAheadOfKafkaLogEndError extends Error {
+	readonly retriable = false;
+	readonly storedNextOffset: bigint;
+	readonly logEndOffset: bigint;
+
+	constructor({
+		topic,
+		partition,
+		storedNextOffset,
+		logEndOffset,
+	}: {
+		topic: string;
+		partition: number;
+		storedNextOffset: bigint;
+		logEndOffset: bigint;
+	}) {
+		super(
+			`Stored state for ${topic}[${partition}] expects offset ${storedNextOffset}, but the Kafka log ends at ${logEndOffset}`,
+		);
+		this.name = "StateAheadOfKafkaLogEndError";
+		this.storedNextOffset = storedNextOffset;
+		this.logEndOffset = logEndOffset;
+	}
+}
+
+export class KafkaPartitionFollowerStoppedError extends Error {
+	constructor({ topic, partition }: { topic: string; partition: number }) {
+		super(`Kafka partition follower stopped for ${topic}[${partition}]`);
+		this.name = "KafkaPartitionFollowerStoppedError";
+	}
+}

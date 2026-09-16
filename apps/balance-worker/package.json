@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"test": "bun test --config ./bunfig.toml tests/unit",
+		"test:kafka": "bun test --config ./bunfig.toml --timeout 30000 tests/integration/kafka",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
 		"ts": "tsc --noEmit"
 	},
