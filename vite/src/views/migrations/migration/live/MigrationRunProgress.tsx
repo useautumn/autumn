@@ -53,6 +53,7 @@ export function MigrationRunProgress({
 			{active && (
 				<motion.output
 					key="migration-progress"
+					aria-live="off"
 					className="block overflow-hidden border-t bg-background"
 					initial={{ opacity: 0, height: 0 }}
 					animate={{ opacity: 1, height: "auto" }}
@@ -78,7 +79,7 @@ export function MigrationRunProgress({
 									<span
 										aria-hidden={running === 0}
 										className={cn(
-											"flex items-center gap-1.5 transition-opacity",
+											"flex items-center gap-1.5 transition-opacity duration-200 ease-out",
 											running > 0 ? "opacity-100" : "opacity-0",
 										)}
 									>
@@ -98,7 +99,14 @@ export function MigrationRunProgress({
 								</span>
 							</span>
 						</div>
-						<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+						<div
+							role="progressbar"
+							aria-label={label}
+							aria-valuemin={0}
+							aria-valuemax={denominator ?? undefined}
+							aria-valuenow={denominator === null ? undefined : completed}
+							className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+						>
 							<motion.div
 								className={cn(
 									"h-full rounded-full bg-primary",
