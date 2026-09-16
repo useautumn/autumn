@@ -5,7 +5,7 @@
  *
  * Both are dispatched back to back; the waiter must read `waiting` at some
  * point while the blocker's trigger run executes. Cloud workers run trigger
- * tasks inline with no queue, so there the test only proves both end `run`.
+ * tasks inline with no queue, so the test is skipped there.
  */
 
 import { test } from "bun:test";
@@ -39,77 +39,78 @@ const waitForRunFinished = async ({
 		},
 	});
 
-test(`${chalk.yellowBright("migration status contention: a Run All dispatched behind another migration waits, then runs")}`, async () => {
-	const customerId = "mig-status-contention";
-	const blockerId = `${customerId}-blocker`;
-	const waiterId = `${customerId}-waiter`;
-	const blockedCustomerIds = Array.from(
-		{ length: 12 },
-		(_, index) => `${customerId}-${index}`,
-	);
-	const plan = products.base({
-		id: `${customerId}-plan`,
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
+test.skipIf(shouldRunTriggerTasksInline())(
+	`${chalk.yellowBright("migration status contention: a Run All dispatched behind another migration waits, then runs")}`,
+	async () => {
+		const customerId = "mig-status-contention";
+		const blockerId = `${customerId}-blocker`;
+		const waiterId = `${customerId}-waiter`;
+		const blockedCustomerIds = Array.from(
+			{ length: 12 },
+			(_, index) => `${customerId}-${index}`,
+		);
+		const plan = products.base({
+			id: `${customerId}-plan`,
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
 
-	const { autumnV1, autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false }),
-			s.otherCustomers(blockedCustomerIds.map((id) => ({ id }))),
-			s.products({ list: [plan] }),
-		],
-		actions: [
-			s.billing.attach({ productId: plan.id }),
-			...blockedCustomerIds.map((id) =>
-				s.billing.attach({ customerId: id, productId: plan.id }),
-			),
-		],
-	});
-	await autumnV1.products.update(plan.id, {
-		items: [items.monthlyMessages({ includedUsage: 200 })],
-	});
-
-	await clearMigrationRunHistory({ ctx, migrationId: blockerId });
-	await clearMigrationRunHistory({ ctx, migrationId: waiterId });
-	await autumnV2_2.migrationsV2.deleteAndCreate({
-		id: blockerId,
-		filter: { customer: { plan: { plan_id: plan.id } } },
-		operations: {
-			customer: [
-				{
-					type: "update_plan",
-					plan_filter: { plan_id: plan.id },
-					version: 2,
-				},
+		const { autumnV1, autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.otherCustomers(blockedCustomerIds.map((id) => ({ id }))),
+				s.products({ list: [plan] }),
 			],
-		},
-		no_billing_changes: true,
-	});
-	await autumnV2_2.migrationsV2.deleteAndCreate({
-		id: waiterId,
-		filter: { customer: { plan: { plan_id: plan.id } } },
-		operations: {
-			customer: [
-				{
-					type: "update_plan",
-					plan_filter: { plan_id: plan.id },
-					customize: { add_items: [{ feature_id: "dashboard" }] },
-				},
+			actions: [
+				s.billing.attach({ productId: plan.id }),
+				...blockedCustomerIds.map((id) =>
+					s.billing.attach({ customerId: id, productId: plan.id }),
+				),
 			],
-		},
-		no_billing_changes: true,
-	});
+		});
+		await autumnV1.products.update(plan.id, {
+			items: [items.monthlyMessages({ includedUsage: 200 })],
+		});
 
-	const blockerRun = await autumnV2_2.migrationsV2.run({
-		id: blockerId,
-		dry_run: false,
-	});
-	const waiterRun = await autumnV2_2.migrationsV2.run({
-		id: waiterId,
-		dry_run: false,
-	});
-	if (!shouldRunTriggerTasksInline()) {
+		await clearMigrationRunHistory({ ctx, migrationId: blockerId });
+		await clearMigrationRunHistory({ ctx, migrationId: waiterId });
+		await autumnV2_2.migrationsV2.deleteAndCreate({
+			id: blockerId,
+			filter: { customer: { plan: { plan_id: plan.id } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: plan.id },
+						version: 2,
+					},
+				],
+			},
+			no_billing_changes: true,
+		});
+		await autumnV2_2.migrationsV2.deleteAndCreate({
+			id: waiterId,
+			filter: { customer: { plan: { plan_id: plan.id } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: plan.id },
+						customize: { add_items: [{ feature_id: "dashboard" }] },
+					},
+				],
+			},
+			no_billing_changes: true,
+		});
+
+		const blockerRun = await autumnV2_2.migrationsV2.run({
+			id: blockerId,
+			dry_run: false,
+		});
+		const waiterRun = await autumnV2_2.migrationsV2.run({
+			id: waiterId,
+			dry_run: false,
+		});
 		await waitForMigrationResult({
 			timeoutMs: 30_000,
 			pollIntervalMs: 200,
@@ -121,20 +122,20 @@ test(`${chalk.yellowBright("migration status contention: a Run All dispatched be
 					blockedBy: blockerId,
 				}),
 		});
-	}
 
-	await waitForRunFinished({ ctx, runId: blockerRun.run_id });
-	await waitForRunFinished({ ctx, runId: waiterRun.run_id });
-	await expectMigrationStatusCorrect({
-		autumn: autumnV2_2,
-		migrationId: blockerId,
-		status: "run",
-		blockedBy: null,
-	});
-	await expectMigrationStatusCorrect({
-		autumn: autumnV2_2,
-		migrationId: waiterId,
-		status: "run",
-		blockedBy: null,
-	});
-});
+		await waitForRunFinished({ ctx, runId: blockerRun.run_id });
+		await waitForRunFinished({ ctx, runId: waiterRun.run_id });
+		await expectMigrationStatusCorrect({
+			autumn: autumnV2_2,
+			migrationId: blockerId,
+			status: "run",
+			blockedBy: null,
+		});
+		await expectMigrationStatusCorrect({
+			autumn: autumnV2_2,
+			migrationId: waiterId,
+			status: "run",
+			blockedBy: null,
+		});
+	},
+);
