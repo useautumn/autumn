@@ -133,6 +133,7 @@ export const trackOutcomeSchema = z
 		revisionAfter: z.number().int().positive(),
 		mutations: z.array(balanceMutationSchema),
 		occurredAt: z.number().int().nonnegative(),
+		deduplicationExpiresAt: z.number().int().nonnegative(),
 	})
 	.strict()
 	.superRefine((outcome, context) => {
@@ -331,6 +332,53 @@ export const customerMeteringStateSchema = z
 	.strict();
 
 export type CustomerMeteringState = z.infer<typeof customerMeteringStateSchema>;
+
+export const stateInitializedEventSchema = z
+	.object({
+		schemaVersion: z.literal(1),
+		type: z.literal("state_initialized"),
+		initializationId: nonEmptyStringSchema,
+		initializedAt: z.number().int().nonnegative(),
+		state: customerMeteringStateSchema,
+	})
+	.strict()
+	.superRefine(({ state }, context) => {
+		if (state.revision !== 0) {
+			context.addIssue({
+				code: "custom",
+				message: "Initial metering state must start at revision zero",
+				path: ["state", "revision"],
+			});
+		}
+	});
+
+export type StateInitializedEvent = z.infer<typeof stateInitializedEventSchema>;
+
+export const stateInitializationFingerprintOf = ({
+	initialization,
+}: {
+	initialization: StateInitializedEvent;
+}): string => {
+	const state = {
+		...initialization.state,
+		featureStatesById: Object.fromEntries(
+			Object.entries(initialization.state.featureStatesById).map(
+				([featureId, featureState]) => [
+					featureId,
+					{
+						...featureState,
+						customerEntitlements: [...featureState.customerEntitlements].sort(
+							({ id: left }, { id: right }) =>
+								left < right ? -1 : left > right ? 1 : 0,
+						),
+					},
+				],
+			),
+		),
+	};
+
+	return JSON.stringify(canonicalizeJsonValue(state));
+};
 
 export type UnsupportedDecisionReason =
 	| "command_conflict"

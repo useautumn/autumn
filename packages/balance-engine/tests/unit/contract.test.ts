@@ -2,13 +2,15 @@ import { describe, expect, test } from "bun:test";
 import * as balanceEngine from "../../src/balanceEngine.js";
 import {
 	computeCheck,
-	computeTrack,
+	computeTrack as computeTrackOutcome,
 	createCustomerMeteringState,
 	executeTrack,
 	parseCheckCommand,
 	parseCustomerMeteringState,
+	parseStateInitializedEvent,
 	parseTrackCommand,
 	parseTrackOutcome,
+	stateInitializationFingerprintOf,
 } from "../../src/balanceEngine.js";
 
 const identity = {
@@ -16,6 +18,15 @@ const identity = {
 	env: "sandbox",
 	customerId: "cus_1",
 } as const;
+
+const defaultDeduplicationExpiresAt = 1_700_086_400_000;
+
+const computeTrack = ({
+	deduplicationExpiresAt = defaultDeduplicationExpiresAt,
+	...input
+}: Omit<Parameters<typeof computeTrackOutcome>[0], "deduplicationExpiresAt"> & {
+	deduplicationExpiresAt?: number;
+}) => computeTrackOutcome({ ...input, deduplicationExpiresAt });
 
 const createState = ({ balance = 10 }: { balance?: number } = {}) =>
 	createCustomerMeteringState({
@@ -82,6 +93,20 @@ const requireNewOutcome = (decision: ReturnType<typeof computeTrack>) => {
 };
 
 describe("balance engine contract boundaries", () => {
+	test("keeps receipt-retention policy out of caller track commands", () => {
+		const input: Record<string, unknown> = { ...createTrackCommand() };
+
+		expect(() => parseTrackCommand({ input })).not.toThrow();
+		expect(() =>
+			parseTrackCommand({
+				input: {
+					...input,
+					deduplicationExpiresAt: 1_700_086_400_000,
+				},
+			}),
+		).toThrow();
+	});
+
 	test("names property-sensitive commands as unsupported", () => {
 		expect(
 			computeTrack({
@@ -121,6 +146,96 @@ describe("balance engine contract boundaries", () => {
 				}),
 			}),
 		).toEqual({ kind: "duplicate", outcome });
+	});
+
+	test("carries the resolved deduplication deadline without changing command identity", () => {
+		const state = createState();
+		const outcome = requireNewOutcome(
+			computeTrack({
+				state,
+				command: createTrackCommand(),
+				deduplicationExpiresAt: 1_700_086_400_000,
+			}),
+		);
+		const appliedState = executeTrack({ state, outcome }).state;
+
+		expect(outcome.deduplicationExpiresAt).toBe(1_700_086_400_000);
+		expect(
+			computeTrack({
+				state: appliedState,
+				existingReceipt: outcome,
+				command: createTrackCommand({ requestId: "req_2" }),
+				deduplicationExpiresAt: 1_700_086_400_001,
+			}),
+		).toEqual({ kind: "duplicate", outcome });
+	});
+
+	test("validates a versioned initial-state event", () => {
+		const event = parseStateInitializedEvent({
+			input: {
+				schemaVersion: 1,
+				type: "state_initialized",
+				initializationId: "init_1",
+				initializedAt: 1_700_000_000_000,
+				state: createState(),
+			},
+		});
+
+		expect(event.state.revision).toBe(0);
+		expect(() =>
+			parseStateInitializedEvent({
+				input: {
+					...event,
+					state: { ...event.state, revision: 1 },
+				},
+			}),
+		).toThrow();
+	});
+
+	test("fingerprints the complete state independent of entitlement order", () => {
+		const state = createCustomerMeteringState({
+			identity,
+			featureStatesById: {
+				messages: {
+					kind: "direct_metered_v1",
+					customerEntitlements: [
+						{ id: "messages_monthly", balance: 10, usage: 0 },
+						{ id: "messages_rollover", balance: 5, usage: 2 },
+					],
+				},
+			},
+		});
+		const initialization = parseStateInitializedEvent({
+			input: {
+				schemaVersion: 1,
+				type: "state_initialized",
+				initializationId: "init_1",
+				initializedAt: 1_700_000_000_000,
+				state,
+			},
+		});
+		const reorderedInitialization = parseStateInitializedEvent({
+			input: {
+				...initialization,
+				state: {
+					...state,
+					featureStatesById: {
+						messages: {
+							...state.featureStatesById.messages,
+							customerEntitlements: [
+								...state.featureStatesById.messages.customerEntitlements,
+							].reverse(),
+						},
+					},
+				},
+			},
+		});
+
+		expect(stateInitializationFingerprintOf({ initialization })).toBe(
+			stateInitializationFingerprintOf({
+				initialization: reorderedInitialization,
+			}),
+		);
 	});
 
 	test("rejects outcomes whose metadata contradicts their mutations", () => {

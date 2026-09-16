@@ -19,6 +19,35 @@ const timings = {
 } satisfies KafkaBalanceWorkerTimings;
 
 describe("Kafka owned partition runtime factory", () => {
+	test("rejects invalid receipt retention before accepting assignments", () => {
+		const fixture = createStoreFixture();
+		try {
+			expect(() =>
+				createKafkaOwnedPartitionRuntimeFactory({
+					kafka: { producer: () => ({}) as OwnedPartitionProducerPort },
+					deploymentEnvironment: "staging",
+					stateStore: fixture.store,
+					partitionResolver: { partitionForIdentity: () => 0 },
+					writerLimits: {
+						maxBatchSize: 100,
+						maxPendingCommands: 1_000,
+						maxPendingCommandsPerCustomer: 100,
+					},
+					trackReceiptRetentionMs: 0,
+					producerLimits: {
+						transactionTimeoutMs: 15_000,
+						retryCount: 3,
+						initialRetryTimeMs: 100,
+						maxRetryTimeMs: 2_000,
+					},
+					timings,
+				}),
+			).toThrow("trackReceiptRetentionMs must be a positive safe integer");
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("creates each assigned runtime with its partition-scoped producer", () => {
 		const fixture = createStoreFixture();
 		try {
@@ -39,6 +68,7 @@ describe("Kafka owned partition runtime factory", () => {
 					maxPendingCommands: 1_000,
 					maxPendingCommandsPerCustomer: 100,
 				},
+				trackReceiptRetentionMs: 86_400_000,
 				producerLimits: {
 					transactionTimeoutMs: 15_000,
 					retryCount: 3,
