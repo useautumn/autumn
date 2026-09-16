@@ -19,6 +19,7 @@
 
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { TW_STRIPE_IDEMPOTENCY_NAMESPACE_FILE } from "@server/external/connect/clientCache/getTwStripeRequestHeaders.js";
 import { spawn } from "bun";
 import chalk from "chalk";
 import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
@@ -69,6 +70,10 @@ const main = async (): Promise<void> => {
 		throw new Error(
 			"[tw-fsboot] STRIPE_SANDBOX_SECRET_KEY is required — this worker's pool key",
 		);
+	}
+	const stripeNamespace = process.env.TW_STRIPE_IDEMPOTENCY_NAMESPACE;
+	if (!stripeNamespace) {
+		throw new Error("[tw-fsboot] TW_STRIPE_IDEMPOTENCY_NAMESPACE is required");
 	}
 
 	// Stale snapshot → fast-forward in place: the orchestrator already checked
@@ -123,6 +128,7 @@ const main = async (): Promise<void> => {
 
 	// 4. The running server picks this up per-request (initMasterStripe seam).
 	mkdirSync(dirname(TW_WORKER_STRIPE_KEY_FILE), { recursive: true });
+	writeFileSync(TW_STRIPE_IDEMPOTENCY_NAMESPACE_FILE, stripeNamespace);
 	writeFileSync(TW_WORKER_STRIPE_KEY_FILE, stripeKey);
 	chmodSync(TW_WORKER_STRIPE_KEY_FILE, 0o600);
 	log("per-worker Stripe pool key written");

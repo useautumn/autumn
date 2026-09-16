@@ -3,6 +3,8 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { StripeSubscriptionUpdatedContext } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
+import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
@@ -11,6 +13,7 @@ const state = {
 	flushBalances: undefined as boolean | undefined,
 	handlerRuns: 0,
 	preservePublishedSubject: false,
+	handlerResult: undefined as StripeWebhookContext["handlerResult"],
 };
 
 await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
@@ -30,9 +33,14 @@ await mockModuleWithRestore(
 await mockModuleWithRestore(
 	"@/external/stripe/runStripeWebhookHandlers.js",
 	() => ({
-		runStripeWebhookHandlers: async ({ ctx }: { ctx: AutumnContext }) => {
+		runStripeWebhookHandlers: async ({
+			ctx,
+		}: {
+			ctx: StripeWebhookContext;
+		}) => {
 			state.handlerRuns++;
 			ctx.skipSubjectCacheDeletion = state.preservePublishedSubject;
+			ctx.handlerResult = state.handlerResult;
 		},
 	}),
 );
@@ -72,6 +80,7 @@ beforeEach(() => {
 	state.flushBalances = undefined;
 	state.handlerRuns = 0;
 	state.preservePublishedSubject = false;
+	state.handlerResult = undefined;
 });
 
 test("preserves a FullSubject published while replaying the webhook", async () => {
@@ -137,3 +146,41 @@ test("keeps the normal replay cleanup when nothing published a subject", async (
 	expect(state.cacheDeletions).toBe(1);
 	expect(state.flushBalances).toBe(true);
 });
+
+test.each([false, true])(
+	"replay uses the final subscription context; changed=%s",
+	async (changed) => {
+		state.handlerResult = {
+			type: "customer.subscription.updated",
+			context: {
+				updatedCustomerProducts: [],
+				insertedCustomerProducts: [],
+				deletedCustomerProducts: [],
+				results: { errors: [], ...(changed ? { subscription: null } : {}) },
+			} as unknown as StripeSubscriptionUpdatedContext,
+		};
+		const ctx = {
+			org: { id: "org_test" },
+			env: AppEnv.Sandbox,
+			logger: { info: () => {} },
+		} as unknown as AutumnContext;
+		const stripeEvent = {
+			id: "evt_test",
+			type: "customer.subscription.updated",
+			request: { id: "req_test", idempotency_key: "autumn:billing:test" },
+			data: { object: {} },
+		} as Stripe.Event;
+		await runStripeWebhookReplay({
+			ctx,
+			payload: {
+				orgId: ctx.org.id,
+				env: ctx.env,
+				stripeEvent,
+				failedAt: Date.now(),
+				failureReason: "test replay",
+			},
+		});
+		expect(state.handlerRuns).toBe(1);
+		expect(state.cacheDeletions).toBe(changed ? 1 : 0);
+	},
+);

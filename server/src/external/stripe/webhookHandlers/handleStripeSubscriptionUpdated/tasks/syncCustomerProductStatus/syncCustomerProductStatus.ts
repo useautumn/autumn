@@ -23,9 +23,9 @@ import type {
 } from "../../stripeSubscriptionUpdatedContext";
 import { fixUnexpectedStatuses } from "./fixUnexpectedStatuses";
 
-const isManualBillingUpdateInvoice = (
-	invoice: { metadata?: Record<string, string> | null },
-) =>
+const isManualBillingUpdateInvoice = (invoice: {
+	metadata?: Record<string, string> | null;
+}) =>
 	invoice.metadata?.autumn_billing_update &&
 	invoice.metadata?.autumn_invoice_mode !== "true";
 
@@ -197,12 +197,13 @@ export const syncCustomerProductStatus = async ({
 	}
 
 	// Safety net: fix any customer products with unexpected statuses
-	await fixUnexpectedStatuses({
-		ctx,
-		stripeSubscription,
-		fullCustomer,
-		autumnStatus,
-		trialEndsAt,
-		collectionMethod,
-	});
+	subscriptionUpdatedContext.results.repairedCustomerProducts =
+		await fixUnexpectedStatuses({
+			ctx,
+			stripeSubscription,
+			fullCustomer,
+			autumnStatus,
+			trialEndsAt,
+			collectionMethod,
+		});
 };

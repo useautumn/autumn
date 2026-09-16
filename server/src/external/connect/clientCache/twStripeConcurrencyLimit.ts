@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
+import { getTwStripeRequestHeaders } from "./getTwStripeRequestHeaders";
 import { waitForTwStripeScheduleClock } from "./twStripeClock/waitForTwStripeScheduleClock";
 import { createTwStripeRequestDeadline } from "./twStripeLimiter/createTwStripeRequestDeadline";
 import { readTwStripeRateLimitCode } from "./twStripeLimiter/readTwStripeRateLimitCode";
@@ -29,6 +30,9 @@ export const applyTwStripeConcurrencyLimit = ({
 
 	httpClient.makeRequest = async (...args: MakeRequestArgs) => {
 		if (!isTwWorkerMode()) return originalMakeRequest(...args);
+		args[4] = getTwStripeRequestHeaders({
+			headers: args[4] as Record<string, string>,
+		});
 		const deadline =
 			getTwStripeRequestDeadline() ??
 			createTwStripeRequestDeadline({ timeoutMs: args[7] });

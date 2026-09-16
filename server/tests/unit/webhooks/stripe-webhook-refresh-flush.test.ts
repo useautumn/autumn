@@ -2,6 +2,7 @@
 
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { Hono } from "hono";
+import type { StripeSubscriptionUpdatedContext } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,
@@ -26,9 +27,15 @@ const { stripeWebhookRefreshMiddleware } = await import(
 const postWebhook = async ({
 	eventType,
 	billingReason,
+	idempotencyKey,
+	preserveCache = false,
+	finalContext,
 }: {
 	eventType: string;
 	billingReason?: string;
+	idempotencyKey?: string;
+	preserveCache?: boolean;
+	finalContext?: StripeSubscriptionUpdatedContext;
 }) => {
 	deleteCalls.length = 0;
 
@@ -38,6 +45,9 @@ const postWebhook = async ({
 			fullCustomer: { id: "cus_remy" },
 			stripeEvent: {
 				type: eventType,
+				request: idempotencyKey
+					? { id: "req_autumn", idempotency_key: idempotencyKey }
+					: null,
 				data: {
 					object: {
 						customer: "cus_stripe",
@@ -54,7 +64,16 @@ const postWebhook = async ({
 		await next();
 	});
 	app.use("*", stripeWebhookRefreshMiddleware);
-	app.post("/", (c) => c.json({ received: true }));
+	app.post("/", (c) => {
+		c.get("ctx").skipSubjectCacheDeletion = preserveCache;
+		if (finalContext) {
+			c.get("ctx").handlerResult = {
+				type: "customer.subscription.updated",
+				context: finalContext,
+			};
+		}
+		return c.json({ received: true });
+	});
 
 	return app.request("http://localhost/", { method: "POST" });
 };
@@ -85,6 +104,69 @@ describe("stripe webhook cache refresh flush", () => {
 
 		expect(response.status).toBe(200);
 		expect(deleteCalls).toHaveLength(0);
+	});
+
+	test("refreshes Autumn-originated subscription updates without a completed handler result", async () => {
+		const response = await postWebhook({
+			eventType: "customer.subscription.updated",
+			idempotencyKey: "autumn:track:test",
+		});
+
+		expect(response.status).toBe(200);
+		expect(deleteCalls).toHaveLength(1);
+		expect(deleteCalls[0]?.flushBalances).toBe(true);
+	});
+
+	test("skips refresh based on the final subscription context", async () => {
+		const response = await postWebhook({
+			eventType: "customer.subscription.updated",
+			idempotencyKey: "autumn:track:test",
+			finalContext: {
+				updatedCustomerProducts: [],
+				insertedCustomerProducts: [],
+				deletedCustomerProducts: [],
+				results: { errors: [] },
+			} as unknown as StripeSubscriptionUpdatedContext,
+		});
+
+		expect(response.status).toBe(200);
+		expect(deleteCalls).toHaveLength(0);
+	});
+
+	test("refreshes when the final subscription context records an uncertain result", async () => {
+		await postWebhook({
+			eventType: "customer.subscription.updated",
+			idempotencyKey: "autumn:track:test",
+			finalContext: {
+				updatedCustomerProducts: [],
+				insertedCustomerProducts: [],
+				deletedCustomerProducts: [],
+				results: { errors: [], subscription: null },
+			} as unknown as StripeSubscriptionUpdatedContext,
+		});
+		expect(deleteCalls).toHaveLength(1);
+	});
+
+	test("still honors a cache published by the handler", async () => {
+		await postWebhook({
+			eventType: "checkout.session.completed",
+			preserveCache: true,
+		});
+		expect(deleteCalls).toHaveLength(0);
+	});
+
+	test("does not use a subscription-update result for another event type", async () => {
+		await postWebhook({
+			eventType: "customer.subscription.created",
+			idempotencyKey: "autumn:billing:test",
+			finalContext: {
+				updatedCustomerProducts: [],
+				insertedCustomerProducts: [],
+				deletedCustomerProducts: [],
+				results: { errors: [] },
+			} as unknown as StripeSubscriptionUpdatedContext,
+		});
+		expect(deleteCalls).toHaveLength(1);
 	});
 });
 

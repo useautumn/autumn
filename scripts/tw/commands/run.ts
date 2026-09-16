@@ -586,6 +586,8 @@ const buildWorkerEnv = ({
 		// Workers have no trigger.dev key: migrations run inline in-process
 		// (shouldRunMigrationInline) instead of via the durable layer.
 		TW_WORKER_MODE: "1",
+		// Reused Stripe accounts retain idempotency responses from earlier cloned databases.
+		TW_STRIPE_IDEMPOTENCY_NAMESPACE: crypto.randomUUID(),
 		// All processes share the same allocation through this worker's Redis.
 		TW_STRIPE_REDIS_URL: REDIS_URL,
 		TW_STRIPE_MAX_RPS: String(stripeBudget.maxRps),

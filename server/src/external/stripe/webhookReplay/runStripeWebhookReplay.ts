@@ -13,6 +13,7 @@ import {
 import { syncStripeEventToSyncDb } from "../webhookMiddlewares/stripeSyncMiddleware.js";
 import { attachStripeEventCustomer } from "../webhookMiddlewares/stripeToAutumnCustomerMiddleware.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
+import { shouldRefreshAfterWebhookHandler } from "../webhookMiddlewares/stripeWebhookRefreshMiddleware";
 import { STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS } from "./stripeWebhookErrorWouldRedeliver.js";
 
 export type StripeWebhookReplayPayload = {
@@ -91,7 +92,10 @@ export const runStripeWebhookReplay = async ({
 	if (claim === "claimed") await completeStripeWebhookEvent({ eventKey });
 
 	// Post-processing mirrors the route's refresh + sync middlewares (best-effort).
-	if (routedCtx.fullCustomer?.id && !routedCtx.skipSubjectCacheDeletion) {
+	if (
+		routedCtx.fullCustomer?.id &&
+		shouldRefreshAfterWebhookHandler({ ctx: routedCtx })
+	) {
 		await tryCatch(
 			deleteCachedFullCustomer({
 				customerId: routedCtx.fullCustomer.id,

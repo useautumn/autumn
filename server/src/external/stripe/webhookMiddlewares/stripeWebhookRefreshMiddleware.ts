@@ -1,4 +1,5 @@
 import type { Context, Next } from "hono";
+import { shouldPreserveSubscriptionUpdateCache } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/shouldPreserveSubscriptionUpdateCache";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type {
 	StripeWebhookContext,
@@ -28,6 +29,26 @@ const updateInvoiceEvents = [
 	"invoice.created",
 	"invoice.finalized",
 ];
+
+export const shouldRefreshAfterWebhookHandler = ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}): boolean => {
+	if (ctx.skipSubjectCacheDeletion) return false;
+
+	const { stripeEvent, handlerResult } = ctx;
+	switch (stripeEvent?.type) {
+		case "customer.subscription.updated":
+			if (handlerResult?.type !== stripeEvent.type) return true;
+			return !shouldPreserveSubscriptionUpdateCache({
+				event: stripeEvent,
+				eventContext: handlerResult.context,
+			});
+		default:
+			return true;
+	}
+};
 
 export const shouldSkipWebhookRefresh = ({
 	ctx,
@@ -70,7 +91,7 @@ export const stripeWebhookRefreshMiddleware = async (
 	const { logger, stripeEvent } = ctx;
 
 	if (!stripeEvent) return;
-	if (ctx.skipSubjectCacheDeletion) return;
+	if (!shouldRefreshAfterWebhookHandler({ ctx })) return;
 
 	const eventType = stripeEvent.type;
 	const data = stripeEvent.data;

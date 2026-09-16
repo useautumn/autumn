@@ -29,7 +29,7 @@ export const fixUnexpectedStatuses = async ({
 }) => {
 	const { db, logger, org, env } = ctx;
 
-	await CusProductService.updateByStripeSubId({
+	return await CusProductService.updateByStripeSubId({
 		db,
 		stripeSubId: stripeSubscription.id,
 		notInStatuses: ALL_STATUSES,
