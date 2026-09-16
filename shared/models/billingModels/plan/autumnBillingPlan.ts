@@ -12,6 +12,7 @@ import {
 	FreeTrialSchema,
 	FullCusProductSchema,
 	FullCustomerEntitlementSchema,
+	FullCustomerLicenseSchema,
 	FullCustomerPriceSchema,
 	type InsertInvoice,
 	PriceSchema,
@@ -80,6 +81,7 @@ export const PatchCustomerProductSchema = z.object({
 	customerProduct: FullCusProductSchema,
 	insertCustomerEntitlements: z.array(FullCustomerEntitlementSchema),
 	insertCustomerPrices: z.array(FullCustomerPriceSchema),
+	insertCustomerLicenses: z.array(FullCustomerLicenseSchema).optional(),
 	deleteCustomerEntitlements: z.array(FullCustomerEntitlementSchema),
 	deleteCustomerPrices: z.array(FullCustomerPriceSchema),
 });
