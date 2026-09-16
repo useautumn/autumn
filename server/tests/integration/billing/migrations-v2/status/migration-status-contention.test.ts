@@ -4,7 +4,8 @@
  * (blocked_by the first) until the first finishes executing, then runs.
  *
  * Both are dispatched back to back; the waiter must read `waiting` at some
- * point while the blocker's trigger run executes.
+ * point while the blocker's trigger run executes. Cloud workers run trigger
+ * tasks inline with no queue, so there the test only proves both end `run`.
  */
 
 import { test } from "bun:test";
@@ -14,6 +15,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrationRunRepo } from "@/internal/migrations/v2/repos/index.js";
+import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
 import { expectMigrationStatusCorrect } from "../utils/expectMigrationStatusCorrect.js";
 import { clearMigrationRunHistory } from "../utils/runChunkedMigration.js";
 import { waitForMigrationResult } from "../utils/runUpdatePlanMigration.js";
@@ -107,17 +109,19 @@ test(`${chalk.yellowBright("migration status contention: a Run All dispatched be
 		id: waiterId,
 		dry_run: false,
 	});
-	await waitForMigrationResult({
-		timeoutMs: 30_000,
-		pollIntervalMs: 200,
-		waitFor: () =>
-			expectMigrationStatusCorrect({
-				autumn: autumnV2_2,
-				migrationId: waiterId,
-				status: "waiting",
-				blockedBy: blockerId,
-			}),
-	});
+	if (!shouldRunTriggerTasksInline()) {
+		await waitForMigrationResult({
+			timeoutMs: 30_000,
+			pollIntervalMs: 200,
+			waitFor: () =>
+				expectMigrationStatusCorrect({
+					autumn: autumnV2_2,
+					migrationId: waiterId,
+					status: "waiting",
+					blockedBy: blockerId,
+				}),
+		});
+	}
 
 	await waitForRunFinished({ ctx, runId: blockerRun.run_id });
 	await waitForRunFinished({ ctx, runId: waiterRun.run_id });
