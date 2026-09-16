@@ -5,20 +5,18 @@ import { MigrationStatusBadge } from "./MigrationStatusBadge";
 const render = (props: Parameters<typeof MigrationStatusBadge>[0]) =>
 	renderToStaticMarkup(<MigrationStatusBadge {...props} />);
 
-test("running and waiting badges carry the live dot", () => {
+test("each status renders its label with a filled icon and its own tone", () => {
 	const running = render({ status: "running", blockedBy: null });
 	expect(running).toContain("Running");
-	expect(running).toContain("animate-ping");
+	expect(running).toContain("text-green-500");
 
 	const waiting = render({ status: "waiting", blockedBy: "pro-v3" });
 	expect(waiting).toContain("Waiting on pro-v3");
-	expect(waiting).toContain("animate-ping");
-});
+	expect(waiting).toContain("text-yellow-500");
 
-test("draft and run badges are static", () => {
+	expect(render({ status: "run", blockedBy: null })).toContain("text-blue-500");
 	expect(render({ status: "draft", blockedBy: null })).toContain("Draft");
-	expect(render({ status: "draft", blockedBy: null })).not.toContain(
-		"animate-ping",
-	);
-	expect(render({ status: "run", blockedBy: null })).toContain(">Run<");
+	for (const status of ["draft", "waiting", "running", "run"] as const) {
+		expect(render({ status, blockedBy: null })).toContain("<svg");
+	}
 });

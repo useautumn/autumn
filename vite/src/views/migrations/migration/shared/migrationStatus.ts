@@ -2,8 +2,7 @@ import type { MigrationStatus } from "@autumn/shared";
 
 export type MigrationStatusBadgeSpec = {
 	label: string;
-	tone: "muted" | "active" | "done";
-	live: boolean;
+	tone: "draft" | "waiting" | "running" | "run";
 };
 
 export function runButtonLabel(status: MigrationStatus): string {
@@ -25,14 +24,13 @@ export function statusBadge({
 		case "waiting":
 			return {
 				label: blockedBy ? `Waiting on ${blockedBy}` : "Waiting",
-				tone: "active",
-				live: true,
+				tone: "waiting",
 			};
 		case "running":
-			return { label: "Running", tone: "active", live: true };
+			return { label: "Running", tone: "running" };
 		case "run":
-			return { label: "Run", tone: "done", live: false };
+			return { label: "Run", tone: "run" };
 		default:
-			return { label: "Draft", tone: "muted", live: false };
+			return { label: "Draft", tone: "draft" };
 	}
 }

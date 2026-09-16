@@ -18,8 +18,7 @@ test("run button is disabled while a Run All is queued or executing", () => {
 test("status badge names the blocking migration while waiting", () => {
 	expect(statusBadge({ status: "waiting", blockedBy: "pro-v3" })).toEqual({
 		label: "Waiting on pro-v3",
-		tone: "active",
-		live: true,
+		tone: "waiting",
 	});
 	expect(statusBadge({ status: "waiting", blockedBy: null }).label).toBe(
 		"Waiting",
@@ -29,17 +28,14 @@ test("status badge names the blocking migration while waiting", () => {
 test("status badge tones", () => {
 	expect(statusBadge({ status: "draft", blockedBy: null })).toEqual({
 		label: "Draft",
-		tone: "muted",
-		live: false,
+		tone: "draft",
 	});
 	expect(statusBadge({ status: "running", blockedBy: null })).toEqual({
 		label: "Running",
-		tone: "active",
-		live: true,
+		tone: "running",
 	});
 	expect(statusBadge({ status: "run", blockedBy: null })).toEqual({
 		label: "Run",
-		tone: "done",
-		live: false,
+		tone: "run",
 	});
 });
