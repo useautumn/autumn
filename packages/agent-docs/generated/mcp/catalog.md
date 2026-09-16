@@ -743,7 +743,7 @@ Billing controls follow the same rule: `·` lines under the item they guard, in 
 - Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
 - Don't write `proration` — leave it out and take server defaults.
 - Trial end behavior is `freeTrial.onEnd`: `"bill"` (default) charges when the trial ends, `"revert"` expires it and restores the previous plan.
-- Every plan row carries `versionSlug` and `active`, and every variant row `versionSlug`. A plan's rows are its versions — exactly one `active: true` — and a version row left out of `plans` is deleted. How rows express versions, renames and drafts: `references/atmn.md`.
+- Every plan row carries `versionSlug` and `active`, and every variant row and license link `versionSlug`. A plan's rows are its versions — exactly one `active: true` — and a version row left out of `plans` is deleted. How rows express versions, renames and drafts: `references/atmn.md`.
 
 The config uses the builders `feature`, `plan`, `variant`, `license` as plain function calls with object arguments; items are plain objects inside a plan, and the file's default export is `atmn({...})` naming every collection. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
 
@@ -1288,7 +1288,7 @@ Tiers must be in ascending order by `to`. The final tier should use `"inf"`.
 
 ## Combining flat and per-unit amounts
 
-Each tier can include both `flatAmount` and `amount` — a fixed fee plus a per-unit charge when that tier is the matching tier. This is useful for combining a base fee with per-unit volume pricing.
+Each tier can include both `flatAmount` and `amount`: a fixed fee plus a per-unit charge when that tier is the matching tier. This is useful for combining a base fee with per-unit volume pricing.
 
 ```ts
 price: {
@@ -3449,6 +3449,14 @@ Usage is attributed per dimension, so graduated dimensions progress through thei
 
   A plan item can override its credit system's rate card for customers on that plan via `featureOverride: { creditSchema: [...] }`. The override replaces the rate card entirely, dimensions included.
 
+## Itemized invoice credits
+
+When a plan bills a credit system **pay-per-use at exactly one currency unit per credit** (for example `$1` per credit, or `$100` per 100 credits), Autumn treats the balance as invoice credits: every tracked usage is attributed to the feature that spent it, and the invoice lists one line per feature ("Premium messages, 40 units … $8") plus a "Credits applied" line for the credits the plan included. Balances like this can only be moved by tracked usage and cycle resets, so the invoice always matches the ledger.
+
+Any other price shape (a fractional price per credit, prepaid packs, included-only or pooled items) bills as an ordinary overage. The decision is made per customer when the plan is attached, so changing a plan's price later never rewrites an existing customer's invoices.
+
+  There is no switch to turn this on. The plan item's price decides, so a credit system can itemize on one plan and bill plainly on another.
+
 ## Stacking with direct balances
 
 A feature can have both a direct balance **and** belong to a credit system. When this happens, the balances stack and **direct balances are always consumed before credit system balances**, regardless of interval.
@@ -4040,7 +4048,7 @@ What a variant's customize can change, when a base edit reaches a variant, and h
 - A variant is an entry in its base row's `variants` array and a license link an entry in the parent row's `licenses` array: `variant({...})` and `license({...})` fixtures, inline or imported from their own files, edited in place there. Pull writes new ones in that form. Every entry the config lists is a declared overlay; there is no `propagate` in a config, so a base edit reaches a variant through the entry you write, not a follow flag.
 - Minting a base version means listing the variant entries again under the new base row, each with the new `versionSlug` and no `internalId`. The old entries stay under the old base row. One variant version cannot serve two base rows; the lint names both rows and says to version and relink the variant.
 - To retire a variant, set `archived: true` on its entry. A variant left out of the array is a deletion, refused while customers hold it.
-- State `versionSlug` on every `license({...})`: the link is pinned to that child version, a config that names it links the same version in every environment, and pull writes it back either way. Minting a child version moves no parent; relinking a parent is editing that slug.
+- Every `license({...})` states `versionSlug` — the lint refuses one without it — because the link is pinned to that child version and a config that names it links the same version in every environment. Pull writes it back. Minting a child version moves no parent; relinking a parent is editing that slug.
 
 ## Config shapes
 
@@ -4131,9 +4139,9 @@ Two notes push prints that are worth relaying: a plan removed while an id-less p
 
 ## Pull
 
-`atmn pull` writes the server's catalog back into the config in place: it flips `active` where the dashboard promoted a version, appends versions the config never mentioned, and backfills `internalId` and `versionSlug`. Run it after anyone touches the dashboard, and before editing a config you did not write.
+`atmn pull` writes the server's catalog back into the config in place: it flips `active` where the dashboard promoted a version, appends versions the config never mentioned, and backfills `internalId` and `versionSlug`. Run it after anyone touches the dashboard, and before editing a config you did not write. With no config yet, `pull` asks which folder to create it in; headless, it prints the `-c <dir>` hint and stops, so run `atmn init` or pass `-c` instead.
 
-`atmn pull --overwrite` is different: it deletes every TypeScript file in the config folder and rescaffolds from the server. It needs `--yes`, and it is the right move only when the config describes a different org than the key — the tell is `Your config no longer matches this org's catalog`. Anywhere else, a plain `pull` is what you want.
+`atmn pull --overwrite` is different: it rewrites `autumn.config.ts` and the `features.ts`, `plans.ts` and `rewards.ts` beside it from the server. It never deletes a file, and it leaves alone any file that does not import the package. It needs `--yes`, and it is the right move only when the config describes a different org than the key — the tell is `Your config no longer matches this org's catalog`. Anywhere else, a plain `pull` is what you want.
 
 ## Sandboxes and keys
 

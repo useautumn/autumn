@@ -11,6 +11,8 @@ import {
 	expectProductTrialing,
 	getTrialEndsAt,
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -55,7 +57,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 		isDefault: true,
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1, autumnV2_3, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -69,23 +71,21 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 		],
 	});
 
-	// Track some usage (the timeout waits after track completes)
+	// Billing reads Postgres, so usage must finish syncing before cancellation.
 	const messagesUsage = 40;
-	await autumnV1.track(
-		{
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: messagesUsage,
-		},
-		{ timeout: 2000 },
-	);
-
-	// Verify usage tracked
-	const customerWithUsage =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expect(customerWithUsage.features?.[TestFeature.Messages]?.usage).toBe(
-		messagesUsage,
-	);
+	await autumnV1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: messagesUsage,
+	});
+	await expectBalanceCorrect({
+		customerId,
+		autumn: autumnV2_3,
+		featureId: TestFeature.Messages,
+		usage: messagesUsage,
+		skipCache: true,
+		settleTimeoutMs: 10_000,
+	});
 
 	// Cancel pro via subscriptions.update
 	await autumnV1.subscriptions.update({
@@ -147,12 +147,10 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 	);
 
 	// Verify Stripe subscription is correct
-	await expectSubToBeCorrect({
-		db: ctx.db,
+	await expectStripeSubscriptionCorrect({
+		ctx,
 		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		shouldBeCanceled: false,
+		options: { shouldBeCanceling: false },
 	});
 
 	// Verify invoices

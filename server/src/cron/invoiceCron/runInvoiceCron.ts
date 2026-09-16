@@ -5,7 +5,7 @@ import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { Stripe } from "stripe";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
-import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/expirePendingCustomerProducts";
+import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
 import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";

@@ -83,7 +83,14 @@ export const expectRoundTrip = async ({
 		const pullFresh = () =>
 			runCli({
 				cwd: freshDir,
-				args: ["pull", ...(includeMappings ? ["--include-mappings"] : [])],
+				// An empty dir has no config to find; -c names it so headless pull
+				// scaffolds instead of stopping at the folder question.
+				args: [
+					"pull",
+					"-c",
+					".",
+					...(includeMappings ? ["--include-mappings"] : []),
+				],
 				secretKey: scenario.secretKey,
 				baseUrl: scenario.baseUrl,
 			});

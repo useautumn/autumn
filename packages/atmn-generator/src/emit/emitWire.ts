@@ -219,6 +219,10 @@ export const emitWireModule = ({
 		)
 		.join("\n");
 	const singletonKeys = JSON.stringify(singletonEntries.map(([name]) => name));
+	const configKeys = JSON.stringify([
+		...entries.map(([name]) => name),
+		...singletonEntries.map(([name]) => name),
+	]);
 	const singletonBodies = singletonEntries
 		.map(
 			([name, meta]) =>
@@ -266,6 +270,23 @@ ${singletonStated}
 });
 
 const SINGLETON_KEYS: readonly string[] = ${singletonKeys};
+const CONFIG_KEYS: readonly string[] = ${configKeys};
+
+/**
+ * A key the type does not know is a config written for another version of
+ * this CLI, and the runtime loader does no type check: refused, never dropped.
+ */
+const unknownKeyIssue = (key: string): { path: string; message: string } =>
+	key === "planVersions"
+		? {
+				path: key,
+				message:
+					"planVersions is gone: every version is now a row in plans, with versionSlug and active. Rebuild the config from your org with \`atmn pull --overwrite --yes\` (commit first), or move the rows into plans.",
+			}
+		: {
+				path: key,
+				message: \`\${key} is not a config field. The fields are \${CONFIG_KEYS.join(", ")}.\`,
+			};
 
 /**
  * The catalog document and each singleton's own request body, split from the
@@ -286,6 +307,11 @@ ${singletonBodies}
 });
 
 export const atmn = (config: AtmnConfig): WireDocument => {
+	const unknownKeys = Object.keys(config).filter(
+		(key) => !CONFIG_KEYS.includes(key),
+	);
+	if (unknownKeys.length > 0)
+		throw new ConfigError(unknownKeys.map(unknownKeyIssue));
 	const document = stated(config);
 	// Linted before anything is sent, and every problem is reported at once —
 	// a round trip per mistake is what makes a config painful to write.

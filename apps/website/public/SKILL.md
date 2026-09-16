@@ -72,7 +72,7 @@ Start with two or three sentences: what's going to happen (connect this project 
 
 Then:
 
-1. Run `atmn init` from the project root with the user's package manager (`bunx atmn init`, `pnpm exec atmn init`, `yarn atmn init`, `npx atmn init` — read it off the lockfile). Every `atmn …` command below means that run command. One command does the whole connect step: it adds `atmn` as a dependency, places `autumn.config.ts` (its own package in a monorepo — it asks where, or takes `--path` and `--name`), pulls whatever the org already holds, and installs these skills beside the config. Each run prints what it did and, when it needs an answer, the flag to pass; run it again with the flag.
+1. Run `atmn init` from the project root with the user's package manager (`bunx atmn init`, `pnpm exec atmn init`, `yarn atmn init`, `npx atmn init` — read it off the lockfile). Every `atmn …` command below means that run command. One command does the whole connect step: it adds `atmn` as a dependency, places the config in `autumn/` (its own package in a monorepo — it asks where, or takes `--path` and `--name`), pulls whatever the org already holds, and installs these skills beside the config. Each run prints what it did and, when it needs an answer, the flag to pass; run it again with the flag.
 2. Key already there → `init` says who it's connected to and moves on. Say so in one line.
 3. No key → `init` stops and asks how to connect. Ask the user the same thing, one question, two options, plain words:
 

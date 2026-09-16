@@ -53,7 +53,7 @@ What a variant's customize can change, when a base edit reaches a variant, and h
 - A variant is an entry in its base row's `variants` array and a license link an entry in the parent row's `licenses` array: `variant({...})` and `license({...})` fixtures, inline or imported from their own files, edited in place there. Pull writes new ones in that form. Every entry the config lists is a declared overlay; there is no `propagate` in a config, so a base edit reaches a variant through the entry you write, not a follow flag.
 - Minting a base version means listing the variant entries again under the new base row, each with the new `versionSlug` and no `internalId`. The old entries stay under the old base row. One variant version cannot serve two base rows; the lint names both rows and says to version and relink the variant.
 - To retire a variant, set `archived: true` on its entry. A variant left out of the array is a deletion, refused while customers hold it.
-- State `versionSlug` on every `license({...})`: the link is pinned to that child version, a config that names it links the same version in every environment, and pull writes it back either way. Minting a child version moves no parent; relinking a parent is editing that slug.
+- Every `license({...})` states `versionSlug` — the lint refuses one without it — because the link is pinned to that child version and a config that names it links the same version in every environment. Pull writes it back. Minting a child version moves no parent; relinking a parent is editing that slug.
 
 ## Config shapes
 
@@ -144,9 +144,9 @@ Two notes push prints that are worth relaying: a plan removed while an id-less p
 
 ## Pull
 
-`atmn pull` writes the server's catalog back into the config in place: it flips `active` where the dashboard promoted a version, appends versions the config never mentioned, and backfills `internalId` and `versionSlug`. Run it after anyone touches the dashboard, and before editing a config you did not write.
+`atmn pull` writes the server's catalog back into the config in place: it flips `active` where the dashboard promoted a version, appends versions the config never mentioned, and backfills `internalId` and `versionSlug`. Run it after anyone touches the dashboard, and before editing a config you did not write. With no config yet, `pull` asks which folder to create it in; headless, it prints the `-c <dir>` hint and stops, so run `atmn init` or pass `-c` instead.
 
-`atmn pull --overwrite` is different: it deletes every TypeScript file in the config folder and rescaffolds from the server. It needs `--yes`, and it is the right move only when the config describes a different org than the key — the tell is `Your config no longer matches this org's catalog`. Anywhere else, a plain `pull` is what you want.
+`atmn pull --overwrite` is different: it rewrites `autumn.config.ts` and the `features.ts`, `plans.ts` and `rewards.ts` beside it from the server. It never deletes a file, and it leaves alone any file that does not import the package. It needs `--yes`, and it is the right move only when the config describes a different org than the key — the tell is `Your config no longer matches this org's catalog`. Anywhere else, a plain `pull` is what you want.
 
 ## Sandboxes and keys
 

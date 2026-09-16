@@ -63,7 +63,6 @@ export const PricingAgentFeatureInputSchema =
 	CreateFeatureV0ParamsSchema.extend({
 		type: AgentFeatureType,
 		credit_schema: z.array(ApiCreditSchemaItemSchema).nullish(),
-		invoice_credit: z.boolean().optional(),
 		model_markups: ModelMarkupsSchema.optional(),
 		default_markup: z.number().min(-100).optional(),
 		provider_markups: ProviderMarkupsSchema.optional(),

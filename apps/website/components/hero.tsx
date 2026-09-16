@@ -148,10 +148,10 @@ export default function Hero() {
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
 							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-4%] md:leading-14 font-sans">
 								<span className="text-[#FFFFFF99] font-normal">
-									The control plane&nbsp;for
+									The managed pricing and
 								</span>{" "}
 								<span className="text-white block md:inline">
-									usage-based pricing
+									billing service
 								</span>
 							</h1>
 							<p className="hero-reveal lg:opacity-0 tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
@@ -173,7 +173,7 @@ export default function Hero() {
 					  so mobile never downloads them, and desktop fills the
 					  already-reserved space once it hydrates.
 					*/}
-					<div className="hero-reveal lg:opacity-0 relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:block">
+					<div className="hero-reveal lg:opacity-0 relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:flex flex-col justify-center">
 						{isXl && (
 							<>
 								<div className="absolute inset-0 z-0 pointer-events-none">
@@ -186,7 +186,7 @@ export default function Hero() {
 										className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100"
 									/>
 								</div>
-								<div className="relative z-10 translate-y-16 w-full flex justify-center">
+								<div className="relative z-10 w-full flex justify-center">
 									<AutumnConfig initialDelay={200} />
 								</div>
 							</>
@@ -263,14 +263,7 @@ export default function Hero() {
 				{/* MOBILE VIEW*/}
 				<div className="relative block xl:hidden w-full overflow-hidden  bg-[#0F0F0F] mt-12">
 					<div className="relative overflow-hidden w-full p-7 flex items-center justify-center">
-						{/*
-						  Mobile hero backdrop: a still frame of the desktop webm
-						  baked into a 63KB webp. The full 625KB looping video
-						  competes with the hero SVG + critical JS for bandwidth on
-						  slow mobile radios, and because this sits behind the
-						  dominant `autumn_mobile.svg` with `mix-blend-screen`, a
-						  static frame reads virtually identically.
-						*/}
+						{/* Still frame of the desktop webm; the looping video is too heavy for mobile radios. */}
 						<Image
 							src="/images/pricing-models/pricingbg-mobile.webp"
 							alt=""
@@ -282,15 +275,8 @@ export default function Hero() {
 							className="hero-bg absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100 pointer-events-none select-none"
 						/>
 
-						<div className="hero-reveal lg:opacity-0 relative z-10 w-[96%] sm:w-[90%] max-w-[520px] flex justify-center items-center">
-							{/* <AutumnConfig lines={16} initialDelay={1000} awaitEvent="preloader:complete" /> */}
-							<Image
-								src={"/images/hero/autumn_mobile.svg"}
-								width={1600}
-								height={1600}
-								alt="xyz"
-								priority
-							/>
+						<div className="hero-reveal lg:opacity-0 relative z-10 w-full max-w-[520px] min-h-[420px] flex justify-center items-center">
+							{!isXl && <AutumnConfig initialDelay={200} />}
 						</div>
 					</div>
 				</div>

@@ -47,7 +47,7 @@ atmn env
 
 ### `atmn init`
 
-Create an `autumn.config.ts` in your project, pull your existing plans into it, and install the agent skills. Prompts for login if you haven't authenticated yet.
+Create an `autumn` folder with `autumn.config.ts` in your project (its own package in a monorepo), pull your existing plans into it, and install the agent skills. Prompts for login if you haven't authenticated yet.
 
 ```bash
 atmn init
@@ -57,7 +57,7 @@ atmn init
 |------|-------------|
 | `--login` | Sign in on the web |
 | `--keyless` | Create a sandbox org without an account |
-| `--path <dir>` | Folder for the config package (monorepos) |
+| `--path <dir>` | Folder for the config (default `autumn`, or `packages/autumn` in a monorepo) |
 | `--name <name>` | Name of the config package (monorepos) |
 
 ### `atmn push`
@@ -85,10 +85,10 @@ atmn pull [options]
 
 | Flag | Description |
 |------|-------------|
-| `--overwrite` | Overwrite config instead of smart in-place update (needs `--yes`) |
+| `--overwrite` | Rewrite the config from Autumn instead of updating it in place (needs `--yes`) |
 | `--include-mappings` | Keep Stripe and RevenueCat mappings in the pulled config |
 
-By default, `pull` does a smart in-place update: it adds new features and plans, updates existing ones, and removes deleted ones while preserving your formatting. Use `--overwrite --yes` to replace the config files entirely.
+By default, `pull` does a smart in-place update: it adds new features and plans, updates existing ones, and removes deleted ones while preserving your formatting. If you have no config yet, `pull` asks where to create it (pass `-c <dir>` to skip the question). Use `--overwrite --yes` to rewrite `autumn.config.ts`, `features.ts`, `plans.ts` and `rewards.ts` from Autumn. Nothing is deleted, and files that don't import `atmn` are left alone.
 
 ### `atmn reset`
 

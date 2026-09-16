@@ -1,42 +1,20 @@
 import {
 	Button,
 	CopyButton,
-	MiniCopyButton,
 	SearchableSelect,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
 import { PlusIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
-import { CheckIcon } from "lucide-react";
 import { useState } from "react";
+import { EntityOptionRow } from "@/components/forms/shared/EntityOptionRow";
 import { cn } from "@/lib/utils";
 import { useEntitySelector } from "../hooks/useEntitySelector";
 import { CreateEntity } from "./CreateEntity";
 import { DeleteEntity } from "./DeleteEntity";
 
 const PLACEHOLDER = "PENDING";
-
-/** One value in an entity row: truncates in place, reveals the full string on
- *  hover, and copies it on click of the icon. */
-const EntityValue = ({
-	value,
-	className,
-	widthClassName,
-}: {
-	value: string;
-	className?: string;
-	widthClassName?: string;
-}) => (
-	<Tooltip>
-		<TooltipTrigger asChild>
-			<div className={cn("min-w-0 max-w-full", widthClassName)}>
-				<MiniCopyButton text={value} innerClassName={className} />
-			</div>
-		</TooltipTrigger>
-		<TooltipContent className="max-w-xs break-all">{value}</TooltipContent>
-	</Tooltip>
-);
 
 export const SelectedEntityDetails = () => {
 	const [isDeleteOpen, setDeleteOpen] = useState(false);
@@ -74,6 +52,7 @@ export const SelectedEntityDetails = () => {
 						searchPlaceholder="Search entities..."
 						emptyText="No entities found"
 						triggerClassName="w-full sm:w-72"
+						contentClassName="w-88"
 						onSearchChange={setSearch}
 						isLoading={isLoading}
 						renderValue={(entity) => {
@@ -101,20 +80,7 @@ export const SelectedEntityDetails = () => {
 							);
 						}}
 						renderOption={(entity, isSelected) => (
-							<>
-								<div className="flex gap-2 items-center min-w-0 flex-1">
-									{entity.name && (
-										<EntityValue value={entity.name} className="text-sm" />
-									)}
-									{/* The opaque id yields width to the readable name first. */}
-									<EntityValue
-										value={entity.id || PLACEHOLDER}
-										className="font-mono text-xs"
-										widthClassName="shrink-[4]"
-									/>
-								</div>
-								{isSelected && <CheckIcon className="size-4 shrink-0" />}
-							</>
+							<EntityOptionRow entity={entity} isSelected={isSelected} />
 						)}
 						footer={({ close }) => (
 							<div className="border-t py-1.5 px-2">

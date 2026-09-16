@@ -17,7 +17,9 @@ export class ConfigNotFoundError extends Error {
 		super(
 			`No autumn.config.ts found. Looked in:\n${searched
 				.map((path) => `  ${path}`)
-				.join("\n")}\n\nRun \`${configPackageName()} pull\` to scaffold one.`,
+				.join(
+					"\n",
+				)}\n\nRun \`${configPackageName()} init\` to create one, or pass -c <dir>.`,
 		);
 		this.name = "ConfigNotFoundError";
 	}
@@ -92,18 +94,35 @@ const withFixtureLocations = ({
  * a dependency after the first load. A single push never notices; pull edits
  * the collection files and then re-evaluates the config, so it must.
  */
+/**
+ * Bun imports a .ts config natively. Node goes through jiti's own import,
+ * which transpiles and handles CJS/ESM interop itself; the package is resolved
+ * from this CLI's install, never from the config's folder.
+ */
+export const importConfigArgs = ({
+	path,
+	onBun = typeof Bun !== "undefined",
+}: {
+	path: string;
+	onBun?: boolean;
+}): string[] => {
+	const target = JSON.stringify(path);
+	const load = onBun
+		? `import(${target})`
+		: `import(${JSON.stringify(import.meta.resolve("jiti"))}).then(({ createJiti }) => createJiti(${target}).import(${target}))`;
+	const report = `(m) => process.stdout.write(JSON.stringify({ ok: true, module: { ...m, default: m.default } })), (e) => process.stdout.write(JSON.stringify({ ok: false, name: e?.name, message: e?.message, issues: e?.issues }))`;
+	return ["-e", `${load}.then(${report})`];
+};
+
 const importConfigModule = async ({
 	path,
 }: {
 	path: string;
 }): Promise<Record<string, unknown> & { default?: WireDocument }> => {
-	const onBun = typeof Bun !== "undefined";
-	const script = `import(${JSON.stringify(path)}).then((m) => process.stdout.write(JSON.stringify({ ok: true, module: { ...m, default: m.default } })), (e) => process.stdout.write(JSON.stringify({ ok: false, name: e?.name, message: e?.message, issues: e?.issues })))`;
-	const result = spawnSync(
-		process.execPath,
-		onBun ? ["-e", script] : ["--import", "jiti/register", "-e", script],
-		{ cwd: dirname(path), encoding: "utf8" },
-	);
+	const result = spawnSync(process.execPath, importConfigArgs({ path }), {
+		cwd: dirname(path),
+		encoding: "utf8",
+	});
 	if (result.status !== 0 || result.stdout.length === 0) {
 		throw new Error(result.stderr.trim() || `Failed to load ${path}`);
 	}

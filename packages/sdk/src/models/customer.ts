@@ -954,10 +954,6 @@ export type CustomerFeature = {
     >
     | undefined;
   /**
-   * Whether usage of this classic credit system should be itemized as invoice credits.
-   */
-  invoiceCredit?: boolean | undefined;
-  /**
    * Per-model markup overrides for AI credit systems.
    */
   modelMarkups?: { [k: string]: CustomerModelMarkups } | null | undefined;
@@ -2708,7 +2704,6 @@ export const CustomerFeature$inboundSchema: z.ZodMiniType<
       ),
       z.lazy(() => CustomerCreditSchema3$inboundSchema),
     ]))),
-    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => CustomerModelMarkups$inboundSchema),
@@ -2730,7 +2725,6 @@ export const CustomerFeature$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
-      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

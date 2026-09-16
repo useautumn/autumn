@@ -8,7 +8,7 @@ import { AppEnv } from "../models/genModels/genEnums.js";
 import { agentFeatureToFeature, featureToAgentFeature } from "./agentTypes.js";
 
 describe("pricing-agent credit rate cards", () => {
-	test("preserves per-X rates, graduated tiers, and invoice-credit mode", () => {
+	test("preserves per-X rates and graduated tiers", () => {
 		const feature: Feature = {
 			internal_id: "fe_credits",
 			org_id: "org_test",
@@ -19,7 +19,6 @@ describe("pricing-agent credit rate cards", () => {
 			type: FeatureType.CreditSystem,
 			config: {
 				usage_type: FeatureUsageType.Single,
-				invoice_credit: true,
 				schema: [
 					{
 						metered_feature_id: "feature_a",
@@ -46,7 +45,6 @@ describe("pricing-agent credit rate cards", () => {
 
 		const agentFeature = featureToAgentFeature(feature);
 		expect(agentFeature).toMatchObject({
-			invoice_credit: true,
 			credit_schema: [
 				{
 					metered_feature_id: "feature_a",

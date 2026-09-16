@@ -63,6 +63,46 @@ export const OVERLAY: Overlay = {
 				reason:
 					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
 			},
+			"items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"licenses.customize.add_items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"variants.customize.items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"variants.customize.add_items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"variants.customize.upsert_licenses.customize.add_items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
 			"licenses.customize.add_items.unlimited": {
 				default: false,
 				reason:
@@ -178,11 +218,6 @@ export const OVERLAY: Overlay = {
 				hidden: true,
 				reason:
 					"Dead since internal_id: a changed featureId beside it is the rename.",
-			},
-			invoice_credit: {
-				hidden: true,
-				reason:
-					"Admin-only for now: invoice credits are money, and a config must not mint them.",
 			},
 			name: {
 				required: true,

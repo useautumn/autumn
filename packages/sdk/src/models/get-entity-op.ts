@@ -558,10 +558,6 @@ export type GetEntityFeature = {
     >
     | undefined;
   /**
-   * Whether usage of this classic credit system should be itemized as invoice credits.
-   */
-  invoiceCredit?: boolean | undefined;
-  /**
    * Per-model markup overrides for AI credit systems.
    */
   modelMarkups?: { [k: string]: GetEntityModelMarkups } | null | undefined;
@@ -1848,7 +1844,6 @@ export const GetEntityFeature$inboundSchema: z.ZodMiniType<
       ),
       z.lazy(() => GetEntityCreditSchema3$inboundSchema),
     ]))),
-    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => GetEntityModelMarkups$inboundSchema),
@@ -1870,7 +1865,6 @@ export const GetEntityFeature$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
-      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

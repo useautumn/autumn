@@ -16,14 +16,14 @@ Your sandbox uses a shared Stripe test account by default. Production requires y
 <Step>
 ### Push your plans to production
 
-If you're using the [CLI](/cli/getting-started), target production with `-p`, which authenticates with `AUTUMN_PROD_SECRET_KEY`. A plain `push -p` only previews the diff; re-run it with `--yes` to apply:
+If you're using the [CLI](/cli/getting-started), add `-p` to target production. It uses `AUTUMN_PROD_SECRET_KEY`. `push -p` only previews the change. Add `--yes` to apply it:
 
 ```bash
 bunx atmn push -p
 bunx atmn push -p --yes
 ```
 
-`atmn login` writes `AUTUMN_PROD_SECRET_KEY` alongside your sandbox key, so both environments stay available.
+`atmn login` writes `AUTUMN_PROD_SECRET_KEY` next to your sandbox key, so you can use both.
 
 Alternatively, the Deploy dialog in the dashboard can copy your sandbox plans to production for you.
 
@@ -38,7 +38,7 @@ Point your server-side code at a live secret key. Create a production key from [
 AUTUMN_SECRET_KEY=am_sk_live_...
 ```
 
-Set that live value only in your production environment. Keep your local `AUTUMN_SECRET_KEY` on the sandbox key the CLI wrote — production CLI commands read `AUTUMN_PROD_SECRET_KEY` instead, so there's no need to overwrite it.
+Only set the live key in your production environment. Keep your local `AUTUMN_SECRET_KEY` as the sandbox key. CLI commands with `-p` read `AUTUMN_PROD_SECRET_KEY`, so you never need to overwrite it.
 
 Double check that:
 - Your **server-side** code uses the live secret key (`am_sk_live_*`)

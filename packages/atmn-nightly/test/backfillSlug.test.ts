@@ -1,6 +1,6 @@
 /**
- * The slug travels with the id: a plan fixture that stated neither gets both
- * written on its first push, once, so a nuke-and-repush keeps its names.
+ * A plan fixture gets its internalId written on its first push, once, so a
+ * nuke-and-repush keeps its identity.
  */
 
 import { expect, test } from "bun:test";
@@ -15,7 +15,7 @@ const config = [
 	"",
 	"export default atmn({",
 	"\tplans: [",
-	'\t\tplan({ active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" } }),',
+	'\t\tplan({ active: true, planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 49, interval: "month" } }),',
 	"\t],",
 	"});",
 	"",
@@ -44,7 +44,7 @@ const client = {
 	get: async () => ({ features: [], plans: [] }),
 };
 
-test("a first push writes internalId and versionSlug into the fixture, once", async () => {
+test("a first push writes internalId into the fixture, once", async () => {
 	rmSync(dir, { recursive: true, force: true });
 	mkdirSync(dir, { recursive: true });
 	writeFileSync(`${dir}/autumn.config.ts`, config, "utf8");
@@ -58,11 +58,9 @@ test("a first push writes internalId and versionSlug into the fixture, once", as
 
 	const after = readFileSync(`${dir}/autumn.config.ts`, "utf8");
 	expect(after).toContain(
-		'plan({ internalId: "prod_1", active: true, planId: "pro", name: "Pro", price: { amount: 49, interval: "month" }, versionSlug: "v1" })',
+		'plan({ internalId: "prod_1", active: true, planId: "pro", versionSlug: "v1", name: "Pro", price: { amount: 49, interval: "month" } })',
 	);
-	expect(printed.join("")).toContain(
-		"Wrote internalId into 1 fixture and versionSlug into 1 fixture.",
-	);
+	expect(printed.join("")).toContain("Wrote internalId into 1 fixture.");
 
 	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	await runPush({ client: client as any, cwd: dir, write: () => {} });

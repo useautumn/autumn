@@ -600,6 +600,32 @@ const tieredOneOffMessages = ({
 		isOneOff: true,
 	}) as LimitedItem;
 
+/**
+ * Volume-priced one-off messages — the whole purchased quantity is charged at
+ * the rate of the single tier it lands in (no recurring charges).
+ * IMPORTANT: Last tier MUST have `to: "inf"` - Stripe requires a catch-all tier.
+ */
+const volumeOneOffMessages = ({
+	includedUsage = 0,
+	billingUnits = 100,
+	tiers = [
+		{ to: 500, amount: 10 },
+		{ to: "inf", amount: 5 },
+	],
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+	tiers?: { to: number | "inf"; amount: number }[];
+} = {}): LimitedItem =>
+	constructPrepaidItem({
+		featureId: TestFeature.Messages,
+		tiers,
+		tierBehaviour: TierBehavior.VolumeBased,
+		billingUnits,
+		includedUsage,
+		isOneOff: true,
+	}) as LimitedItem;
+
 // ═══════════════════════════════════════════════════════════════════
 // CONSUMABLE / PAY-PER-USE (overage pricing)
 // ═══════════════════════════════════════════════════════════════════
@@ -895,6 +921,7 @@ export const items = {
 	oneOffWords,
 	oneOffStorage,
 	tieredOneOffMessages,
+	volumeOneOffMessages,
 
 	// Consumable
 	consumable,

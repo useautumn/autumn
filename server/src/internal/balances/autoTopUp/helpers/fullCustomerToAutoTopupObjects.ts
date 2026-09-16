@@ -7,9 +7,8 @@ import {
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	fullCustomerToPlanProducts,
-	isOneOffPrice,
-	isPrepaidPrice,
-	isVolumeBasedCusEnt,
+	isOneOffCustomerEntitlement,
+	isPrepaidCustomerEntitlement,
 	resolveBillingControlWithProduct,
 } from "@autumn/shared";
 
@@ -28,15 +27,9 @@ const isThresholdEntitlement = (cusEnt: FullCusEntWithFullCusProduct) =>
 const isChargeSource = (cusEnt: FullCusEntWithFullCusProduct) =>
 	cusEnt.customer_product_id != null && cusEnt.expires_at == null;
 
-const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
-	const customerPrice = cusEntToCusPrice({ cusEnt });
-	return Boolean(
-		customerPrice &&
-			isOneOffPrice(customerPrice.price) &&
-			isPrepaidPrice(customerPrice.price) &&
-			!isVolumeBasedCusEnt(cusEnt),
-	);
-};
+/** Flat or tiered — the top-up quantity is priced through the item's tiers. */
+const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) =>
+	isOneOffCustomerEntitlement(cusEnt) && isPrepaidCustomerEntitlement(cusEnt);
 
 /** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
 export const fullCustomerToAutoTopupObjects = ({

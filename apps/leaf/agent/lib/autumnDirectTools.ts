@@ -7,6 +7,7 @@ import {
 	mintCachedAutumnToken,
 } from "./autumnAuth.js";
 import { leafMcpBaseUrl, serverToolMetadata } from "./autumnToolMetadata.js";
+import { previewLedger } from "./previewLedger.js";
 import { type LeafAgentConnection, toolAllowlists } from "./toolAllowlists.js";
 import { slimToolSchema } from "./toolSchemaSlim.js";
 
@@ -65,12 +66,22 @@ export const autumnDirectTools = ({
 						approval: () => "not-applicable",
 						description: tool.description,
 						execute: async (input, toolCtx) => {
-							if (requiresApproval) return RECORDED_FOR_APPROVAL;
+							const args = input as Record<string, unknown>;
+							if (requiresApproval) {
+								// A write the model never previewed verbatim is refused
+								// outright: the thrown error reaches the model as a tool
+								// error, and leaf never sees a completed write to card.
+								const rejection = previewLedger.rejectionFor({
+									args,
+									toolName,
+								});
+								if (rejection) throw new Error(rejection);
+								return RECORDED_FOR_APPROVAL;
+							}
 							const minted = await mintCachedAutumnToken(
 								toolCtx.session.auth.current?.attributes,
 							);
-							const args = input as Record<string, unknown>;
-							return callAutumnMcpTool({
+							const result = await callAutumnMcpTool({
 								args:
 									toolName === "getCustomer" ? withCustomerExpand(args) : args,
 								baseUrl: leafMcpBaseUrl(),
@@ -78,6 +89,8 @@ export const autumnDirectTools = ({
 								token: minted.accessToken,
 								toolName,
 							});
+							previewLedger.recordPreview({ args, result, toolName });
+							return result;
 						},
 						inputSchema: requiresApproval
 							? withApprovalDescriptionSchema(inputSchema)

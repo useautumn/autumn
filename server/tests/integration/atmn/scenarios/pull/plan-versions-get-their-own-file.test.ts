@@ -30,11 +30,14 @@ test.concurrent(
 	],
 }`,
 		});
-		const freshDirectory = scenarioDir({ id: uniqueTestId("atmn_version_pull") });
+		const freshDirectory = scenarioDir({
+			id: uniqueTestId("atmn_version_pull"),
+		});
 		const pull = () =>
 			runCli({
 				cwd: freshDirectory,
-				args: ["pull"],
+				// An empty dir: -c names the folder so headless pull scaffolds.
+				args: ["pull", "-c", "."],
 				secretKey: scenario.secretKey,
 				baseUrl: scenario.baseUrl,
 			});

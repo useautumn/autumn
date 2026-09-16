@@ -287,6 +287,14 @@ Usage is attributed per dimension, so graduated dimensions progress through thei
 
   A plan item can override its credit system's rate card for customers on that plan via `featureOverride: { creditSchema: [...] }`. The override replaces the rate card entirely, dimensions included.
 
+## Itemized invoice credits
+
+When a plan bills a credit system **pay-per-use at exactly one currency unit per credit** (for example `$1` per credit, or `$100` per 100 credits), Autumn treats the balance as invoice credits: every tracked usage is attributed to the feature that spent it, and the invoice lists one line per feature ("Premium messages, 40 units … $8") plus a "Credits applied" line for the credits the plan included. Balances like this can only be moved by tracked usage and cycle resets, so the invoice always matches the ledger.
+
+Any other price shape (a fractional price per credit, prepaid packs, included-only or pooled items) bills as an ordinary overage. The decision is made per customer when the plan is attached, so changing a plan's price later never rewrites an existing customer's invoices.
+
+  There is no switch to turn this on. The plan item's price decides, so a credit system can itemize on one plan and bill plainly on another.
+
 ## Stacking with direct balances
 
 A feature can have both a direct balance **and** belong to a credit system. When this happens, the balances stack and **direct balances are always consumed before credit system balances**, regardless of interval.

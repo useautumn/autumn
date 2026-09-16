@@ -89,15 +89,6 @@ export const compareDbFeature = ({
 			message: `Credit schema different: ${curFeature.config?.schema} !== ${newFeature.config?.schema}`,
 		},
 
-		invoice_credit: {
-			condition:
-				curFeature.type === FeatureType.CreditSystem &&
-				newFeature.type === FeatureType.CreditSystem &&
-				Boolean(curFeature.config?.invoice_credit) !==
-					Boolean(newFeature.config?.invoice_credit),
-			message: `Invoice credit different: ${curFeature.config?.invoice_credit} !== ${newFeature.config?.invoice_credit}`,
-		},
-
 		event_names: {
 			condition:
 				curFeature.type === FeatureType.Metered &&

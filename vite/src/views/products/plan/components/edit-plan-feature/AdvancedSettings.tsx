@@ -35,14 +35,13 @@ export function AdvancedSettings() {
 	const usageType = getFeatureUsageType({ item, features });
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
 	const isPriced = isFeaturePriceItem(item);
+	const isOneOff = itemToBillingInterval({ item }) === BillingInterval.OneOff;
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
 	// Purchased credits only: the cadence of a recurring item already bounds it.
 	const showExpiry =
-		isPriced &&
-		item.usage_model === UsageModel.Prepaid &&
-		itemToBillingInterval({ item }) === BillingInterval.OneOff;
+		isPriced && item.usage_model === UsageModel.Prepaid && isOneOff;
 	const showFeatureOverride = isAnyCreditSystem(
 		features.find((feature) => feature.id === item.feature_id)?.type,
 	);
@@ -52,9 +51,11 @@ export function AdvancedSettings() {
 		item.entity_feature_id != null ||
 		(product?.items?.some((planItem) => planItem?.entity_feature_id != null) ??
 			false);
-	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use)
+	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use).
+	// One-off items have no billing cycle to prorate against.
 	const showProration =
 		isPriced &&
+		!isOneOff &&
 		(item.usage_model === UsageModel.Prepaid ||
 			usageType === FeatureUsageType.Continuous);
 
@@ -64,7 +65,7 @@ export function AdvancedSettings() {
 		isPriced &&
 		item.usage_model === UsageModel.Prepaid &&
 		usageType === FeatureUsageType.Single &&
-		itemToBillingInterval({ item }) !== BillingInterval.OneOff;
+		!isOneOff;
 
 	// Prepaid maps into the v2 slot, usage-based into v1; the meter comes from
 	// the adopted price rather than being mapped.

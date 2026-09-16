@@ -175,6 +175,7 @@ const enrichAndInsertCandidates = async ({
 				initialState: add.initialState,
 				rows: insertableRows,
 				now,
+				invoiceCredit: add.invoiceCredit ?? false,
 			}),
 	});
 

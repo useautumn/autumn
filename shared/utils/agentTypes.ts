@@ -50,7 +50,6 @@ export interface AgentFeature {
 		plural: string;
 	} | null;
 	credit_schema?: ApiCreditSchemaItem[] | null;
-	invoice_credit?: boolean;
 	model_markups?: ModelMarkups;
 	default_markup?: number | null;
 	provider_markups?: ProviderMarkups;
@@ -130,9 +129,6 @@ export function agentFeatureToFeature(agentFeature: AgentFeature): Feature {
 	}
 	if (agentFeature.type === "credit_system") {
 		config.usage_type = FeatureUsageType.Single;
-		if (agentFeature.invoice_credit !== undefined) {
-			config.invoice_credit = agentFeature.invoice_credit;
-		}
 	}
 	if (agentFeature.type === "ai_credit_system") {
 		Object.assign(
@@ -245,9 +241,6 @@ export function featureToAgentFeature(feature: Feature): AgentFeature {
 		agentFeature.credit_schema = feature.config.schema.map(
 			dbCreditSchemaItemToApi,
 		);
-		if (feature.config.invoice_credit !== undefined) {
-			agentFeature.invoice_credit = feature.config.invoice_credit;
-		}
 	}
 	if (isAiCreditSystem(feature.type)) {
 		agentFeature.model_markups = feature.model_markups;

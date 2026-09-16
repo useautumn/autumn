@@ -535,17 +535,19 @@ Change prepaid to usage-based:
 If the customer the customer is NOT on a paid plan (free plan or no plan at all). 2 options:
 
 - No-card trial (default to this): attach with `free_trial` and set `card_required` false. The subscription starts with no card and ends at trial end if none is added. While on it, the customer cannot upgrade or attach another plan until they add a card via the Stripe billing portal.
+- No-card trials cannot be combined with `invoice_mode` (attach rejects it). If an invoice is needed, use `card_required: true`.
 - Card-required trial: attach with `free_trial` and `card_required: true` and `long_lived_checkout` If the customer has no payment method, the attach returns a checkout URL to collect a card; they are charged when the trial ends. This should be done with a long-lived checkout URL param.
 
 The customer already has an active (Stripe) subscription — common in sales-led trials.
 
 - On end: revert (default to this): attach the new plan with `on_end: "revert"` . This grants the plan in Autumn without touching the Stripe subscription; at trial end Autumn moves the customer back to their original plan, preserving the existing billing cycle.
+- To end a revert trial early, cancel it with `updateSubscription` and `cancel_action: "cancel_immediately"`; Autumn restores the previous plan. Do not remove `free_trial` (that converts the trial to paid) or re-attach the old plan.
 - On end: bill -- attaching a plan with a trial (or updating the subscription to add one) resets the Stripe billing anchor/cycle. This can be undesired so warn the user if they request this.
 - Card required param is ignored if there is already an active sub.
 
 Updating or ending a trial
-- Call update_subscription on the trialing plan with a new `free_trial`. The duration is counted from now, not from the original start. A 14-day extension on day 10 of a 14-day trial gives 14 more days, not 4.
-- Pass `free_trial: null` to end the trial immediately instead.
+- Call update_subscription on the trialing plan with the new trial nested under `customize`: `{ customer_id, subscription_id, customize: { free_trial: { duration_length, duration_type, card_required, on_end } } }`. Never put `free_trial` at the top level of an update: the update endpoint rejects a request whose only change is a top-level `free_trial` ("At least one update parameter must be provided"), while `customize.free_trial` is accepted. The duration is counted from now, not from the original start. A 14-day extension on day 10 of a 14-day trial gives 14 more days, not 4.
+- For a bill-on-end trial, pass `customize: { free_trial: null }` to end the trial immediately and start paid billing. Never do this for a revert trial: it activates the trial plan at full price instead of restoring the old plan. Cancel a revert trial instead (see above).
 
 ### Customer and Entity
 
