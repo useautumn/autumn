@@ -67,11 +67,8 @@ export function ExecutionStatusSubMenu({
 					return (
 						<DropdownMenuItem
 							key={status}
-							onClick={(e) => {
-								e.preventDefault();
-								toggle(status);
-							}}
-							onSelect={(e) => e.preventDefault()}
+							closeOnClick={false}
+							onClick={() => toggle(status)}
 							className="flex items-center gap-2 cursor-pointer text-sm"
 						>
 							<Checkbox checked={isActive} className="border-border" />
