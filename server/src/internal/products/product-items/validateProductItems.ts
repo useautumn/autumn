@@ -72,13 +72,9 @@ const validateProductItem = ({
 
 	validateItemFeatureOverride({ item, feature, features });
 
-	if (
-		item.pooled &&
-		isFeaturePriceItem(item) &&
-		item.included_usage === Infinite
-	) {
+	if (isFeaturePriceItem(item) && item.included_usage === Infinite) {
 		throw new RecaseError({
-			message: "Pooled unlimited items cannot include pricing",
+			message: "Unlimited items cannot include pricing",
 			code: ErrCode.InvalidProductItem,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

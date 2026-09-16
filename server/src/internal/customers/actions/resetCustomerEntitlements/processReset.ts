@@ -4,6 +4,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
 	isLifetimeEntitlement,
+	isUnlimitedEntitlement,
 	orgPersistFreeOverage,
 	type Rollover,
 	type UsageAttribution,
@@ -103,7 +104,10 @@ export const processReset = async ({
 	});
 
 	// Compute reset balance update
-	const persistFreeOverage = orgPersistFreeOverage({ org: ctx.org });
+	// An unlimited row's negative balance is a usage counter, not owed overage.
+	const persistFreeOverage =
+		orgPersistFreeOverage({ org: ctx.org }) &&
+		!isUnlimitedEntitlement({ entitlement: ent });
 	const resetBalanceUpdate = getResetBalancesUpdate({
 		cusEnt,
 		allowance: resetBalance,

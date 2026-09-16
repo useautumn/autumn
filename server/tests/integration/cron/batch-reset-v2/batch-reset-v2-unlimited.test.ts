@@ -11,6 +11,8 @@
  * Green (after):
  *   - next_reset_at seeded ~1 month out
  *   - batch reset -> one mutation, balance 0 (and every entity 0), usage 0
+ *   - org.persist_free_overage never applies: the unlimited counter is not
+ *     owed overage, so it still resets to 0
  */
 
 import { expect, test } from "bun:test";
@@ -239,6 +241,82 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			skipCache: true,
 			usage: tracked,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("batch-reset-v2 unlimited: persist_free_overage does not carry the unlimited counter")}`,
+	async () => {
+		const customerId = "batch-reset-v2-unlim-persist";
+		const plan = products.base({
+			id: "unlim-persist",
+			items: [
+				items.unlimited({
+					featureId: TestFeature.Messages,
+					interval: ProductItemInterval.Month,
+				}),
+			],
+		});
+		const tracked = 500;
+
+		const { ctx, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.platform.create({
+					userEmail: `unlim-persist-${Math.random().toString(36).slice(2, 8)}@autumn.test`,
+					configOverrides: { persist_free_overage: true },
+					setupDefaultFeatures: true,
+				}),
+				s.customer({ testClock: false }),
+				s.products({ list: [plan] }),
+			],
+			actions: [
+				s.attach({ productId: plan.id }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: tracked,
+					timeout: 3000,
+				}),
+			],
+		});
+
+		const customerEntitlement = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+		});
+		expect(customerEntitlement).toBeDefined();
+		await waitForPostgresBalance({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement!.id,
+			expectedBalance: -tracked,
+		});
+
+		await expireCusEntForReset({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+			pastTimeMs: Date.now() - 1000,
+		});
+		const result = await runBatchResetV2({
+			ctx,
+			customerEntitlementIds: [customerEntitlement!.id],
+		});
+		expect(result.resetMutations.length).toBe(1);
+
+		const row = await fetchCustomerEntitlementRow({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement!.id,
+		});
+		expect(row.balance).toBe(0);
+
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId: TestFeature.Messages,
+			skipCache: true,
+			usage: 0,
 		});
 	},
 );

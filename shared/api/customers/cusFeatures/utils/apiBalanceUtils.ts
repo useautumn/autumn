@@ -6,6 +6,7 @@ import {
 	cusEntsToReset,
 	cusEntsToRollovers,
 	cusEntsToUnlimitedUsage,
+	isUnlimitedCusEnt,
 } from "@utils/index.js";
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../apiBalanceV1";
 
@@ -69,6 +70,7 @@ export const getUnlimitedApiBalance = ({
 	const planId = cusEntsToPlanId({ cusEnts });
 	const id = cusEnts[0].id;
 	const usage = cusEntsToUnlimitedUsage({ cusEnts, entityId });
+	const unlimitedCusEnts = cusEnts.filter(isUnlimitedCusEnt);
 
 	return {
 		object: "balance",
@@ -81,7 +83,7 @@ export const getUnlimitedApiBalance = ({
 		remaining: 0,
 		usage,
 
-		next_reset_at: cusEntsToNextResetAt({ cusEnts }),
+		next_reset_at: cusEntsToNextResetAt({ cusEnts: unlimitedCusEnts }),
 		max_purchase: null,
 		overage_allowed: false,
 
@@ -95,7 +97,7 @@ export const getUnlimitedApiBalance = ({
 				remaining: 0,
 				usage,
 				unlimited: true,
-				reset: cusEntsToReset({ cusEnts }),
+				reset: cusEntsToReset({ cusEnts: unlimitedCusEnts }),
 				expires_at: null,
 				price: null,
 				overage: 0,
