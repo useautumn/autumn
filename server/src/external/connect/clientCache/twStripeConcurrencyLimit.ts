@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { waitForTwStripeScheduleClock } from "./twStripeClock/waitForTwStripeScheduleClock";
 import { createTwStripeRequestDeadline } from "./twStripeLimiter/createTwStripeRequestDeadline";
+import { readTwStripeRateLimitCode } from "./twStripeLimiter/readTwStripeRateLimitCode";
 import { isTwWorkerMode } from "./twStripeLimiter/twStripeMode";
 import { getTwStripeRequestDeadline } from "./twStripeLimiter/twStripeRequestContext";
 
@@ -74,6 +75,13 @@ export const applyTwStripeConcurrencyLimit = ({
 			}
 			if (process.env.TW_STRIPE_TRACE === "1") {
 				const responseHeaders = response.getHeaders();
+				const stripeErrorCode =
+					response.getStatusCode() === 429
+						? await readTwStripeRateLimitCode({
+								response,
+								timeoutMs: deadline.remainingMs(),
+							})
+						: null;
 				// Only allow known resource names; paths and queries can contain customer data.
 				const endpoint =
 					args[2].match(
@@ -88,6 +96,7 @@ export const applyTwStripeConcurrencyLimit = ({
 						method: args[3],
 						endpoint,
 						stripeRequestId: responseHeaders["request-id"] ?? null,
+						stripeErrorCode,
 						rateLimitedReason:
 							responseHeaders["stripe-rate-limited-reason"] ?? null,
 						lane: permit.lane,
