@@ -44,7 +44,7 @@ const lineItemToTaxableMinorUnits = ({
 	return taxableMinorUnits;
 };
 
-const taxableMinorUnitsToTaxMinorUnits = ({
+export const taxableMinorUnitsToTaxMinorUnits = ({
 	taxableMinorUnits,
 	percentage,
 	inclusive,
