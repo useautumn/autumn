@@ -143,6 +143,7 @@ export function BalanceEditSheet() {
 
 			{isUnlimited ? (
 				<UnlimitedBalanceForm
+					key={`${selectedCusEnt.id}-${effectiveEntityId ?? ""}`}
 					entity={derivedEntity}
 					entityId={effectiveEntityId}
 					selectedCusEnt={selectedCusEnt}
@@ -152,6 +153,7 @@ export function BalanceEditSheet() {
 				/>
 			) : (
 				<BalanceEditForm
+					key={`${selectedCusEnt.id}-${effectiveEntityId ?? ""}`}
 					selectedCusEnt={selectedCusEnt}
 					entity={derivedEntity}
 					entityId={effectiveEntityId}
