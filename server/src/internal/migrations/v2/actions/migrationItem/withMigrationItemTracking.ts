@@ -1,7 +1,4 @@
-import {
-	MigrationItemRunSkipReason,
-	type MigrationItemRunSkipReason as MigrationItemRunSkipReasonType,
-} from "@autumn/shared";
+import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { isTransientDbError } from "@/db/dbUtils.js";
 import type {
 	MigrationItemEventResponse,
@@ -90,7 +87,7 @@ const markItemRunFinished = async ({
 	dryRun: boolean;
 	item: RunScopeItem;
 	status: Exclude<MigrationItemEventStatus, "failed">;
-	skipReason?: MigrationItemRunSkipReasonType;
+	skipReason?: MigrationItemRunSkipReason;
 }) => {
 	const params = {
 		ctx,

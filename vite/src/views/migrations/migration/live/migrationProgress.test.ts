@@ -1,9 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-	migrationProgressDenominator,
-	migrationProgressPercent,
-	runProgressLabel,
-} from "./migrationProgress";
+import { migrationProgress, runProgressLabel } from "./migrationProgress";
 
 test("progress label follows the run state", () => {
 	expect(
@@ -31,26 +27,24 @@ test("progress label follows the run state", () => {
 
 test("percent is completed over the larger of claimed and expected", () => {
 	expect(
-		migrationProgressPercent({ completed: 50, total: 60, expected: 100 }),
-	).toBe(50);
+		migrationProgress({ completed: 50, total: 60, expected: 100 }),
+	).toEqual({ percent: 50, denominator: 100 });
 	expect(
-		migrationProgressPercent({ completed: 50, total: 200, expected: 100 }),
-	).toBe(25);
+		migrationProgress({ completed: 50, total: 200, expected: 100 }),
+	).toEqual({ percent: 25, denominator: 200 });
 });
 
 test("nothing expected reads as zero, never NaN", () => {
 	expect(
-		migrationProgressPercent({ completed: 0, total: 0, expected: 0 }),
+		migrationProgress({ completed: 0, total: 0, expected: 0 }).percent,
 	).toBe(0);
 	expect(
-		migrationProgressPercent({ completed: 0, total: 0, expected: null }),
+		migrationProgress({ completed: 0, total: 0, expected: null }).percent,
 	).toBe(0);
 });
 
 test("completing everything caps at one hundred", () => {
 	expect(
-		migrationProgressPercent({ completed: 120, total: 120, expected: 100 }),
+		migrationProgress({ completed: 120, total: 120, expected: 100 }).percent,
 	).toBe(100);
-	expect(migrationProgressDenominator({ total: 120, expected: 100 })).toBe(120);
-	expect(migrationProgressDenominator({ total: 3, expected: null })).toBe(3);
 });

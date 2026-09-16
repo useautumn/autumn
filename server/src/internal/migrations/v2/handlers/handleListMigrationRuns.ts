@@ -1,7 +1,7 @@
 import { Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { listMigrationStatuses } from "../actions/migrationStatus/index.js";
+import { listMigrationStatuses } from "../actions/migrationStatus/listMigrationStatuses.js";
 import {
 	migrationItemRunRepo,
 	migrationRepo,

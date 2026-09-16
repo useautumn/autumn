@@ -104,8 +104,7 @@ import {
 } from "./migrationItemStatus";
 import { runProgressLabel } from "./migrationProgress";
 import {
-	effectiveExecutionStatuses,
-	executionStatusOptionsForSource,
+	executionStatusesForSource,
 	previewSourceForStatus,
 } from "./previewSource";
 import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
@@ -315,12 +314,12 @@ export function MigrationLiveView({
 		isRunDisabled(migrationStatus);
 
 	const previewSource = previewSourceForStatus(migrationStatus);
-	const executionStatusOptions = executionStatusOptionsForSource(
+	const executionStatusOptions = executionStatusesForSource(
 		previewSource,
 		EXECUTION_STATUS_VALUES,
 	);
 	const activeExecutionStatuses = useMemo(
-		() => effectiveExecutionStatuses(previewSource, executionStatuses),
+		() => executionStatusesForSource(previewSource, executionStatuses),
 		[previewSource, executionStatuses],
 	);
 
@@ -340,8 +339,7 @@ export function MigrationLiveView({
 		executionStatuses: activeExecutionStatuses,
 		isActive: hasActiveRun || hasRealtimeActive,
 	});
-	// A Run All (or Run again) re-evaluates the live filter, so the run dialog
-	// counts filter matches even while the table shows the frozen list.
+	// A run re-evaluates the live filter, so the run dialog counts filter matches.
 	const { count: liveFilterCount } = useMigrationFilterPreview({
 		filter: filter.customer ?? {},
 		migrationId,

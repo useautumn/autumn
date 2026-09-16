@@ -25,7 +25,7 @@ import {
 export type IncludeProcessed = {
 	migrationInternalId: string;
 	executionFilter?: CustomerExecutionStatusFilter;
-	/** Page the processed set alone — the live filter is never compiled. */
+	/** Page the processed set alone; the live filter is never compiled. */
 	sourceOnlyProcessed?: boolean;
 };
 

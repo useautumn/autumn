@@ -19,8 +19,6 @@ export const MigrationItemRunStatus = {
 export type MigrationItemRunStatus =
 	(typeof MigrationItemRunStatus)[keyof typeof MigrationItemRunStatus];
 
-/** Why a skipped item was skipped: nothing to change, or the operations
- * could not apply to it (no matching plan, guard, interrupted). */
 export const MigrationItemRunSkipReason = {
 	NoUpdatesNeeded: "no_updates_needed",
 	Ineligible: "ineligible",

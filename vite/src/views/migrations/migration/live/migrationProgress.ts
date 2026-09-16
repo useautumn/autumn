@@ -1,7 +1,5 @@
 import type { MigrationStatus } from "@autumn/shared";
 
-const PERCENT_MAX = 100;
-
 export function runProgressLabel({
 	migrationStatus,
 	activeRun,
@@ -14,9 +12,9 @@ export function runProgressLabel({
 	return activeRun.dry_run ? "Dry run in progress" : "Migrating customers";
 }
 
-/** Claims land page by page, so `total` grows during a run; the expected
- * scope (the filter count) keeps the bar from lurching backwards. */
-export function migrationProgressPercent({
+/** Claims land page by page, so `total` grows mid-run; the expected scope
+ * (the filter count) keeps the bar from lurching backwards. */
+export function migrationProgress({
 	completed,
 	total,
 	expected,
@@ -24,21 +22,11 @@ export function migrationProgressPercent({
 	completed: number;
 	total: number;
 	expected: number | null;
-}): number {
+}): { percent: number; denominator: number } {
 	const denominator = Math.max(total, expected ?? 0);
-	if (denominator <= 0) return 0;
-	return Math.min(
-		PERCENT_MAX,
-		Math.round((completed / denominator) * PERCENT_MAX),
-	);
-}
-
-export function migrationProgressDenominator({
-	total,
-	expected,
-}: {
-	total: number;
-	expected: number | null;
-}): number {
-	return Math.max(total, expected ?? 0);
+	if (denominator <= 0) return { percent: 0, denominator: 0 };
+	return {
+		percent: Math.min(100, Math.round((completed / denominator) * 100)),
+		denominator,
+	};
 }

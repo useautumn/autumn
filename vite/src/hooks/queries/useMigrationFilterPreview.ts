@@ -26,8 +26,7 @@ export type MigrationPreviewCustomer = CustomerWithProducts & {
 	migration_item_run?: MigrationItemRun | null;
 };
 
-/** "filter" pages the live filter; "item_runs" pages the customers a live
- * run of the migration claimed (the frozen post-run list). */
+/** "item_runs" pages the customers a live run claimed instead of the filter. */
 export type MigrationPreviewSource = "filter" | "item_runs";
 
 type CustomerListFilters = {

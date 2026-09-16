@@ -1,12 +1,8 @@
 /**
- * Migration status is computed from migration_runs, never stored.
- *
- * A "Run All" is a non-dry run with only_ids IS NULL and target_limit IS NULL.
- * draft   → no Run All has ever started
- * waiting → a Run All is queued and another migration's live run is running
+ * draft   → no Run All (live, unscoped run) has ever started
+ * waiting → a Run All is queued behind another migration's running run
  * running → a Run All is queued/running and not blocked
- * run     → any Run All reached execution (started_at set), even if it later
- *           failed or was canceled
+ * run     → a Run All reached execution, even if it later failed or was canceled
  */
 
 import { describe, expect, test } from "bun:test";

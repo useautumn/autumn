@@ -13,9 +13,8 @@ import type { MigrateCustomerContext } from "./migrateCustomerContext.js";
 export type ProcessOperationResult = {
 	plan: AutumnBillingPlan;
 	projectedFullCustomer: FullCustomer;
-	/** Customer products the op matched and changed. */
 	matchedCustomerProducts: number;
-	/** Customer products the op matched but found already in the target state. */
+	/** Matched but already in the target state. */
 	unchangedCustomerProducts: number;
 	billingContexts: UpdateSubscriptionBillingContext[];
 };

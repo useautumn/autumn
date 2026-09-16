@@ -1,7 +1,4 @@
-import {
-	MigrationItemRunSkipReason,
-	type MigrationItemRunSkipReason as MigrationItemRunSkipReasonType,
-} from "@autumn/shared";
+import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
@@ -295,8 +292,7 @@ export const executeBatchMigrationPage = async ({
 	};
 };
 
-/** A skipped customer a rung refused, or with no customer product in any
- * patch scope, was ineligible; one inside a scope was already converged. */
+/** Skipped with a product in scope = already converged; otherwise ineligible. */
 const resolveSkipReasons = async ({
 	ctx,
 	plan,
@@ -307,7 +303,7 @@ const resolveSkipReasons = async ({
 	plan: BatchMigrationExecutionPlan;
 	skippedIds: string[];
 	excludedIds: Set<string>;
-}): Promise<Record<string, MigrationItemRunSkipReasonType>> => {
+}): Promise<Record<string, MigrationItemRunSkipReason>> => {
 	if (skippedIds.length === 0) return {};
 	const scopedIds = await listScopedInternalCustomerIds({
 		db: ctx.db,
