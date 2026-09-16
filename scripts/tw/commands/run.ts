@@ -523,12 +523,16 @@ const buildWorkerEnv = ({
 	stripeSecretKey,
 	isSvixShard,
 	svixAppId,
+	ingressUrl,
+	ingressToken,
 }: {
 	stripeAccountId: string;
 	/** This worker's pool key — MUST match the key its sub-account was created on. */
 	stripeSecretKey: string;
 	isSvixShard: boolean;
 	svixAppId?: string;
+	ingressUrl: string;
+	ingressToken: string;
 }): Record<string, string> => {
 	const env: Record<string, string> = {
 		NODE_ENV: "development",
@@ -561,6 +565,8 @@ const buildWorkerEnv = ({
 		// so a dummy satisfies it (plan §6a) — otherwise the worker 500s every webhook.
 		STRIPE_SANDBOX_WEBHOOK_SECRET: "whsec_tw_skipverify",
 		STRIPE_ACCOUNT_ID: stripeAccountId,
+		TW_STRIPE_INGRESS_URL: ingressUrl,
+		TW_STRIPE_INGRESS_TOKEN: ingressToken,
 		ORG_ID: TEST_ORG_CONFIG.id,
 		// The exact commit under test — freestyle workers fast-forward to it at
 		// boot (inert on other providers).
@@ -971,6 +977,8 @@ const provisionWorker = async ({
 			stripeSecretKey,
 			isSvixShard,
 			svixAppId,
+			ingressUrl,
+			ingressToken,
 		}),
 		tags: vercelTags(owner, runId),
 		signal,
