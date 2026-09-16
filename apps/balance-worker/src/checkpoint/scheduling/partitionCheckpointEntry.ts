@@ -20,6 +20,7 @@ export type PartitionCheckpointEntry = Parameters<
 		consumedNextOffset: bigint | null;
 		nextCleanupAt: number;
 		attempt: number;
+		cleanupAttempts: number;
 		inFlightNextOffset: bigint | null;
 		changesDuringExportSince: number | null;
 		abortExport: (() => void) | null;
@@ -76,6 +77,9 @@ export const initialCheckpointHealth = ({
 	uncheckpointedAgeMs: 0,
 	failure: null,
 	cleanup: {
+		status: "waiting",
+		lastAttemptAt: null,
+		nextAttemptAt: null,
 		lastPrunedAt: null,
 		deletedReceipts: 0,
 		lastDurationMs: null,

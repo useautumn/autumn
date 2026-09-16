@@ -56,7 +56,7 @@ describe("scheduled receipt cleanup", () => {
 				fixture.store.readNextOffset({ topic: fixture.topic, partition: 0 }),
 			).toBe(5n);
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 
@@ -72,7 +72,7 @@ describe("scheduled receipt cleanup", () => {
 			expect(lease.getHealth().cleanup.deletedReceipts).toBe(1);
 			expect(lease.getHealth().status).toBe("stopped");
 		} finally {
-			fixture.close();
+			await fixture.close();
 		}
 	});
 });
