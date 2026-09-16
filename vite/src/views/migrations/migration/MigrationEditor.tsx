@@ -41,7 +41,7 @@ export function MigrationEditor({
 		(s) => s.values.noBillingChanges,
 	);
 	const customerCount = useCustomerCount(filter.customer ?? {});
-	const hasCustomers = customerCount !== null && customerCount > 0;
+	const hasCustomers = customerCount !== 0;
 	const { runs } = useMigrationRunsQuery({ migrationId: migration.id });
 	const hasRuns = runs.length > 0;
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
