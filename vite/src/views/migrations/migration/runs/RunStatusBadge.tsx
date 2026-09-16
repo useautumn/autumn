@@ -1,4 +1,3 @@
-import type { MigrationItemRunSkipReason } from "@autumn/shared";
 import { Badge } from "@autumn/ui";
 import {
 	CheckCircleIcon,
@@ -8,7 +7,6 @@ import {
 } from "@phosphor-icons/react";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
-import { skipBadgeSpec, skipReasonFromResponse } from "./skipBadge";
 
 export function ActiveRunDot({ className }: { className?: string }) {
 	return (
@@ -43,46 +41,45 @@ const STATUS_ICONS: Record<MigrationItemEventStatus, Icon> = {
 	failed: XCircleIcon,
 };
 
+function isNoOpResponse(response: Record<string, unknown> | null): boolean {
+	if (!response) return false;
+	const preview = response.preview as
+		| {
+				plan_changes?: unknown[];
+				balance_changes?: unknown[];
+				flag_changes?: unknown[];
+		  }
+		| undefined;
+	if (!preview) return false;
+	return (
+		(preview.plan_changes?.length ?? 0) === 0 &&
+		(preview.balance_changes?.length ?? 0) === 0 &&
+		(preview.flag_changes?.length ?? 0) === 0
+	);
+}
+
 export function ItemEventStatusBadge({
 	status,
 	dryRun = false,
 	response = null,
-	skipReason,
 }: {
 	status: MigrationItemEventStatus;
 	dryRun?: boolean;
 	response?: Record<string, unknown> | null;
-	/** From the item run row; falls back to the event response. */
-	skipReason?: MigrationItemRunSkipReason | null;
 }) {
-	if (status === "skipped") {
-		const spec = skipBadgeSpec({
-			skipReason: skipReason ?? skipReasonFromResponse(response),
-			response,
-		});
-		if (spec.noChanges)
-			return (
-				<Badge
-					variant="muted"
-					className={cn(
-						"gap-1 bg-muted text-tertiary-foreground",
-						dryRun ? "border-border border-dashed" : "border-transparent",
-					)}
-				>
-					<MinusCircleIcon size={12} weight="fill" />
-					{spec.label}
-				</Badge>
-			);
+	if (status === "skipped" && isNoOpResponse(response))
 		return (
 			<Badge
 				variant="muted"
-				className={cn("gap-1", (dryRun ? DRY_STYLES : LIVE_STYLES).skipped)}
+				className={cn(
+					"gap-1 bg-muted text-tertiary-foreground",
+					dryRun ? "border-border border-dashed" : "border-transparent",
+				)}
 			>
 				<MinusCircleIcon size={12} weight="fill" />
-				{spec.label}
+				No Changes
 			</Badge>
 		);
-	}
 
 	const StatusIcon = STATUS_ICONS[status];
 

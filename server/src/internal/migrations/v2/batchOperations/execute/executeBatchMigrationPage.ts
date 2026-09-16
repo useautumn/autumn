@@ -1,8 +1,6 @@
-import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
-import { listScopedInternalCustomerIds } from "../actions/listScopedInternalCustomerIds/listScopedInternalCustomerIds.js";
 import { removeCustomerEntitlementsForPage } from "../actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
 import { replaceCustomerEntitlementsForPage } from "../actions/replaceCustomerEntitlementsForPage/replaceCustomerEntitlementsForPage.js";
 import { repointCustomerProductsForPage } from "../actions/repointCustomerProductsForPage/repointCustomerProductsForPage.js";
@@ -57,7 +55,6 @@ export const executeBatchMigrationPage = async ({
 		return {
 			succeeded: [],
 			skipped: [],
-			skipReasons: {},
 			insertedItems: [],
 			removedItems: [],
 			repointedProducts: [],
@@ -245,18 +242,6 @@ export const executeBatchMigrationPage = async ({
 	]);
 	for (const id of excludedIds) succeeded.delete(id);
 	const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
-	const skipReasons = await resolveSkipReasons({
-		ctx,
-		plan,
-		skippedIds,
-		excludedIds,
-	});
-	const noUpdatesNeededIds = skippedIds.filter(
-		(id) => skipReasons[id] === MigrationItemRunSkipReason.NoUpdatesNeeded,
-	);
-	const ineligibleIds = skippedIds.filter(
-		(id) => skipReasons[id] === MigrationItemRunSkipReason.Ineligible,
-	);
 
 	await timePhase({
 		phases,
@@ -270,8 +255,7 @@ export const executeBatchMigrationPage = async ({
 						migrationInternalId,
 						migrationRunId,
 						succeededInternalCustomerIds: [...succeeded],
-						noUpdatesNeededInternalCustomerIds: noUpdatesNeededIds,
-						ineligibleInternalCustomerIds: ineligibleIds,
+						skippedInternalCustomerIds: skippedIds,
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 				{ forceCustomPlan: true },
@@ -285,37 +269,8 @@ export const executeBatchMigrationPage = async ({
 		skipped: customers.filter(
 			(customer) => !succeeded.has(customer.internalId),
 		),
-		skipReasons,
 		insertedItems,
 		removedItems,
 		repointedProducts,
 	};
-};
-
-/** Skipped with a product in scope = already converged; otherwise ineligible. */
-const resolveSkipReasons = async ({
-	ctx,
-	plan,
-	skippedIds,
-	excludedIds,
-}: {
-	ctx: AutumnContext;
-	plan: BatchMigrationExecutionPlan;
-	skippedIds: string[];
-	excludedIds: Set<string>;
-}): Promise<Record<string, MigrationItemRunSkipReason>> => {
-	if (skippedIds.length === 0) return {};
-	const scopedIds = await listScopedInternalCustomerIds({
-		db: ctx.db,
-		internalCustomerIds: skippedIds,
-		scopes: plan.patches.map((patch) => patch.scope),
-	});
-	return Object.fromEntries(
-		skippedIds.map((id) => [
-			id,
-			!excludedIds.has(id) && scopedIds.has(id)
-				? MigrationItemRunSkipReason.NoUpdatesNeeded
-				: MigrationItemRunSkipReason.Ineligible,
-		]),
-	);
 };

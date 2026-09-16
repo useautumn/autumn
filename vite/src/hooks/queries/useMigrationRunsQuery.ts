@@ -2,7 +2,6 @@ import type {
 	MigrationItemKind,
 	MigrationRun,
 	MigrationRunStatus,
-	MigrationStatus,
 } from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
@@ -49,12 +48,6 @@ export type MigrationRunWithItemCounts = MigrationRun & {
 	item_run_counts?: MigrationRunItemCounts;
 };
 
-type MigrationRunsListResponse = {
-	list: MigrationRunWithItemCounts[];
-	status: MigrationStatus;
-	blocked_by: string | null;
-};
-
 function findActiveRun(
 	runs: MigrationRunWithItemCounts[],
 ): MigrationRunWithItemCounts | undefined {
@@ -87,13 +80,12 @@ export const useMigrationRunsQuery = ({
 		stableItemIds,
 	]);
 
-	const runsQuery = useQuery<MigrationRunsListResponse>({
+	const runsQuery = useQuery<{ list: MigrationRunWithItemCounts[] }>({
 		queryKey: runsQueryKey,
 		queryFn: async () => {
-			const { data } = await axiosInstance.post<MigrationRunsListResponse>(
-				"/migrations.runs.list",
-				{ migrationId },
-			);
+			const { data } = await axiosInstance.post<{
+				list: MigrationRunWithItemCounts[];
+			}>("/migrations.runs.list", { migrationId });
 			return data;
 		},
 		enabled,
@@ -137,8 +129,6 @@ export const useMigrationRunsQuery = ({
 
 	return {
 		runs: (runsQuery.data?.list ?? []) as MigrationRunWithItemCounts[],
-		status: (runsQuery.data?.status ?? "draft") as MigrationStatus,
-		blockedBy: runsQuery.data?.blocked_by ?? null,
 		isLoadingRuns: runsQuery.isLoading,
 		isActive,
 		activeRunDryRun: activeRun?.dry_run ?? null,

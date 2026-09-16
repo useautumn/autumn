@@ -30,7 +30,6 @@ export const processOperations = async ({
 		plan,
 		projectedFullCustomer: context.fullCustomer,
 		matchedCustomerProducts: 0,
-		unchangedCustomerProducts: 0,
 		billingContexts: [],
 	};
 
@@ -58,8 +57,6 @@ export const processOperations = async ({
 			}),
 			matchedCustomerProducts:
 				state.matchedCustomerProducts + result.matchedCustomerProducts,
-			unchangedCustomerProducts:
-				state.unchangedCustomerProducts + result.unchangedCustomerProducts,
 			billingContexts: [...state.billingContexts, ...result.billingContexts],
 		};
 	}

@@ -10,7 +10,7 @@ import { waitForMigrationResult } from "./runUpdatePlanMigration";
 
 /** Reruns reuse readable migration ids; the delete guard blocks ids with run
  * history, so tests clear their own previous history first. */
-export const clearMigrationRunHistory = async ({
+const clearMigrationRunHistory = async ({
 	ctx,
 	migrationId,
 }: {

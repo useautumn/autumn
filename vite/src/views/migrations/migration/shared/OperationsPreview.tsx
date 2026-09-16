@@ -26,7 +26,6 @@ import {
 } from "../operations/operationItemUtils";
 import { planIdsFromFilter } from "../operations/UpdatePlanOpForm";
 import { migrationItemToProductItem } from "./migrationItemUtils";
-import { formatVersionTransition } from "./versionTransition";
 
 /** Full-width row matching SubscriptionItemRow, with an amber dot for an edited value. */
 function EditedRow({
@@ -174,10 +173,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 											className="text-violet-500 shrink-0"
 										/>
 									}
-									text={formatVersionTransition({
-										planFilter: updateOp.plan_filter,
-										version: updateOp.version,
-									})}
+									text={`v${updateOp.version}`}
 								/>
 							)}
 

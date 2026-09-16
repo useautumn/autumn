@@ -1,4 +1,3 @@
-import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -11,20 +10,17 @@ export const markPageItemRuns = async ({
 	migrationInternalId,
 	migrationRunId,
 	succeededInternalCustomerIds,
-	noUpdatesNeededInternalCustomerIds,
-	ineligibleInternalCustomerIds,
+	skippedInternalCustomerIds,
 }: {
 	db: DrizzleCli;
 	migrationInternalId: string;
 	migrationRunId: string;
 	succeededInternalCustomerIds: string[];
-	noUpdatesNeededInternalCustomerIds: string[];
-	ineligibleInternalCustomerIds: string[];
+	skippedInternalCustomerIds: string[];
 }): Promise<void> => {
 	const allIds = [
 		...succeededInternalCustomerIds,
-		...noUpdatesNeededInternalCustomerIds,
-		...ineligibleInternalCustomerIds,
+		...skippedInternalCustomerIds,
 	];
 	if (allIds.length === 0) return;
 
@@ -33,13 +29,6 @@ export const markPageItemRuns = async ({
 		SET status = CASE
 				WHEN item_id = ANY(${sql.param(succeededInternalCustomerIds)}::text[])
 				THEN 'succeeded' ELSE 'skipped'
-			END,
-			skip_reason = CASE
-				WHEN item_id = ANY(${sql.param(succeededInternalCustomerIds)}::text[])
-				THEN NULL
-				WHEN item_id = ANY(${sql.param(noUpdatesNeededInternalCustomerIds)}::text[])
-				THEN ${MigrationItemRunSkipReason.NoUpdatesNeeded}
-				ELSE ${MigrationItemRunSkipReason.Ineligible}
 			END,
 			updated_at = ${Date.now()}
 		WHERE migration_internal_id = ${migrationInternalId}

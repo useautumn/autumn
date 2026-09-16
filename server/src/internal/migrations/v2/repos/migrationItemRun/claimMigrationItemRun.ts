@@ -89,7 +89,6 @@ export const claimMigrationItemRun = async ({
 						set: {
 							migration_run_id: migrationRunId ?? null,
 							status: MigrationItemRunStatus.Running,
-							skip_reason: null,
 							updated_at: now,
 						},
 						setWhere: inArray(migrationItemRuns.status, retryStatuses),

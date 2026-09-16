@@ -17,7 +17,6 @@ export const MigrationItemRunSchema = z.object({
 	item_kind: z.string(),
 	item_id: z.string(),
 	status: z.enum(["running", "succeeded", "skipped", "failed"]),
-	skip_reason: z.enum(["no_updates_needed", "ineligible"]).nullish(),
 	timestamp: z.union([z.string(), z.date()]).nullish(),
 	created_at: z.number(),
 	updated_at: z.number().nullable(),

@@ -1,8 +1,7 @@
-import { MiniCopyButton } from "@autumn/ui";
+import { Badge, MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { format } from "date-fns";
 import type { MigrationWithRunInfo } from "@/hooks/queries/useMigrationsQuery";
-import { MigrationStatusBadge } from "../migration/shared/MigrationStatusBadge";
 import { MigrationListRowToolbar } from "./MigrationListRowToolbar";
 
 export const createMigrationListColumns = (): ColumnDef<
@@ -21,12 +20,18 @@ export const createMigrationListColumns = (): ColumnDef<
 	},
 	{
 		header: "Status",
-		size: 140,
+		size: 100,
 		cell: ({ row }: { row: Row<MigrationWithRunInfo> }) => (
-			<MigrationStatusBadge
-				status={row.original.status}
-				blockedBy={row.original.blocked_by}
-			/>
+			<Badge
+				variant="muted"
+				className={
+					row.original.has_live_runs
+						? "bg-green-500/10 text-green-500 border-transparent"
+						: "bg-muted text-muted-foreground border-transparent"
+				}
+			>
+				{row.original.has_live_runs ? "Ran" : "Draft"}
+			</Badge>
 		),
 	},
 	{
