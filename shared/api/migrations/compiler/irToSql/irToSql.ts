@@ -5,6 +5,7 @@ import type {
 	NavScope,
 	RootScope,
 } from "../registry/registryTypes.js";
+import { regexSql, startsWithSql } from "./stringMatchSql.js";
 
 export type CompiledSql = {
 	/** WHERE-clause fragment with `?` placeholders. */
@@ -179,36 +180,11 @@ function compileLeaf({
 		params.push(leaf.value);
 		return `${col} <> ?`;
 	}
-	if (leaf.op === "regex") {
-		if (typeof leaf.value !== "string")
-			throw new Error(`$regex expects a string on field "${leaf.field}"`);
-		// Reject here rather than letting Postgres raise mid-migration.
-		try {
-			new RegExp(leaf.value);
-		} catch {
-			throw new Error(
-				`$regex on field "${leaf.field}" is not a valid regular expression`,
-			);
-		}
-		params.push(leaf.value);
-		return `${col} ~ ?`;
-	}
-	if (leaf.op === "startsWith") {
-		if (typeof leaf.value !== "string")
-			throw new Error(`$startsWith expects a string on field "${leaf.field}"`);
-		if (leaf.value === "") return "TRUE";
-		const upperBound = prefixUpperBound(leaf.value);
-		// A range, not LIKE: LIKE cannot use a btree index under a non-C
-		// collation, so a prefix match would scan the whole table.
-		const byteCol = `${col} COLLATE "C"`;
-		if (upperBound === null) {
-			params.push(leaf.value, leaf.value);
-			return `(${col} >= ? AND ${byteCol} >= ?)`;
-		}
-		params.push(leaf.value, upperBound, leaf.value, upperBound);
-		// The uncollated bounds are the index seek; the C-collated pair is the
-		// exact prefix test, since en_US sorts 'aB' inside ['ab','ac').
-		return `(${col} >= ? AND ${col} < ? AND ${byteCol} >= ? AND ${byteCol} < ?)`;
+	if (leaf.op === "regex" || leaf.op === "startsWith") {
+		const build = leaf.op === "regex" ? regexSql : startsWithSql;
+		const match = build({ column: col, field: leaf.field, value: leaf.value });
+		params.push(...match.params);
+		return match.sql;
 	}
 	if (leaf.op === "in" || leaf.op === "nin") {
 		if (!Array.isArray(leaf.value))
@@ -238,17 +214,4 @@ function compileLeaf({
 		return `${col} ${symbol} ?`;
 	}
 	throw new Error(`Unsupported op: ${(leaf as IRLeaf).op}`);
-}
-
-/** Smallest string greater than every value starting with `prefix`: bump the
- * last character that can be bumped. Null when every character is already the
- * maximum code point, leaving the range open-ended. */
-function prefixUpperBound(prefix: string): string | null {
-	const chars = Array.from(prefix);
-	for (let i = chars.length - 1; i >= 0; i--) {
-		const code = chars[i].codePointAt(0) ?? 0;
-		if (code < 0x10ffff)
-			return chars.slice(0, i).join("") + String.fromCodePoint(code + 1);
-	}
-	return null;
 }
