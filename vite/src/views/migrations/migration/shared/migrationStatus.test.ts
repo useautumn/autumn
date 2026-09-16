@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { isRunDisabled, runButtonLabel, statusBadge } from "./migrationStatus";
+import {
+	isRunDisabled,
+	runButtonLabel,
+	statusBadge,
+	waitingExplanation,
+} from "./migrationStatus";
 
 test("run button reads Run All until a Run All has executed", () => {
 	expect(runButtonLabel("draft")).toBe("Run All");
@@ -38,4 +43,11 @@ test("status badge tones", () => {
 		label: "Run",
 		tone: "run",
 	});
+});
+
+test("waiting explanation names the one-per-org limit and the blocker", () => {
+	expect(waitingExplanation("pro-v3")).toBe(
+		'Only one migration runs at a time per organization. This one starts once "pro-v3" finishes.',
+	);
+	expect(waitingExplanation(null)).toContain("the current run");
 });

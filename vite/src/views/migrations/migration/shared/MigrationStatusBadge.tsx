@@ -1,5 +1,5 @@
 import type { MigrationStatus } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import {
 	CheckCircleIcon,
 	ClockIcon,
@@ -8,7 +8,11 @@ import {
 	PlayCircleIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { type MigrationStatusBadgeSpec, statusBadge } from "./migrationStatus";
+import {
+	type MigrationStatusBadgeSpec,
+	statusBadge,
+	waitingExplanation,
+} from "./migrationStatus";
 
 const TONE_STYLES: Record<MigrationStatusBadgeSpec["tone"], string> = {
 	draft: "bg-muted text-tertiary-foreground border-transparent",
@@ -27,15 +31,21 @@ const TONE_ICONS: Record<MigrationStatusBadgeSpec["tone"], Icon> = {
 export function MigrationStatusBadge({
 	status,
 	blockedBy,
+	labelBlocker = true,
 	className,
 }: {
 	status: MigrationStatus;
 	blockedBy: string | null;
+	/** Off where the column is narrow; the tooltip still names the blocker. */
+	labelBlocker?: boolean;
 	className?: string;
 }) {
-	const spec = statusBadge({ status, blockedBy });
+	const spec = statusBadge({
+		status,
+		blockedBy: labelBlocker ? blockedBy : null,
+	});
 	const ToneIcon = TONE_ICONS[spec.tone];
-	return (
+	const badge = (
 		<Badge
 			variant="muted"
 			className={cn(
@@ -47,5 +57,15 @@ export function MigrationStatusBadge({
 			<ToneIcon size={12} weight="fill" />
 			{spec.label}
 		</Badge>
+	);
+	if (status !== "waiting") return badge;
+
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>{badge}</TooltipTrigger>
+			<TooltipContent className="max-w-64">
+				{waitingExplanation(blockedBy)}
+			</TooltipContent>
+		</Tooltip>
 	);
 }

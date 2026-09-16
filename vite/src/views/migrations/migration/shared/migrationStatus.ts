@@ -13,6 +13,11 @@ export function isRunDisabled(status: MigrationStatus): boolean {
 	return status === "running" || status === "waiting";
 }
 
+export function waitingExplanation(blockedBy: string | null): string {
+	const blocker = blockedBy ? `"${blockedBy}"` : "the current run";
+	return `Only one migration runs at a time per organization. This one starts once ${blocker} finishes.`;
+}
+
 export function statusBadge({
 	status,
 	blockedBy,
