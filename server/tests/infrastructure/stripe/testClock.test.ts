@@ -200,3 +200,76 @@ test("an interrupted write prevents later advances even if its response arrives 
 	).rejects.toThrow("unresolved advancement");
 	expect(writes).toBe(1);
 });
+
+test("the minimum webhook wait overlaps clock readiness instead of stacking", async () => {
+	const fixture = createClockFixture();
+	const retrieve = fixture.stripeCli.testHelpers.testClocks.retrieve;
+	fixture.stripeCli.testHelpers.testClocks.retrieve = async (id) => {
+		if (fixture.targets.length > 0) await Bun.sleep(600);
+		return retrieve(id);
+	};
+	const startedAt = performance.now();
+	await advanceStripeTestClock({
+		...fixture,
+		targetSeconds: 200,
+		minimumWaitMs: 800,
+		timeoutMs: 1_200,
+	});
+	expect(performance.now() - startedAt).toBeGreaterThanOrEqual(790);
+	expect(fixture.targets).toEqual([200]);
+});
+
+test("an elapsed minimum wait cannot replace clock readiness", async () => {
+	const fixture = createClockFixture();
+	const retrieve = fixture.stripeCli.testHelpers.testClocks.retrieve;
+	const releaseRead = Promise.withResolvers<void>();
+	fixture.stripeCli.testHelpers.testClocks.retrieve = async (id) => {
+		if (fixture.targets.length > 0) await releaseRead.promise;
+		return retrieve(id);
+	};
+	let finished = false;
+	const pending = advanceStripeTestClock({
+		...fixture,
+		targetSeconds: 200,
+		minimumWaitMs: 20,
+	}).then(() => {
+		finished = true;
+	});
+	try {
+		await Bun.sleep(50);
+		expect(fixture.targets).toEqual([200]);
+		expect(finished).toBe(false);
+	} finally {
+		releaseRead.resolve();
+		await pending;
+	}
+	expect(finished).toBe(true);
+});
+
+test("the operation deadline bounds the minimum webhook wait", async () => {
+	const fixture = createClockFixture();
+	await expect(
+		advanceStripeTestClock({
+			...fixture,
+			targetSeconds: 200,
+			minimumWaitMs: 10_000,
+			timeoutMs: 30,
+		}),
+	).rejects.toThrow("exceeded 30ms");
+	expect(fixture.targets).toEqual([200]);
+});
+
+test("cancellation interrupts the minimum webhook wait", async () => {
+	const fixture = createClockFixture();
+	const controller = new AbortController();
+	const pending = advanceStripeTestClock({
+		...fixture,
+		targetSeconds: 200,
+		minimumWaitMs: 10_000,
+		signal: controller.signal,
+	});
+	await Bun.sleep(10);
+	controller.abort(new Error("test cancelled"));
+	await expect(pending).rejects.toThrow("test cancelled");
+	expect(fixture.targets).toEqual([200]);
+});

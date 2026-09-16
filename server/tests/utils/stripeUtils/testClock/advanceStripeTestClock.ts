@@ -9,6 +9,7 @@ export const advanceStripeTestClock = async ({
 	stripeCli,
 	testClockId,
 	targetSeconds,
+	minimumWaitMs = 0,
 	settleMs = 0,
 	timeoutMs = 180_000,
 	signal,
@@ -16,6 +17,7 @@ export const advanceStripeTestClock = async ({
 	stripeCli: Stripe;
 	testClockId: string;
 	targetSeconds: number;
+	minimumWaitMs?: number;
 	settleMs?: number;
 	timeoutMs?: number;
 	signal?: AbortSignal;
@@ -56,12 +58,16 @@ export const advanceStripeTestClock = async ({
 						},
 					),
 			});
+			const submittedAt = performance.now();
 			await waitForStripeClockReady({
 				stripeCli,
 				testClockId,
 				targetSeconds,
 				wait,
 			});
+			const remainingMinimumMs =
+				minimumWaitMs - (performance.now() - submittedAt);
+			if (remainingMinimumMs > 0) await wait.sleep(remainingMinimumMs);
 			if (settleMs > 0) await wait.sleep(settleMs);
 		} catch (cause) {
 			// An interrupted write may still finish at Stripe; don't advance this clock again.
