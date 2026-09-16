@@ -15,6 +15,11 @@
 			"import": "./src/balanceWorker.ts",
 			"default": "./src/balanceWorker.ts"
 		},
+		"./balanceWorkerClient": {
+			"types": "./src/balanceWorkerClient.ts",
+			"import": "./src/balanceWorkerClient.ts",
+			"default": "./src/balanceWorkerClient.ts"
+		},
 		"./viteDev": {
 			"types": "./src/viteDev.ts",
 			"import": "./src/viteDev.ts",

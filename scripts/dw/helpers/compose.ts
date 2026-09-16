@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { ensureBalanceWorkerTopics } from "../../devServices/ensureBalanceWorkerTopics.ts";
 import { PROJECT_ROOT } from "../constants.ts";
 import {
 	composeProjectName,
@@ -55,6 +56,10 @@ export function ensureComposeStack(
 		{ env },
 	);
 	if (up.code === 0) {
+		ensureBalanceWorkerTopics({
+			kafkaPort: kafkaPortFor(worktreeNum),
+			runtimeEnv: process.env,
+		});
 		log(
 			`compose stack ${project} up (dragonfly :${env.DRAGONFLY_PORT}, elasticmq :${env.ELASTICMQ_PORT}, dynamodb :${env.DYNAMODB_PORT}, kafka :${env.KAFKA_PORT})`,
 		);
