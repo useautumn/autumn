@@ -20,6 +20,14 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { UsageAnchorTooltip } from "@/components/billing-controls/UsageAnchorTooltip";
+import {
+	type UsageLimitCondition,
+	UsageLimitConditionRows,
+} from "@/components/billing-controls/UsageLimitConditionRows";
+import {
+	conditionsFromFilter,
+	conditionsToFilter,
+} from "@/components/billing-controls/usageLimitFilterConditions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -34,14 +42,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
-import {
-	type UsageLimitCondition,
-	UsageLimitConditionRows,
-} from "./UsageLimitConditionRows";
-import {
-	conditionsFromFilter,
-	conditionsToFilter,
-} from "./usageLimitFilterConditions";
 import { useCustomerPropertyKeys } from "./useCustomerPropertyKeys";
 
 // Interval is required (no inherit) and one_off intervals are not supported.
