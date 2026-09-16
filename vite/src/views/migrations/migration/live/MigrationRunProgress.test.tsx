@@ -50,3 +50,18 @@ test("a waiting run pulses a full bar instead of a count fill", () => {
 	expect(markup).toContain("animate-pulse");
 	expect(markup).toContain("width:100%");
 });
+
+test("the running slot holds its place when claims briefly drop to zero", () => {
+	const between = renderToStaticMarkup(
+		<MigrationRunProgress
+			completed={35_000}
+			running={0}
+			total={35_000}
+			expected={705_000}
+			label="Migrating customers"
+			active
+		/>,
+	);
+	expect(between).toContain("running");
+	expect(between).toContain("opacity-0");
+});

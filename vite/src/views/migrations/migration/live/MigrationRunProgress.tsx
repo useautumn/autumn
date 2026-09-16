@@ -1,5 +1,6 @@
 import { UsersIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { migrationProgress } from "./migrationProgress";
@@ -30,6 +31,9 @@ export function MigrationRunProgress({
 	slot?: HTMLElement | null;
 }) {
 	const shouldReduceMotion = useReducedMotion();
+	const lastRunningRef = useRef(running);
+	if (running > 0) lastRunningRef.current = running;
+	const peakRunning = running > 0 ? running : lastRunningRef.current;
 	const { percent, denominator } = migrationProgress({
 		completed,
 		total,
@@ -62,10 +66,15 @@ export function MigrationRunProgress({
 								{label}
 							</span>
 							<span className="flex items-center gap-3 text-tertiary-foreground tabular-nums">
-								{running > 0 && (
-									<span className="flex items-center gap-1.5">
+								{!waiting && (
+									<span
+										className={cn(
+											"flex items-center gap-1.5 transition-opacity",
+											running > 0 ? "opacity-100" : "opacity-0",
+										)}
+									>
 										<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-										{running.toLocaleString()} running
+										{peakRunning.toLocaleString()} running
 									</span>
 								)}
 								<span>
