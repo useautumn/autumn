@@ -6,7 +6,7 @@ import {
 	planLicenses,
 	prices,
 } from "@autumn/shared";
-import { and, eq, exists, notExists, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, notExists, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
 /**
@@ -18,46 +18,47 @@ export const hasNoBillingSource = ({ db }: { db: DrizzleCli }) => {
 
 	const hasNoCustomerPrice = notExists(
 		db
-			.select()
+			.select({ id: customerPrices.id })
 			.from(customerPrices)
 			.where(eq(customerPrices.customer_product_id, customerProducts.id)),
 	);
 
-	const customizedLicenseHasPrice = exists(
+	// customer_products.id is COLLATE "C"; matching the license column's collation
+	// keeps this lookup on unique_customer_license instead of a seq scan.
+	const parentCustomerProductId = sql`${customerProducts.id} COLLATE "default"`;
+	const hasNoPricedLicense = notExists(
 		db
-			.select()
-			.from(licensePrices)
-			.where(eq(licensePrices.plan_license_id, planLicenses.id)),
-	);
-	const baseLicenseProductHasPrice = exists(
-		db
-			.select()
-			.from(prices)
-			.where(
+			.select({ id: customerLicenses.id })
+			.from(customerLicenses)
+			.innerJoin(
+				planLicenses,
+				eq(planLicenses.id, customerLicenses.plan_license_id),
+			)
+			.leftJoin(
+				licensePrices,
 				and(
+					eq(planLicenses.customized, true),
+					eq(licensePrices.plan_license_id, planLicenses.id),
+				),
+			)
+			.leftJoin(
+				prices,
+				and(
+					eq(planLicenses.customized, false),
 					eq(
 						prices.internal_product_id,
 						customerLicenses.license_internal_product_id,
 					),
 					eq(prices.is_custom, false),
 				),
-			),
-	);
-	const hasNoPricedLicense = notExists(
-		db
-			.select()
-			.from(customerLicenses)
-			.innerJoin(
-				planLicenses,
-				eq(planLicenses.id, customerLicenses.plan_license_id),
 			)
 			.where(
 				and(
-					eq(customerLicenses.parent_customer_product_id, customerProducts.id),
-					or(
-						and(eq(planLicenses.customized, true), customizedLicenseHasPrice),
-						and(eq(planLicenses.customized, false), baseLicenseProductHasPrice),
+					eq(
+						customerLicenses.parent_customer_product_id,
+						parentCustomerProductId,
 					),
+					or(isNotNull(licensePrices.id), isNotNull(prices.id)),
 				),
 			),
 	);
