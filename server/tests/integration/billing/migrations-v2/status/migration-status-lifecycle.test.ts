@@ -19,6 +19,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrationRunRepo } from "@/internal/migrations/v2/repos/index.js";
 import { expectMigrationStatusCorrect } from "../utils/expectMigrationStatusCorrect.js";
+import { clearMigrationRunHistory } from "../utils/runChunkedMigration.js";
 import { waitForMigrationResult } from "../utils/runUpdatePlanMigration.js";
 
 type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
@@ -108,6 +109,7 @@ test.concurrent(
 			],
 		});
 
+		await clearMigrationRunHistory({ ctx, migrationId });
 		await autumnV2_2.migrationsV2.deleteAndCreate({
 			id: migrationId,
 			filter: { customer: { plan: { plan_id: plan.id } } },
