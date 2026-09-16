@@ -337,13 +337,13 @@ export function MigrationLiveView({
 		executionStatuses: activeExecutionStatuses,
 		isActive: hasActiveRun || hasRealtimeActive,
 	});
-	// A run re-evaluates the live filter, so the run dialog counts filter matches.
-	const { count: liveFilterCount } = useMigrationFilterPreview({
+	// The run scope is the whole migration filter, never the table's search,
+	// list filters or execution statuses.
+	const { count: runScopeCount } = useMigrationFilterPreview({
 		filter: filter.customer ?? {},
 		migrationId,
 		includeRows: false,
 	});
-	const runScopeCount = previewSource === "filter" ? count : liveFilterCount;
 
 	const setSelectedCustomer = useMigrationSheetStore(
 		(s) => s.setSelectedCustomer,
