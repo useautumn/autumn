@@ -44,6 +44,60 @@ function restoreMocks(): void {
 
 function ignoreLog(): void {}
 
+test.each(["none", "msk_iam"] as const)(
+	"shared shadow and operator ownership reader uses %s without enabling direct routing",
+	(authMode) => {
+		balanceWorkerEnv = balanceWorkerConfig.createBalanceWorkerClientEnv({
+			NODE_ENV: "production",
+			KAFKA_BROKERS: "broker:9098",
+			KAFKA_AUTH_MODE: authMode,
+			AWS_REGION: "us-east-1",
+		});
+		const interrupted = new Error("stop before opening any connection");
+		function interruptConnection(): never {
+			throw interrupted;
+		}
+		const createClient = spyOn(kafka, "createKafkaClient").mockImplementation(
+			interruptConnection,
+		);
+		const createTransport = spyOn(kafka, "createKafkaTransport");
+		expect(() =>
+			ownershipAccess.createServerOwnershipConsumer({
+				topic: "shadow-ownership",
+				groupIdPrefix: "shadow-reader",
+			}),
+		).toThrow(interrupted);
+		expect(createTransport).toHaveBeenCalledWith({
+			authMode,
+			region: "us-east-1",
+		});
+		expect(balanceWorkerEnv.BALANCE_WORKER_ROLLOUT_ENABLED).toBe(false);
+		expect(createClient).toHaveBeenCalledTimes(1);
+		expect(createClient.mock.calls[0]?.[0]).toMatchObject({
+			clientId: "shadow-reader",
+			brokers: ["broker:9098"],
+			limits: {
+				connectionTimeoutMs: 3000,
+				requestTimeoutMs: 10000,
+				retryCount: 3,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 1000,
+			},
+		});
+		expect(createClient.mock.calls[0]?.[0].transport).toEqual(
+			authMode === "none"
+				? {}
+				: {
+						ssl: true,
+						sasl: {
+							mechanism: "oauthbearer",
+							oauthBearerProvider: expect.any(Function),
+						},
+					},
+		);
+	},
+);
+
 function createContext({
 	env = AppEnv.Sandbox,
 }: {
