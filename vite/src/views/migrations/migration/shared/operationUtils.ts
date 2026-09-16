@@ -24,6 +24,31 @@ function hasCustomizations(customize: UpdatePlanOp["customize"]): boolean {
 	return false;
 }
 
+type CustomerOperation = NonNullable<Operations["customer"]>[number];
+
+/** A version without customize swaps every customer item for the target
+ * version's catalog, overriding customized plans. */
+export function needsVersionOnlyWarning(op: CustomerOperation): boolean {
+	return (
+		op.type === "update_plan" &&
+		op.version !== undefined &&
+		!hasCustomizations(op.customize)
+	);
+}
+
+export function versionOnlyWarningVersions(operations: Operations): number[] {
+	const versions = new Set<number>();
+	for (const op of operations.customer ?? []) {
+		if (op.type === "update_plan" && needsVersionOnlyWarning(op))
+			versions.add(op.version as number);
+	}
+	return [...versions].sort((a, b) => a - b);
+}
+
+export function versionWarningText(version: number): string {
+	return `This directly sets customers to v${version} and replaces all their items, overriding any customized plans. Combine with customize for a safer operation.`;
+}
+
 export function getOperationsSummaryText(operations: Operations): string {
 	const ops = operations.customer ?? [];
 	const updateCount = ops.filter((op) => op.type === "update_plan").length;

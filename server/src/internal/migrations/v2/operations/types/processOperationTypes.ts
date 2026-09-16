@@ -14,6 +14,7 @@ export type ProcessOperationResult = {
 	plan: AutumnBillingPlan;
 	projectedFullCustomer: FullCustomer;
 	matchedCustomerProducts: number;
+	unchangedCustomerProducts: number;
 	billingContexts: UpdateSubscriptionBillingContext[];
 };
 

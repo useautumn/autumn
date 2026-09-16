@@ -168,7 +168,7 @@ export function MigrateCustomersDialog({
 
 	const versionProducts = useVersionProducts(productId, migratableVersions);
 	const latestProduct = useLatestProduct(productId, latestVersion);
-	const { features = [] } = useFeaturesQuery();
+	const { features = [], isLoading: isLoadingFeatures } = useFeaturesQuery();
 
 	const hasPricingChange = useMemo(() => {
 		if (!latestProduct) return false;
@@ -209,17 +209,19 @@ export function MigrateCustomersDialog({
 	);
 
 	const handleCreate = async () => {
-		if (migratableVersions.length === 0) return;
-
-		const draft = buildVersionMigrationDraft({
-			productId,
-			latestVersion,
-			scope,
-			pastVersions: migratableVersions,
-			hasPricingChange,
-		});
+		if (migratableVersions.length === 0 || isLoadingFeatures) return;
 
 		try {
+			const draft = buildVersionMigrationDraft({
+				productId,
+				latestVersion,
+				scope,
+				pastVersions: migratableVersions,
+				hasPricingChange,
+				latestProduct,
+				versionProducts,
+				features,
+			});
 			const migration = await createMigration(draft);
 
 			toast.success("Migration created");
@@ -358,7 +360,7 @@ export function MigrateCustomersDialog({
 						metaShortcut="enter"
 						onClick={handleCreate}
 						isLoading={isCreating}
-						disabled={isCreating || !hasMigratableVersions}
+						disabled={isCreating || isLoadingFeatures || !hasMigratableVersions}
 						className="w-full"
 					>
 						{hasMigratableVersions

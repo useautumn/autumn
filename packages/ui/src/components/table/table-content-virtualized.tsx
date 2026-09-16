@@ -18,6 +18,7 @@ export function TableContentVirtualized({
 	className?: string;
 }) {
 	const context = useTableContext();
+	const isFlexFill = context.virtualization?.containerHeight === "100%";
 	const {
 		enableColumnVisibility,
 		columnVisibilityInToolbar,
@@ -27,6 +28,7 @@ export function TableContentVirtualized({
 	} = context;
 	const { isLoading, isTransitioning } = context;
 	const rows = table.getRowModel().rows;
+	const showsSkeleton = (isLoading || isTransitioning) && !rows.length;
 	const showMobileCards = useShowMobileCards();
 
 	// State, not a ref, so the virtualizer re-renders once the container mounts.
@@ -39,13 +41,17 @@ export function TableContentVirtualized({
 
 	// Small tables stay as short as their content; taller ones get a usable floor.
 	const MIN_TABLE_HEIGHT = 400;
-	const containerHeightPx = virtualization?.containerHeight
-		? Number.parseInt(virtualization.containerHeight, 10)
-		: undefined;
+	const containerHeight = virtualization?.containerHeight;
+	const containerHeightPx =
+		containerHeight && !containerHeight.startsWith("calc")
+			? Number.parseInt(containerHeight, 10)
+			: undefined;
+	const isShortContainer =
+		containerHeightPx !== undefined && containerHeightPx < MIN_TABLE_HEIGHT;
 	const minHeight =
-		containerHeightPx && containerHeightPx < MIN_TABLE_HEIGHT
+		isShortContainer || isFlexFill
 			? undefined
-			: contentHeight > MIN_TABLE_HEIGHT
+			: contentHeight > MIN_TABLE_HEIGHT || showsSkeleton
 				? MIN_TABLE_HEIGHT
 				: undefined;
 
@@ -62,8 +68,6 @@ export function TableContentVirtualized({
 		...context,
 		scrollContainer,
 	};
-
-	const isFlexFill = virtualization?.containerHeight === "100%";
 
 	if (showMobileCards) {
 		return <TableMobileCards />;
@@ -98,10 +102,18 @@ export function TableContentVirtualized({
 				<div
 					key={visibleColumnKey}
 					ref={setScrollContainer}
-					className={cn("w-full overflow-auto", isFlexFill && "flex-1 min-h-0")}
+					className={cn(
+						"w-full overflow-auto transition-[max-height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+						isFlexFill && "flex-1 min-h-0",
+						showsSkeleton && "overflow-hidden",
+					)}
 					style={{
 						minHeight: isFlexFill ? undefined : minHeight,
-						maxHeight: isFlexFill ? undefined : virtualization?.containerHeight,
+						maxHeight: isFlexFill ? undefined : containerHeight,
+						height:
+							!isFlexFill && showsSkeleton && containerHeight
+								? containerHeight
+								: undefined,
 						willChange: "scroll-position",
 					}}
 				>

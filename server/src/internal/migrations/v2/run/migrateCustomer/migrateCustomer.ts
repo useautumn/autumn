@@ -1,3 +1,4 @@
+import type { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withMigrationCustomerLock } from "@/external/redis/actions/migrationCustomerLock/withMigrationCustomerLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildPreviewMigrateCustomer } from "@/internal/migrations/v2/preview/index.js";
@@ -10,6 +11,7 @@ import {
 	logMigrateCustomerResult,
 } from "./logs/index.js";
 import { processOperations } from "./processOperations.js";
+import { resolveSkipReason } from "./resolveSkipReason.js";
 import { setupMigrateCustomerContext } from "./setup/setupMigrateCustomerContext.js";
 
 export type MigrateCustomerItemPreview = {
@@ -21,6 +23,7 @@ export type MigrateCustomerItemPreview = {
 export type MigrateCustomerResult = {
 	itemPreview: MigrateCustomerItemPreview | null;
 	status: "succeeded" | "skipped";
+	skipReason?: MigrationItemRunSkipReason;
 	response: Record<string, unknown> | null;
 };
 
@@ -60,6 +63,7 @@ export const migrateCustomer = async ({
 				plan: autumnPlan,
 				billingContexts,
 				matchedCustomerProducts,
+				unchangedCustomerProducts,
 			} = await processOperations({
 				ctx: migrationCtx,
 				context,
@@ -108,14 +112,22 @@ export const migrateCustomer = async ({
 				},
 			});
 
+			const skipReason = resolveSkipReason({
+				matchedCustomerProducts,
+				unchangedCustomerProducts,
+			});
+
 			return {
 				itemPreview: {
 					id: context.fullCustomer.id ?? null,
 					name: context.fullCustomer.name ?? null,
 					email: context.fullCustomer.email ?? null,
 				},
-				status: matchedCustomerProducts === 0 ? "skipped" : "succeeded",
-				response,
+				status: skipReason ? "skipped" : "succeeded",
+				skipReason: skipReason ?? undefined,
+				response: skipReason
+					? { ...response, skip_reason: skipReason }
+					: response,
 			};
 		};
 

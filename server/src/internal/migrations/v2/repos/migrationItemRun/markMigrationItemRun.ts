@@ -1,6 +1,7 @@
 import {
 	type MigrationItemKind,
 	type MigrationItemRun,
+	type MigrationItemRunSkipReason,
 	MigrationItemRunStatus,
 	type MigrationItemRunStatus as MigrationItemRunStatusType,
 	migrationItemRuns,
@@ -21,6 +22,7 @@ const markMigrationItemRun = async ({
 	itemKind,
 	itemId,
 	status,
+	skipReason,
 }: {
 	ctx: MigrationItemRunRepoContext;
 	migrationInternalId: string;
@@ -29,6 +31,7 @@ const markMigrationItemRun = async ({
 	itemKind: MigrationItemKind;
 	itemId: string;
 	status: MigrationItemRunStatusType;
+	skipReason?: MigrationItemRunSkipReason;
 }): Promise<MigrationItemRun | null> => {
 	if (dryRun && !migrationRunId)
 		throw new Error(
@@ -36,6 +39,8 @@ const markMigrationItemRun = async ({
 		);
 
 	const now = Date.now();
+	const skipReasonValue =
+		status === MigrationItemRunStatus.Skipped ? (skipReason ?? null) : null;
 	const target = dryRun
 		? [
 				migrationItemRuns.migration_internal_id,
@@ -62,13 +67,14 @@ const markMigrationItemRun = async ({
 			item_kind: itemKind,
 			item_id: itemId,
 			status,
+			skip_reason: skipReasonValue,
 			created_at: now,
 			updated_at: now,
 		})
 		.onConflictDoUpdate({
 			target,
 			targetWhere,
-			set: { status, updated_at: now },
+			set: { status, skip_reason: skipReasonValue, updated_at: now },
 		})
 		.returning();
 
@@ -84,7 +90,9 @@ export const markMigrationItemRunSucceeded = async (
 	});
 
 export const markMigrationItemRunSkipped = async (
-	params: Omit<Parameters<typeof markMigrationItemRun>[0], "status">,
+	params: Omit<Parameters<typeof markMigrationItemRun>[0], "status"> & {
+		skipReason: MigrationItemRunSkipReason;
+	},
 ): Promise<MigrationItemRun | null> =>
 	markMigrationItemRun({
 		...params,

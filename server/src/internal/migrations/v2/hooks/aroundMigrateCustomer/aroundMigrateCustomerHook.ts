@@ -1,3 +1,4 @@
+import { MigrationItemRunSkipReason } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { MigrateCustomerContext } from "../../operations/types/index.js";
 import type {
@@ -38,10 +39,12 @@ export const buildSkippedMigrateCustomerResult = ({
 		email: context.fullCustomer.email ?? null,
 	},
 	status: "skipped",
+	skipReason: MigrationItemRunSkipReason.Ineligible,
 	response: {
 		skipped: {
 			reason: skip.reason,
 		},
+		skip_reason: MigrationItemRunSkipReason.Ineligible,
 		...(skip.response ?? {}),
 	},
 });

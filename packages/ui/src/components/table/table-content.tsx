@@ -23,6 +23,7 @@ export function TableContent({
 	} = useTableContext();
 	const rows = table.getRowModel().rows;
 	const showMobileCards = useShowMobileCards();
+	const showsSkeleton = (isLoading || isTransitioning) && !rows.length;
 
 	if (showMobileCards) {
 		return <TableMobileCards />;
@@ -34,6 +35,7 @@ export function TableContent({
 				"rounded-lg border relative z-50 min-w-0",
 				!rows.length && "border-dashed",
 				className,
+				showsSkeleton && "overflow-hidden",
 			)}
 		>
 			{(isLoading || isTransitioning) && (
@@ -45,7 +47,10 @@ export function TableContent({
 				</div>
 			)}
 			<Table
-				className="p-0 w-full rounded-lg overflow-auto"
+				className={cn(
+					"p-0 w-full rounded-lg overflow-auto",
+					showsSkeleton && "overflow-hidden",
+				)}
 				flexibleTableColumns={flexibleTableColumns}
 			>
 				{children}
