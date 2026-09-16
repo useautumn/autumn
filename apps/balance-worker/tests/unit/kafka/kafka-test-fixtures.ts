@@ -36,7 +36,18 @@ export const createState = ({
 		featureStatesById: {
 			messages: {
 				kind: "direct_metered_v1",
-				customerEntitlements: [{ id: "messages_monthly", balance, usage: 0 }],
+				customerEntitlements: [
+					{
+						id: "messages_monthly",
+						balance,
+						usage: 0,
+						granted: balance,
+						externalId: null,
+						planId: null,
+						reset: null,
+						expiresAt: null,
+					},
+				],
 			},
 		},
 	});

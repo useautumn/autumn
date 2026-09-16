@@ -48,7 +48,18 @@ const state = createCustomerMeteringState({
 	featureStatesById: {
 		messages: {
 			kind: "direct_metered_v1",
-			customerEntitlements: [{ id: "balance", balance: 10, usage: 0 }],
+			customerEntitlements: [
+				{
+					id: "balance",
+					balance: 10,
+					usage: 0,
+					granted: 10,
+					externalId: null,
+					planId: null,
+					reset: null,
+					expiresAt: null,
+				},
+			],
 		},
 	},
 });
@@ -71,6 +82,9 @@ const fixture = ({
 	const submitted: unknown[] = [];
 	const lookups: PartitionRoute[] = [];
 	const processor: PartitionProcessor = {
+		initialize: async () => {
+			throw new Error("Initialization is not configured in this fixture");
+		},
 		track: async (params) => {
 			submitted.push(params);
 			if (cause) throw cause;
@@ -151,8 +165,8 @@ async function logsFailedRequest(): Promise<void> {
 	for (const [cause, statusCode, errorCode] of [
 		[
 			new PartitionWriterStateNotFoundError({ customerKey: "missing" }),
-			503,
-			"NOT_READY",
+			409,
+			"NOT_INITIALIZED",
 		],
 		[new Error("failed write"), 500, "INTERNAL"],
 	] as const) {
@@ -417,14 +431,22 @@ describe("Balance worker HTTP", () => {
 		});
 	});
 	test.each([
-		new PartitionWriterStateNotFoundError({ customerKey: "missing" }),
-		new PartitionWriterCapacityError(),
+		{
+			cause: new PartitionWriterStateNotFoundError({ customerKey: "missing" }),
+			status: 409,
+			code: "NOT_INITIALIZED",
+		},
+		{
+			cause: new PartitionWriterCapacityError(),
+			status: 503,
+			code: "NOT_READY",
+		},
 	])(
 		"reports unavailable state or capacity without inventing balances",
-		async (cause) => {
+		async ({ cause, status, code }) => {
 			const response = await fixture({ cause }).post();
-			expect(response.status).toBe(503);
-			expect((await response.json()).error.code).toBe("NOT_READY");
+			expect(response.status).toBe(status);
+			expect((await response.json()).error.code).toBe(code);
 		},
 	);
 	test("withdraws a stale healthy admission when runtime health fails", async () => {

@@ -12,6 +12,7 @@ import {
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
 import { OwnedPartitionNotReadyError } from "../../../runtime/runtimeErrors.js";
+import { ConflictingMeteringStateInitializationError } from "../../../state/sqliteBalanceStateErrors.js";
 import {
 	PartitionRouteMismatchError,
 	PartitionRouteNotOwnedError,
@@ -36,6 +37,21 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 		) {
 			status = 400;
 			error = { code: "INVALID_REQUEST", message: "Invalid worker request" };
+		} else if (cause instanceof ConflictingMeteringStateInitializationError) {
+			status = 409;
+			error = {
+				code: "INITIALIZATION_CONFLICT",
+				message: "Initialization id reused with a different baseline",
+			};
+		} else if (
+			cause instanceof PartitionWriterStateNotFoundError ||
+			cause instanceof PartitionProcessorStateNotFoundError
+		) {
+			status = 409;
+			error = {
+				code: "NOT_INITIALIZED",
+				message: "Customer must be initialized before check or track",
+			};
 		} else if (cause instanceof PartitionWriterCommandConflictError) {
 			status = 400;
 			error = {
@@ -50,9 +66,7 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 			};
 		} else if (
 			cause instanceof OwnedPartitionNotReadyError ||
-			cause instanceof PartitionWriterCapacityError ||
-			cause instanceof PartitionWriterStateNotFoundError ||
-			cause instanceof PartitionProcessorStateNotFoundError
+			cause instanceof PartitionWriterCapacityError
 		) {
 			status = 503;
 			error = {

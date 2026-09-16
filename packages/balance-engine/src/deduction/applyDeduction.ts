@@ -38,7 +38,7 @@ export const applyDeduction = ({
 		if (!mutation) return customerEntitlement;
 
 		return {
-			id: customerEntitlement.id,
+			...customerEntitlement,
 			balance: mutation.balanceAfter,
 			usage: mutation.usageAfter,
 		};

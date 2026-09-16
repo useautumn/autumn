@@ -3,6 +3,8 @@ import {
 	ConflictingTrackReceiptError,
 	computeTrack,
 	OutOfOrderTrackOutcomeError,
+	parseCheckCommand,
+	parseInitializeCommand,
 } from "@autumn/balance-engine";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import {
@@ -49,6 +51,58 @@ describe("receipt reuse during checkpoint replay", () => {
 				expect(retry).toEqual({
 					kind: "duplicate",
 					outcome: fixture.reusedOutcome,
+				});
+				expect(fixture.records).toHaveLength(3);
+				const initializationRetry = await fixture.restoredProcessor.initialize({
+					command: parseInitializeCommand({
+						input: {
+							schemaVersion: 1,
+							type: "initialize",
+							requestId: "restore-initialize-retry",
+							identity,
+							initializationId: fixture.initialization.initializationId,
+							state: fixture.initialization.state,
+							occurredAt: fixture.now,
+						},
+					}),
+				});
+				expect(initializationRetry).toEqual({
+					kind: "duplicate",
+					state: fixture.initialization.state,
+				});
+				const checked = await fixture.restoredProcessor.check({
+					command: parseCheckCommand({
+						input: {
+							schemaVersion: 1,
+							type: "check",
+							requestId: "restored-check",
+							identity,
+							entityId: null,
+							featureId: "messages",
+							requiredBalance: 1,
+							properties: null,
+							occurredAt: fixture.now,
+						},
+					}),
+				});
+				expect(checked).toMatchObject({
+					kind: "decided",
+					balance: 2,
+					revision: 2,
+					balanceSnapshot: {
+						id: "messages_monthly",
+						externalId: "monthly-grant",
+						balance: 2,
+						usage: 8,
+						granted: 10,
+						planId: "pro",
+						reset: {
+							interval: "month",
+							intervalCount: 1,
+							nextResetAt: 1_800_000_000_000,
+						},
+						expiresAt: null,
+					},
 				});
 				expect(fixture.records).toHaveLength(3);
 				const checkpoint = parsePartitionCheckpoint({

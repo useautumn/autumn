@@ -220,7 +220,16 @@ const createStore = ({
 			messages: {
 				kind: "direct_metered_v1",
 				customerEntitlements: [
-					{ id: "messages_monthly", balance: 10, usage: 0 },
+					{
+						id: "messages_monthly",
+						balance: 10,
+						usage: 0,
+						granted: 10,
+						externalId: null,
+						planId: null,
+						reset: null,
+						expiresAt: null,
+					},
 				],
 			},
 		},
