@@ -35,6 +35,7 @@ export type {
 	UnsupportedDecisionReason,
 } from "./contracts.js";
 export {
+	parseMeteringIdentity,
 	stateInitializationFingerprintOf,
 	trackCommandFingerprintOf,
 } from "./contracts.js";
