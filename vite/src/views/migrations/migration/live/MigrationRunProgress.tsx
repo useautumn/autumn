@@ -83,7 +83,7 @@ export function MigrationRunProgress({
 									</span>{" "}
 									of{" "}
 									<span className="font-medium text-foreground">
-										{denominator.toLocaleString()}
+										{denominator === null ? "…" : denominator.toLocaleString()}
 									</span>{" "}
 									customers
 								</span>
@@ -93,10 +93,14 @@ export function MigrationRunProgress({
 							<motion.div
 								className={cn(
 									"h-full rounded-full bg-primary",
-									waiting && "animate-pulse bg-primary/40",
+									(waiting || denominator === null) &&
+										"animate-pulse bg-primary/40",
 								)}
 								initial={false}
-								animate={{ width: waiting ? "100%" : `${percent}%` }}
+								animate={{
+									width:
+										waiting || denominator === null ? "100%" : `${percent}%`,
+								}}
 								exit={{
 									width: "100%",
 									transition: shouldReduceMotion

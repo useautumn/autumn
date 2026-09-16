@@ -55,3 +55,9 @@ test("completing everything caps at one hundred", () => {
 		migrationProgress({ completed: 120, total: 120, expected: 100 }).percent,
 	).toBe(100);
 });
+
+test("an unknown scope stays indeterminate instead of reading complete", () => {
+	expect(
+		migrationProgress({ completed: 205_000, total: 205_000, expected: null }),
+	).toEqual({ percent: 0, denominator: null });
+});
