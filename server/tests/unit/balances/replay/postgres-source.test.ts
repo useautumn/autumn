@@ -11,13 +11,13 @@ import { describe, expect, mock, test } from "bun:test";
 import type { FullSubject } from "@autumn/shared";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { BalanceHydrationSelection } from "@/internal/balances/hydration/balanceHydrationContracts.js";
 import { createPostgresReplayHydrationSource } from "@/internal/balances/replay/postgres/createPostgresReplayHydrationSource.js";
 import type {
 	ReplayOrganizationLoader,
 	ReplaySubjectLoader,
 } from "@/internal/balances/replay/postgres/postgresReplayHydrationPorts.js";
-import type { ReplayHydrationSelection } from "@/internal/balances/replay/replayHydrationContracts.js";
-import { createReplayHydrationFixture } from "./replay-hydration-fixture.js";
+import { createBalanceHydrationFixture } from "../hydration/balance-hydration-fixture.js";
 
 const dialect = new PgDialect();
 
@@ -62,7 +62,7 @@ const createSourceHarness = ({
 	organizationFound?: boolean;
 	commitFails?: boolean;
 } = {}) => {
-	const fixture = createReplayHydrationFixture();
+	const fixture = createBalanceHydrationFixture();
 	const database = createDatabaseHarness({ commitFails });
 	const subject = fullSubject ?? fixture.fullSubject;
 	const loadOrganization = mock(
@@ -101,7 +101,7 @@ const load = ({
 	signal = new AbortController().signal,
 }: {
 	source: ReturnType<typeof createPostgresReplayHydrationSource>;
-	selection: ReplayHydrationSelection;
+	selection: BalanceHydrationSelection;
 	signal?: AbortSignal;
 }) => source.load({ selection, signal });
 
@@ -172,7 +172,7 @@ describe("Postgres replay hydration source", () => {
 	test.concurrent(
 		"uses the baseline rather than wall time for reset and expiry eligibility",
 		async () => {
-			const fixture = createReplayHydrationFixture({
+			const fixture = createBalanceHydrationFixture({
 				baseline: { id: "historical", capturedAtMs: 1_700_000_000_000 },
 			});
 			fixture.customerEntitlement.next_reset_at = 1_700_000_010_000;

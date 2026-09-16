@@ -4,11 +4,11 @@ import type {
 	TrackDecision,
 } from "@autumn/balance-engine";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { BalanceHydrationResult } from "../../hydration/balanceHydrationContracts.js";
 import type {
 	ReplayEnvironment,
 	ReplayOperation,
 } from "../manifest/replayManifestContracts.js";
-import type { ReplayHydrationResult } from "../replayHydrationContracts.js";
 import { describeReplayOperatorError } from "./replayOperatorErrors.js";
 
 /** A customer whose baseline could not be proven fresh is never replayed. */
@@ -78,7 +78,7 @@ export type ReplayPrewarmStatus = Readonly<{
 }>;
 
 export type ReplayPrewarmResultCounts = Record<
-	ReplayHydrationResult["kind"],
+	BalanceHydrationResult["kind"],
 	number
 >;
 

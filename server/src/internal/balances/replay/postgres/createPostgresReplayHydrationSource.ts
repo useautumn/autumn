@@ -9,11 +9,11 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fullSubjectToMeteringState } from "../../balanceWorker/fullSubjectToMeteringState.js";
 import type {
-	ReplayHydrationBaseline,
-	ReplayHydrationSelection,
-	ReplayHydrationSource,
-	ReplayHydrationSourceResult,
-} from "../replayHydrationContracts.js";
+	BalanceHydrationBaseline,
+	BalanceHydrationSelection,
+	BalanceHydrationSource,
+	BalanceHydrationSourceResult,
+} from "../../hydration/balanceHydrationContracts.js";
 import {
 	buildReplayContextMetadata,
 	createReplayHydrationContext,
@@ -51,7 +51,7 @@ const SNAPSHOT_TRANSACTION = {
 } as const;
 const STATEMENT_TIMEOUT_MS = 2_000;
 
-export type PostgresReplayHydrationSource = ReplayHydrationSource & {
+export type PostgresReplayHydrationSource = BalanceHydrationSource & {
 	readContext(params: { identity: MeteringIdentity }): AutumnContext;
 	close(): void;
 };
@@ -71,7 +71,7 @@ type SourceState = {
 	loadOrganization: ReplayOrganizationLoader;
 	loadFullSubject: ReplaySubjectLoader;
 	metadataByIdentity: Map<string, ReplayContextMetadata>;
-	baseline?: ReplayHydrationBaseline;
+	baseline?: BalanceHydrationBaseline;
 	closed: boolean;
 };
 
@@ -97,7 +97,7 @@ function bindBaseline({
 	baseline,
 }: {
 	state: SourceState;
-	baseline: ReplayHydrationBaseline;
+	baseline: BalanceHydrationBaseline;
 }): void {
 	const bound = state.baseline;
 	if (!bound) {
@@ -122,7 +122,7 @@ function convertSnapshot({
 	ctx: AutumnContext;
 	metadata: ReplayContextMetadata;
 	fullSubject: FullSubject;
-	selection: ReplayHydrationSelection;
+	selection: BalanceHydrationSelection;
 	replayWindowMs: number;
 }): SnapshotOutcome {
 	const { identity, baseline, featureIds } = selection;
@@ -157,7 +157,7 @@ async function readFrozenSnapshot({
 	transaction,
 }: {
 	state: SourceState;
-	selection: ReplayHydrationSelection;
+	selection: BalanceHydrationSelection;
 	env: AppEnv;
 	signal: AbortSignal;
 	transaction: DrizzleCli;
@@ -217,7 +217,7 @@ function publishSnapshot({
 	state: SourceState;
 	identityKey: string;
 	outcome: SnapshotOutcome;
-}): ReplayHydrationSourceResult {
+}): BalanceHydrationSourceResult {
 	if (outcome.kind === "refused") {
 		state.metadataByIdentity.delete(identityKey);
 		return {
@@ -236,9 +236,9 @@ async function loadSnapshot({
 	signal,
 }: {
 	state: SourceState;
-	selection: ReplayHydrationSelection;
+	selection: BalanceHydrationSelection;
 	signal: AbortSignal;
-}): Promise<ReplayHydrationSourceResult> {
+}): Promise<BalanceHydrationSourceResult> {
 	assertSourceLive({ state, signal });
 	if (
 		!isSupportedBaseline({

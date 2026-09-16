@@ -7,7 +7,7 @@
  */
 import { expect, test } from "bun:test";
 import type { MeteringRecord } from "@autumn/kafka";
-import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
+import { createBalanceHydrationCoordinator } from "@/internal/balances/hydration/createBalanceHydrationCoordinator.js";
 import type {
 	ReplayOperation,
 	ReplayRequestBody,
@@ -20,16 +20,16 @@ import {
 	topic,
 } from "../balanceWorker/worker-fixture.js";
 import {
+	createBalanceHydrationFixture,
+	createLoadedSource,
+} from "../hydration/balance-hydration-fixture.js";
+import {
 	buildReplayRequest,
 	createArchiveRecord,
 	findReplyValue,
 	type ReplayArchiveRecord,
 	replayEnvOf,
 } from "./operator-fixture.js";
-import {
-	createLoadedSource,
-	createReplayHydrationFixture,
-} from "./replay-hydration-fixture.js";
 
 type ReplayExecutionResult = Awaited<ReturnType<typeof executeReplayRequest>>;
 
@@ -64,7 +64,7 @@ function trackOutcomesOf({ records }: { records: MeteringRecord[] }) {
 }
 
 function createCompositionHarness() {
-	const fixture = createReplayHydrationFixture();
+	const fixture = createBalanceHydrationFixture();
 	const records: MeteringRecord[] = [];
 	const store = openSqliteBalanceStateStore({ databasePath: ":memory:" });
 	store.initializePartition({ topic, partition, nextOffset: 0n });
@@ -74,7 +74,7 @@ function createCompositionHarness() {
 		now: fixture.selection.baseline.capturedAtMs,
 	});
 	const loads = { count: 0 };
-	const coordinator = createReplayHydrationCoordinator({
+	const coordinator = createBalanceHydrationCoordinator({
 		source: createLoadedSource({
 			state: fixture.state,
 			onLoad: async () => {

@@ -9,70 +9,70 @@ import type {
 } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 
-export type ReplayHydrationBaseline = Readonly<{
+export type BalanceHydrationBaseline = Readonly<{
 	id: string;
 	capturedAtMs: number;
 }>;
 
-export type ReplayHydrationSelection = Readonly<{
+export type BalanceHydrationSelection = Readonly<{
 	identity: Readonly<MeteringIdentity>;
-	baseline: ReplayHydrationBaseline;
+	baseline: BalanceHydrationBaseline;
 	featureIds: readonly string[];
 }>;
 
-export type ReplayHydrationSourceRefusalCategory = "missing" | "unsupported";
+export type BalanceHydrationSourceRefusalCategory = "missing" | "unsupported";
 
-export type ReplayHydrationSourceResult =
+export type BalanceHydrationSourceResult =
 	| Readonly<{ kind: "loaded"; state: CustomerMeteringState }>
 	| Readonly<{
 			kind: "refused";
-			category: ReplayHydrationSourceRefusalCategory;
+			category: BalanceHydrationSourceRefusalCategory;
 			reason: string;
 	  }>;
 
-export type ReplayHydrationSource = {
+export type BalanceHydrationSource = {
 	load(params: {
-		selection: ReplayHydrationSelection;
+		selection: BalanceHydrationSelection;
 		signal: AbortSignal;
-	}): Promise<ReplayHydrationSourceResult>;
+	}): Promise<BalanceHydrationSourceResult>;
 };
 
-export type ReplayHydrationWorkerClient = Pick<
+export type BalanceHydrationWorkerClient = Pick<
 	BalanceWorkerClient,
 	"check" | "track" | "initialize"
 >;
 
-export type ReplayHydrationConfig = Readonly<{
+export type BalanceHydrationConfig = Readonly<{
 	maxActive?: number;
 	maxQueued?: number;
 	deadlineMs?: number;
 }>;
 
-export type ReplayHydrationClock = Readonly<{
+export type BalanceHydrationClock = Readonly<{
 	now: () => number;
 	setTimeout: (callback: () => void, delayMs: number) => unknown;
 	clearTimeout: (timer: unknown) => void;
 }>;
 
-export type ReplayHydrationResult = Readonly<{
+export type BalanceHydrationResult = Readonly<{
 	kind: InitializationDecision["kind"] | "already_ready";
 	freshParity: boolean;
 }>;
 
-export type ReplayHydrationCoordinator = {
+export type BalanceHydrationCoordinator = {
 	check(params: {
-		selection: ReplayHydrationSelection;
+		selection: BalanceHydrationSelection;
 		command: CheckCommand;
 		signal?: AbortSignal;
 	}): Promise<CheckDecision>;
 	track(params: {
-		selection: ReplayHydrationSelection;
+		selection: BalanceHydrationSelection;
 		command: TrackCommand;
 		signal?: AbortSignal;
 	}): Promise<TrackDecision>;
 	prewarm(params: {
-		selection: ReplayHydrationSelection;
+		selection: BalanceHydrationSelection;
 		signal?: AbortSignal;
-	}): Promise<ReplayHydrationResult>;
+	}): Promise<BalanceHydrationResult>;
 	close(): Promise<void>;
 };

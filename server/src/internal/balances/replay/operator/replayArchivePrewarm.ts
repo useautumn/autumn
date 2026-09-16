@@ -1,13 +1,13 @@
 import type {
+	BalanceHydrationCoordinator,
+	BalanceHydrationResult,
+	BalanceHydrationSelection,
+} from "../../hydration/balanceHydrationContracts.js";
+import { BalanceHydrationSourceRefusedError } from "../../hydration/balanceHydrationErrors.js";
+import type {
 	ReplayManifestBaseline,
 	ReplayManifestCohort,
 } from "../manifest/replayManifestContracts.js";
-import type {
-	ReplayHydrationCoordinator,
-	ReplayHydrationResult,
-	ReplayHydrationSelection,
-} from "../replayHydrationContracts.js";
-import { ReplayHydrationSourceRefusedError } from "../replayHydrationErrors.js";
 import {
 	describeReplayFailureReason,
 	REPLAY_CANCELLED_REASON,
@@ -28,9 +28,9 @@ export type ReplayBlockedAdmission = Exclude<
 
 export type ReplayCohortPlan = Readonly<{
 	cohort: ReplayManifestCohort;
-	selection: ReplayHydrationSelection;
+	selection: BalanceHydrationSelection;
 	admission: ReplayCohortAdmission;
-	result: ReplayHydrationResult | null;
+	result: BalanceHydrationResult | null;
 }>;
 
 export function buildReplaySelection({
@@ -39,7 +39,7 @@ export function buildReplaySelection({
 }: {
 	cohort: ReplayManifestCohort;
 	baseline: ReplayManifestBaseline;
-}): ReplayHydrationSelection {
+}): BalanceHydrationSelection {
 	return {
 		identity: {
 			orgId: cohort.identity.orgId,
@@ -56,7 +56,7 @@ export function buildReplaySelection({
 const admitPrewarmResult = ({
 	result,
 }: {
-	result: ReplayHydrationResult;
+	result: BalanceHydrationResult;
 }): ReplayCohortAdmission =>
 	result.kind === "initialized" && result.freshParity
 		? { kind: "ready" }
@@ -67,7 +67,7 @@ const admitPrewarmFailure = ({
 }: {
 	error: unknown;
 }): ReplayCohortAdmission =>
-	error instanceof ReplayHydrationSourceRefusedError
+	error instanceof BalanceHydrationSourceRefusedError
 		? { kind: "excluded", reason: error.reason, category: error.category }
 		: { kind: "failed", reason: describeReplayFailureReason({ error }) };
 
@@ -79,7 +79,7 @@ const prewarmCohort = async ({
 }: {
 	cohort: ReplayManifestCohort;
 	baseline: ReplayManifestBaseline;
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	signal: AbortSignal;
 }): Promise<ReplayCohortPlan> => {
 	const selection = buildReplaySelection({ cohort, baseline });
@@ -121,7 +121,7 @@ const prewarmCohort = async ({
 
 type PrewarmLaneContext = Readonly<{
 	baseline: ReplayManifestBaseline;
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	signal: AbortSignal;
 	plans: ReplayCohortPlan[];
 }>;
@@ -152,7 +152,7 @@ export async function prewarmReplayCohorts({
 }: {
 	cohorts: readonly ReplayManifestCohort[];
 	baseline: ReplayManifestBaseline;
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	concurrency: number;
 	signal: AbortSignal;
 }): Promise<readonly ReplayCohortPlan[]> {

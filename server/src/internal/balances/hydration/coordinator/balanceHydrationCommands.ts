@@ -7,12 +7,12 @@ import {
 	parseTrackCommand,
 	type TrackCommand,
 } from "@autumn/balance-engine";
-import { ReplayHydrationInvalidSelectionError } from "../replayHydrationErrors.js";
+import { BalanceHydrationInvalidSelectionError } from "../balanceHydrationErrors.js";
 import {
 	identitiesEqual,
 	initializationIdOf,
 	type NormalizedSelection,
-} from "./replaySelection.js";
+} from "./balanceHydrationSelection.js";
 
 function deepFreeze<Value>(value: Value): Readonly<Value> {
 	if (typeof value !== "object" || value === null || Object.isFrozen(value))
@@ -29,12 +29,12 @@ export function assertCommandMatchesSelection({
 	selection: NormalizedSelection;
 }): void {
 	if (!identitiesEqual({ left: command.identity, right: selection.identity })) {
-		throw new ReplayHydrationInvalidSelectionError({
+		throw new BalanceHydrationInvalidSelectionError({
 			reason: "command identity does not match selection",
 		});
 	}
 	if (!selection.featureIds.includes(command.featureId)) {
-		throw new ReplayHydrationInvalidSelectionError({
+		throw new BalanceHydrationInvalidSelectionError({
 			reason: "command feature is not selected",
 		});
 	}

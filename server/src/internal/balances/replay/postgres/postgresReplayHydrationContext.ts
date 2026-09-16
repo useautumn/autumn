@@ -10,7 +10,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { ReplayHydrationBaseline } from "../replayHydrationContracts.js";
+import type { BalanceHydrationBaseline } from "../../hydration/balanceHydrationContracts.js";
 import { PostgresReplayRedisUnavailableError } from "./postgresReplayHydrationErrors.js";
 
 /** Detached org metadata: it carries no FullSubject, engine seed or open
@@ -18,7 +18,7 @@ import { PostgresReplayRedisUnavailableError } from "./postgresReplayHydrationEr
 export type ReplayContextMetadata = Readonly<{
 	identity: MeteringIdentity;
 	env: AppEnv;
-	baseline: ReplayHydrationBaseline;
+	baseline: BalanceHydrationBaseline;
 	org: Organization;
 	features: Feature[];
 	apiVersion: ApiVersionClass;
@@ -33,7 +33,7 @@ export function buildReplayContextMetadata({
 }: {
 	identity: MeteringIdentity;
 	env: AppEnv;
-	baseline: ReplayHydrationBaseline;
+	baseline: BalanceHydrationBaseline;
 	org: Organization;
 	features: Feature[];
 }): ReplayContextMetadata {

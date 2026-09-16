@@ -7,20 +7,20 @@ import type {
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { fullSubjectToMeteringState } from "@/internal/balances/balanceWorker/fullSubjectToMeteringState.js";
 import type {
-	ReplayHydrationSelection,
-	ReplayHydrationSource,
-} from "@/internal/balances/replay/replayHydrationContracts.js";
+	BalanceHydrationSelection,
+	BalanceHydrationSource,
+} from "@/internal/balances/hydration/balanceHydrationContracts.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
 
 export const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
-export function createReplayHydrationFixture({
+export function createBalanceHydrationFixture({
 	identity,
 	baseline = { id: "snapshot-2026-09-16", capturedAtMs: 1_790_000_000_000 },
 	featureIds = ["messages"],
 }: {
 	identity?: MeteringIdentity;
-	baseline?: ReplayHydrationSelection["baseline"];
+	baseline?: BalanceHydrationSelection["baseline"];
 	featureIds?: readonly string[];
 } = {}) {
 	const fixture = createCustomerFixture();
@@ -42,7 +42,7 @@ export function createReplayHydrationFixture({
 		fullSubject: fixture.fullSubject,
 		featureIds,
 	});
-	const selection: ReplayHydrationSelection = {
+	const selection: BalanceHydrationSelection = {
 		identity: selectedIdentity,
 		baseline,
 		featureIds,
@@ -126,8 +126,8 @@ export function createLoadedSource({
 	onLoad,
 }: {
 	state: CustomerMeteringState;
-	onLoad?: ReplayHydrationSource["load"];
-}): ReplayHydrationSource {
+	onLoad?: BalanceHydrationSource["load"];
+}): BalanceHydrationSource {
 	return {
 		load: onLoad ?? (async () => ({ kind: "loaded", state })),
 	};

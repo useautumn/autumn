@@ -3,8 +3,13 @@
  * ordering, totals reconciliation, phase timing and global pacing.
  */
 import { describe, expect, it } from "bun:test";
+import { BalanceHydrationSourceRefusedError } from "@/internal/balances/hydration/balanceHydrationErrors.js";
 import { runReplayArchive } from "@/internal/balances/replay/operator/runReplayArchive.js";
-import { ReplayHydrationSourceRefusedError } from "@/internal/balances/replay/replayHydrationErrors.js";
+import {
+	createBalanceHydrationFixture,
+	createNotInitializedError,
+	tick,
+} from "../hydration/balance-hydration-fixture.js";
 import {
 	buildReplayManifest,
 	createArchiveRecord,
@@ -16,15 +21,10 @@ import {
 	unsupportedCheckDecision,
 	unsupportedTrackDecision,
 } from "./operator-fixture.js";
-import {
-	createNotInitializedError,
-	createReplayHydrationFixture,
-	tick,
-} from "./replay-hydration-fixture.js";
 
 type ReplayArchiveReport = Awaited<ReturnType<typeof runReplayArchive>>;
 
-const fixture = createReplayHydrationFixture();
+const fixture = createBalanceHydrationFixture();
 const { readContext } = createReadContextSpy({ ctx: fixture.ctx });
 
 const featureNotFoundCheck = () =>
@@ -234,7 +234,7 @@ describe("runReplayArchive", () => {
 					return Promise.reject(new Error("prewarm_crashed"));
 				if (customerId === "cus_missing")
 					return Promise.reject(
-						new ReplayHydrationSourceRefusedError({
+						new BalanceHydrationSourceRefusedError({
 							category: "missing",
 							reason: "baseline_not_found",
 						}),

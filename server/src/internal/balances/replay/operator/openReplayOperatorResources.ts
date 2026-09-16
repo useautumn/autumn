@@ -48,7 +48,7 @@ async function loadReplayOperatorModules() {
 		import("@/db/initDrizzle.js"),
 		import("@/external/logtail/logtailUtils.js"),
 		import("../postgres/createPostgresReplayHydrationSource.js"),
-		import("../createReplayHydrationCoordinator.js"),
+		import("../../hydration/createBalanceHydrationCoordinator.js"),
 		import("./runReplayArchive.js"),
 	]);
 	return {
@@ -61,8 +61,8 @@ async function loadReplayOperatorModules() {
 		logger: logtail.logger,
 		createPostgresReplayHydrationSource:
 			postgresSource.createPostgresReplayHydrationSource,
-		createReplayHydrationCoordinator:
-			hydration.createReplayHydrationCoordinator,
+		createBalanceHydrationCoordinator:
+			hydration.createBalanceHydrationCoordinator,
 		runReplayArchive: archive.runReplayArchive,
 	};
 }
@@ -229,7 +229,7 @@ export async function openReplayOperatorResources({
 				timeoutMs: REPLAY_WORKER_REQUEST_TIMEOUT_MS,
 			},
 		});
-		const coordinator = modules.createReplayHydrationCoordinator({
+		const coordinator = modules.createBalanceHydrationCoordinator({
 			source,
 			client,
 		});

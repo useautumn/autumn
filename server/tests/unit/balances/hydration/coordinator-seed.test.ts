@@ -5,19 +5,19 @@
 import { expect, test } from "bun:test";
 import type { InitializeCommand } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
-import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
-import type { ReplayHydrationWorkerClient } from "@/internal/balances/replay/replayHydrationContracts.js";
+import type { BalanceHydrationWorkerClient } from "@/internal/balances/hydration/balanceHydrationContracts.js";
+import { createBalanceHydrationCoordinator } from "@/internal/balances/hydration/createBalanceHydrationCoordinator.js";
 import {
+	createBalanceHydrationFixture,
 	createLoadedSource,
 	createNotInitializedError,
-	createReplayHydrationFixture,
-} from "./replay-hydration-fixture.js";
+} from "./balance-hydration-fixture.js";
 
 function prewarmMissingClient({
 	initialize,
 }: {
-	initialize: ReplayHydrationWorkerClient["initialize"];
-}): ReplayHydrationWorkerClient {
+	initialize: BalanceHydrationWorkerClient["initialize"];
+}): BalanceHydrationWorkerClient {
 	return {
 		check: async () => {
 			throw createNotInitializedError();
@@ -32,9 +32,9 @@ function prewarmMissingClient({
 test.concurrent(
 	"an ambiguous initialize response retries once with the exact frozen seed",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const commands: InitializeCommand[] = [];
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({ state: fixture.state }),
 			client: prewarmMissingClient({
 				initialize: async ({ command }) => {
@@ -65,7 +65,7 @@ test.concurrent(
 test.concurrent(
 	"baseline time participates in stable seed identity while state content does not",
 	async () => {
-		const first = createReplayHydrationFixture();
+		const first = createBalanceHydrationFixture();
 		const changedState = structuredClone(first.state);
 		changedState.featureStatesById.messages.customerEntitlements[0].balance = 71;
 		const commands: InitializeCommand[] = [];
@@ -83,7 +83,7 @@ test.concurrent(
 				state: first.state,
 			},
 		]) {
-			const coordinator = createReplayHydrationCoordinator({
+			const coordinator = createBalanceHydrationCoordinator({
 				source: createLoadedSource({ state }),
 				client: prewarmMissingClient({
 					initialize: async ({ command }) => {
@@ -105,7 +105,7 @@ test.concurrent(
 test.concurrent(
 	"named source refusal and mismatched loaded state never call initialize",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const mismatched = structuredClone(fixture.state);
 		mismatched.identity.customerId = "wrong-customer";
 		for (const { source, expected } of [
@@ -118,7 +118,7 @@ test.concurrent(
 					}),
 				},
 				expected: {
-					name: "ReplayHydrationSourceRefusedError",
+					name: "BalanceHydrationSourceRefusedError",
 					code: "source_refused",
 					category: "unsupported",
 					reason: "reset_boundary_crossed",
@@ -127,13 +127,13 @@ test.concurrent(
 			{
 				source: createLoadedSource({ state: mismatched }),
 				expected: {
-					name: "ReplayHydrationSourceMismatchError",
+					name: "BalanceHydrationSourceMismatchError",
 					code: "source_mismatch",
 				},
 			},
 		]) {
 			let initializeCalls = 0;
-			const coordinator = createReplayHydrationCoordinator({
+			const coordinator = createBalanceHydrationCoordinator({
 				source,
 				client: prewarmMissingClient({
 					initialize: async ({ command }) => {
@@ -154,13 +154,13 @@ test.concurrent(
 test.concurrent(
 	"prewarm preserves initialization decisions without claiming existing state is fresh parity",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		for (const kind of [
 			"initialized",
 			"duplicate",
 			"already_initialized",
 		] as const) {
-			const coordinator = createReplayHydrationCoordinator({
+			const coordinator = createBalanceHydrationCoordinator({
 				source: createLoadedSource({ state: fixture.state }),
 				client: prewarmMissingClient({
 					initialize: async ({ command }) =>

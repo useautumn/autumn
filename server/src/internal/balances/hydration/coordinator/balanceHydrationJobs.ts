@@ -4,25 +4,25 @@ import type {
 } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import {
-	ReplayHydrationAbortedError,
-	ReplayHydrationClosedError,
-	ReplayHydrationDeadlineError,
-	ReplayHydrationQueueSaturatedError,
-	ReplayHydrationSelectionConflictError,
-	ReplayHydrationSourceRefusedError,
-} from "../replayHydrationErrors.js";
-import { buildInitializeCommand } from "./replayCommands.js";
+	BalanceHydrationAbortedError,
+	BalanceHydrationClosedError,
+	BalanceHydrationDeadlineError,
+	BalanceHydrationQueueSaturatedError,
+	BalanceHydrationSelectionConflictError,
+	BalanceHydrationSourceRefusedError,
+} from "../balanceHydrationErrors.js";
+import { buildInitializeCommand } from "./balanceHydrationCommands.js";
 import {
 	assertScopeOpen,
+	type BalanceHydrationScope,
 	type HydrationJob,
-	type ReplayHydrationScope,
-} from "./replayHydrationScope.js";
+} from "./balanceHydrationScope.js";
 import {
 	identityKeyOf,
 	type NormalizedSelection,
 	selectionKeyOf,
-} from "./replaySelection.js";
-import { validateSourceState } from "./replaySourceState.js";
+} from "./balanceHydrationSelection.js";
+import { validateSourceState } from "./balanceHydrationSourceState.js";
 
 type JobWaiter = {
 	readonly job: HydrationJob;
@@ -39,12 +39,12 @@ export async function hydrateSelection({
 	selection,
 	signal,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	selection: NormalizedSelection;
 	signal?: AbortSignal;
 }): Promise<InitializationDecision> {
 	if (signal?.aborted)
-		throw new ReplayHydrationAbortedError({ cause: signal.reason });
+		throw new BalanceHydrationAbortedError({ cause: signal.reason });
 	assertScopeOpen({ scope });
 	const job = jobForSelection({ scope, selection });
 	return waitForJob({ scope, job, signal });
@@ -54,7 +54,7 @@ export function abortAllJobs({
 	scope,
 	cause,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	cause: Error;
 }): void {
 	for (const job of [...scope.currentJobs.values()])
@@ -69,13 +69,13 @@ function jobForSelection({
 	scope,
 	selection,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	selection: NormalizedSelection;
 }): HydrationJob {
 	const existing = scope.currentJobs.get(identityKeyOf({ selection }));
 	if (!existing) return createJob({ scope, selection });
 	if (existing.selectionKey !== selectionKeyOf({ selection }))
-		throw new ReplayHydrationSelectionConflictError();
+		throw new BalanceHydrationSelectionConflictError();
 	return existing;
 }
 
@@ -83,12 +83,12 @@ function createJob({
 	scope,
 	selection,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	selection: NormalizedSelection;
 }): HydrationJob {
 	const shouldQueue = scope.activeCount >= scope.limits.maxActive;
 	if (shouldQueue && scope.queue.length >= scope.limits.maxQueued)
-		throw new ReplayHydrationQueueSaturatedError();
+		throw new BalanceHydrationQueueSaturatedError();
 	const settlement = Promise.withResolvers<InitializationDecision>();
 	settlement.promise.catch(() => undefined);
 	const job: HydrationJob = {
@@ -118,10 +118,10 @@ function expireJob({
 	scope,
 	job,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 }): void {
-	abortJob({ scope, job, cause: new ReplayHydrationDeadlineError() });
+	abortJob({ scope, job, cause: new BalanceHydrationDeadlineError() });
 }
 
 function abortJob({
@@ -129,7 +129,7 @@ function abortJob({
 	job,
 	cause,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 	cause: Error;
 }): void {
@@ -144,7 +144,7 @@ function settleJob({
 	decision,
 	cause,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 	decision?: InitializationDecision;
 	cause?: unknown;
@@ -162,7 +162,7 @@ function removeQueuedJob({
 	scope,
 	job,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 }): void {
 	const index = scope.queue.indexOf(job);
@@ -173,7 +173,7 @@ function unregisterJob({
 	scope,
 	job,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 }): void {
 	if (scope.currentJobs.get(job.identityKey) === job)
@@ -184,19 +184,19 @@ function assertJobLive({
 	scope,
 	job,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 }): void {
 	if (job.phase === "settled" || job.controller.signal.aborted) {
-		throw job.controller.signal.reason ?? new ReplayHydrationAbortedError();
+		throw job.controller.signal.reason ?? new BalanceHydrationAbortedError();
 	}
 	if (scope.closed) {
-		const cause = new ReplayHydrationClosedError();
+		const cause = new BalanceHydrationClosedError();
 		abortJob({ scope, job, cause });
 		throw cause;
 	}
 	if (scope.clock.now() >= job.deadlineAt) {
-		const cause = new ReplayHydrationDeadlineError();
+		const cause = new BalanceHydrationDeadlineError();
 		abortJob({ scope, job, cause });
 		throw cause;
 	}
@@ -206,7 +206,7 @@ function startJob({
 	scope,
 	job,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 }): void {
 	job.phase = "active";
@@ -221,7 +221,7 @@ async function runPhysicalJob({
 	scope,
 	job,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 }): Promise<void> {
 	try {
@@ -237,7 +237,7 @@ function releasePhysicalJob({
 	scope,
 	job,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 }): void {
 	job.physicalPending = false;
@@ -248,7 +248,7 @@ function releasePhysicalJob({
 	drainQueue({ scope });
 }
 
-function drainQueue({ scope }: { scope: ReplayHydrationScope }): void {
+function drainQueue({ scope }: { scope: BalanceHydrationScope }): void {
 	if (scope.closed) return;
 	while (scope.activeCount < scope.limits.maxActive) {
 		const job = scope.queue.shift();
@@ -262,7 +262,7 @@ async function loadAndInitialize({
 	scope,
 	job,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 }): Promise<InitializationDecision> {
 	assertJobLive({ scope, job });
@@ -272,7 +272,7 @@ async function loadAndInitialize({
 	});
 	assertJobLive({ scope, job });
 	if (sourceResult.kind === "refused") {
-		throw new ReplayHydrationSourceRefusedError({
+		throw new BalanceHydrationSourceRefusedError({
 			category: sourceResult.category,
 			reason: sourceResult.reason,
 		});
@@ -293,7 +293,7 @@ async function submitInitialization({
 	job,
 	command,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 	command: InitializeCommand;
 }): Promise<InitializationDecision> {
@@ -304,13 +304,37 @@ async function submitInitialization({
 				command,
 				signal: job.controller.signal,
 			});
-			assertJobLive({ scope, job });
-			return decision;
+			return acceptInitializationResponse({ scope, job, decision });
 		} catch (cause) {
 			if (!mayResendInitialization({ attempt, cause })) throw cause;
 		}
 	}
 	throw new Error("Unreachable replay initialization attempt");
+}
+
+/**
+ * A known acknowledgement is never discarded on clock reading alone: only a
+ * fired deadline timer, an abort, or a closed scope may refuse it. The timer
+ * still bounds the caller, because it settles the job before this runs.
+ */
+function acceptInitializationResponse({
+	scope,
+	job,
+	decision,
+}: {
+	scope: BalanceHydrationScope;
+	job: HydrationJob;
+	decision: InitializationDecision;
+}): InitializationDecision {
+	if (job.phase === "settled" || job.controller.signal.aborted) {
+		throw job.controller.signal.reason ?? new BalanceHydrationAbortedError();
+	}
+	if (scope.closed) {
+		const cause = new BalanceHydrationClosedError();
+		abortJob({ scope, job, cause });
+		throw cause;
+	}
+	return decision;
 }
 
 function mayResendInitialization({
@@ -332,13 +356,13 @@ function waitForJob({
 	job,
 	signal,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	job: HydrationJob;
 	signal?: AbortSignal;
 }): Promise<InitializationDecision> {
 	if (signal?.aborted)
 		return Promise.reject(
-			new ReplayHydrationAbortedError({ cause: signal.reason }),
+			new BalanceHydrationAbortedError({ cause: signal.reason }),
 		);
 	const outcome = Promise.withResolvers<InitializationDecision>();
 	const waiter: JobWaiter = {
@@ -402,17 +426,17 @@ function abandonWaiter({
 	scope,
 	waiter,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	waiter: JobWaiter;
 }): void {
 	if (!finishWaiter({ waiter })) return;
 	waiter.reject(
-		new ReplayHydrationAbortedError({ cause: waiter.signal?.reason }),
+		new BalanceHydrationAbortedError({ cause: waiter.signal?.reason }),
 	);
 	if (waiter.job.waiters.size > 0 || waiter.job.phase === "settled") return;
 	abortJob({
 		scope,
 		job: waiter.job,
-		cause: new ReplayHydrationAbortedError({ cause: waiter.signal?.reason }),
+		cause: new BalanceHydrationAbortedError({ cause: waiter.signal?.reason }),
 	});
 }

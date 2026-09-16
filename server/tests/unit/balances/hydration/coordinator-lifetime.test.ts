@@ -4,14 +4,14 @@
  */
 import { expect, test } from "bun:test";
 import type { CustomerMeteringState } from "@autumn/balance-engine";
-import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
-import type { ReplayHydrationSource } from "@/internal/balances/replay/replayHydrationContracts.js";
+import type { BalanceHydrationSource } from "@/internal/balances/hydration/balanceHydrationContracts.js";
+import { createBalanceHydrationCoordinator } from "@/internal/balances/hydration/createBalanceHydrationCoordinator.js";
 import {
+	createBalanceHydrationFixture,
 	createLoadedSource,
 	createNotInitializedError,
-	createReplayHydrationFixture,
 	tick,
-} from "./replay-hydration-fixture.js";
+} from "./balance-hydration-fixture.js";
 
 function missingClient() {
 	return {
@@ -30,7 +30,7 @@ function missingClient() {
 }
 
 test.concurrent("config requires positive bounded safe integers", async () => {
-	const fixture = createReplayHydrationFixture();
+	const fixture = createBalanceHydrationFixture();
 	for (const config of [
 		{ maxActive: 0 },
 		{ maxQueued: -1 },
@@ -38,7 +38,7 @@ test.concurrent("config requires positive bounded safe integers", async () => {
 		{ maxActive: Number.POSITIVE_INFINITY },
 	]) {
 		expect(() =>
-			createReplayHydrationCoordinator({
+			createBalanceHydrationCoordinator({
 				source: createLoadedSource({ state: fixture.state }),
 				client: missingClient(),
 				config,
@@ -50,14 +50,14 @@ test.concurrent("config requires positive bounded safe integers", async () => {
 test.concurrent(
 	"four active loads and 64 queued unique identities reject the next unique job while duplicates attach",
 	async () => {
-		const base = createReplayHydrationFixture();
+		const base = createBalanceHydrationFixture();
 		const sourceGates = new Map<
 			string,
 			ReturnType<typeof Promise.withResolvers<void>>
 		>();
 		let active = 0;
 		let peakActive = 0;
-		const source: ReplayHydrationSource = {
+		const source: BalanceHydrationSource = {
 			load: async ({ selection }) => {
 				active++;
 				peakActive = Math.max(peakActive, active);
@@ -74,7 +74,7 @@ test.concurrent(
 				};
 			},
 		};
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source,
 			client: missingClient(),
 			config: { deadlineMs: 10_000 },
@@ -95,7 +95,7 @@ test.concurrent(
 		await expect(
 			coordinator.prewarm({ selection: selections[68] }),
 		).rejects.toMatchObject({
-			name: "ReplayHydrationQueueSaturatedError",
+			name: "BalanceHydrationQueueSaturatedError",
 			code: "queue_saturated",
 		});
 		for (const gate of sourceGates.values()) gate.resolve();
@@ -111,15 +111,15 @@ test.concurrent(
 test.concurrent(
 	"deadline rejects promptly but a source that ignores abort retains its slot and cannot initialize late",
 	async () => {
-		const first = createReplayHydrationFixture();
-		const second = createReplayHydrationFixture({
+		const first = createBalanceHydrationFixture();
+		const second = createBalanceHydrationFixture({
 			identity: { ...first.selection.identity, customerId: "cus_second" },
 		});
 		const firstGate = Promise.withResolvers<void>();
 		const secondStarted = Promise.withResolvers<void>();
 		const initialized: string[] = [];
 		let sourceCalls = 0;
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: {
 				load: async ({ selection }) => {
 					sourceCalls++;
@@ -147,7 +147,7 @@ test.concurrent(
 		await expect(
 			coordinator.prewarm({ selection: first.selection }),
 		).rejects.toMatchObject({
-			name: "ReplayHydrationDeadlineError",
+			name: "BalanceHydrationDeadlineError",
 			code: "deadline",
 		});
 		const secondResult = coordinator.prewarm({ selection: second.selection });
@@ -164,11 +164,11 @@ test.concurrent(
 test.concurrent(
 	"one waiter cancellation leaves shared work alive; cancelling every waiter aborts it and close awaits physical settlement",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const physicalGate = Promise.withResolvers<void>();
 		const sourceStarted = Promise.withResolvers<AbortSignal>();
 		let initializeCalls = 0;
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: {
 				load: async ({ signal }) => {
 					sourceStarted.resolve(signal);
@@ -198,7 +198,7 @@ test.concurrent(
 		const sharedSignal = await sourceStarted.promise;
 		firstController.abort(new Error("first left"));
 		await expect(first).rejects.toMatchObject({
-			name: "ReplayHydrationAbortedError",
+			name: "BalanceHydrationAbortedError",
 			code: "aborted",
 		});
 		expect(sharedSignal.aborted).toBe(false);

@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import type { ReplayHydrationSelection } from "../replayHydrationContracts.js";
-import { ReplayHydrationInvalidSelectionError } from "../replayHydrationErrors.js";
+import type { BalanceHydrationSelection } from "../balanceHydrationContracts.js";
+import { BalanceHydrationInvalidSelectionError } from "../balanceHydrationErrors.js";
 
 export type NormalizedSelection = Readonly<{
-	identity: Readonly<ReplayHydrationSelection["identity"]>;
-	baseline: Readonly<ReplayHydrationSelection["baseline"]>;
+	identity: Readonly<BalanceHydrationSelection["identity"]>;
+	baseline: Readonly<BalanceHydrationSelection["baseline"]>;
 	featureIds: readonly string[];
 }>;
 
@@ -16,7 +16,7 @@ function requireNonEmptyString({
 	value: string;
 }): string {
 	if (value.length === 0) {
-		throw new ReplayHydrationInvalidSelectionError({
+		throw new BalanceHydrationInvalidSelectionError({
 			reason: `${name} must be nonempty`,
 		});
 	}
@@ -26,11 +26,11 @@ function requireNonEmptyString({
 export function normalizeSelection({
 	selection,
 }: {
-	selection: ReplayHydrationSelection;
+	selection: BalanceHydrationSelection;
 }): NormalizedSelection {
 	const featureIds = [...new Set(selection.featureIds)].sort();
 	if (featureIds.length === 0) {
-		throw new ReplayHydrationInvalidSelectionError({
+		throw new BalanceHydrationInvalidSelectionError({
 			reason: "featureIds must contain at least one feature",
 		});
 	}
@@ -38,7 +38,7 @@ export function normalizeSelection({
 		requireNonEmptyString({ name: "featureId", value: featureId });
 	const capturedAtMs = selection.baseline.capturedAtMs;
 	if (!Number.isSafeInteger(capturedAtMs) || capturedAtMs < 0) {
-		throw new ReplayHydrationInvalidSelectionError({
+		throw new BalanceHydrationInvalidSelectionError({
 			reason: "baseline.capturedAtMs must be a nonnegative safe integer",
 		});
 	}
@@ -107,8 +107,8 @@ export function identitiesEqual({
 	left,
 	right,
 }: {
-	left: ReplayHydrationSelection["identity"];
-	right: ReplayHydrationSelection["identity"];
+	left: BalanceHydrationSelection["identity"];
+	right: BalanceHydrationSelection["identity"];
 }): boolean {
 	return (
 		left.orgId === right.orgId &&

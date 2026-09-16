@@ -4,10 +4,10 @@ import type {
 } from "@autumn/balance-engine";
 import { AppEnv, CusProductStatus, type FullSubject } from "@autumn/shared";
 import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
-import type { ReplayHydrationSourceResult } from "../replayHydrationContracts.js";
+import type { BalanceHydrationSourceResult } from "../../hydration/balanceHydrationContracts.js";
 
 export type ReplayHydrationRefusal = Extract<
-	ReplayHydrationSourceResult,
+	BalanceHydrationSourceResult,
 	{ kind: "refused" }
 >;
 

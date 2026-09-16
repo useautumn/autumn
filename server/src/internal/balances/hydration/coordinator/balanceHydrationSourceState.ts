@@ -2,11 +2,11 @@ import {
 	type CustomerMeteringState,
 	parseCustomerMeteringState,
 } from "@autumn/balance-engine";
-import { ReplayHydrationSourceMismatchError } from "../replayHydrationErrors.js";
+import { BalanceHydrationSourceMismatchError } from "../balanceHydrationErrors.js";
 import {
 	identitiesEqual,
 	type NormalizedSelection,
-} from "./replaySelection.js";
+} from "./balanceHydrationSelection.js";
 
 export function validateSourceState({
 	input,
@@ -19,12 +19,12 @@ export function validateSourceState({
 	try {
 		state = parseCustomerMeteringState({ input });
 	} catch (cause) {
-		throw new ReplayHydrationSourceMismatchError({
+		throw new BalanceHydrationSourceMismatchError({
 			reason: cause instanceof Error ? cause.message : "invalid_state",
 		});
 	}
 	if (!identitiesEqual({ left: state.identity, right: selection.identity })) {
-		throw new ReplayHydrationSourceMismatchError({ reason: "identity" });
+		throw new BalanceHydrationSourceMismatchError({ reason: "identity" });
 	}
 	const actualFeatureIds = Object.keys(state.featureStatesById).sort();
 	if (
@@ -33,7 +33,7 @@ export function validateSourceState({
 			(featureId, index) => featureId !== selection.featureIds[index],
 		)
 	) {
-		throw new ReplayHydrationSourceMismatchError({ reason: "feature_set" });
+		throw new BalanceHydrationSourceMismatchError({ reason: "feature_set" });
 	}
 	return state;
 }

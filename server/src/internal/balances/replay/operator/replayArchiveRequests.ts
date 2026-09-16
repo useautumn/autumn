@@ -1,5 +1,5 @@
+import type { BalanceHydrationCoordinator } from "../../hydration/balanceHydrationContracts.js";
 import type { ReplayManifestRequest } from "../manifest/replayManifestContracts.js";
-import type { ReplayHydrationCoordinator } from "../replayHydrationContracts.js";
 import { executeReplayRequest } from "./executeReplayRequest.js";
 import { planReplayRequest } from "./planReplayRequest.js";
 import {
@@ -62,7 +62,7 @@ const executeAdmittedRequest = async ({
 }: {
 	request: ReplayManifestRequest;
 	plan: ReplayCohortPlan;
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	readContext: ReplayContextReader;
 	clock: ReplayArchiveClock;
 	signal: AbortSignal;
@@ -106,7 +106,7 @@ const replayRequest = async ({
 }: {
 	request: ReplayManifestRequest;
 	plan: ReplayCohortPlan;
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	readContext: ReplayContextReader;
 	pacer: ReplayStartPacer;
 	clock: ReplayArchiveClock;
@@ -137,7 +137,7 @@ const replayCohortRequests = async ({
 	signal,
 }: {
 	plan: ReplayCohortPlan;
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	readContext: ReplayContextReader;
 	pacer: ReplayStartPacer;
 	clock: ReplayArchiveClock;
@@ -160,7 +160,7 @@ const replayCohortRequests = async ({
 };
 
 type ReplayLaneContext = Readonly<{
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	readContext: ReplayContextReader;
 	pacer: ReplayStartPacer;
 	clock: ReplayArchiveClock;
@@ -197,7 +197,7 @@ export async function replayCohorts({
 	signal,
 }: {
 	plans: readonly ReplayCohortPlan[];
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	readContext: ReplayContextReader;
 	pacer: ReplayStartPacer;
 	clock: ReplayArchiveClock;

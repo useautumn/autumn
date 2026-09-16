@@ -8,13 +8,13 @@ import type {
 import { InsufficientBalanceError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkDecisionToCheckResponse } from "../../check/balanceWorker/balanceWorkerCheckResponse.js";
+import type {
+	BalanceHydrationCoordinator,
+	BalanceHydrationSelection,
+} from "../../hydration/balanceHydrationContracts.js";
+import { BalanceHydrationSourceRefusedError } from "../../hydration/balanceHydrationErrors.js";
 import { trackDecisionToTrackResponse } from "../../track/balanceWorker/balanceWorkerTrackResponse.js";
 import type { ReplayManifestRequest } from "../manifest/replayManifestContracts.js";
-import type {
-	ReplayHydrationCoordinator,
-	ReplayHydrationSelection,
-} from "../replayHydrationContracts.js";
-import { ReplayHydrationSourceRefusedError } from "../replayHydrationErrors.js";
 import {
 	planReplayRequest,
 	type ReplayCheckPlan,
@@ -52,8 +52,8 @@ async function dispatchReplayPlan({
 	signal,
 }: {
 	plan: ReplayCheckPlan | ReplayTrackPlan;
-	selection: ReplayHydrationSelection;
-	coordinator: ReplayHydrationCoordinator;
+	selection: BalanceHydrationSelection;
+	coordinator: BalanceHydrationCoordinator;
 	signal?: AbortSignal;
 }): Promise<ReplayDispatch> {
 	if (plan.kind === "check")
@@ -159,7 +159,7 @@ function replayExecutionErrorOf({
 }: {
 	cause: unknown;
 }): ReplayExecutionResult {
-	if (cause instanceof ReplayHydrationSourceRefusedError)
+	if (cause instanceof BalanceHydrationSourceRefusedError)
 		return { kind: "refused", reason: cause.reason };
 	const refusal = replayRefusalReasonOf({ cause });
 	if (refusal !== undefined) return { kind: "refused", reason: refusal };
@@ -175,8 +175,8 @@ export async function executeReplayRequest({
 	clock = DEFAULT_CLOCK,
 }: {
 	request: ReplayManifestRequest;
-	selection: ReplayHydrationSelection;
-	coordinator: ReplayHydrationCoordinator;
+	selection: BalanceHydrationSelection;
+	coordinator: BalanceHydrationCoordinator;
 	readContext: ReplayReadContext;
 	signal?: AbortSignal;
 	clock?: ReplayExecutionClock;

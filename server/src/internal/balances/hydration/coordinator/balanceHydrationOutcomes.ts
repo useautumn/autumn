@@ -1,6 +1,6 @@
 import type { InitializationDecision } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
-import type { ReplayHydrationResult } from "../replayHydrationContracts.js";
+import type { BalanceHydrationResult } from "../balanceHydrationContracts.js";
 
 export function isExactInitializationMiss(cause: unknown): boolean {
 	return (
@@ -21,6 +21,6 @@ export function prewarmResultOf({
 	kind,
 }: {
 	kind: InitializationDecision["kind"] | "already_ready";
-}): ReplayHydrationResult {
+}): BalanceHydrationResult {
 	return { kind, freshParity: kind === "initialized" };
 }

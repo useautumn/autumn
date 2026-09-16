@@ -1,8 +1,9 @@
 /**
- * Replay hydration coordinator regressions found in parent review: only a newly
+ * Balance hydration coordinator regressions found in parent review: only a newly
  * initialized customer carries fresh parity, public operations reject after
- * close before any I/O, a late initialize reply cannot outlive the deadline or
- * close, and an aborted identity stays registered until its load settles.
+ * close before any I/O, an acknowledged initialize reply survives a deadline
+ * whose timer has not fired but never survives the fired timer or close, and an
+ * aborted identity stays registered until its load settles.
  *
  * The duplicate rule is canonical: the writer answers a duplicate with the
  * submitted baseline (writer actions/decide.ts), so later tracks may already
@@ -17,25 +18,25 @@ import type {
 	InitializationDecision,
 	InitializeCommand,
 } from "@autumn/balance-engine";
-import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type {
-	ReplayHydrationClock,
-	ReplayHydrationSelection,
-	ReplayHydrationSource,
-	ReplayHydrationSourceResult,
-	ReplayHydrationWorkerClient,
-} from "@/internal/balances/replay/replayHydrationContracts.js";
+	BalanceHydrationClock,
+	BalanceHydrationSelection,
+	BalanceHydrationSource,
+	BalanceHydrationSourceResult,
+	BalanceHydrationWorkerClient,
+} from "@/internal/balances/hydration/balanceHydrationContracts.js";
 import {
-	ReplayHydrationAbortedError,
-	ReplayHydrationClosedError,
-	ReplayHydrationDeadlineError,
-} from "@/internal/balances/replay/replayHydrationErrors.js";
+	BalanceHydrationAbortedError,
+	BalanceHydrationClosedError,
+	BalanceHydrationDeadlineError,
+} from "@/internal/balances/hydration/balanceHydrationErrors.js";
+import { createBalanceHydrationCoordinator } from "@/internal/balances/hydration/createBalanceHydrationCoordinator.js";
 import {
+	createBalanceHydrationFixture,
 	createLoadedSource,
 	createNotInitializedError,
-	createReplayHydrationFixture,
 	tick,
-} from "./replay-hydration-fixture.js";
+} from "./balance-hydration-fixture.js";
 
 const ORIGIN_MS = 10_000;
 const DEADLINE_MS = 1_000;
@@ -43,13 +44,14 @@ const DEADLINE_MS = 1_000;
 type WorkerCallCounts = { check: number; track: number; initialize: number };
 
 type WorkerClientStub = Readonly<{
-	client: ReplayHydrationWorkerClient;
+	client: BalanceHydrationWorkerClient;
 	calls: WorkerCallCounts;
 }>;
 
-type ControlledClock = ReplayHydrationClock &
+type ControlledClock = BalanceHydrationClock &
 	Readonly<{
 		advance: (durationMs: number) => void;
+		fireAllTimers: () => void;
 		pendingTimerCount: () => number;
 	}>;
 
@@ -73,12 +75,12 @@ function createWorkerClientStub({
 	initialize,
 	track = rejectNotInitialized,
 }: {
-	check: ReplayHydrationWorkerClient["check"];
-	initialize: ReplayHydrationWorkerClient["initialize"];
-	track?: ReplayHydrationWorkerClient["track"];
+	check: BalanceHydrationWorkerClient["check"];
+	initialize: BalanceHydrationWorkerClient["initialize"];
+	track?: BalanceHydrationWorkerClient["track"];
 }): WorkerClientStub {
 	const calls: WorkerCallCounts = { check: 0, track: 0, initialize: 0 };
-	const client: ReplayHydrationWorkerClient = {
+	const client: BalanceHydrationWorkerClient = {
 		check: (params) => {
 			calls.check++;
 			return check(params);
@@ -95,7 +97,7 @@ function createWorkerClientStub({
 	return { client, calls };
 }
 
-/** Time advances without firing timers: a late timer cannot license success. */
+/** Time and timers move independently: only a fired timer bounds a caller. */
 function createControlledClock(): ControlledClock {
 	const timers = new Map<number, () => void>();
 	let nextTimerId = 1;
@@ -112,6 +114,11 @@ function createControlledClock(): ControlledClock {
 		},
 		advance: (durationMs) => {
 			nowMs += durationMs;
+		},
+		fireAllTimers: () => {
+			const pending = [...timers.values()];
+			timers.clear();
+			for (const callback of pending) callback();
 		},
 		pendingTimerCount: () => timers.size,
 	};
@@ -181,14 +188,14 @@ function checkDecisionOf({
 	};
 }
 
-describe("Replay hydration parity evidence", () => {
+describe("Balance hydration parity evidence", () => {
 	test("keeps a worker duplicate an idempotent success without parity", async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
 			initialize: async () => ({ kind: "duplicate", state: fixture.state }),
 		});
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({ state: fixture.state }),
 			client: worker.client,
 		});
@@ -201,7 +208,7 @@ describe("Replay hydration parity evidence", () => {
 	});
 
 	test("grants fresh parity only to a newly initialized customer", async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const decisions: readonly InitializationDecision[] = [
 			{ kind: "initialized", state: fixture.state },
 			{ kind: "duplicate", state: fixture.state },
@@ -213,7 +220,7 @@ describe("Replay hydration parity evidence", () => {
 				check: rejectNotInitialized,
 				initialize: async () => decision,
 			});
-			const coordinator = createReplayHydrationCoordinator({
+			const coordinator = createBalanceHydrationCoordinator({
 				source: createLoadedSource({ state: fixture.state }),
 				client: worker.client,
 			});
@@ -229,12 +236,12 @@ describe("Replay hydration parity evidence", () => {
 	});
 
 	test("treats an already ready customer as a parity-free success", async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const worker = createWorkerClientStub({
 			check: async () => checkDecisionOf({ state: fixture.state }),
 			initialize: async () => ({ kind: "initialized", state: fixture.state }),
 		});
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({ state: fixture.state }),
 			client: worker.client,
 		});
@@ -247,11 +254,11 @@ describe("Replay hydration parity evidence", () => {
 	});
 });
 
-describe("Replay hydration lifetime guards", () => {
+describe("Balance hydration lifetime guards", () => {
 	test("rejects public operations after close before worker or source", async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		let sourceLoads = 0;
-		async function load(): Promise<ReplayHydrationSourceResult> {
+		async function load(): Promise<BalanceHydrationSourceResult> {
 			sourceLoads++;
 			return { kind: "loaded", state: fixture.state };
 		}
@@ -259,7 +266,7 @@ describe("Replay hydration lifetime guards", () => {
 			check: rejectNotInitialized,
 			initialize: async () => ({ kind: "initialized", state: fixture.state }),
 		});
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({ state: fixture.state, onLoad: load }),
 			client: worker.client,
 		});
@@ -271,29 +278,29 @@ describe("Replay hydration lifetime guards", () => {
 				selection: fixture.selection,
 				command: fixture.checkCommand,
 			}),
-		).rejects.toBeInstanceOf(ReplayHydrationClosedError);
+		).rejects.toBeInstanceOf(BalanceHydrationClosedError);
 		await expect(
 			coordinator.track({
 				selection: fixture.selection,
 				command: fixture.trackCommand,
 			}),
-		).rejects.toBeInstanceOf(ReplayHydrationClosedError);
+		).rejects.toBeInstanceOf(BalanceHydrationClosedError);
 		await expect(
 			coordinator.prewarm({ selection: fixture.selection }),
-		).rejects.toBeInstanceOf(ReplayHydrationClosedError);
+		).rejects.toBeInstanceOf(BalanceHydrationClosedError);
 		expect(worker.calls).toEqual({ check: 0, track: 0, initialize: 0 });
 		expect(sourceLoads).toBe(0);
 	});
 
-	test("refuses success when initialize returns after the deadline", async () => {
-		const fixture = createReplayHydrationFixture();
+	test("preserves acknowledged initialization before deadline callback settles the caller", async () => {
+		const fixture = createBalanceHydrationFixture();
 		const clock = createControlledClock();
 		const gate = createDeferred<InitializationDecision>();
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
 			initialize: () => gate.promise,
 		});
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({ state: fixture.state }),
 			client: worker.client,
 			config: { deadlineMs: DEADLINE_MS },
@@ -308,23 +315,66 @@ describe("Replay hydration lifetime guards", () => {
 		clock.advance(DEADLINE_MS + 1);
 		gate.resolve({ kind: "initialized", state: fixture.state });
 
-		expect(rejectionCauseOf({ state: await prewarmed })).toBeInstanceOf(
-			ReplayHydrationDeadlineError,
-		);
+		expect(await prewarmed).toEqual({
+			kind: "resolved",
+			value: { kind: "initialized", freshParity: true },
+		});
 		expect(worker.calls.check).toBe(1);
 		expect(clock.pendingTimerCount()).toBe(0);
 		await coordinator.close();
 	});
 
-	test("rejects a late initialize reply once the coordinator closes", async () => {
-		const fixture = createReplayHydrationFixture();
+	test("rejects when the deadline timer fires while initialize awaits and ignores the late acknowledgement", async () => {
+		const fixture = createBalanceHydrationFixture();
 		const clock = createControlledClock();
 		const gate = createDeferred<InitializationDecision>();
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
 			initialize: () => gate.promise,
 		});
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
+			source: createLoadedSource({ state: fixture.state }),
+			client: worker.client,
+			config: { deadlineMs: DEADLINE_MS },
+			clock,
+		});
+		const tracked = settledStateOf({
+			promise: coordinator.track({
+				selection: fixture.selection,
+				command: fixture.trackCommand,
+			}),
+		});
+		await flush({ times: 8 });
+		expect(worker.calls.initialize).toBe(1);
+		const tracksBeforeDeadline = worker.calls.track;
+
+		// The fired timer alone bounds the caller; wall time need not move.
+		clock.fireAllTimers();
+
+		const deadlineState = await tracked;
+		expect(rejectionCauseOf({ state: deadlineState })).toBeInstanceOf(
+			BalanceHydrationDeadlineError,
+		);
+
+		gate.resolve({ kind: "initialized", state: fixture.state });
+		await flush({ times: 8 });
+
+		expect(await tracked).toBe(deadlineState);
+		expect(worker.calls.track).toBe(tracksBeforeDeadline);
+		expect(worker.calls.initialize).toBe(1);
+		expect(clock.pendingTimerCount()).toBe(0);
+		await coordinator.close();
+	});
+
+	test("rejects a late initialize reply once the coordinator closes", async () => {
+		const fixture = createBalanceHydrationFixture();
+		const clock = createControlledClock();
+		const gate = createDeferred<InitializationDecision>();
+		const worker = createWorkerClientStub({
+			check: rejectNotInitialized,
+			initialize: () => gate.promise,
+		});
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({ state: fixture.state }),
 			client: worker.client,
 			config: { deadlineMs: DEADLINE_MS },
@@ -341,30 +391,30 @@ describe("Replay hydration lifetime guards", () => {
 		await closed;
 
 		expect(rejectionCauseOf({ state: await prewarmed })).toBeInstanceOf(
-			ReplayHydrationClosedError,
+			BalanceHydrationClosedError,
 		);
 		expect(clock.pendingTimerCount()).toBe(0);
 	});
 });
 
-describe("Replay hydration abort settlement", () => {
+describe("Balance hydration abort settlement", () => {
 	test("keeps an aborted identity registered until physical settlement", async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const { customerId } = fixture.selection.identity;
-		const otherFixture = createReplayHydrationFixture({
+		const otherFixture = createBalanceHydrationFixture({
 			identity: { ...fixture.selection.identity, customerId: "cus_replay_two" },
 		});
 		const otherCustomerId = otherFixture.selection.identity.customerId;
-		const abandonedLoad = createDeferred<ReplayHydrationSourceResult>();
+		const abandonedLoad = createDeferred<BalanceHydrationSourceResult>();
 		const loadsByCustomerId = new Map<string, number>();
 		const initializedCustomerIds: string[] = [];
 
 		async function load({
 			selection,
 		}: {
-			selection: ReplayHydrationSelection;
+			selection: BalanceHydrationSelection;
 			signal: AbortSignal;
-		}): Promise<ReplayHydrationSourceResult> {
+		}): Promise<BalanceHydrationSourceResult> {
 			const loaded = selection.identity.customerId;
 			loadsByCustomerId.set(loaded, (loadsByCustomerId.get(loaded) ?? 0) + 1);
 			// Deliberately ignores the signal: physical work outlives logical aborts.
@@ -381,12 +431,12 @@ describe("Replay hydration abort settlement", () => {
 			return { kind: "initialized", state: command.state };
 		}
 
-		const source: ReplayHydrationSource = { load };
+		const source: BalanceHydrationSource = { load };
 		const worker = createWorkerClientStub({
 			check: rejectNotInitialized,
 			initialize: recordInitialize,
 		});
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source,
 			client: worker.client,
 			config: { maxActive: 2 },
@@ -403,7 +453,7 @@ describe("Replay hydration abort settlement", () => {
 
 		controller.abort();
 		expect(rejectionCauseOf({ state: await aborted })).toBeInstanceOf(
-			ReplayHydrationAbortedError,
+			BalanceHydrationAbortedError,
 		);
 
 		const retried = settledStateOf({
@@ -413,7 +463,7 @@ describe("Replay hydration abort settlement", () => {
 
 		expect(loadsByCustomerId.get(customerId)).toBe(1);
 		expect(rejectionCauseOf({ state: retriedOutcome })).toBeInstanceOf(
-			ReplayHydrationAbortedError,
+			BalanceHydrationAbortedError,
 		);
 		await expect(
 			coordinator.prewarm({ selection: otherFixture.selection }),

@@ -1,15 +1,15 @@
 import type { InitializationDecision } from "@autumn/balance-engine";
 import type {
-	ReplayHydrationClock,
-	ReplayHydrationConfig,
-	ReplayHydrationSource,
-	ReplayHydrationWorkerClient,
-} from "../replayHydrationContracts.js";
+	BalanceHydrationClock,
+	BalanceHydrationConfig,
+	BalanceHydrationSource,
+	BalanceHydrationWorkerClient,
+} from "../balanceHydrationContracts.js";
 import {
-	ReplayHydrationClosedError,
-	ReplayHydrationInvalidSelectionError,
-} from "../replayHydrationErrors.js";
-import type { NormalizedSelection } from "./replaySelection.js";
+	BalanceHydrationClosedError,
+	BalanceHydrationInvalidSelectionError,
+} from "../balanceHydrationErrors.js";
+import type { NormalizedSelection } from "./balanceHydrationSelection.js";
 
 const DEFAULT_MAX_ACTIVE = 4;
 const DEFAULT_MAX_QUEUED = 64;
@@ -39,17 +39,17 @@ export type HydrationJob = {
 	physicalTask: Promise<void> | undefined;
 };
 
-export type ReplayHydrationLimits = Readonly<{
+export type BalanceHydrationLimits = Readonly<{
 	maxActive: number;
 	maxQueued: number;
 	deadlineMs: number;
 }>;
 
-export type ReplayHydrationScope = {
-	readonly source: ReplayHydrationSource;
-	readonly client: ReplayHydrationWorkerClient;
-	readonly clock: ReplayHydrationClock;
-	readonly limits: ReplayHydrationLimits;
+export type BalanceHydrationScope = {
+	readonly source: BalanceHydrationSource;
+	readonly client: BalanceHydrationWorkerClient;
+	readonly clock: BalanceHydrationClock;
+	readonly limits: BalanceHydrationLimits;
 	readonly currentJobs: Map<string, HydrationJob>;
 	readonly queue: HydrationJob[];
 	readonly physicalTasks: Set<Promise<void>>;
@@ -66,14 +66,14 @@ function requirePositiveSafeInteger({
 	value: number;
 }): number {
 	if (!Number.isSafeInteger(value) || value <= 0) {
-		throw new ReplayHydrationInvalidSelectionError({
+		throw new BalanceHydrationInvalidSelectionError({
 			reason: `${name} must be a positive safe integer`,
 		});
 	}
 	return value;
 }
 
-function defaultClock(): ReplayHydrationClock {
+function defaultClock(): BalanceHydrationClock {
 	return {
 		now: () => performance.now(),
 		setTimeout: (callback, delayMs) => setTimeout(callback, delayMs),
@@ -85,8 +85,8 @@ function defaultClock(): ReplayHydrationClock {
 function resolveLimits({
 	config,
 }: {
-	config: ReplayHydrationConfig;
-}): ReplayHydrationLimits {
+	config: BalanceHydrationConfig;
+}): BalanceHydrationLimits {
 	return {
 		maxActive: requirePositiveSafeInteger({
 			name: "maxActive",
@@ -103,17 +103,17 @@ function resolveLimits({
 	};
 }
 
-export function createReplayHydrationScope({
+export function createBalanceHydrationScope({
 	source,
 	client,
 	config,
 	clock,
 }: {
-	source: ReplayHydrationSource;
-	client: ReplayHydrationWorkerClient;
-	config: ReplayHydrationConfig;
-	clock?: ReplayHydrationClock;
-}): ReplayHydrationScope {
+	source: BalanceHydrationSource;
+	client: BalanceHydrationWorkerClient;
+	config: BalanceHydrationConfig;
+	clock?: BalanceHydrationClock;
+}): BalanceHydrationScope {
 	return {
 		source,
 		client,
@@ -131,7 +131,7 @@ export function createReplayHydrationScope({
 export function assertScopeOpen({
 	scope,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 }): void {
-	if (scope.closed) throw new ReplayHydrationClosedError();
+	if (scope.closed) throw new BalanceHydrationClosedError();
 }

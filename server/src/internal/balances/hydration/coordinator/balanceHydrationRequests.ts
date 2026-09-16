@@ -5,29 +5,29 @@ import type {
 	TrackDecision,
 } from "@autumn/balance-engine";
 import type {
-	ReplayHydrationResult,
-	ReplayHydrationSelection,
-} from "../replayHydrationContracts.js";
+	BalanceHydrationResult,
+	BalanceHydrationSelection,
+} from "../balanceHydrationContracts.js";
 import {
-	ReplayHydrationAbortedError,
-	ReplayHydrationClosedError,
-} from "../replayHydrationErrors.js";
+	BalanceHydrationAbortedError,
+	BalanceHydrationClosedError,
+} from "../balanceHydrationErrors.js";
 import {
 	assertCommandMatchesSelection,
 	buildProbeCommand,
 	freezeCheckCommand,
 	freezeTrackCommand,
-} from "./replayCommands.js";
-import { abortAllJobs, hydrateSelection } from "./replayHydrationJobs.js";
+} from "./balanceHydrationCommands.js";
+import { abortAllJobs, hydrateSelection } from "./balanceHydrationJobs.js";
 import {
 	isExactInitializationMiss,
 	prewarmResultOf,
-} from "./replayHydrationOutcomes.js";
+} from "./balanceHydrationOutcomes.js";
 import {
 	assertScopeOpen,
-	type ReplayHydrationScope,
-} from "./replayHydrationScope.js";
-import { normalizeSelection } from "./replaySelection.js";
+	type BalanceHydrationScope,
+} from "./balanceHydrationScope.js";
+import { normalizeSelection } from "./balanceHydrationSelection.js";
 
 export async function runCheck({
 	scope,
@@ -35,8 +35,8 @@ export async function runCheck({
 	command,
 	signal,
 }: {
-	scope: ReplayHydrationScope;
-	selection: ReplayHydrationSelection;
+	scope: BalanceHydrationScope;
+	selection: BalanceHydrationSelection;
 	command: CheckCommand;
 	signal?: AbortSignal;
 }): Promise<CheckDecision> {
@@ -60,8 +60,8 @@ export async function runTrack({
 	command,
 	signal,
 }: {
-	scope: ReplayHydrationScope;
-	selection: ReplayHydrationSelection;
+	scope: BalanceHydrationScope;
+	selection: BalanceHydrationSelection;
 	command: TrackCommand;
 	signal?: AbortSignal;
 }): Promise<TrackDecision> {
@@ -84,10 +84,10 @@ export async function runPrewarm({
 	selection,
 	signal,
 }: {
-	scope: ReplayHydrationScope;
-	selection: ReplayHydrationSelection;
+	scope: BalanceHydrationScope;
+	selection: BalanceHydrationSelection;
 	signal?: AbortSignal;
-}): Promise<ReplayHydrationResult> {
+}): Promise<BalanceHydrationResult> {
 	assertScopeOpen({ scope });
 	const normalized = normalizeSelection({ selection });
 	const probe = buildProbeCommand({ selection: normalized });
@@ -108,11 +108,11 @@ export async function runPrewarm({
 export function closeScope({
 	scope,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 }): Promise<void> {
 	if (scope.closePromise) return scope.closePromise;
 	scope.closed = true;
-	abortAllJobs({ scope, cause: new ReplayHydrationClosedError() });
+	abortAllJobs({ scope, cause: new BalanceHydrationClosedError() });
 	scope.closePromise = awaitPhysicalWork({ scope });
 	return scope.closePromise;
 }
@@ -120,7 +120,7 @@ export function closeScope({
 async function awaitPhysicalWork({
 	scope,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 }): Promise<void> {
 	await Promise.allSettled([...scope.physicalTasks]);
 }
@@ -131,10 +131,10 @@ function assertResendAllowed({
 	scope,
 	signal,
 }: {
-	scope: ReplayHydrationScope;
+	scope: BalanceHydrationScope;
 	signal?: AbortSignal;
 }): void {
 	assertScopeOpen({ scope });
 	if (signal?.aborted)
-		throw new ReplayHydrationAbortedError({ cause: signal.reason });
+		throw new BalanceHydrationAbortedError({ cause: signal.reason });
 }

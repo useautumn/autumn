@@ -21,13 +21,13 @@ import {
 	type PartitionOwner,
 } from "@autumn/kafka";
 import { Kafka, logLevel } from "kafkajs";
-import { createReplayHydrationCoordinator } from "../../../../../server/src/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type {
-	ReplayHydrationCoordinator,
-	ReplayHydrationSelection,
-	ReplayHydrationSource,
-	ReplayHydrationSourceResult,
-} from "../../../../../server/src/internal/balances/replay/replayHydrationContracts.js";
+	BalanceHydrationCoordinator,
+	BalanceHydrationSelection,
+	BalanceHydrationSource,
+	BalanceHydrationSourceResult,
+} from "../../../../../server/src/internal/balances/hydration/balanceHydrationContracts.js";
+import { createBalanceHydrationCoordinator } from "../../../../../server/src/internal/balances/hydration/createBalanceHydrationCoordinator.js";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 
 const LOOPBACK_BROKER_PATTERN = /^(?:127\.0\.0\.1|localhost):(\d{1,5})$/;
@@ -83,7 +83,7 @@ const REPLAY_IDENTITY: MeteringIdentity = {
 	customerId: "cus_replay_hydration_external",
 };
 
-const REPLAY_SELECTION: ReplayHydrationSelection = {
+const REPLAY_SELECTION: BalanceHydrationSelection = {
 	identity: REPLAY_IDENTITY,
 	baseline: { id: BASELINE_ID, capturedAtMs: BASELINE_CAPTURED_AT_MS },
 	featureIds: [FEATURE_ID],
@@ -106,14 +106,14 @@ type ReplayHarness = {
 };
 
 type RecordingReplaySource = {
-	source: ReplayHydrationSource;
+	source: BalanceHydrationSource;
 	readLoadCount(): number;
 };
 
 type ReplayScope = {
 	harness: ReplayHarness;
 	workers: WorkerFixture[];
-	coordinators: ReplayHydrationCoordinator[];
+	coordinators: BalanceHydrationCoordinator[];
 	baselineSource: RecordingReplaySource;
 	firstOutcome?: TrackOutcome;
 };
@@ -158,7 +158,7 @@ function createBaselineState(): CustomerMeteringState {
 /** Read-only fixture stand-in for the Postgres baseline loader. */
 function createRecordingReplaySource(): RecordingReplaySource {
 	let loadCount = 0;
-	function load(): Promise<ReplayHydrationSourceResult> {
+	function load(): Promise<BalanceHydrationSourceResult> {
 		loadCount += 1;
 		return Promise.resolve({ kind: "loaded", state: createBaselineState() });
 	}
@@ -169,8 +169,8 @@ function createRecordingReplaySource(): RecordingReplaySource {
 }
 
 /** The restarted worker must answer from its own Kafka log, never from a source. */
-function createForbiddenReplaySource(): ReplayHydrationSource {
-	function load(): Promise<ReplayHydrationSourceResult> {
+function createForbiddenReplaySource(): BalanceHydrationSource {
+	function load(): Promise<BalanceHydrationSourceResult> {
 		throw new Error("Recovered replay traffic must not reload a baseline");
 	}
 	return { load };
@@ -398,9 +398,9 @@ function createReplayCoordinator({
 	source,
 }: {
 	scope: ReplayScope;
-	source: ReplayHydrationSource;
-}): ReplayHydrationCoordinator {
-	const coordinator = createReplayHydrationCoordinator({
+	source: BalanceHydrationSource;
+}): BalanceHydrationCoordinator {
+	const coordinator = createBalanceHydrationCoordinator({
 		source,
 		client: createBalanceWorkerClient({
 			ctx: { owners: scope.harness.routing },
@@ -437,7 +437,7 @@ async function expectCheckedBalance({
 	coordinator,
 	requestId,
 }: {
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	requestId: string;
 }): Promise<void> {
 	const decision = await coordinator.check({

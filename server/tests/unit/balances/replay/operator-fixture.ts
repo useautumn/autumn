@@ -7,6 +7,11 @@ import type {
 	UnsupportedDecisionReason,
 } from "@autumn/balance-engine";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type {
+	BalanceHydrationCoordinator,
+	BalanceHydrationResult,
+	BalanceHydrationSelection,
+} from "@/internal/balances/hydration/balanceHydrationContracts.js";
 import { parseReplayManifest } from "@/internal/balances/replay/manifest/parseReplayManifest.js";
 import type {
 	ReplayEnvironment,
@@ -16,11 +21,6 @@ import type {
 	ReplayOperation,
 	ReplayRequestBody,
 } from "@/internal/balances/replay/manifest/replayManifestContracts.js";
-import type {
-	ReplayHydrationCoordinator,
-	ReplayHydrationResult,
-	ReplayHydrationSelection,
-} from "@/internal/balances/replay/replayHydrationContracts.js";
 
 const DAY_MS = 86_400_000;
 
@@ -218,21 +218,21 @@ export function createFakeCoordinator({
 	onTrack,
 }: {
 	onPrewarm?: (params: {
-		selection: ReplayHydrationSelection;
-	}) => Promise<ReplayHydrationResult>;
+		selection: BalanceHydrationSelection;
+	}) => Promise<BalanceHydrationResult>;
 	onCheck?: (params: {
-		selection: ReplayHydrationSelection;
+		selection: BalanceHydrationSelection;
 		command: CheckCommand;
 	}) => Promise<CheckDecision>;
 	onTrack?: (params: {
-		selection: ReplayHydrationSelection;
+		selection: BalanceHydrationSelection;
 		command: TrackCommand;
 	}) => Promise<TrackDecision>;
 } = {}) {
 	const calls: FakeCoordinatorCall[] = [];
 	const checkCommands: CheckCommand[] = [];
 	const trackCommands: TrackCommand[] = [];
-	const selections: ReplayHydrationSelection[] = [];
+	const selections: BalanceHydrationSelection[] = [];
 	const activeByCustomer = new Map<string, number>();
 	const state = {
 		closed: false,
@@ -258,7 +258,7 @@ export function createFakeCoordinator({
 		else activeByCustomer.set(customerId, next);
 	};
 
-	const coordinator: ReplayHydrationCoordinator = {
+	const coordinator: BalanceHydrationCoordinator = {
 		async prewarm({ selection }) {
 			const customerId = selection.identity.customerId;
 			calls.push({ operation: "prewarm", customerId });

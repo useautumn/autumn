@@ -4,7 +4,7 @@
  */
 import { expect, test } from "bun:test";
 import type { MeteringRecord } from "@autumn/kafka";
-import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
+import { createBalanceHydrationCoordinator } from "@/internal/balances/hydration/createBalanceHydrationCoordinator.js";
 import { openSqliteBalanceStateStore } from "../../../../../apps/balance-worker/src/state/sqliteBalanceStateStore.js";
 import {
 	createWorkerFixture,
@@ -12,14 +12,14 @@ import {
 	topic,
 } from "../balanceWorker/worker-fixture.js";
 import {
+	createBalanceHydrationFixture,
 	createLoadedSource,
-	createReplayHydrationFixture,
-} from "./replay-hydration-fixture.js";
+} from "./balance-hydration-fixture.js";
 
 test.concurrent(
 	"cold track hydrates baseline 72 then check returns 67 with no hot source read",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const records: MeteringRecord[] = [];
 		const store = openSqliteBalanceStateStore({ databasePath: ":memory:" });
 		store.initializePartition({ topic, partition, nextOffset: 0n });
@@ -29,7 +29,7 @@ test.concurrent(
 			now: fixture.selection.baseline.capturedAtMs,
 		});
 		let sourceCalls = 0;
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
 				onLoad: async () => {
@@ -71,7 +71,7 @@ test.concurrent(
 test.concurrent(
 	"two coordinators racing one worker emit one seed and duplicate track does not charge twice",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const records: MeteringRecord[] = [];
 		const store = openSqliteBalanceStateStore({ databasePath: ":memory:" });
 		store.initializePartition({ topic, partition, nextOffset: 0n });
@@ -81,11 +81,11 @@ test.concurrent(
 			now: fixture.selection.baseline.capturedAtMs,
 		});
 		const source = createLoadedSource({ state: fixture.state });
-		const first = createReplayHydrationCoordinator({
+		const first = createBalanceHydrationCoordinator({
 			source,
 			client: worker.client,
 		});
-		const second = createReplayHydrationCoordinator({
+		const second = createBalanceHydrationCoordinator({
 			source,
 			client: worker.client,
 		});

@@ -1,6 +1,6 @@
+import type { BalanceHydrationCoordinator } from "../../hydration/balanceHydrationContracts.js";
 import { buildReplayManifestCohorts } from "../manifest/buildReplayManifestCohorts.js";
 import type { ReplayManifest } from "../manifest/replayManifestContracts.js";
-import type { ReplayHydrationCoordinator } from "../replayHydrationContracts.js";
 import type {
 	ReplayArchiveClock,
 	ReplayArchiveConfig,
@@ -42,7 +42,7 @@ export async function runReplayArchive({
 	signal,
 }: {
 	manifest: ReplayManifest;
-	coordinator: ReplayHydrationCoordinator;
+	coordinator: BalanceHydrationCoordinator;
 	readContext: ReplayContextReader;
 	config?: ReplayArchiveConfig;
 	clock?: ReplayArchiveClock;

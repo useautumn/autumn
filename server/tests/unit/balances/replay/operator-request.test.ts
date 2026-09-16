@@ -2,9 +2,13 @@
  * Planning and single-request execution over parsed manifest requests.
  */
 import { describe, expect, it } from "bun:test";
+import { BalanceHydrationSourceRefusedError } from "@/internal/balances/hydration/balanceHydrationErrors.js";
 import { executeReplayRequest } from "@/internal/balances/replay/operator/executeReplayRequest.js";
 import { planReplayRequest } from "@/internal/balances/replay/operator/planReplayRequest.js";
-import { ReplayHydrationSourceRefusedError } from "@/internal/balances/replay/replayHydrationErrors.js";
+import {
+	createBalanceHydrationFixture,
+	createNotInitializedError,
+} from "../hydration/balance-hydration-fixture.js";
 import {
 	ARCHIVE_WINDOW,
 	buildReplayRequest,
@@ -15,10 +19,6 @@ import {
 	REPLAY_BASELINE,
 	unsupportedTrackDecision,
 } from "./operator-fixture.js";
-import {
-	createNotInitializedError,
-	createReplayHydrationFixture,
-} from "./replay-hydration-fixture.js";
 
 type ReplayRequestPlan = ReturnType<typeof planReplayRequest>;
 type ReplayExecutionResult = Awaited<ReturnType<typeof executeReplayRequest>>;
@@ -221,7 +221,7 @@ describe("planReplayRequest", () => {
 });
 
 describe("executeReplayRequest", () => {
-	const fixture = createReplayHydrationFixture();
+	const fixture = createBalanceHydrationFixture();
 
 	it("refuses unsupported requests without touching the coordinator or context", async () => {
 		const { coordinator, calls } = createFakeCoordinator();
@@ -274,7 +274,7 @@ describe("executeReplayRequest", () => {
 		const { coordinator } = createFakeCoordinator({
 			onCheck: () =>
 				Promise.reject(
-					new ReplayHydrationSourceRefusedError({
+					new BalanceHydrationSourceRefusedError({
 						category: "unsupported",
 						reason: "legacy_baseline_shape",
 					}),

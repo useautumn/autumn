@@ -13,13 +13,13 @@ import {
 	type BalanceWorkerClient,
 	BalanceWorkerClientError,
 } from "@autumn/balance-worker-client";
-import { createReplayHydrationCoordinator } from "@/internal/balances/replay/createReplayHydrationCoordinator.js";
+import { createBalanceHydrationCoordinator } from "@/internal/balances/hydration/createBalanceHydrationCoordinator.js";
 import {
+	createBalanceHydrationFixture,
 	createLoadedSource,
 	createNotInitializedError,
-	createReplayHydrationFixture,
 	tick,
-} from "./replay-hydration-fixture.js";
+} from "./balance-hydration-fixture.js";
 
 const unsupportedTrack: TrackDecision = {
 	kind: "unsupported",
@@ -33,10 +33,10 @@ const unsupportedCheck: CheckDecision = {
 test.concurrent(
 	"hot check and prewarm never read the source or initialize",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		let sourceCalls = 0;
 		let initializeCalls = 0;
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
 				onLoad: async () => {
@@ -74,7 +74,7 @@ test.concurrent(
 test.concurrent(
 	"only the exact typed not-initialized miss loads; all other failures propagate",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const failures: unknown[] = [
 			new Error("unknown"),
 			new BalanceWorkerClientError({
@@ -96,7 +96,7 @@ test.concurrent(
 		];
 		for (const failure of failures) {
 			let sourceCalls = 0;
-			const coordinator = createReplayHydrationCoordinator({
+			const coordinator = createBalanceHydrationCoordinator({
 				source: createLoadedSource({
 					state: fixture.state,
 					onLoad: async () => {
@@ -135,7 +135,7 @@ test.concurrent(
 test.concurrent(
 	"cold track retries the original immutable command once after durable initialization",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const sourceGate = Promise.withResolvers<void>();
 		const trackCommands: TrackCommand[] = [];
 		const initializeCommands: InitializeCommand[] = [];
@@ -151,7 +151,7 @@ test.concurrent(
 				return { kind: "initialized", state: command.state };
 			},
 		};
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
 				onLoad: async () => {
@@ -189,10 +189,10 @@ test.concurrent(
 test.concurrent(
 	"same identity and canonical selection singleflight while conflicting selections fail by name",
 	async () => {
-		const fixture = createReplayHydrationFixture();
+		const fixture = createBalanceHydrationFixture();
 		const sourceGate = Promise.withResolvers<void>();
 		let sourceCalls = 0;
-		const coordinator = createReplayHydrationCoordinator({
+		const coordinator = createBalanceHydrationCoordinator({
 			source: createLoadedSource({
 				state: fixture.state,
 				onLoad: async () => {
@@ -235,7 +235,7 @@ test.concurrent(
 				},
 			}),
 		).rejects.toMatchObject({
-			name: "ReplayHydrationSelectionConflictError",
+			name: "BalanceHydrationSelectionConflictError",
 			code: "selection_conflict",
 		});
 		sourceGate.resolve();
