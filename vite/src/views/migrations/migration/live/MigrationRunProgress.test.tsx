@@ -14,7 +14,8 @@ test("an active run shows the count against the expected scope", () => {
 		/>,
 	);
 	expect(markup).toContain("Migrating customers");
-	expect(markup).toContain("5 of 10 customers, 2 running");
+	expect(markup).toContain("2 running");
+	expect(markup).toContain("10</span> customers");
 	expect(markup).toContain("width:50%");
 });
 

@@ -1,3 +1,4 @@
+import { CircleNotchIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createPortal } from "react-dom";
 import { migrationProgress } from "./migrationProgress";
@@ -50,12 +51,32 @@ export function MigrationRunProgress({
 					transition={shouldReduceMotion ? { duration: 0 } : ENTER_TRANSITION}
 				>
 					<div className="mx-auto flex w-full max-w-5xl flex-col gap-1.5 px-4 pt-3 pb-4 sm:px-10">
-						<div className="flex items-center justify-between gap-2 text-xs">
-							<span className="text-foreground">{label}</span>
-							<span className="text-tertiary-foreground tabular-nums">
-								{completed.toLocaleString()} of {denominator.toLocaleString()}{" "}
-								customers
-								{running > 0 && `, ${running.toLocaleString()} running`}
+						<div className="flex items-center justify-between gap-3 text-xs">
+							<span className="flex items-center gap-2 text-foreground">
+								<CircleNotchIcon
+									size={14}
+									weight="bold"
+									className="animate-spin text-primary"
+								/>
+								{label}
+							</span>
+							<span className="flex items-center gap-3 text-tertiary-foreground tabular-nums">
+								{running > 0 && (
+									<span className="flex items-center gap-1.5">
+										<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
+										{running.toLocaleString()} running
+									</span>
+								)}
+								<span>
+									<span className="font-medium text-foreground">
+										{completed.toLocaleString()}
+									</span>{" "}
+									of{" "}
+									<span className="font-medium text-foreground">
+										{denominator.toLocaleString()}
+									</span>{" "}
+									customers
+								</span>
 							</span>
 						</div>
 						<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
