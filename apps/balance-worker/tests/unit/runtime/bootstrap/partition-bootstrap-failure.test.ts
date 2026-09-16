@@ -4,6 +4,7 @@ import {
 	PartitionCheckpointContentHashMismatchError,
 	UnsupportedPartitionCheckpointSchemaVersionError,
 } from "../../../../src/checkpoint/partitionCheckpoint.js";
+import { PartitionCheckpointBodyLimitExceededError } from "../../../../src/checkpoint/partitionCheckpointEncoding.js";
 import { PartitionCheckpointSourceError } from "../../../../src/checkpoint/partitionCheckpointSource.js";
 import {
 	isPartitionBootstrapBlockedCause,
@@ -33,6 +34,11 @@ describe("partition bootstrap failure policy", () => {
 		new PartitionCheckpointContentHashMismatchError(),
 		new PartitionCheckpointLimitExceededError({
 			limitName: "serialized_bytes",
+			limit: 100,
+			observed: 101,
+		}),
+		new PartitionCheckpointBodyLimitExceededError({
+			limitName: "compressed_bytes",
 			limit: 100,
 			observed: 101,
 		}),
