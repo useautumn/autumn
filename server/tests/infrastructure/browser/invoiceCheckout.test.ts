@@ -30,11 +30,12 @@ const createInvoicePage = async ({
 			await route.fulfill({
 				contentType: "text/html",
 				body: `<button role="button" data-value="card" onclick="document.querySelector('form').hidden=false; this.remove()">Card</button>
-			<form hidden><input name="number"><input name="expiry"><input name="cvc"><input name="postalCode"><input name="phone" autocomplete="tel" required></form>
+			<form hidden><input name="number"><input name="expiry"><input name="cvc"><input name="postalCode"><input type="checkbox" name="linkOptIn" checked><input name="linkMobilePhone" autocomplete="billing tel"></form>
 			<script>
 			window.addEventListener('message', () => {
-				const values = [...document.querySelectorAll('input')].map(input => input.value);
-				if (JSON.stringify(values) !== JSON.stringify(['4242424242424242','1228','123','10001','+12025550100'])) throw Error('Incomplete form');
+				if (document.querySelector('[name=linkOptIn]').checked) { document.body.insertAdjacentHTML('beforeend', '<div role=alert>Your phone number is incomplete</div>'); return; }
+				const values = [...document.querySelectorAll('input')].filter(input => !['linkOptIn','linkMobilePhone'].includes(input.name)).map(input => input.value);
+				if (JSON.stringify(values) !== JSON.stringify(['4242424242424242','1228','123','10001'])) throw Error('Incomplete form');
 				${outcome === "invalid" ? "document.body.insertAdjacentHTML('beforeend', '<div role=alert>Your card was declined</div>');" : "parent.postMessage('submitted', '*');"}
 			});
 			</script>`,
@@ -67,7 +68,7 @@ const createInvoicePage = async ({
 	return { context, page, getSubmissions: () => submissions };
 };
 
-test("invoice checkout waits for a delayed frame and collapsed card form, then confirms payment", async () => {
+test("invoice checkout waits for a delayed form, opts out of Link, then confirms payment", async () => {
 	const fixture = await createInvoicePage({ outcome: "paid" });
 	try {
 		await invoiceCheckout({
