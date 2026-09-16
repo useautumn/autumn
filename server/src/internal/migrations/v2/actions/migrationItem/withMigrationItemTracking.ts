@@ -1,3 +1,7 @@
+import {
+	MigrationItemRunSkipReason,
+	type MigrationItemRunSkipReason as MigrationItemRunSkipReasonType,
+} from "@autumn/shared";
 import { isTransientDbError } from "@/db/dbUtils.js";
 import type {
 	MigrationItemEventResponse,
@@ -18,6 +22,7 @@ import {
 export type MigrationItemTrackingResult = {
 	itemPreview: MigrationItemPreview | null;
 	status: Exclude<MigrationItemEventStatus, "failed">;
+	skipReason?: MigrationItemRunSkipReason;
 	response: MigrationItemEventResponse;
 };
 
@@ -77,6 +82,7 @@ const markItemRunFinished = async ({
 	dryRun,
 	item,
 	status,
+	skipReason,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
@@ -84,6 +90,7 @@ const markItemRunFinished = async ({
 	dryRun: boolean;
 	item: RunScopeItem;
 	status: Exclude<MigrationItemEventStatus, "failed">;
+	skipReason?: MigrationItemRunSkipReasonType;
 }) => {
 	const params = {
 		ctx,
@@ -95,7 +102,10 @@ const markItemRunFinished = async ({
 	};
 
 	if (status === "skipped") {
-		await migrationItemRunRepo.markSkipped(params);
+		await migrationItemRunRepo.markSkipped({
+			...params,
+			skipReason: skipReason ?? MigrationItemRunSkipReason.Ineligible,
+		});
 		return;
 	}
 
@@ -127,6 +137,7 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 			dryRun,
 			item,
 			status: result.status,
+			skipReason: result.skipReason,
 		});
 
 		await recordMigrationItemEvent({
@@ -162,6 +173,7 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 				dryRun,
 				item,
 				status: "skipped",
+				skipReason: MigrationItemRunSkipReason.Ineligible,
 			});
 
 			const response = {
@@ -169,6 +181,7 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 					reason: "connection_dropped",
 					error: error instanceof Error ? error.message : String(error),
 				},
+				skip_reason: MigrationItemRunSkipReason.Ineligible,
 			};
 			await recordMigrationItemEvent({
 				ctx,

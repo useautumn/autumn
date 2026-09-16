@@ -1,4 +1,7 @@
-import type { MigrationItemRun } from "@autumn/shared";
+import type {
+	MigrationItemRun,
+	MigrationItemRunSkipReason,
+} from "@autumn/shared";
 import type {
 	MigrationItemEvent,
 	MigrationItemEventStatus,
@@ -14,6 +17,7 @@ export type MigrationItemStatus =
 			status: MigrationItemEventStatus;
 			dryRun: boolean;
 			response: Record<string, unknown> | null;
+			skipReason: MigrationItemRunSkipReason | null;
 	  }
 	| { kind: "none" };
 
@@ -50,12 +54,16 @@ export function resolveMigrationItemStatus({
 
 	if (itemRun?.status === "running") return { kind: "running" };
 
+	const liveSkipReason =
+		itemRun?.status === "skipped" ? (itemRun.skip_reason ?? null) : null;
+
 	if (event)
 		return {
 			kind: "result",
 			status: event.status,
 			dryRun: event.dry_run,
 			response: event.response,
+			skipReason: event.dry_run ? null : liveSkipReason,
 		};
 
 	if (itemRun?.status && itemRun.status !== "running")
@@ -64,6 +72,7 @@ export function resolveMigrationItemStatus({
 			status: itemRun.status,
 			dryRun: false,
 			response: null,
+			skipReason: liveSkipReason,
 		};
 
 	return { kind: "none" };

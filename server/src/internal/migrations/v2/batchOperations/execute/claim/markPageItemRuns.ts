@@ -1,26 +1,30 @@
+import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 /** Set-based settle of the page's `running` claims: flips them to succeeded or
- * skipped in one statement, inside the page transaction (visible only with
- * mutations). Only settles claims held by this run — a concurrent run sharing
- * the migration must never flip another run's claims. */
+ * skipped (with its reason) in one statement, inside the page transaction
+ * (visible only with mutations). Only settles claims held by this run — a
+ * concurrent run sharing the migration must never flip another run's claims. */
 export const markPageItemRuns = async ({
 	db,
 	migrationInternalId,
 	migrationRunId,
 	succeededInternalCustomerIds,
-	skippedInternalCustomerIds,
+	noUpdatesNeededInternalCustomerIds,
+	ineligibleInternalCustomerIds,
 }: {
 	db: DrizzleCli;
 	migrationInternalId: string;
 	migrationRunId: string;
 	succeededInternalCustomerIds: string[];
-	skippedInternalCustomerIds: string[];
+	noUpdatesNeededInternalCustomerIds: string[];
+	ineligibleInternalCustomerIds: string[];
 }): Promise<void> => {
 	const allIds = [
 		...succeededInternalCustomerIds,
-		...skippedInternalCustomerIds,
+		...noUpdatesNeededInternalCustomerIds,
+		...ineligibleInternalCustomerIds,
 	];
 	if (allIds.length === 0) return;
 
@@ -29,6 +33,13 @@ export const markPageItemRuns = async ({
 		SET status = CASE
 				WHEN item_id = ANY(${sql.param(succeededInternalCustomerIds)}::text[])
 				THEN 'succeeded' ELSE 'skipped'
+			END,
+			skip_reason = CASE
+				WHEN item_id = ANY(${sql.param(succeededInternalCustomerIds)}::text[])
+				THEN NULL
+				WHEN item_id = ANY(${sql.param(noUpdatesNeededInternalCustomerIds)}::text[])
+				THEN ${MigrationItemRunSkipReason.NoUpdatesNeeded}
+				ELSE ${MigrationItemRunSkipReason.Ineligible}
 			END,
 			updated_at = ${Date.now()}
 		WHERE migration_internal_id = ${migrationInternalId}

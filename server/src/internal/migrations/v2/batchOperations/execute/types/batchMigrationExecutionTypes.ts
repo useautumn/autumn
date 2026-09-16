@@ -2,6 +2,7 @@ import type {
 	CusProductStatus,
 	EntitlementWithFeature,
 	FullProductWithoutLicenses,
+	MigrationItemRunSkipReason,
 } from "@autumn/shared";
 
 /** One claimed customer flowing through a page. Preview fields feed the
@@ -71,6 +72,8 @@ export type BatchMigrationPageResult = {
 	/** Customers with no batch-eligible customer product — marked skipped;
 	 * retryable via retry_item_statuses through the per-customer lane. */
 	skipped: BatchMigrationPageCustomer[];
+	/** Why each skipped customer was skipped, keyed by internal customer id. */
+	skipReasons?: Record<string, MigrationItemRunSkipReason>;
 	/** Rows inserted this page, in patch order. */
 	insertedItems: BatchMigrationInsertedItem[];
 	removedItems: BatchMigrationRemovedItem[];
