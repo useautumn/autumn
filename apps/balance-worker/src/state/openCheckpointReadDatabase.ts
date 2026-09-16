@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { SQLITE_SCHEMA_VERSION } from "../sqliteBalanceStateSchema.js";
+import { SQLITE_SCHEMA_VERSION } from "./openBalanceStateDatabase.js";
 
 export const openCheckpointReadDatabase = ({
 	databasePath,

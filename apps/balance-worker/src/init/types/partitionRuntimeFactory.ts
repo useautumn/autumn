@@ -15,7 +15,7 @@ import type {
 	PartitionOutcomeFollowerPort,
 	PartitionRuntime,
 } from "../../runtime/types/partitionRuntime.js";
-import type { PartitionCheckpointRestoreLimits } from "../../state/checkpoint/restorePartitionCheckpoint.js";
+import type { PartitionCheckpointRestoreLimits } from "../../state/actions/checkpoint/restorePartitionCheckpoint.js";
 import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
 
 export type KafkaBalanceWorkerTimings = KafkaConsumerGroupTimings & {

@@ -12,7 +12,7 @@ import {
 	stateInitializationFingerprintOf,
 } from "@autumn/balance-engine";
 import { createPartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
-import { PartitionCheckpointLimitExceededError } from "../../../../src/state/checkpoint/restorePartitionCheckpoint.js";
+import { PartitionCheckpointLimitExceededError } from "../../../../src/state/actions/checkpoint/restorePartitionCheckpoint.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,

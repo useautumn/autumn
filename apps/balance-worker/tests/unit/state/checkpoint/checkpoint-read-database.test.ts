@@ -3,8 +3,8 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openCheckpointReadDatabase } from "../../../../src/state/checkpoint/openCheckpointReadDatabase.js";
-import { openBalanceStateDatabase } from "../../../../src/state/sqliteBalanceStateSchema.js";
+import { openBalanceStateDatabase } from "../../../../src/state/openBalanceStateDatabase.js";
+import { openCheckpointReadDatabase } from "../../../../src/state/openCheckpointReadDatabase.js";
 
 describe("checkpoint read-only connection", () => {
 	test.concurrent(

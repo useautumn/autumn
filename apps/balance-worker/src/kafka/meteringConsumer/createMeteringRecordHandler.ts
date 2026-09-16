@@ -67,17 +67,10 @@ export function createMeteringRecordHandler({
 		position,
 		record,
 	}: MeteringRecordApplication): { nextOffset: bigint } | undefined {
-		const result =
-			record.type === "state_initialized"
-				? ctx.stateStore.applyDurableStateInitialization({
-						position,
-						initialization: record,
-					})
-				: ctx.stateStore.applyDurableTrackOutcome({
-						position,
-						outcome: record,
-					});
-		if (result.kind === "position_already_applied") {
+		const [result] = ctx.stateStore.applyDurableMutations({
+			records: [{ position, mutation: record }],
+		});
+		if (result?.kind === "position_already_applied") {
 			return { nextOffset: result.nextOffset };
 		}
 	}

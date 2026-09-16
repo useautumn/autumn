@@ -1,5 +1,5 @@
 import type { PartitionCheckpointV1 } from "../../../checkpoint/partitionCheckpoint.js";
-import type { PartitionCheckpointRestoreMode } from "../../../state/checkpoint/restorePartitionCheckpoint.js";
+import type { PartitionCheckpointRestoreMode } from "../../../state/actions/checkpoint/restorePartitionCheckpoint.js";
 import { PartitionBootstrapRefusedError } from "../partitionBootstrapErrors.js";
 import type {
 	PartitionBootstrapContext,

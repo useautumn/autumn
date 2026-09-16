@@ -1,22 +1,23 @@
-import type { Database } from "bun:sqlite";
 import {
 	assertPartitionCheckpointOwnership,
 	type PartitionCheckpointPartitionResolver,
 	type PartitionCheckpointV1,
 	serializePartitionCheckpoint,
-} from "../../checkpoint/partitionCheckpoint.js";
+} from "../../../checkpoint/partitionCheckpoint.js";
 import {
 	assertPartitionCheckpointLimits,
 	assertPartitionCheckpointWithinLimit,
 	PartitionCheckpointLimitExceededError,
 	type PartitionCheckpointLimits,
-} from "../../checkpoint/partitionCheckpointLimits.js";
+} from "../../../checkpoint/partitionCheckpointLimits.js";
+import { insertState } from "../../repos/customerStates/customerStates.js";
 import {
+	deletePartitionProgress,
 	insertPartitionProgress,
-	insertState,
-	insertTrackReceipt,
 	readNextOffset,
-} from "../sqliteBalanceStateRows.js";
+} from "../../repos/partitionProgress.js";
+import { insertTrackReceipt } from "../../repos/trackReceipts/trackReceipts.js";
+import type { StateStoreContext } from "../../types/stateStoreContext.js";
 
 export type PartitionCheckpointRestoreMode = "replace" | "restore";
 
@@ -78,13 +79,13 @@ const validateCheckpoint = ({
 };
 
 export const restorePartitionCheckpoint = ({
-	database,
+	ctx,
 	checkpoint,
 	mode,
 	limits,
 	partitionResolver,
 }: {
-	database: Database;
+	ctx: StateStoreContext;
 	checkpoint: PartitionCheckpointV1;
 	mode: PartitionCheckpointRestoreMode;
 	limits: PartitionCheckpointRestoreLimits;
@@ -92,10 +93,10 @@ export const restorePartitionCheckpoint = ({
 }): void => {
 	validateCheckpoint({ checkpoint, limits, partitionResolver });
 
-	database
+	ctx.sqliteDb
 		.transaction(() => {
 			const existingNextOffset = readNextOffset({
-				database,
+				ctx,
 				topic: checkpoint.topic,
 				partition: checkpoint.partition,
 			});
@@ -112,23 +113,22 @@ export const restorePartitionCheckpoint = ({
 			}
 
 			if (mode === "replace") {
-				database
-					.query<never, { topic: string; partition: number }>(`
-						DELETE FROM partition_progress
-						WHERE topic = $topic AND partition_id = $partition
-					`)
-					.run({ topic: checkpoint.topic, partition: checkpoint.partition });
+				deletePartitionProgress({
+					ctx,
+					topic: checkpoint.topic,
+					partition: checkpoint.partition,
+				});
 			}
 
 			insertPartitionProgress({
-				database,
+				ctx,
 				topic: checkpoint.topic,
 				partition: checkpoint.partition,
 				nextOffset: checkpoint.nextOffset,
 			});
 			for (const checkpointState of checkpoint.states) {
 				insertState({
-					database,
+					ctx,
 					partitionKey: checkpointState.partitionKey,
 					topic: checkpoint.topic,
 					partition: checkpoint.partition,
@@ -139,7 +139,7 @@ export const restorePartitionCheckpoint = ({
 			}
 			for (const checkpointReceipt of checkpoint.receipts) {
 				insertTrackReceipt({
-					database,
+					ctx,
 					partitionKey: checkpointReceipt.partitionKey,
 					position: {
 						topic: checkpoint.topic,

@@ -5,7 +5,7 @@ import {
 } from "../../checkpoint/partitionCheckpoint.js";
 import { PartitionCheckpointBodyLimitExceededError } from "../../checkpoint/partitionCheckpointEncoding.js";
 import { PartitionCheckpointSourceError } from "../../checkpoint/partitionCheckpointSource.js";
-import { PartitionCheckpointLimitExceededError } from "../../state/checkpoint/restorePartitionCheckpoint.js";
+import { PartitionCheckpointLimitExceededError } from "../../state/actions/checkpoint/restorePartitionCheckpoint.js";
 import type { PartitionBootstrapRefusalReason } from "./types/partitionBootstrap.js";
 
 export class PartitionBootstrapRefusedError extends Error {

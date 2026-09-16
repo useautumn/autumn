@@ -2,9 +2,9 @@ import { parentPort, threadId, workerData } from "node:worker_threads";
 import { runCheckpointThread } from "../../src/checkpoint/background/runCheckpointThread.js";
 import { encodePartitionCheckpoint } from "../../src/checkpoint/partitionCheckpointEncoding.js";
 import type { PartitionCheckpointLimits } from "../../src/checkpoint/partitionCheckpointLimits.js";
-import { capturePartitionCheckpoint } from "../../src/state/checkpoint/capturePartitionCheckpoint.js";
-import { openCheckpointReadDatabase } from "../../src/state/checkpoint/openCheckpointReadDatabase.js";
-import { readNextOffset } from "../../src/state/sqliteBalanceStateRows.js";
+import { capturePartitionCheckpoint } from "../../src/state/actions/checkpoint/capturePartitionCheckpoint.js";
+import { openCheckpointReadDatabase } from "../../src/state/openCheckpointReadDatabase.js";
+import { readNextOffset } from "../../src/state/repos/partitionProgress.js";
 
 export type CheckpointThreadFixtureConfig = {
 	databasePath: string;
@@ -36,16 +36,22 @@ runCheckpointThread({
 			if (config.exit) process.exit(17);
 			if (config.pauseAt === "before_read") pause();
 			if (config.pauseAt !== "after_read")
-				return capturePartitionCheckpoint({ database, ...params });
+				return capturePartitionCheckpoint({
+					ctx: { sqliteDb: database },
+					...params,
+				});
 			return database
 				.transaction(() => {
 					readNextOffset({
-						database,
+						ctx: { sqliteDb: database },
 						topic: params.topic,
 						partition: params.partition,
 					});
 					pause();
-					return capturePartitionCheckpoint({ database, ...params });
+					return capturePartitionCheckpoint({
+						ctx: { sqliteDb: database },
+						...params,
+					});
 				})
 				.deferred();
 		},

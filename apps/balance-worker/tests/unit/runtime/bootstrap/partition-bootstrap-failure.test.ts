@@ -13,7 +13,7 @@ import {
 import {
 	PartitionCheckpointLimitExceededError,
 	PartitionCheckpointRestoreConflictError,
-} from "../../../../src/state/checkpoint/restorePartitionCheckpoint.js";
+} from "../../../../src/state/actions/checkpoint/restorePartitionCheckpoint.js";
 
 const topic = "metering-events-v1";
 const partition = 2;

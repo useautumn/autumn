@@ -11,7 +11,7 @@ import {
 } from "@autumn/balance-engine";
 import { parsePartitionCheckpoint } from "../../../../src/checkpoint/partitionCheckpoint.js";
 import { planPartitionBootstrap } from "../../../../src/runtime/bootstrap/plan/planPartitionBootstrap.js";
-import { PartitionCheckpointLimitExceededError } from "../../../../src/state/checkpoint/restorePartitionCheckpoint.js";
+import { PartitionCheckpointLimitExceededError } from "../../../../src/state/actions/checkpoint/restorePartitionCheckpoint.js";
 import {
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,

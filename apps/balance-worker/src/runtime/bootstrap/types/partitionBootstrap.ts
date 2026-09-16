@@ -3,7 +3,7 @@ import type {
 	PartitionCheckpointV1,
 } from "../../../checkpoint/partitionCheckpoint.js";
 import type { PartitionCheckpointSource } from "../../../checkpoint/partitionCheckpointSource.js";
-import type { PartitionCheckpointRestoreLimits } from "../../../state/checkpoint/restorePartitionCheckpoint.js";
+import type { PartitionCheckpointRestoreLimits } from "../../../state/actions/checkpoint/restorePartitionCheckpoint.js";
 import type { SqliteBalanceStateStore } from "../../../state/sqliteBalanceStateStore.js";
 
 export type PartitionBootstrapRetryPolicy = {

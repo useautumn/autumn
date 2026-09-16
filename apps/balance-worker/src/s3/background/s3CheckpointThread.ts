@@ -1,8 +1,8 @@
 import { parentPort, workerData } from "node:worker_threads";
 import { S3Client } from "@aws-sdk/client-s3";
 import { runCheckpointThread } from "../../checkpoint/background/runCheckpointThread.js";
-import { capturePartitionCheckpoint } from "../../state/checkpoint/capturePartitionCheckpoint.js";
-import { openCheckpointReadDatabase } from "../../state/checkpoint/openCheckpointReadDatabase.js";
+import { capturePartitionCheckpoint } from "../../state/actions/checkpoint/capturePartitionCheckpoint.js";
+import { openCheckpointReadDatabase } from "../../state/openCheckpointReadDatabase.js";
 import { createS3CheckpointObjectClient } from "../s3CheckpointObjectClient.js";
 import { createS3PartitionCheckpointStorage } from "../s3PartitionCheckpointStorage.js";
 import type { S3CheckpointThreadConfig } from "./s3CheckpointThreadConfig.js";
@@ -29,7 +29,7 @@ runCheckpointThread({
 	limits: config.checkpointLimits,
 	stateStore: {
 		capturePartitionCheckpoint: (params) =>
-			capturePartitionCheckpoint({ database, ...params }),
+			capturePartitionCheckpoint({ ctx: { sqliteDb: database }, ...params }),
 	},
 	publisher,
 });

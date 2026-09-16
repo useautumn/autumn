@@ -1,19 +1,17 @@
-import type { Database } from "bun:sqlite";
 import {
 	type PreparedPartitionCheckpoint,
 	preparePartitionCheckpoint,
-} from "../../checkpoint/partitionCheckpoint.js";
+} from "../../../checkpoint/partitionCheckpoint.js";
 import {
 	assertPartitionCheckpointLimits,
 	assertPartitionCheckpointWithinLimit,
 	type PartitionCheckpointLimits,
-} from "../../checkpoint/partitionCheckpointLimits.js";
-import { PartitionProgressNotFoundError } from "../sqliteBalanceStateErrors.js";
-import {
-	readNextOffset,
-	readPartitionReceipts,
-	readPartitionStates,
-} from "../sqliteBalanceStateRows.js";
+} from "../../../checkpoint/partitionCheckpointLimits.js";
+import { readPartitionStates } from "../../repos/customerStates/customerStates.js";
+import { readNextOffset } from "../../repos/partitionProgress.js";
+import { readPartitionReceipts } from "../../repos/trackReceipts/trackReceipts.js";
+import { PartitionProgressNotFoundError } from "../../sqliteBalanceStateErrors.js";
+import type { StateStoreContext } from "../../types/stateStoreContext.js";
 
 export type PartitionCheckpointCaptureLimits = PartitionCheckpointLimits;
 
@@ -21,14 +19,14 @@ const probeLimitOf = ({ limit }: { limit: number }): number =>
 	limit === Number.MAX_SAFE_INTEGER ? limit : limit + 1;
 
 export const capturePartitionCheckpoint = ({
-	database,
+	ctx,
 	topic,
 	partition,
 	createdAt,
 	limits,
 	consumedNextOffset = null,
 }: {
-	database: Database;
+	ctx: StateStoreContext;
 	topic: string;
 	partition: number;
 	createdAt: number;
@@ -43,14 +41,14 @@ export const capturePartitionCheckpoint = ({
 		throw new RangeError("Consumed next offset cannot be negative");
 	}
 
-	const cut = database
+	const cut = ctx.sqliteDb
 		.transaction(() => {
-			const nextOffset = readNextOffset({ database, topic, partition });
+			const nextOffset = readNextOffset({ ctx, topic, partition });
 			if (nextOffset === null) {
 				throw new PartitionProgressNotFoundError({ topic, partition });
 			}
 			const states = readPartitionStates({
-				database,
+				ctx,
 				topic,
 				partition,
 				limit: probeLimitOf({ limit: limits.maxStates }),
@@ -61,7 +59,7 @@ export const capturePartitionCheckpoint = ({
 				observed: states.length,
 			});
 			const receipts = readPartitionReceipts({
-				database,
+				ctx,
 				topic,
 				partition,
 				createdAt,
