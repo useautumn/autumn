@@ -12,9 +12,24 @@ let ownershipConsumer: OwnershipConsumer | undefined;
 export function getOwnershipConsumer(): OwnershipConsumer {
 	if (ownershipConsumer) return ownershipConsumer;
 	const env = getBalanceWorkerClientEnv();
+	ownershipConsumer = createServerOwnershipConsumer({
+		topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
+		groupIdPrefix: "autumn-server-ownership",
+	});
+	return ownershipConsumer;
+}
+
+export function createServerOwnershipConsumer({
+	topic,
+	groupIdPrefix,
+}: {
+	topic: string;
+	groupIdPrefix: string;
+}): OwnershipConsumer {
+	const env = getBalanceWorkerClientEnv();
 	const kafka = new Kafka(
 		createKafkaClient({
-			clientId: "autumn-server-ownership",
+			clientId: groupIdPrefix,
 			brokers: env.KAFKA_BROKERS,
 			transport: {},
 			limits: {
@@ -26,14 +41,13 @@ export function getOwnershipConsumer(): OwnershipConsumer {
 			},
 		}),
 	);
-	ownershipConsumer = createOwnershipConsumer({
+	return createOwnershipConsumer({
 		ctx: { kafka },
 		config: {
-			topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
-			groupIdPrefix: "autumn-server-ownership",
+			topic,
+			groupIdPrefix,
 		},
 	});
-	return ownershipConsumer;
 }
 
 export async function startOwnershipConsumer(): Promise<void> {

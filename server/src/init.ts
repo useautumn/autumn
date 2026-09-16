@@ -23,6 +23,10 @@ import {
 	stopReplicaRoutingProber,
 } from "./db/replicaRoutingState.js";
 import {
+	startBalanceShadow,
+	stopBalanceShadow,
+} from "./external/balanceWorker/balanceShadow.js";
+import {
 	startOwnershipConsumer,
 	stopOwnershipConsumer,
 } from "./external/balanceWorker/getOwnershipConsumer.js";
@@ -130,6 +134,7 @@ const init = async ({
 
 	await startAllEdgeConfigPolling({ logger });
 	await startOwnershipConsumer();
+	startBalanceShadow();
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 	startRedisMonitor();
 	startRedisV2Monitor();
@@ -352,6 +357,7 @@ async function gracefulShutdown() {
 		// their delayed timers enqueue SQS work, so the batchers close LAST.
 		stopAcceptingRequests?.();
 		await waitForInFlightRequestsToSettle({ timeoutMs: 10_000 });
+		await stopBalanceShadow();
 		await stopOwnershipConsumer();
 
 		// Flush any buffered OTel spans before shutting down
