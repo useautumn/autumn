@@ -106,6 +106,9 @@ export const createInvoiceForBilling = async ({
 			? undefined
 			: billingContextToCurrency({ org: ctx.org, billingContext }),
 		collectionMethod,
+		// Invoice mode drafts: let Stripe auto-finalize and email the invoice
+		// (~1 hour after creation), matching subscription-generated drafts.
+		autoAdvance: isInvoiceMode,
 		daysUntilDue: invoiceMode?.daysUntilDue,
 		paymentMethodTypes: invoiceMode?.paymentMethodTypes,
 		footer: invoiceMode?.footer,
