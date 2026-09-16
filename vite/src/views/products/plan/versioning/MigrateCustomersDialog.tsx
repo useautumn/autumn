@@ -217,6 +217,9 @@ export function MigrateCustomersDialog({
 			scope,
 			pastVersions: migratableVersions,
 			hasPricingChange,
+			latestProduct,
+			versionProducts,
+			features,
 		});
 
 		try {
