@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
+import { waitForTwStripeScheduleClock } from "./twStripeClock/waitForTwStripeScheduleClock";
 import { createTwStripeRequestDeadline } from "./twStripeLimiter/createTwStripeRequestDeadline";
 import { isTwWorkerMode } from "./twStripeLimiter/twStripeMode";
 import { getTwStripeRequestDeadline } from "./twStripeLimiter/twStripeRequestContext";
@@ -44,6 +45,14 @@ export const applyTwStripeConcurrencyLimit = ({
 			process.env.TW_STRIPE_TRACE === "1" ? randomUUID() : undefined;
 
 		for (let attempt = 0; ; attempt++) {
+			await waitForTwStripeScheduleClock({
+				client,
+				method: args[3],
+				path: args[2],
+				headers: args[4] as Record<string, string>,
+				deadline,
+				networkTimeoutMs: args[7],
+			});
 			const permit = await acquireTwStripePermit({
 				authorization,
 				stripeAccount:
