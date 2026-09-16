@@ -182,12 +182,18 @@ const unlimited = ({ featureId }: { featureId: string }) =>
 
 /**
  * Unlimited messages - no usage cap
+ * @param entityFeatureId - Entity feature ID for per-entity usage tracking
  * @returns Unlimited messages feature item
  */
-const unlimitedMessages = () =>
+const unlimitedMessages = ({
+	entityFeatureId,
+}: {
+	entityFeatureId?: string;
+} = {}) =>
 	constructFeatureItem({
 		featureId: TestFeature.Messages,
 		unlimited: true,
+		entityFeatureId,
 	});
 
 /**
