@@ -1,14 +1,14 @@
 import { type CheckCommand, parseCheckCommand } from "@autumn/balance-engine";
 import type { CheckParams } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BalanceWorkerUnsupportedError } from "../../balanceWorker/balanceWorkerErrors.js";
+import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { validateBalanceWorkerRequest } from "../../balanceWorker/validateBalanceWorkerRequest.js";
 
 export function checkParamsToCheckCommand({
 	ctx,
 	body,
 }: {
-	ctx: AutumnContext;
+	ctx: BalanceWorkerRequestContext;
 	body: CheckParams;
 }): CheckCommand {
 	validateBalanceWorkerRequest({ ctx, body });

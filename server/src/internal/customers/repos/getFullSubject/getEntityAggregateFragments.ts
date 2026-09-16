@@ -9,7 +9,11 @@ import { getEntityOptionsAggregateFragments } from "./getEntityOptionsAggregateF
  *   - entity_rollover_feature: feature-level rollover totals, summed directly
  *     off r.balance / r.usage (one add per active rollover).
  */
-const buildEntityRolloverCtes = () => sql`
+const buildEntityRolloverCtes = ({
+	expiryTimestampSql,
+}: {
+	expiryTimestampSql: SQL;
+}) => sql`
 		entity_rollover_keys AS (
 			SELECT
 				ce.internal_feature_id,
@@ -21,7 +25,7 @@ const buildEntityRolloverCtes = () => sql`
 			JOIN entity_level_cus_ents ce ON r.cus_ent_id = ce.id
 			CROSS JOIN LATERAL jsonb_each(r.entities) AS kv(entity_key, entity_value)
 			WHERE jsonb_typeof(r.entities) = 'object'
-				AND (r.expires_at IS NULL OR r.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+				AND (r.expires_at IS NULL OR r.expires_at > ${expiryTimestampSql})
 			GROUP BY ce.internal_feature_id, ce.internal_customer_id, kv.entity_key
 		),
 
@@ -33,7 +37,7 @@ const buildEntityRolloverCtes = () => sql`
 				SUM(COALESCE(r.usage, 0)::numeric) AS rollover_usage
 			FROM rollovers r
 			JOIN entity_level_cus_ents ce ON r.cus_ent_id = ce.id
-			WHERE (r.expires_at IS NULL OR r.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+			WHERE (r.expires_at IS NULL OR r.expires_at > ${expiryTimestampSql})
 			GROUP BY ce.internal_feature_id, ce.internal_customer_id
 		)
 `;
@@ -42,10 +46,12 @@ export const getEntityAggregateFragments = ({
 	entityId,
 	statusFilter,
 	internalFeatureIds,
+	expiryTimestampSql = sql`EXTRACT(EPOCH FROM now()) * 1000`,
 }: {
 	entityId?: string;
 	statusFilter: SQL;
 	internalFeatureIds?: string[];
+	expiryTimestampSql?: SQL;
 }) => {
 	// Single array parameter, not one placeholder per id — keeps the SQL text
 	// stable across callers so the statement stays preparable.
@@ -98,7 +104,7 @@ export const getEntityAggregateFragments = ({
 				AND ce.internal_entity_id IS NOT NULL
 				AND ce.pooled_balance_id IS NULL
 				AND ce.pooled_contribution_id IS NULL
-				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+				AND (ce.expires_at IS NULL OR ce.expires_at > ${expiryTimestampSql})
 				AND (ce.balance != 0 OR ce.unlimited IS TRUE)
 				${featureFilter}
 		),
@@ -127,7 +133,7 @@ export const getEntityAggregateFragments = ({
 
 		${entityOptionsAggregateFragments.ctes},
 
-		${buildEntityRolloverCtes()},
+		${buildEntityRolloverCtes({ expiryTimestampSql })},
 
 		-- Per-entity balance map: built ONLY from jsonb_each(ce.entities) so
 		-- that entities keys reflect real per-entity breakdowns, not every

@@ -1,12 +1,12 @@
 import type { TrackCommand } from "@autumn/balance-engine";
 import type { TrackParams } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 
 export function trackParamsToTrackCommand({
 	ctx,
 	body,
 }: {
-	ctx: AutumnContext;
+	ctx: BalanceWorkerRequestContext;
 	body: TrackParams;
 }): TrackCommand {
 	return {

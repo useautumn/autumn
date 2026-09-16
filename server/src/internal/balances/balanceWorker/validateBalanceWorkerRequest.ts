@@ -1,12 +1,12 @@
 import type { CheckParams, TrackParams } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BalanceWorkerUnsupportedError } from "./balanceWorkerErrors.js";
+import type { BalanceWorkerRequestContext } from "./balanceWorkerRequestContext.js";
 
 export function validateBalanceWorkerRequest({
 	ctx,
 	body,
 }: {
-	ctx: AutumnContext;
+	ctx: BalanceWorkerRequestContext;
 	body: CheckParams | TrackParams;
 }): void {
 	let reason: string | undefined;
