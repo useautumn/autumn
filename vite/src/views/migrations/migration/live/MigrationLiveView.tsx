@@ -359,8 +359,7 @@ export function MigrationLiveView({
 	);
 	const progressRun = activeRun ?? (isSettling ? latestRun : undefined);
 	const tableOffsetPx =
-		(env === AppEnv.Sandbox ? 260 : 220) +
-		(progressRun ? PROGRESS_FOOTER_PX : 0);
+		(env === AppEnv.Sandbox ? 260 : 220) + (activeRun ? PROGRESS_FOOTER_PX : 0);
 	const tableContainerHeight = `calc(100vh - ${tableOffsetPx}px)`;
 	const progressCounts = (progressRun ?? latestRun)?.item_run_counts;
 	const canShowPendingStatus =
@@ -858,11 +857,8 @@ export function MigrationLiveView({
 				running={progressCounts?.running ?? 0}
 				total={progressCounts?.total ?? 0}
 				expected={runScopeCount}
-				label={runProgressLabel({
-					migrationStatus,
-					activeRun: progressRun,
-				})}
-				active={!!progressRun}
+				label={runProgressLabel({ migrationStatus, activeRun })}
+				active={!!activeRun}
 				slot={footerSlot}
 			/>
 		</div>
