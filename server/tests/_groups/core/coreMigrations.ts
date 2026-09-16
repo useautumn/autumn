@@ -30,6 +30,7 @@ export const coreMigrations: TestGroup = {
 		"integration/billing/migrations-v2/batch-migrations/version-repoint/fallbacks/operation-input-fallbacks.test.ts",
 		// Computed migration status (draft/waiting/running/run).
 		"integration/billing/migrations-v2/status/migration-run-claim-status.test.ts",
+		"integration/billing/migrations-v2/status/migration-run-dispatch-verification.test.ts",
 		"integration/billing/migrations-v2/status/migration-status-lifecycle.test.ts",
 		"integration/billing/migrations-v2/status/migration-status-contention.test.ts",
 		// Frozen post-run customer list (filter.preview source=item_runs).
