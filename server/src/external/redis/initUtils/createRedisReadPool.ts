@@ -30,6 +30,14 @@ const getRedisReadPoolState = (redis: Redis): RedisReadPoolState | undefined =>
 export const getRedisReadPoolLanes = (redis: Redis): readonly Redis[] =>
 	getRedisReadPoolState(redis)?.lanes ?? [redis];
 
+export const getRedisReadLaneInFlight = ({
+	redis,
+	lane,
+}: {
+	redis: Redis;
+	lane: number;
+}): number | undefined => getRedisReadPoolState(redis)?.inFlight[lane];
+
 export const acquireRedisReadLane = (
 	redis: Redis,
 ): RedisReadLaneLease | undefined => {

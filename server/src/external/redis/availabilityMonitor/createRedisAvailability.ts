@@ -2,8 +2,9 @@ import { monitorEventLoopDelay } from "node:perf_hooks";
 import { withTimeout } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { waitForRedisReady } from "../initUtils/redisWarmup.js";
 import { describeRedisConnections } from "../initUtils/createStandbyRedisRouter.js";
+import { waitForRedisReady } from "../initUtils/redisWarmup.js";
+import { getRedisPoolMonitor } from "../poolMonitor/getRedisPoolMonitor.js";
 
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
@@ -83,6 +84,11 @@ export const createRedisAvailability = ({
 
 		if (probeRedis && probeRedis.status !== "end") probeRedis.disconnect();
 		probeRedis = sourceRedis.duplicate();
+		getRedisPoolMonitor().register({
+			redis: probeRedis,
+			name: `${logPrefix}:probe`,
+			redisType: "probe",
+		});
 		probeRedis.on("error", () => {});
 		probeSourceRedis = sourceRedis;
 		return probeRedis;
@@ -278,7 +284,10 @@ export const createRedisAvailability = ({
 					waitForRedisReady(mainRedis, logPrefix).catch(() => undefined),
 				);
 			}
-			if (activeProbeRedis !== mainRedis && activeProbeRedis.status !== "ready") {
+			if (
+				activeProbeRedis !== mainRedis &&
+				activeProbeRedis.status !== "ready"
+			) {
 				readinessPromises.push(
 					waitForRedisReady(activeProbeRedis, `${logPrefix}Probe`).catch(
 						() => undefined,

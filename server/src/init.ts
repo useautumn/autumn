@@ -62,6 +62,7 @@ import {
 } from "./external/redis/initRedis.js";
 import { awaitBoundedWarmup } from "./external/redis/initUtils/boundedWarmup.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
+import { getRedisPoolMonitor } from "./external/redis/poolMonitor/getRedisPoolMonitor.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { globalEventBatchingManager } from "./internal/balances/events/EventBatchingManager.js";
@@ -102,6 +103,7 @@ const init = async ({
 
 	initPgHealthMonitor({ client: clientCritical });
 	startPgPoolMonitor();
+	getRedisPoolMonitor().start();
 	// `db` is the general pool — the probe must never occupy a critical-pool slot.
 	startReplicaRoutingProber({ db });
 
@@ -354,6 +356,7 @@ async function gracefulShutdown() {
 		}
 		shutdownPgHealthMonitor();
 		stopPgPoolMonitor();
+		getRedisPoolMonitor().stop();
 		stopReplicaRoutingProber();
 		stopRedisMonitor();
 		stopRedisV2Monitor();
