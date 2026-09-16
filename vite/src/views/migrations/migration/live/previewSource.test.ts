@@ -9,9 +9,12 @@ test("draft migrations preview the live filter", () => {
 	expect(previewSourceForStatus("draft")).toBe("filter");
 });
 
-test("once a Run All has started the list freezes to item runs", () => {
-	expect(previewSourceForStatus("running")).toBe("item_runs");
-	expect(previewSourceForStatus("waiting")).toBe("item_runs");
+test("a queued or executing run keeps the live filter in view", () => {
+	expect(previewSourceForStatus("waiting")).toBe("filter");
+	expect(previewSourceForStatus("running")).toBe("filter");
+});
+
+test("once a Run All has completed the list freezes to item runs", () => {
 	expect(previewSourceForStatus("run")).toBe("item_runs");
 });
 
