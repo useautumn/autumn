@@ -30,11 +30,11 @@ const createInvoicePage = async ({
 			await route.fulfill({
 				contentType: "text/html",
 				body: `<button role="button" data-value="card" onclick="document.querySelector('form').hidden=false; this.remove()">Card</button>
-			<form hidden><input name="number"><input name="expiry"><input name="cvc"><input name="postalCode"></form>
+			<form hidden><input name="number"><input name="expiry"><input name="cvc"><input name="postalCode"><input name="phone" autocomplete="tel" required></form>
 			<script>
 			window.addEventListener('message', () => {
 				const values = [...document.querySelectorAll('input')].map(input => input.value);
-				if (JSON.stringify(values) !== JSON.stringify(['4242424242424242','1228','123','10001'])) throw Error('Incomplete form');
+				if (JSON.stringify(values) !== JSON.stringify(['4242424242424242','1228','123','10001','+12025550100'])) throw Error('Incomplete form');
 				${outcome === "invalid" ? "document.body.insertAdjacentHTML('beforeend', '<div role=alert>Your card was declined</div>');" : "parent.postMessage('submitted', '*');"}
 			});
 			</script>`,

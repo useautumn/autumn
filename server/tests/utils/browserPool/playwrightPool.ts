@@ -73,9 +73,13 @@ class PlaywrightPool {
 		});
 		let admission: Awaited<ReturnType<typeof limitStripeBrowserRequests>>;
 		try {
-			admission = await limitStripeBrowserRequests({ context });
-			const page = await context.newPage();
-			return await wait.run(() => fn({ ...args, page }));
+			return await wait.run(async () => {
+				admission = await limitStripeBrowserRequests({ context });
+				wait.remainingMs();
+				const page = await context.newPage();
+				wait.remainingMs();
+				return fn({ ...args, page });
+			});
 		} finally {
 			wait.close();
 			try {

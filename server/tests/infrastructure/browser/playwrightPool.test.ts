@@ -44,3 +44,19 @@ test("cancelling one checkout closes only its own context", async () => {
 	expect(await rejection).toMatchObject({ message: "cancelled checkout" });
 	expect(await second).toBe("Independent checkout");
 }, 15_000);
+
+test("an already cancelled checkout never starts browser actions", async () => {
+	const controller = new AbortController();
+	controller.abort(new Error("test already ended"));
+	let started = false;
+	await expect(
+		playwrightPool.runInPage({
+			args: {},
+			signal: controller.signal,
+			fn: async () => {
+				started = true;
+			},
+		}),
+	).rejects.toThrow("test already ended");
+	expect(started).toBe(false);
+});

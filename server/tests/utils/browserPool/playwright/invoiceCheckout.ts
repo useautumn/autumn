@@ -60,6 +60,12 @@ export const invoiceCheckout = async ({
 		)
 		.first();
 	if (await postalCode.count()) await postalCode.fill("10001");
+	const phone = paymentFrame
+		.locator(
+			'input[name="phone"], input[name="phoneNumber"], input[autocomplete="tel"]',
+		)
+		.first();
+	if (await phone.isVisible()) await phone.fill("+12025550100");
 
 	await page
 		.locator(
