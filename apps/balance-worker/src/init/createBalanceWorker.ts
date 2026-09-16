@@ -42,6 +42,7 @@ export async function createBalanceWorker({
 	try {
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
+				logger: dependencies.logger,
 				kafka: resources.kafka,
 				ownershipOffsets: resources.admin,
 				stateStore: resources.stateStore,

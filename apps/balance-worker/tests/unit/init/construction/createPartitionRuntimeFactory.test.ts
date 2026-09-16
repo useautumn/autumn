@@ -1,12 +1,18 @@
 import { describe, expect, test } from "bun:test";
+import { parseTrackCommand } from "@autumn/balance-engine";
 import type { KafkaProducerClient } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
 import { createPartitionRuntimeFactory } from "../../../../src/init/construction/createPartitionRuntimeFactory.js";
 import type { PartitionRuntimeFactoryConfig } from "../../../../src/init/types/partitionRuntimeFactory.js";
-import type { PartitionOutcomeFollowerPort } from "../../../../src/runtime/types/partitionRuntime.js";
+import type {
+	PartitionOutcomeFollowerPort,
+	PartitionRuntime,
+} from "../../../../src/runtime/types/partitionRuntime.js";
 import {
 	closeStoreFixture,
+	createState,
 	createStoreFixture,
+	identity,
 	topic,
 } from "../../kafka/kafka-test-fixtures.js";
 
@@ -46,6 +52,122 @@ const config: PartitionRuntimeFactoryConfig = {
 };
 
 describe("Kafka owned partition runtime factory", () => {
+	test.concurrent(
+		"logs Kafka commit and SQLite apply after each phase completes",
+		async () => {
+			const fixture = createStoreFixture();
+			const commitStarted = Promise.withResolvers<void>();
+			const releaseCommit = Promise.withResolvers<void>();
+			const logs: unknown[][] = [];
+			let runtime: PartitionRuntime | undefined;
+			function record(...args: unknown[]): void {
+				logs.push(args);
+			}
+			try {
+				fixture.store.restoreState({
+					topic,
+					partition: 0,
+					initializationId: "baseline",
+					state: createState(),
+				});
+				const producer: KafkaProducerClient = {
+					connect: async () => {},
+					disconnect: async () => {},
+					transaction: async () => ({
+						send: async () => [
+							{ topicName: topic, partition: 0, errorCode: 0, baseOffset: "0" },
+						],
+						commit: async () => {
+							commitStarted.resolve();
+							await releaseCommit.promise;
+						},
+						abort: async () => {},
+					}),
+				};
+				const factory = createPartitionRuntimeFactory({
+					ctx: {
+						kafka: { producer: () => producer },
+						stateStore: fixture.store,
+						ownershipOffsets: { fetchTopicOffsets: async () => [] },
+						checkpointSource: { latest: async () => null },
+						partitionResolver: { partitionForIdentity: () => 0 },
+						logger: { info: record, warn: record },
+					},
+					config,
+				});
+				runtime = factory({
+					topic,
+					partition: 0,
+					follower: {
+						readLogRange: async () => ({
+							logStartOffset: 0n,
+							logEndOffset: 0n,
+						}),
+						startAndCatchUp: async () => {},
+						readProgress: () => ({ consumedNextOffset: 0n, highWatermark: 0n }),
+						stop: async () => {},
+					},
+				}).runtime;
+				await runtime.start();
+				const command = parseTrackCommand({
+					input: {
+						schemaVersion: 1,
+						type: "track",
+						commandId: "private_command",
+						requestId: "private_request",
+						identity,
+						entityId: null,
+						featureId: "messages",
+						value: 5,
+						overageBehavior: "reject",
+						properties: null,
+						occurredAt: 1_700_000_000_000,
+					},
+				});
+				const pending = runtime.process((processor) =>
+					processor.track({ command }),
+				);
+				await commitStarted.promise;
+				expect(logs).toEqual([]);
+				expect(fixture.store.readState({ identity })?.revision).toBe(0);
+				releaseCommit.resolve();
+				await expect(pending).resolves.toMatchObject({
+					kind: "new",
+					outcome: { status: "applied" },
+				});
+				expect(logs).toHaveLength(2);
+				for (const [index, phase, result] of [
+					[0, "kafka_commit", "committed"],
+					[1, "sqlite_apply", "applied"],
+				] as const) {
+					expect(logs[index]?.[0]).toMatchObject({
+						event: "balance_worker.commit",
+						workerDeployment: "staging",
+						workerEndpoint: "http://worker.test",
+						topic,
+						partition: 0,
+						phase,
+						result,
+						batchSize: 1,
+						baseOffset: "0",
+						durationMs: expect.any(Number),
+					});
+				}
+				expect(fixture.store.readState({ identity })?.revision).toBe(1);
+				await expect(
+					runtime.process((processor) => processor.track({ command })),
+				).resolves.toMatchObject({ kind: "duplicate" });
+				expect(logs).toHaveLength(2);
+				expect(JSON.stringify(logs)).not.toContain("private_command");
+				expect(JSON.stringify(logs)).not.toContain(identity.customerId);
+			} finally {
+				releaseCommit.resolve();
+				await runtime?.stop();
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
 	test("rejects invalid receipt retention before accepting assignments", () => {
 		const fixture = createStoreFixture();
 		try {
