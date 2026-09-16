@@ -27,6 +27,16 @@ const activeTempPaths: string[] = [
 	"integration/billing/stripe-webhooks/invoice-created/invoice-created-consumable-trial.test.ts",
 	// Setup and migration both emit scenario "new"; the matcher doesn't distinguish them.
 	"integration/billing/autumn-webhooks/batch-migration/batch-migration-products-updated.test.ts",
+	// Remaining assertion failures need individual review; TW independence is not yet established.
+	"integration/balances/update/usage/allocated/update-usage-paid-allocated.test.ts",
+	"integration/billing/multi-attach/customize/multi-attach-customize.test.ts",
+	"integration/billing/pooled-balances/update/customize-pooled-balance.test.ts",
+	"integration/billing/stripe-webhooks/invoice-created/invoice-created-consumable-discounts.test.ts",
+	"integration/billing/stripe-webhooks/subscription-deleted/subscription-deleted-invoice-discounts.test.ts",
+	"integration/billing/stripe-webhooks/test-clock-ready/test-clock-ready-expires-trial.test.ts",
+	"integration/billing/update-subscription/params/recalculate-balances/update-quantity-prepaid-overage.test.ts",
+	"integration/catalog-v2/plans/remove/remove-plans-archived.test.ts",
+	"integration/licenses/billing/discounts/license-discount-composition.test.ts",
 ];
 
 export const temp: TestGroup = {
