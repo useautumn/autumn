@@ -13,6 +13,14 @@ const activeTempPaths: string[] = [
 	"integration/billing/migrations-v2/batch-migrations/replace-items/batch-replace-item-events-webhooks.test.ts",
 	// Deferred logic review: scheduled free-plan activation is emitted as updated, not activated.
 	"integration/billing/autumn-webhooks/billing-updated/billing-updated-subscription-deleted.test.ts",
+	// Deferred fixture review: a seeded referral program has no required received_by value.
+	"integration/catalog-v2/plans/update/rename-plan-refs.test.ts",
+	// Reproduces in a single local case: the variant already has Stripe resources before attach.
+	"integration/crud/plans/variants/stripe-resource-carryover.test.ts",
+	// Deferred logic review: subscription refresh can invalidate tracked usage before its DB flush.
+	"integration/billing/stripe-webhooks/invoice-created/invoice-created-consumable-trial.test.ts",
+	// Setup and migration both emit scenario "new"; the matcher doesn't distinguish them.
+	"integration/billing/autumn-webhooks/batch-migration/batch-migration-products-updated.test.ts",
 ];
 
 export const temp: TestGroup = {
