@@ -1,7 +1,9 @@
 /**
- * atmn crud/versions — draft on a brand-new plan → server error surfaced verbatim
+ * atmn crud/versions — draft on a brand-new plan → refused before anything is sent
  *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
+ * A plan whose only row is `active: false` has no version anyone can buy. The
+ * config lint says so and the push never reaches the server; the raw-wire
+ * path gets the server's own version of that guard (scenarios/lint).
  */
 
 import { expect, test } from "bun:test";
@@ -34,9 +36,9 @@ test.concurrent(
 
 			expect(error).toBeInstanceOf(Error);
 			expect((error as Error).message).toContain(
-				"/v1/catalogV2.preview_update failed (400):",
+				'Plan "pro" has 1 version and none is active.',
 			);
-			expect((error as Error).message).toContain("Cannot set active to false");
+			expect((error as Error).message).not.toContain("catalogV2");
 
 			const catalog = (await scenario.client.get({})) as unknown as {
 				plans: Array<{ id: string }>;

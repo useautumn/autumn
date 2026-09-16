@@ -10,17 +10,13 @@ import {
 	type Price,
 	PriceType,
 } from "@autumn/shared";
+import { products } from "@tests/utils/fixtures/db/products";
 import {
 	entitlementToResetCycleAnchor,
 	productToBillingCycleAnchor,
 } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
-import { products } from "@tests/utils/fixtures/db/products";
 
-const feature = ({
-	type = FeatureType.Metered,
-}: {
-	type?: FeatureType;
-} = {}) =>
+const feature = ({ type = FeatureType.Metered }: { type?: FeatureType } = {}) =>
 	({
 		id: "messages",
 		internal_id: "feature_messages",
@@ -67,11 +63,7 @@ const entitlement = ({
 		feature: feature({ type }),
 	}) satisfies EntitlementWithFeature;
 
-const fixedPrice = ({
-	interval,
-}: {
-	interval: BillingInterval;
-}) =>
+const fixedPrice = ({ interval }: { interval: BillingInterval }) =>
 	({
 		id: "price_base",
 		internal_product_id: "product_messages",
@@ -132,25 +124,44 @@ describe("cycle anchor resolvers", () => {
 		expect(anchor).toBe(1000);
 	});
 
-	test.concurrent("does not store reset anchor for non-resetting entitlements", () => {
-		const anchors = [
-			entitlementToResetCycleAnchor({
-				entitlement: entitlement({ type: FeatureType.Boolean }),
-				resetCycleAnchor: 1000,
-				now: 500,
-			}),
-			entitlementToResetCycleAnchor({
-				entitlement: entitlement({ allowanceType: AllowanceType.Unlimited }),
-				resetCycleAnchor: 1000,
-				now: 500,
-			}),
-			entitlementToResetCycleAnchor({
-				entitlement: entitlement({ interval: EntInterval.Lifetime }),
-				resetCycleAnchor: 1000,
-				now: 500,
-			}),
-		];
+	test.concurrent(
+		"does not store reset anchor for non-resetting entitlements",
+		() => {
+			const anchors = [
+				entitlementToResetCycleAnchor({
+					entitlement: entitlement({ type: FeatureType.Boolean }),
+					resetCycleAnchor: 1000,
+					now: 500,
+				}),
+				entitlementToResetCycleAnchor({
+					entitlement: entitlement({
+						allowanceType: AllowanceType.Unlimited,
+						interval: EntInterval.Lifetime,
+					}),
+					resetCycleAnchor: 1000,
+					now: 500,
+				}),
+				entitlementToResetCycleAnchor({
+					entitlement: entitlement({ interval: EntInterval.Lifetime }),
+					resetCycleAnchor: 1000,
+					now: 500,
+				}),
+			];
 
-		expect(anchors).toEqual([null, null, null]);
-	});
+			expect(anchors).toEqual([null, null, null]);
+		},
+	);
+
+	test.concurrent(
+		"stores reset anchor for unlimited entitlements with an interval",
+		() => {
+			expect(
+				entitlementToResetCycleAnchor({
+					entitlement: entitlement({ allowanceType: AllowanceType.Unlimited }),
+					resetCycleAnchor: 1000,
+					now: 500,
+				}),
+			).toBe(1000);
+		},
+	);
 });

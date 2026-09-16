@@ -148,3 +148,42 @@ schema drops and CS removals. Remove `will_archive` stamping lives in
 
 (A same-call CS referencing a removed feature is a VERDICT, not an error —
 see remove-features t5. Locked in `catalog_update_ordering` plan, rule 1.)
+
+## Credit rate cards — `credit-rate-card.test.ts`
+
+| Case | Covered |
+|---|---|
+| Create flat + graduated rows; update rates | ✓ t1 |
+| Rate card update saves on a feature with a pooled plan item | ✓ t2 |
+| Rate card update saves on a feature with an included-only plan item | ✓ t3 |
+| Unpool + price a credit item in one call with a rate card update | ✓ t4 |
+| Included → priced usage in one call with a rate card update | ✓ t5 |
+| Empty `credit_schema` on a classic credit system → 400 | — (unit: `featureUtils.ts:81`) |
+
+## Credit dimensions — `credit-dimensions.test.ts`
+
+| Case | Covered |
+|---|---|
+| Create with a dimension; edit one dimension; convert back to a plain row | ✓ t1 |
+| Blocked: two same-specificity dimensions that can match one event (catalog + features.update) | ✓ t2 |
+| Plan-item `feature_override.credit_schema` carries a dimensioned row | ✓ t3 |
+| CLI round-trip of dimensions + multipliers | ✓ `atmn/crud/features/credit-system-dimensions-multipliers.test.ts` |
+
+## Invoice-credit stamp — `billing/attach/invoice-credits/attach-stamps-invoice-credit.test.ts`
+
+| Case | Covered |
+|---|---|
+| Pay-per-use $1/credit item → `customer_entitlements.invoice_credit = true` | ✓ |
+| Included-only item on a flagged feature → stamp false, attach succeeds | ✓ |
+| Track on stamped balance writes `usage_attribution` | ✓ |
+| Track on unstamped balance deducts plainly, no attribution | ✓ |
+| Manual balance update on the unstamped balance succeeds | ✓ |
+| Price-shape predicate matrix (P1–P9) | ✓ unit `features/invoice-credit-item.test.ts` |
+| Flag flip is not a blockable change, no customer blocker | ✓ unit `features/invoice-credit-activation.test.ts` |
+| Legacy attach path stamps and itemizes | ✓ `billing/attach/invoice-credits/invoice-credits-edge-cases.test.ts` E1 |
+| Entity-scoped 1:1 balances itemize per entity; a zero-net entity adds no lines | ✓ E2 |
+| Usage during a free trial is not charged when the trial converts | ✓ E3 |
+| Customer billed in eur is itemized at the eur rate | ✓ E4 |
+| Mid-cycle switch to a non-1:1 plan itemizes the old balance and stamps the new one false | ✓ E5 |
+| Dashboard QA seeds (1:1, per-hundred, fractional, locked vs editable, playbook) | scenario `scenarios/balances/invoice-credit-stamp-scenario.test.ts` |
+

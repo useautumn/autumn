@@ -1,14 +1,5 @@
-/**
- * CLI-shaped differences from the API live here, in one declarative file, and
- * nowhere else. The spec stays the single source of truth for SHAPE; the
- * overlay only says what the CLI does with a field the API already describes.
- *
- * Three verbs, deliberately. Anything needing a fourth is a sign the difference
- * belongs in the schema or the server instead — that is the project's mantra.
- *
- * Entries are expected to stay few. Casing is NOT a rename: `version_slug`
- * becomes `versionSlug` by the generic mapper, so it needs no entry.
- */
+/** The overlay holds CLI-only field treatment while OpenAPI owns shape; `default` omits values the server reads identically.
+ * Casing is generic, so `version_slug` becomes `versionSlug` without an entry. */
 
 /** Dotted path from a collection item root, e.g. "items.price.billing_units". */
 export type FieldPath = string;
@@ -26,6 +17,8 @@ export type FieldOverlay = {
 	/** A sentence appended to the field's JSDoc: what the server's description
 	 * leaves out and a reader (or an agent) needs to know in the config. */
 	describe?: string;
+	/** The value the CLI treats as this field's default: a field at it is not written into a fixture. */
+	default?: unknown;
 	/** Why — this is documentation, and it is not optional. */
 	reason: string;
 };
@@ -37,6 +30,13 @@ export type Overlay = {
 	collections: Record<string, CollectionOverlay>;
 	/** Wire names allowed through despite `x-internal` — the ids the CLI must carry. */
 	exposeInternal: string[];
+	/**
+	 * Test-only bookkeeping; changes no generated output. `x-internal` fields
+	 * the server both returns and accepts are already dropped from fixtures,
+	 * and each is named here with why that is a no-op on push; an unnamed one
+	 * fails the generator's round-trip guard.
+	 */
+	serverOwnedInternal: Record<string, string>;
 };
 
 /**
@@ -44,9 +44,85 @@ export type Overlay = {
  * for a fixture that does not exist yet is a guess at a path.
  */
 export const OVERLAY: Overlay = {
-	exposeInternal: ["internal_id", "entity_feature_id"],
+	exposeInternal: ["internal_id", "entity_feature_id", "allocated_billing"],
+	serverOwnedInternal: {
+		price_id: "Row id; the server matches the price by feature and reuses it.",
+		entitlement_id:
+			"Row id; the server matches the entitlement by feature and reuses it.",
+		stripe_price_id:
+			"Processor mapping; carried by `processors.stripe.priceId` when stated.",
+		base_currency:
+			"FX bookkeeping written beside `currencies`; derived from the org's default.",
+		update_items:
+			"A patch lane on a variant; a fixture states the variant's full items instead.",
+	},
 	collections: {
 		plans: {
+			"items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
+			"items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"licenses.customize.add_items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"variants.customize.items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"variants.customize.add_items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"variants.customize.upsert_licenses.customize.add_items.proration": {
+				default: {
+					onIncrease: "prorate_immediately",
+					onDecrease: "prorate_immediately",
+				},
+				reason:
+					"The pair the server stores for a prepaid item that never set one, and what it reads an omitted block as, so a pull writes proration only when it was set to something else.",
+			},
+			"licenses.customize.add_items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
+			"variants.customize.items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
+			"variants.customize.add_items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
+			"variants.customize.upsert_licenses.customize.add_items.unlimited": {
+				default: false,
+				reason:
+					"The server reads absent and false identically, so writing false adds noise to pulled fixtures.",
+			},
 			version_slug: {
 				describe:
 					'Defaults to "vN", N being the server\'s version number, which counts in creation order; state it explicitly on every history row so a nuke-and-repush or a sandbox-to-prod push keeps the same names even though the numbers may differ.',
@@ -59,19 +135,22 @@ export const OVERLAY: Overlay = {
 				reason: "Same default as the base plan's versionSlug.",
 			},
 			"licenses.version_slug": {
-				hidden: true,
 				reason:
-					"A link always follows the child's active version (wire/07_licenses); pinning it from config is a change the server reports forever.",
+					"A catalog fixture must identify the exact child row so the same config links the same version in every environment.",
 			},
 			"variants.customize.upsert_licenses.version_slug": {
-				hidden: true,
 				reason:
-					"Same as licenses.version_slug: a variant's license link follows the child's active version too.",
+					"Customized variant license links use the same explicit child-version anchor as top-level plan licenses.",
 			},
 			name: {
 				required: true,
 				reason:
 					"A fixture states the whole row (PUT), so a plan always has its name.",
+			},
+			active: {
+				required: true,
+				reason:
+					"With every version in one array, membership no longer says which row is live; each row has to.",
 			},
 			new_plan_id: {
 				hidden: true,
@@ -97,6 +176,12 @@ export const OVERLAY: Overlay = {
 				deprecated: true,
 				reason:
 					"Per-entity items are deprecated but existing catalogs carry them, so a config must keep round-tripping the field.",
+			},
+			"items.price.allocated_billing": {
+				describe:
+					"Only pulled as `prorated_legacy` for a price still on the legacy immediate-proration behavior, alongside its `proration` knobs.",
+				reason:
+					"The server only surfaces the legacy value, so a config carrying it must round-trip; dropping it is the migration.",
 			},
 			versioning: {
 				hidden: true,
@@ -134,20 +219,10 @@ export const OVERLAY: Overlay = {
 				reason:
 					"Dead since internal_id: a changed featureId beside it is the rename.",
 			},
-			invoice_credit: {
-				hidden: true,
-				reason:
-					"Admin-only for now: invoice credits are money, and a config must not mint them.",
-			},
 			name: {
 				required: true,
 				reason:
 					"A fixture states the whole row (PUT), so a feature always has its name.",
-			},
-			event_names: {
-				deprecated: true,
-				reason:
-					"Deprecated on the server, but existing catalogs carry it, so a config must keep round-tripping the field.",
 			},
 		},
 		settings: {

@@ -15,6 +15,7 @@ import { handleGetInvoiceLineItems } from "./internalHandlers/handleGetInvoiceLi
 import { handleListCustomerExports } from "./internalHandlers/handleListCustomerExports.js";
 import { handleListEntitiesInternal } from "./internalHandlers/handleListEntitiesInternal.js";
 import { handleSearchCustomers } from "./internalHandlers/handleSearchCustomers.js";
+import { handleSyncCustomerEntitlementAnchors } from "./internalHandlers/handleSyncCustomerEntitlementAnchors.js";
 
 export const internalCusRouter = new Hono<HonoEnv>();
 
@@ -22,6 +23,10 @@ internalCusRouter.post("/all/search", ...handleSearchCustomers);
 internalCusRouter.post("/all/full_customers", ...handleGetFullCustomers);
 internalCusRouter.post("/all/count", ...handleCountCustomers);
 internalCusRouter.post("/clear_cache", ...handleClearCustomerCache);
+internalCusRouter.post(
+	"/customer-entitlements/sync-anchor",
+	...handleSyncCustomerEntitlementAnchors,
+);
 // Registered before /:customer_id so "exports" is never read as a customer id.
 internalCusRouter.post("/exports", ...handleCreateCustomerExport);
 internalCusRouter.get("/exports", ...handleListCustomerExports);

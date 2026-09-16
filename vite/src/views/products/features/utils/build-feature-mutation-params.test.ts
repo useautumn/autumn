@@ -5,7 +5,7 @@ import {
 	featureToCatalogFeatureParams,
 } from "./buildFeatureMutationParams";
 
-test("classic credit systems preserve graduated rate cards and invoice credits", () => {
+test("classic credit systems preserve graduated rate cards and never send the inert invoice flag", () => {
 	const result = buildFeatureMarkupParams({
 		type: FeatureType.CreditSystem,
 		schema: [
@@ -19,7 +19,6 @@ test("classic credit systems preserve graduated rate cards and invoice credits",
 				],
 			},
 		],
-		invoiceCredit: true,
 	});
 
 	expect(result.credit_schema).toEqual([
@@ -33,7 +32,7 @@ test("classic credit systems preserve graduated rate cards and invoice credits",
 			],
 		},
 	]);
-	expect(result.invoice_credit).toBe(true);
+	expect(result).not.toHaveProperty("invoice_credit");
 });
 
 test("AI credit systems never send classic rate-card fields", () => {
@@ -49,11 +48,9 @@ test("AI credit systems never send classic rate-card fields", () => {
 				credit_amount: 1,
 			},
 		],
-		invoiceCredit: true,
 	});
 
 	expect(result.credit_schema).toBeUndefined();
-	expect(result.invoice_credit).toBeUndefined();
 	expect(result.model_markups).toEqual({
 		"openai/gpt-5": { markup: 20 },
 	});
@@ -61,7 +58,7 @@ test("AI credit systems never send classic rate-card fields", () => {
 	expect(result.provider_markups).toEqual({ openai: { markup: 15 } });
 });
 
-test("catalog feature params include invoice-credit configuration", () => {
+test("catalog feature params drop a stored invoice_credit flag", () => {
 	const result = featureToCatalogFeatureParams({
 		feature: {
 			id: "credits",
@@ -82,7 +79,7 @@ test("catalog feature params include invoice-credit configuration", () => {
 		},
 	});
 
-	expect(result.invoice_credit).toBe(true);
+	expect(result).not.toHaveProperty("invoice_credit");
 	expect(result.credit_schema).toEqual([
 		{
 			metered_feature_id: "tokens",
@@ -101,26 +98,10 @@ const creditFeature = {
 	event_names: [],
 };
 
-test("omits processors when the stripe product is unchanged", () => {
+test("never sends processors: feature Stripe products are managed outside the sheets", () => {
 	const result = featureToCatalogFeatureParams({
 		feature: { ...creditFeature, stripe_product_id: "prod_1" },
-		originalStripeProductId: "prod_1",
 	});
 
 	expect(result.processors).toBeUndefined();
-});
-
-test("sends processors when a stripe product is set or cleared", () => {
-	expect(
-		featureToCatalogFeatureParams({
-			feature: { ...creditFeature, stripe_product_id: "prod_1" },
-		}).processors,
-	).toEqual({ stripe: { product_id: "prod_1" } });
-
-	expect(
-		featureToCatalogFeatureParams({
-			feature: { ...creditFeature, stripe_product_id: null },
-			originalStripeProductId: "prod_1",
-		}).processors,
-	).toEqual({ stripe: { product_id: "" } });
 });

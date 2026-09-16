@@ -112,6 +112,7 @@ export const computePatchCustomerProductPlan = ({
 				customerProduct: patchContext.originalCustomerProduct,
 				insertCustomerPrices: patchContext.insertCustomerPrices,
 				insertCustomerEntitlements: patchContext.insertCustomerEntitlements,
+				insertCustomerLicenses: patchContext.insertCustomerLicenses,
 				deleteCustomerPrices: patchContext.deleteCustomerPrices,
 				deleteCustomerEntitlements: patchContext.deleteCustomerEntitlements,
 			},

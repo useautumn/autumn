@@ -523,4 +523,3 @@ describe("deriveVariantIntents", () => {
 		});
 	});
 });
-

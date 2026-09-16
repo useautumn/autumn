@@ -12,6 +12,7 @@ import type { CompletedTurn } from "./driver/runAgentCase.ts";
 import { runCase } from "./driver/runCase.ts";
 import { inspectWorkspaceConfig } from "./grading/inspectConfig.ts";
 import { renderScorecard } from "./grading/renderScorecard.ts";
+import { readOracleCatalog } from "./grading/sandboxOracle.ts";
 import {
 	captureConfigText,
 	inspectConfigSnapshots,
@@ -29,8 +30,13 @@ import {
 	evalBackendUrl,
 } from "./workspace/backendUrl.ts";
 import { createCaseWorkspace } from "./workspace/createCaseWorkspace.ts";
-import { createEvalOrg, deleteEvalOrg } from "./workspace/evalOrg.ts";
+import {
+	createEvalOrg,
+	deleteEvalOrg,
+	seedEvalCustomer,
+} from "./workspace/evalOrg.ts";
 import { saveRunArtifact } from "./workspace/saveRunArtifact.ts";
+import { seedCatalog } from "./workspace/seedCatalog.ts";
 import { sweepStaleWorkspaces } from "./workspace/sweepStaleWorkspaces.ts";
 
 const turnSourceFor = (axCase: AxCase) => {
@@ -127,7 +133,11 @@ export const initAxEval = ({
 		// A real throwaway org per arm: pushes land somewhere disposable and
 		// concurrent arms never share state.
 		const orgRunId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-		const org = await createEvalOrg({ runId: orgRunId });
+		const scenario = axCase.scenario;
+		const org = await createEvalOrg({
+			runId: orgRunId,
+			withStripe: scenario?.withStripe,
+		});
 		const workspace = await createCaseWorkspace(`${axCase.name}-${arm}`, {
 			secretKey: org.secretKey,
 			backendUrl,
@@ -135,8 +145,15 @@ export const initAxEval = ({
 		try {
 			// A real post-init project has an autumn.config.ts with the import
 			// line already there; seeding it kills invented-import failures.
-			if (
-				axCase.scenario?.seedConfig !== false &&
+			if (scenario?.seedCatalog) {
+				await seedCatalog({
+					workspaceDir: workspace.dir,
+					config: scenario.seedCatalog,
+					backendUrl,
+					secretKey: org.secretKey,
+				});
+			} else if (
+				scenario?.seedConfig !== false &&
 				!axCase.existingFiles?.["autumn.config.ts"]
 			) {
 				await writeFile(
@@ -156,6 +173,10 @@ export default atmn({
 			)) {
 				await writeFile(join(workspace.dir, path), content);
 			}
+			for (const seed of scenario?.seedCustomers ?? []) {
+				await seedEvalCustomer({ org, backendUrl, seed });
+			}
+			await scenario?.beforeAgent?.({ backendUrl, secretKey: org.secretKey });
 			const equipment = await equipAgent({
 				workspaceDir: workspace.dir,
 				kit: armKit,
@@ -171,7 +192,7 @@ export default atmn({
 				maxTurns,
 				timeoutMs,
 				renderMode,
-				systemPromptAppend: axCase.scenario?.primer,
+				systemPromptAppend: scenario?.primer,
 				extraEnv: { ATMN_BACKEND_URL: backendUrl },
 				onTurn: (turn) => {
 					configTextAfterTurn.push(captureConfigText(workspace.dir));
@@ -183,6 +204,10 @@ export default atmn({
 				configTexts: configTextAfterTurn,
 			});
 			const config = await inspectWorkspaceConfig(workspace.dir);
+			const catalog =
+				scenario?.captureCatalog || scenario?.seedCatalog
+					? await readOracleCatalog({ backendUrl, secretKey: org.secretKey })
+					: undefined;
 			const artifactPath = await saveRunArtifact({
 				caseName: axCase.name,
 				arm,
@@ -196,6 +221,7 @@ export default atmn({
 				kitSkillIds: equipment.skillIds,
 				config,
 				configAfterTurn,
+				...(catalog ? { catalog } : {}),
 				...run,
 			};
 		} finally {

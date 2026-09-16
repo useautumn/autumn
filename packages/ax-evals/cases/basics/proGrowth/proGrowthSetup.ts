@@ -51,6 +51,8 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 20, interval: "month" },
 			items: [
@@ -63,6 +65,8 @@ export default atmn({
 		}),
 		plan({
 			planId: "growth",
+			versionSlug: "v1",
+			active: true,
 			name: "Growth",
 			price: { amount: 50, interval: "month" },
 			items: [
@@ -78,6 +82,8 @@ ${
 	withFree
 		? `		plan({
 			planId: "free",
+			versionSlug: "v1",
+			active: true,
 			name: "Free",
 			autoEnable: true,
 			items: [

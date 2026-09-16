@@ -11,4 +11,7 @@ export const PLAN_PREVIOUS_ATTRIBUTE_LABELS: Record<string, string> = {
 	active: "Active version",
 	billing_controls: "Billing controls",
 	processors: "Stripe mapping",
+	base_variant_id: "Base plan",
+	base_version: "Base version",
+	base_version_slug: "Base version slug",
 };

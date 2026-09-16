@@ -34,6 +34,33 @@ export type PathHints = {
 
 export type WireDocument = Record<string, unknown>;
 
+/** Stated relationship entries are complete desired state; no overlay means stock. */
+const clearOmittedRelationshipCustomizes = <T,>(row: T): T => {
+	if (row === null || typeof row !== "object") return row;
+	const source = row as Record<string, unknown>;
+	const normalize = (entries: unknown): unknown =>
+		Array.isArray(entries)
+			? entries.map((entry) =>
+					entry !== null && typeof entry === "object"
+						? {
+								...(entry as Record<string, unknown>),
+								customize:
+									(entry as Record<string, unknown>).customize ?? null,
+							}
+						: entry,
+				)
+			: entries;
+	return {
+		...source,
+		...(source.licenses !== undefined
+			? { licenses: normalize(source.licenses) }
+			: {}),
+		...(source.variants !== undefined
+			? { variants: normalize(source.variants) }
+			: {}),
+	} as T;
+};
+
 /**
  * Fixture (camelCase) -> wire (snake_case), stopping where the spec says the
  * data stops being ours. Array indices are elided from the path, so one hint
@@ -158,11 +185,11 @@ const hintsLiteral = ({
 });`;
 
 /**
- * `atmn()` is the whole client-side computation: fold history into its
- * collection, lint, recase, and state two constants. Every decision the config
- * used to carry — versioning, propagation, which plans need a migration — is
- * the server's now. An omitted collection stays omitted: absent means "not
- * mine", `[]` means "mine, and empty".
+ * `atmn()` is the whole client-side computation: lint, recase, and state two
+ * constants. Every decision the config used to carry — versioning,
+ * propagation, which plans need a migration — is the server's now. An omitted
+ * collection stays omitted: absent means "not mine", `[]` means "mine, and
+ * empty".
  */
 export const emitWireModule = ({
 	catalogHints,
@@ -192,6 +219,10 @@ export const emitWireModule = ({
 		)
 		.join("\n");
 	const singletonKeys = JSON.stringify(singletonEntries.map(([name]) => name));
+	const configKeys = JSON.stringify([
+		...entries.map(([name]) => name),
+		...singletonEntries.map(([name]) => name),
+	]);
 	const singletonBodies = singletonEntries
 		.map(
 			([name, meta]) =>
@@ -199,63 +230,24 @@ export const emitWireModule = ({
 		)
 		.join("\n");
 	const members = entries
-		.flatMap(([name, meta]) => [
-			`\t/** Every ${name} entry this catalog should have. \`[]\` means "mine, and`,
-			`\t * empty"; omitted means "not mine". */`,
-			`\t${name}?: ${meta.typeName}[];`,
-			...(meta.historyKey
-				? [
-						`\t/** Past versions of ${name}, full rows, stamped \`active: false\`. */`,
-						`\t${meta.historyKey}?: ${meta.typeName}[];`,
-					]
-				: []),
-		])
+		.map(
+			([name, meta]) =>
+				`\t/** Every ${name} entry this catalog should have. \`[]\` means "mine, and
+\t * empty"; omitted means "not mine". */
+\t${name}?: ${meta.typeName}[];`,
+		)
 		.join("\n");
 	const stated = entries
 		.map(([name, meta]) =>
-			meta.historyKey
+			meta.versioned
 				? `\t...(config.${name} !== undefined
 \t\t? {
-\t\t\t\t${name}: [
-\t\t\t\t\t...config.${name}.map((row) => followDeclaredVariants({ ...row, active: row.active ?? true })),
-\t\t\t\t\t...(config.${meta.historyKey} ?? []).map((row) => followDeclaredVariants({ ...row, active: false })),
-\t\t\t\t],
-\t\t\t\t// Absent history is "not mine"; stated history removes the versions it omits.
-\t\t\t\tskip_version_deletions: config.${meta.historyKey} === undefined,
+\t\t\t\t${name}: config.${name}.map(clearOmittedRelationshipCustomizes),
+\t\t\t\t// Stated ${name} are every version: the ones it omits are removed.
+\t\t\t\tskip_version_deletions: false,
 \t\t\t}
 \t\t: {}),`
 				: `\t...(config.${name} !== undefined ? { ${name}: config.${name} } : {}),`,
-		)
-		.join("\n");
-	const guards = entries
-		.filter(([, meta]) => meta.historyKey)
-		.map(
-			([
-				name,
-				meta,
-			]) => `\tif (config.${meta.historyKey} !== undefined && config.${name} === undefined) {
-\t\tthrow new ConfigError([
-\t\t\t{
-\t\t\t\tpath: "config",
-\t\t\t\tmessage: "${meta.historyKey} needs ${name}: history rows on their own would remove every active version.",
-\t\t\t},
-\t\t]);
-\t}
-\t// History alone is a row nobody can buy. Membership decides, not \`active\`:
-\t// a draft in ${name} may be inactive, a row only in ${meta.historyKey} may not.
-\tconst ${name}HistoryOnly = historyOnlyIds({
-\t\tidField: ${JSON.stringify(meta.idField)},
-\t\trows: config.${name} ?? [],
-\t\thistory: config.${meta.historyKey} ?? [],
-\t});
-\tif (${name}HistoryOnly.length > 0) {
-\t\tthrow new ConfigError(
-\t\t\t${name}HistoryOnly.map((id) => ({
-\t\t\t\tpath: \`${meta.builder} \${JSON.stringify(id)}\`,
-\t\t\t\tmessage: \`${meta.historyOnlyMessage ?? ""} \${${name}HistoryOnly.map((each) => JSON.stringify(each)).join(", ")}\`,
-\t\t\t})),
-\t\t);
-\t}`,
 		)
 		.join("\n");
 
@@ -272,61 +264,29 @@ ${members}
 ${singletonMembers}
 };
 
-/** The document as the server sees it: history rows folded into their collection. */
-/** A declared variant with no customize of its own follows its base: the
- * server needs the pin stated, so it is derived here, never typed. */
-const followDeclaredVariants = <
-	T extends {
-		variants?: { variantPlanId: string; version?: number; versionSlug?: string }[];
-	},
->(
-	row: T,
-): T & {
-	propagate?: {
-		variants: { planId: string; version?: number; versionSlug?: string }[];
-	};
-} =>
-	Array.isArray(row.variants) && row.variants.length > 0
-		? {
-				...row,
-				propagate: {
-					// A declared version pin travels with the follow, or the server
-					// would resolve the active variant row instead of the stated one.
-					variants: row.variants.map((variant) => ({
-						planId: variant.variantPlanId,
-						...(variant.version !== undefined ? { version: variant.version } : {}),
-						...(variant.versionSlug !== undefined ? { versionSlug: variant.versionSlug } : {}),
-					})),
-				},
-			}
-		: row;
-
-/** Ids every row of which sits in history: no version of them would be active. */
-const historyOnlyIds = ({
-	idField,
-	rows,
-	history,
-}: {
-	idField: string;
-	rows: Record<string, unknown>[];
-	history: Record<string, unknown>[];
-}): string[] => {
-	const stated = new Set(rows.map((row) => row[idField]));
-	return [
-		...new Set(
-			history
-				.map((row) => row[idField])
-				.filter((id): id is string => typeof id === "string" && !stated.has(id)),
-		),
-	];
-};
-
 const stated = (config: AtmnConfig): Record<string, unknown> => ({
 ${stated}
 ${singletonStated}
 });
 
 const SINGLETON_KEYS: readonly string[] = ${singletonKeys};
+const CONFIG_KEYS: readonly string[] = ${configKeys};
+
+/**
+ * A key the type does not know is a config written for another version of
+ * this CLI, and the runtime loader does no type check: refused, never dropped.
+ */
+const unknownKeyIssue = (key: string): { path: string; message: string } =>
+	key === "planVersions"
+		? {
+				path: key,
+				message:
+					"planVersions is gone: every version is now a row in plans, with versionSlug and active. Rebuild the config from your org with \`atmn pull --overwrite --yes\` (commit first), or move the rows into plans.",
+			}
+		: {
+				path: key,
+				message: \`\${key} is not a config field. The fields are \${CONFIG_KEYS.join(", ")}.\`,
+			};
 
 /**
  * The catalog document and each singleton's own request body, split from the
@@ -347,7 +307,11 @@ ${singletonBodies}
 });
 
 export const atmn = (config: AtmnConfig): WireDocument => {
-${guards}
+	const unknownKeys = Object.keys(config).filter(
+		(key) => !CONFIG_KEYS.includes(key),
+	);
+	if (unknownKeys.length > 0)
+		throw new ConfigError(unknownKeys.map(unknownKeyIssue));
 	const document = stated(config);
 	// Linted before anything is sent, and every problem is reported at once —
 	// a round trip per mistake is what makes a config painful to write.

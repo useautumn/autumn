@@ -18,6 +18,7 @@ import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/con
 import type Stripe from "stripe";
 import { stripePriceCanBill } from "@/external/stripe/prices/utils/classifyStripePriceUtils";
 import { stripePriceToAmount } from "@/external/stripe/prices/utils/convertStripePriceUtils";
+import { stripeSchedulePhaseItemToPriceId } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import { stripeInlinePriceMatchesStripePrice } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { findPhaseItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findPhaseItemForAutumnPrice";
 import { findSubscriptionItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findSubscriptionItemForAutumnPrice";
@@ -62,7 +63,7 @@ export const normalizeActualPhaseItem = ({
 }: {
 	item: Stripe.SubscriptionSchedule.Phase.Item;
 }): NormalizedItem => {
-	const priceId = typeof item.price === "string" ? item.price : item.price.id;
+	const priceId = stripeSchedulePhaseItemToPriceId(item);
 	const autumnCusPriceId = item.metadata?.autumn_customer_price_id;
 	const priceObj =
 		typeof item.price !== "string" && "unit_amount_decimal" in item.price
@@ -146,7 +147,7 @@ const buildActualCandidates = ({
 			index,
 			autumnCustomerPriceId: metadata?.autumn_customer_price_id,
 			autumnPriceId: metadata?.autumn_price_id,
-			priceId: typeof item.price === "string" ? item.price : item.price.id,
+			priceId: stripeSchedulePhaseItemToPriceId(item),
 			price: priceObj,
 			quantity: item.quantity,
 		};
@@ -292,9 +293,7 @@ const findActualIndex = ({
 					phaseItems: availableItems,
 				})
 			: availableItems.find(
-					(item) =>
-						(typeof item.price === "string" ? item.price : item.price.id) ===
-						priceId,
+					(item) => stripeSchedulePhaseItemToPriceId(item) === priceId,
 				);
 		if (matched) return { index: actualPhaseItems.indexOf(matched) };
 	}

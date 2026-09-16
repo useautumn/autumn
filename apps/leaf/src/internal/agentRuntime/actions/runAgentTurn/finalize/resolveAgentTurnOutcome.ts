@@ -59,6 +59,14 @@ export const resolveAgentTurnOutcome = async ({
 			: { kind: "reply", sessionId, text: outcome.text };
 	}
 
+	if (outcome.kind === "silent" && outcome.declined) {
+		logger.info("Eve session declined to reply", {
+			event: "leaf.eve_session_declined_reply",
+			data: { session_id: sessionId },
+		});
+		return { declined: true, kind: "empty", sessionId };
+	}
+
 	logger.warn("Eve session produced no reply", {
 		event: "leaf.eve_session_no_reply",
 		data: { ended_on: outcome.kind, session_id: sessionId },

@@ -16,6 +16,12 @@ import {
  * 3. StripePriceId (can be multiple for multi-entity)
  * 4. StripeProductId (can be multiple for multi-entity)
  *
+ * A metadata match names only one entity's customer price, yet Stripe merges
+ * every entity sharing the same Stripe price into one line. Siblings that match
+ * this line by stripe_price_id are kept so the merged line is attributed to all
+ * of them. Product-level matches are not siblings: per-entity inline prices get
+ * their own Stripe line each.
+ *
  * @returns Array of matched LineItems (empty if no matches)
  */
 export const filterBillingLineItemsByStripeLineItem = ({
@@ -44,8 +50,22 @@ export const filterBillingLineItemsByStripeLineItem = ({
 	// Find the highest priority (lowest number)
 	const highestPriority = Math.min(...scoredItems.map((item) => item.priority));
 
-	// Return all items at the highest priority level
-	return scoredItems
+	const topMatches = scoredItems
 		.filter((item) => item.priority === highestPriority)
 		.map((item) => item.lineItem);
+
+	if (highestPriority !== LineItemMatchPriority.CustomerPriceId) {
+		return topMatches;
+	}
+
+	const mergedPriceIds = new Set(topMatches.map((li) => li.context.price.id));
+	const siblingsOnSameStripePrice = scoredItems
+		.filter(
+			(item) =>
+				item.priority === LineItemMatchPriority.StripePriceId &&
+				mergedPriceIds.has(item.lineItem.context.price.id),
+		)
+		.map((item) => item.lineItem);
+
+	return [...topMatches, ...siblingsOnSameStripePrice];
 };

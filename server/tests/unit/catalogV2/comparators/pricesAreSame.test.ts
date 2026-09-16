@@ -554,25 +554,44 @@ describe("pricesAreSame", () => {
 		});
 
 		test("tier_behavior unset equals graduated", () => {
+			const tiered = {
+				usage_tiers: [
+					{ to: 100, amount: 1 },
+					{ to: TierInfinite, amount: 0.5 },
+				],
+			};
 			expectSame(
-				usage({}, { tier_behavior: null }),
-				usage({}, { tier_behavior: TierBehavior.Graduated }),
+				usage(tiered, { tier_behavior: null }),
+				usage(tiered, { tier_behavior: TierBehavior.Graduated }),
 				true,
 			);
 			expectSame(
-				usage({}, { tier_behavior: undefined }),
-				usage({}, { tier_behavior: TierBehavior.Graduated }),
+				usage(tiered, { tier_behavior: undefined }),
+				usage(tiered, { tier_behavior: TierBehavior.Graduated }),
 				true,
 			);
 			expectSame(
+				usage(tiered, { tier_behavior: null }),
+				usage(tiered, { tier_behavior: TierBehavior.VolumeBased }),
+				false,
+			);
+			expectSame(
+				usage(tiered, { tier_behavior: TierBehavior.Graduated }),
+				usage(tiered, { tier_behavior: TierBehavior.VolumeBased }),
+				false,
+			);
+		});
+
+		test("tier_behavior is ignored when both prices are flat", () => {
+			expectSame(
 				usage({}, { tier_behavior: null }),
 				usage({}, { tier_behavior: TierBehavior.VolumeBased }),
-				false,
+				true,
 			);
 			expectSame(
 				usage({}, { tier_behavior: TierBehavior.Graduated }),
 				usage({}, { tier_behavior: TierBehavior.VolumeBased }),
-				false,
+				true,
 			);
 		});
 	});

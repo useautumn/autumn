@@ -1,12 +1,8 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CreditSchemaListProvider } from "../hooks/CreditSchemaListContext";
-import { useCreditDimensionsToggle } from "../hooks/useCreditDimensionsToggle";
 import { diffCreditOverride } from "../utils/diffCreditOverride";
 import { featureDisplayName } from "../utils/featureDisplayName";
-import { CreditDimensionsSection } from "./CreditDimensionsSection";
-import { CreditDimensionsSwitch } from "./CreditDimensionsSwitch";
 import { CreditRateCardList } from "./CreditRateCardList";
 import { RowStatusBadge } from "./RowStatusBadge";
 
@@ -22,8 +18,6 @@ export function CreditOverrideRateCard({
 	onRemoveLast: () => void;
 }) {
 	const { features } = useFeaturesQuery();
-	const { isAdmin } = useAdmin();
-	const dimensions = useCreditDimensionsToggle({ schema, setSchema: onChange });
 	const diff = diffCreditOverride({ schema, creditSystem });
 
 	const missingFeatureNames = diff.missingFeatureIds
@@ -56,16 +50,6 @@ export function CreditOverrideRateCard({
 					<span className="text-tertiary-foreground text-xs">
 						Not in this override: {missingFeatureNames}
 					</span>
-				)}
-
-				{isAdmin && (
-					<>
-						<CreditDimensionsSwitch
-							checked={dimensions.enabled}
-							onCheckedChange={dimensions.setEnabled}
-						/>
-						{dimensions.enabled && <CreditDimensionsSection />}
-					</>
 				)}
 			</div>
 		</CreditSchemaListProvider>

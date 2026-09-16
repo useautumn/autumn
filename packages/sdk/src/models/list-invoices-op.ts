@@ -24,12 +24,12 @@ export const ListInvoicesStatus = {
 } as const;
 export type ListInvoicesStatus = ClosedEnum<typeof ListInvoicesStatus>;
 
-export const ListInvoicesProcessorTypeRequest = {
+export const ListInvoicesProcessorTypeRequestBody = {
   Stripe: "stripe",
   Revenuecat: "revenuecat",
 } as const;
-export type ListInvoicesProcessorTypeRequest = ClosedEnum<
-  typeof ListInvoicesProcessorTypeRequest
+export type ListInvoicesProcessorTypeRequestBody = ClosedEnum<
+  typeof ListInvoicesProcessorTypeRequestBody
 >;
 
 export type ListInvoicesParams = {
@@ -56,7 +56,7 @@ export type ListInvoicesParams = {
   /**
    * Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe.
    */
-  processorTypes?: Array<ListInvoicesProcessorTypeRequest> | undefined;
+  processorTypes?: Array<ListInvoicesProcessorTypeRequestBody> | undefined;
 };
 
 /**
@@ -72,6 +72,60 @@ export const ListInvoicesListProcessorType = {
 export type ListInvoicesListProcessorType = OpenEnum<
   typeof ListInvoicesListProcessorType
 >;
+
+export type ListInvoicesEntity = {
+  /**
+   * The entity this share of the line item is attributed to
+   */
+  entityId: string;
+  /**
+   * Quantity charged to this entity. Null on fixed-price lines.
+   */
+  quantity: number | null;
+  /**
+   * Amount attributed to this entity, pre-discount and pre-tax
+   */
+  amount: number;
+};
+
+export type ListInvoicesItem = {
+  /**
+   * Description of the invoice line item
+   */
+  description: string;
+  /**
+   * Timestamp when the billing period starts
+   */
+  periodStart: number | null;
+  /**
+   * Timestamp when the billing period ends
+   */
+  periodEnd: number | null;
+  /**
+   * The plan this line item came from. Null for lines with no Autumn plan behind them.
+   */
+  planId: string | null;
+  /**
+   * The ID of the feature associated with this line item
+   */
+  featureId: string | null;
+  /**
+   * The name of the feature associated with this line item
+   */
+  featureName: string | null;
+  /**
+   * Quantity actually charged on this line. Null on fixed-price lines.
+   */
+  quantity: number | null;
+  /**
+   * Amount charged on this line, pre-discount and pre-tax. Negative for credits.
+   */
+  amount: number;
+  /**
+   * How this line splits by entity. Empty for customer-level lines. Only populated for invoices finalized after entity attribution shipped.
+   */
+  entities: Array<ListInvoicesEntity>;
+};
 
 export type ListInvoicesList = {
   /**
@@ -126,6 +180,10 @@ export type ListInvoicesList = {
    * The total amount refunded on the invoice
    */
   refundedAmount: number;
+  /**
+   * Line items on the invoice, one per line as shown in Stripe. Capped at 100. Empty for invoices recorded before line item storage.
+   */
+  items?: Array<ListInvoicesItem> | undefined;
 };
 
 /**
@@ -148,9 +206,9 @@ export const ListInvoicesStatus$outboundSchema: z.ZodMiniEnum<
 > = z.enum(ListInvoicesStatus);
 
 /** @internal */
-export const ListInvoicesProcessorTypeRequest$outboundSchema: z.ZodMiniEnum<
-  typeof ListInvoicesProcessorTypeRequest
-> = z.enum(ListInvoicesProcessorTypeRequest);
+export const ListInvoicesProcessorTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof ListInvoicesProcessorTypeRequestBody
+> = z.enum(ListInvoicesProcessorTypeRequestBody);
 
 /** @internal */
 export type ListInvoicesParams$Outbound = {
@@ -174,7 +232,7 @@ export const ListInvoicesParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     status: z.optional(z.array(ListInvoicesStatus$outboundSchema)),
     processorTypes: z.optional(
-      z.array(ListInvoicesProcessorTypeRequest$outboundSchema),
+      z.array(ListInvoicesProcessorTypeRequestBody$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -202,6 +260,70 @@ export const ListInvoicesListProcessorType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListInvoicesListProcessorType);
 
 /** @internal */
+export const ListInvoicesEntity$inboundSchema: z.ZodMiniType<
+  ListInvoicesEntity,
+  unknown
+> = z.pipe(
+  z.object({
+    entity_id: types.string(),
+    quantity: types.nullable(types.number()),
+    amount: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "entity_id": "entityId",
+    });
+  }),
+);
+
+export function listInvoicesEntityFromJSON(
+  jsonString: string,
+): SafeParseResult<ListInvoicesEntity, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListInvoicesEntity$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListInvoicesEntity' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListInvoicesItem$inboundSchema: z.ZodMiniType<
+  ListInvoicesItem,
+  unknown
+> = z.pipe(
+  z.object({
+    description: types.string(),
+    period_start: types.nullable(types.number()),
+    period_end: types.nullable(types.number()),
+    plan_id: types.nullable(types.string()),
+    feature_id: types.nullable(types.string()),
+    feature_name: types.nullable(types.string()),
+    quantity: types.nullable(types.number()),
+    amount: types.number(),
+    entities: z.array(z.lazy(() => ListInvoicesEntity$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "period_start": "periodStart",
+      "period_end": "periodEnd",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+      "feature_name": "featureName",
+    });
+  }),
+);
+
+export function listInvoicesItemFromJSON(
+  jsonString: string,
+): SafeParseResult<ListInvoicesItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListInvoicesItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListInvoicesItem' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListInvoicesList$inboundSchema: z.ZodMiniType<
   ListInvoicesList,
   unknown
@@ -223,6 +345,9 @@ export const ListInvoicesList$inboundSchema: z.ZodMiniType<
     entity_id: types.nullable(types.string()),
     amount_paid: types.nullable(types.number()),
     refunded_amount: types.number(),
+    items: types.optional(
+      z.array(z.lazy(() => ListInvoicesItem$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

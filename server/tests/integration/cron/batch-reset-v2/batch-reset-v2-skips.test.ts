@@ -12,8 +12,9 @@
  *       "no_action" (reason product_past_due); untouched
  *     - past_due product WITH config.ignore_past_due = true -> resets normally
  *     - expired product -> verdict "should_expire"; cusEnt marked expired
- *     - entitlement flipped to unlimited -> verdict "clear_next_reset"
- *       (unlimited: true); no reset mutation
+ *     - entitlement flipped to unlimited (monthly) -> still resets: usage
+ *       counter back to 0, next_reset_at advanced (unlimited rows with an
+ *       interval are a reset candidate like any consumable)
  *   Side effects:
  *     - should_expire persists the denormalized cusEnt expiry flag.
  */
@@ -294,7 +295,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("batch-reset-v2 skips: entitlement flipped to unlimited gets clear_next_reset verdict")}`,
+	`${chalk.yellowBright("batch-reset-v2 skips: entitlement flipped to monthly unlimited still resets")}`,
 	async () => {
 		const customerId = "batch-reset-v2-skip-unlimited";
 		const plan = products.base({
@@ -319,7 +320,7 @@ test.concurrent(
 		// cusEnt still carries a stale next_reset_at.
 		await ctx.db
 			.update(entitlements)
-			.set({ allowance_type: AllowanceType.Unlimited })
+			.set({ allowance_type: AllowanceType.Unlimited, allowance: null })
 			.where(eq(entitlements.id, customerEntitlement!.entitlement_id));
 		await expireCusEntForReset({
 			ctx,
@@ -333,13 +334,14 @@ test.concurrent(
 			customerEntitlementIds: [customerEntitlement!.id],
 		});
 
-		expect(result.resetMutations.length).toBe(0);
-		expect(result.verdicts).toEqual([
-			expect.objectContaining({
-				kind: "clear_next_reset",
-				unlimited: true,
-				customerEntitlementId: customerEntitlement!.id,
-			}),
-		]);
+		expect(result.resetMutations.length).toBe(1);
+		expect(result.verdicts.length).toBe(0);
+
+		const row = await fetchCustomerEntitlementRow({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement!.id,
+		});
+		expect(row.balance).toBe(0);
+		expect(row.next_reset_at!).toBeGreaterThan(Date.now());
 	},
 );

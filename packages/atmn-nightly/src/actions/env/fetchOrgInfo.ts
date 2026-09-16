@@ -1,4 +1,5 @@
 import { AutumnApiError } from "../../generated/client";
+import { autumnFetch } from "../../http/autumnFetch";
 import type { OrgInfo } from "./types/orgInfo";
 
 const ORG_INFO_PATH = "/v1/organization/me";
@@ -7,7 +8,7 @@ const ORG_INFO_PATH = "/v1/organization/me";
 export const fetchOrgInfo = async ({
 	baseUrl,
 	secretKey,
-	fetch = globalThis.fetch,
+	fetch = autumnFetch,
 }: {
 	baseUrl: string;
 	secretKey: string;

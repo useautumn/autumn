@@ -34,6 +34,32 @@ export type PathHints = {
 
 export type WireDocument = Record<string, unknown>;
 
+/** Stated relationship entries are complete desired state; no overlay means stock. */
+const clearOmittedRelationshipCustomizes = <T>(row: T): T => {
+	if (row === null || typeof row !== "object") return row;
+	const source = row as Record<string, unknown>;
+	const normalize = (entries: unknown): unknown =>
+		Array.isArray(entries)
+			? entries.map((entry) =>
+					entry !== null && typeof entry === "object"
+						? {
+								...(entry as Record<string, unknown>),
+								customize: (entry as Record<string, unknown>).customize ?? null,
+							}
+						: entry,
+				)
+			: entries;
+	return {
+		...source,
+		...(source.licenses !== undefined
+			? { licenses: normalize(source.licenses) }
+			: {}),
+		...(source.variants !== undefined
+			? { variants: normalize(source.variants) }
+			: {}),
+	} as T;
+};
+
 /**
  * Fixture (camelCase) -> wire (snake_case), stopping where the spec says the
  * data stops being ours. Array indices are elided from the path, so one hint
@@ -204,8 +230,6 @@ export type AtmnConfig = {
 	/** Every plans entry this catalog should have. `[]` means "mine, and
 	 * empty"; omitted means "not mine". */
 	plans?: Plan[];
-	/** Past versions of plans, full rows, stamped `active: false`. */
-	planVersions?: Plan[];
 	/** Every rewards entry this catalog should have. `[]` means "mine, and
 	 * empty"; omitted means "not mine". */
 	rewards?: Reward[];
@@ -217,79 +241,13 @@ export type AtmnConfig = {
 	settings?: Settings;
 };
 
-/** The document as the server sees it: history rows folded into their collection. */
-/** A declared variant with no customize of its own follows its base: the
- * server needs the pin stated, so it is derived here, never typed. */
-const followDeclaredVariants = <
-	T extends {
-		variants?: {
-			variantPlanId: string;
-			version?: number;
-			versionSlug?: string;
-		}[];
-	},
->(
-	row: T,
-): T & {
-	propagate?: {
-		variants: { planId: string; version?: number; versionSlug?: string }[];
-	};
-} =>
-	Array.isArray(row.variants) && row.variants.length > 0
-		? {
-				...row,
-				propagate: {
-					// A declared version pin travels with the follow, or the server
-					// would resolve the active variant row instead of the stated one.
-					variants: row.variants.map((variant) => ({
-						planId: variant.variantPlanId,
-						...(variant.version !== undefined
-							? { version: variant.version }
-							: {}),
-						...(variant.versionSlug !== undefined
-							? { versionSlug: variant.versionSlug }
-							: {}),
-					})),
-				},
-			}
-		: row;
-
-/** Ids every row of which sits in history: no version of them would be active. */
-const historyOnlyIds = ({
-	idField,
-	rows,
-	history,
-}: {
-	idField: string;
-	rows: Record<string, unknown>[];
-	history: Record<string, unknown>[];
-}): string[] => {
-	const stated = new Set(rows.map((row) => row[idField]));
-	return [
-		...new Set(
-			history
-				.map((row) => row[idField])
-				.filter(
-					(id): id is string => typeof id === "string" && !stated.has(id),
-				),
-		),
-	];
-};
-
 const stated = (config: AtmnConfig): Record<string, unknown> => ({
 	...(config.features !== undefined ? { features: config.features } : {}),
 	...(config.plans !== undefined
 		? {
-				plans: [
-					...config.plans.map((row) =>
-						followDeclaredVariants({ ...row, active: row.active ?? true }),
-					),
-					...(config.planVersions ?? []).map((row) =>
-						followDeclaredVariants({ ...row, active: false }),
-					),
-				],
-				// Absent history is "not mine"; stated history removes the versions it omits.
-				skip_version_deletions: config.planVersions === undefined,
+				plans: config.plans.map(clearOmittedRelationshipCustomizes),
+				// Stated plans are every version: the ones it omits are removed.
+				skip_version_deletions: false,
 			}
 		: {}),
 	...(config.rewards !== undefined ? { rewards: config.rewards } : {}),
@@ -300,6 +258,29 @@ const stated = (config: AtmnConfig): Record<string, unknown> => ({
 });
 
 const SINGLETON_KEYS: readonly string[] = ["settings"];
+const CONFIG_KEYS: readonly string[] = [
+	"features",
+	"plans",
+	"rewards",
+	"referralPrograms",
+	"settings",
+];
+
+/**
+ * A key the type does not know is a config written for another version of
+ * this CLI, and the runtime loader does no type check: refused, never dropped.
+ */
+const unknownKeyIssue = (key: string): { path: string; message: string } =>
+	key === "planVersions"
+		? {
+				path: key,
+				message:
+					"planVersions is gone: every version is now a row in plans, with versionSlug and active. Rebuild the config from your org with `atmn pull --overwrite --yes` (commit first), or move the rows into plans.",
+			}
+		: {
+				path: key,
+				message: `${key} is not a config field. The fields are ${CONFIG_KEYS.join(", ")}.`,
+			};
 
 /**
  * The catalog document and each singleton's own request body, split from the
@@ -323,30 +304,11 @@ export const splitWire = (
 });
 
 export const atmn = (config: AtmnConfig): WireDocument => {
-	if (config.planVersions !== undefined && config.plans === undefined) {
-		throw new ConfigError([
-			{
-				path: "config",
-				message:
-					"planVersions needs plans: history rows on their own would remove every active version.",
-			},
-		]);
-	}
-	// History alone is a row nobody can buy. Membership decides, not `active`:
-	// a draft in plans may be inactive, a row only in planVersions may not.
-	const plansHistoryOnly = historyOnlyIds({
-		idField: "planId",
-		rows: config.plans ?? [],
-		history: config.planVersions ?? [],
-	});
-	if (plansHistoryOnly.length > 0) {
-		throw new ConfigError(
-			plansHistoryOnly.map((id) => ({
-				path: `plan ${JSON.stringify(id)}`,
-				message: `At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version. ${plansHistoryOnly.map((each) => JSON.stringify(each)).join(", ")}`,
-			})),
-		);
-	}
+	const unknownKeys = Object.keys(config).filter(
+		(key) => !CONFIG_KEYS.includes(key),
+	);
+	if (unknownKeys.length > 0)
+		throw new ConfigError(unknownKeys.map(unknownKeyIssue));
 	const document = stated(config);
 	// Linted before anything is sent, and every problem is reported at once —
 	// a round trip per mistake is what makes a config painful to write.

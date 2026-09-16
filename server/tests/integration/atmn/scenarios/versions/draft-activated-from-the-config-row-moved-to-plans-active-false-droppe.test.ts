@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
 	atmnConfigSource,
@@ -13,7 +14,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnClient } from "../../../../../../packages/atmn-nightly/src/generated/client";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type CatalogPlanRow = {
 	id: string;
@@ -43,19 +43,21 @@ test.concurrent(
 			extra: `\n\t\t\t\tversionSlug: "v1",`,
 		});
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
 			config: `{ plans: [${v1}] }`,
 		});
 
 		try {
 			await scenario.push();
 
-			// v2 mints as an explicit draft alongside the still-active v1 — both
-			// rows sit in `plans` while the draft is unminted, no history yet.
+			// v2 mints as an explicit draft alongside the still-active v1.
 			const v2Draft = paidMonthly({
 				planId: "pro",
 				amount: 30,
-				extra: `\n\t\t\t\tversionSlug: "v2",\n\t\t\t\tactive: false,`,
+				active: false,
+				extra: `\n\t\t\t\tversionSlug: "v2",`,
 			});
 			scenario.writeConfig(
 				atmnConfigSource({ body: `{ plans: [${v1} ${v2Draft}] }` }),
@@ -72,18 +74,22 @@ test.concurrent(
 				]),
 			);
 
-			// Activating from the config: v2 drops `active: false`, v1 is restated
-			// in planVersions — the active pointer moves and v1 becomes history.
+			// Activating from the config: the `active` flag moves from v1 to v2.
 			const v2Active = paidMonthly({
 				planId: "pro",
 				amount: 30,
 				extra: `\n\t\t\t\tversionSlug: "v2",`,
 			});
+			const v1History = paidMonthly({
+				planId: "pro",
+				amount: 20,
+				active: false,
+				extra: `\n\t\t\t\tversionSlug: "v1",`,
+			});
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
-	plans: [${v2Active}],
-	planVersions: [${v1}],
+	plans: [${v2Active}${v1History}],
 }`,
 				}),
 			);

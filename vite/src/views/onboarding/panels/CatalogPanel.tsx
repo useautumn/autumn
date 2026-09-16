@@ -1,36 +1,17 @@
 import type { Feature } from "@autumn/shared";
 import { SectionTag } from "@autumn/ui";
+import { Link } from "react-router";
 import { useOrg } from "@/hooks/common/useOrg";
 import type { ProductListItem } from "@/hooks/queries/useProductsQuery";
-import {
-	getFeatureIcon,
-	getFeatureIconConfig,
-} from "@/views/products/features/utils/getFeatureIcon";
 import { CreditSystemCard } from "./CreditSystemCard";
 import { buildPlanGroups, splitCreditSystems } from "./catalogGrouping";
+import { catalogGridClassName, featurePagePath } from "./catalogUi";
+import { FeatureChip } from "./FeatureChip";
 import { PanelSection } from "./PanelSection";
 import { PlanTrack } from "./PlanTrack";
 
 /** Three rows of the 4-column grid. */
 const MAX_FEATURES = 12;
-
-/** Credits and features share one column count so the two strips align, and
- * a lone cell keeps a column's width rather than stretching or shrinking. */
-const CATALOG_GRID = "grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4";
-
-function FeatureChip({ feature }: { feature: Feature }) {
-	const config = getFeatureIconConfig(feature.type, feature.config?.usage_type);
-
-	return (
-		<span
-			className="flex min-w-0 items-center gap-1.5 rounded-md border bg-interactive-secondary px-2 py-1"
-			title={config.label}
-		>
-			{getFeatureIcon({ feature, size: 12 })}
-			<span className="truncate text-tiny text-foreground">{feature.name}</span>
-		</span>
-	);
-}
 
 export function CatalogPanel({
 	products,
@@ -72,7 +53,7 @@ export function CatalogPanel({
 					<SectionTag>Credits</SectionTag>
 					{/* Same column count as the features below, so the two strips line
 					    up rather than each cell finding its own width. */}
-					<div className={CATALOG_GRID}>
+					<div className={catalogGridClassName}>
 						{creditSystems.map((creditSystem) => (
 							<CreditSystemCard
 								key={creditSystem.id}
@@ -89,14 +70,17 @@ export function CatalogPanel({
 					<SectionTag>Features</SectionTag>
 					{/* A fixed grid rather than wrapped chips: uniform columns line the
 					    features up with the plan track above instead of ragging. */}
-					<div className={CATALOG_GRID}>
+					<div className={catalogGridClassName}>
 						{plainFeatures.slice(0, MAX_FEATURES).map((feature) => (
 							<FeatureChip key={feature.id} feature={feature} />
 						))}
 						{hiddenFeatures > 0 && (
-							<span className="flex items-center px-2 text-tiny text-subtle">
+							<Link
+								to={featurePagePath()}
+								className="flex items-center px-2 text-tiny text-subtle transition-colors hover:text-tertiary-foreground"
+							>
 								+{hiddenFeatures} more
-							</span>
+							</Link>
 						)}
 					</div>
 				</div>

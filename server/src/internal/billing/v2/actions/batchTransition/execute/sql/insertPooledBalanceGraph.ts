@@ -107,6 +107,7 @@ export const insertPooledBalanceGraph = async ({
 			next_reset_at: nextResetAt,
 			usage_allowed: false,
 			separate_interval: false,
+			invoice_credit: false,
 			adjustment: 0,
 			additional_balance: 0,
 			entities: null,

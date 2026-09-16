@@ -99,6 +99,7 @@ describe("getCreditRateCard — invoice attribution descriptors", () => {
 		() => {
 			expect(
 				getCreditRateCard({
+					invoiceCredit: true,
 					sourceFeature,
 					creditSystem: flatInvoiceCreditFeature,
 				}),
@@ -115,6 +116,7 @@ describe("getCreditRateCard — invoice attribution descriptors", () => {
 		() => {
 			expect(
 				getCreditRateCard({
+					invoiceCredit: true,
 					sourceFeature: flatInvoiceCreditFeature,
 					creditSystem: flatInvoiceCreditFeature,
 				}),
@@ -131,6 +133,7 @@ describe("getCreditRateCard — invoice attribution descriptors", () => {
 		() => {
 			expect(
 				getCreditRateCard({
+					invoiceCredit: false,
 					sourceFeature,
 					creditSystem: {
 						...flatInvoiceCreditFeature,

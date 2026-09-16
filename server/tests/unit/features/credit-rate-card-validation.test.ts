@@ -71,9 +71,8 @@ describe("credit rate-card validation", () => {
 						],
 					},
 				],
-				invoice_credit: true,
 			}),
-		).toMatchObject({ invoice_credit: true });
+		).toMatchObject({ usage_type: FeatureUsageType.Single });
 	});
 
 	test.each([
@@ -144,13 +143,6 @@ describe("credit rate-card validation", () => {
 	test("rejects classic rate-card fields on AI credit systems", () => {
 		expect(() =>
 			validate(
-				{ schema: [], invoice_credit: true },
-				FeatureType.AiCreditSystem,
-			),
-		).toThrow(/invoice/i);
-
-		expect(() =>
-			validate(
 				{
 					schema: [{ metered_feature_id: "feature_a", credit_amount: 1 }],
 				},
@@ -167,7 +159,6 @@ describe("credit rate-card API mapping", () => {
 				id: "credits",
 				name: "Credits",
 				type: FeatureType.CreditSystem,
-				invoice_credit: true,
 				credit_schema: [
 					{
 						metered_feature_id: "feature_a",
@@ -188,7 +179,6 @@ describe("credit rate-card API mapping", () => {
 		});
 
 		expect(stored.config).toMatchObject({
-			invoice_credit: true,
 			schema: [
 				{
 					metered_feature_id: "feature_a",
@@ -212,7 +202,6 @@ describe("credit rate-card API mapping", () => {
 			dbFeature: { ...stored, internal_id: "fe_credits" },
 		});
 		expect(response).toMatchObject({
-			invoice_credit: true,
 			credit_schema: [
 				{
 					metered_feature_id: "feature_a",
@@ -260,7 +249,6 @@ describe("credit rate-card API mapping", () => {
 				originalFeature,
 			}),
 		).toMatchObject({
-			invoice_credit: true,
 			schema: [{ metered_feature_id: "feature_a", credit_amount: 2 }],
 		});
 	});

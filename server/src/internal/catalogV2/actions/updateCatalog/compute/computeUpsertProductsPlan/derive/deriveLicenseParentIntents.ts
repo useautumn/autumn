@@ -80,6 +80,7 @@ export const deriveLicenseParentIntents = ({
 					planParams: {
 						plan_id: productKey.planId,
 						version: productKey.version,
+						archived: link.product.archived,
 					},
 					source: "license_pin" as const,
 				},

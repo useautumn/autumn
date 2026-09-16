@@ -11,8 +11,8 @@
  *                                             and AUTUMN_SANDBOX_ID is pinned
  *   path
  *     - monorepo                            → --path and --name are asked (hinted headless)
- *     - single repo                         → config in cwd, no questions
- *     - monorepo writes package.json (dep on atmn-nightly), config + planVersions/,
+ *     - single repo                         → config in autumn/, no questions
+ *     - monorepo writes package.json (dep on atmn-nightly), config + collection files,
  *       the root marker `"atmn": { "config" }` and an `"atmn"` root script
  *   pull
  *     - the pull runs against the config dir; its line count is reported
@@ -156,14 +156,10 @@ const deps = ({
 					organizationSlug: slug,
 					apiKey: "am_sk_test_keyless",
 					claimToken: "tok",
-					claimUrl: "https://app.useautumn.com/claim?token=tok",
 					claimExpiresAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
 				};
 			},
 			startClaim: async () => {
-				throw new Error("init never claims");
-			},
-			verifyClaim: async () => {
 				throw new Error("init never claims");
 			},
 		},
@@ -182,7 +178,7 @@ const deps = ({
 	return { deps: fake, calls };
 };
 
-test("single repo, valid key: no questions, config in cwd, skills beside it", async () => {
+test("single repo, valid key: no questions, config in autumn/, skills beside it", async () => {
 	const root = repo({
 		monorepo: false,
 		env: "AUTUMN_SECRET_KEY=am_sk_test_main\n",
@@ -199,21 +195,26 @@ test("single repo, valid key: no questions, config in cwd, skills beside it", as
 	expect(calls.login).toBe(0);
 	// The config imports the CLI, so the root package gains the dependency.
 	expect(calls.install).toEqual(["npm"]);
-	expect(calls.pull).toEqual([root]);
-	expect(result.configDir).toBe(root);
-	expect(existsSync(join(root, "autumn.config.ts"))).toBe(true);
-	expect(existsSync(join(root, "planVersions"))).toBe(true);
+	const configDir = join(root, "autumn");
+	expect(calls.pull).toEqual([configDir]);
+	expect(result.configDir).toBe(configDir);
+	expect(existsSync(join(root, "autumn.config.ts"))).toBe(false);
+	expect(existsSync(join(configDir, "autumn.config.ts"))).toBe(true);
+	expect(existsSync(join(configDir, "plans.ts"))).toBe(true);
 	for (const skill of SKILLS)
-		expect(existsSync(join(root, "skills", skill.name, "SKILL.md"))).toBe(true);
+		expect(existsSync(join(configDir, "skills", skill.name, "SKILL.md"))).toBe(
+			true,
+		);
 	const text = lines.join("");
 	expect(text).toContain("✓ Logged in as Acme (acme)");
 	expect(text).not.toContain("Monorepo");
+	expect(text).toContain("✓ Path autumn");
 	expect(text).toContain("✓ Pulled 2 entries");
 	expect(text).toContain("✓ Skills:");
 	expect(text).toContain("atmn push");
 	// A single-package repo still gets the marker so `-c` stays optional.
 	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-	expect(manifest.atmn).toEqual({ config: "autumn.config.ts" });
+	expect(manifest.atmn).toEqual({ config: "autumn/autumn.config.ts" });
 	expect(manifest.dependencies["atmn-nightly"]).toBeDefined();
 	expect(text).toContain("✓ Added atmn-nightly to package.json");
 	expect(text).toContain("npm run atmn push");
@@ -235,7 +236,7 @@ test("a repo with no package.json gets one, so the config's import resolves", as
 
 	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 	expect(manifest.dependencies["atmn-nightly"]).toBeDefined();
-	expect(manifest.atmn).toEqual({ config: "autumn.config.ts" });
+	expect(manifest.atmn).toEqual({ config: "autumn/autumn.config.ts" });
 	expect(calls.install).toEqual(["npm"]);
 });
 
@@ -474,7 +475,7 @@ test("monorepo, headless: hints --path, then --name, then does everything", asyn
 	expect(pkg.private).toBe(true);
 	expect(pkg.dependencies["atmn-nightly"]).toBeDefined();
 	expect(existsSync(join(pkgDir, "autumn.config.ts"))).toBe(true);
-	expect(existsSync(join(pkgDir, "planVersions"))).toBe(true);
+	expect(existsSync(join(pkgDir, "plans.ts"))).toBe(true);
 	expect(existsSync(join(pkgDir, "skills"))).toBe(true);
 
 	const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
@@ -531,14 +532,14 @@ test("a second init in the same repo is a no-op for the files it already wrote",
 		deps: d,
 		prompter: createPrompter({ interactive: false, write: () => {} }),
 	});
-	writeFileSync(join(root, "autumn.config.ts"), "// edited\n");
+	writeFileSync(join(root, "autumn/autumn.config.ts"), "// edited\n");
 
 	await runInit({
 		cwd: root,
 		deps: d,
 		prompter: createPrompter({ interactive: false, write: () => {} }),
 	});
-	expect(readFileSync(join(root, "autumn.config.ts"), "utf8")).toBe(
+	expect(readFileSync(join(root, "autumn/autumn.config.ts"), "utf8")).toBe(
 		"// edited\n",
 	);
 });

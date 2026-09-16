@@ -7,7 +7,7 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/updatePendingPlanIfAny";
+import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/updatePendingPlanIfAny";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";

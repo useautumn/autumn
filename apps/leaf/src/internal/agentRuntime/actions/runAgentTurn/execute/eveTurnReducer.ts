@@ -5,6 +5,7 @@ import { WAITING_FOR_INPUT_MESSAGE } from "../../../../../ui/messages.js";
 import type { RunStopReason } from "../../../../runs/runRegistry.js";
 import type { AgentApprovalRequest } from "../../../domain/agentTurn.js";
 import type { AgentActionProgress } from "../../../domain/agentTurnContext.js";
+import { isEmptyDelivery } from "../../../eve/emptyDelivery.js";
 import type { EveEvent } from "../../../eve/eveEventSchemas.js";
 import {
 	approvalOptionIds,
@@ -38,7 +39,8 @@ import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalog
 export type EveTurnOutcome =
 	| { kind: "answered"; catalogDecision?: CatalogPlanPreview; text: string }
 	| { kind: "parked"; question?: PendingQuestion; text: string }
-	| { kind: "silent" }
+	/** `declined`: the model chose to say nothing (empty-delivery marker). */
+	| { declined?: boolean; kind: "silent" }
 	| { kind: "stopped"; stopReason: RunStopReason; text: string }
 	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
 	| { kind: "unreachable" };
@@ -50,6 +52,8 @@ export type RecordedWrite = Readonly<{
 }>;
 
 export type EveTurnProgress = Readonly<{
+	/** The model answered with the empty-delivery marker: nothing to post. */
+	declinedReply: boolean;
 	finalText: string;
 	/** Gated writes the model called this turn; the approval is assembled from
 	 * these when the turn ends. */
@@ -82,6 +86,7 @@ export type EveTurnTransition = Readonly<{
 }>;
 
 export const createEveTurnProgress = (): EveTurnProgress => ({
+	declinedReply: false,
 	finalText: "",
 	pendingText: "",
 	recordedWrites: [],
@@ -234,16 +239,21 @@ const reduceActionResult = ({
 	if (!result?.callId) {
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
-	const recordedWrites = isGatedWriteTool(result.toolName)
-		? [
-				...progress.recordedWrites,
-				{
-					callId: result.callId,
-					input: progress.toolInputs.get(result.callId) ?? {},
-					toolName: normalizeToolName(result.toolName ?? ""),
-				},
-			]
-		: progress.recordedWrites;
+	// A write the agent process refused (thrown tool error → "failed") or eve
+	// denied ("rejected") never ran, so it has nothing to approve.
+	const writeCompleted =
+		event.status === undefined || event.status === "completed";
+	const recordedWrites =
+		isGatedWriteTool(result.toolName) && writeCompleted
+			? [
+					...progress.recordedWrites,
+					{
+						callId: result.callId,
+						input: progress.toolInputs.get(result.callId) ?? {},
+						toolName: normalizeToolName(result.toolName ?? ""),
+					},
+				]
+			: progress.recordedWrites;
 	logger.info("Eve tool completed", {
 		event: "leaf.eve_tool_completed",
 		data: {
@@ -293,7 +303,14 @@ const reduceMessageDelta = ({
 			: `${progress.pendingText}${event.messageDelta}`;
 	const reasoningStreamId = progress.reasoningStreamId ?? createReasoningId();
 	return {
-		effects: [{ id: reasoningStreamId, kind: "reasoning", text: pendingText }],
+		effects: [
+			{
+				id: reasoningStreamId,
+				kind: "reasoning",
+				// The empty-delivery marker is not something to show as progress.
+				text: isEmptyDelivery(pendingText) ? "" : pendingText,
+			},
+		],
 		progress: { ...progress, pendingText, reasoningStreamId },
 	};
 };
@@ -307,7 +324,10 @@ const reduceCompletedMessage = ({
 	event: Extract<EveEvent, { type: "message.completed" }>;
 	progress: EveTurnProgress;
 }): EveTurnTransition => {
-	const message = event.message || progress.pendingText;
+	const declined =
+		event.message === null ||
+		isEmptyDelivery(event.message || progress.pendingText);
+	const message = declined ? "" : event.message || progress.pendingText;
 	if (event.finishReason === "tool-calls") {
 		const id = progress.reasoningStreamId ?? createReasoningId();
 		return {
@@ -321,6 +341,7 @@ const reduceCompletedMessage = ({
 			: [],
 		progress: {
 			...progress,
+			declinedReply: declined,
 			finalText: message,
 			pendingText: "",
 			reasoningStreamId: undefined,
@@ -413,7 +434,7 @@ const reduceTerminalEvent = ({
 		effects: [{ kind: "save_session" }],
 		outcome: eveTurnProducedOutput({ catalogDecision, text })
 			? { catalogDecision, kind: "answered", text }
-			: { kind: "silent" },
+			: { declined: progress.declinedReply, kind: "silent" },
 		progress,
 	};
 };

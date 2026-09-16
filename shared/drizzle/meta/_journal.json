@@ -533,6 +533,48 @@
       "when": 1788531508069,
       "tag": "0075_gorgeous_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1789396827859,
+      "tag": "0076_invoice_line_item_entities",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1789415136700,
+      "tag": "0077_big_stellaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1789465281154,
+      "tag": "0078_amusing_zodiak",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1789471661970,
+      "tag": "0079_invoice_credit_stamp",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1789500736880,
+      "tag": "0080_vengeful_famine",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1789506861254,
+      "tag": "0081_sudden_layla_miller",
+      "breakpoints": true
     }
   ]
 }

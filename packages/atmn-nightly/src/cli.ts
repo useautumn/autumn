@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { Command } from "commander";
+import { registerApiCommands } from "./actions/api/registerApiCommands";
 import { runEnv } from "./actions/env";
 import { fetchOrgInfo } from "./actions/env/fetchOrgInfo";
 import { runInit } from "./actions/init/runInit";
@@ -42,10 +43,13 @@ import {
 } from "./env/resolveTarget";
 import type { CreateSandboxParams } from "./generated/client";
 import { createClient } from "./generated/client";
+import { autumnFetch } from "./http/autumnFetch";
 import { type Project, resolveProject } from "./project/resolveProject";
 import {
 	createPrompter,
+	hint,
 	NeedsInputError,
+	needs,
 	type Prompter,
 	releaseStdin,
 } from "./prompt/prompt";
@@ -98,6 +102,26 @@ const projectOf = ({ command }: { command: Command }): Project =>
 
 const configFlagOf = ({ command }: { command: Command }): string | undefined =>
 	command.optsWithGlobals<GlobalFlags>().config;
+
+/** Skills sit beside the config; with no config and no --dir there is nowhere to put them. */
+const skillsDirOf = ({
+	command,
+	dir,
+}: {
+	command: Command;
+	dir: string | undefined;
+}): string => {
+	if (dir !== undefined) return dir;
+	const project = projectOf({ command });
+	if (project.configPath === null) {
+		const flagHint = `Run ${configPackageName()} init, or pass --dir <dir>`;
+		process.stdout.write(
+			`${needs("No Autumn config folder found.")}\n${hint(flagHint)}\n`,
+		);
+		throw new NeedsInputError(flagHint);
+	}
+	return join(project.configDir, SKILLS_DIR_NAME);
+};
 
 const writeStaleSkillsHint = ({ command }: { command: Command }): void => {
 	const stale = staleSkillsHint({
@@ -155,6 +179,7 @@ const prompterFor = ({ command }: { command: Command }): Prompter =>
 const clientFor = ({ target }: { target: Target }) =>
 	createClient({
 		secretKey: requireSecretKey({ target }),
+		fetch: autumnFetch,
 		...(target.baseUrl ? { baseUrl: target.baseUrl } : {}),
 	});
 
@@ -216,7 +241,10 @@ export const buildProgram = (): Command => {
 			"after",
 			"\nWith no AUTUMN_SECRET_KEY on disk, init asks how to connect in a terminal; headless it prints --login / --keyless and stops.",
 		)
-		.option("--path <dir>", "folder for the Autumn package (monorepos)")
+		.option(
+			"--path <dir>",
+			"folder for the config: autumn/ by default, packages/autumn/ in a monorepo",
+		)
 		.option("--name <name>", "the package's name (monorepos)")
 		.option("--login", CONNECT_OPTIONS.login)
 		.option("--keyless", CONNECT_OPTIONS.keyless)
@@ -274,26 +302,20 @@ Two ways in:
   atmn login                       ${CONNECT_OPTIONS.login}
   atmn login --keyless             ${CONNECT_OPTIONS.keyless}
 Linking a keyless org to an account:
-  atmn login --claim you@acme.com  emails a one-time code; pass it back with --otp <code>`,
+  atmn login --claim you@acme.com  creates and emails a secure browser claim link`,
 		)
 		.option("--keyless", CONNECT_OPTIONS.keyless)
 		.option(
 			"--claim <email>",
 			"link the keyless org this key belongs to with an account",
 		)
-		.option(
-			"--otp <code>",
-			"the code --claim emailed (headless: run again with it)",
-		)
 		.action(
 			async (
-				options: { keyless?: boolean; claim?: string; otp?: string },
+				options: { keyless?: boolean; claim?: string },
 				command: Command,
 			) => {
 				if (options.keyless && options.claim !== undefined)
 					throw new Error("Pick one of --keyless and --claim.");
-				if (options.otp !== undefined && options.claim === undefined)
-					throw new Error("--otp answers --claim; pass --claim <email> too.");
 				const target = prepareTarget({ command });
 				const prompter = prompterFor({ command });
 				// A keyless org lives in sandbox, so its key is the main sandbox one
@@ -315,7 +337,6 @@ Linking a keyless org to an account:
 					await runClaim({
 						secretKey: requireSecretKey({ target: mainTarget }),
 						email: options.claim,
-						...(options.otp === undefined ? {} : { otp: options.otp }),
 						deps: keylessDepsFor({ target: mainTarget }),
 						prompter,
 					});
@@ -324,6 +345,11 @@ Linking a keyless org to an account:
 				await runLogin({ target, configPath: configFlagOf({ command }) });
 			},
 		);
+
+	registerApiCommands({
+		program,
+		targetOf: (command) => prepareTarget({ command }),
+	});
 
 	program
 		.command("env")
@@ -403,9 +429,7 @@ Linking a keyless org to an account:
 		.option("--link", "run `npx skills add <dir> --all` afterwards")
 		.action(
 			async (options: { dir?: string; link?: boolean }, command: Command) => {
-				const dir =
-					options.dir ??
-					join(projectOf({ command }).configDir, SKILLS_DIR_NAME);
+				const dir = skillsDirOf({ command, dir: options.dir });
 				installSkills({ dir, write: (text) => process.stdout.write(text) });
 				if (options.link === true)
 					await linkSkills({
@@ -423,8 +447,7 @@ Linking a keyless org to an account:
 			"the install to update; <config folder>/skills by default",
 		)
 		.action((options: { dir?: string }, command: Command) => {
-			const dir =
-				options.dir ?? join(projectOf({ command }).configDir, SKILLS_DIR_NAME);
+			const dir = skillsDirOf({ command, dir: options.dir });
 			updateSkills({ dir, write: (text) => process.stdout.write(text) });
 		});
 
@@ -432,13 +455,28 @@ Linking a keyless org to an account:
 		.command("pull")
 		.description("write your remote catalog back into autumn.config.ts")
 		.option("--include-mappings", "keep processor mappings in pulled fixtures")
+		.option(
+			"--overwrite",
+			"rewrite the config from your org's catalog (e.g. after switching orgs)",
+		)
+		.option("-y, --yes", "overwrite it")
 		.action(
-			async (options: { includeMappings?: boolean }, command: Command) => {
+			async (
+				options: {
+					includeMappings?: boolean;
+					overwrite?: boolean;
+					yes?: boolean;
+				},
+				command: Command,
+			) => {
 				const target = prepareTarget({ command });
 				await runPull({
 					client: clientFor({ target }),
 					configPath: configFlagOf({ command }),
 					includeMappings: options.includeMappings === true,
+					overwrite: options.overwrite === true,
+					yes: options.yes === true,
+					prompter: prompterFor({ command }),
 				});
 				writeStaleSkillsHint({ command });
 			},

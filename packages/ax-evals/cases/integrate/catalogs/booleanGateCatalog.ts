@@ -15,12 +15,16 @@ export default atmn({
 	plans: [
 		plan({
 			planId: "free",
+			versionSlug: "v1",
+			active: true,
 			name: "Free",
 			autoEnable: true,
 			items: [],
 		}),
 		plan({
 			planId: "pro",
+			versionSlug: "v1",
+			active: true,
 			name: "Pro",
 			price: { amount: 20, interval: "month" },
 			items: [{ featureId: "custom_branding" }],

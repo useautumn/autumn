@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
 	atmnConfigSource,
@@ -12,7 +13,6 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 type WirePlanRow = Record<string, unknown>;
 
@@ -31,15 +31,18 @@ test.concurrent(
 		const v1 = paidMonthly({
 			planId: "pro",
 			amount: 20,
-			extra: `\n\t\t\t\tversionSlug: "v1",`,
+			versionSlug: "v1",
 		});
 		const v2Draft = paidMonthly({
 			planId: "pro",
 			amount: 30,
-			extra: `\n\t\t\t\tversionSlug: "v2",\n\t\t\t\tactive: false,`,
+			active: false,
+			versionSlug: "v2",
 		});
 		const scenario = await initAtmnScenario({
-			setup: [s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` })],
+			setup: [
+				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
+			],
 			config: `{ plans: [${v1}] }`,
 		});
 
@@ -64,7 +67,7 @@ test.concurrent(
 			await scenario.pull();
 
 			// Membership is state: the wire has one `plans` array, and `active`
-			// on each row is what says plans vs planVersions — not a separate key.
+			// on each row is what says which version is live — not a separate key.
 			const wire = (await scenario.wireFromConfig()) as {
 				plans?: WirePlanRow[];
 			};

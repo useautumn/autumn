@@ -14,7 +14,11 @@ import { entities } from "../../cusModels/entityModels/entityTable.js";
 import { features } from "../../featureModels/featureTable.js";
 import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customerProducts } from "../cusProductTable.js";
-import type { EntityBalance, UsageAttribution } from "./cusEntModels.js";
+import type {
+	CustomerEntitlementMetadata,
+	EntityBalance,
+	UsageAttribution,
+} from "./cusEntModels.js";
 
 export const customerEntitlements = pgTable(
 	"customer_entitlements",
@@ -32,6 +36,9 @@ export const customerEntitlements = pgTable(
 			.$type<UsageAttribution>()
 			.notNull()
 			.default({}),
+		// Stamped at creation from the plan item's price shape; invoice lines,
+		// attribution and mutation guards read this, never the feature config.
+		invoice_credit: boolean("invoice_credit").notNull().default(false),
 		created_at: numeric({ mode: "number" }).notNull(),
 		reset_cycle_anchor: numeric({ mode: "number" }),
 		next_reset_at: numeric({ mode: "number" }),
@@ -62,6 +69,9 @@ export const customerEntitlements = pgTable(
 		feature_id: text("feature_id"),
 
 		external_id: text("external_id"),
+
+		/** Provenance for loose rows that outlive their plan (expiring top-ups). */
+		metadata: jsonb("metadata").$type<CustomerEntitlementMetadata>(),
 
 		// Denormalized parent-product expiry; nullable tri-state so a manual `false`
 		// stays sticky and the backfill cron only flips NULL -> true.
@@ -119,6 +129,14 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_loose_customer_expires")
 			.on(table.internal_customer_id, table.expires_at)
 			.where(sql`${table.customer_product_id} IS NULL`),
+		// Expiry-first for the unscoped purchase-grant sweep; the partial
+		// predicate keeps it to grant rows only.
+		index("idx_customer_entitlements_expiring_grants")
+			.on(table.expires_at)
+			.where(
+				sql`${table.customer_product_id} IS NULL AND ${table.expires_at} IS NOT NULL AND ${table.metadata}->>'source' IS NOT NULL`,
+			)
+			.concurrently(),
 		index("idx_customer_entitlements_next_reset_not_expired")
 			.on(table.next_reset_at)
 			.where(

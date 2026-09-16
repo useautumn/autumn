@@ -57,7 +57,8 @@ export const UpdateCatalogPlanParamsSchema = z
 			description: "Whether this is the org's default plan.",
 		}),
 		archived: z.boolean().optional().meta({
-			description: "Archive or unarchive the plan.",
+			description:
+				"Archive this plan. Omitted or false means the stated plan is live.",
 		}),
 		active: z.boolean().optional().meta({
 			description:

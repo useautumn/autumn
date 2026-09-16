@@ -19,14 +19,18 @@ test.concurrent("default plan / auto enable", async () => {
 		config: configBody({
 			plans: `
 		plan({
+			active: true,
 			planId: "starter",
 			name: "Starter",
+			versionSlug: "v1",
 			autoEnable: true,
 			items: [],
 		}),
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			// A paid auto-enable plan needs a cardless trial to pass the default-plan rule.
 			freeTrial: { durationLength: 14, durationType: "day", cardRequired: false },
@@ -44,7 +48,7 @@ test.concurrent("default plan / auto enable", async () => {
 		expect(starter).toEqual(expect.objectContaining({ auto_enable: true }));
 		expect(pro).toEqual(expect.objectContaining({ auto_enable: true }));
 		// The deprecated twin never reaches a fixture; the stated flag does.
-		const config = freshFiles.get("autumn.config.ts") ?? "";
+		const config = freshFiles.get("plans.ts") ?? "";
 		expect(config).not.toContain("isDefault");
 		expect(config.match(/autoEnable: true/g)).toHaveLength(2);
 	} finally {

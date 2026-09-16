@@ -14,8 +14,26 @@ import {
 	removeRejectedSsoAccount,
 	userRequiresSso,
 } from "@/internal/auth/sso/ssoInvitationProvisioning.js";
-import { shouldSkipDefaultOrgForAgentClaim } from "@/internal/orgs/agentOnboarding/agentAuthUtils.js";
+import {
+	getAgentClaimIntentFromHeaders,
+	hashAgentAuthSubject,
+} from "@/internal/orgs/agentOnboarding/agentAuthUtils.js";
+import { findAgentClaimAttempt } from "@/internal/orgs/agentOnboarding/repos/agentChallengeRepo.js";
 import { createDefaultOrg } from "@/utils/authUtils/createDefaultOrg.js";
+
+const hasPendingAgentClaimIntent = async ({
+	headers,
+}: {
+	headers: HeadersInit | undefined;
+}) => {
+	const attemptToken = getAgentClaimIntentFromHeaders({ headers });
+	if (!attemptToken) return false;
+	const attempt = await findAgentClaimAttempt({
+		db,
+		attemptTokenHash: hashAgentAuthSubject({ value: attemptToken }),
+	});
+	return !!attempt && new Date(attempt.expiresAt) > new Date();
+};
 
 export const beforeSessionCreated = async (
 	session: Session,
@@ -27,11 +45,7 @@ export const beforeSessionCreated = async (
 	);
 	let requiresSso = false;
 	try {
-		if (
-			shouldSkipDefaultOrgForAgentClaim({
-				headers: context?.headers,
-			})
-		) {
+		if (await hasPendingAgentClaimIntent({ headers: context?.headers })) {
 			return;
 		}
 

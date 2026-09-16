@@ -10,10 +10,6 @@ import {
 	type UpdateCatalogFeatureParams,
 } from "@autumn/shared";
 import { creditSchemaToApi } from "../credit-systems/utils/creditSchemaUtils";
-import {
-	featureStripeProductChanged,
-	normalizeFeatureStripeProductId,
-} from "./featureStripeProductChanged";
 
 interface BuildFeatureMarkupParamsArgs {
 	type: FeatureType;
@@ -21,7 +17,6 @@ interface BuildFeatureMarkupParamsArgs {
 	defaultMarkup?: number | null;
 	providerMarkups?: ProviderMarkups;
 	schema?: CreditSchemaItem[];
-	invoiceCredit?: boolean;
 }
 
 interface FeatureMarkupParams {
@@ -29,7 +24,6 @@ interface FeatureMarkupParams {
 	default_markup?: number | null;
 	provider_markups?: ProviderMarkups;
 	credit_schema?: ApiCreditSchemaItem[];
-	invoice_credit?: boolean;
 }
 
 /**
@@ -43,7 +37,6 @@ export const buildFeatureMarkupParams = ({
 	defaultMarkup,
 	providerMarkups,
 	schema,
-	invoiceCredit,
 }: BuildFeatureMarkupParamsArgs): FeatureMarkupParams => {
 	const ai = isAiCreditSystem(type);
 	return {
@@ -51,7 +44,6 @@ export const buildFeatureMarkupParams = ({
 		default_markup: ai ? defaultMarkup : undefined,
 		provider_markups: ai ? providerMarkups : undefined,
 		credit_schema: ai || !schema ? undefined : creditSchemaToApi(schema),
-		invoice_credit: ai ? undefined : invoiceCredit,
 	};
 };
 
@@ -61,30 +53,18 @@ export const featureToCatalogFeatureParams = ({
 	featureId = feature.id,
 	newFeatureId,
 	archived,
-	originalStripeProductId,
 }: {
 	feature: Pick<Feature, "id" | "name" | "type" | "config" | "event_names"> & {
 		model_markups?: Feature["model_markups"];
-		stripe_product_id?: string | null;
 	};
 	featureId?: string;
 	newFeatureId?: string;
 	archived?: boolean;
-	originalStripeProductId?: string | null;
 }): UpdateCatalogFeatureParams => {
 	const renamed =
 		newFeatureId !== undefined && newFeatureId !== featureId
 			? newFeatureId
 			: undefined;
-	const nextProductId = normalizeFeatureStripeProductId(
-		feature.stripe_product_id,
-	);
-	const processors = featureStripeProductChanged({
-		from: originalStripeProductId,
-		to: nextProductId,
-	})
-		? { stripe: { product_id: nextProductId ?? "" } }
-		: undefined;
 
 	return {
 		feature_id: featureId,
@@ -99,9 +79,7 @@ export const featureToCatalogFeatureParams = ({
 			defaultMarkup: feature.config?.default_markup,
 			providerMarkups: feature.config?.provider_markups,
 			schema: feature.config?.schema,
-			invoiceCredit: feature.config?.invoice_credit,
 		}),
 		...(archived !== undefined ? { archived } : {}),
-		...(processors ? { processors } : {}),
 	};
 };

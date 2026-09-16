@@ -1,7 +1,5 @@
 /** A canonical content source, concatenated into a resource in declared order. */
-export type Source =
-	| { type: "docs"; page: string }
-	| { type: "legacy"; file: string };
+export type Source = { type: "docs"; page: string };
 
 /**
  * MCP-resource output. `uri` becomes `autumn://docs/<uri>`. Two shapes:
@@ -19,11 +17,12 @@ export type McpFormat = {
 
 /**
  * Skill output: composed from a single mdx (frontmatter + agent framing +
- * `<docs url="…" />` / `<legacy file="…" />` insertion tags). `file` is relative
+ * `<docs url="…" />` insertion tags). `file` is relative
  * to `content/`. Skill name/description come from that mdx's frontmatter.
  */
 export type SkillFormat = {
 	file: string;
+	public?: boolean;
 };
 
 /** One translatable unit and the formats it emits. */

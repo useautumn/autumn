@@ -71,6 +71,17 @@ describe("edge config registry", () => {
 		expect(secondRefresh).toHaveBeenCalledTimes(2);
 	});
 
+	test("loads a config registered after polling started", async () => {
+		const { registry } = createRegistry({ timestamps: ["v1", "v1"] });
+		await registry.start();
+		const lateRefresh = jest.fn(async () => {});
+
+		registry.register({ store: { refresh: lateRefresh } });
+		await Promise.resolve();
+
+		expect(lateRefresh).toHaveBeenCalledTimes(1);
+	});
+
 	test("falls back to refreshing configs when timestamp polling fails", async () => {
 		const { refresh, registry } = createRegistry({
 			timestamps: ["v1", new Error("S3 unavailable")],

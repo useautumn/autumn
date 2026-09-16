@@ -9,6 +9,8 @@ import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalancePlan";
+import { assertRoomForExpiringGrants } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant";
+import { splitExpiringPurchaseGrants } from "@/internal/billing/v2/utils/expiringGrants/splitExpiringPurchaseGrants";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachBalanceTransitionPlan } from "./computeAttachBalanceTransitionPlan.js";
@@ -49,6 +51,22 @@ export const computeAttachPlan = ({
 		attachBillingContext,
 		params,
 	});
+	// Expiring items keep their product row as a 0-balance price anchor; the
+	// purchase itself becomes a loose grant whose clock starts at access.
+	// Runs BEFORE the overage rebalance, which zeroes one-off rows it claims.
+	const expiringGrants = splitExpiringPurchaseGrants({
+		customerProduct: newCustomerProduct,
+		orgId: ctx.org.id,
+		now:
+			attachBillingContext.accessStartsAt ??
+			attachBillingContext.currentEpochMs,
+	});
+	assertRoomForExpiringGrants({
+		fullCustomer: attachBillingContext.fullCustomer,
+		incoming: expiringGrants.customerEntitlements.length,
+		now: attachBillingContext.currentEpochMs,
+	});
+
 	const oneOffPurchaseRebalance = computeOneOffPurchaseRebalance({
 		ctx,
 		newCustomerProduct,
@@ -158,6 +176,7 @@ export const computeAttachPlan = ({
 			...(customEnts ?? []),
 			...(carriedOverEntitlements ?? []),
 			...oneOffPrepaidCarryOvers.entitlements,
+			...expiringGrants.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
 		insertPlanLicenses: attachBillingContext.insertPlanLicenses,
@@ -166,6 +185,7 @@ export const computeAttachPlan = ({
 		insertCustomerEntitlements: [
 			...(carriedOverCustomerEntitlements ?? []),
 			...oneOffPrepaidCarryOvers.customerEntitlements,
+			...expiringGrants.customerEntitlements,
 		],
 		updateCustomerEntitlements,
 		pooledBalancePlan,

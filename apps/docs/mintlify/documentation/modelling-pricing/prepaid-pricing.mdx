@@ -22,51 +22,55 @@ This is in contrast to [usage-based pricing](/documentation/modelling-pricing/us
 Create your features and add them to a plan with `prepaid` prices:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const apiCredits = feature({
-  id: 'api_credits',
-  name: 'API Credits',
-  type: 'metered',
+  featureId: "api_credits",
+  name: "API Credits",
+  type: "metered",
   consumable: true,
 });
 
 export const seats = feature({
-  id: 'seats',
-  name: 'Seats',
-  type: 'metered',
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: apiCredits.id,
+    {
+      featureId: apiCredits.featureId,
       included: 500,
       price: {
         amount: 10,
         billingUnits: 1000,
-        billingMethod: 'prepaid',
-        interval: 'month',
+        billingMethod: "prepaid",
+        interval: "month",
       },
-    }),
-    item({
-      featureId: seats.id,
+    },
+    {
+      featureId: seats.featureId,
       included: 3,
       price: {
         amount: 5,
-        billingMethod: 'prepaid',
-        interval: 'month',
+        billingMethod: "prepaid",
+        interval: "month",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [apiCredits, seats], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">

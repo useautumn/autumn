@@ -39,7 +39,7 @@ Customer
 - balances[feature_id] -> Balance -> Feature
   - pooled balance: fed by entity grants, spent by any entity
   - rollover, expiry, usage windows live here
-- license pools[license] -> seats granted / assigned / remaining
+- licenses[] -> CustomerLicense -> seats granted / in use / remaining
 - flags[feature_id] -> Flag -> Feature
 - billing_controls -> customer-level usage controls
 - entities[] -> Entity -> same runtime shape scoped under Customer
@@ -61,7 +61,7 @@ Subscription/Purchase -> Balance or Flag provisioning
 
 Two relationships changed recently — worth stating plainly because older docs describe the old way:
 
-**Versions are groups of customers, not history.** A plan's versions used to be numbered steps in time, and the newest was always live. Now each version is a definition that some group of customers lives on, and one version is marked **active** — the one new customers get. You promote a version to active deliberately, when it's ready. Why it works this way: change a plan for *everyone* (say, add a feature to all versions) and that's an edit, not a new version. Change the terms so existing customers keep the old deal (say, raise the base price) and that's a new version — the old customers stay on theirs. Non-active versions are also how you stage plans during a migration from another billing setup.
+**Versions are groups of customers, not history.** A plan's versions used to be numbered steps in time, and the newest was always live. Now each version is a definition that some group of customers lives on, and exactly one is **active** — the one attach uses when no version is named. Which changes are edits and which are new versions, drafts, and how customers move: the plan definition below.
 
 **Plans connect to other plans.** A plan can have variants (an annual twin storing only its differences), and it can offer licenses (a small seat plan it hands out per seat). So plans form a graph, not a flat list.
 
@@ -188,11 +188,13 @@ Load the matching definition when reasoning about that object.
 
 <versions>
 
-- A plan's versions are parallel definitions that different groups of customers live on — not a timeline. One version is marked **active**; that's what new customers get.
-- Versions used to be numbered steps where the newest was automatically live. That changed: now you create a version and **promote** it to active when it's ready.
-- When is a change a new version? If it applies to everyone (adding a feature to all versions), it's an edit, not a version. If existing customers should keep their old terms (a base price increase with grandfathering), it's a new version — old customers stay on theirs.
-- Non-active versions have a second use: staging plans during a migration from another billing setup, holding those customer groups before cutover.
-- Each version has a `version_slug` (a user-facing name); renaming a slug does not create a new version.
+- A version is one definition of a plan that a group of customers lives on. A plan's versions sit side by side — they are not a timeline, and a newer one is not "the" plan.
+- The test for a new version: **should existing customers keep the old terms?** Yes (a base price increase they are grandfathered on) → a new version; they stay on theirs. No (a feature everyone gets) → an edit to the version they are on, or to every version at once — not a new version.
+- Exactly one version of a plan is **active**: the one `billing.attach` puts a customer on when no version is named, and the one reads resolve to by default. Promoting a version moves that pointer; it moves no customer.
+- A version that is not active is a **draft**: minted, not yet sold. Two flows: mint and promote in one step, or mint as a draft, review it, promote later. Drafts also stage customer groups while migrating from another billing system.
+- `version_slug` is the version's name (`v1`, `2026-q3`), unique within the plan. Renaming a slug renames the version; it never mints one. The server also numbers versions in creation order — an internal label, not a meaning.
+- Customers do not move when the pointer moves. Editing a version in place changes what its customers have; moving customers to another version is a **migration**, drafted and run on its own.
+- Variants and licenses are versioned with the plan. A variant's customize is a diff over one base version. A license link is pinned to one child version; moving a parent onto another child version is an explicit change to that link. How a catalog update expresses these is the `autumn-catalog` skill's.
 - A plan can also have **aliases**: after a plan id rename, the old id still resolves to the plan.
 
 </versions>
@@ -201,10 +203,10 @@ Load the matching definition when reasoning about that object.
 
 - Variants group related plans under one base definition and store each variant's diff as `variant_details.customize`.
 - `plans.list` returns a flat plan list; each variant plan points back to its base through `variant_details`.
-- In `catalog.preview_update` / `catalog.update`, define or customize variants under the base plan's `plans[n].variants`.
-- Updating a base plan can propagate its diff to selected variants through the catalog update flow.
+- In a catalog update, variants are defined or customized under the base plan's `variants`, never as top-level plans.
+- A base edit does not reach a variant on its own: each variant either follows the change or keeps its current definition, and the update preview says which for every variant.
 - Common variant uses: billing intervals, A/B price packages, and volume ladders.
-- A variant's stored diff can change the price, add or remove items, and change the trial — it cannot replace the whole item list, and a variant cannot be the default plan or have variants of its own.
+- A variant's stored diff can change the price, replace the item list (`items`) or patch it (`add_items` / `remove_items`), and change the trial. A variant cannot be the default plan or have variants of its own.
 
 Annual interval variant:
 
@@ -533,17 +535,19 @@ Change prepaid to usage-based:
 If the customer the customer is NOT on a paid plan (free plan or no plan at all). 2 options:
 
 - No-card trial (default to this): attach with `free_trial` and set `card_required` false. The subscription starts with no card and ends at trial end if none is added. While on it, the customer cannot upgrade or attach another plan until they add a card via the Stripe billing portal.
+- No-card trials cannot be combined with `invoice_mode` (attach rejects it). If an invoice is needed, use `card_required: true`.
 - Card-required trial: attach with `free_trial` and `card_required: true` and `long_lived_checkout` If the customer has no payment method, the attach returns a checkout URL to collect a card; they are charged when the trial ends. This should be done with a long-lived checkout URL param.
 
 The customer already has an active (Stripe) subscription — common in sales-led trials.
 
 - On end: revert (default to this): attach the new plan with `on_end: "revert"` . This grants the plan in Autumn without touching the Stripe subscription; at trial end Autumn moves the customer back to their original plan, preserving the existing billing cycle.
+- To end a revert trial early, cancel it with `updateSubscription` and `cancel_action: "cancel_immediately"`; Autumn restores the previous plan. Do not remove `free_trial` (that converts the trial to paid) or re-attach the old plan.
 - On end: bill -- attaching a plan with a trial (or updating the subscription to add one) resets the Stripe billing anchor/cycle. This can be undesired so warn the user if they request this.
 - Card required param is ignored if there is already an active sub.
 
 Updating or ending a trial
-- Call update_subscription on the trialing plan with a new `free_trial`. The duration is counted from now, not from the original start. A 14-day extension on day 10 of a 14-day trial gives 14 more days, not 4.
-- Pass `free_trial: null` to end the trial immediately instead.
+- Call update_subscription on the trialing plan with the new trial nested under `customize`: `{ customer_id, subscription_id, customize: { free_trial: { duration_length, duration_type, card_required, on_end } } }`. Never put `free_trial` at the top level of an update: the update endpoint rejects a request whose only change is a top-level `free_trial` ("At least one update parameter must be provided"), while `customize.free_trial` is accepted. The duration is counted from now, not from the original start. A 14-day extension on day 10 of a 14-day trial gives 14 more days, not 4.
+- For a bill-on-end trial, pass `customize: { free_trial: null }` to end the trial immediately and start paid billing. Never do this for a revert trial: it activates the trial plan at full price instead of restoring the old plan. Cancel a revert trial instead (see above).
 
 ### Customer and Entity
 
@@ -727,7 +731,7 @@ A license lets a parent plan hand out another plan per seat. "Team is $40/seat, 
 
 - **Child plan** — the actual product for the child: an ordinary plan whose items are what one seat gets. It needs its own `group`, otherwise attaching it would replace its parent.
 - **License** — the link plus the customized definition: the parent's `licenses: [{ license_plan_id, included }]` entry. `included` is how many seats come free with the parent. The license can also customize the child *for this parent only* — a different price, items added or removed — while the child plan itself stays shared.
-- **CustomerLicense** — the runtime record per customer: how many seats they have (`granted` = included + paid), how many are assigned to entities, how many are free. Its identity (`link_id`) is stable across plan versions, so seats never jump around when plans change.
+- **CustomerLicense** — the runtime record per customer: how many seats they have (`granted` = included + paid), how many are in use (`usage`), how many remain (`remaining`). Its identity is stable across plan versions, so seats never jump around when plans change.
 
 ```json
 {

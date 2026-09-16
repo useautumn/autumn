@@ -2,27 +2,28 @@ import {
 	type AutumnBillingPlan,
 	billingContextToCurrency,
 	cusEntToCusPrice,
+	cusProductToPrices,
 	type FullCusEntWithFullCusProduct,
+	findPrepaidQuantityTargetPrice,
 	fullCustomerToCustomerEntitlements,
 	InternalError,
 	isOneOffPrice,
-	isPrepaidPrice,
-	isVolumeBasedCusEnt,
 	type LineItem,
 	type LineItemContext,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV1Params,
 	type UsagePriceConfig,
-	usagePriceToLineItem,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeRebalancedAutoTopUp } from "@/internal/balances/autoTopUp/compute/computeRebalancedAutoTopUp.js";
-import {
-	buildUpdatedOptions,
-	updateCusEntOptionsInline,
-} from "@/internal/balances/autoTopUp/helpers/autoTopUpUtils.js";
+import { topUpQuantityToLineItem } from "@/internal/balances/autoTopUp/compute/topUpQuantityToLineItem.js";
+import { buildUpdatedOptions } from "@/internal/balances/autoTopUp/helpers/autoTopUpUtils.js";
+import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/entitlementExpiry.js";
+import { assertRoomForExpiringGrants } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
+import { routeRemainderToExpiringGrant } from "@/internal/billing/v2/utils/expiringGrants/routeRemainderToExpiringGrant.js";
 
+/** Charge the same one-off prepaid price the ManualTopUp intent was routed on. */
 const findTargetCusEnt = ({
 	billingContext,
 	featureId,
@@ -32,21 +33,22 @@ const findTargetCusEnt = ({
 }): FullCusEntWithFullCusProduct | undefined => {
 	const { fullCustomer, customerProduct } = billingContext;
 
+	const targetPrice = findPrepaidQuantityTargetPrice({
+		prices: cusProductToPrices({ cusProduct: customerProduct }),
+		featureId,
+	});
+	if (!targetPrice || !isOneOffPrice(targetPrice)) return undefined;
+
 	const cusEntsForFeature = fullCustomerToCustomerEntitlements({
 		fullCustomer,
 		featureId,
 	});
 
-	return cusEntsForFeature.find((ce) => {
-		if (ce.customer_product?.id !== customerProduct.id) return false;
-		const cusPrice = cusEntToCusPrice({ cusEnt: ce });
-		if (!cusPrice) return false;
-		return (
-			isOneOffPrice(cusPrice.price) &&
-			isPrepaidPrice(cusPrice.price) &&
-			!isVolumeBasedCusEnt(ce)
-		);
-	});
+	return cusEntsForFeature.find(
+		(ce) =>
+			ce.customer_product?.id === customerProduct.id &&
+			cusEntToCusPrice({ cusEnt: ce })?.price.id === targetPrice.id,
+	);
 };
 
 /** Build the AutumnBillingPlan for a manual top-up: invoice charge (unless
@@ -93,14 +95,9 @@ export const computeManualTopUpPlan = ({
 
 	let lineItems: LineItem[] = [];
 	if (!skipBillingChanges) {
-		const inlineCusEnt = updateCusEntOptionsInline({
+		const lineItem = topUpQuantityToLineItem({
 			cusEnt: prepaidCusEnt,
-			feature,
-			quantity: topUpPacks,
-		});
-
-		const lineItem = usagePriceToLineItem({
-			cusEnt: inlineCusEnt,
+			quantity,
 			context: {
 				price: cusPrice.price,
 				product: customerProduct.product,
@@ -110,21 +107,37 @@ export const computeManualTopUpPlan = ({
 				now: currentEpochMs ?? Date.now(),
 				billingTiming: "in_advance",
 			} satisfies LineItemContext,
-			options: {
-				shouldProrateOverride: false,
-				chargeImmediatelyOverride: true,
-			},
 		});
 
 		lineItems = [lineItem];
 	}
 
-	const { deltas } = computeRebalancedAutoTopUp({
+	const rebalance = computeRebalancedAutoTopUp({
 		fullCustomer,
 		featureId,
 		quantity,
 		prepaidCustomerEntitlementId: prepaidCusEnt.id,
 	});
+
+	const hasExpiry = Boolean(
+		entitlementToExpiry({ entitlement: prepaidCusEnt.entitlement }),
+	);
+	if (hasExpiry) {
+		assertRoomForExpiringGrants({
+			fullCustomer,
+			incoming: 1,
+			now: currentEpochMs ?? Date.now(),
+		});
+	}
+
+	const { deltas, customEntitlements, insertCustomerEntitlements } =
+		routeRemainderToExpiringGrant({
+			deltas: rebalance.deltas,
+			customerEntitlement: prepaidCusEnt,
+			source: "manual_topup",
+			orgId: org.id,
+			now: currentEpochMs ?? Date.now(),
+		});
 
 	return {
 		customerId: fullCustomer?.id ?? "",
@@ -132,15 +145,23 @@ export const computeManualTopUpPlan = ({
 		lineItems,
 		updateCustomerEntitlements: [],
 		autoTopupRebalance: { deltas },
-		updateCustomerProduct: {
-			customerProduct,
-			updates: {
-				options: buildUpdatedOptions({
-					cusProduct: customerProduct,
-					feature,
-					topUpPacks,
+		...(customEntitlements.length ? { customEntitlements } : {}),
+		...(insertCustomerEntitlements.length
+			? { insertCustomerEntitlements }
+			: {}),
+		...(hasExpiry
+			? {}
+			: {
+					updateCustomerProduct: {
+						customerProduct,
+						updates: {
+							options: buildUpdatedOptions({
+								cusProduct: customerProduct,
+								feature,
+								topUpPacks,
+							}),
+						},
+					},
 				}),
-			},
-		},
 	};
 };

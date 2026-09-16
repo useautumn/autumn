@@ -16,34 +16,38 @@ Per-unit pricing charges customers based on the quantity of a resource they use 
 Create a `non-consumable` metered feature and add it to a plan with a per-unit price:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan } from "atmn";
 
 export const seats = feature({
-  id: 'seats',
-  name: 'Seats',
-  type: 'metered',
+  featureId: "seats",
+  name: "Seats",
+  type: "metered",
   consumable: false,
 });
 
 export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
   items: [
-    item({
-      featureId: seats.id,
+    {
+      featureId: seats.featureId,
       included: 5,
       price: {
         amount: 10,
-        interval: 'month',
-        billingMethod: 'usage_based',
+        interval: "month",
+        billingMethod: "usage_based",
       },
-    }),
+    },
   ],
 });
+
+export default atmn({ features: [seats], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 </Tab>
 <Tab title="Dashboard">

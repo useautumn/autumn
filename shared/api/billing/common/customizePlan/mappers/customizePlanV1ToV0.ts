@@ -23,7 +23,6 @@ const patchStyleCustomizeToItems = ({
 }): CustomizePlanV0 => {
 	const basePlan = productV2ToApiPlanV1({
 		features: ctx.features,
-		includeProration: true,
 		product: mapToProductV2({ features: ctx.features, product: fullProduct }),
 	});
 	const applied = applyCustomizeToPlan({

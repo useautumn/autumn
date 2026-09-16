@@ -39,11 +39,6 @@ export const ApiFeatureV1Schema = z.object({
 			"For classic credit systems: maps metered features to flat or graduated credit costs.",
 	}),
 
-	invoice_credit: z.boolean().optional().meta({
-		description:
-			"Whether usage of this classic credit system should be itemized as invoice credits.",
-	}),
-
 	model_markups: ModelMarkupsSchema.optional().meta({
 		description: "Per-model markup overrides for AI credit systems.",
 	}),

@@ -6,9 +6,10 @@ import type {
 import { ErrCode } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getEffectiveBinSize } from "../utils/intervals";
+import { useAnalyticsFilterState } from "./useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useSelectedEventNames } from "./useSelectedEventNames";
 
@@ -29,14 +30,22 @@ export const useAnalyticsData = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const [searchParams] = useSearchParams();
-	const customerId = searchParams.get("customer_id");
-	const entityId = searchParams.get("entity_id");
-	const groupBy = searchParams.get("group_by");
-	const maxGroups = Number(searchParams.get("max_groups")) || 10;
+	const { filterStates } = useAnalyticsFilterState();
+	const {
+		customer_id: customerId,
+		entity_id: entityId,
+		group_by: groupBy,
+		max_groups: maxGroups,
+	} = filterStates;
 
 	const { queryStates } = useAnalyticsQueryState();
-	const { interval, bin_size: binSize, start, end } = queryStates;
+	const { interval, start, end } = queryStates;
+	// Resolve the bin here rather than letting the server default it: a range's
+	// default granularity is a UI decision, and the two must not drift.
+	const binSize = getEffectiveBinSize({
+		interval,
+		binSize: queryStates.bin_size,
+	});
 	// The deduction rollup is keyed by customer, so it cannot run org-wide.
 	const aggregateOn =
 		queryStates.aggregate_on === "deducted" && customerId
@@ -77,7 +86,7 @@ export const useAnalyticsData = ({
 		custom_range: customRange,
 		event_names: selectedEventNames,
 		group_by: formattedGroupBy,
-		bin_size: binSize || undefined,
+		bin_size: binSize,
 		timezone: effectiveTimezone,
 		max_groups: formattedGroupBy ? maxGroups : undefined,
 		aggregate_on: aggregateOn,
@@ -92,7 +101,7 @@ export const useAnalyticsData = ({
 			customerId,
 			entityId,
 			interval,
-			binSize || "day",
+			binSize,
 			String(start ?? ""),
 			String(end ?? ""),
 			...selectedEventNames.sort(),
@@ -144,12 +153,16 @@ export const useRawAnalyticsData = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const [searchParams] = useSearchParams();
-	const customerId = searchParams.get("customer_id");
-	const entityId = searchParams.get("entity_id");
+	const { filterStates } = useAnalyticsFilterState();
+	const { customer_id: customerId, entity_id: entityId } = filterStates;
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;
+	// The table must cover the chart's window, so it resolves the bin the same way.
+	const binSize = getEffectiveBinSize({
+		interval,
+		binSize: queryStates.bin_size,
+	});
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
@@ -169,6 +182,7 @@ export const useRawAnalyticsData = () => {
 		customer_id: customerId || undefined,
 		entity_id: entityId || undefined,
 		interval: customRange ? undefined : interval,
+		bin_size: binSize,
 		custom_range: customRange,
 		event_names: tableEventNames,
 	};
@@ -180,6 +194,7 @@ export const useRawAnalyticsData = () => {
 			customerId,
 			entityId,
 			interval,
+			binSize,
 			String(start ?? ""),
 			String(end ?? ""),
 			...(tableEventNames ?? []).sort(),

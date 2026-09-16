@@ -1,13 +1,9 @@
 import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { computeUpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateCatalogPlan";
 import { assertRewardScope } from "@/internal/catalogV2/actions/updateCatalog/errors/assertRewardScope";
 import { handleUpdateCatalogErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateCatalogErrors";
-import { setupUpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupUpdateCatalogContext";
-import {
-	type CatalogPhases,
-	timeCatalogPhase,
-} from "@/internal/catalogV2/actions/updateCatalog/setup/timeCatalogPhase";
+import { planCatalogUpdate } from "@/internal/catalogV2/actions/updateCatalog/planCatalogUpdate";
+import type { CatalogPhases } from "@/internal/catalogV2/actions/updateCatalog/setup/timeCatalogPhase";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import {
@@ -57,25 +53,12 @@ export async function updateCatalogV2({
 
 	assertRewardScope({ ctx, params, preview });
 
-	// 1. Setup — all DB reads; preview adds previewContext presentation facts
-	const catalogContext = await setupUpdateCatalogContext({
+	// 1–2. Setup + compute
+	const { catalogContext, updateCatalogPlan } = await planCatalogUpdate({
 		ctx,
 		params,
 		preview,
 		phases,
-	});
-
-	// 2. Compute
-	const updateCatalogPlan = await timeCatalogPhase({
-		ctx,
-		phases,
-		phase: "compute",
-		run: async () =>
-			computeUpdateCatalogPlan({
-				ctx,
-				catalogContext,
-				params,
-			}),
 	});
 
 	// 3. Errors

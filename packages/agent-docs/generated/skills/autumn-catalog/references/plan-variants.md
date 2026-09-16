@@ -13,81 +13,74 @@ Variants are most useful for:
 
 ## Setting up
 
-<Tabs>
-<Tab title="CLI">
-
-Define variants from a base plan in `autumn.config.ts`:
+Each variant is its own `variant({...})` fixture, listed in the base plan's `variants`:
 
 ```ts autumn.config.ts
-import { feature, item, plan } from 'atmn';
+import { atmn, feature, plan, variant } from "atmn";
 
 export const emails = feature({
-  id: 'emails',
-  name: 'Emails',
-  type: 'metered',
+  featureId: "emails",
+  name: "Emails",
+  type: "metered",
   consumable: true,
 });
 
-export const pro = plan({
-  id: 'pro',
-  name: 'Pro',
-  price: { amount: 20, interval: 'month' },
-  items: [
-    item({
-      featureId: emails.id,
-      included: 10000,
-      price: {
-        amount: 1,
-        billingUnits: 1000,
-        billingMethod: 'usage_based',
-        interval: 'month',
-      },
-    }),
-  ],
-});
-
-export const proAnnual = pro.variant({
-  id: 'pro_annual',
-  name: 'Pro Annual',
+export const proAnnual = variant({
+  variantPlanId: "pro_annual",
+  versionSlug: "v1",
+  name: "Pro Annual",
   customize: {
-    price: { amount: 200, interval: 'year' },
+    price: { amount: 200, interval: "year" },
   },
 });
 
-export const pro100k = pro.variant({
-  id: 'pro_100k',
-  name: 'Pro 100k',
+export const pro100k = variant({
+  variantPlanId: "pro_100k",
+  versionSlug: "v1",
+  name: "Pro 100k",
   customize: {
-    price: { amount: 35, interval: 'month' },
-    removeItems: [{ featureId: emails.id, billingMethod: 'usage_based' }],
+    price: { amount: 35, interval: "month" },
+    removeItems: [{ featureId: emails.featureId, billingMethod: "usage_based" }],
     addItems: [
-      item({
-        featureId: emails.id,
+      {
+        featureId: emails.featureId,
         included: 100000,
         price: {
           amount: 0.9,
           billingUnits: 1000,
-          billingMethod: 'usage_based',
-          interval: 'month',
+          billingMethod: "usage_based",
+          interval: "month",
         },
-      }),
+      },
     ],
   },
 });
+
+export const pro = plan({
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [
+    {
+      featureId: emails.featureId,
+      included: 10000,
+      price: {
+        amount: 1,
+        billingUnits: 1000,
+        billingMethod: "usage_based",
+        interval: "month",
+      },
+    },
+  ],
+  variants: [proAnnual, pro100k],
+});
+
+export default atmn({ features: [emails], plans: [pro] });
 ```
 
-Push changes with `atmn push`.
-
-</Tab>
-<Tab title="Dashboard">
-
-1. Create or open the base plan
-2. Create a variant from that plan
-3. Change only the fields that differ, such as price or specific feature items
-4. Save the variant
-
-</Tab>
-</Tabs>
+Preview with `atmn push`, then apply with `atmn push --yes`.
 
 ## How variants work
 

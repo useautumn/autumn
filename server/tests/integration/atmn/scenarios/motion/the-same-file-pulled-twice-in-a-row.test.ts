@@ -7,12 +7,12 @@
  */
 
 import { expect, test } from "bun:test";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	CLI_PACKAGE_DIR,
 	initAtmnScenario,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	"the same file pulled twice in a row → the first pull applies a create, an update, and a delete; the second writes nothing",
@@ -35,8 +35,8 @@ export default atmn({ plans: [keep, gone] });
 			files: {
 				"plans.ts": `import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
 
-export const keep = plan({ planId: "${keepId}", name: "Keep", price: { amount: 10, interval: "month" } });
-export const gone = plan({ planId: "${goneId}", name: "Gone", price: { amount: 20, interval: "month" } });
+export const keep = plan({ active: true, planId: "${keepId}", name: "Keep", versionSlug: "v1", price: { amount: 10, interval: "month" } });
+export const gone = plan({ active: true, planId: "${goneId}", name: "Gone", versionSlug: "v1", price: { amount: 20, interval: "month" } });
 `,
 			},
 		});

@@ -233,7 +233,8 @@
 							"api-reference/customers/updateCustomer",
 							"api-reference/customers/deleteCustomer",
 							"api-reference/invoices/insertInvoices",
-							"api-reference/invoices/listInvoices"
+							"api-reference/invoices/listInvoices",
+							"api-reference/invoices/payInvoice"
 						]
 					},
 					{
@@ -315,6 +316,12 @@
 									"api-reference/webhooks/billingAutoTopupFailed",
 									"api-reference/webhooks/billingAutoTopupSucceeded",
 									"api-reference/webhooks/billingUpdated"
+								]
+							},
+							{
+								"group": "Invoice",
+								"pages": [
+									"api-reference/webhooks/invoiceFinalized"
 								]
 							},
 							{

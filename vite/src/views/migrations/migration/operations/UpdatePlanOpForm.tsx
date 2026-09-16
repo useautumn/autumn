@@ -38,6 +38,7 @@ import {
 	productItemToMigrationItem,
 } from "../shared/migrationItemUtils";
 import { PlanVersionPicker } from "../shared/PlanVersionPicker";
+import { VersionOnlyWarnings } from "../shared/VersionOnlyWarnings";
 import { ItemSummaryRow } from "./ItemSummaryRow";
 import {
 	MigrationOperationSheet,
@@ -235,6 +236,8 @@ export function UpdatePlanOpForm({
 					<RemoveButton onClick={() => update({ version: undefined })} />
 				</div>
 			)}
+
+			<VersionOnlyWarnings operations={{ customer: [value] }} />
 
 			{customize?.price !== undefined && (
 				<div className="flex items-center gap-2 group/row">

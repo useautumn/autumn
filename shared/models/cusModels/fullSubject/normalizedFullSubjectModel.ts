@@ -3,6 +3,7 @@ import {
 	type AggregatedFeatureBalance,
 	AggregatedFeatureBalanceSchema,
 } from "../../cusProductModels/cusEntModels/aggregatedCusEnt.js";
+import type { CustomerEntitlementMetadata } from "../../cusProductModels/cusEntModels/cusEntModels.js";
 import {
 	type EntityBalance,
 	FullCustomerEntitlementSchema,
@@ -78,6 +79,7 @@ export type SubjectBalance = {
 	unlimited: boolean | null;
 	balance: number;
 	usage_attribution?: UsageAttribution;
+	invoice_credit?: boolean;
 	adjustment: number | null;
 	additional_balance: number;
 	usage_allowed: boolean | null;
@@ -90,6 +92,7 @@ export type SubjectBalance = {
 	next_reset_at: number | null;
 	expires_at: number | null;
 	external_id: string | null;
+	metadata?: CustomerEntitlementMetadata | null;
 	entities: Record<string, EntityBalance> | null;
 	cache_version: number | null;
 	created_at: number;

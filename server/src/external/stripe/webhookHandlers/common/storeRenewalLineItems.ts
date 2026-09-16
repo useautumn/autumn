@@ -24,6 +24,7 @@ export async function storeRenewalLineItems({
 	eventContext,
 	periodEndMs,
 	reconcileOnly,
+	emitFinalizedWebhook,
 }: {
 	ctx: StripeWebhookContext;
 	autumnInvoice: Invoice;
@@ -32,6 +33,7 @@ export async function storeRenewalLineItems({
 	eventContext?: BaseWebhookEventContext;
 	periodEndMs?: number;
 	reconcileOnly?: boolean;
+	emitFinalizedWebhook?: boolean;
 }): Promise<void> {
 	const { org, env, logger } = ctx;
 
@@ -65,6 +67,7 @@ export async function storeRenewalLineItems({
 		autumnInvoiceId: autumnInvoice.id,
 		billingLineItems,
 		reconcileOnly,
+		emitFinalizedWebhook,
 	});
 
 	logger.info(

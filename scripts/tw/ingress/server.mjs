@@ -23,8 +23,8 @@
  *   - POST /ingress/map          → token-authed; merge `{ accountId, workerUrl }`
  *                                  and/or `{ map: { [acct]: url } }`; → `{ size }`.
  *   - GET  /ingress/map          → the current map as JSON (debug).
- *   - POST /ingress/connect[/:env] → ack 200 immediately, then async forward the
- *                                  raw body to the owning worker's connect route.
+ *   - POST /ingress/connect[/:env] → forward to the owning worker and preserve
+ *                                  its acknowledgement status.
  *   - 404 otherwise.
  */
 
@@ -37,6 +37,8 @@ const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
+const HTTP_INTERNAL_SERVER_ERROR = 500;
+const HTTP_BAD_GATEWAY = 502;
 
 const port = Number(process.env.INGRESS_PORT) || DEFAULT_PORT;
 const token = process.env.INGRESS_TOKEN ?? "";
@@ -77,24 +79,20 @@ const sendText = (res, status, text) => {
 	res.end(text);
 };
 
-/**
- * Forward an already-acked connect event to the owning worker. Never throws —
- * Stripe has already received its 200, so a forward failure is logged and dropped
- * rather than propagated.
- */
-const forwardConnectEvent = async (rawBody, env) => {
-	let accountId;
+// The worker owns early-vs-sync acknowledgement; the relay must not override it.
+const forwardConnectEvent = async ({ rawBody, env }) => {
+	let event;
 	try {
-		const event = JSON.parse(rawBody);
-		accountId = event?.account;
+		event = JSON.parse(rawBody);
 	} catch (error) {
 		logWarn(`dropping connect event with unparseable body: ${error.message}`);
-		return;
+		return HTTP_BAD_REQUEST;
 	}
 
+	const accountId = event?.account;
 	if (!accountId) {
 		logWarn("dropping connect event with no event.account");
-		return;
+		return HTTP_BAD_REQUEST;
 	}
 
 	const workerUrl = routes.get(accountId);
@@ -102,25 +100,33 @@ const forwardConnectEvent = async (rawBody, env) => {
 		// Silently drop: after teardown, Stripe retries webhooks for deleted
 		// sub-accounts for a while — there's no worker to route them to and it's
 		// expected, so logging each one just spams the run output.
-		return;
+		return HTTP_OK;
 	}
 
 	const target = `${workerUrl}/webhooks/connect/${env}`;
+	const startedAt = Date.now();
+	const description = `event=${event.id} type=${event.type} account=${accountId}`;
 	try {
 		const response = await fetch(target, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: rawBody,
+			redirect: "manual",
 		});
+		// Drain the response so concurrent forwards can reuse their connections.
+		await response.text();
+		const outcome = `${description} status=${response.status} elapsedMs=${Date.now() - startedAt}`;
 		if (!response.ok) {
-			logWarn(
-				`forward to ${target} (account ${accountId}) returned ${response.status}`,
-			);
+			logWarn(`forward failed: ${outcome}`);
+		} else {
+			logInfo(`forward acknowledged: ${outcome}`);
 		}
+		return response.status;
 	} catch (error) {
 		logError(
-			`forward to ${target} (account ${accountId}) failed: ${error.message}`,
+			`forward failed: ${description} elapsedMs=${Date.now() - startedAt} error=${error.message}`,
 		);
+		return HTTP_BAD_GATEWAY;
 	}
 };
 
@@ -165,20 +171,13 @@ const handleMapRead = (res) => {
 	});
 };
 
-/**
- * POST /ingress/connect[/:env] — ack Stripe immediately (it needs a fast 200),
- * then forward to the owning worker async. The optional `:env` path segment wins
- * over `TW_ENV`.
- */
 const handleConnect = async (req, res, env) => {
 	const rawBody = await readBody(req);
-	// Ack Stripe FIRST — it must always get a fast 200, even if we have no route.
-	sendText(res, HTTP_OK, "ok");
-	// Forward async; never throws.
-	void forwardConnectEvent(rawBody, env);
+	const status = await forwardConnectEvent({ rawBody, env });
+	sendText(res, status, status < 300 ? "ok" : "webhook delivery failed");
 };
 
-const server = createServer((req, res) => {
+export const server = createServer((req, res) => {
 	void (async () => {
 		try {
 			const url = new URL(req.url ?? "/", `http://localhost:${port}`);
@@ -213,12 +212,14 @@ const server = createServer((req, res) => {
 		} catch (error) {
 			logError(`request handler error: ${error.message}`);
 			if (!res.headersSent) {
-				sendText(res, HTTP_OK, "ok");
+				sendText(res, HTTP_INTERNAL_SERVER_ERROR, "ingress request failed");
 			}
 		}
 	})();
 });
 
-server.listen(port, () => {
-	logInfo(`listening on :${port} (env=${defaultEnv})`);
-});
+if (import.meta.main) {
+	server.listen(port, () => {
+		logInfo(`listening on :${port} (env=${defaultEnv})`);
+	});
+}

@@ -1,7 +1,7 @@
 import { type Feature, isAnyCreditSystem } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import {
 	SheetFooter,
@@ -10,14 +10,13 @@ import {
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { getBackendErr } from "@/utils/genUtils";
-import { FeatureStripeProductConfirmDialog } from "../../plan/components/new-feature/FeatureStripeProductConfirmDialog";
 import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
 import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
+import { useSheetBrowserBack } from "../hooks/useSheetBrowserBack";
 import { featureToCatalogFeatureParams } from "../utils/buildFeatureMutationParams";
-import { featureStripeProductChanged } from "../utils/featureStripeProductChanged";
 
 interface UpdateFeatureSheetProps {
 	open: boolean;
@@ -37,7 +36,7 @@ function UpdateFeatureSheet({
 	const setBaseFeature = useFeatureStore((s) => s.setBaseFeature);
 
 	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
-	const [confirmOpen, setConfirmOpen] = useState(false);
+	useSheetBrowserBack({ enabled: open });
 
 	// Initialize feature store when selectedFeature changes
 	useEffect(() => {
@@ -57,7 +56,6 @@ function UpdateFeatureSheet({
 						feature,
 						featureId: selectedFeature.id,
 						newFeatureId: feature.id,
-						originalStripeProductId: selectedFeature.stripe_product_id,
 					}),
 				],
 			});
@@ -69,7 +67,6 @@ function UpdateFeatureSheet({
 				onSuccess(selectedFeature.id, feature.id);
 			}
 
-			setConfirmOpen(false);
 			setOpen(false);
 		} catch (error: unknown) {
 			console.log(error);
@@ -87,16 +84,6 @@ function UpdateFeatureSheet({
 				toast.error(validationError);
 				return;
 			}
-		}
-
-		if (
-			featureStripeProductChanged({
-				from: selectedFeature.stripe_product_id,
-				to: feature.stripe_product_id,
-			})
-		) {
-			setConfirmOpen(true);
-			return;
 		}
 
 		await persistFeature();
@@ -139,13 +126,6 @@ function UpdateFeatureSheet({
 						Update feature
 					</ShortcutButton>
 				</SheetFooter>
-				<FeatureStripeProductConfirmDialog
-					confirmLabel="Update feature"
-					isSaving={isPending}
-					onConfirm={() => void persistFeature()}
-					onOpenChange={setConfirmOpen}
-					open={confirmOpen}
-				/>
 			</SheetContent>
 		</Sheet>
 	);

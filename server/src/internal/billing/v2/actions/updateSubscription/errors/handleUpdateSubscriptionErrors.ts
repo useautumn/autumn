@@ -8,19 +8,20 @@ import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/upda
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
-import { computeFieldUpdates } from "../compute/computeFieldUpdates";
-import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
-import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
-import { handleManualTopUpErrors } from "./handleManualTopUpErrors";
+import { computeFieldUpdates } from "../compute/computeFieldUpdates.js";
+import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors.js";
+import { handleCustomPlanErrors } from "./handleCustomPlanErrors.js";
+import { handleManualTopUpErrors } from "./handleManualTopUpErrors.js";
 import {
 	checkTrialRemovalWithOneOffItems,
 	handleOneOffErrors,
-} from "./handleOneOffErrors";
-import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
-import { handleUncancelErrors } from "./handleUncancelErrors";
-import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors";
-import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors";
-import { handleUpdateSubscriptionLicenseErrors } from "./handleUpdateSubscriptionLicenseErrors";
+} from "./handleOneOffErrors.js";
+import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors.js";
+import { handleUncancelErrors } from "./handleUncancelErrors.js";
+import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors.js";
+import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors.js";
+import { handleUpdateSubscriptionCustomLineItemsErrors } from "./handleUpdateSubscriptionCustomLineItemsErrors.js";
+import { handleUpdateSubscriptionLicenseErrors } from "./handleUpdateSubscriptionLicenseErrors.js";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -70,6 +71,11 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 4b. Manual top-up strict-shape gate (must run before one-off check so it
 	// owns the "Update too complex" message for ManualTopUp requests).
 	handleManualTopUpErrors({ billingContext, params });
+	handleUpdateSubscriptionCustomLineItemsErrors({
+		billingContext,
+		billingPlan,
+		params,
+	});
 
 	// 5. One-off errors
 	handleOneOffErrors({ ctx, billingContext, autumnBillingPlan, params });

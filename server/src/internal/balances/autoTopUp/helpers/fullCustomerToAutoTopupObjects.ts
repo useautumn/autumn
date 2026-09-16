@@ -7,9 +7,8 @@ import {
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	fullCustomerToPlanProducts,
-	isOneOffPrice,
-	isPrepaidPrice,
-	isVolumeBasedCusEnt,
+	isOneOffCustomerEntitlement,
+	isPrepaidCustomerEntitlement,
 	resolveBillingControlWithProduct,
 } from "@autumn/shared";
 
@@ -23,15 +22,14 @@ const getThreshold = (cusEnt: FullCusEntWithFullCusProduct) =>
 const isThresholdEntitlement = (cusEnt: FullCusEntWithFullCusProduct) =>
 	getThreshold(cusEnt) !== undefined;
 
-const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
-	const customerPrice = cusEntToCusPrice({ cusEnt });
-	return Boolean(
-		customerPrice &&
-			isOneOffPrice(customerPrice.price) &&
-			isPrepaidPrice(customerPrice.price) &&
-			!isVolumeBasedCusEnt(cusEnt),
-	);
-};
+/** Expiring grants are loose and carry no price, so they never match — but
+ * the pin makes the intent explicit: the charge source is the plan's own row. */
+const isChargeSource = (cusEnt: FullCusEntWithFullCusProduct) =>
+	cusEnt.customer_product_id != null && cusEnt.expires_at == null;
+
+/** Flat or tiered — the top-up quantity is priced through the item's tiers. */
+const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) =>
+	isOneOffCustomerEntitlement(cusEnt) && isPrepaidCustomerEntitlement(cusEnt);
 
 /** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
 export const fullCustomerToAutoTopupObjects = ({
@@ -91,13 +89,14 @@ export const fullCustomerToAutoTopupObjects = ({
 		customerEntitlement = cusEnts.find(
 			(ce) =>
 				ce.customer_product?.internal_product_id === sourceProductInternalId &&
-				isOneOffPrepaid(ce),
+				isOneOffPrepaid(ce) &&
+				isChargeSource(ce),
 		);
 	} else {
 		// Customer-level config has no source plan, so charge the MOST RECENTLY
 		// attached plan's one-off price.
 		customerEntitlement = cusEnts
-			.filter(isOneOffPrepaid)
+			.filter((ce) => isOneOffPrepaid(ce) && isChargeSource(ce))
 			.sort(
 				(left, right) =>
 					(right.customer_product?.created_at ?? 0) -

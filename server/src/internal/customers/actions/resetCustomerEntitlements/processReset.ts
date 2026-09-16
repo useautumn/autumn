@@ -48,12 +48,9 @@ export const processReset = async ({
 	const ent = cusEnt.entitlement;
 	const cusProduct = cusEnt.customer_product;
 
-	// Unlimited / lifetime cusEnts should never reach here
+	// Lifetime cusEnts should never reach here
 	// (getCusEntsNeedingReset filters them out), but guard defensively
-	if (
-		isUnlimitedEntitlement({ entitlement: ent }) ||
-		isLifetimeEntitlement({ entitlement: ent })
-	) {
+	if (isLifetimeEntitlement({ entitlement: ent })) {
 		return null;
 	}
 
@@ -107,7 +104,10 @@ export const processReset = async ({
 	});
 
 	// Compute reset balance update
-	const persistFreeOverage = orgPersistFreeOverage({ org: ctx.org });
+	// An unlimited row's negative balance is a usage counter, not owed overage.
+	const persistFreeOverage =
+		orgPersistFreeOverage({ org: ctx.org }) &&
+		!isUnlimitedEntitlement({ entitlement: ent });
 	const resetBalanceUpdate = getResetBalancesUpdate({
 		cusEnt,
 		allowance: resetBalance,

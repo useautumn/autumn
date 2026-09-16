@@ -1,7 +1,5 @@
 ## Setup and payments
 
-import CreatePlans from "/snippets/create-plans.mdx";
-
 In this example we'll create the pricing for a premium AI chatbot. We're going to have:
 
 - A <Badge color="green">Free</Badge> plan that gives users 5 chat messages per month for free
@@ -11,7 +9,104 @@ In this example we'll create the pricing for a premium AI chatbot. We're going t
 <Step title="Create your pricing plans">
 Create a plan for each pricing tier that your app offers. In our example we'll create a "Free" and "Pro" plan, and assign them features.
 
-<CreatePlans />
+Browse our [Examples](/examples) for guides on setting up credit systems, top ups and other common pricing models.
+
+Run the following command in your root directory:
+
+<CodeGroup>
+```bash bun
+bunx atmn init
+```
+```bash npm
+npx atmn init
+```
+```bash pnpm
+pnpm dlx atmn init
+```
+</CodeGroup>
+
+This will prompt you to login or create an account, and create an `autumn.config.ts` file. Paste in the code below, or view our [config schema](/cli/config) to build your own.
+
+```typescript autumn.config.ts [expandable]
+import { atmn, feature, plan } from "atmn";
+
+// Features
+export const messages = feature({
+  featureId: "messages",
+  name: "Messages",
+  type: "metered",
+  consumable: true,
+});
+
+// Plans
+export const free = plan({
+  planId: "free",
+  versionSlug: "v1",
+  active: true,
+  name: "Free",
+  autoEnable: true,
+  items: [
+    // 5 messages per month
+    {
+      featureId: messages.featureId,
+      included: 5,
+      reset: { interval: "month" },
+    },
+  ],
+});
+
+export const pro = plan({
+  planId: "pro",
+  versionSlug: "v1",
+  active: true,
+  name: "Pro",
+  price: {
+    amount: 20,
+    interval: "month",
+  },
+  items: [
+    // 100 messages per month
+    {
+      featureId: messages.featureId,
+      included: 100,
+      reset: { interval: "month" },
+    },
+  ],
+});
+
+export default atmn({ features: [messages], plans: [free, pro] });
+```
+
+Then, preview your changes against Autumn's sandbox environment.
+
+<CodeGroup>
+```bash bun
+bunx atmn push
+```
+```bash npm
+npx atmn push
+```
+```bash pnpm
+pnpm dlx atmn push
+```
+</CodeGroup>
+
+Once the preview looks right, apply it:
+
+<CodeGroup>
+```bash bun
+bunx atmn push --yes
+```
+```bash npm
+npx atmn push --yes
+```
+```bash pnpm
+pnpm dlx atmn push --yes
+```
+</CodeGroup>
+
+  If you already have products created in the dashboard, run `atmn pull` to
+  pull them into your local config.
 
 </Step>
 

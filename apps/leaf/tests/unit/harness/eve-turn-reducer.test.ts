@@ -83,6 +83,59 @@ describe("Eve turn reducer", () => {
 		expect(terminal.outcome).toMatchObject({ kind: "answered", text: "Hello" });
 	});
 
+	test("treats an empty-delivery completion as a declined reply", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const appended = reduceEveTurnEvent({
+			createReasoningId: () => "reasoning_1",
+			event: {
+				messageDelta: "<eve-empty-delivery/>",
+				type: "message.appended",
+			},
+			progress: started.progress,
+		});
+		expect(appended.effects).toEqual([
+			{ id: "reasoning_1", kind: "reasoning", text: "" },
+		]);
+
+		const completed = reduceEveTurnEvent({
+			event: { finishReason: "stop", message: null, type: "message.completed" },
+			progress: appended.progress,
+		});
+		expect(completed.progress).toMatchObject({
+			declinedReply: true,
+			finalText: "",
+		});
+
+		const terminal = reduceEveTurnEvent({
+			event: { type: "session.completed" },
+			progress: completed.progress,
+		});
+		expect(terminal.outcome).toEqual({ declined: true, kind: "silent" });
+	});
+
+	test("treats the literal empty-delivery marker as a declined reply", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const completed = reduceEveTurnEvent({
+			event: {
+				finishReason: "stop",
+				message: "<eve-empty-delivery/>",
+				type: "message.completed",
+			},
+			progress: started.progress,
+		});
+		const terminal = reduceEveTurnEvent({
+			event: { type: "session.completed" },
+			progress: completed.progress,
+		});
+		expect(terminal.outcome).toEqual({ declined: true, kind: "silent" });
+	});
+
 	test("suspends a gated write without mutating prior tool state", () => {
 		const request = { customer_id: "cus_1", plan_id: "pro" };
 		const progress = {
@@ -268,6 +321,51 @@ describe("a batch parked after a preview turn", () => {
 				toolName: "autumn__updateCustomer",
 			},
 			kind: "suspended",
+		});
+	});
+});
+
+describe("a write the agent process refused", () => {
+	test("is never recorded, so the turn ends without a card", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const requested = reduceEveTurnEvent({
+			event: {
+				actions: [
+					{
+						callId: "call_w",
+						input: { request: { customer_id: "cus_1", plan_id: "pro" } },
+						toolName: "autumn__attach",
+					},
+				],
+				type: "actions.requested",
+			},
+			progress: started.progress,
+		});
+		const refused = reduceEveTurnEvent({
+			event: {
+				result: {
+					callId: "call_w",
+					output:
+						"Error: `attach` was called with a request that was never run through `previewAttach`",
+					toolName: "autumn__attach",
+				},
+				status: "failed",
+				type: "action.result",
+			},
+			progress: requested.progress,
+		});
+		expect(refused.progress.recordedWrites).toEqual([]);
+
+		const terminal = reduceEveTurnEvent({
+			event: { type: "session.completed" },
+			progress: { ...refused.progress, finalText: "Let me re-preview." },
+		});
+		expect(terminal.outcome).toEqual({
+			kind: "answered",
+			text: "Let me re-preview.",
 		});
 	});
 });

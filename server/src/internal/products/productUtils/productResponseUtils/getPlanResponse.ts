@@ -154,14 +154,12 @@ export async function getPlanResponse({
 	});
 
 	// 6. Convert items to plan features
-	let planItems = productItemsToPlanItemsV1({
+	const planItems = productItemsToPlanItemsV1({
 		items: featureItems,
 		features,
 		expand,
 		currency,
 	});
-
-	planItems = planItems.map((item) => ({ ...item, proration: undefined }));
 
 	// 7. Get free trial in V2 format
 	const freeTrial = getFreeTrialV2Response({

@@ -26,11 +26,7 @@
  * on prices flowing through customize.upsert_licenses.
  */
 import { expect, test } from "bun:test";
-import {
-	type ApiCustomerV3,
-	type ApiCustomerV5,
-	BillingInterval,
-} from "@autumn/shared";
+import { type ApiCustomerV5, BillingInterval } from "@autumn/shared";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import {
 	createStripeFixedPriceUnderProduct,
@@ -41,7 +37,6 @@ import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expect
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -66,7 +61,7 @@ test(`${chalk.yellowBright("sub.created license back-sync: 3x license price atta
 		group: "lic-backsync-licenses",
 	});
 
-	const { autumnV1, autumnV2_3 } = await initScenario({
+	const { autumnV2_3 } = await initScenario({
 		customerId,
 		ctx,
 		setup: [
@@ -101,11 +96,13 @@ test(`${chalk.yellowBright("sub.created license back-sync: 3x license price atta
 	});
 	expect(stripeSubscription.status).toBe("active");
 
-	await timeout(12_000);
-
 	// ── Contract: PARENT attached (not the license plan itself) ──────────
-	const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({ customer: customerV3, productId: parent.id });
+	await expectProductActive({
+		customerId,
+		autumn: autumnV2_3,
+		productId: parent.id,
+		settleTimeoutMs: 30_000,
+	});
 
 	// ── Contract: pool paid_quantity 3, granted = included + 3 ───────────
 	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
@@ -158,7 +155,7 @@ test(`${chalk.yellowBright("sub.created license back-sync: custom $120/yr licens
 		group: "lic-backsync-cstm-licenses",
 	});
 
-	const { autumnV1, autumnV2_3 } = await initScenario({
+	const { autumnV2_3 } = await initScenario({
 		customerId,
 		ctx,
 		setup: [
@@ -200,11 +197,13 @@ test(`${chalk.yellowBright("sub.created license back-sync: custom $120/yr licens
 	});
 	expect(stripeSubscription.status).toBe("active");
 
-	await timeout(12_000);
-
 	// ── Contract: PARENT attached (not the license plan itself) ──────────
-	const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({ customer: customerV3, productId: parent.id });
+	await expectProductActive({
+		customerId,
+		autumn: autumnV2_3,
+		productId: parent.id,
+		settleTimeoutMs: 30_000,
+	});
 
 	// ── Contract: pool paid_quantity 2, granted = included + 2 ───────────
 	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);

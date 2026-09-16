@@ -76,7 +76,7 @@ for (const interval of RESET_INTERVALS) {
 						.find((plan) => plan.id === "pro")
 						?.items.find((entry) => entry.featureId === "messages")?.reset;
 
-					const fixtureText = freshFiles.get("autumn.config.ts") ?? "";
+					const fixtureText = freshFiles.get("plans.ts") ?? "";
 
 					expect(reset?.interval).toBe(interval);
 

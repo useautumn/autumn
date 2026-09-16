@@ -1,3 +1,4 @@
+import { autumnFetch } from "../http/autumnFetch";
 import { getApiKeysEndpoint } from "./oauthConfig";
 import type { OrgApiKeys } from "./types/orgApiKeys";
 
@@ -13,7 +14,7 @@ type ApiKeysResponse = {
 export const createOrgApiKeys = async ({
 	accessToken,
 	backendUrl,
-	fetch = globalThis.fetch,
+	fetch = autumnFetch,
 }: {
 	accessToken: string;
 	backendUrl: string;

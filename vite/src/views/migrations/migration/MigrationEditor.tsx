@@ -20,7 +20,13 @@ import {
 
 const STEP_IDS = STEPS.map((s) => s.id);
 
-export function MigrationEditor({ migration }: { migration: Migration }) {
+export function MigrationEditor({
+	migration,
+	footerSlot,
+}: {
+	migration: Migration;
+	footerSlot: HTMLDivElement | null;
+}) {
 	const [step, setStep] = useQueryState<StepId>(
 		"step",
 		parseAsStringLiteral(STEP_IDS).withDefault("filter"),
@@ -35,7 +41,7 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 		(s) => s.values.noBillingChanges,
 	);
 	const customerCount = useCustomerCount(filter.customer ?? {});
-	const hasCustomers = customerCount !== null && customerCount > 0;
+	const hasCustomers = customerCount !== 0;
 	const { runs } = useMigrationRunsQuery({ migrationId: migration.id });
 	const hasRuns = runs.length > 0;
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
@@ -119,6 +125,7 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 					step={step}
 					onStepChange={guardedSetStep}
 					headerActions={headerActions}
+					footerSlot={footerSlot}
 				/>
 			)}
 		</div>

@@ -21,7 +21,7 @@ import { errorNotice, runStoppedByUserNotice } from "../../../ui/messages.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
 import { createRunProgress } from "../../../ui/runProgress.js";
 import { getSlackWorkspaceId } from "../context.js";
-import { slackMessageMentionsUser } from "../events.js";
+import { slackMentionedUserIds, slackMessageMentionsUser } from "../events.js";
 import { createEveSlackPresenter } from "../evePresenter.js";
 import {
 	fetchSlackAttachmentFallback,
@@ -34,6 +34,7 @@ import { runSlackAgentTurn } from "./runSlackAgentTurn.js";
 
 type DispatchSlackAgentMessageInput = {
 	attachments?: ReadonlyArray<Attachment>;
+	author?: { email?: string; name: string };
 	clientContext?: Readonly<Record<string, unknown>>;
 	channelId: string;
 	providerUserId: string;
@@ -50,6 +51,7 @@ type DispatchSlackAgentMessageInput = {
 
 const runAndReply = async ({
 	attachments,
+	author,
 	channelId,
 	clientContext,
 	providerUserId,
@@ -104,6 +106,19 @@ const runAndReply = async ({
 			});
 			return "close";
 		}
+		// A subscribed thread delivers every reply; the model is told who spoke
+		// and whom they addressed, and declines replies meant for someone else.
+		const mentionedUserIds = slackMentionedUserIds({ raw });
+		const botUserId = installation.bot_user_id ?? undefined;
+		// An installation without a stored bot id can't prove it was addressed;
+		// unknown reads as not mentioned, so delivery stays conditional.
+		const mentionsAgent = Boolean(
+			botUserId && mentionedUserIds.includes(botUserId),
+		);
+		const mentionsOthers = mentionedUserIds.some((id) => id !== botUserId);
+		const speaker = author
+			? { ...author, mentionsAgent, mentionsOthers }
+			: undefined;
 
 		const session = createLeafSessionContext({
 			channelId,
@@ -171,6 +186,7 @@ const runAndReply = async ({
 			providerUserId,
 			recentMessages,
 			run,
+			speaker,
 			text,
 			threadId,
 		});

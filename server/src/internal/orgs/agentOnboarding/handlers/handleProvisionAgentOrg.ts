@@ -29,7 +29,6 @@ export const handleProvisionAgentOrg = createRoute({
 			organization_slug: provisioned.organization.slug,
 			api_key: provisioned.apiKey,
 			claim_token: provisioned.claimToken,
-			claim_url: provisioned.claimUrl,
 			claim_expires_at: provisioned.claimExpiresAt.toISOString(),
 		});
 	},

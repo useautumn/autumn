@@ -137,6 +137,14 @@ const response = await autumn.billing.update({
     <DynamicParamField body="items" type="object[]">
       Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
       <Expandable title="properties">
+        <DynamicParamField body="threshold_billing" type="object | null">
+          Bills this many feature units when outstanding overage reaches it.
+          <Expandable title="properties">
+            <DynamicParamField body="threshold" type="number" required />
+
+          </Expandable>
+        </DynamicParamField>
+
         <DynamicParamField body="feature_id" type="string" required>
           The ID of the feature to configure.
         </DynamicParamField>
@@ -401,6 +409,14 @@ const response = await autumn.billing.update({
     <DynamicParamField body="add_items" type="object[]">
       Items to add to the plan.
       <Expandable title="properties">
+        <DynamicParamField body="threshold_billing" type="object | null">
+          Bills this many feature units when outstanding overage reaches it.
+          <Expandable title="properties">
+            <DynamicParamField body="threshold" type="number" required />
+
+          </Expandable>
+        </DynamicParamField>
+
         <DynamicParamField body="feature_id" type="string" required>
           The ID of the feature to configure.
         </DynamicParamField>
@@ -923,6 +939,14 @@ const response = await autumn.billing.update({
 
             <DynamicParamField body="add_items" type="object[]">
               <Expandable title="properties">
+                <DynamicParamField body="threshold_billing" type="object | null">
+                  Bills this many feature units when outstanding overage reaches it.
+                  <Expandable title="properties">
+                    <DynamicParamField body="threshold" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
                 <DynamicParamField body="feature_id" type="string" required>
                   The ID of the feature to configure.
                 </DynamicParamField>
@@ -1333,6 +1357,20 @@ const response = await autumn.billing.update({
 
     <DynamicParamField body="quantity" type="integer" required>
       Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="custom_line_items" type="object[]">
+  Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+  <Expandable title="properties">
+    <DynamicParamField body="amount" type="number" required>
+      Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+    </DynamicParamField>
+
+    <DynamicParamField body="description" type="string" required>
+      Description for the line item.
     </DynamicParamField>
 
   </Expandable>

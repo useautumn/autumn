@@ -15,6 +15,7 @@ import { countCustomers } from "../filters/customers/filterCustomers.js";
  * run's internal id, which would churn the key mid-run for no behavior change. */
 export type CustomerCountCacheScope = {
 	migrationId?: string;
+	source?: "filter" | "item_runs";
 	executionStatuses?: CustomerExecutionStatus[];
 	migrationRunId?: string;
 	migrationRunDryRun?: boolean;

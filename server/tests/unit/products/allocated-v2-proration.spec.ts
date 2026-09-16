@@ -31,6 +31,7 @@ import {
 	UsageModel,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { AllocatedBilling } from "@autumn/shared/api/products/components/allocatedBilling";
 import { BillingMethod } from "@autumn/shared/api/products/components/billingMethod";
 import { CreatePlanItemParamsV1Schema } from "@autumn/shared/api/products/items/crud/createPlanItemParamsV1";
 import { planItemV0ToProductItem } from "@autumn/shared/api/products/items/mappers/planItemV0ToProductItem";
@@ -276,7 +277,25 @@ describe("itemsAreSame allocated billing behavior comparison", () => {
 });
 
 describe("public plan item proration boundary", () => {
-	test("allocated usage-based responses omit proration", () => {
+	test("allocated arrear responses omit proration", () => {
+		const [planItem] = productItemsToPlanItemsV1({
+			items: [
+				seatsItem({
+					config: {
+						allocated_billing_behavior: AllocatedBillingBehavior.Arrear,
+						on_increase: OnIncrease.BillImmediately,
+						on_decrease: OnDecrease.None,
+					},
+				}),
+			],
+			features,
+		});
+
+		expect(planItem?.proration).toBeUndefined();
+		expect(planItem?.price?.allocated_billing).toBeUndefined();
+	});
+
+	test("legacy prorated allocated responses keep proration", () => {
 		const [planItem] = productItemsToPlanItemsV1({
 			items: [
 				seatsItem({
@@ -290,7 +309,13 @@ describe("public plan item proration boundary", () => {
 			features,
 		});
 
-		expect(planItem?.proration).toBeUndefined();
+		expect(planItem?.price?.allocated_billing).toBe(
+			AllocatedBilling.ProratedLegacy,
+		);
+		expect(planItem?.proration).toEqual({
+			on_increase: OnIncrease.BillImmediately,
+			on_decrease: OnDecrease.None,
+		});
 	});
 
 	test("public usage-based inputs reject proration", () => {
@@ -313,7 +338,7 @@ describe("public plan item proration boundary", () => {
 
 		expect(result.success).toBe(false);
 		expect(result.error?.issues[0]?.message).toBe(
-			"proration is only supported for prepaid features.",
+			"proration is only supported for prepaid or legacy allocated prices.",
 		);
 	});
 
@@ -422,8 +447,8 @@ const newProduct: Product = {
 	version: 2,
 	version_slug: "v2",
 	active: true,
-deleted_at: null,
-previous_version_slug: null,
+	deleted_at: null,
+	previous_version_slug: null,
 	group: "",
 	env: AppEnv.Sandbox,
 	internal_id: "prod_internal_v2",

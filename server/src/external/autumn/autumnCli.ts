@@ -33,6 +33,7 @@ import {
 	type CustomerBillingControlsParams,
 	type CustomerData,
 	CustomerExpand,
+	type CustomerListFilters,
 	type DeleteBalanceParamsV0,
 	EntityExpand,
 	ErrCode,
@@ -43,7 +44,9 @@ import {
 	type ListEntitiesParams,
 	type Migration,
 	type MigrationFilter,
+	type MigrationItemRun,
 	type MigrationRun,
+	type MigrationStatus,
 	type MultiUpdateParamsV0Input,
 	type Operations,
 	type OrgConfig,
@@ -71,6 +74,63 @@ import { defaultApiVersion } from "@tests/constants.js";
 import { timeout } from "@tests/utils/genUtils";
 import type { TinybirdMigrationItemEvent } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
 import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
+
+export type MigrationListItem = Migration & {
+	status: MigrationStatus;
+	blocked_by: string | null;
+	has_live_runs: boolean;
+	batch_eligible: boolean;
+};
+
+export type MigrationRunItemCounts = {
+	total: number;
+	running: number;
+	succeeded: number;
+	skipped: number;
+	failed: number;
+	completed: number;
+};
+
+export type MigrationRunsListResponse = {
+	list: (MigrationRun & { item_run_counts: MigrationRunItemCounts })[];
+	status: MigrationStatus;
+	blocked_by: string | null;
+};
+
+export type MigrationFilterPreviewParams = {
+	filter?: MigrationFilter["customer"];
+	search?: string;
+	customerFilters?: Pick<
+		CustomerListFilters,
+		"status" | "version" | "none" | "processor"
+	>;
+	cursor?: string;
+	pageSize?: number;
+	includeCount?: boolean;
+	countOnly?: boolean;
+	migrationId?: string;
+	source?: "filter" | "item_runs";
+	executionStatuses?: (
+		| "queued"
+		| "running"
+		| "succeeded"
+		| "skipped"
+		| "failed"
+		| "not_run"
+	)[];
+	migrationRunId?: string;
+	migrationRunDryRun?: boolean;
+};
+
+export type MigrationFilterPreviewResponse = {
+	count: number | null;
+	customers: (Record<string, unknown> & {
+		internal_id: string;
+		id: string | null;
+		migration_item_run: MigrationItemRun | null;
+	})[];
+	next_cursor: string | null;
+};
 
 /** Update-request billing controls: usage limits may be counter-only writes. */
 type WritableBillingControls<T extends { usage_limits?: unknown }> = Omit<
@@ -584,6 +644,7 @@ export class AutumnInt {
 			updates: {
 				name?: string;
 				email?: string;
+				stripe_id?: string | null;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
 				billing_controls?: WritableBillingControls<CustomerBillingControlsParams>;
@@ -1130,9 +1191,9 @@ export class AutumnInt {
 			const data = await this.post(`/migrations.create`, params);
 			return data as Migration;
 		},
-		list: async (): Promise<{ list: Migration[] }> => {
+		list: async (): Promise<{ list: MigrationListItem[] }> => {
 			const data = await this.post(`/migrations.list`, {});
-			return data as { list: Migration[] };
+			return data as { list: MigrationListItem[] };
 		},
 		update: async (params: {
 			id: string;
@@ -1218,11 +1279,17 @@ export class AutumnInt {
 				canceled: boolean;
 			};
 		},
+		filterPreview: async (
+			params: MigrationFilterPreviewParams,
+		): Promise<MigrationFilterPreviewResponse> => {
+			const data = await this.post(`/migrations.filter.preview`, params);
+			return data as MigrationFilterPreviewResponse;
+		},
 		listRuns: async (params: {
 			migrationId: string;
-		}): Promise<{ list: MigrationRun[] }> => {
+		}): Promise<MigrationRunsListResponse> => {
 			const data = await this.post(`/migrations.runs.list`, params);
-			return data as { list: MigrationRun[] };
+			return data as MigrationRunsListResponse;
 		},
 		listItemEvents: async (params: {
 			migrationId: string;

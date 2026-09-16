@@ -121,7 +121,7 @@ test.concurrent(
 					billing_method: BillingMethod.Prepaid,
 				},
 			},
-			errMessage: "Pooled unlimited items cannot include pricing",
+			errMessage: "Unlimited items cannot include pricing",
 		});
 	},
 );
@@ -137,31 +137,101 @@ test.concurrent(
 	},
 );
 
+const expectPlanCreated = async ({
+	planId,
+	item,
+}: {
+	planId: string;
+	item: NonNullable<CreatePlanParamsV2Input["items"]>[number];
+}) =>
+	autumnRpc.plans.create<unknown, CreatePlanParamsV2Input>({
+		plan_id: planId,
+		name: planId,
+		group: `group-${planId}`,
+		auto_enable: false,
+		items: [item],
+	});
+
 test.concurrent(
-	"pooled item validation: rejects invoice-credit features",
+	"pooled item validation: accepts a pooled included-only item on a flagged credit system",
 	async () => {
-		await expectPooledItemRejected({
+		await expectPlanCreated({
 			planId: `pooled-invoice-credit-${crypto.randomUUID()}`,
 			item: {
 				feature_id: TestFeature.InvoiceCredits,
 				included: 100,
 				pooled: true,
 			},
-			errMessage: "Invoice-credit features cannot use pooled plan items",
 		});
 	},
 );
 
 test.concurrent(
-	"invoice-credit item validation: rejects included-only plan items",
+	"invoice-credit item validation: accepts included-only plan items",
 	async () => {
-		await expectPooledItemRejected({
+		await expectPlanCreated({
 			planId: `included-only-invoice-credit-${crypto.randomUUID()}`,
 			item: {
 				feature_id: TestFeature.InvoiceCredits,
 				included: 100,
 			},
-			errMessage: "Invoice-credit features require usage-based pricing",
+		});
+	},
+);
+
+test.concurrent(
+	"invoice-credit item validation: accepts prepaid plan items at one currency unit per credit",
+	async () => {
+		await expectPlanCreated({
+			planId: `prepaid-invoice-credit-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.InvoiceCredits,
+				included: 0,
+				price: {
+					amount: 1,
+					billing_units: 1,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+		});
+	},
+);
+
+test.concurrent(
+	"invoice-credit item validation: accepts prepaid plan items that are not one currency unit per credit",
+	async () => {
+		await expectPlanCreated({
+			planId: `prepaid-invoice-credit-non-1to1-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.InvoiceCredits,
+				included: 0,
+				price: {
+					amount: 2,
+					billing_units: 1,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+		});
+	},
+);
+
+test.concurrent(
+	"unlimited item validation: rejects priced unlimited features",
+	async () => {
+		await expectPooledItemRejected({
+			planId: `priced-unlimited-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.Messages,
+				unlimited: true,
+				price: {
+					amount: 10,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+			errMessage: "Unlimited items cannot include pricing",
 		});
 	},
 );

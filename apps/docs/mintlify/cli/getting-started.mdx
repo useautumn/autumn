@@ -40,58 +40,48 @@ AUTUMN_SECRET_KEY=am_sk_test_...
 AUTUMN_PROD_SECRET_KEY=am_sk_live_...
 ```
 
+<Tip>
+No account yet? `bunx atmn login --keyless` creates a sandbox for you right away. You can link it to an account later with `bunx atmn login --claim <email>`.
+</Tip>
+
 <Check>
 You can verify your setup at any time with `bunx atmn env`, which shows your current organization and environment.
 </Check>
 
 ## Initialize a project
 
-Run `atmn init` in your project root to create an `autumn.config.ts` file:
+Run `atmn init` in your project root. It creates an `autumn` folder for your config:
 
 ```bash
 bunx atmn init
 ```
 
-You'll be prompted to choose a starter template:
+This creates `autumn/autumn.config.ts` along with `features.ts`, `plans.ts` and `rewards.ts` beside it, pulls in any plans you've already created in Autumn, and installs the Autumn skills for your coding agent. In a monorepo it asks where the folder should go, with `packages/autumn` as the default. If you haven't logged in yet, it prompts you to.
 
-| Template | Pricing model |
-|----------|--------------|
-| **T3 Chat** | Freemium with message limits and a credits add-on |
-| **Railway** | Credit-based infrastructure pricing with overage |
-| **Linear** | Per-seat pricing with team limits |
-| **OpenAI** | Credit system mapping multiple AI models |
-
-Pick whichever is closest to your use case, or start from scratch and build your own using the [config reference](/cli/config).
+Build your pricing using the [config reference](/cli/config).
 
 ## Push and pull
 
 Once you have an `autumn.config.ts`, sync it with Autumn:
 
 ```bash
-# Push local config to Autumn
+# Preview what would change
 bunx atmn push
+
+# Apply the changes
+bunx atmn push --yes
 
 # Pull remote config into your local file
 bunx atmn pull
 ```
 
-`push` reads your config file, compares it with what's in Autumn, and applies the changes. In interactive mode you'll see a summary of what will be created, updated, or deleted before confirming.
+`push` reads your config file, compares it with what's in Autumn, and shows a summary of what will be created, updated, or deleted. Run it again with `--yes` to apply the changes.
 
-`pull` fetches your plans and features from Autumn and writes them into your local `autumn.config.ts`. If the file already exists, it does a smart in-place update that preserves your local formatting and comments where possible.
+`pull` fetches your plans and features from Autumn and writes them into your local config. If the file already exists, it does a smart in-place update that preserves your local formatting and comments where possible.
 
 <Tip>
 Use `bunx atmn pull` to generate an `autumn.config.ts` from plans you've already created in the dashboard.
 </Tip>
-
-## Preview locally
-
-You can preview your plans without pushing anything:
-
-```bash
-bunx atmn preview
-```
-
-This renders a pricing table from your local config.
 
 ## Environments
 
@@ -99,14 +89,14 @@ By default, all commands target your **sandbox** environment. Add the `-p` flag 
 
 ```bash
 # Push to production
-bunx atmn push -p
+bunx atmn push -p --yes
 
 # Pull from production
 bunx atmn pull -p
 ```
 
 <Warning>
-Pushing to production will prompt for confirmation. Use `--yes` to skip the prompt automatically.
+`push -p` only previews the changes. Add `--yes` to apply them to production.
 </Warning>
 
 **Next: Configuration reference**
@@ -117,5 +107,5 @@ Learn how to define features, plans, and pricing in your `autumn.config.ts`.
   title="Configuration reference"
   href="/cli/config"
 >
-  Complete reference for features, plans, and plan features
+  Every builder and field available in autumn.config.ts
 </Card>

@@ -35,9 +35,7 @@ export const computeOneOffPurchaseRebalance = ({
 		const quantity = customerEntitlement.balance ?? 0;
 		if (quantity <= 0) return [];
 
-		validateInvoiceCreditBalanceMutation({
-			feature: customerEntitlement.entitlement.feature,
-		});
+		validateInvoiceCreditBalanceMutation({ customerEntitlement });
 
 		customerEntitlement.balance = 0;
 		return [

@@ -11,7 +11,6 @@ export const billingPlanToUpdateSubscriptionPreviewIntent = ({
 }) => {
 	switch (billingContext.intent) {
 		case UpdateSubscriptionIntent.UpdateQuantity:
-		case UpdateSubscriptionIntent.UpdateLicenseQuantity:
 		case UpdateSubscriptionIntent.ManualTopUp:
 			return UpdateSubscriptionPreviewIntent.UpdateQuantity;
 		case UpdateSubscriptionIntent.UpdatePlan:

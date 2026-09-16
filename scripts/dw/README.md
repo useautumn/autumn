@@ -31,6 +31,7 @@ bun dw              # provision (if first run) → start dev
 bun dw setup        # provision only (no dev server)
 bun dw run          # start dev server only (must already be provisioned)
 bun dw identify     # discover your URLs / ports / tmux session
+bun dw open         # open this worktree's local dashboard in the browser
 bun dw attach       # jump into tmux to watch logs interactively
 bun dw logs         # tail last 2000 lines without attaching
 bun dw reset        # nuke DB branch + containers → re-provision
@@ -102,6 +103,13 @@ DW_VITE_PORT=3200
 ```
 
 Machine-parseable `KEY=value` pairs are emitted after the blank line for `eval`-ing in shells.
+
+### `bun dw open`
+Opens this worktree's local dashboard in the default browser — `https://wtN.localhost` when the stack is provisioned, or `http://localhost:3000` on an unprovisioned canonical checkout.
+
+```sh
+bun dw open
+```
 
 ### `bun dw list`
 Shows all registered worktrees with ports and age.
@@ -196,6 +204,7 @@ Direct ports are useful for `curl` when you don't want HTTPS cert hassles.
 ### "I'm a fresh agent — where is my stack?"
 ```sh
 bun dw identify
+bun dw open
 ```
 
 ### "I want to query my own server"

@@ -75,6 +75,10 @@ export type PreviewMultiAttachBasePrice = {
     | undefined;
 };
 
+export type PreviewMultiAttachThresholdBilling = {
+  threshold: number;
+};
+
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
@@ -601,6 +605,10 @@ export type PreviewMultiAttachFeatureOverride = {
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
 export type PreviewMultiAttachPlanItem = {
+  /**
+   * Bills this many feature units when outstanding overage reaches it.
+   */
+  thresholdBilling?: PreviewMultiAttachThresholdBilling | null | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -1513,7 +1521,7 @@ export function previewMultiAttachAdditionalCurrencyToJSON(
 export type PreviewMultiAttachBasePrice$Outbound = {
   amount: number;
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
   additional_currencies?:
     | Array<PreviewMultiAttachAdditionalCurrency$Outbound>
     | undefined;
@@ -1527,7 +1535,7 @@ export const PreviewMultiAttachBasePrice$outboundSchema: z.ZodMiniType<
   z.object({
     amount: z.number(),
     interval: PreviewMultiAttachPriceInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(
         z.lazy(() => PreviewMultiAttachAdditionalCurrency$outboundSchema),
@@ -1553,6 +1561,29 @@ export function previewMultiAttachBasePriceToJSON(
 }
 
 /** @internal */
+export type PreviewMultiAttachThresholdBilling$Outbound = {
+  threshold: number;
+};
+
+/** @internal */
+export const PreviewMultiAttachThresholdBilling$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachThresholdBilling$Outbound,
+  PreviewMultiAttachThresholdBilling
+> = z.object({
+  threshold: z.number(),
+});
+
+export function previewMultiAttachThresholdBillingToJSON(
+  previewMultiAttachThresholdBilling: PreviewMultiAttachThresholdBilling,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachThresholdBilling$outboundSchema.parse(
+      previewMultiAttachThresholdBilling,
+    ),
+  );
+}
+
+/** @internal */
 export const PreviewMultiAttachResetInterval$outboundSchema: z.ZodMiniEnum<
   typeof PreviewMultiAttachResetInterval
 > = z.enum(PreviewMultiAttachResetInterval);
@@ -1560,7 +1591,7 @@ export const PreviewMultiAttachResetInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewMultiAttachReset$Outbound = {
   interval: string;
-  interval_count?: number | undefined;
+  interval_count: number;
 };
 
 /** @internal */
@@ -1570,7 +1601,7 @@ export const PreviewMultiAttachReset$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     interval: PreviewMultiAttachResetInterval$outboundSchema,
-    intervalCount: z.optional(z.number()),
+    intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2729,6 +2760,10 @@ export function previewMultiAttachFeatureOverrideToJSON(
 
 /** @internal */
 export type PreviewMultiAttachPlanItem$Outbound = {
+  threshold_billing?:
+    | PreviewMultiAttachThresholdBilling$Outbound
+    | null
+    | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
@@ -2746,6 +2781,11 @@ export const PreviewMultiAttachPlanItem$outboundSchema: z.ZodMiniType<
   PreviewMultiAttachPlanItem
 > = z.pipe(
   z.object({
+    thresholdBilling: z.optional(
+      z.nullable(
+        z.lazy(() => PreviewMultiAttachThresholdBilling$outboundSchema),
+      ),
+    ),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
@@ -2764,6 +2804,7 @@ export const PreviewMultiAttachPlanItem$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      thresholdBilling: "threshold_billing",
       featureId: "feature_id",
       featureOverride: "feature_override",
     });
@@ -2906,7 +2947,7 @@ export type PreviewMultiAttachFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
+  on_end: string;
 };
 
 /** @internal */
@@ -2921,7 +2962,7 @@ export const PreviewMultiAttachFreeTrialParams$outboundSchema: z.ZodMiniType<
       "month",
     ),
     cardRequired: z._default(z.boolean(), false),
-    onEnd: z.optional(PreviewMultiAttachOnEnd$outboundSchema),
+    onEnd: z._default(PreviewMultiAttachOnEnd$outboundSchema, "bill"),
   }),
   z.transform((v) => {
     return remap$(v, {

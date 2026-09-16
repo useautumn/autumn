@@ -1,24 +1,20 @@
 import {
 	type CreditSystemConfig,
 	ErrCode,
-	entToPrice,
 	type Feature,
 	FeatureAlreadyExistsError,
 	FeatureType,
 	type FeatureUpdateBlocker,
 	isAiCreditSystem,
 	isAnyCreditSystem,
-	isConsumablePrice,
 	type ModelMarkups,
 	notNullish,
-	toProductItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { workflows } from "@/queue/workflows.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { isEnablingInvoiceCreditFeature } from "../creditSystemUtils.js";
 import { FeatureService } from "../FeatureService.js";
 import {
 	validateCreditSystem,
@@ -30,11 +26,6 @@ import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUs
 import { handleFeatureIdChanged } from "../utils/updateFeatureUtils/handleFeatureIdChanged.js";
 import { handleFeatureTypeChanged } from "../utils/updateFeatureUtils/handleFeatureTypeChanged.js";
 import { handleFeatureUsageTypeChanged } from "../utils/updateFeatureUtils/handleFeatureUsageTypeChanged.js";
-import {
-	validateInvoiceCreditPooling,
-	validateInvoiceCreditPrice,
-	validateInvoiceCreditUsageBasedPricing,
-} from "../validateInvoiceCreditPooling.js";
 import { hasCreditRateCardChanged } from "./hasCreditRateCardChanged.js";
 import type { ClearCreditSystemCachePayload } from "./runClearCreditSystemCacheTask.js";
 
@@ -174,58 +165,11 @@ export const updateFeature = async ({
 		feature.config?.usage_type !== updates.config?.usage_type;
 
 	const isChangingName = updates.name && feature.name !== updates.name;
-	const nextFeature = {
-		...feature,
-		type: updates.type ?? feature.type,
-		config: updates.config ?? feature.config,
-	};
-	const isEnablingInvoiceCredits = isEnablingInvoiceCreditFeature({
-		currentFeature: feature,
-		nextFeature,
-	});
-
-	if (
-		isChangingType ||
-		isChangingId ||
-		isChangingUsageType ||
-		isEnablingInvoiceCredits
-	) {
+	if (isChangingType || isChangingId || isChangingUsageType) {
 		const objectsUsingFeature = await getObjectsUsingFeature({
 			ctx,
 			feature,
 		});
-
-		validateInvoiceCreditPooling({
-			feature: nextFeature,
-			pooled:
-				isEnablingInvoiceCredits &&
-				objectsUsingFeature.entitlements.some(
-					(entitlement) => entitlement.pooled,
-				),
-		});
-		validateInvoiceCreditUsageBasedPricing({
-			feature: nextFeature,
-			usageBased: objectsUsingFeature.entitlements.every((entitlement) => {
-				const price = entToPrice({
-					ent: entitlement,
-					prices: objectsUsingFeature.prices,
-				});
-				return price !== undefined && isConsumablePrice(price);
-			}),
-		});
-		if (isEnablingInvoiceCredits) {
-			for (const entitlement of objectsUsingFeature.entitlements) {
-				const price = entToPrice({
-					ent: entitlement,
-					prices: objectsUsingFeature.prices,
-				});
-				if (!price) continue;
-				validateInvoiceCreditPrice({
-					feature: nextFeature,
-					item: toProductItem({ ent: entitlement, price }),
-				});
-			}
-		}
 
 		// Validate the whole change before any mutation so it stays atomic.
 		const [blocker] = detectFeatureUpdateBlockers({

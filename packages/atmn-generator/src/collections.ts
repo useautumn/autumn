@@ -9,10 +9,8 @@ export type CollectionMeta = {
 	readonly idField: string;
 	/** The same id as catalogV2.get names it. */
 	readonly responseIdField: string;
-	/** Config key holding past versions; rows there are stamped `active: false`. */
-	readonly historyKey?: string;
-	/** Printed when an id has rows in `historyKey` and none in the collection. */
-	readonly historyOnlyMessage?: string;
+	/** Rows sharing `idField` are versions; pull keys them by id and slug. */
+	readonly versioned?: boolean;
 	/** Whether pull can address entries by `idField` alone. */
 	readonly pull: boolean;
 	/** Set when the item is a union; `builder` then names only the union type. */
@@ -40,15 +38,13 @@ export const COLLECTIONS: Readonly<Record<string, CollectionMeta>> = {
 		responseIdField: "id",
 		pull: true,
 	},
-	// Versions share planId: pull matches a stable id first, else id + slug.
+	// Every version of a plan is a row here; `active` says which one is live.
 	plans: {
 		builder: "plan",
 		typeName: "Plan",
 		idField: "planId",
 		responseIdField: "id",
-		historyKey: "planVersions",
-		historyOnlyMessage:
-			"At least one version of each plan must be active. planVersions is for historical inactive products, and plans is for the active version.",
+		versioned: true,
 		pull: true,
 	},
 	// Free-product and invoice-credit rewards have no branch: the catalog

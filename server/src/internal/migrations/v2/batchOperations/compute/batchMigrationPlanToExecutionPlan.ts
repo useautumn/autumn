@@ -1,3 +1,4 @@
+import { isInvoiceCreditEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditEntitlement.js";
 import type {
 	BatchMigrationExecutionPlan,
 	BatchMigrationPlan,
@@ -18,6 +19,7 @@ export const batchMigrationPlanToExecutionPlan = ({
 			addEntitlementOps: patch.operations.addEntitlements.map((operation) => ({
 				entitlement: operation.entitlementPrice.entitlement,
 				initialState: operation.initialState,
+				invoiceCredit: isInvoiceCreditEntitlement(operation.entitlementPrice),
 			})),
 			removeEntitlementOps: patch.operations.removeEntitlements
 				.filter((operation) => operation.by === "filter")
@@ -32,6 +34,7 @@ export const batchMigrationPlanToExecutionPlan = ({
 					from: operation.from,
 					entitlement: operation.entitlementPrice.entitlement,
 					initialState: operation.initialState,
+					invoiceCredit: isInvoiceCreditEntitlement(operation.entitlementPrice),
 				})),
 			licenseEntitlementOps: patch.operations.licenseEntitlements,
 			repointCustomerProduct: patch.operations.repointCustomerProduct,

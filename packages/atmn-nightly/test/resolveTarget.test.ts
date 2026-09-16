@@ -77,15 +77,27 @@ test("flags beat AUTUMN_BASE_URL, which beats the spec's server", () => {
 	}
 });
 
-test("a missing key names the variable it wants", () => {
+test("a missing sandbox key gives the login and keyless next steps", () => {
 	const previous = process.env.AUTUMN_SECRET_KEY;
 	delete process.env.AUTUMN_SECRET_KEY;
 	try {
 		expect(() => requireSecretKey({ target: resolveTarget({}) })).toThrow(
-			/AUTUMN_SECRET_KEY is not set/,
+			"AUTUMN_SECRET_KEY is not set. Run atmn login, or atmn login --keyless if you don't have an account.",
 		);
 	} finally {
 		if (previous !== undefined) process.env.AUTUMN_SECRET_KEY = previous;
+	}
+});
+
+test("a missing production key gives the login next step", () => {
+	const previous = process.env.AUTUMN_PROD_SECRET_KEY;
+	delete process.env.AUTUMN_PROD_SECRET_KEY;
+	try {
+		expect(() =>
+			requireSecretKey({ target: resolveTarget({ prod: true }) }),
+		).toThrow("AUTUMN_PROD_SECRET_KEY is not set. Run atmn login.");
+	} finally {
+		if (previous !== undefined) process.env.AUTUMN_PROD_SECRET_KEY = previous;
 	}
 });
 
@@ -179,7 +191,7 @@ test("a missing sandbox key points at the command that mints one", () => {
 			expect(() =>
 				requireSecretKey({ target: resolveTarget({ sandbox: "org_2n4b" }) }),
 			).toThrow(
-				/AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY is not set\. atmn sandbox create/,
+				"AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY is not set. Run atmn sandbox create, or add its key to your .env.",
 			);
 		},
 	);

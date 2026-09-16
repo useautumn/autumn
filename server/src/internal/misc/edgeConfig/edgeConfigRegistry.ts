@@ -30,9 +30,13 @@ export const createEdgeConfigRegistry = ({
 	let pollPromise: Promise<void> | null = null;
 	let backstopTimer: ReturnType<typeof setInterval> | null = null;
 	let backstopPromise: Promise<void> | null = null;
+	let pollLogger: Logger | undefined;
 
+	// A store registered after polling began missed the startup load and would
+	// serve its default until the next timestamp change or backstop.
 	const register = ({ store }: { store: EdgeConfigLifecycle }) => {
 		stores.push(store);
+		if (pollTimer) void store.refresh({ logger: pollLogger });
 	};
 
 	const refreshAll = async ({ logger }: { logger?: Logger } = {}) => {
@@ -92,6 +96,7 @@ export const createEdgeConfigRegistry = ({
 		}
 		await refreshAll({ logger });
 
+		pollLogger = logger;
 		pollTimer = setInterval(() => {
 			if (pollPromise) return;
 			pollPromise = checkForChanges({ logger }).finally(() => {

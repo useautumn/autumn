@@ -43,6 +43,7 @@ publicSsoRouter.post("/resolve", async (c) => {
 publicSsoRouter.get("/start", async (c) => {
 	const providerId = c.req.query("providerId");
 	const mode = c.req.query("mode");
+	const next = c.req.query("next");
 	if (!providerId) return c.json({ message: "Provider is required" }, 400);
 
 	const { db } = c.get("ctx");
@@ -65,7 +66,7 @@ publicSsoRouter.get("/start", async (c) => {
 		);
 	}
 	requestHeaders.delete("content-length");
-	const callbackURL = getSsoCompletionCallbackUrl({ providerId });
+	const callbackURL = getSsoCompletionCallbackUrl({ providerId, next });
 	const response = await withTrustedSsoOrigin({
 		origin: trustedIssuerOrigin,
 		run: () =>

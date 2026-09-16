@@ -181,6 +181,11 @@ export const pricesAreSame = (
 		),
 	};
 
+	// A single tier has nothing to graduate; GET collapses it to a flat amount,
+	// so its stored tier_behavior is unobservable (matches itemsAreSame).
+	const bothFlat =
+		usageConfig1.usage_tiers.length <= 1 &&
+		usageConfig2.usage_tiers.length <= 1;
 	const prorationDiffs = {
 		onIncrease:
 			price1.proration_config?.on_increase !=
@@ -189,8 +194,9 @@ export const pricesAreSame = (
 			price1.proration_config?.on_decrease !=
 			price2.proration_config?.on_decrease,
 		tierBehavior:
+			!bothFlat &&
 			(price1.tier_behavior ?? TierBehavior.Graduated) !==
-			(price2.tier_behavior ?? TierBehavior.Graduated),
+				(price2.tier_behavior ?? TierBehavior.Graduated),
 	};
 
 	const pricesAreDiff =

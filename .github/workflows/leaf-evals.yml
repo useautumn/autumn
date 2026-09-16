@@ -33,12 +33,11 @@ jobs:
               - "apps/leaf/**"
               - ".github/workflows/leaf-evals.yml"
 
-  # One smoke eval per PR: the canonical lookup -> preview -> approval -> write
-  # flow. The full suite is local-only (bun <file>.eval.ts) to keep model spend down.
+  # Run evals locally (bun <file>.eval.ts) to keep model spend down.
   eval:
     name: Eval
     needs: changes
-    if: needs.changes.outputs.leaf == 'true'
+    if: ${{ false }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     env:

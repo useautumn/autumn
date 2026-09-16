@@ -1,6 +1,7 @@
 import type {
 	FullCusProduct,
 	FullCustomerEntitlement,
+	FullCustomerLicense,
 	FullCustomerPrice,
 } from "@autumn/shared";
 
@@ -8,12 +9,14 @@ export const applyCustomerProductItemsPatch = ({
 	customerProduct,
 	insertCustomerPrices,
 	insertCustomerEntitlements,
+	insertCustomerLicenses = [],
 	deleteCustomerPrices,
 	deleteCustomerEntitlements,
 }: {
 	customerProduct: FullCusProduct;
 	insertCustomerPrices: FullCustomerPrice[];
 	insertCustomerEntitlements: FullCustomerEntitlement[];
+	insertCustomerLicenses?: FullCustomerLicense[];
 	deleteCustomerPrices: FullCustomerPrice[];
 	deleteCustomerEntitlements: FullCustomerEntitlement[];
 }): FullCusProduct => {
@@ -41,5 +44,13 @@ export const applyCustomerProductItemsPatch = ({
 			),
 			...insertCustomerEntitlements,
 		],
+		...(insertCustomerLicenses.length > 0
+			? {
+					customer_licenses: [
+						...(customerProduct.customer_licenses ?? []),
+						...insertCustomerLicenses,
+					],
+				}
+			: {}),
 	};
 };

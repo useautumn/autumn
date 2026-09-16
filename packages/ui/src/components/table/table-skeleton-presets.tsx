@@ -2,10 +2,33 @@ import type { ColumnSkeletonMeta } from "@autumn/ui/components/table/table-row-c
 import { Skeleton } from "@autumn/ui/components/ui/skeleton";
 import { cn } from "@autumn/ui/lib/utils";
 
-const LABEL_WIDTHS = ["w-12", "w-16", "w-14", "w-10", "w-20", "w-14"];
-const DATE_WIDTHS = ["w-28", "w-32", "w-30", "w-26", "w-34", "w-28"];
-const ID_WIDTHS = ["w-28", "w-36", "w-32", "w-24", "w-40", "w-30"];
-const NAME_WIDTHS = ["w-20", "w-24", "w-16", "w-28", "w-20", "w-24"];
+// Percent widths never widen a column: they resolve against the cell, and
+// count as zero in the auto table layout's min-content pass.
+const LABEL_WIDTHS = [
+	"w-1/2",
+	"w-3/5",
+	"w-[55%]",
+	"w-2/5",
+	"w-[70%]",
+	"w-[55%]",
+];
+const DATE_WIDTHS = [
+	"w-[70%]",
+	"w-4/5",
+	"w-3/4",
+	"w-[65%]",
+	"w-[85%]",
+	"w-[70%]",
+];
+const ID_WIDTHS = [
+	"w-[65%]",
+	"w-[85%]",
+	"w-3/4",
+	"w-[55%]",
+	"w-[95%]",
+	"w-[70%]",
+];
+const NAME_WIDTHS = ["w-3/5", "w-[70%]", "w-1/2", "w-4/5", "w-3/5", "w-[70%]"];
 
 const pickWidth = (widths: string[], rowIndex: number): string =>
 	widths[rowIndex % widths.length];

@@ -26,8 +26,10 @@ type CatalogPlanRow = {
 // through unresolved, so a made-up id round-trips without a real account.
 const proPlan = `
 		plan({
+			active: true,
 			planId: "pro",
 			name: "Pro",
+			versionSlug: "v1",
 			createInStripe: false,
 			price: {
 				amount: 49,

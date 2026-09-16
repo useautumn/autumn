@@ -92,6 +92,7 @@ export const initPooledBalanceGraph = ({
 		// scan must keep seeing them, so never stamp reset_by_invoice.
 		reset_by_invoice: false,
 		is_pooled_balance: true,
+		invoice_credit: false,
 		pooled_balance_id: pooledBalanceId,
 		pooled_contribution_id: null,
 		replaceables: [],

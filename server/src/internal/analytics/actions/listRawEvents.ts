@@ -5,14 +5,22 @@ import type {
 	RawEventFromClickHouse,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
+import { sub } from "date-fns";
 import {
 	getTinybirdPipes,
 	type ListEventsPaginatedPipeRow,
 } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getBillingCycleStartDate } from "../analyticsUtils.js";
+import {
+	getBillingCycleStartDate,
+	getStandardIntervalWindow,
+} from "../analyticsUtils.js";
 
 const DEFAULT_LIMIT = 1000;
+
+/** Lookback for ranges with no fixed window, e.g. billing-cycle ranges whose
+ * subscription lookup came up empty. */
+const FALLBACK_LOOKBACK_DAYS = 24;
 
 const formatJsDateToClickHouseDateTime = (date: Date): string => {
 	const year = date.getFullYear();
@@ -25,28 +33,15 @@ const formatJsDateToClickHouseDateTime = (date: Date): string => {
 	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
-const calculateStartDateFromInterval = (interval: string): Date => {
-	const startDate = new Date();
-
-	switch (interval) {
-		case "24h":
-			startDate.setHours(startDate.getHours() - 24);
-			break;
-		case "7d":
-			startDate.setDate(startDate.getDate() - 7);
-			break;
-		case "30d":
-			startDate.setDate(startDate.getDate() - 30);
-			break;
-		case "90d":
-			startDate.setDate(startDate.getDate() - 90);
-			break;
-		default:
-			startDate.setDate(startDate.getDate() - 24);
-			break;
-	}
-
-	return startDate;
+const calculateStartDateFromInterval = ({
+	interval,
+	binSize,
+}: {
+	interval: string;
+	binSize?: string;
+}): UTCDate => {
+	const window = getStandardIntervalWindow({ interval, binSize });
+	return window?.start ?? sub(new UTCDate(), { days: FALLBACK_LOOKBACK_DAYS });
 };
 
 /** Converts pipe row to the expected ClickHouse format */
@@ -67,6 +62,7 @@ export type ListRawEventsParams = {
 	customer_id?: string;
 	entity_id?: string;
 	interval?: string;
+	bin_size?: string;
 	custom_range?: { start: number; end: number };
 	customer?: FullCustomer;
 	aggregateAll?: boolean;
@@ -101,7 +97,10 @@ export const listRawEvents = async ({
 			: null;
 
 	// Calculate date range
-	const startDate = calculateStartDateFromInterval(intervalType);
+	const startDate = calculateStartDateFromInterval({
+		interval: intervalType,
+		binSize: params.bin_size,
+	});
 
 	const finalStartDate = params.custom_range
 		? formatJsDateToClickHouseDateTime(new UTCDate(params.custom_range.start))
@@ -113,7 +112,7 @@ export const listRawEvents = async ({
 		? formatJsDateToClickHouseDateTime(new UTCDate(params.custom_range.end))
 		: isBillingCycle && billingCycleResult?.endDate
 			? billingCycleResult.endDate
-			: formatJsDateToClickHouseDateTime(new Date());
+			: formatJsDateToClickHouseDateTime(new UTCDate());
 
 	const eventNameFilter = (() => {
 		if (params.event_names && params.event_names.length > 0) {

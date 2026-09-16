@@ -29,8 +29,7 @@ const paths = [
 		name: "create a new version",
 		nextBody: () =>
 			configBody({
-				plans: versionedPro({ versionSlug: "v2", amount: 59 }),
-				planVersions: versionedPro({ versionSlug: "v1" }),
+				plans: `${versionedPro({ versionSlug: "v2", amount: 59 })}${versionedPro({ versionSlug: "v1", active: false })}`,
 			}),
 	},
 	{

@@ -2,7 +2,6 @@ import type { Feature } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
-import { useState } from "react";
 import { toast } from "sonner";
 import {
 	SheetFooter,
@@ -10,10 +9,8 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { getBackendErr } from "@/utils/genUtils";
-import { FeatureStripeProductConfirmDialog } from "../../../plan/components/new-feature/FeatureStripeProductConfirmDialog";
-import { NewFeatureAdvanced } from "../../../plan/components/new-feature/NewFeatureAdvanced";
+import { useSheetBrowserBack } from "../../hooks/useSheetBrowserBack";
 import { featureToCatalogFeatureParams } from "../../utils/buildFeatureMutationParams";
-import { featureStripeProductChanged } from "../../utils/featureStripeProductChanged";
 import { useCreditSystemForm } from "../hooks/useCreditSystemForm";
 import { validateCreditSystem } from "../utils/validateCreditSystem";
 import { CreditSystemDetails } from "./CreditSystemDetails";
@@ -26,30 +23,32 @@ interface UpdateCreditSystemSheetProps {
 	onSuccess?: (oldId: string, newId: string) => void;
 }
 
-function UpdateCreditSystemSheet({
-	open,
+/**
+ * The form is keyed on the credit system being edited, so every open starts
+ * from that system's saved values rather than a form another one touched.
+ */
+function UpdateCreditSystemForm({
+	creditSystem,
 	setOpen,
-	selectedCreditSystem,
 	onSuccess,
-}: UpdateCreditSystemSheetProps) {
+}: {
+	creditSystem: Feature;
+	setOpen: (open: boolean) => void;
+	onSuccess?: (oldId: string, newId: string) => void;
+}) {
 	const { mutateAsync: updateCatalog } = useUpdateCatalogMutation();
-	const [confirmOpen, setConfirmOpen] = useState(false);
 
 	const form = useCreditSystemForm({
-		feature: open ? selectedCreditSystem : null,
+		feature: creditSystem,
 		onSubmit: async (values) => {
-			if (!selectedCreditSystem) return;
-
-			const creditSystem = {
+			const validationError = validateCreditSystem({
 				name: values.name,
 				id: values.id,
 				type: values.type,
 				config: values.config,
 				event_names: values.event_names,
 				model_markups: values.model_markups,
-			};
-
-			const validationError = validateCreditSystem(creditSystem);
+			});
 			if (validationError) {
 				toast.error(validationError);
 				return;
@@ -69,105 +68,77 @@ function UpdateCreditSystemSheet({
 							},
 							event_names: values.event_names,
 							model_markups: values.model_markups,
-							stripe_product_id: values.stripe_product_id,
 						},
-						featureId: selectedCreditSystem.id,
+						featureId: creditSystem.id,
 						newFeatureId: values.id,
-						originalStripeProductId: selectedCreditSystem.stripe_product_id,
 					}),
 				],
 			});
 
 			toast.success("Credit system updated successfully");
-			onSuccess?.(
-				selectedCreditSystem.id,
-				values.id || selectedCreditSystem.id,
-			);
-			setConfirmOpen(false);
+			onSuccess?.(creditSystem.id, values.id || creditSystem.id);
 			setOpen(false);
 		},
 	});
 
 	const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
-	const values = useStore(form.store, (s) => s.values);
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent
-				key={selectedCreditSystem?.internal_id}
-				className="flex flex-col overflow-hidden md:max-w-2xl"
-			>
-				<SheetHeader
-					title="Update Credit System"
-					description="Modify how this credit system is configured"
-				/>
+		<>
+			<div className="flex-1 overflow-y-auto">
+				<CreditSystemDetails form={form} />
+				<CreditSystemSchema form={form} disableModeSwitch />
+			</div>
 
-				<div className="flex-1 overflow-y-auto">
-					<CreditSystemDetails form={form} />
-					<CreditSystemSchema form={form} disableModeSwitch />
-					<NewFeatureAdvanced
-						feature={{
-							id: values.id,
-							name: values.name,
-							type: values.type,
-							config: values.config,
-							event_names: values.event_names,
-							stripe_product_id: values.stripe_product_id,
-						}}
-						setFeature={(next) =>
-							form.setFieldValue(
-								"stripe_product_id",
-								next.stripe_product_id ?? null,
-							)
-						}
-					/>
-				</div>
-
-				<SheetFooter>
-					<ShortcutButton
-						variant="secondary"
-						className="w-full"
-						onClick={() => setOpen(false)}
-						singleShortcut="escape"
-					>
-						Cancel
-					</ShortcutButton>
-					<ShortcutButton
-						className="w-full"
-						onClick={() => {
-							if (
-								featureStripeProductChanged({
-									from: selectedCreditSystem?.stripe_product_id,
-									to: values.stripe_product_id,
-								})
-							) {
-								setConfirmOpen(true);
-								return;
-							}
-
-							form.handleSubmit().catch((err: AxiosError) => {
-								toast.error(
-									getBackendErr(err, "Failed to update credit system"),
-								);
-							});
-						}}
-						metaShortcut="enter"
-						isLoading={isSubmitting}
-					>
-						Update credit system
-					</ShortcutButton>
-				</SheetFooter>
-				<FeatureStripeProductConfirmDialog
-					confirmLabel="Update credit system"
-					isSaving={isSubmitting}
-					onConfirm={() =>
+			<SheetFooter>
+				<ShortcutButton
+					variant="secondary"
+					className="w-full"
+					onClick={() => setOpen(false)}
+					singleShortcut="escape"
+				>
+					Cancel
+				</ShortcutButton>
+				<ShortcutButton
+					className="w-full"
+					onClick={() =>
 						form.handleSubmit().catch((err: AxiosError) => {
 							toast.error(getBackendErr(err, "Failed to update credit system"));
 						})
 					}
-					onOpenChange={setConfirmOpen}
-					open={confirmOpen}
+					metaShortcut="enter"
+					isLoading={isSubmitting}
+				>
+					Update credit system
+				</ShortcutButton>
+			</SheetFooter>
+		</>
+	);
+}
+
+function UpdateCreditSystemSheet({
+	open,
+	setOpen,
+	selectedCreditSystem,
+	onSuccess,
+}: UpdateCreditSystemSheetProps) {
+	useSheetBrowserBack({ enabled: open });
+
+	return (
+		<Sheet open={open} onOpenChange={setOpen}>
+			<SheetContent className="flex flex-col overflow-hidden md:max-w-2xl">
+				<SheetHeader
+					title="Update Credit System"
+					description="Modify how this credit system is configured"
 				/>
+				{open && selectedCreditSystem && (
+					<UpdateCreditSystemForm
+						key={selectedCreditSystem.internal_id}
+						creditSystem={selectedCreditSystem}
+						setOpen={setOpen}
+						onSuccess={onSuccess}
+					/>
+				)}
 			</SheetContent>
 		</Sheet>
 	);

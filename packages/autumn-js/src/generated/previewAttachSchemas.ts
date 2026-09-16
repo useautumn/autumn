@@ -206,6 +206,16 @@ export const previewAttachInvoiceCreditsSchema = z.object({
 	currency: z.string(),
 });
 
+export const previewAttachDimensionsUpsertLicenseToUnion2OutboundSchema =
+	z.union([z.number(), z.string()]);
+
+export const previewAttachDimensionsUpsertLicenseTier2OutboundSchema = z.object(
+	{
+		to: z.union([z.number(), z.string()]),
+		credit_cost: z.number(),
+	},
+);
+
 export const previewAttachUpsertLicenseMultipliersMatch2OutboundSchema =
 	z.union([z.string(), z.number(), z.boolean()]);
 
@@ -390,11 +400,15 @@ export const previewAttachLicenseQuantityOutboundSchema = z.object({
 	quantity: z.number(),
 });
 
-const previewAttachDimensionsUpsertLicense3Schema = z.any();
+const previewAttachDimensionsToUpsertLicenseEnum2Schema = z.any();
+
+const previewAttachDimensionsUpsertLicenseMatch3Schema = z.any();
 
 const previewAttachDimensionsUpsertLicense4Schema = z.any();
 
 const closedEnumSchema = z.any();
+
+const previewAttachUpsertLicenseThresholdBillingSchema = z.any();
 
 const previewAttachUpsertLicenseResetSchema = z.any();
 
@@ -426,9 +440,11 @@ const planSchema = z.any();
 
 const openEnumSchema = z.any();
 
-const previewAttachDimensionsUpsertLicense3OutboundSchema = z.any();
+const previewAttachDimensionsUpsertLicenseMatch3OutboundSchema = z.any();
 
 const previewAttachDimensionsUpsertLicense4OutboundSchema = z.any();
+
+const previewAttachUpsertLicenseThresholdBillingOutboundSchema = z.any();
 
 const previewAttachUpsertLicenseResetOutboundSchema = z.any();
 
@@ -455,6 +471,23 @@ const previewAttachBillingControlsOutboundSchema = z.any();
 const previewAttachFeatureQuantityRequestBodyOutboundSchema = z.any();
 
 const previewAttachFreeTrialParamsOutboundSchema = z.any();
+
+export const previewAttachDimensionsUpsertLicenseToUnion2Schema = z.union([
+	z.number(),
+	previewAttachDimensionsToUpsertLicenseEnum2Schema,
+]);
+
+export const previewAttachDimensionsUpsertLicenseTier2Schema = z.object({
+	to: z.union([z.number(), previewAttachDimensionsToUpsertLicenseEnum2Schema]),
+	creditCost: z.number(),
+});
+
+export const previewAttachDimensionsUpsertLicense3Schema = z.object({
+	match: z.record(z.string(), previewAttachDimensionsUpsertLicenseMatch3Schema),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tierBehavior: z.literal("graduated"),
+	tiers: z.array(previewAttachDimensionsUpsertLicenseTier2Schema),
+});
 
 export const previewAttachUpsertLicenseDimensionsUnion2Schema = z.union([
 	previewAttachDimensionsUpsertLicense3Schema,
@@ -570,6 +603,10 @@ export const previewAttachUpsertLicenseFeatureOverrideSchema = z.object({
 });
 
 export const previewAttachUpsertLicensePlanItemSchema = z.object({
+	thresholdBilling: z
+		.union([previewAttachUpsertLicenseThresholdBillingSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
@@ -802,6 +839,16 @@ export const previewAttachResponseSchema = z.object({
 		.optional(),
 });
 
+export const previewAttachDimensionsUpsertLicense3OutboundSchema = z.object({
+	match: z.record(
+		z.string(),
+		previewAttachDimensionsUpsertLicenseMatch3OutboundSchema,
+	),
+	priority: z.union([z.number(), z.undefined()]).optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(previewAttachDimensionsUpsertLicenseTier2OutboundSchema),
+});
+
 export const previewAttachUpsertLicenseDimensionsUnion2OutboundSchema = z.union(
 	[
 		previewAttachDimensionsUpsertLicense3OutboundSchema,
@@ -862,6 +909,13 @@ export const previewAttachUpsertLicenseFeatureOverrideOutboundSchema = z.object(
 );
 
 export const previewAttachUpsertLicensePlanItemOutboundSchema = z.object({
+	threshold_billing: z
+		.union([
+			previewAttachUpsertLicenseThresholdBillingOutboundSchema,
+			z.undefined(),
+		])
+		.optional()
+		.nullable(),
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),

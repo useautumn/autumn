@@ -13,8 +13,6 @@ export interface UpdateCatalogContext {
 	productStatesContext: ProductStatesContext;
 	/** Stated `internal_id` → the row it names. Empty when none were stated. */
 	internalIdRefs: InternalIdRefs;
-	/** Persisted plan versions referencing a feature being enabled for invoice credits. */
-	invoiceCreditProducts: FullProduct[];
 	licenseStatesContext: LicenseStatesContext;
 	/** Rewards and referral programs the catalog can speak for. */
 	rewardStatesContext: RewardStatesContext;

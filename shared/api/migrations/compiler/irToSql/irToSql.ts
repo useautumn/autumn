@@ -5,6 +5,7 @@ import type {
 	NavScope,
 	RootScope,
 } from "../registry/registryTypes.js";
+import { regexSql, startsWithSql } from "./stringMatchSql.js";
 
 export type CompiledSql = {
 	/** WHERE-clause fragment with `?` placeholders. */
@@ -178,6 +179,12 @@ function compileLeaf({
 		if (leaf.value === null) return `${col} IS NOT NULL`;
 		params.push(leaf.value);
 		return `${col} <> ?`;
+	}
+	if (leaf.op === "regex" || leaf.op === "startsWith") {
+		const build = leaf.op === "regex" ? regexSql : startsWithSql;
+		const match = build({ column: col, field: leaf.field, value: leaf.value });
+		params.push(...match.params);
+		return match.sql;
 	}
 	if (leaf.op === "in" || leaf.op === "nin") {
 		if (!Array.isArray(leaf.value))

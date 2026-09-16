@@ -12,6 +12,86 @@ const { buildAgentMessageText, extractUserMessageText } = await import(
 );
 
 describe("Harness message text", () => {
+	test("names the speaker on every turn", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				speaker: { email: "aneil@example.com", name: "Aneil Singh" },
+				text: "yep, we're good!",
+			},
+		});
+
+		expect(text).toContain("Speaker: Aneil Singh (aneil@example.com)");
+		expect(text).toContain("Delivery is conditional");
+		expect(text).toContain("<eve-empty-delivery/>");
+		expect(text).not.toContain("@-mentions someone else");
+		expect(extractUserMessageText(text)).toBe("yep, we're good!");
+	});
+
+	test("does not make delivery conditional when the agent is mentioned", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: true,
+			params: {
+				speaker: { mentionsAgent: true, name: "Aneil Singh" },
+				text: "@Autumn please update their enterprise billing",
+			},
+		});
+
+		expect(text).toContain("Speaker: Aneil Singh");
+		expect(text).not.toContain("Delivery is conditional");
+	});
+
+	test("keeps delivery conditional on a recovered session mid-thread", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: true,
+			params: {
+				speaker: { mentionsAgent: false, name: "Aneil Singh" },
+				text: "yep, we're good!",
+			},
+		});
+
+		expect(text).toContain("Delivery is conditional");
+	});
+
+	test("flags a message that mentions someone else and not the agent", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				speaker: {
+					mentionsAgent: false,
+					mentionsOthers: true,
+					name: "Aneil Singh",
+				},
+				text: "@Ayush any support here",
+			},
+		});
+
+		expect(text).toContain("Speaker: Aneil Singh");
+		expect(text).toContain("@-mentions someone else in the thread, not you");
+		expect(text).toContain("reply with exactly <eve-empty-delivery/>");
+	});
+
+	test("does not flag a message that mentions the agent alongside others", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			newSession: false,
+			params: {
+				speaker: {
+					mentionsAgent: true,
+					mentionsOthers: true,
+					name: "Aneil Singh",
+				},
+				text: "@Autumn @Ayush approved, apply it",
+			},
+		});
+
+		expect(text).not.toContain("@-mentions someone else");
+	});
+
 	test("injects org context on a new session", () => {
 		const text = buildAgentMessageText({
 			env: "sandbox",

@@ -135,3 +135,49 @@ export const readOracleCustomer = async ({
 		raw: body,
 	};
 };
+
+export type OracleCatalogPlan = {
+	id: string;
+	version?: number;
+	version_slug?: string | null;
+	active?: boolean;
+	internal_id?: string | null;
+	price?: { amount?: number; interval?: string } | null;
+	items: { feature_id?: string; included?: number }[];
+};
+
+/** Every version of every live plan, as the org holds them after the run. */
+export type OracleCatalog = { plans: OracleCatalogPlan[] };
+
+export const readOracleCatalog = async ({
+	backendUrl,
+	secretKey,
+}: {
+	backendUrl: string;
+	secretKey: string;
+}): Promise<OracleCatalog> => {
+	const res = await fetch(`${backendUrl}/v1/catalogV2.get`, {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${secretKey}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({ include_versions: true }),
+	});
+	if (!res.ok) return { plans: [] };
+	const body = (await res.json()) as { plans?: OracleCatalogPlan[] };
+	return {
+		plans: (body.plans ?? []).map((plan) => ({
+			id: plan.id,
+			version: plan.version,
+			version_slug: plan.version_slug,
+			active: plan.active,
+			internal_id: plan.internal_id,
+			price: plan.price,
+			items: (plan.items ?? []).map((item) => ({
+				feature_id: item.feature_id,
+				included: item.included,
+			})),
+		})),
+	};
+};

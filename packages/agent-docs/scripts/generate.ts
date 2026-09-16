@@ -12,20 +12,19 @@ import type { McpResource, Skill } from "../src/translate/formats/types.js";
 import { docsPageToMarkdown } from "../src/translate/ingest/docsPage.js";
 import { writePublicSkills } from "./publicSkills.js";
 
-// Build-time translation: read canonical docs (+ transitional legacy markdown),
+// Build-time translation: read canonical docs,
 // emit self-contained TS artifacts so consumers need no runtime fs access, plus
 // readable rendered .md/SKILL.md for inspection.
 const here = dirname(fileURLToPath(import.meta.url));
 const docsRoot = resolve(here, "../../../apps/docs/mintlify");
-const legacyRoot = resolve(here, "../../mcp/src/resources-v2");
 const contentRoot = resolve(here, "../content");
 
+const readSnippet = (snippetPath: string): string =>
+	readFileSync(resolve(docsRoot, `.${snippetPath}`), "utf8");
+
 const readSource = (source: Source): string => {
-	if (source.type === "docs") {
-		const text = readFileSync(resolve(docsRoot, source.page), "utf8");
-		return docsPageToMarkdown({ path: source.page, text });
-	}
-	return readFileSync(resolve(legacyRoot, source.file), "utf8");
+	const text = readFileSync(resolve(docsRoot, source.page), "utf8");
+	return docsPageToMarkdown({ path: source.page, text, readSnippet });
 };
 
 const headingAnchor = (heading: string): string =>
@@ -71,6 +70,7 @@ const resolveDocs = (url: string): string => {
 	const markdown = docsPageToMarkdown({
 		path: page,
 		text: readFileSync(resolve(docsRoot, page), "utf8"),
+		readSnippet,
 	});
 	return anchor ? sliceSection({ markdown, anchor, url }) : markdown;
 };
@@ -83,6 +83,7 @@ const contentFileResolver =
 
 const mcpResources: McpResource[] = [];
 const skills: Skill[] = [];
+const publicSkillNames = new Set<string>();
 const skillNameByEntryKey: Record<string, string> = {};
 
 for (const [entryKey, entry] of Object.entries(config)) {
@@ -116,7 +117,11 @@ for (const [entryKey, entry] of Object.entries(config)) {
 			resolveContentFile: contentFileResolver(file),
 		});
 		skillNameByEntryKey[entryKey] = skill.name;
-		skills.push(toSkill({ skill }));
+		const formattedSkill = toSkill({ skill });
+		skills.push(formattedSkill);
+		if (entry.formats.skill.public) {
+			publicSkillNames.add(formattedSkill.name);
+		}
 	}
 }
 
@@ -255,7 +260,7 @@ for (const resource of mcpResources) {
 }
 writePublicSkills({
 	outputDirectory: resolve(readableRoot, "skills"),
-	skills,
+	skills: skills.filter((skill) => publicSkillNames.has(skill.name)),
 });
 for (const id of agentIds) {
 	writeReadable({

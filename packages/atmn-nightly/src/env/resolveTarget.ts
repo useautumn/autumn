@@ -119,10 +119,13 @@ export const managementTarget = ({ target }: { target: Target }): Target => {
 	};
 };
 
-const missingKeyMessage = ({ name }: { name: SecretKeyName }): string =>
-	name === "AUTUMN_SECRET_KEY" || name === "AUTUMN_PROD_SECRET_KEY"
-		? `${name} is not set. Put it in your .env, or export it before running.`
-		: `${name} is not set. atmn sandbox create writes it when it mints a sandbox; for one you already have, put its key in your .env.`;
+const missingKeyMessage = ({ name }: { name: SecretKeyName }): string => {
+	if (name === "AUTUMN_SECRET_KEY")
+		return `${name} is not set. Run atmn login, or atmn login --keyless if you don't have an account.`;
+	if (name === "AUTUMN_PROD_SECRET_KEY")
+		return `${name} is not set. Run atmn login.`;
+	return `${name} is not set. Run atmn sandbox create, or add its key to your .env.`;
+};
 
 export const requireSecretKey = ({ target }: { target: Target }): string => {
 	const key = process.env[target.secretKeyName];

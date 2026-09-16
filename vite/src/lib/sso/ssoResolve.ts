@@ -17,7 +17,9 @@ export const parseSsoResolveResponse = (
  * provider is SSO-only, so the dashboard never picks the method itself.
  */
 export const resolveSso = async (
-	params: { email: string } | { providerId: string },
+	params:
+		| { email: string; next?: string }
+		| { providerId: string; next?: string },
 ): Promise<SsoResolveResponse> => {
 	const response = await fetch(
 		`${import.meta.env.VITE_BACKEND_URL}/auth/sso/resolve`,
@@ -35,6 +37,11 @@ export const resolveSso = async (
 	const parsed = parseSsoResolveResponse(await response.json());
 	if (!parsed) {
 		throw new Error("sso_resolve_invalid_response");
+	}
+	if (parsed.action === "sso" && params.next) {
+		const url = new URL(parsed.url);
+		url.searchParams.set("next", params.next);
+		return { action: "sso", url: url.toString() };
 	}
 	return parsed;
 };

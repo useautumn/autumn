@@ -1,22 +1,22 @@
 import crypto from "node:crypto";
 
-export const AGENT_AUTH_CHALLENGE_TTL_MS = 5 * 60 * 1000;
-export const AGENT_AUTH_MAX_ATTEMPTS = 3;
+export const AGENT_CLAIM_ATTEMPT_TTL_MS = 10 * 60 * 1000;
+export const AGENT_CLAIM_INTENT_COOKIE = "autumn_agent_claim";
 
-export const AgentAuthPurpose = {
+export const AgentClaimPurpose = {
 	Claim: "claim",
 } as const;
 
-export type AgentAuthPurpose =
-	(typeof AgentAuthPurpose)[keyof typeof AgentAuthPurpose];
+export type AgentClaimPurpose =
+	(typeof AgentClaimPurpose)[keyof typeof AgentClaimPurpose];
 
-export type AgentAuthChallenge = {
+export type AgentClaimAttempt = {
 	version: 1;
-	purpose: AgentAuthPurpose;
+	purpose: AgentClaimPurpose;
 	email: string;
-	claimTokenHash?: string;
+	claimTokenHash: string;
+	attemptTokenHash: string;
 	expiresAt: string;
-	attempts: number;
 };
 
 export const normalizeAgentEmail = ({ email }: { email: string }): string =>
@@ -25,11 +25,17 @@ export const normalizeAgentEmail = ({ email }: { email: string }): string =>
 export const hashAgentAuthSubject = ({ value }: { value: string }): string =>
 	crypto.createHash("sha256").update(value).digest("hex");
 
-export const getAgentChallengeIdentifier = ({
-	email,
+export const getAgentClaimAttemptIdentifier = ({
+	attemptTokenHash,
 }: {
-	email: string;
-}): string => `agent-challenge:${hashAgentAuthSubject({ value: email })}`;
+	attemptTokenHash: string;
+}): string => `agent-claim-attempt:${attemptTokenHash}`;
+
+export const getAgentClaimPointerIdentifier = ({
+	claimTokenHash,
+}: {
+	claimTokenHash: string;
+}): string => `agent-claim-pointer:${claimTokenHash}`;
 
 export const hashAgentClaimToken = ({
 	claimToken,
@@ -37,25 +43,65 @@ export const hashAgentClaimToken = ({
 	claimToken: string;
 }): string => hashAgentAuthSubject({ value: claimToken });
 
-const AGENT_CLAIM_HEADER = "x-autumn-agent-claim";
-const agentClaimMarker = crypto.randomBytes(32).toString("base64url");
+export const createAgentClaimAttemptToken = (): string =>
+	crypto.randomBytes(32).toString("base64url");
 
-export const createAgentClaimSessionHeaders = (): Headers => {
-	const headers = new Headers();
-	headers.set(AGENT_CLAIM_HEADER, agentClaimMarker);
-	return headers;
+export const buildAgentClaimUrl = ({
+	attemptToken,
+}: {
+	attemptToken: string;
+}): string => {
+	const clientUrl = (process.env.CLIENT_URL ?? "http://localhost:3000").replace(
+		/\/$/,
+		"",
+	);
+	return `${clientUrl}/claim?token=${encodeURIComponent(attemptToken)}`;
 };
 
-export const shouldSkipDefaultOrgForAgentClaim = ({
+const signAgentClaimIntent = ({ attemptToken }: { attemptToken: string }) =>
+	crypto
+		.createHmac(
+			"sha256",
+			process.env.BETTER_AUTH_SECRET ?? "missing-better-auth-secret",
+		)
+		.update(attemptToken)
+		.digest("base64url");
+
+export const createAgentClaimIntent = ({
+	attemptToken,
+}: {
+	attemptToken: string;
+}): string => `${attemptToken}.${signAgentClaimIntent({ attemptToken })}`;
+
+export const parseAgentClaimIntent = ({
+	value,
+}: {
+	value: string | undefined;
+}): string | null => {
+	if (!value) return null;
+	const separator = value.lastIndexOf(".");
+	if (separator <= 0) return null;
+	const attemptToken = value.slice(0, separator);
+	const signature = value.slice(separator + 1);
+	const expected = signAgentClaimIntent({ attemptToken });
+	if (signature.length !== expected.length) return null;
+	return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+		? attemptToken
+		: null;
+};
+
+export const getAgentClaimIntentFromHeaders = ({
 	headers,
 }: {
 	headers: HeadersInit | undefined;
-}): boolean => {
-	const marker = new Headers(headers).get(AGENT_CLAIM_HEADER);
-	if (!marker || marker.length !== agentClaimMarker.length) return false;
-
-	return crypto.timingSafeEqual(
-		Buffer.from(marker),
-		Buffer.from(agentClaimMarker),
-	);
+}): string | null => {
+	const cookie = new Headers(headers).get("cookie");
+	const value = cookie
+		?.split(";")
+		.map((part) => part.trim())
+		.find((part) => part.startsWith(`${AGENT_CLAIM_INTENT_COOKIE}=`))
+		?.slice(AGENT_CLAIM_INTENT_COOKIE.length + 1);
+	return parseAgentClaimIntent({
+		value: value ? decodeURIComponent(value) : undefined,
+	});
 };

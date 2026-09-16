@@ -747,7 +747,6 @@ const response = await client.features.create({ featureId: "advanced-analytics",
 @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 @param display - Singular and plural display names for the feature in your user interface. (optional)
 @param creditSchema - A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
-@param invoiceCredit - Whether usage of this classic credit system should be itemized as invoice credits. (optional)
 @param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
 @param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
 @param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
@@ -793,7 +792,6 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 @param display - Singular and plural display names for the feature in your user interface. (optional)
 @param creditSchema - A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
-@param invoiceCredit - Whether usage of this classic credit system should be itemized as invoice credits. (optional)
 @param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
 @param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
 @param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
@@ -820,6 +818,7 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 * [insert](docs/sdks/invoices/README.md#insert) - Inserts or updates up to 500 historical invoices without reading or mutating the billing processor.
 * [list](docs/sdks/invoices/README.md#list) - Lists invoices with cursor pagination and optional filters (customer, entity, status, processor). Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
+* [pay](docs/sdks/invoices/README.md#pay) - Marks an open Stripe invoice as paid out of band. No charge is attempted; use this when payment was collected elsewhere (e.g. a marketplace). Already-paid invoices are returned unchanged.
 
 ### [Keys](docs/sdks/keys/README.md)
 
@@ -1409,7 +1408,6 @@ const response = await client.features.create({ featureId: "advanced-analytics",
 @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 @param display - Singular and plural display names for the feature in your user interface. (optional)
 @param creditSchema - A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
-@param invoiceCredit - Whether usage of this classic credit system should be itemized as invoice credits. (optional)
 @param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
 @param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
 @param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
@@ -1468,7 +1466,6 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 @param display - Singular and plural display names for the feature in your user interface. (optional)
 @param creditSchema - A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
-@param invoiceCredit - Whether usage of this classic credit system should be itemized as invoice credits. (optional)
 @param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
 @param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
 @param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
@@ -1479,6 +1476,7 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @returns The updated feature object.
 - [`invoicesInsert`](docs/sdks/invoices/README.md#insert) - Inserts or updates up to 500 historical invoices without reading or mutating the billing processor.
 - [`invoicesList`](docs/sdks/invoices/README.md#list) - Lists invoices with cursor pagination and optional filters (customer, entity, status, processor). Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
+- [`invoicesPay`](docs/sdks/invoices/README.md#pay) - Marks an open Stripe invoice as paid out of band. No charge is attempted; use this when payment was collected elsewhere (e.g. a marketplace). Already-paid invoices are returned unchanged.
 - [`keysMint`](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
 - [`keysRefresh`](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
 - [`keysRevoke`](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.

@@ -15,13 +15,13 @@ import {
 } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
 	initAtmnScenario,
-	TMP_ROOT,
+	scenarioDir,
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import { runPull } from "../../../../../../packages/atmn-nightly/src/actions/pull";
 
 test.concurrent(
-	"empty dir → scaffold root + `planVersions/.gitkeep`; second pull is a no-op",
+	"empty dir → scaffold root + collection files; second pull is a no-op",
 	async () => {
 		const scenario = await initAtmnScenario({
 			setup: [
@@ -30,8 +30,7 @@ test.concurrent(
 			config: configBody({ features: everyFeatureType, plans: freePlan }),
 		});
 
-		const emptyDir = join(TMP_ROOT, uniqueTestId("atmn_empty_dir"));
-		mkdirSync(emptyDir, { recursive: true });
+		const emptyDir = scenarioDir({ id: uniqueTestId("atmn_empty_dir") });
 
 		try {
 			await scenario.push();
@@ -40,21 +39,29 @@ test.concurrent(
 			const first = await runPull({
 				client: scenario.client,
 				cwd: emptyDir,
+				configPath: emptyDir,
 				write: (text) => {
 					firstOutput += text;
 				},
 			});
 			expect(firstOutput).toContain("Scaffolded");
-			expect(existsSync(join(emptyDir, "planVersions", ".gitkeep"))).toBe(true);
+			for (const file of ["features.ts", "plans.ts", "rewards.ts"])
+				expect(existsSync(join(emptyDir, file))).toBe(true);
+			expect(existsSync(join(emptyDir, "planVersions"))).toBe(false);
 			expect(first.appended).toContain("free@v1");
+			// Rows land in the collection file; the root only imports.
+			expect(readFileSync(join(emptyDir, "plans.ts"), "utf8")).toContain(
+				'planId: "free"',
+			);
 			expect(
 				readFileSync(join(emptyDir, "autumn.config.ts"), "utf8"),
-			).toContain('planId: "free"');
+			).not.toContain("plan(");
 
 			let secondOutput = "";
 			const second = await runPull({
 				client: scenario.client,
 				cwd: emptyDir,
+				configPath: emptyDir,
 				write: (text) => {
 					secondOutput += text;
 				},

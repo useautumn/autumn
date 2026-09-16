@@ -110,7 +110,7 @@ export const SignIn = () => {
 			// through to an email code.
 			let resolved: Awaited<ReturnType<typeof resolveSso>>;
 			try {
-				resolved = await resolveSso({ email });
+				resolved = await resolveSso({ email, next: defaultPath });
 			} catch {
 				toast.error(
 					"Couldn't check how your organization signs in. Please try again.",

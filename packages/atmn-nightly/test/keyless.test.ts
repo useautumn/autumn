@@ -1,6 +1,6 @@
 /**
  * Keyless onboarding: `login --keyless` provisions an org and writes its key;
- * `login --claim` sends a code and verifies it, headless in two runs.
+ * `login --claim` returns and emails one secure browser link.
  */
 
 import { expect, test } from "bun:test";
@@ -15,7 +15,7 @@ import {
 	runKeylessLogin,
 } from "../src/actions/login/keyless";
 import { slugFor } from "../src/auth/keyless";
-import { createPrompter, NeedsInputError } from "../src/prompt/prompt";
+import { createPrompter } from "../src/prompt/prompt";
 
 chalk.level = 0;
 
@@ -28,7 +28,6 @@ const deps = () => {
 	const calls = {
 		provision: [] as { name: string; slug: string }[],
 		startClaim: [] as { secretKey: string; email: string }[],
-		verify: [] as { email: string; otp: string }[],
 	};
 	const fake: KeylessDeps = {
 		provision: async (params) => {
@@ -38,22 +37,14 @@ const deps = () => {
 				organizationSlug: params.slug,
 				apiKey: "am_sk_test_keyless",
 				claimToken: "tok",
-				claimUrl: "https://app.useautumn.com/claim?token=tok",
 				claimExpiresAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
 			};
 		},
 		startClaim: async (params) => {
 			calls.startClaim.push(params);
-			return { expiresAt: new Date(Date.now() + 10 * 60_000).toISOString() };
-		},
-		verifyClaim: async (params) => {
-			calls.verify.push(params);
-			if (params.otp !== "123456") throw new Error("Invalid code");
 			return {
-				organizationId: "org_k",
-				organizationSlug: "acme",
-				userId: "user_1",
-				email: params.email,
+				claimUrl: "https://app.useautumn.com/claim?token=attempt",
+				expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
 			};
 		},
 	};
@@ -110,66 +101,21 @@ test("keyless login writes the key, names the org after the project, hides the U
 	expect(text).not.toContain("https://app.useautumn.com/claim");
 });
 
-test("keyless login interactive also prints the claim URL", async () => {
-	const root = mkdtempSync(join(tmpdir(), "keyless-"));
-	const { deps: d } = deps();
-	const { lines, write } = capture();
-	await runKeylessLogin({
-		repoRoot: root,
-		envDirs: [root],
-		deps: d,
-		prompter: createPrompter({ interactive: true, write }),
-	});
-	expect(lines.join("")).toContain(
-		"Or open https://app.useautumn.com/claim?token=tok",
-	);
-});
-
-test("claim headless: sends the code, hints --otp and stops; second run verifies", async () => {
+test("claim returns and emails the same secure browser link", async () => {
 	const { deps: d, calls } = deps();
-	const first = capture();
-	await expect(
-		runClaim({
-			secretKey: "am_sk_test_keyless",
-			email: "you@example.com",
-			deps: d,
-			prompter: createPrompter({ interactive: false, write: first.write }),
-		}),
-	).rejects.toThrow(NeedsInputError);
+	const output = capture();
+	const started = await runClaim({
+		secretKey: "am_sk_test_keyless",
+		email: "you@example.com",
+		deps: d,
+		prompter: createPrompter({ interactive: false, write: output.write }),
+	});
 	expect(calls.startClaim).toEqual([
 		{ secretKey: "am_sk_test_keyless", email: "you@example.com" },
 	]);
-	expect(calls.verify).toEqual([]);
-	const text = first.lines.join("");
-	expect(text).toContain("✓ Sent a one-time code to you@example.com");
-	expect(text).toContain("atmn login --claim you@example.com --otp 123456");
-
-	const second = capture();
-	const verified = await runClaim({
-		secretKey: "am_sk_test_keyless",
-		email: "you@example.com",
-		otp: "123456",
-		deps: d,
-		prompter: createPrompter({ interactive: false, write: second.write }),
-	});
-	// --otp skips a fresh code: a second one would invalidate the first.
-	expect(calls.startClaim).toHaveLength(1);
-	expect(verified.email).toBe("you@example.com");
-	expect(second.lines.join("")).toContain("✓ Linked acme to you@example.com");
-});
-
-test("claim interactive: asks for the code after sending it", async () => {
-	const { deps: d, calls } = deps();
-	const { write } = capture();
-	await runClaim({
-		secretKey: "am_sk_test_keyless",
-		email: "you@example.com",
-		deps: d,
-		prompter: createPrompter({
-			interactive: true,
-			write,
-			readLine: async () => "123456",
-		}),
-	});
-	expect(calls.verify).toEqual([{ email: "you@example.com", otp: "123456" }]);
+	expect(started.claimUrl).toContain("/claim?token=attempt");
+	const text = output.lines.join("");
+	expect(text).toContain("✓ Created a claim link for you@example.com");
+	expect(text).toContain("https://app.useautumn.com/claim?token=attempt");
+	expect(text).toContain("The same link was emailed to you@example.com");
 });

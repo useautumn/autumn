@@ -6,11 +6,11 @@
 
 import { expect, test } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 /**
  * The base every case nests its variant under: a metered feature and an
@@ -27,18 +27,21 @@ const baseConfig = ({
 		feature({ featureId: "extra", name: "Extra", type: "metered", consumable: false }),
 	],
 	plans: [
-		plan({ planId: "seatLicense", name: "Seat License", price: { amount: 15, interval: "month" } }),
+		plan({ active: true, planId: "seatLicense", name: "Seat License", versionSlug: "v1", price: { amount: 15, interval: "month" } }),
 		plan({
+			active: true,
 			planId: "base",
 			name: "Base",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			items: [{ featureId: "seats", included: 1 }],
 			freeTrial: { durationLength: 14, durationType: "day" },
-			licenses: [{ licensePlanId: "seatLicense", included: 5 }],
+			licenses: [{ licensePlanId: "seatLicense", versionSlug: "v1", included: 5 }],
 			variants: [
 				{
 					variantPlanId: "variant",
 					name: "Variant",
+					versionSlug: "v1",
 					customize: ${variantCustomize},
 				},
 			],

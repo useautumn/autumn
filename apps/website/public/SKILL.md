@@ -11,7 +11,7 @@ Take the user from "I want billing" to pricing that is live in a sandbox org and
 
 These apply the whole time, not just in one phase.
 
-- CLI-first: everything happens in `autumn.config.ts` and `atmn`. The only browser moment is signing in — and the keyless path skips even that. Never send the user to the dashboard to do the work.
+- CLI-first: everything happens in `autumn.config.ts` and `atmn`. The only browser moments are signing in, or claiming a keyless org later. Never send the user to the dashboard to do the work.
 - Never invent a price, limit, or plan name. A missing number is a question, never a guess.
 - Push only after the user approves the pricing (Phase 4), or when they already told you to go ahead without a review.
 - Sandbox by default: `AUTUMN_SECRET_KEY` is the sandbox key. Don't touch production during setup.
@@ -54,11 +54,7 @@ For items 4 and 6, another skill owns the conversation and its checklist replace
 
 Don't message the user yet — just find out where things stand.
 
-Four skills share this job. If any of them is missing, install them all with one command from the project root:
-
-```bash
-npx skills add useautumn/skills --skill autumn-setup --skill autumn-catalog --skill autumn-integrate --skill autumn-concepts -y
-```
+Four skills share this job, and they ship inside the `atmn` CLI: `atmn init` writes them next to the config and prints the `npx skills add <that folder> -y` line that registers them with your agent, and `atmn skills update` refreshes them when `push` or `pull` say they are older than the CLI. If any is missing here, that is Phase 2's job — never fetch them from anywhere else.
 
 `autumn-setup` (this file) is the flow. `autumn-catalog` is how to build the pricing, plus the exact `atmn` commands — load it in Phase 4. `autumn-integrate` is how the app calls Autumn — load it in Phase 6. `autumn-concepts` explains Autumn's objects — the other two load it themselves.
 
@@ -76,16 +72,16 @@ Start with two or three sentences: what's going to happen (connect this project 
 
 Then:
 
-1. Run `atmn init` from the project root with the user's package manager (`bunx atmn init`, `pnpm exec atmn init`, `yarn atmn init`, `npx atmn init` — read it off the lockfile). Every `atmn …` command below means that run command. One command does the whole connect step: it adds `atmn` as a dependency, places `autumn.config.ts` (its own package in a monorepo — it asks where, or takes `--path` and `--name`), pulls whatever the org already holds, and installs these skills beside the config. Each run prints what it did and, when it needs an answer, the flag to pass; run it again with the flag.
+1. Run `atmn init` from the project root with the user's package manager (`bunx atmn init`, `pnpm exec atmn init`, `yarn atmn init`, `npx atmn init` — read it off the lockfile). Every `atmn …` command below means that run command. One command does the whole connect step: it adds `atmn` as a dependency, places the config in `autumn/` (its own package in a monorepo — it asks where, or takes `--path` and `--name`), pulls whatever the org already holds, and installs these skills beside the config. Each run prints what it did and, when it needs an answer, the flag to pass; run it again with the flag.
 2. Key already there → `init` says who it's connected to and moves on. Say so in one line.
 3. No key → `init` stops and asks how to connect. Ask the user the same thing, one question, two options, plain words:
 
    > Two ways to start: sign in to an Autumn account (I'll open a browser), or go keyless — I set up a sandbox for you right now and you link an account later. Which do you want?
 
-   Go keyless without asking when there's nobody to ask (unattended run, no browser) or the user has already told you to handle everything yourself. Either way, say in one line which one you picked.
+   Always ask this one, even if the user told you to handle everything yourself — a keyless org has no owner until they link it, and that is their call, not yours. Pick keyless without asking only when there is genuinely nobody in the chat to answer (an unattended run), and say in one line that you did.
 4. Connect the way they chose, by running `init` again with the flag:
 
-   - **Sign in** → say a browser window is coming, then `atmn init --login`. It opens the browser to sign in and create or pick an org, prints the sign-in URL, and waits — that's normal, it's not stuck. If the browser doesn't open, send the user the printed URL as-is. Keys get saved to `.env`. Fails, or there's no browser (SSH, sandbox) → retry once, then offer keyless instead, or let the user copy their own sandbox key from app.useautumn.com into `.env` as `AUTUMN_SECRET_KEY`.
+   - **Sign in** → say a browser window is coming, then `atmn init --login`. It opens the browser to sign in and create or pick an org, prints the sign-in URL, and waits — that's normal, it's not stuck. If the browser doesn't open (SSH, sandbox), that's not a failure: send the user the printed URL as-is and wait. Keys get saved to `.env`. Fails → retry once, then stop and tell the user what failed. Offer the ways forward — go keyless, or they copy their own sandbox key from app.useautumn.com into `.env` as `AUTUMN_SECRET_KEY` — and wait for their answer. Never switch to keyless on your own.
    - **Keyless** → `atmn init --keyless`. It provisions a sandbox org and saves its key to `.env` as `AUTUMN_SECRET_KEY`. No account, no browser, nothing for the user to do. The org is a real one: pushing, customers, and billing all work the same. It has no owner until Phase 7 links one, and the key doesn't change when that happens. `init` prints the deadline for linking; note it for Phase 7. For what provisioning and linking do underneath, and their limits, read `references/keyless.md`.
 
 5. `init` pulled the org's catalog into the config. If plans showed up ("Pulled N entries"), say so and go through them with the user before changing anything. A brand-new or keyless org is empty; the config is a scaffold for Phase 4 to fill.
@@ -141,9 +137,9 @@ Skip this entirely if the user signed in — they already own their org.
 
 Offer once, right after they've seen the integration work, because that's when there's something worth logging in to look at:
 
-> Want to link this to your account? Takes an email and a code, and then you can open the dashboard and see everything that just ran.
+> Want to link this to your account? I’ll create a secure sign-in link so you can claim the org and open everything that just ran in the dashboard.
 
-No → fine, drop it and say the offer stands whenever. Yes → ask which email should own the org, run `atmn login --claim <email>`, then ask them for the code that lands in their inbox and pass it back with `--otp <code>`. Linking makes them the owner: same key, same plans, same customers, plus the dashboard. An email that already has an Autumn account works the same way; the new org is added beside their existing ones.
+No → fine, drop it and say the offer stands whenever. Yes → ask which email to send the link to, run `atmn login --claim <email>`, and give them the returned claim URL. Autumn also emails that same URL — say so, naming the address, so they know where to find it later ("Also sent to you@example.com"). Whoever opens the link and signs in becomes the owner — the email is only where the link is delivered, so treat the link like the key and give it to the user alone. Linking makes them the owner: same key, same plans, same customers, plus the dashboard. An account that already exists works the same way; the new org is added beside their existing ones and becomes active after confirmation.
 
 Unclaimed orgs don't wait forever, so mention the window `init` printed when you offer — as a fact, not a threat. If linking fails, nothing is lost: the key keeps working and they can try again, or sign up normally and push the same config. What the commands do underneath: `references/keyless.md`.
 
@@ -159,7 +155,7 @@ Then stop. Don't keep building, don't tour the dashboard, don't deploy anything.
 
 A keyless org is a real sandbox org with no owner yet. One call creates it and hands back a secret key; pushing a catalog, creating customers, and billing all work normally. The user links their account later, and the key stays the same.
 
-The CLI does both: `atmn init --keyless` (or `atmn login --keyless`) provisions, and `atmn login --claim <email> [--otp <code>]` links. Use those. The HTTP calls below are what they do underneath, for when you need to know the fields or limits. Base URL is `https://api.useautumn.com`, and none of these routes need auth except where noted.
+The CLI does both: `atmn init --keyless` (or `atmn login --keyless`) provisions, and `atmn login --claim <email>` creates the browser claim flow. Use those. The HTTP calls below are what they do underneath, for when you need to know the fields or limits. Base URL is `https://api.useautumn.com`. The same flow, in the [auth.md](https://workos.com/auth-md) convention agents discover on their own, is at `https://useautumn.com/auth.md`.
 
 ## Provision
 
@@ -167,26 +163,27 @@ The CLI does both: `atmn init --keyless` (or `atmn login --keyless`) provisions,
 
 Send `name` and `slug`, both derived from the project (repo name, or the `name` in package.json). The slug is lowercase letters and numbers, with `-` or `_` between words.
 
-Back comes `organization_id`, `organization_slug`, `api_key`, `claim_token`, `claim_url`, and `claim_expires_at`.
+Back comes `organization_id`, `organization_slug`, `api_key`, `claim_token`, and `claim_expires_at`.
 
 - Write `api_key` into `.env` as `AUTUMN_SECRET_KEY`. It is a sandbox secret key — never print it or read it back into the chat.
-- `claim_token` is a second way to link the org, for when you don't have the key. Claiming with the key is simpler, so normally you can ignore it. It is as secret as the key.
-- `claim_url` opens the same linking flow in a browser. Useful only if the user would rather click than paste a code.
+- `claim_token` works only on `/agent.start_claim`, as an alternative to the key for that one call. It is not an API credential — it can't read or write catalogs, customers, or anything else. Claiming with the key is simpler, so normally you can ignore it. It is still as secret as the key.
 - `claim_expires_at` is the deadline for linking — a few days out. Read it from the response instead of assuming; after it passes, the org can't be linked to anyone.
 - Provisioning is rate limited per machine. If it fails, tell the user and offer sign-in — never loop on it.
 
-## Link the org to an account
+## Claim the org
 
-Two calls with the user in between.
+`POST /agent.start_claim` with an `Authorization: Bearer <AUTUMN_SECRET_KEY>` header and an `email` in the body. Autumn returns `claim_url` and `expires_at`, and emails the same URL to that address.
 
-**Start it.** `POST /agent.claim` with an `Authorization: Bearer <AUTUMN_SECRET_KEY>` header and the user's `email` in the body. Autumn emails them a one-time code and returns `expires_at`, a few minutes out.
+Give the URL to the user in the chat as well, and tell them which address it was emailed to. They open it, sign in with any account, review the organization, and confirm the claim. Autumn then adds that account as owner and switches their dashboard to the claimed organization.
+
+The email is only where the link is delivered — it is not checked at claim time. The link itself is the credential: anyone who opens it and signs in owns the org, so share it only with the user.
 
 If you're using the claim token instead of the key, send `claim_token` in the body and no `Authorization` header. Send exactly one of the two — both, or neither, is refused.
 
-**Finish it.** `POST /agent.verify` with `email` and the `otp` the user read out. It returns the organization and the user now attached to it. From here they can sign in at app.useautumn.com and see everything.
-
 Notes that matter:
 
-- Only a few tries per code, and it expires in minutes. A wrong code means ask again; a dead one means starting over from `/agent.claim`.
+- The browser link expires in minutes. If it expires, call `/agent.start_claim` again to replace it. Only the newest link works.
+- Never ask the user for a verification code; completion happens in the browser.
+- The same URL is emailed, so the user still has it if the agent session is lost.
 - The provisioned key keeps working after linking. Don't rotate it, don't provision a second org.
 - Linking an org that's already linked, or past its deadline, fails on purpose. These errors are deliberately vague so they can't be probed — don't guess at what went wrong, just tell the user it didn't go through and what you'll try next.

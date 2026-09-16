@@ -186,6 +186,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         <DynamicParamField body="items" type="object[]">
           Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
           <Expandable title="properties">
+            <DynamicParamField body="threshold_billing" type="object | null">
+              Bills this many feature units when outstanding overage reaches it.
+              <Expandable title="properties">
+                <DynamicParamField body="threshold" type="number" required />
+
+              </Expandable>
+            </DynamicParamField>
+
             <DynamicParamField body="feature_id" type="string" required>
               The ID of the feature to configure.
             </DynamicParamField>
@@ -450,6 +458,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         <DynamicParamField body="add_items" type="object[]">
           Items to add to the plan.
           <Expandable title="properties">
+            <DynamicParamField body="threshold_billing" type="object | null">
+              Bills this many feature units when outstanding overage reaches it.
+              <Expandable title="properties">
+                <DynamicParamField body="threshold" type="number" required />
+
+              </Expandable>
+            </DynamicParamField>
+
             <DynamicParamField body="feature_id" type="string" required>
               The ID of the feature to configure.
             </DynamicParamField>
@@ -950,6 +966,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicParamField body="add_items" type="object[]">
                   <Expandable title="properties">
+                    <DynamicParamField body="threshold_billing" type="object | null">
+                      Bills this many feature units when outstanding overage reaches it.
+                      <Expandable title="properties">
+                        <DynamicParamField body="threshold" type="number" required />
+
+                      </Expandable>
+                    </DynamicParamField>
+
                     <DynamicParamField body="feature_id" type="string" required>
                       The ID of the feature to configure.
                     </DynamicParamField>
@@ -1354,6 +1378,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             <DynamicParamField body="items" type="object[]">
               Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
               <Expandable title="properties">
+                <DynamicParamField body="threshold_billing" type="object | null">
+                  Bills this many feature units when outstanding overage reaches it.
+                  <Expandable title="properties">
+                    <DynamicParamField body="threshold" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
                 <DynamicParamField body="feature_id" type="string" required>
                   The ID of the feature to configure.
                 </DynamicParamField>
@@ -1618,6 +1650,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             <DynamicParamField body="add_items" type="object[]">
               Items to add to the plan.
               <Expandable title="properties">
+                <DynamicParamField body="threshold_billing" type="object | null">
+                  Bills this many feature units when outstanding overage reaches it.
+                  <Expandable title="properties">
+                    <DynamicParamField body="threshold" type="number" required />
+
+                  </Expandable>
+                </DynamicParamField>
+
                 <DynamicParamField body="feature_id" type="string" required>
                   The ID of the feature to configure.
                 </DynamicParamField>
@@ -2118,6 +2158,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicParamField body="add_items" type="object[]">
                       <Expandable title="properties">
+                        <DynamicParamField body="threshold_billing" type="object | null">
+                          Bills this many feature units when outstanding overage reaches it.
+                          <Expandable title="properties">
+                            <DynamicParamField body="threshold" type="number" required />
+
+                          </Expandable>
+                        </DynamicParamField>
+
                         <DynamicParamField body="feature_id" type="string" required>
                           The ID of the feature to configure.
                         </DynamicParamField>

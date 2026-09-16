@@ -14,9 +14,9 @@ import {
 	getFeatureCreditSystem,
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
+import { ExpiryConfig } from "./advanced-settings/ExpiryConfig";
 import { FeatureOverrideConfig } from "./advanced-settings/FeatureOverrideConfig";
 import { PooledBalanceConfig } from "./advanced-settings/PooledBalanceConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
@@ -26,7 +26,6 @@ import { StripePriceConfig } from "./advanced-settings/StripePriceConfig";
 import { UsageLimit } from "./advanced-settings/UsageLimit";
 
 export function AdvancedSettings() {
-	const { isAdmin } = useAdmin();
 	const { features } = useFeaturesQuery();
 	const { item } = useProductItemContext();
 	const { product } = useProduct();
@@ -36,23 +35,27 @@ export function AdvancedSettings() {
 	const usageType = getFeatureUsageType({ item, features });
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
 	const isPriced = isFeaturePriceItem(item);
+	const isOneOff = itemToBillingInterval({ item }) === BillingInterval.OneOff;
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	const showFeatureOverride =
-		isAdmin &&
-		isAnyCreditSystem(
-			features.find((feature) => feature.id === item.feature_id)?.type,
-		);
+	// Purchased credits only: the cadence of a recurring item already bounds it.
+	const showExpiry =
+		isPriced && item.usage_model === UsageModel.Prepaid && isOneOff;
+	const showFeatureOverride = isAnyCreditSystem(
+		features.find((feature) => feature.id === item.feature_id)?.type,
+	);
 	// Deprecated in favor of licenses. Surface it whenever any item in the plan
 	// uses an entity feature, so all items in such plans keep working.
 	const showEntityFeature =
 		item.entity_feature_id != null ||
 		(product?.items?.some((planItem) => planItem?.entity_feature_id != null) ??
 			false);
-	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use)
+	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use).
+	// One-off items have no billing cycle to prorate against.
 	const showProration =
 		isPriced &&
+		!isOneOff &&
 		(item.usage_model === UsageModel.Prepaid ||
 			usageType === FeatureUsageType.Continuous);
 
@@ -62,7 +65,7 @@ export function AdvancedSettings() {
 		isPriced &&
 		item.usage_model === UsageModel.Prepaid &&
 		usageType === FeatureUsageType.Single &&
-		itemToBillingInterval({ item }) !== BillingInterval.OneOff;
+		!isOneOff;
 
 	// Prepaid maps into the v2 slot, usage-based into v1; the meter comes from
 	// the adopted price rather than being mapped.
@@ -83,6 +86,9 @@ export function AdvancedSettings() {
 
 					{/* Rollover */}
 					{showRollover && <RolloverConfig />}
+
+					{/* Expiry on purchased credits */}
+					{showExpiry && <ExpiryConfig />}
 
 					{/* Credit rate card override */}
 					{showFeatureOverride && <FeatureOverrideConfig />}

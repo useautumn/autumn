@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { publicServiceUrlsFromDashboard } from "../devProxy/cloudflareConfig.ts";
 import {
 	entryPublicOrigin,
 	laptopDevEnv,
+	localServiceUrls,
 	loopbackServiceUrls,
 	publicDevEnv,
 } from "./publicUrls.ts";
-import { publicServiceUrlsFromDashboard } from "../devProxy/cloudflareConfig.ts";
 
 describe("publicDevEnv", () => {
 	test("stamps one public hostname per service", () => {
@@ -91,5 +92,19 @@ describe("publicDevEnv", () => {
 		expect(env.CLIENT_URL).toBe("http://localhost:3000");
 		expect(env.VITE_BACKEND_URL).toBe("http://localhost:8080");
 		expect(env.CLOUD_AGENT).toBe("1");
+	});
+
+	test("localServiceUrls uses loopback vite when unprovisioned", () => {
+		expect(localServiceUrls({ entry: { worktreeNum: 3 } }).vite).toBe(
+			"http://localhost:3200",
+		);
+	});
+
+	test("localServiceUrls uses portless dashboard when provisioned", () => {
+		const urls = localServiceUrls({
+			entry: { worktreeNum: 3, branchName: "dw-wt-3-abc" },
+		});
+		expect(urls.vite).toContain("wt3.localhost");
+		expect(urls.api).toContain("wt3-api.localhost");
 	});
 });

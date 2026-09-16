@@ -1,7 +1,14 @@
-import { Button, CopyButton, SearchableSelect } from "@autumn/ui";
+import {
+	Button,
+	CopyButton,
+	SearchableSelect,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { PlusIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
-import { CheckIcon } from "lucide-react";
 import { useState } from "react";
+import { EntityOptionRow } from "@/components/forms/shared/EntityOptionRow";
 import { cn } from "@/lib/utils";
 import { useEntitySelector } from "../hooks/useEntitySelector";
 import { CreateEntity } from "./CreateEntity";
@@ -45,32 +52,35 @@ export const SelectedEntityDetails = () => {
 						searchPlaceholder="Search entities..."
 						emptyText="No entities found"
 						triggerClassName="w-full sm:w-72"
+						contentClassName="w-88"
 						onSearchChange={setSearch}
 						isLoading={isLoading}
-						renderValue={(entity) => (
-							<span
-								className={cn(
-									"truncate",
-									entity ? "text-muted-foreground" : "text-tertiary-foreground",
-								)}
-							>
-								{entity
-									? entity.name || entity.id || PLACEHOLDER
-									: "Select entity"}
-							</span>
-						)}
+						renderValue={(entity) => {
+							const label = entity
+								? entity.name || entity.id || PLACEHOLDER
+								: "Select entity";
+							return (
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<span
+											className={cn(
+												"truncate",
+												entity
+													? "text-muted-foreground"
+													: "text-tertiary-foreground",
+											)}
+										>
+											{label}
+										</span>
+									</TooltipTrigger>
+									<TooltipContent className="max-w-xs break-all">
+										{label}
+									</TooltipContent>
+								</Tooltip>
+							);
+						}}
 						renderOption={(entity, isSelected) => (
-							<>
-								<div className="flex gap-2 items-center min-w-0 flex-1">
-									{entity.name && (
-										<span className="text-sm shrink-0">{entity.name}</span>
-									)}
-									<span className="truncate text-tertiary-foreground font-mono text-xs min-w-0">
-										{entity.id || PLACEHOLDER}
-									</span>
-								</div>
-								{isSelected && <CheckIcon className="size-4 shrink-0" />}
-							</>
+							<EntityOptionRow entity={entity} isSelected={isSelected} />
 						)}
 						footer={({ close }) => (
 							<div className="border-t py-1.5 px-2">

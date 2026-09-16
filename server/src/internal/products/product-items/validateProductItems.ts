@@ -4,6 +4,7 @@ import {
 	type Feature,
 	FeatureType,
 	Infinite,
+	isContUseFeature,
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
 	itemToEntInterval,
@@ -23,11 +24,6 @@ import {
 } from "@autumn/shared";
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
 import { StatusCodes } from "http-status-codes";
-import {
-	validateInvoiceCreditPooling,
-	validateInvoiceCreditPrice,
-	validateInvoiceCreditUsageBasedPricing,
-} from "@/internal/features/validateInvoiceCreditPooling.js";
 import { validateItemFeatureOverride } from "@/internal/features/validateItemFeatureOverride.js";
 import {
 	isBooleanFeatureItem,
@@ -74,22 +70,11 @@ const validateProductItem = ({
 		});
 	}
 
-	validateInvoiceCreditPooling({ feature, pooled: item.pooled });
-	validateInvoiceCreditUsageBasedPricing({
-		feature,
-		usageBased:
-			isFeaturePriceItem(item) && item.usage_model === UsageModel.PayPerUse,
-	});
-	validateInvoiceCreditPrice({ feature, item });
 	validateItemFeatureOverride({ item, feature, features });
 
-	if (
-		item.pooled &&
-		isFeaturePriceItem(item) &&
-		item.included_usage === Infinite
-	) {
+	if (isFeaturePriceItem(item) && item.included_usage === Infinite) {
 		throw new RecaseError({
-			message: "Pooled unlimited items cannot include pricing",
+			message: "Unlimited items cannot include pricing",
 			code: ErrCode.InvalidProductItem,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
@@ -329,6 +314,20 @@ const validateProductItem = ({
 		});
 	}
 
+	// The schema can only see the item's shape; a purchase can only expire if
+	// the feature actually holds a consumable balance.
+	if (
+		item.config?.expiry &&
+		feature &&
+		(feature.type === FeatureType.Boolean || isContUseFeature({ feature }))
+	) {
+		throw new RecaseError({
+			message: `expiry is only supported on consumable features (feature: ${item.feature_id})`,
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	if (!item.config?.rollover) return;
 	const rollover = item.config.rollover as RolloverConfig;
 
@@ -340,6 +339,14 @@ const validateProductItem = ({
 	// Authoring-time checks only: billing paths revalidate items round-tripped
 	// from persisted entitlements, which no longer answer for their own shape.
 	if (!validateRollover) return;
+
+	if (item.included_usage === Infinite) {
+		throw new RecaseError({
+			message: "Unlimited items cannot have rollover",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
 
 	const rolloverIssue = rolloverConfigToIssue({ rollover });
 	if (rolloverIssue) {

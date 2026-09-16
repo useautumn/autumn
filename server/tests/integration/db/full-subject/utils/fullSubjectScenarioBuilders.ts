@@ -150,8 +150,8 @@ const buildProduct = ({
 	version: 1,
 	version_slug: "v1",
 	active: true,
-deleted_at: null,
-previous_version_slug: null,
+	deleted_at: null,
+	previous_version_slug: null,
 	processor: null,
 	base_variant_id: null,
 	base_internal_product_id: null,
@@ -345,6 +345,7 @@ const buildCustomerEntitlement = ({
 	id: `ce_${key}_${suffix}`,
 	customer_product_id: customerProductId,
 	entitlement_id: entitlement.id,
+	invoice_credit: false,
 	internal_customer_id: customer.internal_id,
 	internal_entity_id: internalEntityId,
 	internal_feature_id: entitlement.internal_feature_id,
@@ -369,6 +370,7 @@ const buildCustomerEntitlement = ({
 	external_id: `bal_${key}_${suffix}`,
 	expired: null,
 	reset_by_invoice: null,
+	metadata: null,
 });
 
 const buildRollover = ({

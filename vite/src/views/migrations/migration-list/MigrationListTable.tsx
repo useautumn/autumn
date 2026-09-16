@@ -58,7 +58,10 @@ export function MigrationListTable() {
 	});
 
 	const getRowHref = (row: MigrationWithRunInfo) =>
-		pushPage({ path: `/migrations/${row.id}` });
+		pushPage({
+			path: `/migrations/${row.id}`,
+			queryParams: { step: row.status === "draft" ? undefined : "live" },
+		});
 
 	// Stay out of the way until there is more than one page's worth to page through.
 	const showPagination =

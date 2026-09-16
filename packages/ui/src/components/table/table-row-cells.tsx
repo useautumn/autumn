@@ -127,7 +127,7 @@ export const TableRowCells = memo(
 	},
 ) as typeof TableRowCellsInner;
 
-const SKELETON_WIDTHS = ["w-24", "w-20", "w-28", "w-16", "w-32", "w-20"];
+const SKELETON_WIDTHS = ["w-3/5", "w-1/2", "w-2/3", "w-2/5", "w-3/4", "w-1/2"];
 
 export type ColumnSkeletonMeta = {
 	skeleton?: ReactNode | ((rowIndex: number) => ReactNode);

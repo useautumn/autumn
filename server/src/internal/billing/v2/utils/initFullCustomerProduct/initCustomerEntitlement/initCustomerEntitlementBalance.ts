@@ -27,16 +27,30 @@ export const initCustomerEntitlementBalance = ({
 		  };
 	entitlement: EntitlementWithFeature;
 }): { balance: number; entities: Record<string, EntityBalance> | null } => {
+	const { fullCustomer, featureQuantities } = initContext;
+
 	// 1. If entitlement is boolean or unlimited, return 0
 	const isBoolean = isBooleanEntitlement({ entitlement });
 	const isUnlimited = isUnlimitedEntitlement({ entitlement });
 
-	if (isBoolean || isUnlimited) {
+	if (isBoolean) {
 		return { balance: 0, entities: null };
 	}
 
+	// Unlimited entity rows still need their entity map so per-entity usage
+	// counters sync back to the DB instead of tripping ENTITY_COUNT_MISMATCH.
+	if (isUnlimited) {
+		return {
+			balance: 0,
+			entities: initCustomerEntitlementEntities({
+				entitlement,
+				customerEntities: fullCustomer.entities,
+				startingBalance: 0,
+			}),
+		};
+	}
+
 	// 2. Get starting balance
-	const { fullCustomer, featureQuantities } = initContext;
 
 	const price = entToPrice({
 		ent: entitlement,

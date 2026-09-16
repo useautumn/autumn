@@ -155,6 +155,25 @@ const hasContentCustomize = (
 	customize.remove_items !== undefined ||
 	customize.free_trial !== undefined;
 
+/** A declared variant states its whole row: the base's declared licenses[]
+ * are its stock links, re-anchored and customized from the base's entry. */
+const applyDeclaredBaseLicenses = ({
+	plan,
+	variantProduct,
+	declaredLicenses,
+}: {
+	plan: DiffablePlanV1;
+	variantProduct: FullProduct;
+	declaredLicenses?: PlanLicenseParams[];
+}): DiffablePlanV1 =>
+	declaredLicenses === undefined
+		? plan
+		: mergeUpsertLicensesOntoPlan({
+				plan,
+				variantProduct,
+				upsertLicenses: declaredLicenses,
+			});
+
 /**
  * Follow applies the base current→next diff onto the variant; customize then
  * patches on top — its license lanes last, so an overlay that drops a base
@@ -190,7 +209,13 @@ export const buildVariantEditDiff = ({
 			}),
 		});
 	}
-	if (customize) {
+	if (customize === null) {
+		nextPlan = applyDeclaredBaseLicenses({
+			plan: fullProductToApiPlanV1Sync({ product: baseCurrent ?? baseNext }),
+			variantProduct,
+			declaredLicenses,
+		});
+	} else if (customize) {
 		const { upsert_licenses, remove_licenses, ...contentCustomize } = customize;
 		if (!follow) {
 			const basePlan = fullProductToApiPlanV1Sync({
@@ -205,6 +230,11 @@ export const buildVariantEditDiff = ({
 						licenses: currentPlan.licenses,
 					}
 				: { ...basePlan, licenses: currentPlan.licenses };
+			nextPlan = applyDeclaredBaseLicenses({
+				plan: nextPlan,
+				variantProduct,
+				declaredLicenses,
+			});
 		} else if (hasContentCustomize(customize)) {
 			nextPlan = {
 				...applyCustomizeToPlan({

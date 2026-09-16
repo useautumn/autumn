@@ -8,6 +8,7 @@
 
 import { expect, test } from "bun:test";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	atmnConfigSource,
 	initAtmnScenario,
@@ -15,7 +16,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 
 test.concurrent(
 	`${chalk.yellowBright("renamed base with a nested variant → variant keeps its own id, attach by the base's old id still resolves")}`,
@@ -32,13 +32,16 @@ test.concurrent(
 			config: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "base",
 			name: "Base",
+			versionSlug: "v1",
 			price: { amount: 49, interval: "month" },
 			variants: [
 				{
 					variantPlanId: "addon",
 					name: "Addon",
+					versionSlug: "v1",
 					customize: { price: { amount: 79, interval: "month" } },
 				},
 			],
@@ -72,13 +75,16 @@ test.concurrent(
 					body: `{
 	plans: [
 		plan({
+			active: true,
 			planId: "baseNew",
 			internalId: "${base.internal_id}",
 			name: "Base",
+			versionSlug: "v1",
 			variants: [
 				{
 					variantPlanId: "addon",
 					name: "Addon",
+					versionSlug: "v1",
 					customize: { price: { amount: 79, interval: "month" } },
 				},
 			],

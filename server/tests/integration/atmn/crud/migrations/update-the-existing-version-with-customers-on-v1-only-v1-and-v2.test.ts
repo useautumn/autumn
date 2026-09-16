@@ -68,8 +68,7 @@ for (const { name, customeredVersions } of customeredVersionCases) {
 				scenario.writeConfig(
 					atmnConfigSource({
 						body: configBody({
-							plans: versionedPro({ versionSlug: "v2", amount: 59 }),
-							planVersions: versionedPro({ versionSlug: "v1" }),
+							plans: `${versionedPro({ versionSlug: "v2", amount: 59 })}${versionedPro({ versionSlug: "v1", active: false })}`,
 						}),
 					}),
 				);
@@ -87,8 +86,7 @@ for (const { name, customeredVersions } of customeredVersionCases) {
 				scenario.writeConfig(
 					atmnConfigSource({
 						body: configBody({
-							plans: versionedPro({ versionSlug: "v2", amount: 69 }),
-							planVersions: versionedPro({ versionSlug: "v1", amount: 19 }),
+							plans: `${versionedPro({ versionSlug: "v2", amount: 69 })}${versionedPro({ versionSlug: "v1", amount: 19, active: false })}`,
 						}),
 					}),
 				);

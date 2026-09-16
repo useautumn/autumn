@@ -15,15 +15,18 @@ const flat = (value: unknown) =>
 		.slice(0, 300);
 
 /** Failure metadata worth reading in the terminal (full copy is in
- * Braintrust): validation errors and the closest-plan field diff. */
+ * Braintrust): parse and validation errors and the closest-plan field diff. */
 const failureDetail = (entry: AxScore): string => {
 	if (entry.score !== 0 || !entry.metadata) return "";
 	const lines: string[] = [];
-	const { validationErrors, closestPlan, fields } = entry.metadata as {
-		validationErrors?: string[];
-		closestPlan?: string;
-		fields?: Record<string, string>;
-	};
+	const { parseError, validationErrors, closestPlan, fields } =
+		entry.metadata as {
+			parseError?: string;
+			validationErrors?: string[];
+			closestPlan?: string;
+			fields?: Record<string, string>;
+		};
+	if (parseError) lines.push(`      ${flat(parseError)}`);
 	for (const error of validationErrors ?? [])
 		lines.push(`      ${flat(error)}`);
 	if (fields) {
