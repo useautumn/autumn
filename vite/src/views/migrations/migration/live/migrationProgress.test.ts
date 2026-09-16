@@ -6,6 +6,13 @@ test("progress label follows the run state", () => {
 		runProgressLabel({
 			migrationStatus: "waiting",
 			activeRun: { dry_run: false },
+			blockedBy: "pro-v3",
+		}),
+	).toBe("Waiting for pro-v3");
+	expect(
+		runProgressLabel({
+			migrationStatus: "waiting",
+			activeRun: { dry_run: false },
 		}),
 	).toBe("Waiting for another migration");
 	expect(

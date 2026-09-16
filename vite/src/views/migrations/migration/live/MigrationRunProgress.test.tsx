@@ -33,3 +33,20 @@ test("nothing renders once no run is active", () => {
 		),
 	).toBe("");
 });
+
+test("a waiting run pulses a full bar instead of a count fill", () => {
+	const markup = renderToStaticMarkup(
+		<MigrationRunProgress
+			completed={0}
+			running={0}
+			total={0}
+			expected={10}
+			label="Waiting for pro-v3"
+			active
+			waiting
+		/>,
+	);
+	expect(markup).toContain("Waiting for pro-v3");
+	expect(markup).toContain("animate-pulse");
+	expect(markup).toContain("width:100%");
+});

@@ -1,6 +1,7 @@
 import { UsersIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
 import { migrationProgress } from "./migrationProgress";
 
 const EASE_OUT = [0.32, 0.72, 0, 1] as const;
@@ -18,6 +19,7 @@ export function MigrationRunProgress({
 	expected,
 	label,
 	active,
+	waiting = false,
 	slot,
 }: {
 	completed: number;
@@ -26,6 +28,8 @@ export function MigrationRunProgress({
 	expected: number | null;
 	label: string;
 	active: boolean;
+	/** Pulses the bar while the run is queued behind another migration. */
+	waiting?: boolean;
 	slot?: HTMLElement | null;
 }) {
 	const shouldReduceMotion = useReducedMotion();
@@ -81,9 +85,12 @@ export function MigrationRunProgress({
 						</div>
 						<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
 							<motion.div
-								className="h-full rounded-full bg-primary"
+								className={cn(
+									"h-full rounded-full bg-primary",
+									waiting && "animate-pulse bg-primary/40",
+								)}
 								initial={false}
-								animate={{ width: `${percent}%` }}
+								animate={{ width: waiting ? "100%" : `${percent}%` }}
 								exit={{
 									width: "100%",
 									transition: shouldReduceMotion

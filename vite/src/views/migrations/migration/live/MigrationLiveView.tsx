@@ -854,8 +854,9 @@ export function MigrationLiveView({
 				running={progressCounts?.running ?? 0}
 				total={progressCounts?.total ?? 0}
 				expected={runScopeCount}
-				label={runProgressLabel({ migrationStatus, activeRun })}
+				label={runProgressLabel({ migrationStatus, activeRun, blockedBy })}
 				active={!!activeRun}
+				waiting={migrationStatus === "waiting"}
 				slot={footerSlot}
 			/>
 		</div>

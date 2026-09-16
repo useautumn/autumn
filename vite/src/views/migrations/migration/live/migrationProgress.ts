@@ -3,11 +3,14 @@ import type { MigrationStatus } from "@autumn/shared";
 export function runProgressLabel({
 	migrationStatus,
 	activeRun,
+	blockedBy = null,
 }: {
 	migrationStatus: MigrationStatus;
 	activeRun: { dry_run: boolean } | undefined;
+	blockedBy?: string | null;
 }): string {
-	if (migrationStatus === "waiting") return "Waiting for another migration";
+	if (migrationStatus === "waiting")
+		return `Waiting for ${blockedBy ?? "another migration"}`;
 	if (!activeRun) return "Last run";
 	return activeRun.dry_run ? "Dry run in progress" : "Migrating customers";
 }
