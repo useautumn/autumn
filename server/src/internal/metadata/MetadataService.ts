@@ -87,6 +87,35 @@ export class MetadataService {
 		return claimedRows.length > 0;
 	}
 
+	/**
+	 * Repoints a deferred row from one Stripe invoice to its replacement.
+	 * Returns false when another writer already moved (or removed) the row.
+	 */
+	static async swapStripeInvoiceId({
+		db,
+		id,
+		fromStripeInvoiceId,
+		toStripeInvoiceId,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		fromStripeInvoiceId: string;
+		toStripeInvoiceId: string;
+	}): Promise<boolean> {
+		const swappedRows = await db
+			.update(metadata)
+			.set({ stripe_invoice_id: toStripeInvoiceId })
+			.where(
+				and(
+					eq(metadata.id, id),
+					eq(metadata.stripe_invoice_id, fromStripeInvoiceId),
+				),
+			)
+			.returning({ id: metadata.id });
+
+		return swappedRows.length > 0;
+	}
+
 	static async delete({ db, id }: { db: DrizzleCli; id: string }) {
 		await db.delete(metadata).where(eq(metadata.id, id));
 	}

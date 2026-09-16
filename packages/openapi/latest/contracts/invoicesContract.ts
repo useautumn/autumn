@@ -8,6 +8,10 @@ import {
 	PayInvoiceResponseSchema,
 } from "@api/others/apiInvoice/payInvoiceParams.js";
 import {
+	ReissueInvoiceParamsSchema,
+	ReissueInvoiceResponseSchema,
+} from "@api/others/apiInvoice/reissueInvoiceParams.js";
+import {
 	VoidInvoiceParamsSchema,
 	VoidInvoiceResponseSchema,
 } from "@api/others/apiInvoice/voidInvoiceParams.js";
@@ -201,5 +205,44 @@ export const voidInvoiceContract = oc
 	.output(
 		VoidInvoiceResponseSchema.meta({
 			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "void" } }],
+		}),
+	);
+
+export const reissueInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.reissue",
+		operationId: "reissueInvoice",
+		tags: ["invoices"],
+		description:
+			"Voids an open send-invoice Stripe invoice and issues a replacement with the same line items. An invoice template can supply the replacement's footer (e.g. bank details) and memo. The replacement keeps the original due date unless net_terms_days is passed, which is required once the original is past due. The replacement stays linked to the same subscription and fulfils the same pending plan when paid.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "reissue",
+		}),
+	})
+	.input(
+		ReissueInvoiceParamsSchema.meta({
+			title: "ReissueInvoiceParams",
+			examples: [
+				{
+					invoice_id: "inv_2b3c4d5e6f7g8h",
+					invoice_template_id: "inv_tmpl_bank_transfer",
+				},
+			],
+		}),
+	)
+	.output(
+		ReissueInvoiceResponseSchema.meta({
+			examples: [
+				{
+					invoice: {
+						...LIST_INVOICE_EXAMPLE,
+						id: "inv_3c4d5e6f7g8h9i",
+						status: "open",
+					},
+					voided_invoice_id: "inv_2b3c4d5e6f7g8h",
+				},
+			],
 		}),
 	);
