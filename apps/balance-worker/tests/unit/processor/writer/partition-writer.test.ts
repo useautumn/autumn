@@ -21,9 +21,11 @@ import {
 	initialize,
 } from "../../../../src/processor/commands/initialize.js";
 import {
-	submitTrack,
 	type TrackReceiptPolicy,
+	track,
 } from "../../../../src/processor/commands/track.js";
+import { createAcceptedCommands } from "../../../../src/processor/common/acceptedCommands.js";
+import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
 import type {
 	MutateParams,
@@ -264,9 +266,19 @@ const createPartitionTrackWriter = ({
 		ctx: { stateStore, appender },
 		config: { topic, partition, limits },
 	});
+	const scope: PartitionProcessorScope = {
+		ctx: {
+			stateStore,
+			appender,
+			trackReceiptPolicy: receiptPolicy,
+			assertCanRead: () => undefined,
+			config: { topic, partition, writerLimits: limits },
+			writer,
+		},
+		accepted: createAcceptedCommands(),
+	};
 	return {
-		submitTrack: ({ command }) =>
-			submitTrack({ writer, command, receiptPolicy }),
+		submitTrack: ({ command }) => track({ scope, command }),
 		submitInitialization: ({ initialization }) =>
 			initialize({ writer, initialization }),
 	};

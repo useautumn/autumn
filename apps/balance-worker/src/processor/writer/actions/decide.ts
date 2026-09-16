@@ -92,6 +92,7 @@ export async function waitForPendingCommits({
 }): Promise<void> {
 	const commits = pendingCommitsFor({ state: scope.state, customerKey });
 	if (commits.length > 0) await Promise.allSettled(commits);
+	if (scope.state.recoveryError) throw scope.state.recoveryError;
 }
 
 export function submitInitialization({

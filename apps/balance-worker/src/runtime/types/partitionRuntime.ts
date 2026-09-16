@@ -1,18 +1,12 @@
-import type {
-	CheckCommand,
-	CheckDecision,
-	MeteringIdentity,
-	TrackCommand,
-	TrackDecision,
-} from "@autumn/balance-engine";
+import type { MeteringIdentity } from "@autumn/balance-engine";
 import type {
 	OwnedPartitionFollowerProgress,
 	OwnedPartitionHealth,
 } from "../../health/ownedPartitionHealth.js";
 import type { TrackReceiptPolicy } from "../../processor/commands/track.js";
+import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type {
 	CommittedOutcomeAppender,
-	PartitionWriter,
 	PartitionWriterLimits,
 } from "../../processor/writer/types/partitionWriter.js";
 import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
@@ -70,22 +64,11 @@ export type PartitionRuntimeConfig = {
 
 export interface PartitionRuntimeContext extends PartitionRuntimeDependencies {
 	config: PartitionRuntimeConfig;
-	writer: PartitionWriter;
-	requestTracker: RuntimeRequestTracker;
+	processor: PartitionProcessor;
 }
 
 export type RuntimeFailure = { cause: unknown };
 export type RuntimeUnavailableListener = (failure: RuntimeFailure) => void;
-
-export interface RuntimeRequestTracker {
-	register<Result>(params: { operation: Promise<Result> }): Promise<Result>;
-	registerTrack(params: {
-		customerKey: string;
-		operation: Promise<TrackDecision>;
-	}): Promise<TrackDecision>;
-	precedingTracks(params: { customerKey: string }): Promise<TrackDecision>[];
-	drain(): Promise<void>;
-}
 
 export type PartitionRuntime = {
 	// A preparation source must own its reader: stop settles all writes before activation reuses SQLite.
@@ -98,6 +81,8 @@ export type PartitionRuntime = {
 	getStatus(): PartitionRuntimeStatus;
 	getHealth(): OwnedPartitionHealth;
 	subscribeUnavailable(listener: RuntimeUnavailableListener): () => void;
-	submitTrack(params: { command: TrackCommand }): Promise<TrackDecision>;
-	check(params: { command: CheckCommand }): Promise<CheckDecision>;
+	/** Runs one processor command behind the readiness gate and recovery mapping. */
+	process<Decision>(
+		run: (processor: PartitionProcessor) => Promise<Decision>,
+	): Promise<Decision>;
 };
