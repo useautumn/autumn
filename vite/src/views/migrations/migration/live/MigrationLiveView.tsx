@@ -337,11 +337,22 @@ export function MigrationLiveView({
 		executionStatuses: activeExecutionStatuses,
 		isActive: hasActiveRun || hasRealtimeActive,
 	});
-	const { count: runScopeCount } = useMigrationFilterPreview({
+	const { count: unfilteredCount } = useMigrationFilterPreview({
 		filter: filter.customer ?? {},
 		migrationId,
 		includeRows: false,
 	});
+	const tableCountIsRunScope =
+		previewSource === "filter" &&
+		deferredSearch === "" &&
+		activeExecutionStatuses.length === 0 &&
+		Object.keys(previewCustomerFilters).every(
+			(key) =>
+				previewCustomerFilters[key as keyof typeof previewCustomerFilters] ===
+				undefined,
+		);
+	const runScopeCount =
+		unfilteredCount ?? (tableCountIsRunScope ? count : null);
 
 	const setSelectedCustomer = useMigrationSheetStore(
 		(s) => s.setSelectedCustomer,
