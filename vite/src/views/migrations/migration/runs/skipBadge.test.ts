@@ -12,7 +12,7 @@ test("no_updates_needed reads as No Changes", () => {
 
 test("ineligible says so next to Skipped", () => {
 	expect(skipBadgeSpec({ skipReason: "ineligible", response: null })).toEqual({
-		label: "Skipped — ineligible",
+		label: "Skipped (ineligible)",
 		noChanges: false,
 	});
 });

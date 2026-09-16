@@ -70,7 +70,6 @@ import { pushPage } from "@/utils/genUtils";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
-import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import {
 	useMigrationRunControls,
@@ -83,11 +82,8 @@ import { CustomerSearchToolbar } from "../shared/CustomerSearchToolbar";
 import { MigrationStatusBadge } from "../shared/MigrationStatusBadge";
 import { isRunDisabled, runButtonLabel } from "../shared/migrationStatus";
 import { OperationsPreview } from "../shared/OperationsPreview";
-import {
-	versionOnlyWarningVersions,
-	versionWarningText,
-} from "../shared/operationUtils";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
+import { VersionOnlyWarnings } from "../shared/VersionOnlyWarnings";
 import { ActiveDot } from "./ActiveDot";
 import {
 	EXECUTION_STATUS_VALUES,
@@ -116,6 +112,8 @@ type CustomerRow = MigrationPreviewCustomer & {
 	_activeRunId?: string;
 	_waitingOnOtherMigration?: boolean;
 };
+
+const PROGRESS_FOOTER_PX = 56;
 
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
 	id: "migration_status",
@@ -204,6 +202,7 @@ export function MigrationLiveView({
 	step,
 	onStepChange,
 	headerActions,
+	footerSlot,
 }: {
 	migrationId: string;
 	filter: MigrationFilter;
@@ -212,11 +211,10 @@ export function MigrationLiveView({
 	step: StepId;
 	onStepChange: (step: StepId) => void;
 	headerActions?: ReactNode;
+	footerSlot?: HTMLDivElement | null;
 }) {
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const env = useEnv();
-	const tableContainerHeight =
-		env === AppEnv.Sandbox ? "calc(100vh - 260px)" : "calc(100vh - 220px)";
 	const [executionQuery, setExecutionQuery] = useQueryStates(
 		{
 			execution_status: parseAsArrayOf(
@@ -360,6 +358,10 @@ export function MigrationLiveView({
 		(r) => r.status === "queued" || r.status === "running",
 	);
 	const progressRun = activeRun ?? (isSettling ? latestRun : undefined);
+	const tableOffsetPx =
+		(env === AppEnv.Sandbox ? 260 : 220) +
+		(progressRun ? PROGRESS_FOOTER_PX : 0);
+	const tableContainerHeight = `calc(100vh - ${tableOffsetPx}px)`;
 	const progressCounts = (progressRun ?? latestRun)?.item_run_counts;
 	const canShowPendingStatus =
 		executionStatuses.length === 0 || executionStatuses.includes("queued");
@@ -597,11 +599,7 @@ export function MigrationLiveView({
 							noBillingChanges={noBillingChanges}
 						/>
 						<OperationsPreview operations={operations} />
-						{versionOnlyWarningVersions(operations).map((version) => (
-							<InfoBox key={version} variant="warning">
-								{versionWarningText(version)}
-							</InfoBox>
-						))}
+						<VersionOnlyWarnings operations={operations} />
 						<MigrationRunControls
 							value={runControls}
 							onChange={setRunControls}
@@ -831,18 +829,6 @@ export function MigrationLiveView({
 				}
 			/>
 
-			<MigrationRunProgress
-				completed={progressCounts?.completed ?? 0}
-				running={progressCounts?.running ?? 0}
-				total={progressCounts?.total ?? 0}
-				expected={runScopeCount}
-				label={runProgressLabel({
-					migrationStatus,
-					activeRun: progressRun,
-				})}
-				active={!!progressRun}
-			/>
-
 			<Table.Provider
 				config={{
 					table,
@@ -867,6 +853,18 @@ export function MigrationLiveView({
 					</Table.VirtualizedContent>
 				</Table.Container>
 			</Table.Provider>
+			<MigrationRunProgress
+				completed={progressCounts?.completed ?? 0}
+				running={progressCounts?.running ?? 0}
+				total={progressCounts?.total ?? 0}
+				expected={runScopeCount}
+				label={runProgressLabel({
+					migrationStatus,
+					activeRun: progressRun,
+				})}
+				active={!!progressRun}
+				slot={footerSlot}
+			/>
 		</div>
 	);
 }

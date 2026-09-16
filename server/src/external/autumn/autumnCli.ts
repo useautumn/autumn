@@ -33,6 +33,7 @@ import {
 	type CustomerBillingControlsParams,
 	type CustomerData,
 	CustomerExpand,
+	type CustomerListFilters,
 	type DeleteBalanceParamsV0,
 	EntityExpand,
 	ErrCode,
@@ -99,6 +100,7 @@ export type MigrationRunsListResponse = {
 export type MigrationFilterPreviewParams = {
 	filter?: MigrationFilter["customer"];
 	search?: string;
+	customerFilters?: CustomerListFilters;
 	cursor?: string;
 	pageSize?: number;
 	includeCount?: boolean;

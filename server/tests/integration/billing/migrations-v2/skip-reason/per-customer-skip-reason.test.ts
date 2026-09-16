@@ -130,3 +130,61 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("per-customer skip reason: add_plan on a customer who already has the plan is no_updates_needed")}`,
+	async () => {
+		const runSuffix = Date.now();
+		const hasPlanId = `pc-skip-add-has-${runSuffix}`;
+		const needsPlanId = `pc-skip-add-needs-${runSuffix}`;
+		const addOn = products.base({ id: "pc-skip-add-on", items: [] });
+		const basePlan = products.base({ id: "pc-skip-add-base", items: [] });
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId: hasPlanId,
+			setup: [
+				s.customer(),
+				s.otherCustomers([{ id: needsPlanId }]),
+				s.products({ list: [addOn, basePlan] }),
+			],
+			actions: [
+				s.parallel(
+					s.billing.attach({ productId: addOn.id }),
+					s.billing.attach({ customerId: needsPlanId, productId: basePlan.id }),
+				),
+			],
+		});
+
+		const { migration, migrationRunId, result } = await runChunkedMigration({
+			ctx,
+			migrationClient: autumnV2_2,
+			migrationId: "pc-skip-add-plan-mig",
+			filter: {
+				customer: { plan: { plan_id: { $in: [addOn.id, basePlan.id] } } },
+			},
+			operations: { customer: [{ type: "add_plan", plan_id: addOn.id }] },
+			noBillingChanges: true,
+			controls: { limit: 10 },
+		});
+		if (result?.lane !== "per_customer")
+			throw new Error(`Expected the per-customer lane, got ${result?.lane}`);
+
+		const run = {
+			ctx,
+			migrationInternalId: migration.internal_id,
+			migrationRunId,
+		};
+		await expectMigrationItemRunStatus({
+			...run,
+			customerId: hasPlanId,
+			status: MigrationItemRunStatus.Skipped,
+			skipReason: "no_updates_needed",
+		});
+		await expectMigrationItemRunStatus({
+			...run,
+			customerId: needsPlanId,
+			status: MigrationItemRunStatus.Succeeded,
+			skipReason: null,
+		});
+	},
+);

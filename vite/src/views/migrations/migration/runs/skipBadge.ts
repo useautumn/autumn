@@ -33,7 +33,7 @@ export function skipBadgeSpec({
 	if (skipReason === "no_updates_needed")
 		return { label: "No Changes", noChanges: true };
 	if (skipReason === "ineligible")
-		return { label: "Skipped — ineligible", noChanges: false };
+		return { label: "Skipped (ineligible)", noChanges: false };
 	if (isNoOpResponse(response)) return { label: "No Changes", noChanges: true };
 	return { label: "Skipped", noChanges: false };
 }

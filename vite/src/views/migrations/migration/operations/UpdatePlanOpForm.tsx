@@ -27,7 +27,6 @@ import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import {
 	parsePlanKey,
 	planFilterToPlanKeys,
@@ -38,11 +37,8 @@ import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
 } from "../shared/migrationItemUtils";
-import {
-	needsVersionOnlyWarning,
-	versionWarningText,
-} from "../shared/operationUtils";
 import { PlanVersionPicker } from "../shared/PlanVersionPicker";
+import { VersionOnlyWarnings } from "../shared/VersionOnlyWarnings";
 import { ItemSummaryRow } from "./ItemSummaryRow";
 import {
 	MigrationOperationSheet,
@@ -241,9 +237,7 @@ export function UpdatePlanOpForm({
 				</div>
 			)}
 
-			{value.version !== undefined && needsVersionOnlyWarning(value) && (
-				<InfoBox variant="warning">{versionWarningText(value.version)}</InfoBox>
-			)}
+			<VersionOnlyWarnings operations={{ customer: [value] }} />
 
 			{customize?.price !== undefined && (
 				<div className="flex items-center gap-2 group/row">

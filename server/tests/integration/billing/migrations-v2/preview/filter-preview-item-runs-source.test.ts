@@ -9,6 +9,7 @@
  *   newly match the filter are absent until the migration runs again.
  *   search and executionStatuses carry over; "queued" / "not_run" are dropped.
  *   count follows the same source. Each row still carries migration_item_run.
+ *   Cursor paging and customer list filters apply to the frozen list too.
  */
 
 import { expect, test } from "bun:test";
@@ -149,5 +150,74 @@ test.concurrent(
 			func: () =>
 				autumnV2_2.migrationsV2.filterPreview({ source: "item_runs" }),
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("filter preview item_runs source: pages by cursor and honours customer list filters")}`,
+	async () => {
+		const customerId = "preview-item-runs-paging";
+		const otherIds = [1, 2].map((index) => `${customerId}-${index}`);
+		const migrationId = `${customerId}-mig`;
+		const plan = products.base({ id: `${customerId}-plan`, items: [] });
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.otherCustomers(otherIds.map((id) => ({ id }))),
+				s.products({ list: [plan] }),
+			],
+			actions: [
+				s.parallel(
+					s.billing.attach({ productId: plan.id }),
+					...otherIds.map((id) =>
+						s.billing.attach({ customerId: id, productId: plan.id }),
+					),
+				),
+			],
+		});
+
+		await runChunkedMigration({
+			ctx,
+			migrationClient: autumnV2_2,
+			migrationId,
+			filter: { customer: { plan: { plan_id: plan.id } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: plan.id },
+						customize: { add_items: [itemsV2.dashboard()] },
+					},
+				],
+			},
+		});
+
+		const seen: string[] = [];
+		let cursor: string | undefined;
+		for (let page = 0; page < 3; page++) {
+			const result = await autumnV2_2.migrationsV2.filterPreview({
+				migrationId,
+				source: "item_runs",
+				pageSize: 1,
+				cursor,
+			});
+			expect(result.count).toBe(3);
+			expect(result.customers).toHaveLength(1);
+			seen.push(result.customers[0].id ?? "");
+			cursor = result.next_cursor ?? undefined;
+			if (page < 2) expect(cursor).toBeTruthy();
+		}
+		expect(cursor).toBeUndefined();
+		expect(seen.sort()).toEqual([customerId, ...otherIds].sort());
+
+		const withoutPlans = await autumnV2_2.migrationsV2.filterPreview({
+			migrationId,
+			source: "item_runs",
+			customerFilters: { none: true },
+		});
+		expect(withoutPlans.count).toBe(0);
+		expect(withoutPlans.customers).toHaveLength(0);
 	},
 );

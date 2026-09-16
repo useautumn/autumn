@@ -1,10 +1,15 @@
-import { motion, useReducedMotion } from "motion/react";
-import { cn } from "@/lib/utils";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { createPortal } from "react-dom";
 import { migrationProgress } from "./migrationProgress";
 
-const FILL_TRANSITION = { duration: 0.45, ease: [0.32, 0.72, 0, 1] as const };
+const EASE_OUT = [0.32, 0.72, 0, 1] as const;
+const ENTER_TRANSITION = { duration: 0.3, ease: EASE_OUT };
+/** Held back so the bar visibly completes before the footer collapses. */
+const EXIT_TRANSITION = { duration: 0.25, ease: EASE_OUT, delay: 0.55 };
+const FILL_TRANSITION = { duration: 0.45, ease: EASE_OUT };
 
-/** Reserved-height slot so count updates never shift the layout. */
+/** Pinned to the page's footer slot while a run is active, mirroring the
+ * customer export sheet. Renders inline when no slot is mounted. */
 export function MigrationRunProgress({
 	completed,
 	running,
@@ -12,6 +17,7 @@ export function MigrationRunProgress({
 	expected,
 	label,
 	active,
+	slot,
 }: {
 	completed: number;
 	running: number;
@@ -19,6 +25,7 @@ export function MigrationRunProgress({
 	expected: number | null;
 	label: string;
 	active: boolean;
+	slot?: HTMLElement | null;
 }) {
 	const shouldReduceMotion = useReducedMotion();
 	const { percent, denominator } = migrationProgress({
@@ -26,31 +33,52 @@ export function MigrationRunProgress({
 		total,
 		expected,
 	});
-	const visible = active || completed > 0 || running > 0;
 
-	return (
-		<output
-			className={cn(
-				"flex h-9 w-full flex-col justify-center gap-1.5 transition-opacity",
-				visible ? "opacity-100" : "opacity-0",
+	const footer = (
+		<AnimatePresence initial={false}>
+			{active && (
+				<motion.output
+					key="migration-progress"
+					className="block overflow-hidden border-t bg-background"
+					initial={{ opacity: 0, height: 0 }}
+					animate={{ opacity: 1, height: "auto" }}
+					exit={{
+						opacity: 0,
+						height: 0,
+						transition: shouldReduceMotion ? { duration: 0 } : EXIT_TRANSITION,
+					}}
+					transition={shouldReduceMotion ? { duration: 0 } : ENTER_TRANSITION}
+				>
+					<div className="mx-auto flex w-full max-w-5xl flex-col gap-1.5 px-4 pt-3 pb-4 sm:px-10">
+						<div className="flex items-center justify-between gap-2 text-xs">
+							<span className="text-foreground">{label}</span>
+							<span className="text-tertiary-foreground tabular-nums">
+								{completed.toLocaleString()} of {denominator.toLocaleString()}{" "}
+								customers
+								{running > 0 && `, ${running.toLocaleString()} running`}
+							</span>
+						</div>
+						<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+							<motion.div
+								className="h-full rounded-full bg-primary"
+								initial={false}
+								animate={{ width: `${percent}%` }}
+								exit={{
+									width: "100%",
+									transition: shouldReduceMotion
+										? { duration: 0 }
+										: FILL_TRANSITION,
+								}}
+								transition={
+									shouldReduceMotion ? { duration: 0 } : FILL_TRANSITION
+								}
+							/>
+						</div>
+					</div>
+				</motion.output>
 			)}
-			aria-hidden={!visible}
-		>
-			<div className="flex items-center justify-between gap-2 text-xs">
-				<span className="text-foreground">{label}</span>
-				<span className="text-tertiary-foreground tabular-nums">
-					{completed.toLocaleString()} of {denominator.toLocaleString()}
-					{running > 0 && `, ${running.toLocaleString()} running`}
-				</span>
-			</div>
-			<div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-				<motion.div
-					className="h-full rounded-full bg-primary"
-					initial={false}
-					animate={{ width: `${percent}%` }}
-					transition={shouldReduceMotion ? { duration: 0 } : FILL_TRANSITION}
-				/>
-			</div>
-		</output>
+		</AnimatePresence>
 	);
+
+	return slot ? createPortal(footer, slot) : footer;
 }

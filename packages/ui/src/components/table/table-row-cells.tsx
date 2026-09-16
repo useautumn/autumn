@@ -185,7 +185,9 @@ export function TableSkeletonRows({
 						style={cellStyle}
 					>
 						{skeletonContent ?? (
-							<Skeleton className={cn("h-3.5 rounded-sm", widthClass)} />
+							<Skeleton
+								className={cn("h-3.5 max-w-full rounded-sm", widthClass)}
+							/>
 						)}
 					</TableCell>
 				);
