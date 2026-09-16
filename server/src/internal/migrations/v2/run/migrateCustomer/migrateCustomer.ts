@@ -124,7 +124,7 @@ export const migrateCustomer = async ({
 					email: context.fullCustomer.email ?? null,
 				},
 				status: skipReason ? "skipped" : "succeeded",
-				...(skipReason ? { skipReason } : {}),
+				skipReason: skipReason ?? undefined,
 				response: skipReason
 					? { ...response, skip_reason: skipReason }
 					: response,

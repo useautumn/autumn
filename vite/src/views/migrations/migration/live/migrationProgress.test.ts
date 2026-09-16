@@ -27,9 +27,6 @@ test("progress label follows the run state", () => {
 			activeRun: { dry_run: false },
 		}),
 	).toBe("Migrating customers");
-	expect(
-		runProgressLabel({ migrationStatus: "run", activeRun: undefined }),
-	).toBe("Last run");
 });
 
 test("percent is completed over the larger of claimed and expected", () => {

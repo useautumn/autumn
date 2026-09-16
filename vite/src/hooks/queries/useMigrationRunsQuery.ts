@@ -137,7 +137,7 @@ export const useMigrationRunsQuery = ({
 
 	return {
 		runs: (runsQuery.data?.list ?? []) as MigrationRunWithItemCounts[],
-		status: (runsQuery.data?.status ?? "draft") as MigrationStatus,
+		status: runsQuery.data?.status ?? "draft",
 		blockedBy: runsQuery.data?.blocked_by ?? null,
 		isLoadingRuns: runsQuery.isLoading,
 		isActive,

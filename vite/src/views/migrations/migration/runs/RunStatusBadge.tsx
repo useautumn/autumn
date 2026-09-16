@@ -60,23 +60,19 @@ export function ItemEventStatusBadge({
 			skipReason: skipReason ?? skipReasonFromResponse(response),
 			response,
 		});
-		if (spec.noChanges)
-			return (
-				<Badge
-					variant="muted"
-					className={cn(
-						"gap-1 bg-muted text-tertiary-foreground",
-						dryRun ? "border-border border-dashed" : "border-transparent",
-					)}
-				>
-					<MinusCircleIcon size={12} weight="fill" />
-					{spec.label}
-				</Badge>
-			);
+		const styles = dryRun ? DRY_STYLES : LIVE_STYLES;
 		return (
 			<Badge
 				variant="muted"
-				className={cn("gap-1", (dryRun ? DRY_STYLES : LIVE_STYLES).skipped)}
+				className={cn(
+					"gap-1",
+					spec.noChanges
+						? cn(
+								"bg-muted text-tertiary-foreground",
+								dryRun ? "border-border border-dashed" : "border-transparent",
+							)
+						: styles.skipped,
+				)}
 			>
 				<MinusCircleIcon size={12} weight="fill" />
 				{spec.label}

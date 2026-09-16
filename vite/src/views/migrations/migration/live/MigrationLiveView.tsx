@@ -213,6 +213,8 @@ export function MigrationLiveView({
 }) {
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const env = useEnv();
+	const tableContainerHeight =
+		env === AppEnv.Sandbox ? "calc(100vh - 260px)" : "calc(100vh - 220px)";
 	const [executionQuery, setExecutionQuery] = useQueryStates(
 		{
 			execution_status: parseAsArrayOf(
@@ -314,9 +316,9 @@ export function MigrationLiveView({
 		previewSource,
 		EXECUTION_STATUS_VALUES,
 	);
-	const activeExecutionStatuses = useMemo(
-		() => executionStatusesForSource(previewSource, executionStatuses),
-		[previewSource, executionStatuses],
+	const activeExecutionStatuses = executionStatusesForSource(
+		previewSource,
+		executionStatuses,
 	);
 
 	const {
@@ -356,8 +358,6 @@ export function MigrationLiveView({
 		(r) => r.status === "queued" || r.status === "running",
 	);
 	const progressRun = activeRun ?? (isSettling ? latestRun : undefined);
-	const tableContainerHeight =
-		env === AppEnv.Sandbox ? "calc(100vh - 260px)" : "calc(100vh - 220px)";
 	const progressCounts = (progressRun ?? latestRun)?.item_run_counts;
 	const canShowPendingStatus =
 		executionStatuses.length === 0 || executionStatuses.includes("queued");

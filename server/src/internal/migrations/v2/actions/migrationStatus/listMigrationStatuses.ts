@@ -1,9 +1,13 @@
-import type { Migration, MigrationRun, MigrationStatus } from "@autumn/shared";
+import type { Migration, MigrationStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationRepo, migrationRunRepo } from "../../repos/index.js";
 import { resolveMigrationStatus } from "./resolveMigrationStatus.js";
 
 type MigrationRef = Pick<Migration, "internal_id" | "id">;
+type MigrationStatusInfo = {
+	status: MigrationStatus;
+	blocked_by: string | null;
+};
 
 const resolveBlockerId = async ({
 	ctx,
@@ -29,9 +33,7 @@ export const listMigrationStatuses = async ({
 }: {
 	ctx: AutumnContext;
 	migrations: MigrationRef[];
-}): Promise<
-	Map<string, { status: MigrationStatus; blocked_by: string | null }>
-> => {
+}): Promise<Map<string, MigrationStatusInfo>> => {
 	if (migrations.length === 0) return new Map();
 
 	const [orgActiveRuns, startedRunAllIds] = await Promise.all([
@@ -42,21 +44,13 @@ export const listMigrationStatuses = async ({
 		}),
 	]);
 
-	const activeRunsByMigration = new Map<string, MigrationRun[]>();
-	for (const run of orgActiveRuns) {
-		const runs = activeRunsByMigration.get(run.migration_internal_id) ?? [];
-		runs.push(run);
-		activeRunsByMigration.set(run.migration_internal_id, runs);
-	}
-
-	const statuses = new Map<
-		string,
-		{ status: MigrationStatus; blocked_by: string | null }
-	>();
+	const statuses = new Map<string, MigrationStatusInfo>();
 	for (const migration of migrations) {
 		const { status, blockedByMigrationInternalId } = resolveMigrationStatus({
 			migrationInternalId: migration.internal_id,
-			runs: activeRunsByMigration.get(migration.internal_id) ?? [],
+			runs: orgActiveRuns.filter(
+				(run) => run.migration_internal_id === migration.internal_id,
+			),
 			orgActiveRuns,
 			hasStartedRunAll: startedRunAllIds.has(migration.internal_id),
 		});

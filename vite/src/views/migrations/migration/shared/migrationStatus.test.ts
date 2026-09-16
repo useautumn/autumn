@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	isRunDisabled,
 	runButtonLabel,
-	statusBadge,
+	statusLabel,
 	waitingExplanation,
 } from "./migrationStatus";
 
@@ -20,29 +20,14 @@ test("run button is disabled while a Run All is queued or executing", () => {
 	expect(isRunDisabled("run")).toBe(false);
 });
 
-test("status badge names the blocking migration while waiting", () => {
-	expect(statusBadge({ status: "waiting", blockedBy: "pro-v3" })).toEqual({
-		label: "Waiting on pro-v3",
-		tone: "waiting",
-	});
-	expect(statusBadge({ status: "waiting", blockedBy: null }).label).toBe(
-		"Waiting",
+test("status label names the blocking migration while waiting", () => {
+	expect(statusLabel({ status: "waiting", blockedBy: "pro-v3" })).toBe(
+		"Waiting on pro-v3",
 	);
-});
-
-test("status badge tones", () => {
-	expect(statusBadge({ status: "draft", blockedBy: null })).toEqual({
-		label: "Draft",
-		tone: "draft",
-	});
-	expect(statusBadge({ status: "running", blockedBy: null })).toEqual({
-		label: "Running",
-		tone: "running",
-	});
-	expect(statusBadge({ status: "run", blockedBy: null })).toEqual({
-		label: "Run",
-		tone: "run",
-	});
+	expect(statusLabel({ status: "waiting", blockedBy: null })).toBe("Waiting");
+	expect(statusLabel({ status: "draft", blockedBy: null })).toBe("Draft");
+	expect(statusLabel({ status: "running", blockedBy: null })).toBe("Running");
+	expect(statusLabel({ status: "run", blockedBy: null })).toBe("Run");
 });
 
 test("waiting explanation names the one-per-org limit and the blocker", () => {

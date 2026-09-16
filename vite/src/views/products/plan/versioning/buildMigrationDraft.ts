@@ -179,21 +179,21 @@ export function buildVersionMigrationDraft({
 	latestVersion,
 	scope,
 	pastVersions,
-	hasPricingChange = false,
+	hasPricingChange,
 	includeCustom = false,
 	latestProduct,
-	versionProducts = new Map(),
-	features = [],
+	versionProducts,
+	features,
 }: {
 	productId: string;
 	latestVersion: number;
 	scope: VersionMigrateScope;
 	pastVersions: number[];
-	hasPricingChange?: boolean;
+	hasPricingChange: boolean;
 	includeCustom?: boolean;
-	latestProduct?: FrontendProduct;
-	versionProducts?: Map<number, FrontendProduct>;
-	features?: Feature[];
+	latestProduct: FrontendProduct | undefined;
+	versionProducts: Map<number, FrontendProduct>;
+	features: Feature[];
 }): MigrationDraft {
 	const versions = (scope === "all" ? pastVersions : [scope])
 		.slice()
