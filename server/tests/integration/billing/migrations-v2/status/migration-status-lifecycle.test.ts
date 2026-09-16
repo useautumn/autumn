@@ -238,10 +238,11 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("migration status: run survives a later failed run; canceled-before-start stays draft")}`,
+	`${chalk.yellowBright("migration status: run survives later failed or canceled runs; canceled-before-start stays draft")}`,
 	async () => {
 		const customerId = "mig-status-history";
 		const ranId = `${customerId}-ran`;
+		const canceledAfterStartId = `${customerId}-canceled`;
 		const neverStartedId = `${customerId}-never`;
 
 		const { autumnV2_2, ctx } = await initScenario({
@@ -250,6 +251,9 @@ test.concurrent(
 			actions: [],
 		});
 		const ran = await autumnV2_2.migrationsV2.deleteAndCreate({ id: ranId });
+		const canceledAfterStart = await autumnV2_2.migrationsV2.deleteAndCreate({
+			id: canceledAfterStartId,
+		});
 		const neverStarted = await autumnV2_2.migrationsV2.deleteAndCreate({
 			id: neverStartedId,
 		});
@@ -268,6 +272,12 @@ test.concurrent(
 		});
 		await seedRun({
 			ctx,
+			migrationInternalId: canceledAfterStart.internal_id,
+			status: MigrationRunStatus.Canceled,
+			started: true,
+		});
+		await seedRun({
+			ctx,
 			migrationInternalId: neverStarted.internal_id,
 			status: MigrationRunStatus.Canceled,
 			started: false,
@@ -276,6 +286,11 @@ test.concurrent(
 		await expectMigrationStatusCorrect({
 			autumn: autumnV2_2,
 			migrationId: ranId,
+			status: "run",
+		});
+		await expectMigrationStatusCorrect({
+			autumn: autumnV2_2,
+			migrationId: canceledAfterStartId,
 			status: "run",
 		});
 		await expectMigrationStatusCorrect({
