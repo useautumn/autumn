@@ -179,16 +179,25 @@ function compileLeaf({
 		params.push(leaf.value);
 		return `${col} <> ?`;
 	}
-	if (leaf.op === "startsWith" || leaf.op === "regex") {
+	if (leaf.op === "regex") {
 		if (typeof leaf.value !== "string")
-			throw new Error(`$${leaf.op} expects a string on field "${leaf.field}"`);
-		if (leaf.op === "regex") {
+			throw new Error(`$regex expects a string on field "${leaf.field}"`);
+		params.push(leaf.value);
+		return `${col} ~ ?`;
+	}
+	if (leaf.op === "startsWith") {
+		if (typeof leaf.value !== "string")
+			throw new Error(`$startsWith expects a string on field "${leaf.field}"`);
+		if (leaf.value === "") return "TRUE";
+		const upperBound = prefixUpperBound(leaf.value);
+		// A range, not LIKE: under a non-C collation LIKE cannot use a btree
+		// index, so a prefix match would seq-scan the whole table.
+		if (upperBound === null) {
 			params.push(leaf.value);
-			return `${col} ~ ?`;
+			return `${col} >= ?`;
 		}
-		// A literal prefix: escape LIKE's own wildcards so they match themselves.
-		params.push(`${leaf.value.replace(/[\\%_]/g, "\\$&")}%`);
-		return `${col} LIKE ?`;
+		params.push(leaf.value, upperBound);
+		return `(${col} >= ? AND ${col} < ?)`;
 	}
 	if (leaf.op === "in" || leaf.op === "nin") {
 		if (!Array.isArray(leaf.value))
@@ -218,4 +227,17 @@ function compileLeaf({
 		return `${col} ${symbol} ?`;
 	}
 	throw new Error(`Unsupported op: ${(leaf as IRLeaf).op}`);
+}
+
+/** Smallest string greater than every value starting with `prefix`: bump the
+ * last character that can be bumped. Null when every character is already the
+ * maximum code point, leaving the range open-ended. */
+function prefixUpperBound(prefix: string): string | null {
+	const chars = Array.from(prefix);
+	for (let i = chars.length - 1; i >= 0; i--) {
+		const code = chars[i].codePointAt(0) ?? 0;
+		if (code < 0x10ffff)
+			return chars.slice(0, i).join("") + String.fromCodePoint(code + 1);
+	}
+	return null;
 }

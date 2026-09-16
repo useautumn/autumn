@@ -4,8 +4,12 @@
  * them. A migration saved with either operator stored cleanly and then threw
  * `No supported operator found` on every preview, run and count.
  *
+ * `$startsWith` lowers to a half-open range rather than LIKE: under a
+ * non-C collation LIKE cannot use a btree index, so on millions of rows it
+ * degrades to a sequential scan, while the range uses the existing index.
+ *
  * Red (current):  compiling such a filter throws.
- * Green (after):  they lower to LIKE / ~ against the field's column.
+ * Green (after):  startsWith becomes >= prefix AND < successor, regex uses ~.
  */
 
 import { expect, test } from "bun:test";
@@ -22,15 +26,27 @@ const compile = (filter: Record<string, unknown>) =>
 		ambient,
 	});
 
-test("customer_id $startsWith compiles to a prefix match", () => {
+test("customer_id $startsWith compiles to an index-usable range", () => {
 	const result = compile({ customer_id: { $startsWith: "bench-c-12" } });
-	expect(result.sql).toContain("c.id LIKE ?");
-	expect(result.params).toContain("bench-c-12%");
+	expect(result.sql).toContain("c.id >= ?");
+	expect(result.sql).toContain("c.id < ?");
+	expect(result.sql).not.toContain("LIKE");
+	expect(result.params).toContain("bench-c-12");
+	expect(result.params).toContain("bench-c-13");
 });
 
-test("a prefix containing LIKE wildcards matches them literally", () => {
+test("a prefix ending at the maximum code point leaves the range open", () => {
+	const maxChar = String.fromCodePoint(0x10ffff);
+	const result = compile({ customer_id: { $startsWith: maxChar } });
+	expect(result.sql).toContain("c.id >= ?");
+	expect(result.sql).not.toContain("c.id < ?");
+	expect(result.params).toContain(maxChar);
+});
+
+test("wildcard characters in a prefix are matched literally", () => {
 	const result = compile({ customer_id: { $startsWith: "50%_off" } });
-	expect(result.params).toContain("50\\%\\_off%");
+	expect(result.params).toContain("50%_off");
+	expect(result.params).toContain("50%_ofg");
 });
 
 test("customer_id $regex compiles to a regex match", () => {
@@ -43,6 +59,6 @@ test("a prefix combines with another operator on the same field", () => {
 	const result = compile({
 		customer_id: { $startsWith: "bench-", $ne: "bench-c-1" },
 	});
-	expect(result.sql).toContain("LIKE ?");
+	expect(result.sql).toContain("c.id >= ?");
 	expect(result.sql).toContain("<> ?");
 });
