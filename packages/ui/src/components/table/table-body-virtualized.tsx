@@ -195,7 +195,7 @@ export function TableBodyVirtualized() {
 	} else if (containerPx > 0) {
 		skeletonRowCount = Math.max(
 			1,
-			Math.floor(
+			Math.ceil(
 				(containerPx + SKELETON_ROW_BORDER_PX) /
 					(rowHeight + SKELETON_ROW_BORDER_PX),
 			),
