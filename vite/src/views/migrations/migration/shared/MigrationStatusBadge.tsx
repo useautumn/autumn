@@ -48,6 +48,7 @@ export function MigrationStatusBadge({
 	const badge = (
 		<Badge
 			variant="muted"
+			tabIndex={status === "waiting" ? 0 : undefined}
 			className={cn(
 				"max-w-56 gap-1 whitespace-nowrap",
 				TONE_STYLES[spec.tone],

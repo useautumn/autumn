@@ -28,7 +28,13 @@ const DEFAULT_PAGE_SIZE = 50;
 const PreviewFilterBody = z.object({
 	filter: CustomerFilterSchema.optional().default({}),
 	search: z.string().optional().default(""),
-	customerFilters: CustomerListFiltersSchema.optional(),
+	/** Only the list filters the preview query applies. */
+	customerFilters: CustomerListFiltersSchema.pick({
+		status: true,
+		version: true,
+		none: true,
+		processor: true,
+	}).optional(),
 	cursor: z.string().optional().default(""),
 	includeCount: z.boolean().optional().default(true),
 	countOnly: z.boolean().optional().default(false),

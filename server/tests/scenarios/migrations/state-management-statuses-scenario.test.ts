@@ -29,6 +29,9 @@ type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 type ScenarioClient = Awaited<ReturnType<typeof initScenario>>["autumnV2_2"];
 
 const CUSTOMER_IDS = ["a", "b", "c", "d", "e", "f"].map((id) => `qa-st-${id}`);
+/** Seeded live runs make every other queued Run All in the org read
+ * `waiting`, so group runs settle them; set this for manual QA. */
+const KEEP_LIVE_RUNS = process.env.QA_KEEP_LIVE_RUNS === "1";
 
 const transientDbError = () =>
 	Object.assign(
@@ -131,8 +134,9 @@ const seedRun = async ({
  *                         seeded so it stays executing until you cancel it
  *   qa-waiting  waiting — queued behind qa-running
  *
- * While qa-running is live, any other Run All in the org reads "Waiting on
- * qa-running" until its trigger task starts. Cancel qa-running when done.
+ * qa-running and qa-waiting stay live only with QA_KEEP_LIVE_RUNS=1; while
+ * they are, any other Run All in the org reads "Waiting on qa-running" until
+ * its trigger task starts. Cancel qa-running when done.
  */
 test(`${chalk.yellowBright("migration-setup: state management statuses QA")}`, async () => {
 	const plan = products.base({
@@ -297,18 +301,33 @@ test(`${chalk.yellowBright("migration-setup: state management statuses QA")}`, a
 		migrationId: "qa-waiting",
 		planId: plan.id,
 	});
-	await seedRun({
+	const waitingRunId = await seedRun({
 		ctx,
 		migrationInternalId: waiting.internal_id,
 		status: MigrationRunStatus.Queued,
 	});
+
+	if (!KEEP_LIVE_RUNS) {
+		for (const internalId of [runningRunId, waitingRunId]) {
+			await migrationRunRepo.update({
+				ctx,
+				internalId,
+				updates: {
+					status: MigrationRunStatus.Canceled,
+					finished_at: Date.now(),
+				},
+			});
+		}
+	}
 
 	console.log(
 		chalk.green(
 			[
 				"[migration-setup] qa-dry (Draft, dry-run rows), qa-skips (Run: guard, connection drop,",
 				"no changes, failed, passed), qa-running (Running, a/b claimed, c passed),",
-				"qa-waiting (Waiting on qa-running). Cancel qa-running when finished.",
+				KEEP_LIVE_RUNS
+					? "qa-waiting (Waiting on qa-running). Cancel qa-running when finished."
+					: "qa-waiting. Both seeded runs were settled; rerun with QA_KEEP_LIVE_RUNS=1 to keep them live.",
 			].join("\n"),
 		),
 	);

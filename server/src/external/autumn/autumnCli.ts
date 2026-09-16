@@ -100,7 +100,10 @@ export type MigrationRunsListResponse = {
 export type MigrationFilterPreviewParams = {
 	filter?: MigrationFilter["customer"];
 	search?: string;
-	customerFilters?: CustomerListFilters;
+	customerFilters?: Pick<
+		CustomerListFilters,
+		"status" | "version" | "none" | "processor"
+	>;
 	cursor?: string;
 	pageSize?: number;
 	includeCount?: boolean;
