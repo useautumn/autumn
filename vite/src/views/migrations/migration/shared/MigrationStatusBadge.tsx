@@ -49,13 +49,13 @@ export function MigrationStatusBadge({
 		<Badge
 			variant="muted"
 			className={cn(
-				"gap-1 whitespace-nowrap",
+				"max-w-56 gap-1 whitespace-nowrap",
 				TONE_STYLES[spec.tone],
 				className,
 			)}
 		>
-			<ToneIcon size={12} weight="fill" />
-			{spec.label}
+			<ToneIcon size={12} weight="fill" className="shrink-0" />
+			<span className="truncate">{spec.label}</span>
 		</Badge>
 	);
 	if (status !== "waiting") return badge;
