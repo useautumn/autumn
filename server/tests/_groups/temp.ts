@@ -11,6 +11,8 @@ const activeTempPaths: string[] = [
 	"integration/billing/stripe-webhooks/invoice-created/invoice-created-per-entity-consumable-advanced.test.ts",
 	// Deferred logic review: continuous events postpone the debounce flush past assertions.
 	"integration/balances/lock/check-with-lock-credit-system.test.ts",
+	// Deferred logic review: allocated deduction is followed by webhook cache flushes and a zero balance.
+	"integration/billing/update-subscription/cancel/immediately/cancel-immediately-billing.test.ts",
 	// Deferred logic review: delivered webhooks include entity_id: null; previews omit it.
 	"integration/billing/migrations-v2/batch-migrations/replace-items/batch-replace-item-events-webhooks.test.ts",
 	// Deferred logic review: scheduled free-plan activation is emitted as updated, not activated.
