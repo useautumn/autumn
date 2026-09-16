@@ -95,8 +95,9 @@ export const executeStripeInvoicePlan = async ({
 		fullProducts,
 	});
 	if (!autumnInvoice) {
+		// The Stripe invoice is finalized and payable; nothing here voids it.
 		throw new RecaseError({
-			message: `Invoice ${finalized.id} could not be stored`,
+			message: `Stripe invoice ${finalized.id} was finalized but could not be stored in Autumn; it is open in Stripe and must be reconciled or voided manually`,
 			code: ErrCode.InternalError,
 			statusCode: 500,
 		});
