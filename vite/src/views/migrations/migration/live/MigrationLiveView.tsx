@@ -104,6 +104,7 @@ import {
 } from "./migrationItemStatus";
 import { runProgressLabel } from "./migrationProgress";
 import {
+	effectiveExecutionStatuses,
 	executionStatusOptionsForSource,
 	previewSourceForStatus,
 } from "./previewSource";
@@ -318,6 +319,10 @@ export function MigrationLiveView({
 		previewSource,
 		EXECUTION_STATUS_VALUES,
 	);
+	const activeExecutionStatuses = useMemo(
+		() => effectiveExecutionStatuses(previewSource, executionStatuses),
+		[previewSource, executionStatuses],
+	);
 
 	const {
 		customers,
@@ -332,7 +337,7 @@ export function MigrationLiveView({
 		pageSize,
 		migrationId,
 		source: previewSource,
-		executionStatuses,
+		executionStatuses: activeExecutionStatuses,
 		isActive: hasActiveRun || hasRealtimeActive,
 	});
 	// A Run All (or Run again) re-evaluates the live filter, so the run dialog
@@ -812,12 +817,14 @@ export function MigrationLiveView({
 					<CustomerListFilterButton
 						extraMenuItems={
 							<ExecutionStatusSubMenu
-								selected={executionStatuses}
+								selected={activeExecutionStatuses}
 								onChange={handleExecutionStatusesChange}
 								options={executionStatusOptions}
 							/>
 						}
-						hasActiveExtraFilters={hasActiveExecutionFilters(executionStatuses)}
+						hasActiveExtraFilters={hasActiveExecutionFilters(
+							activeExecutionStatuses,
+						)}
 						onClearExtra={() => handleExecutionStatusesChange([])}
 						hideSavedViews
 						hideInterval
