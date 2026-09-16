@@ -105,7 +105,7 @@ export function TableContentVirtualized({
 					key={visibleColumnKey}
 					ref={setScrollContainer}
 					className={cn(
-						"w-full overflow-auto",
+						"w-full overflow-auto transition-[max-height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
 						isFlexFill && "flex-1 min-h-0",
 						showsSkeleton && "overflow-hidden",
 					)}

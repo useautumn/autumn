@@ -113,6 +113,9 @@ type CustomerRow = MigrationPreviewCustomer & {
 	_waitingOnOtherMigration?: boolean;
 };
 
+// The page already pads 32px below the table; reserve only the remainder.
+const PROGRESS_FOOTER_PX = 26;
+
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
 	id: "migration_status",
 	header: "Status",
@@ -213,8 +216,6 @@ export function MigrationLiveView({
 }) {
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const env = useEnv();
-	const tableContainerHeight =
-		env === AppEnv.Sandbox ? "calc(100vh - 260px)" : "calc(100vh - 220px)";
 	const [executionQuery, setExecutionQuery] = useQueryStates(
 		{
 			execution_status: parseAsArrayOf(
@@ -358,6 +359,9 @@ export function MigrationLiveView({
 		(r) => r.status === "queued" || r.status === "running",
 	);
 	const progressRun = activeRun ?? (isSettling ? latestRun : undefined);
+	const tableOffsetPx =
+		(env === AppEnv.Sandbox ? 260 : 220) + (activeRun ? PROGRESS_FOOTER_PX : 0);
+	const tableContainerHeight = `calc(100vh - ${tableOffsetPx}px)`;
 	const progressCounts = (progressRun ?? latestRun)?.item_run_counts;
 	const canShowPendingStatus =
 		executionStatuses.length === 0 || executionStatuses.includes("queued");
