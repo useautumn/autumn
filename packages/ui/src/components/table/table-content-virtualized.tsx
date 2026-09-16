@@ -98,7 +98,11 @@ export function TableContentVirtualized({
 				<div
 					key={visibleColumnKey}
 					ref={setScrollContainer}
-					className={cn("w-full overflow-auto", isFlexFill && "flex-1 min-h-0")}
+					className={cn(
+						"w-full overflow-auto",
+						isFlexFill && "flex-1 min-h-0",
+						(isLoading || isTransitioning) && !rows.length && "overflow-hidden",
+					)}
 					style={{
 						minHeight: isFlexFill ? undefined : minHeight,
 						maxHeight: isFlexFill ? undefined : virtualization?.containerHeight,
