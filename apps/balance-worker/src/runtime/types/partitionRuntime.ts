@@ -1,26 +1,24 @@
 import type {
-	OwnedPartitionFollowerProgress,
-	OwnedPartitionHealth,
-} from "../../health/ownedPartitionHealth.js";
-import type {
-	PartitionBootstrapper,
-	PartitionLogRange,
-} from "../bootstrap/types/partitionBootstrap.js";
-export type OwnedPartitionBootstrapPort = PartitionBootstrapper;
-
-import type {
 	CheckCommand,
 	CheckDecision,
 	MeteringIdentity,
 	TrackCommand,
 	TrackDecision,
 } from "@autumn/balance-engine";
+import type {
+	OwnedPartitionFollowerProgress,
+	OwnedPartitionHealth,
+} from "../../health/ownedPartitionHealth.js";
 import type { SqliteBalanceStateStore } from "../../state/sqliteBalanceStateStore.js";
 import type { CommittedTrackOutcomeAppender } from "../../writer/committedTrackOutcomeAppender.js";
 import type {
 	PartitionTrackWriterLimits,
 	PartitionTrackWriterReceiptPolicy,
 } from "../../writer/partitionTrackWriter.js";
+import type {
+	PartitionBootstrapper,
+	PartitionLogRange,
+} from "../bootstrap/types/partitionBootstrap.js";
 import type { PartitionRuntimeStatus } from "./partitionRuntimeState.js";
 
 export type OwnedPartitionProducer = {
@@ -35,18 +33,16 @@ export type PartitionOutcomeFollowerPort = {
 		partition: number;
 		signal: AbortSignal;
 	}): Promise<PartitionLogRange>;
-	readProgress(params: {
-		topic: string;
-		partition: number;
-	}): OwnedPartitionFollowerProgress;
-	// Resolve after replay reaches a freshly captured watermark; continue live following until stopped.
 	startAndCatchUp(params: {
 		topic: string;
 		partition: number;
 		targetNextOffset: bigint;
 		onUnavailable: RuntimeUnavailableListener;
 	}): Promise<void>;
-	// Stopping must settle pending catch-up and in-flight replay callbacks.
+	readProgress(params: {
+		topic: string;
+		partition: number;
+	}): OwnedPartitionFollowerProgress;
 	stop(): Promise<void>;
 };
 
@@ -55,13 +51,13 @@ export type MeteringPartitionResolver = {
 };
 
 export type PartitionRuntimeDependencies = {
-	bootstrapper: PartitionBootstrapper;
-	trackReceiptPolicy: PartitionTrackWriterReceiptPolicy;
 	stateStore: SqliteBalanceStateStore;
 	producer: OwnedPartitionProducer;
 	appender: CommittedTrackOutcomeAppender;
 	follower: PartitionOutcomeFollowerPort;
+	bootstrapper: PartitionBootstrapper;
 	partitionResolver: MeteringPartitionResolver;
+	trackReceiptPolicy: PartitionTrackWriterReceiptPolicy;
 };
 
 export type PartitionRuntimeConfig = {
@@ -93,6 +89,9 @@ export interface RuntimeRequestTracker {
 }
 
 export type PartitionRuntime = {
+	// A preparation source must own its reader: stop settles all writes before activation reuses SQLite.
+	prepare(params: { follower: PartitionOutcomeFollowerPort }): Promise<void>;
+	activate(): Promise<void>;
 	drain(): Promise<void>;
 	waitForQuiescence(): Promise<void>;
 	start(): Promise<void>;

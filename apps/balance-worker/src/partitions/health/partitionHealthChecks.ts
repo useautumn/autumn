@@ -7,7 +7,9 @@ import { reportPartitionError } from "../reportPartitionError.js";
 import type {
 	AllocationScope,
 	PartitionEntry,
+	PartitionScope,
 } from "../types/partitionState.js";
+import type { PartitionFailure } from "../types/partitions.js";
 
 export function respondToUnhealthyPartitions({
 	ctx,
@@ -74,16 +76,47 @@ export function respondToPartitionFailure({
 		state.terminalHealthByPartition.has(partition)
 	)
 		return "ignored";
+	state.directory.withdraw({ partition });
 	state.terminalHealthByPartition.set(partition, health);
 	try {
 		ctx.onUnhealthyPartition({ topic: ctx.config.topic, partition, cause });
 	} catch (callbackCause) {
 		reportPartitionError({ ctx, cause: callbackCause });
 	}
-	if (isPartitionBootstrapBlockedCause({ cause })) {
+	if (
+		isPartitionBootstrapBlockedCause({ cause }) &&
+		!entry?.claimed &&
+		!entry?.publicationFailed
+	) {
 		retryPartition({ ctx, state, partition, entry, allocationGeneration });
 		return "partition_parked";
 	}
 	requestPartitionServiceStop({ ctx, state, allocationGeneration });
 	return "group_stopping";
+}
+
+export function onPartitionUnavailable({
+	ctx,
+	state,
+	entry,
+	allocationGeneration,
+	cause,
+}: PartitionScope & PartitionFailure): void {
+	const { partition } = entry;
+	if (
+		state.entries.get(partition) !== entry ||
+		!isCurrentAllocation({ state, allocationGeneration })
+	)
+		return;
+	state.directory.withdraw({ partition });
+	if (!entry.startupSettled) return;
+	respondToPartitionFailure({
+		ctx,
+		state,
+		partition,
+		entry,
+		cause,
+		health: entry.runtime.getHealth(),
+		allocationGeneration,
+	});
 }

@@ -19,6 +19,38 @@ import {
 	UnexpectedKafkaOffsetError,
 } from "../../state/sqliteBalanceStateErrors.js";
 
+export class StateAheadOfKafkaLogEndError extends Error {
+	readonly retriable = false;
+	readonly storedNextOffset: bigint;
+	readonly logEndOffset: bigint;
+
+	constructor({
+		topic,
+		partition,
+		storedNextOffset,
+		logEndOffset,
+	}: {
+		topic: string;
+		partition: number;
+		storedNextOffset: bigint;
+		logEndOffset: bigint;
+	}) {
+		super(
+			`Stored state for ${topic}[${partition}] expects offset ${storedNextOffset}, but the Kafka log ends at ${logEndOffset}`,
+		);
+		this.name = "StateAheadOfKafkaLogEndError";
+		this.storedNextOffset = storedNextOffset;
+		this.logEndOffset = logEndOffset;
+	}
+}
+
+export class KafkaPartitionFollowerStoppedError extends Error {
+	constructor({ topic, partition }: { topic: string; partition: number }) {
+		super(`Kafka partition follower stopped for ${topic}[${partition}]`);
+		this.name = "KafkaPartitionFollowerStoppedError";
+	}
+}
+
 export class KafkaPartitionInvariantError extends Error {
 	readonly retriable = false;
 	readonly topic: string;
@@ -54,13 +86,13 @@ export function isPartitionInvariantCause(cause: unknown): cause is Error {
 		cause instanceof UnsupportedRecordVersionError ||
 		cause instanceof RecordKeyMismatchError ||
 		cause instanceof ConflictingTrackReceiptError ||
+		cause instanceof ConflictingMeteringStateInitializationError ||
 		cause instanceof OutOfOrderTrackOutcomeError ||
 		cause instanceof StaleTrackOutcomeError ||
 		cause instanceof TrackOutcomeSubjectMismatchError ||
-		cause instanceof ConflictingMeteringStateInitializationError ||
-		cause instanceof MeteringStatePartitionMismatchError ||
 		cause instanceof CorruptBalanceStateError ||
 		cause instanceof MeteringStateNotFoundError ||
+		cause instanceof MeteringStatePartitionMismatchError ||
 		cause instanceof PartitionProgressNotFoundError ||
 		cause instanceof UnexpectedKafkaOffsetError
 	);
@@ -88,37 +120,5 @@ export class StateBehindKafkaLogStartError extends Error {
 		this.name = "StateBehindKafkaLogStartError";
 		this.storedNextOffset = storedNextOffset;
 		this.logStartOffset = logStartOffset;
-	}
-}
-
-export class StateAheadOfKafkaLogEndError extends Error {
-	readonly retriable = false;
-	readonly storedNextOffset: bigint;
-	readonly logEndOffset: bigint;
-
-	constructor({
-		topic,
-		partition,
-		storedNextOffset,
-		logEndOffset,
-	}: {
-		topic: string;
-		partition: number;
-		storedNextOffset: bigint;
-		logEndOffset: bigint;
-	}) {
-		super(
-			`Stored state for ${topic}[${partition}] expects offset ${storedNextOffset}, but the Kafka log ends at ${logEndOffset}`,
-		);
-		this.name = "StateAheadOfKafkaLogEndError";
-		this.storedNextOffset = storedNextOffset;
-		this.logEndOffset = logEndOffset;
-	}
-}
-
-export class KafkaPartitionFollowerStoppedError extends Error {
-	constructor({ topic, partition }: { topic: string; partition: number }) {
-		super(`Kafka partition follower stopped for ${topic}[${partition}]`);
-		this.name = "KafkaPartitionFollowerStoppedError";
 	}
 }

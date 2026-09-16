@@ -10,18 +10,15 @@ import {
 	type TrackDecision,
 } from "@autumn/balance-engine";
 import { PartitionTrackWriterRecoveryRequiredError } from "../../writer/partitionTrackWriter.js";
+import { assertRuntimeReady } from "../getRuntimeHealth.js";
 import { enterRuntimeRecovery } from "../lifecycle/enterRuntimeRecovery.js";
 import {
 	OwnedPartitionMismatchError,
-	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionStateNotFoundError,
 } from "../runtimeErrors.js";
 import type { PartitionRuntimeContext } from "../types/partitionRuntime.js";
-import type {
-	PartitionRuntimeScope,
-	PartitionRuntimeState,
-} from "../types/partitionRuntimeState.js";
+import type { PartitionRuntimeScope } from "../types/partitionRuntimeState.js";
 
 export async function submitRuntimeTrack({
 	ctx,
@@ -126,10 +123,4 @@ function assertCommandPartition({
 		});
 	}
 	return customerKey;
-}
-
-function assertRuntimeReady({ state }: { state: PartitionRuntimeState }): void {
-	if (state.terminalError) throw state.terminalError;
-	if (state.status !== "ready")
-		throw new OwnedPartitionNotReadyError({ status: state.status });
 }
